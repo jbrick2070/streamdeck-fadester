@@ -1,0 +1,40 @@
+{
+  "name": "streamdeck-fadester",
+  "version": "0.1.0",
+  "description": "Fadester for OBS — Stream Deck + fader dial and auto-fade controller for Midi Fadester in OBS Studio 33",
+  "license": "GPL-2.0-or-later",
+  "type": "module",
+  "author": "Jeffrey A. Brick",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jbrick2070/streamdeck-fadester.git"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "build": "rollup -c",
+    "watch": "rollup -c -w",
+    "test": "vitest run",
+    "test:mutation": "node --import tsx scripts/run-mutation-checks.ts",
+    "test:obs-live": "node --import tsx tests/obs-live-conformance.ts",
+    "validate": "streamdeck validate com.jbrick2070.fadester-for-obs.sdPlugin",
+    "pack": "streamdeck pack com.jbrick2070.fadester-for-obs.sdPlugin --output release --force"
+  },
+  "dependencies": {
+    "@elgato/streamdeck": "3.0.3"
+  },
+  "devDependencies": {
+    "@elgato/cli": "1.10.3",
+    "@rollup/plugin-commonjs": "^28.0.3",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "@rollup/plugin-typescript": "^12.1.2",
+    "@types/node": "^24.0.0",
+    "@types/ws": "^8.18.1",
+    "rollup": "^4.40.0",
+    "tslib": "^2.8.1",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.2"
+  }
+}

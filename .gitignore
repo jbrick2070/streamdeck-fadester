@@ -1,0 +1,10 @@
+node_modules/
+dist/
+release/
+*.streamDeckPlugin
+*.log
+com.jbrick2070.fadester-for-obs.sdPlugin/bin/
+com.jbrick2070.fadester-for-obs.sdPlugin/logs/
+START-PROMPT.md
+NOTE-FOR-MIDI-FADESTER.md
+MIDI-FADESTER-PROPOSAL.md

@@ -1,8 +1,8 @@
 # Fadester for OBS — Implementation Plan
 
-Status: 2026-10-27 (Phase 0 — Plan Only, Awaiting Operator Approval).
+Status: 2026-10-27. Approved by the operator on 2026-10-27 (decisions `D-1..D-4` recorded in Section 7).
 Companion to [REQUIREMENTS.md](REQUIREMENTS.md), [API-CONTRACT.md](API-CONTRACT.md), [GRAPHICS-NOTES.md](GRAPHICS-NOTES.md), [UI-NOTES.md](UI-NOTES.md), and [IDEAS.md](IDEAS.md).
-Coding waits until: (1) the operator approves this plan and decisions `D-1..D-4`, and (2) Midi Fadester's `midi-fadester` vendor API (its PLAN item 6) is pushed and aligned to [API-CONTRACT.md](API-CONTRACT.md).
+Phase 1 is implemented against [API-CONTRACT.md](API-CONTRACT.md) and verified against our fake `obs-websocket` 5 server (`tests/helpers/fake-obs-server.ts`), with a live OBS 33 websocket conformance test (`tests/obs-live-conformance.ts`) ready to run as soon as Midi Fadester's vendor API is pushed.
 
 ---
 
@@ -218,21 +218,23 @@ C:\streamdeck-fadester\
 #### Step 1.4: Launch Actions (`Fader` Dial & `Auto-fade` Key) and Property Inspector (`src/actions/`, `ui/`)
 - Implement `src/actions/dial-math.ts`:
   - `computeDialDelta(ticks, stepPerTick, acceleration, elapsedMs)`: applies `1%`, `2%` (default), or `5%` per tick with velocity acceleration (`1×`, `2×`, `3×`).
-  - `resolveDialPressCommand(slotValue, pressAction)`: maps `Snap 0/100`, `Auto-fade 1 s`, `Auto-fade 2 s`, `Cut`, and `Finish T-bar` (plus `Auto-fade 3 s` on long press `>= 500 ms` per `D-3`) to exact `set_fader_value` or `auto_fade` requests.
+  - `resolveDialPressCommand(slotValue, pressAction)`: maps `Snap 0/100`, `Auto-fade 1 s`, `Auto-fade 2 s`, `Cut`, and `Finish T-bar` (plus `Auto-fade 3 s` on long press `>= 800 ms` with an on-cell `HOLD 3s FADE` indicator during the hold per `D-3`) to exact `set_fader_value` or `auto_fade` requests.
   - `mapTouchTapToValue(tapX, targetMode)`: maps `0..200` px tap coordinate with `20 px` left/right snap zones (`x <= 20 → 0.0`, `x >= 180 → 1.0`, linear `(x - 20) / 160` in between; in Crossfade thumbnail mode, tapping the left `96 px` thumbnail snaps to `0.0` and tapping the right `96 px` thumbnail snaps to `1.0`).
 - Implement `src/actions/fader-dial.ts` (`Fader`) and `src/actions/auto-fade-key.ts` (`Auto-fade`).
 - Implement `ui/fader-dial.html`, `ui/auto-fade-key.html`, and `ui/pi-common.js` (host/port/password inputs, live status banner with clickable Midi Fadester link when missing, **Connect / Test** button, and live Slot dropdown showing each slot's `name`, `label`, and `reason` when unavailable).
 - **Step 1.4 Automated Tests (`dial-math.test.ts`, `actions-integration.test.ts`):**
   - Verifies `computeDialDelta` for `1%`, `2%`, `5%`, clockwise/counter-clockwise ticks, and acceleration on/off.
-  - Verifies all 5 press modes (`Snap 0/100`, `Auto-fade 1 s`, `Auto-fade 2 s`, `Cut`, `Finish T-bar`) and long-press `Auto-fade 3 s`.
+  - Verifies all 5 press modes (`Snap 0/100`, `Auto-fade 1 s`, `Auto-fade 2 s`, `Cut`, `Finish T-bar`) and long-press `Auto-fade 3 s` at `800 ms` (including the hold indicator rendered while held `< 800 ms` and cleared on release or fire).
   - Verifies `onTouchTap` coordinate mapping at left edge (`x = 10 → 0.0`), center (`x = 100 → 0.5`), right edge (`x = 190 → 1.0`), and thumbnail left/right snap.
   - End-to-end integration test with `fake-obs-server`: dropping `Fader` on a dial binds to `"crossfader"`, turning calls `nudge_fader`, pressing runs `auto_fade` / `set_fader_value`, external `fader_changed` from `"midi"` updates the dial's SVG feedback (`0%` → `42%` → `100%`), and pressing the `Auto-fade` key calls `auto_fade` while displaying live percent on the key SVG.
 - **Step 1.4 Mutation Checks:**
   - *Mutation 1.4a:* Invert the `< 0.5` toggle threshold or omit `release: true` in `Finish T-bar` / `Snap 0/100` → `dial-math.test.ts` MUST fail.
   - *Mutation 1.4b:* Unsubscribe `FaderDialAction` from `fader_changed` store updates → `actions-integration.test.ts` APC40-to-dial sync test MUST fail.
+  - *Mutation 1.4c:* Omit the Hold indicator during `onDialDown` or fire the short press on `onDialUp` after the `800 ms` hold already fired → `actions-integration.test.ts` MUST fail.
 
-#### Step 1.5: Bundle Validation & Live Hardware Verification (`streamdeck validate` + Portable OBS 33)
-- Build the plugin bundle (`npm run build`), run the full automated test suite (`npm test`), validate with `@elgato/cli` (`npx streamdeck validate`), link into Stream Deck (`npx streamdeck link`), and execute the Manual Hardware Verification Checklist (Section 5) against portable OBS 33 (`C:\Users\jeffr\OBS-Studio-33-Portable`) and the physical Stream Deck +.
+#### Step 1.5: Bundle Validation, Live OBS 33 Conformance Runner & Hardware Verification (`streamdeck validate` + Portable OBS 33)
+- Implement `tests/obs-live-conformance.ts` (`npm run test:obs-live`) per `D-2`: connects `FadesterClient` to a real OBS 33 websocket (or local harness) to verify SHA-256 password auth, wrong password (`4009` close code, retries stop, status sentence shown), one vendor request (`get_state`), one vendor event (`fader_changed`), and automatic reconnect after OBS restarts.
+- Build the plugin bundle (`npm run build`), run the full automated test suite (`npm test`), validate with `@elgato/cli` (`npx streamdeck validate`), package `.streamDeckPlugin` (`npx streamdeck pack`), and execute the Manual Hardware Verification Checklist (Section 5) against portable OBS 33 (`C:\Users\jeffr\OBS-Studio-33-Portable`) and the physical Stream Deck +.
 
 ---
 
@@ -294,15 +296,13 @@ Target environment:
 
 ---
 
-## 7. Operator Decisions for Approval (`D-1 .. D-4`)
+## 7. Approved Operator Decisions (`D-1 .. D-4`, Approved 2026-10-27)
 
-Please confirm or adjust these four decisions before Phase 1 coding begins:
-
-1. **`D-1` — SDK & Node.js Versions:**
-   - **Recommendation:** Pin **`@elgato/streamdeck` `3.0.3`** (current major), **`@elgato/cli` `1.10.3`**, `SDKVersion: 3`, and **`Nodejs.Version: "24"`** (`Software.MinimumVersion: "7.1"`), matching the Node `v24.22.1` runtime already bundled in Stream Deck `7.4.2.22730` on this machine.
-2. **`D-2` — `obs-websocket` 5 Client Library:**
-   - **Recommendation:** Use **our own small, strictly-typed client (`src/obs/fadester-client.ts`, ~220 LOC)** over `ws` (bundled by `@elgato/streamdeck`) and `node:crypto` SHA-256, rather than `obs-websocket-js` (`5.0.8`).
-3. **`D-3` — Dial Long-Press (`Auto-fade 3 s`):**
-   - **Recommendation:** **Enable by default:** holding the dial for `>= 500 ms` triggers a **3-second auto-fade (`ms: 3000`)** to the opposite rail, configurable in the Property Inspector (`Auto-fade 3 s` default, `Finish T-bar`, or `None`).
-4. **`D-4` — Elgato Marketplace Listing (Later):**
-   - **Recommendation:** Ship direct `.streamDeckPlugin` packages on GitHub Releases in Phase 1 while building all icons, manifest metadata, and `streamdeck validate` checks to Elgato Marketplace rules from day one; submit to the Elgato Marketplace in Phase 4 once hardware verification across the Fadester suite is complete.
+1. **`D-1` — SDK & Node.js Versions (Approved):**
+   - Pin **`@elgato/streamdeck` `3.0.3`** (`SDKVersion: 3`), **`@elgato/cli` `1.10.3`**, **`Nodejs.Version: "24"`**, and **`Software.MinimumVersion: "7.1"`**. `README.md` states explicitly that Stream Deck 6.x is not supported.
+2. **`D-2` — `obs-websocket` 5 Client Library (Approved with Conformance Test Condition):**
+   - Use **our own small, strictly-typed client (`src/obs/fadester-client.ts`)** over `ws` and `node:crypto` SHA-256, paired with a conformance test (`tests/obs-live-conformance.ts`) against the real OBS 33 websocket covering password auth, wrong password (close `4009`, retries stop, status sentence shown), one vendor request, one vendor event, and reconnect after OBS restarts. (If that test is hard to keep green, switch to `obs-websocket-js`.)
+3. **`D-3` — Dial Long-Press (`Auto-fade 3 s` at `800 ms` with Hold Indicator — Approved):**
+   - Holding a dial for **`>= 800 ms`** triggers a **3-second auto-fade (`ms: 3000`)** toward the opposite rail (`Auto-fade 3 s` default, or `None`). While the dial is held down prior to `800 ms`, the cell renders a bold orange **Hold indicator (`HOLD 3s FADE`)** so a fade never starts by surprise during a show.
+4. **`D-4` — Elgato Marketplace Listing (Approved):**
+   - Ship `.streamDeckPlugin` releases on GitHub in Phase 1 while building all icons, manifest metadata, and `streamdeck validate` checks to Elgato Marketplace rules from day one; submit to the Elgato Marketplace in Phase 4.

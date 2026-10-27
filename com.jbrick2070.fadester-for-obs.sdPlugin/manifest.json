@@ -1,0 +1,70 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
+  "Name": "Fadester for OBS",
+  "Version": "0.1.0.0",
+  "Author": "Jeffrey A. Brick",
+  "Description": "Turn Stream Deck + dials, touch cells, and keys into direct fader controls for Midi Fadester in OBS Studio 33.",
+  "Category": "Fadester for OBS",
+  "CategoryIcon": "imgs/plugin/category-icon",
+  "Icon": "imgs/plugin/plugin-icon",
+  "URL": "https://github.com/jbrick2070/streamdeck-fadester",
+  "UUID": "com.jbrick2070.fadester-for-obs",
+  "CodePath": "bin/plugin.js",
+  "SDKVersion": 3,
+  "Software": {
+    "MinimumVersion": "7.1"
+  },
+  "OS": [
+    {
+      "Platform": "windows",
+      "MinimumVersion": "10"
+    }
+  ],
+  "Nodejs": {
+    "Version": "24"
+  },
+  "Actions": [
+    {
+      "Name": "Fader",
+      "UUID": "com.jbrick2070.fadester-for-obs.fader",
+      "Icon": "imgs/actions/fader/icon",
+      "Tooltip": "Control a Midi Fadester slot with a Stream Deck + rotary dial and touch cell.",
+      "PropertyInspectorPath": "ui/fader-dial.html",
+      "Controllers": [
+        "Encoder"
+      ],
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": false,
+      "Encoder": {
+        "layout": "layouts/fader-cell.json",
+        "TriggerDescription": {
+          "Rotate": "Nudge fader",
+          "Push": "Snap / Auto-fade (hold 0.8 s for 3 s fade)",
+          "Touch": "Tap to jump or snap to side"
+        }
+      },
+      "States": [
+        {
+          "Image": "imgs/actions/fader/key"
+        }
+      ]
+    },
+    {
+      "Name": "Auto-fade",
+      "UUID": "com.jbrick2070.fadester-for-obs.auto-fade",
+      "Icon": "imgs/actions/auto-fade/icon",
+      "Tooltip": "Run a timed fade on a Midi Fadester slot to 0% or 100%.",
+      "PropertyInspectorPath": "ui/auto-fade-key.html",
+      "Controllers": [
+        "Keypad"
+      ],
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": true,
+      "States": [
+        {
+          "Image": "imgs/actions/auto-fade/key"
+        }
+      ]
+    }
+  ]
+}

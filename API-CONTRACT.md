@@ -53,6 +53,35 @@ Transport-level errors (unknown `vendorName` or `requestType`) use obs-websocket
 Because `obs-websocket-api.h`'s `obs_websocket_request_callback_function` (`void (*)(obs_data_t *request_data, obs_data_t *response_data, void *priv_data)`) returns `void` and cannot set the outer `requestStatus`, vendor-level validation errors return `{ "error": "<sentence>", "comment": "<sentence>" }` inside `responseData`, with the sentence giving the fix — for example:
 `"Slot 'fader_9' does not exist. Valid slots: crossfader, fader_1 .. fader_8, master."`
 
+## In-process bridge (plugin to plugin, inside OBS)
+
+Plugins in the same OBS do not go through obs-websocket. They use `obs_get_proc_handler()` and
+`obs_get_signal_handler()`. One owner per concept: Midi Fadester owns fader slots, Visual Sidechain owns
+audio signals. Neither plugin re-exposes the other's data over its own vendor API.
+
+Midi Fadester registers:
+
+| proc or signal | calldata in | calldata out |
+|---|---|---|
+| proc `midi_fadester_get_slot_value` | `string slot` | `float value`, `bool ok`, `string reason` |
+| proc `midi_fadester_set_fader_value` | `string slot`, `float value` | `bool ok`, `string reason` |
+| signal `midi_fadester_fader_changed` | `string slot`, `float value`, `string origin` | (emitted on every change, coalesced like the vendor event) |
+
+Visual Sidechain registers:
+
+| proc or signal | calldata in | calldata out |
+|---|---|---|
+| proc `visual_sidechain_get_signals` | none | `float level, bass, mid, high, kick, snare, beat_phase, bpm`, `bool ok` |
+| signal `visual_sidechain_signals` | none | `float` fields as above, emitted at most 30 times per second |
+
+Rules for the bridge:
+
+- A consumer that finds the proc missing shows "Midi Fadester is not loaded" (or "Visual Sidechain is not
+  loaded") in its UI next to the source that needs it, and reads 0. Never silent.
+- Prefer the signal to polling. If a consumer polls, it polls once per video tick at most.
+- Each side has a headless test with a fake proc handler, and the OBS harness loads both plugins and checks
+  one value crossing each way.
+
 ## Rules
 
 - Every request is covered by a headless test on the Midi Fadester side (fake websocket) and by the OBS

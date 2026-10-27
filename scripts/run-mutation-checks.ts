@@ -33,8 +33,11 @@ const MUTATIONS: MutationCheck[] = [
     id: "M-1.2a",
     step: "Step 1.2 (OBS Client Close 4009 Stop-Retry)",
     description:
-      "Mutate close 4009 handler in fadester-client.ts so wrong-password keeps retrying and verify fadester-client.test.ts fails",
-    filePath: resolve(ROOT, "src/obs/fadester-client.ts"),
+      "Mutate close 4009 handler in obs-vendor-client.ts so wrong-password keeps retrying and verify fadester-client.test.ts fails",
+    filePath: resolve(
+      ROOT,
+      "packages/streamdeck-fadester-shared/src/obs/obs-vendor-client.ts"
+    ),
     target: "if (code === 4009) {",
     mutated: "if (code === 9999) {",
     testFile: "tests/fadester-client.test.ts"
@@ -43,8 +46,11 @@ const MUTATIONS: MutationCheck[] = [
     id: "M-1.2b",
     step: "Step 1.2 (OBS Client Post-Error get_state Resync)",
     description:
-      "Disable post-error get_state() resync on inner vendor validation error in fadester-client.ts and verify fadester-client.test.ts fails",
-    filePath: resolve(ROOT, "src/obs/fadester-client.ts"),
+      "Disable post-error get_state() resync on inner vendor validation error in obs-vendor-client.ts and verify fadester-client.test.ts fails",
+    filePath: resolve(
+      ROOT,
+      "packages/streamdeck-fadester-shared/src/obs/obs-vendor-client.ts"
+    ),
     target:
       'if (resyncOnError && requestType !== "get_state" && this.identified) {\n        void this.getState().catch(() => {});\n      }\n      throw vendorErr;\n    }\n\n    return innerData as TResponse;',
     mutated:
@@ -56,7 +62,10 @@ const MUTATIONS: MutationCheck[] = [
     step: "Step 1.3 (SVG Renderer >= 3px Stroke Rule)",
     description:
       "Mutate dial status border stroke-width from 3 to 1 in svg-renderer.ts and verify svg-renderer.test.ts fails",
-    filePath: resolve(ROOT, "src/gfx/svg-renderer.ts"),
+    filePath: resolve(
+      ROOT,
+      "packages/streamdeck-fadester-shared/src/svg-renderer.ts"
+    ),
     target:
       '<rect x="2" y="2" width="196" height="96" rx="10" fill="url(#bg)" stroke="${borderColor}" stroke-width="3"/>',
     mutated:
@@ -68,7 +77,10 @@ const MUTATIONS: MutationCheck[] = [
     step: "Step 1.3 (SVG Renderer Verbatim Unavailable Reason)",
     description:
       "Replace verbatim slot.reason with a generic string in svg-renderer.ts and verify svg-renderer.test.ts fails",
-    filePath: resolve(ROOT, "src/gfx/svg-renderer.ts"),
+    filePath: resolve(
+      ROOT,
+      "packages/streamdeck-fadester-shared/src/svg-renderer.ts"
+    ),
     target: 'slot.reason || "Unavailable in OBS"',
     mutated: '"Generic Error"',
     testFile: "tests/svg-renderer.test.ts"
@@ -78,7 +90,10 @@ const MUTATIONS: MutationCheck[] = [
     step: "Step 1.3 (Per-Cell Rate Limiter Trailing-Edge Flush)",
     description:
       "Disable trailing-edge flush in cell-rate-limiter.ts and verify rate-limiter-thumbnails.test.ts fails",
-    filePath: resolve(ROOT, "src/gfx/cell-rate-limiter.ts"),
+    filePath: resolve(
+      ROOT,
+      "packages/streamdeck-fadester-shared/src/cell-rate-limiter.ts"
+    ),
     target: "void this.onFlush(toSend);",
     mutated: "void toSend;",
     testFile: "tests/rate-limiter-thumbnails.test.ts"

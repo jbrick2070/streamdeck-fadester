@@ -27,7 +27,7 @@ export default {
   plugins: [
     typescript({
       tsconfig: "./tsconfig.json",
-      include: ["src/**/*.ts"]
+      include: ["src/**/*.ts", "packages/**/*.ts"]
     }),
     nodeResolve({
       browser: false,

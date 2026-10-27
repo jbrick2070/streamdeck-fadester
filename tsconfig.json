@@ -13,7 +13,11 @@
     "noImplicitOverride": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "types": ["node"]
+    "types": ["node"],
+    "paths": {
+      "streamdeck-fadester-shared": ["./packages/streamdeck-fadester-shared/src/index.ts"],
+      "streamdeck-fadester-shared/obs": ["./packages/streamdeck-fadester-shared/src/obs/obs-vendor-client.ts"]
+    }
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts", "scripts/**/*.ts"]
+  "include": ["src/**/*.ts", "packages/**/*.ts", "tests/**/*.ts", "scripts/**/*.ts"]
 }

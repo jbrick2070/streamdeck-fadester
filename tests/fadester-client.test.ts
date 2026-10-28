@@ -149,7 +149,9 @@ describe("Step 1.2 — FadesterClient & FadesterStore against FakeObsServer", ()
 
     // 1. get_state
     const state = await client.getState();
-    expect(state.version).toBe("0.1.0");
+    expect(state.version).toBe("0.3.0");
+    expect(state.profile).toBe("apc40mk2");
+    expect(state.profile_tier).toBe("verified");
 
     // 2. set_fader_value (with release: true)
     const setRes = await client.setFaderValue({
@@ -187,7 +189,7 @@ describe("Step 1.2 — FadesterClient & FadesterStore against FakeObsServer", ()
 
     // 6. load_profile
     const profRes = await client.loadProfile({ name: "apc40mk2" });
-    expect(profRes).toEqual({ loaded: true });
+    expect(profRes).toEqual({ loaded: "apc40mk2", profile_tier: "verified" });
 
     // External fader_changed event from MIDI clears takeover_pending and updates value
     const slotUpdatePromise = waitForEvent<string>(store, "slotValueChanged");
@@ -229,5 +231,57 @@ describe("Step 1.2 — FadesterClient & FadesterStore against FakeObsServer", ()
 
     expect(store.getLastErrorComment()).toContain("Slot 'fader_9' does not exist");
     expect(getStateCallsAfter).toBeGreaterThan(getStateCallsBefore);
+  });
+
+  it("handles 0.3.0 build commit in status sentence and controller profiles without crossfader or master", async () => {
+    server = new FakeObsServer({
+      obsVersion: "33.0.0",
+      fadesterVersion: "0.3.0",
+      buildCommit: "642d6b7"
+    });
+    const port = await server.start();
+
+    client = new FadesterClient({ host: "127.0.0.1", port, password: "" });
+    const store = new FadesterStore(client);
+    const connectedPromise = waitForEvent(client, "statusChanged");
+    client.start();
+    await connectedPromise;
+    await new Promise((r) => setTimeout(r, 30));
+
+    expect(store.getStatus().sentence).toBe(
+      "Connected: OBS 33.0.0, Midi Fadester 0.3.0 (642d6b7)"
+    );
+    expect(store.getProfile()).toBe("apc40mk2");
+    expect(store.getProfileTier()).toBe("verified");
+
+    // Switch to midimix (no crossfader, master present)
+    const midimixChanged = waitForEvent<void>(store, "changed");
+    const midimixRes = await client.loadProfile({ name: "midimix" });
+    await midimixChanged;
+    expect(midimixRes).toEqual({ loaded: "midimix", profile_tier: "beta" });
+    expect(store.getProfile()).toBe("midimix");
+    expect(store.getProfileTier()).toBe("beta");
+    expect(store.getSlot("crossfader")?.available).toBe(false);
+    expect(store.getSlot("crossfader")?.reason).toBe(
+      "Not used. Click to set up."
+    );
+    expect(store.getSlot("master")?.available).toBe(true);
+
+    // Switch to nanokontrol2 (no crossfader AND no master)
+    const nanoChanged = waitForEvent<void>(store, "changed");
+    const nanoRes = await client.loadProfile({ name: "nanokontrol2" });
+    await nanoChanged;
+    expect(nanoRes).toEqual({ loaded: "nanokontrol2", profile_tier: "beta" });
+    expect(store.getProfile()).toBe("nanokontrol2");
+    expect(store.getSlot("crossfader")?.available).toBe(false);
+    expect(store.getSlot("crossfader")?.label).toBe("Disabled");
+    expect(store.getSlot("crossfader")?.reason).toBe(
+      "Not used. Click to set up."
+    );
+    expect(store.getSlot("master")?.available).toBe(false);
+    expect(store.getSlot("master")?.label).toBe("Disabled");
+    expect(store.getSlot("master")?.reason).toBe(
+      "Not used. Click to set up."
+    );
   });
 });

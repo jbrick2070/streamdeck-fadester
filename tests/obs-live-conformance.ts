@@ -4,12 +4,14 @@ import { spawn, spawnSync, ChildProcess } from "node:child_process";
 import { Socket } from "node:net";
 import { FadesterClient } from "../src/obs/fadester-client.js";
 import { FadesterStore } from "../src/state/fadester-store.js";
+import { renderDialCellSvg } from "../src/gfx/svg-renderer.js";
 import { FaderChangedEvent } from "../src/types/contract.js";
 
-const OBS_ROOT = "C:\\Users\\jeffr\\OBS-Studio-33-Portable";
+const OBS_ROOT = "C:\\Users\\jeffr\\OBS-Studio-33-Portable-StreamDeckFadester";
 const OBS_BIN_DIR = `${OBS_ROOT}\\bin\\64bit`;
 const OBS_EXE = `${OBS_BIN_DIR}\\obs64.exe`;
 const OBS_WS_CONFIG_PATH = `${OBS_ROOT}\\config\\obs-studio\\plugin_config\\obs-websocket\\config.json`;
+const DEFAULT_ISOLATED_PORT = 4457;
 
 interface ObsWsConfig {
   alerts_enabled: boolean;
@@ -18,6 +20,24 @@ interface ObsWsConfig {
   server_enabled: boolean;
   server_password: string;
   server_port: number;
+}
+
+function assertNoObsRunning(): void {
+  const res = spawnSync(
+    "powershell.exe",
+    [
+      "-NoProfile",
+      "-Command",
+      "$p = Get-Process obs64 -ErrorAction SilentlyContinue; if ($p) { $p.Id -join ',' }"
+    ],
+    { encoding: "utf8" }
+  );
+  const pids = (res.stdout ?? "").trim();
+  if (pids.length > 0) {
+    throw new Error(
+      `Aborting: obs64.exe is already running (PID ${pids}). Per single-OBS rule, will not launch or close portable OBS while another instance is active.`
+    );
+  }
 }
 
 function ensureObsWebSocketEnabled(): ObsWsConfig {
@@ -36,8 +56,8 @@ function ensureObsWebSocketEnabled(): ObsWsConfig {
     cfg.server_password = "fadester_live_test_pw";
     modified = true;
   }
-  if (!cfg.server_port) {
-    cfg.server_port = 4455;
+  if (!cfg.server_port || cfg.server_port === 4455) {
+    cfg.server_port = DEFAULT_ISOLATED_PORT;
     modified = true;
   }
   if (modified) {
@@ -75,7 +95,7 @@ async function waitForTcpPort(port: number, timeoutMs = 15000): Promise<void> {
 }
 
 function launchPortableObs(): ChildProcess {
-  const child = spawn(OBS_EXE, ["--portable", "--disable-updater", "--multi"], {
+  const child = spawn(OBS_EXE, ["--portable", "--disable-updater"], {
     cwd: OBS_BIN_DIR,
     stdio: "ignore",
     detached: false
@@ -117,20 +137,24 @@ async function closePortableObs(child: ChildProcess | null): Promise<void> {
 }
 
 async function runLiveConformance(): Promise<void> {
-  console.log("=== Live Portable OBS 33 + Midi Fadester (208d94f) Conformance Test ===");
+  console.log("=== Live Isolated Portable OBS 33 + Midi Fadester 0.3.0 Conformance Test ===");
+  assertNoObsRunning();
+
   const wsCfg = ensureObsWebSocketEnabled();
   console.log(
-    `[CONFIG] obs-websocket port=${wsCfg.server_port}, auth_required=${wsCfg.auth_required}, server_enabled=${wsCfg.server_enabled}`
+    `[CONFIG] obs_root=${OBS_ROOT}, port=${wsCfg.server_port}, auth_required=${wsCfg.auth_required}, server_enabled=${wsCfg.server_enabled} (credentials read from obs-websocket config.json)`
   );
 
   let obsProc: ChildProcess | null = null;
   try {
-    console.log("\n[STEP 1] Launching portable OBS 33...");
+    console.log("\n[STEP 1] Launching isolated portable OBS 33...");
     obsProc = launchPortableObs();
     await waitForTcpPort(wsCfg.server_port, 15000);
     // Allow plugins & vendor API registration to finish
-    await new Promise((r) => setTimeout(r, 600));
-    console.log(`[STEP 1 PASS] Portable OBS 33 listening on 127.0.0.1:${wsCfg.server_port} (PID ${obsProc.pid})`);
+    await new Promise((r) => setTimeout(r, 700));
+    console.log(
+      `[STEP 1 PASS] Isolated portable OBS 33 listening on 127.0.0.1:${wsCfg.server_port} (PID ${obsProc.pid})`
+    );
 
     // -------------------------------------------------------------------------
     // STEP 2: Wrong-password close 4009 (retries stop, status sentence shown)
@@ -181,7 +205,7 @@ async function runLiveConformance(): Promise<void> {
     console.log("[STEP 2 PASS] Close 4009 detected, exact sentence shown, retries stopped at 1.");
 
     // -------------------------------------------------------------------------
-    // STEP 3: Password auth connect & get_state
+    // STEP 3: Password auth connect & get_state (0.3.0 + build + profile fields)
     // -------------------------------------------------------------------------
     console.log("\n[STEP 3] Connecting with valid password & calling get_state...");
     const client = new FadesterClient(
@@ -211,32 +235,62 @@ async function runLiveConformance(): Promise<void> {
     );
 
     const state = await client.getState();
-    const crossfaderSlot = state.slots.find((s) => s.id === "crossfader");
     console.log(`  status.sentence  = "${connectedStatus.sentence}"`);
     console.log(
-      `  get_state        = version=${state.version}, api_version=${state.api_version}, studio_mode=${state.studio_mode}, slots=${state.slots.length}`
+      `  get_state        = version=${state.version}, commit=${state.build?.commit ?? ""}, api_version=${state.api_version}, profile=${state.profile}, profile_tier=${state.profile_tier}, studio_mode=${state.studio_mode}, slots=${state.slots.length}`
     );
-    console.log(
-      `  device           = ${JSON.stringify(state.device)}`
-    );
-    console.log(
-      `  crossfader slot  = ${JSON.stringify(crossfaderSlot)}`
-    );
+    console.log(`  device           = ${JSON.stringify(state.device)}`);
 
     if (!connectedStatus.sentence.startsWith("Connected: OBS 33.")) {
       throw new Error(`Unexpected connected sentence: ${connectedStatus.sentence}`);
     }
-    if (!crossfaderSlot) {
-      throw new Error("crossfader slot missing from get_state");
+    if (state.version !== "0.3.0") {
+      throw new Error(`Expected Midi Fadester 0.3.0, got ${state.version}`);
     }
-    console.log("[STEP 3 PASS] Authenticated and received full get_state from Midi Fadester.");
+    if (!state.profile || !state.profile_tier) {
+      throw new Error(
+        `Expected get_state to include profile and profile_tier, got profile=${state.profile}, profile_tier=${state.profile_tier}`
+      );
+    }
+    console.log("[STEP 3 PASS] Authenticated and received 0.3.0 get_state with build, profile, and profile_tier.");
 
     // -------------------------------------------------------------------------
-    // STEP 4: nudge_fader on crossfader + receive fader_changed event
+    // STEP 4: Ensure apc40mk2 + Studio Mode active (2 scenes) so crossfader T-bar is writable in 0.3.0
     // -------------------------------------------------------------------------
-    console.log("\n[STEP 4] Resetting crossfader to 0.0, then calling nudge_fader({ slot: 'crossfader', delta: 0.15 })...");
+    console.log("\n[STEP 4] Loading apc40mk2 profile & enabling Studio Mode (2 scenes) for T-bar writability...");
+    await client.loadProfile({ name: "apc40mk2" });
+    const sceneList = await client.sendObsRequest("GetSceneList");
+    const scenes = Array.isArray(sceneList.scenes) ? sceneList.scenes : [];
+    if (scenes.length < 2) {
+      await client
+        .sendObsRequest("CreateScene", { sceneName: "Fadester Live Scene B" })
+        .catch(() => {});
+    }
+    await client.sendObsRequest("SetStudioModeEnabled", {
+      studioModeEnabled: true
+    });
+    await new Promise((r) => setTimeout(r, 150));
+
+    const studioState = await client.getState();
+    const crossfaderReady = studioState.slots.find((s) => s.id === "crossfader");
+    console.log(
+      `  studio_mode      = ${studioState.studio_mode}, crossfader.available=${crossfaderReady?.available}, reason="${crossfaderReady?.reason ?? ""}"`
+    );
+    if (!crossfaderReady || !crossfaderReady.available) {
+      throw new Error(
+        `Expected crossfader to be available in Studio Mode, got ${JSON.stringify(crossfaderReady)}`
+      );
+    }
+    console.log("[STEP 4 PASS] apc40mk2 loaded and Studio Mode active; crossfader is available.");
+
+    // -------------------------------------------------------------------------
+    // STEP 5: nudge_fader on crossfader + receive fader_changed event
+    // -------------------------------------------------------------------------
+    console.log(
+      "\n[STEP 5] Resetting crossfader to 0.0, then calling nudge_fader({ slot: 'crossfader', delta: 0.15 })..."
+    );
     await client.setFaderValue({ slot: "crossfader", value: 0.0 });
-    await new Promise((r) => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, 60));
 
     const receivedEvents: FaderChangedEvent[] = [];
     const onFaderChanged = (ev: FaderChangedEvent): void => {
@@ -247,7 +301,7 @@ async function runLiveConformance(): Promise<void> {
     client.on("faderChanged", onFaderChanged);
 
     const nudgeRes = await client.nudgeFader({ slot: "crossfader", delta: 0.15 });
-    await new Promise((r) => setTimeout(r, 80));
+    await new Promise((r) => setTimeout(r, 100));
 
     console.log(`  nudge_fader resp = ${JSON.stringify(nudgeRes)}`);
     console.log(`  fader_changed ev = ${JSON.stringify(receivedEvents[0])}`);
@@ -258,12 +312,12 @@ async function runLiveConformance(): Promise<void> {
     if (receivedEvents.length === 0) {
       throw new Error("Expected at least one fader_changed event after nudge_fader");
     }
-    console.log("[STEP 4 PASS] nudge_fader on crossfader succeeded and emitted fader_changed event.");
+    console.log("[STEP 5 PASS] nudge_fader on crossfader succeeded and emitted fader_changed event.");
 
     // -------------------------------------------------------------------------
-    // STEP 5: auto_fade on crossfader + receive auto_fade fader_changed events
+    // STEP 6: auto_fade on crossfader + receive auto_fade fader_changed events
     // -------------------------------------------------------------------------
-    console.log("\n[STEP 5] Calling auto_fade({ slot: 'crossfader', to: 0.85, ms: 300 })...");
+    console.log("\n[STEP 6] Calling auto_fade({ slot: 'crossfader', to: 0.85, ms: 300 })...");
     receivedEvents.length = 0;
     const autoFadeRes = await client.autoFade({
       slot: "crossfader",
@@ -293,15 +347,90 @@ async function runLiveConformance(): Promise<void> {
         `Expected crossfader value ~0.85 after auto_fade, got ${postFadeCrossfader?.value}`
       );
     }
-    // Restore crossfader to 0.0
     await client.setFaderValue({ slot: "crossfader", value: 0.0 });
     client.off("faderChanged", onFaderChanged);
-    console.log("[STEP 5 PASS] auto_fade completed to 0.85 and emitted fader_changed (origin='auto_fade').");
+    console.log(
+      "[STEP 6 PASS] auto_fade completed to 0.85 and emitted fader_changed (origin='auto_fade')."
+    );
 
     // -------------------------------------------------------------------------
-    // STEP 6: Reconnect automatically after OBS restarts (D-2)
+    // STEP 7: Live 0.3.0 profile switch (nanokontrol2 -> no crossfader, no master)
     // -------------------------------------------------------------------------
-    console.log("\n[STEP 6] Closing portable OBS 33 to test disconnect & automatic reconnect on restart...");
+    console.log(
+      "\n[STEP 7] Switching live to 'nanokontrol2' (no crossfader, no master) and checking state_changed & SVG..."
+    );
+    const stateChangedPromise = new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new Error("Timed out waiting for store changed after load_profile")),
+        4000
+      );
+      const onStoreChanged = (): void => {
+        if (store.getProfile() === "nanokontrol2") {
+          clearTimeout(timer);
+          store.off("changed", onStoreChanged);
+          resolve();
+        }
+      };
+      store.on("changed", onStoreChanged);
+    });
+
+    const loadNanoRes = await client.loadProfile({ name: "nanokontrol2" });
+    await stateChangedPromise;
+
+    const nanoCrossfader = store.getSlot("crossfader");
+    const nanoMaster = store.getSlot("master");
+    const nanoCrossfaderSvg = renderDialCellSvg({
+      status: store.getStatus(),
+      slot: nanoCrossfader,
+      slotId: "crossfader"
+    });
+
+    console.log(`  load_profile res = ${JSON.stringify(loadNanoRes)}`);
+    console.log(
+      `  store profile    = ${store.getProfile()} (${store.getProfileTier()}), display="${store.getProfileDisplayName()}"`
+    );
+    console.log(
+      `  crossfader slot  = target_mode=${nanoCrossfader?.target_mode}, available=${nanoCrossfader?.available}, reason="${nanoCrossfader?.reason}"`
+    );
+    console.log(
+      `  master slot      = target_mode=${nanoMaster?.target_mode}, available=${nanoMaster?.available}, reason="${nanoMaster?.reason}"`
+    );
+
+    if (
+      !nanoCrossfader ||
+      nanoCrossfader.available !== false ||
+      nanoCrossfader.reason !== "Not used. Click to set up."
+    ) {
+      throw new Error(
+        `Expected nanokontrol2 crossfader disabled with verbatim reason, got ${JSON.stringify(nanoCrossfader)}`
+      );
+    }
+    if (
+      !nanoMaster ||
+      nanoMaster.available !== false ||
+      nanoMaster.reason !== "Not used. Click to set up."
+    ) {
+      throw new Error(
+        `Expected nanokontrol2 master disabled with verbatim reason, got ${JSON.stringify(nanoMaster)}`
+      );
+    }
+    if (!nanoCrossfaderSvg.includes("Not used. Click to set up.")) {
+      throw new Error("Expected crossfader dial SVG to render verbatim 'Not used. Click to set up.'");
+    }
+
+    // Restore apc40mk2
+    await client.loadProfile({ name: "apc40mk2" });
+    await new Promise((r) => setTimeout(r, 150));
+    console.log(
+      "[STEP 7 PASS] Live state_changed updated store & dial SVG for disabled crossfader/master without restart, then restored apc40mk2."
+    );
+
+    // -------------------------------------------------------------------------
+    // STEP 8: Reconnect automatically after OBS restarts (D-2)
+    // -------------------------------------------------------------------------
+    console.log(
+      "\n[STEP 8] Closing isolated portable OBS 33 to test disconnect & automatic reconnect on restart..."
+    );
     const disconnectedPromise = new Promise<ReturnType<FadesterClient["getStatus"]>>(
       (resolve, reject) => {
         const timer = setTimeout(
@@ -324,6 +453,8 @@ async function runLiveConformance(): Promise<void> {
     const unreachableStatus = await disconnectedPromise;
     console.log(`  on OBS exit      = "${unreachableStatus.sentence}"`);
 
+    assertNoObsRunning();
+
     const reconnectedPromise = new Promise<ReturnType<FadesterClient["getStatus"]>>(
       (resolve, reject) => {
         const timer = setTimeout(
@@ -341,15 +472,17 @@ async function runLiveConformance(): Promise<void> {
       }
     );
 
-    console.log("  Relaunching portable OBS 33...");
+    console.log("  Relaunching isolated portable OBS 33...");
     obsProc = launchPortableObs();
     const reconnectedStatus = await reconnectedPromise;
     console.log(`  on OBS restart   = "${reconnectedStatus.sentence}"`);
     console.log(`  store slot count = ${store.getSlots().length}`);
-    console.log("[STEP 6 PASS] Client automatically reconnected and re-synced state after OBS restart.");
+    console.log(
+      "[STEP 8 PASS] Client automatically reconnected and re-synced state after OBS restart."
+    );
 
     client.stop();
-    console.log("\n=== ALL LIVE OBS 33 + MIDI FADESTER CONFORMANCE CHECKS PASSED ===");
+    console.log("\n=== ALL LIVE OBS 33 + MIDI FADESTER 0.3.0 CONFORMANCE CHECKS PASSED ===");
   } finally {
     await closePortableObs(obsProc);
   }

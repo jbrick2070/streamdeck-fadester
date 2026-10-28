@@ -2,7 +2,28 @@
 
 export const FADESTER_VENDOR_NAME = "midi-fadester" as const;
 export const FADESTER_API_VERSION = 1 as const;
-export const MIDI_FADESTER_RELEASE_URL = "https://github.com/jbrick2070/midi-fadester/releases" as const;
+export const MIDI_FADESTER_RELEASE_URL =
+  "https://github.com/jbrick2070/midi-fadester/releases" as const;
+
+export const CONTROLLER_PROFILES = [
+  "apc40mk2",
+  "apcminimk2",
+  "midimix",
+  "nanokontrol2",
+  "launchcontrolxl",
+  "generic"
+] as const;
+
+export type ControllerProfileSlug =
+  | (typeof CONTROLLER_PROFILES)[number]
+  | (string & {});
+
+export type ProfileTier = "verified" | "beta" | "custom" | (string & {});
+
+export interface FadesterBuildInfo {
+  commit: string;
+  built_at: string;
+}
 
 export type SlotId =
   | "crossfader"
@@ -48,12 +69,16 @@ export interface FadesterSlot {
   name: string;
   kind: SlotKind;
   target_mode: TargetMode;
+  scene?: string;
   source_a: string;
   source_b: string;
   curve: CurveType;
   afv: boolean;
   value: number;
+  cal_min?: number;
+  cal_max?: number;
   takeover_pending: TakeoverPending;
+  parked?: boolean;
   label: string;
   available: boolean;
   reason: string;
@@ -61,8 +86,12 @@ export interface FadesterSlot {
 
 export interface GetStateResponse {
   version: string;
+  build?: FadesterBuildInfo;
   api_version?: number;
   studio_mode: boolean;
+  profile?: ControllerProfileSlug;
+  profile_display_name?: string;
+  profile_tier?: ProfileTier;
   device: FadesterDeviceState;
   slots: FadesterSlot[];
 }
@@ -101,20 +130,24 @@ export interface AutoFadeResponse {
 export interface SetSlotRequest {
   slot: string;
   target_mode?: TargetMode;
+  scene?: string;
   source_a?: string;
   source_b?: string;
   curve?: CurveType;
   afv?: boolean;
+  cal_min?: number;
+  cal_max?: number;
 }
 
 export type SetSlotResponse = FadesterSlot;
 
 export interface LoadProfileRequest {
-  name: string;
+  name: ControllerProfileSlug;
 }
 
 export interface LoadProfileResponse {
   loaded: string | boolean;
+  profile_tier?: ProfileTier;
 }
 
 export interface FaderChangedEvent {
@@ -143,5 +176,8 @@ export interface ConnectionStatusInfo {
   cellReason: string;
   obsVersion?: string;
   fadesterVersion?: string;
+  buildCommit?: string;
+  profile?: ControllerProfileSlug;
+  profileTier?: ProfileTier;
   linkUrl?: string;
 }

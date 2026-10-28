@@ -14,11 +14,66 @@ export interface FakeObsServerOptions {
   password?: string;
   obsVersion?: string;
   fadesterVersion?: string;
+  buildCommit?: string;
   apiVersion?: number;
+  profile?: string;
   missingPlugin?: boolean;
   studioMode?: boolean;
   screenshotDelayMs?: number;
 }
+
+interface FakeProfileMeta {
+  slug: string;
+  displayName: string;
+  tier: "verified" | "beta" | "custom";
+  hasCrossfader: boolean;
+  hasMaster: boolean;
+}
+
+const FAKE_PROFILES: Record<string, FakeProfileMeta> = {
+  apc40mk2: {
+    slug: "apc40mk2",
+    displayName: "Akai APC40 mkII",
+    tier: "verified",
+    hasCrossfader: true,
+    hasMaster: true
+  },
+  apcminimk2: {
+    slug: "apcminimk2",
+    displayName: "Akai APC mini mk2",
+    tier: "beta",
+    hasCrossfader: false,
+    hasMaster: true
+  },
+  midimix: {
+    slug: "midimix",
+    displayName: "Akai MIDImix",
+    tier: "beta",
+    hasCrossfader: false,
+    hasMaster: true
+  },
+  nanokontrol2: {
+    slug: "nanokontrol2",
+    displayName: "Korg nanoKONTROL2",
+    tier: "beta",
+    hasCrossfader: false,
+    hasMaster: false
+  },
+  launchcontrolxl: {
+    slug: "launchcontrolxl",
+    displayName: "Novation Launch Control XL",
+    tier: "beta",
+    hasCrossfader: false,
+    hasMaster: false
+  },
+  generic: {
+    slug: "generic",
+    displayName: "Generic MIDI (Custom)",
+    tier: "custom",
+    hasCrossfader: true,
+    hasMaster: true
+  }
+};
 
 export function createDefaultSlots(studioMode = true): FadesterSlot[] {
   return [
@@ -109,7 +164,9 @@ export class FakeObsServer {
   public password: string;
   public obsVersion: string;
   public fadesterVersion: string;
+  public buildCommit: string;
   public apiVersion: number;
+  public profile: string;
   public missingPlugin: boolean;
   public studioMode: boolean;
   public screenshotDelayMs: number;
@@ -135,12 +192,15 @@ export class FakeObsServer {
   public constructor(opts?: FakeObsServerOptions) {
     this.password = opts?.password ?? "";
     this.obsVersion = opts?.obsVersion ?? "33.0.0";
-    this.fadesterVersion = opts?.fadesterVersion ?? "0.1.0";
+    this.fadesterVersion = opts?.fadesterVersion ?? "0.3.0";
+    this.buildCommit = opts?.buildCommit ?? "";
     this.apiVersion = opts?.apiVersion ?? 1;
+    this.profile = opts?.profile ?? "apc40mk2";
     this.missingPlugin = opts?.missingPlugin ?? false;
     this.studioMode = opts?.studioMode ?? true;
     this.screenshotDelayMs = opts?.screenshotDelayMs ?? 5;
     this.slots = createDefaultSlots(this.studioMode);
+    this.applyProfileTopology(this.profile);
   }
 
   public async start(port = 0): Promise<number> {
@@ -198,11 +258,74 @@ export class FakeObsServer {
     });
   }
 
+  public applyProfileTopology(profileSlug: string): void {
+    const meta = FAKE_PROFILES[profileSlug] ?? FAKE_PROFILES.apc40mk2;
+    this.profile = meta.slug;
+
+    const cross = this.slots.find((s) => s.id === "crossfader");
+    if (cross) {
+      if (!meta.hasCrossfader) {
+        cross.target_mode = "unassigned";
+        cross.label = "Disabled";
+        cross.available = false;
+        cross.reason = "Not used. Click to set up.";
+        cross.value = 0.0;
+      } else if (meta.slug === "apc40mk2") {
+        cross.target_mode = "tbar";
+        cross.label = "Studio Mode T-bar";
+        cross.available = this.studioMode;
+        cross.reason = this.studioMode ? "" : "Studio Mode is off";
+      } else {
+        cross.target_mode = "unassigned";
+        cross.label = "Unassigned";
+        cross.available = false;
+        cross.reason = "Not used. Click to set up.";
+      }
+    }
+
+    const master = this.slots.find((s) => s.id === "master");
+    if (master) {
+      if (!meta.hasMaster) {
+        master.target_mode = "unassigned";
+        master.source_a = "";
+        master.label = "Disabled";
+        master.available = false;
+        master.reason = "Not used. Click to set up.";
+        master.value = 0.0;
+      } else if (meta.slug === "generic") {
+        master.target_mode = "unassigned";
+        master.source_a = "";
+        master.label = "Unassigned";
+        master.available = false;
+        master.reason = "Not used. Click to set up.";
+      } else if (master.target_mode === "unassigned") {
+        master.target_mode = "audio_volume";
+        master.source_a = "Desktop Audio";
+        master.label = "Desktop Audio";
+        master.available = true;
+        master.reason = "";
+        master.value = 1.0;
+      }
+    }
+  }
+
   public getStatePayload(): GetStateResponse {
+    const meta = FAKE_PROFILES[this.profile] ?? FAKE_PROFILES.apc40mk2;
     return {
       version: this.fadesterVersion,
+      ...(this.buildCommit
+        ? {
+            build: {
+              commit: this.buildCommit,
+              built_at: "2026-10-28T07:00:00Z"
+            }
+          }
+        : {}),
       api_version: this.apiVersion,
       studio_mode: this.studioMode,
+      profile: meta.slug,
+      profile_display_name: meta.displayName,
+      profile_tier: meta.tier,
       device: {
         name: "APC40 mkII",
         connected: true,
@@ -362,12 +485,18 @@ export class FakeObsServer {
     }
 
     if (vReqType === "load_profile") {
-      const name = String(vReqData.name ?? "");
-      if (name !== "apc40mk2") {
-        const msg = `Profile '${name}' does not exist. Valid profiles: apc40mk2.`;
+      const name = String(vReqData.name ?? "").toLowerCase();
+      const meta = FAKE_PROFILES[name];
+      if (!meta) {
+        const msg = `Unknown profile '${name}'. Valid profiles: apc40mk2, apcminimk2, midimix, nanokontrol2, launchcontrolxl, generic.`;
         return { error: msg, comment: msg };
       }
-      return { loaded: true };
+      this.applyProfileTopology(meta.slug);
+      this.emitVendorEvent(
+        "state_changed",
+        this.getStatePayload() as unknown as Record<string, unknown>
+      );
+      return { loaded: meta.slug, profile_tier: meta.tier };
     }
 
     const slotId = String(vReqData.slot ?? "");

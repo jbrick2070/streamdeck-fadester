@@ -40,8 +40,15 @@ export interface ObsVendorClientOptions {
 
 export interface ObsVendorStateMeta {
   version: string;
+  build?: {
+    commit?: string;
+    built_at?: string;
+  };
   api_version?: number;
   studio_mode: boolean;
+  profile?: string;
+  profile_display_name?: string;
+  profile_tier?: string;
 }
 
 interface PendingRequest {
@@ -471,12 +478,24 @@ export class ObsVendorClient<
 
       this.reconnectAttempt = 0;
       this.haltedReason = "none";
+      const buildCommit =
+        typeof state.build?.commit === "string" && state.build.commit.trim().length > 0
+          ? state.build.commit.trim()
+          : undefined;
+      const versionLabel = buildCommit
+        ? `${state.version} (${buildCommit})`
+        : state.version;
       this.setStatus({
         kind: "connected",
-        sentence: `Connected: OBS ${obsVersion}, ${this.pluginDisplayName} ${state.version}`,
+        sentence: `Connected: OBS ${obsVersion}, ${this.pluginDisplayName} ${versionLabel}`,
         cellReason: "",
         obsVersion,
-        fadesterVersion: state.version
+        fadesterVersion: state.version,
+        ...(buildCommit ? { buildCommit } : {}),
+        ...(typeof state.profile === "string" ? { profile: state.profile } : {}),
+        ...(typeof state.profile_tier === "string"
+          ? { profileTier: state.profile_tier }
+          : {})
       });
       this.emit("stateChanged", state);
       await this.refreshSceneNames(state.studio_mode);
@@ -575,7 +594,7 @@ export class ObsVendorClient<
     entry.resolve(responseData);
   }
 
-  protected sendObsRequest(
+  public sendObsRequest(
     requestType: string,
     requestData?: Record<string, unknown>
   ): Promise<Record<string, unknown>> {

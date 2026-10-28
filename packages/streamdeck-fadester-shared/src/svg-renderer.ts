@@ -93,6 +93,14 @@ function renderHoldOverlay(): string {
   ].join("");
 }
 
+function renderParkedIndicator(parked?: boolean): string {
+  if (!parked) {
+    return "";
+  }
+  const P = PLAYLISTER_PALETTE;
+  return `<circle data-parked="true" cx="190" cy="12" r="4" fill="${P.orangeAccent}" stroke="${P.whiteGlyph}" stroke-width="3"/>`;
+}
+
 export function renderDialCellSvg<TSlot extends SurfaceSlotBase>(
   input: DialCellRenderInput<TSlot>
 ): string {
@@ -118,7 +126,21 @@ export function renderDialCellSvg<TSlot extends SurfaceSlotBase>(
     );
   }
 
-  // 3. Unassigned slot -> "Unassigned, set in OBS" (GRAPHICS-NOTES.md Rule 2)
+  // 3. Unavailable or profile-disabled slot -> verbatim slot.reason from API-CONTRACT.md
+  if (!slot.available) {
+    const unavailableReason =
+      slot.reason ||
+      (slot.target_mode === "unassigned"
+        ? "Unassigned, set in OBS"
+        : "Unavailable in OBS");
+    return renderDialStatusSvg(
+      slot.name || slot.id,
+      unavailableReason,
+      P.orangeAccent
+    );
+  }
+
+  // 4. Unassigned slot (available is true) -> "Unassigned, set in OBS"
   if (slot.target_mode === "unassigned") {
     return renderDialStatusSvg(
       slot.name || slot.id,
@@ -127,19 +149,11 @@ export function renderDialCellSvg<TSlot extends SurfaceSlotBase>(
     );
   }
 
-  // 4. Unavailable slot -> verbatim slot.reason from API-CONTRACT.md
-  if (!slot.available) {
-    return renderDialStatusSvg(
-      slot.name || slot.id,
-      slot.reason || "Unavailable in OBS",
-      P.orangeAccent
-    );
-  }
-
   const clamped = Math.max(0, Math.min(1, slot.value));
   const pct = Math.round(clamped * 100);
   const pctText = `${pct}%`;
   const holdMarkup = input.holdingForLongPress ? renderHoldOverlay() : "";
+  const parkedMarkup = renderParkedIndicator(slot.parked);
 
   // 5. Studio Mode T-bar cell (GRAPHICS-NOTES.md #3)
   if (slot.target_mode === "tbar") {
@@ -185,6 +199,7 @@ export function renderDialCellSvg<TSlot extends SurfaceSlotBase>(
         : "",
       `<rect x="${thumbX}" y="52" width="10" height="36" rx="4" fill="${P.orangeAccent}" stroke="${P.whiteGlyph}" stroke-width="3"/>`,
       takeoverSvg,
+      parkedMarkup,
       holdMarkup,
       `</svg>`
     ].join("");
@@ -237,6 +252,7 @@ export function renderDialCellSvg<TSlot extends SurfaceSlotBase>(
       `<rect data-knob="true" x="${knobX - 6}" y="62" width="12" height="30" rx="4" fill="${P.orangeAccent}" stroke="${P.whiteGlyph}" stroke-width="3"/>`,
       `<text x="100" y="52" text-anchor="middle" fill="${P.whiteGlyph}" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="800">${pctText}</text>`,
       takeoverSvg,
+      parkedMarkup,
       holdMarkup,
       `</svg>`
     ].join("");
@@ -278,6 +294,7 @@ export function renderDialCellSvg<TSlot extends SurfaceSlotBase>(
       : "",
     `<rect x="${capX}" y="52" width="10" height="36" rx="4" fill="${P.orangeAccent}" stroke="${P.whiteGlyph}" stroke-width="3"/>`,
     takeoverSvg,
+    parkedMarkup,
     holdMarkup,
     `</svg>`
   ].join("");
@@ -319,11 +336,16 @@ export function renderAutoFadeKeySvg<TSlot extends SurfaceSlotBase>(
   if (!slot) {
     return renderKeyStatusSvg(fallbackTitle, "Slot missing");
   }
+  if (!slot.available) {
+    const unavailableReason =
+      slot.reason ||
+      (slot.target_mode === "unassigned"
+        ? "Unassigned, set in OBS"
+        : "Unavailable");
+    return renderKeyStatusSvg(slot.name || slot.id, unavailableReason);
+  }
   if (slot.target_mode === "unassigned") {
     return renderKeyStatusSvg(slot.name || slot.id, "Unassigned, set in OBS");
-  }
-  if (!slot.available) {
-    return renderKeyStatusSvg(slot.name || slot.id, slot.reason || "Unavailable");
   }
 
   const clamped = Math.max(0, Math.min(1, slot.value));

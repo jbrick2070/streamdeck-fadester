@@ -81,8 +81,22 @@ const MUTATIONS: MutationCheck[] = [
       ROOT,
       "packages/streamdeck-fadester-shared/src/svg-renderer.ts"
     ),
-    target: 'slot.reason || "Unavailable in OBS"',
-    mutated: '"Generic Error"',
+    target:
+      'const unavailableReason =\n      slot.reason ||\n      (slot.target_mode === "unassigned"\n        ? "Unassigned, set in OBS"\n        : "Unavailable in OBS");',
+    mutated: 'const unavailableReason = "Generic Error";',
+    testFile: "tests/svg-renderer.test.ts"
+  },
+  {
+    id: "M-1.3d",
+    step: "Step 1.3 (0.3.0 Profile-Disabled Slot Reason Priority)",
+    description:
+      "Skip !slot.available branch when target_mode is unassigned in svg-renderer.ts so disabled slots swallow slot.reason, and verify svg-renderer.test.ts fails",
+    filePath: resolve(
+      ROOT,
+      "packages/streamdeck-fadester-shared/src/svg-renderer.ts"
+    ),
+    target: "if (!slot.available) {",
+    mutated: 'if (!slot.available && slot.target_mode !== "unassigned") {',
     testFile: "tests/svg-renderer.test.ts"
   },
   {
@@ -177,7 +191,7 @@ function main(): void {
     console.error(finalRun.output);
     throw new Error("Post-mutation full test suite failed!");
   }
-  console.log("All 8 mutations killed and full test suite restored green.");
+  console.log(`All ${MUTATIONS.length} mutations killed and full test suite restored green.`);
 }
 
 main();

@@ -33,6 +33,9 @@ function broadcastToPropertyInspector(): void {
       cellReason: status.cellReason,
       linkUrl: status.linkUrl ?? ""
     },
+    profile: store.getProfile(),
+    profileDisplayName: store.getProfileDisplayName(),
+    profileTier: store.getProfileTier(),
     globalSettings: client.getSettings(),
     slots,
     lastErrorComment: store.getLastErrorComment()

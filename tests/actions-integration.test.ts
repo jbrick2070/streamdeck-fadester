@@ -132,4 +132,75 @@ describe("Step 1.4 — End-to-End Fader Dial & Auto-fade Key Integration", () =>
     dialCtrl.disappear();
     keyCtrl.disappear();
   });
+
+  it("updates connected dial (crossfader) and key (master) live on state_changed when switching to nanokontrol2 without restart", async () => {
+    server = new FakeObsServer({
+      fadesterVersion: "0.3.0",
+      buildCommit: "642d6b7"
+    });
+    const port = await server.start();
+
+    client = new FadesterClient({ host: "127.0.0.1", port, password: "" });
+    const store = new FadesterStore(client);
+    await new Promise<void>((resolve) => {
+      client!.once("statusChanged", () => resolve());
+      client!.start();
+    });
+    await new Promise((r) => setTimeout(r, 30));
+
+    const dialCanvasHistory: string[] = [];
+    const dialCtrl = new FaderDialInstanceController(
+      store,
+      {
+        setFeedback: async ({ canvas }) => {
+          dialCanvasHistory.push(decodeSvgUri(canvas));
+        },
+        showAlert: async () => {}
+      },
+      { slot: "crossfader" },
+      16
+    );
+    dialCtrl.appear();
+
+    const keyImageHistory: string[] = [];
+    const keyCtrl = new AutoFadeKeyInstanceController(
+      store,
+      {
+        setImage: async (img) => {
+          keyImageHistory.push(decodeSvgUri(img));
+        },
+        showAlert: async () => {}
+      },
+      { slot: "master", to: 0, durationMs: 1000 },
+      16
+    );
+    keyCtrl.appear();
+
+    // Initially on apc40mk2: crossfader shows T-bar 0%, master shows 100%
+    expect(dialCanvasHistory.at(-1)).toContain('data-cell="tbar"');
+    expect(keyImageHistory.at(-1)).toContain('data-key="auto-fade"');
+    expect(keyImageHistory.at(-1)).toContain(">100%<");
+
+    // Load nanokontrol2 (turns off crossfader AND master) while connected
+    await client.loadProfile({ name: "nanokontrol2" });
+    await new Promise((r) => setTimeout(r, 40));
+
+    expect(store.getProfile()).toBe("nanokontrol2");
+    expect(store.getProfileTier()).toBe("beta");
+    expect(dialCanvasHistory.at(-1)).toContain("Not used. Click to set up.");
+    expect(dialCanvasHistory.at(-1)).not.toContain('data-cell="tbar"');
+    expect(keyImageHistory.at(-1)).toContain('data-key="status"');
+    expect(keyImageHistory.at(-1)).toContain("Not used. Click to set up.");
+    expect(keyImageHistory.at(-1)).not.toContain(">100%<");
+
+    // Switch back to apc40mk2 -> both recover live without restart
+    await client.loadProfile({ name: "apc40mk2" });
+    await new Promise((r) => setTimeout(r, 40));
+    expect(dialCanvasHistory.at(-1)).toContain('data-cell="tbar"');
+    expect(keyImageHistory.at(-1)).toContain('data-key="auto-fade"');
+    expect(keyImageHistory.at(-1)).toContain(">100%<");
+
+    dialCtrl.disappear();
+    keyCtrl.disappear();
+  });
 });

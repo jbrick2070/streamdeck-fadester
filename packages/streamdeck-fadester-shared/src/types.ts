@@ -7,12 +7,22 @@ export type ConnectionStateKind =
   | "missing_plugin"
   | "version_mismatch";
 
+export type SurfaceProfileTier = "verified" | "beta" | "custom" | (string & {});
+
+export interface SurfaceBuildInfo {
+  commit: string;
+  built_at: string;
+}
+
 export interface ConnectionStatusInfo {
   kind: ConnectionStateKind;
   sentence: string;
   cellReason: string;
   obsVersion?: string;
   fadesterVersion?: string;
+  buildCommit?: string;
+  profile?: string;
+  profileTier?: SurfaceProfileTier;
   linkUrl?: string;
 }
 
@@ -41,10 +51,14 @@ export interface SurfaceSlotBase {
   id: string;
   name: string;
   target_mode: SurfaceTargetMode;
+  scene?: string;
   source_a: string;
   source_b: string;
   value: number;
+  cal_min?: number;
+  cal_max?: number;
   takeover_pending: SurfaceTakeoverPending;
+  parked?: boolean;
   label: string;
   available: boolean;
   reason: string;
@@ -61,8 +75,12 @@ export interface SurfaceStatePayload<
   TDevice extends SurfaceDeviceState = SurfaceDeviceState
 > {
   version: string;
+  build?: SurfaceBuildInfo;
   api_version?: number;
   studio_mode: boolean;
+  profile?: string;
+  profile_display_name?: string;
+  profile_tier?: SurfaceProfileTier;
   device: TDevice;
   slots: TSlot[];
 }

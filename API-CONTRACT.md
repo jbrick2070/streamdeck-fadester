@@ -11,12 +11,12 @@ Values are floats 0.0 to 1.0. Slot ids are stable strings, never display names.
 
 | requestType | requestData | responseData | Notes |
 |---|---|---|---|
-| `get_state` | none | `{ version, studio_mode, device: { name, connected, error }, slots: [slot...] }` | The whole picture in one call. Surfaces call it on connect and after any error. |
+| `get_state` | none | `{ version, build: { commit, built_at }, api_version, studio_mode, profile, profile_display_name, profile_tier, device: { name, connected, error }, slots: [slot...] }` | The whole picture in one call. Surfaces call it on connect and after any error. `build` (added 2026-10-27) carries the short git commit and the build time, so a surface's "Connected" sentence can name the exact build. `profile` (added in 0.3.0) is the active controller profile slug (`apc40mk2`, `apcminimk2`, `midimix`, `nanokontrol2`, `launchcontrolxl`, `generic`), `profile_display_name` is the human-readable desk name, and `profile_tier` is `verified`, `beta`, or `custom`. |
 | `set_fader_value` | `{ slot, value, release? }` | `{ slot, value }` | Moves a slot like a fader would. Goes through the same smoothing and curve as MIDI. `release: true` on a T-bar slot finishes the transition (the same as letting go of the T-bar). Soft takeover does not apply to this call. |
 | `nudge_fader` | `{ slot, delta }` | `{ slot, value }` | For endless knobs and dials: adds `delta` (may be negative), clamps to 0..1. |
 | `auto_fade` | `{ slot, to, ms }` | `{ slot }` | Timed fade from the current value to `to` over `ms` (50..20000). A new call on the same slot replaces the running one. |
-| `set_slot` | `{ slot, target_mode?, source_a?, source_b?, curve?, afv? }` | the updated slot | Same fields as the OBS dialog. Unknown source names are an error, not a no-op. |
-| `load_profile` | `{ name }` | `{ loaded }` | `name`: `apc40mk2` for now. |
+| `set_slot` | `{ slot, target_mode?, scene?, source_a?, source_b?, curve?, afv?, cal_min?, cal_max? }` | the updated slot | Same fields as the OBS dialog. Unknown scene or source names are an error, not a no-op. |
+| `load_profile` | `{ name }` | `{ loaded, profile_tier }` | `name`: `apc40mk2` (`verified`), `apcminimk2`, `midimix`, `nanokontrol2`, `launchcontrolxl` (`beta`), or `generic` (`custom`). Profiles for desks without a physical crossfader (`apcminimk2`, `midimix`, `nanokontrol2`, `launchcontrolxl`) or master (`nanokontrol2`, `launchcontrolxl`) turn those slots off (`target_mode: "unassigned"`, `label: "Disabled"`, `available: false`, `reason: "Not used. Click to set up."`) and emit `state_changed`. |
 
 Slot object:
 
@@ -26,16 +26,24 @@ Slot object:
   "name": "Crossfader",
   "kind": "crossfader | fader | master",
   "target_mode": "unassigned | tbar | crossfade_ab | layer_opacity | audio_volume",
+  "scene": "",
   "source_a": "Cam 1", "source_b": "Loop 3",
   "curve": "dip_free | full_center | equal_power | linear | cut",
   "afv": false,
   "value": 0.42,
+  "cal_min": 0, "cal_max": 127,
   "takeover_pending": "none | up | down",
+  "parked": false,
   "label": "Cam 1 -> Loop 3",
   "available": true,
   "reason": ""
 }
 ```
+
+`parked: true` (added 2026-10-27) means the slot just completed a throw or reached a rail and ignores
+input until the control leaves that rail by the hysteresis amount; surfaces show it (a dot or "at end")
+and do not treat the frozen value as a fault. `nudge_fader` and `set_fader_value` on a parked slot are
+accepted and unpark it, since they are deliberate.
 
 `available: false` with a `reason` sentence ("Studio Mode is off", "Source 'Loop 3' not found") is how a
 surface learns why a dial does nothing. Surfaces show the reason as text; they never guess.

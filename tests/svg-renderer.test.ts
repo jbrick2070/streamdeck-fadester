@@ -212,4 +212,62 @@ describe("Step 1.3 — Playlister Runtime SVG Renderer (Dial Cells & Keys)", () 
     expect(keySvg).toContain("Studio Mode is off");
     assertMinStrokeWidth(keySvg, 3);
   });
+
+  it("renders Midi Fadester 0.3.0 verbatim reason for profile-disabled slots (target_mode=unassigned, available=false) and parked indicator", () => {
+    const disabledByProfileSlot: FadesterSlot = {
+      id: "crossfader",
+      name: "Crossfader (A/B)",
+      kind: "crossfader",
+      target_mode: "unassigned",
+      source_a: "",
+      source_b: "",
+      curve: "dip_free",
+      afv: false,
+      value: 0.72,
+      takeover_pending: "none",
+      parked: false,
+      label: "Disabled",
+      available: false,
+      reason: "Not used. Click to set up."
+    };
+
+    const dialSvg = renderDialCellSvg({
+      status: CONNECTED_STATUS,
+      slot: disabledByProfileSlot,
+      slotId: "crossfader"
+    });
+    expect(dialSvg).toContain("Not used. Click to set up.");
+    expect(dialSvg).toContain(PLAYLISTER_PALETTE.orangeAccent);
+    expect(dialSvg).not.toContain("Unassigned, set in OBS");
+    expect(dialSvg).not.toContain("72%");
+    assertMinStrokeWidth(dialSvg, 3);
+
+    const keySvg = renderAutoFadeKeySvg({
+      status: CONNECTED_STATUS,
+      slot: disabledByProfileSlot,
+      slotId: "crossfader",
+      to: 1,
+      durationMs: 1000
+    });
+    expect(keySvg).toContain("Not used. Click to set up.");
+    expect(keySvg).not.toContain("Unassigned, set in OBS");
+    expect(keySvg).not.toContain("72%");
+    assertMinStrokeWidth(keySvg, 3);
+
+    const parkedSlot: FadesterSlot = {
+      ...disabledByProfileSlot,
+      target_mode: "tbar",
+      available: true,
+      reason: "",
+      value: 1.0,
+      parked: true
+    };
+    const parkedSvg = renderDialCellSvg({
+      status: CONNECTED_STATUS,
+      slot: parkedSlot,
+      slotId: "crossfader"
+    });
+    expect(parkedSvg).toContain('data-parked="true"');
+    assertMinStrokeWidth(parkedSvg, 3);
+  });
 });

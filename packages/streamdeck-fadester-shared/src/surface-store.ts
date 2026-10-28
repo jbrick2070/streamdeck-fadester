@@ -2,7 +2,9 @@
 import { EventEmitter } from "node:events";
 import {
   ConnectionStatusInfo,
+  SurfaceBuildInfo,
   SurfaceDeviceState,
+  SurfaceProfileTier,
   SurfaceSlotBase,
   SurfaceSlotValueChangeEvent,
   SurfaceStatePayload
@@ -21,6 +23,10 @@ export class SurfaceStore<
   protected readonly client: TClient;
   private status: ConnectionStatusInfo = makeUnreachableStatus();
   private studioMode = false;
+  private build: SurfaceBuildInfo | undefined;
+  private profile = "";
+  private profileDisplayName = "";
+  private profileTier: SurfaceProfileTier = "";
   private device: TDevice;
   private slotList: TSlot[] = [];
   protected readonly slotMap = new Map<string, TSlot>();
@@ -49,6 +55,14 @@ export class SurfaceStore<
       "stateChanged",
       (state: SurfaceStatePayload<TSlot, TDevice>) => {
         this.studioMode = Boolean(state.studio_mode);
+        this.build = state.build ? { ...state.build } : undefined;
+        this.profile = typeof state.profile === "string" ? state.profile : "";
+        this.profileDisplayName =
+          typeof state.profile_display_name === "string"
+            ? state.profile_display_name
+            : "";
+        this.profileTier =
+          typeof state.profile_tier === "string" ? state.profile_tier : "";
         this.device =
           state.device ??
           ({
@@ -104,6 +118,22 @@ export class SurfaceStore<
 
   public isStudioMode(): boolean {
     return this.studioMode;
+  }
+
+  public getBuild(): SurfaceBuildInfo | undefined {
+    return this.build;
+  }
+
+  public getProfile(): string {
+    return this.profile;
+  }
+
+  public getProfileDisplayName(): string {
+    return this.profileDisplayName;
+  }
+
+  public getProfileTier(): SurfaceProfileTier {
+    return this.profileTier;
   }
 
   public getDevice(): TDevice {

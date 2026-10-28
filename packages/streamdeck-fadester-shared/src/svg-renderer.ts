@@ -14,6 +14,7 @@ export interface DialCellRenderInput<
   thumbnailA?: string;
   thumbnailB?: string;
   holdingForLongPress?: boolean;
+  holdLabel?: string;
 }
 
 export interface KeyCellRenderInput<
@@ -21,6 +22,7 @@ export interface KeyCellRenderInput<
 > {
   status: ConnectionStatusInfo;
   slot?: TSlot;
+  slots?: readonly TSlot[];
   slotId: string;
   to: 0 | 1;
   durationMs: number;
@@ -84,12 +86,15 @@ function renderTakeoverArrow(
   return "";
 }
 
-function renderHoldOverlay(): string {
+function renderHoldOverlay(label = "HOLD 3s FADE"): string {
   const P = PLAYLISTER_PALETTE;
+  const safeLabel = escapeXml(truncateLabel(label || "HOLD 3s FADE", 15));
+  const boxW = safeLabel.length > 12 ? 128 : 112;
+  const boxX = Math.round((200 - boxW) / 2);
   return [
     `<rect data-hold-indicator="true" x="3" y="3" width="194" height="94" rx="10" fill="none" stroke="${P.orangeAccent}" stroke-width="4"/>`,
-    `<rect x="44" y="6" width="112" height="24" rx="6" fill="${P.orangeAccent}" stroke="${P.whiteGlyph}" stroke-width="3"/>`,
-    `<text x="100" y="23" text-anchor="middle" fill="${P.bgTop}" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="800">HOLD 3s FADE</text>`
+    `<rect x="${boxX}" y="6" width="${boxW}" height="24" rx="6" fill="${P.orangeAccent}" stroke="${P.whiteGlyph}" stroke-width="3"/>`,
+    `<text x="100" y="23" text-anchor="middle" fill="${P.bgTop}" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="800">${safeLabel}</text>`
   ].join("");
 }
 
@@ -152,7 +157,9 @@ export function renderDialCellSvg<TSlot extends SurfaceSlotBase>(
   const clamped = Math.max(0, Math.min(1, slot.value));
   const pct = Math.round(clamped * 100);
   const pctText = `${pct}%`;
-  const holdMarkup = input.holdingForLongPress ? renderHoldOverlay() : "";
+  const holdMarkup = input.holdingForLongPress
+    ? renderHoldOverlay(input.holdLabel)
+    : "";
   const parkedMarkup = renderParkedIndicator(slot.parked);
 
   // 5. Studio Mode T-bar cell (GRAPHICS-NOTES.md #3)
@@ -258,14 +265,18 @@ export function renderDialCellSvg<TSlot extends SurfaceSlotBase>(
     ].join("");
   }
 
-  // 7. Standard Fader cell with A-to-B colored gradient bar & takeover arrow (GRAPHICS-NOTES.md #1)
-  const { colorA, colorB } = getSourcePairGradientColors(
-    slot.source_a,
-    slot.source_b
-  );
+  // 7. Standard Fader or FX/Filter cell with gradient bar, formatted readout & takeover arrow (GRAPHICS-NOTES.md #1)
+  const isFxCell = slot.target_mode === "filter_param" || slot.kind === "fx";
+  const { colorA, colorB } = isFxCell
+    ? { colorA: P.fxCyanStart, colorB: P.fxAmberEnd }
+    : getSourcePairGradientColors(slot.source_a, slot.source_b);
   const displayLabel = escapeXml(
     truncateLabel(slot.label || slot.name || slot.id, 14)
   );
+  const readoutText = escapeXml(
+    truncateLabel(slot.display_value || pctText, 10)
+  );
+  const readoutFontSize = readoutText.length > 6 ? 18 : 22;
   const barX = 14;
   const barW = 172;
   const fillW = Math.round(barW * clamped);
@@ -274,7 +285,7 @@ export function renderDialCellSvg<TSlot extends SurfaceSlotBase>(
   const takeoverSvg = renderTakeoverArrow(slot.takeover_pending, arrowX, 70);
 
   return [
-    `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100" data-cell="fader">`,
+    `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100" data-cell="${isFxCell ? "fx" : "fader"}">`,
     `<defs>`,
     `<linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">`,
     `<stop offset="0%" stop-color="${P.bgTop}"/>`,
@@ -287,7 +298,7 @@ export function renderDialCellSvg<TSlot extends SurfaceSlotBase>(
     `</defs>`,
     `<rect x="2" y="2" width="196" height="96" rx="10" fill="url(#bg)" stroke="${P.trackBorder}" stroke-width="3"/>`,
     `<text x="14" y="38" fill="${P.whiteGlyph}" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700">${displayLabel}</text>`,
-    `<text x="186" y="38" text-anchor="end" fill="${P.whiteGlyph}" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="800">${pctText}</text>`,
+    `<text x="186" y="38" text-anchor="end" fill="${P.whiteGlyph}" font-family="Segoe UI, Arial, sans-serif" font-size="${readoutFontSize}" font-weight="800">${readoutText}</text>`,
     `<rect x="${barX}" y="58" width="${barW}" height="24" rx="8" fill="${P.trackBg}" stroke="${P.trackBorder}" stroke-width="3"/>`,
     fillW > 0
       ? `<rect x="${barX}" y="58" width="${fillW}" height="24" rx="8" fill="url(#abGrad)"/>`
@@ -323,13 +334,49 @@ export function renderAutoFadeKeySvg<TSlot extends SurfaceSlotBase>(
   input: KeyCellRenderInput<TSlot>
 ): string {
   const P = PLAYLISTER_PALETTE;
-  const fallbackTitle = input.slot?.name || input.slotId || "Auto-fade";
+  const isAllFx = input.slotId === "__all_fx__";
+  const fallbackTitle = isAllFx
+    ? "Clean FX"
+    : input.slot?.name || input.slotId || "Auto-fade";
 
   if (input.status.kind !== "connected") {
     return renderKeyStatusSvg(
       fallbackTitle,
       input.status.cellReason || input.status.sentence
     );
+  }
+
+  if (isAllFx) {
+    const slotList = input.slots ?? [];
+    const hasFxSupport = slotList.some((s) => s.kind === "fx");
+    if (!hasFxSupport) {
+      return renderKeyStatusSvg("Clean FX", "Update Midi Fadester to 0.4.0");
+    }
+
+    const eligible = slotList.filter(
+      (s) =>
+        (s.kind === "fx" || s.target_mode === "filter_param") &&
+        s.target_mode !== "unassigned" &&
+        s.enabled !== false
+    );
+    const activeCount = eligible.filter((s) => s.value > 0.005).length;
+    const borderColor = activeCount > 0 ? P.orangeAccent : P.previewGreen;
+    const line1 = activeCount > 0 ? "CLEAN FX" : "FX CLEAN";
+    const line2 = activeCount > 0 ? `${activeCount} ACTIVE` : "ALL 0%";
+
+    return [
+      `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" data-key="clean-fx" data-active-fx="${activeCount}">`,
+      `<defs>`,
+      `<linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">`,
+      `<stop offset="0%" stop-color="${P.bgTop}"/>`,
+      `<stop offset="100%" stop-color="${P.bgBottom}"/>`,
+      `</linearGradient>`,
+      `</defs>`,
+      `<rect x="3" y="3" width="114" height="114" rx="14" fill="url(#bg)" stroke="${borderColor}" stroke-width="3"/>`,
+      `<text x="60" y="50" text-anchor="middle" fill="${P.whiteGlyph}" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="800">${line1}</text>`,
+      `<text x="60" y="80" text-anchor="middle" fill="${borderColor}" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="800">${line2}</text>`,
+      `</svg>`
+    ].join("");
   }
 
   const slot = input.slot;
@@ -351,9 +398,16 @@ export function renderAutoFadeKeySvg<TSlot extends SurfaceSlotBase>(
   const clamped = Math.max(0, Math.min(1, slot.value));
   const pct = Math.round(clamped * 100);
   const pctText = `${pct}%`;
+  const isFxSlot = slot.target_mode === "filter_param" || slot.kind === "fx";
+  const gradStart = isFxSlot ? P.fxCyanStart : P.blueStart;
+  const gradEnd = isFxSlot ? P.fxAmberEnd : P.violetEnd;
   const title = escapeXml(
     truncateLabel(slot.label || slot.name || slot.id, 10)
   );
+  const readoutText = escapeXml(
+    truncateLabel(slot.display_value || pctText, 10)
+  );
+  const readoutFontSize = readoutText.length > 5 ? 20 : 28;
   const barX = 14;
   const barW = 92;
   const fillW = Math.round(barW * clamped);
@@ -366,13 +420,13 @@ export function renderAutoFadeKeySvg<TSlot extends SurfaceSlotBase>(
     `<stop offset="100%" stop-color="${P.bgBottom}"/>`,
     `</linearGradient>`,
     `<linearGradient id="ab" x1="0" y1="0" x2="1" y2="0">`,
-    `<stop offset="0%" stop-color="${P.blueStart}"/>`,
-    `<stop offset="100%" stop-color="${P.violetEnd}"/>`,
+    `<stop offset="0%" stop-color="${gradStart}"/>`,
+    `<stop offset="100%" stop-color="${gradEnd}"/>`,
     `</linearGradient>`,
     `</defs>`,
     `<rect x="3" y="3" width="114" height="114" rx="14" fill="url(#bg)" stroke="${P.trackBorder}" stroke-width="3"/>`,
     `<text x="60" y="32" text-anchor="middle" fill="${P.mutedText}" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700">${title}</text>`,
-    `<text x="60" y="72" text-anchor="middle" fill="${P.whiteGlyph}" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="800">${pctText}</text>`,
+    `<text x="60" y="72" text-anchor="middle" fill="${P.whiteGlyph}" font-family="Segoe UI, Arial, sans-serif" font-size="${readoutFontSize}" font-weight="800">${readoutText}</text>`,
     `<rect x="${barX}" y="90" width="${barW}" height="16" rx="6" fill="${P.trackBg}" stroke="${P.trackBorder}" stroke-width="3"/>`,
     fillW > 0
       ? `<rect x="${barX}" y="90" width="${fillW}" height="16" rx="6" fill="url(#ab)"/>`

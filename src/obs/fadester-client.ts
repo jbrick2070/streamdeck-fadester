@@ -6,12 +6,16 @@ import {
   FADESTER_API_VERSION,
   FADESTER_VENDOR_NAME,
   FaderChangedEvent,
+  GetCatalogRequest,
+  GetCatalogResponse,
   GetStateResponse,
   LoadProfileRequest,
   LoadProfileResponse,
   MIDI_FADESTER_RELEASE_URL,
   NudgeFaderRequest,
   NudgeFaderResponse,
+  ResetFxRequest,
+  ResetFxResponse,
   SetFaderValueRequest,
   SetFaderValueResponse,
   SetSlotRequest,
@@ -117,6 +121,22 @@ export class FadesterClient extends ObsVendorClient<GetStateResponse> {
     });
   }
 
+  public async getCatalog(
+    req?: GetCatalogRequest
+  ): Promise<GetCatalogResponse> {
+    return this.callVendor<GetCatalogResponse>(
+      "get_catalog",
+      req?.source !== undefined ? { source: req.source } : {}
+    );
+  }
+
+  public async resetFx(req?: ResetFxRequest): Promise<ResetFxResponse> {
+    return this.callVendor<ResetFxResponse>(
+      "reset_fx",
+      req?.ms !== undefined ? { ms: req.ms } : {}
+    );
+  }
+
   protected override createVendorError(
     comment: string,
     code = -1
@@ -132,6 +152,9 @@ export class FadesterClient extends ObsVendorClient<GetStateResponse> {
       const ev: FaderChangedEvent = {
         slot: String(vendorEventData.slot ?? ""),
         value: Number(vendorEventData.value ?? 0),
+        ...(typeof vendorEventData.display_value === "string"
+          ? { display_value: vendorEventData.display_value }
+          : {}),
         origin:
           (vendorEventData.origin as FaderChangedEvent["origin"]) ?? "api"
       };

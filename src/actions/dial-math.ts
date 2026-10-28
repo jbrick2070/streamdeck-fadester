@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import {
   AutoFadeRequest,
+  ResetFxRequest,
   SetFaderValueRequest,
   TargetMode
 } from "../types/contract.js";
@@ -14,7 +15,8 @@ export const DIAL_HOLD_THRESHOLD_MS = 800 as const;
 
 export type ResolvedDialCommand =
   | { kind: "set_fader_value"; request: SetFaderValueRequest }
-  | { kind: "auto_fade"; request: AutoFadeRequest };
+  | { kind: "auto_fade"; request: AutoFadeRequest }
+  | { kind: "reset_fx"; request: ResetFxRequest };
 
 export function normalizeStepPerTick(raw?: number): DialStepPerTick {
   if (raw === 0.01 || raw === 0.02 || raw === 0.05) {
@@ -56,6 +58,11 @@ export function resolveDialPressCommand(
   const targetRail = currentValue < 0.5 ? 1.0 : 0.0;
 
   switch (pressAction) {
+    case "clean_0":
+      return {
+        kind: "set_fader_value",
+        request: { slot, value: 0.0, release: true }
+      };
     case "finish_tbar":
       return {
         kind: "set_fader_value",
@@ -88,6 +95,12 @@ export function resolveDialLongPressCommand(
 ): ResolvedDialCommand | null {
   if (longPressAction === "none") {
     return null;
+  }
+  if (longPressAction === "clean_all_fx") {
+    return {
+      kind: "reset_fx",
+      request: { ms: 0 }
+    };
   }
   if (longPressAction === "finish_tbar") {
     return {

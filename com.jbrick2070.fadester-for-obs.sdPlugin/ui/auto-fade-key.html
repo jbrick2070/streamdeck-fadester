@@ -85,7 +85,7 @@
 
   <div class="row">
     <label for="slot-select">Slot</label>
-    <select id="slot-select"></select>
+    <select id="slot-select" data-allow-all-fx="true"></select>
   </div>
 
   <div class="row">
@@ -98,7 +98,7 @@
 
   <div class="row">
     <label for="duration-input">Duration (ms)</label>
-    <input type="number" id="duration-input" value="1000" min="50" max="20000" step="50" />
+    <input type="number" id="duration-input" value="1000" min="0" max="20000" step="50" />
   </div>
 
   <h3>OBS WebSocket Connection (Global)</h3>
@@ -135,7 +135,7 @@
 
       if (slotEl && settings.slot) slotEl.value = settings.slot;
       if (toEl) toEl.value = String(settings.to !== undefined ? settings.to : 1);
-      if (durEl) durEl.value = String(settings.durationMs || 1000);
+      if (durEl) durEl.value = String(settings.durationMs !== undefined ? settings.durationMs : 1000);
 
       if (slotEl) slotEl.onchange = () => save({ slot: slotEl.value });
       if (toEl) toEl.onchange = () => save({ to: Number(toEl.value) === 0 ? 0 : 1 });

@@ -21,6 +21,7 @@ function broadcastToPropertyInspector(): void {
     id: s.id,
     name: s.name,
     label: s.label,
+    kind: s.kind,
     target_mode: s.target_mode,
     available: s.available,
     reason: s.reason

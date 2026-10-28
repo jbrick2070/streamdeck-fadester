@@ -13,6 +13,8 @@ import {
 import { FadesterStore } from "../state/fadester-store.js";
 import {
   DEFAULT_FADER_DIAL_SETTINGS,
+  DialLongPressAction,
+  DialPressAction,
   FaderDialSettings
 } from "../types/settings.js";
 import { CellRateLimiter } from "../gfx/cell-rate-limiter.js";
@@ -219,6 +221,12 @@ export class FaderDialInstanceController {
   public renderSvgString(): string {
     const slot = this.store.getSlot(this.settings.slot);
     const thumbs = this.thumbnailFetcher.getLatest();
+    const holdLabel =
+      this.settings.longPressAction === "clean_all_fx"
+        ? "HOLD CLEAN FX"
+        : this.settings.longPressAction === "finish_tbar"
+          ? "HOLD FINISH"
+          : "HOLD 3s FADE";
     return renderDialCellSvg({
       status: this.store.getStatus(),
       slot,
@@ -228,7 +236,8 @@ export class FaderDialInstanceController {
       showThumbnails: this.settings.showThumbnails,
       thumbnailA: thumbs.thumbnailA,
       thumbnailB: thumbs.thumbnailB,
-      holdingForLongPress: this.holdingForLongPress
+      holdingForLongPress: this.holdingForLongPress,
+      holdLabel
     });
   }
 
@@ -272,6 +281,8 @@ export class FaderDialInstanceController {
     try {
       if (cmd.kind === "set_fader_value") {
         await this.store.getClient().setFaderValue(cmd.request);
+      } else if (cmd.kind === "reset_fx") {
+        await this.store.getClient().resetFx(cmd.request);
       } else {
         await this.store.getClient().autoFade(cmd.request);
       }
@@ -288,6 +299,29 @@ export class FaderDialInstanceController {
   }
 
   private mergeSettings(raw?: FaderDialSettings): Required<FaderDialSettings> {
+    const validPress: readonly DialPressAction[] = [
+      "snap_0_100",
+      "clean_0",
+      "auto_fade_1s",
+      "auto_fade_2s",
+      "cut",
+      "finish_tbar"
+    ];
+    const validLongPress: readonly DialLongPressAction[] = [
+      "auto_fade_3s",
+      "clean_all_fx",
+      "finish_tbar",
+      "none"
+    ];
+    const pressAction =
+      raw?.pressAction && validPress.includes(raw.pressAction)
+        ? raw.pressAction
+        : DEFAULT_FADER_DIAL_SETTINGS.pressAction;
+    const longPressAction =
+      raw?.longPressAction && validLongPress.includes(raw.longPressAction)
+        ? raw.longPressAction
+        : DEFAULT_FADER_DIAL_SETTINGS.longPressAction;
+
     return {
       slot: (raw?.slot && String(raw.slot).trim()) || DEFAULT_FADER_DIAL_SETTINGS.slot,
       stepPerTick: normalizeStepPerTick(Number(raw?.stepPerTick)),
@@ -295,9 +329,8 @@ export class FaderDialInstanceController {
         raw?.acceleration !== undefined
           ? Boolean(raw.acceleration)
           : DEFAULT_FADER_DIAL_SETTINGS.acceleration,
-      pressAction: raw?.pressAction ?? DEFAULT_FADER_DIAL_SETTINGS.pressAction,
-      longPressAction:
-        raw?.longPressAction ?? DEFAULT_FADER_DIAL_SETTINGS.longPressAction,
+      pressAction,
+      longPressAction,
       showThumbnails:
         raw?.showThumbnails !== undefined
           ? Boolean(raw.showThumbnails)

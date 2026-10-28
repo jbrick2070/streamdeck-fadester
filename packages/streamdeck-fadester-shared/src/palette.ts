@@ -7,6 +7,8 @@ export const PLAYLISTER_PALETTE = {
   trackBorder: "#334155",
   blueStart: "#2563EB",
   violetEnd: "#7C3AED",
+  fxCyanStart: "#06B6D4",
+  fxAmberEnd: "#F59E0B",
   whiteGlyph: "#F8FAFC",
   mutedText: "#CBD5E1",
   orangeAccent: "#F97316",

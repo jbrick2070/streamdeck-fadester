@@ -1,70 +1,86 @@
-# Fadester API contract (draft 1, 2026-10-27)
+# Fadester API contract (draft 2, 2026-10-28)
 
 The agreement between Midi Fadester (inside OBS) and every surface that controls it: Fadester for OBS
 (Stream Deck), scripts, Companion. Midi Fadester implements it as an obs-websocket vendor API; the surfaces
 call it. Both sides build to this file; changes go here first.
 
 Vendor name: `midi-fadester`. Transport: obs-websocket 5 `CallVendorRequest` and vendor events.
-Values are floats 0.0 to 1.0. Slot ids are stable strings, never display names.
+Values are floats 0.0 to 1.0. Slot ids are stable strings, never display names:
+`crossfader`, `fader_1` .. `fader_8`, `master`, `fx_1` .. `fx_8` (18 slots total in `0.4.0+`; 10 slots in `0.3.0`).
 
 ## Requests
 
 | requestType | requestData | responseData | Notes |
 |---|---|---|---|
-| `get_state` | none | `{ version, build: { commit, built_at }, api_version, studio_mode, profile, profile_display_name, profile_tier, device: { name, connected, error }, slots: [slot...] }` | The whole picture in one call. Surfaces call it on connect and after any error. `build` (added 2026-10-27) carries the short git commit and the build time, so a surface's "Connected" sentence can name the exact build. `profile` (added in 0.3.0) is the active controller profile slug (`apc40mk2`, `apcminimk2`, `midimix`, `nanokontrol2`, `launchcontrolxl`, `generic`), `profile_display_name` is the human-readable desk name, and `profile_tier` is `verified`, `beta`, or `custom`. |
+| `get_state` | none | `{ version, build: { commit, built_at }, api_version, studio_mode, profile, profile_display_name, profile_tier, device: { name, connected, error }, slots: [slot...] }` | The whole picture in one call. Surfaces call it on connect and after any error. `build` carries the short git commit and build time. `profile` is the active controller profile slug (`apc40mk2`, `apcminimk2`, `midimix`, `nanokontrol2`, `launchcontrolxl`, `generic`), `profile_display_name` is the human-readable desk name, and `profile_tier` is `verified`, `beta`, or `custom`. |
 | `set_fader_value` | `{ slot, value, release? }` | `{ slot, value }` | Moves a slot like a fader would. Goes through the same smoothing and curve as MIDI. `release: true` on a T-bar slot finishes the transition (the same as letting go of the T-bar). Soft takeover does not apply to this call. |
 | `nudge_fader` | `{ slot, delta }` | `{ slot, value }` | For endless knobs and dials: adds `delta` (may be negative), clamps to 0..1. |
 | `auto_fade` | `{ slot, to, ms }` | `{ slot }` | Timed fade from the current value to `to` over `ms` (50..20000). A new call on the same slot replaces the running one. |
-| `set_slot` | `{ slot, target_mode?, scene?, source_a?, source_b?, curve?, afv?, cal_min?, cal_max? }` | the updated slot | Same fields as the OBS dialog. Unknown scene or source names are an error, not a no-op. |
-| `load_profile` | `{ name }` | `{ loaded, profile_tier }` | `name`: `apc40mk2` (`verified`), `apcminimk2`, `midimix`, `nanokontrol2`, `launchcontrolxl` (`beta`), or `generic` (`custom`). Profiles for desks without a physical crossfader (`apcminimk2`, `midimix`, `nanokontrol2`, `launchcontrolxl`) or master (`nanokontrol2`, `launchcontrolxl`) turn those slots off (`target_mode: "unassigned"`, `label: "Disabled"`, `available: false`, `reason: "Not used. Click to set up."`) and emit `state_changed`. |
+| `set_slot` | `{ slot, enabled?, target_mode?, scene?, source_a?, source_b?, filter_name?, filter_prop?, from_val?, to_val?, bypass_at_zero?, curve?, afv?, cal_min?, cal_max? }` | the updated slot | Same fields as the OBS dialog. Unknown scene, source, filter, or property names — or duplicate `(source_a, filter_name, filter_prop)` writers across any of the 18 slots — return a validation error, never a silent no-op. |
+| `load_profile` | `{ name }` | `{ loaded, profile_tier }` | `name`: `apc40mk2` (`verified`), `apcminimk2`, `midimix`, `nanokontrol2`, `launchcontrolxl` (`beta`), or `generic` (`custom`). Profiles for desks without a physical crossfader or master turn those fader slots off (`enabled: false`, `available: false`, `reason: "Not used. Click to set up."`), while `fx_1 .. fx_8` stay `enabled: true` across all 6 profiles so Stream Deck + and WebSocket surfaces always have 8 dedicated FX slots. |
+| `get_catalog` | `{ source? }` | Overview (no `source`): `{ scenes: [{ name, layers: [{ name, has_audio }] }], audio_sources: [{ name, db }], filter_hosts: [{ source, is_scene, filter_count }] }`<br>Source detail (`source` set): `{ source, is_scene, filters: [{ name, type_id, enabled, properties: [{ name, label, type: "float" \| "int", min, max, step, suffix, current }] }] }` | Added in `0.4.0`. Discovers scenes, audio sources, filter-capable sources/scenes, and numeric (`OBS_PROPERTY_FLOAT` / `OBS_PROPERTY_INT`, recursing nested `OBS_PROPERTY_GROUP`s) filter settings without polling or calling `obs_source_properties()` on the video tick. Internal `__midi_fadester_opacity__` filters are excluded. |
+| `reset_fx` | `{ ms? }` | `{ eligible_count, reset_count, queued_unavailable_count, ms }` | Added in `0.4.0` (`Clean / All FX Off`). Resets every assigned slot where `kind == "fx"` or `target_mode == "filter_param"` to `0.0` (`from_val`), either instantly (`ms` omitted or `0`) or over a timed ramp (`ms` in `50..20000`), releasing `bypass_at_zero` filter enable states at `0%` without touching non-filter channel faders or A/B crossfades. Slots currently unavailable queue a clean-on-availability flag so re-added filters restore cleanly to `0%`. |
 
-Slot object:
+Slot object (`0.4.0`, backward-compatible superset of `0.3.0`):
 
 ```json
 {
-  "id": "crossfader",
-  "name": "Crossfader",
-  "kind": "crossfader | fader | master",
-  "target_mode": "unassigned | tbar | crossfade_ab | layer_opacity | audio_volume",
+  "id": "fx_1",
+  "name": "FX 1",
+  "kind": "crossfader | fader | master | fx",
+  "enabled": true,
+  "target_mode": "unassigned | tbar | crossfade_ab | layer_opacity | audio_volume | filter_param",
   "scene": "",
-  "source_a": "Cam 1", "source_b": "Loop 3",
+  "source_a": "Cam 1",
+  "source_b": "",
+  "filter_name": "Blur",
+  "filter_prop": "radius",
+  "from_val": 0.0,
+  "to_val": 32.0,
+  "bypass_at_zero": true,
   "curve": "dip_free | full_center | equal_power | linear | cut",
   "afv": false,
-  "value": 0.42,
-  "cal_min": 0, "cal_max": 127,
+  "value": 0.44,
+  "display_value": "14.1 px",
+  "cal_min": 0,
+  "cal_max": 127,
   "takeover_pending": "none | up | down",
   "parked": false,
-  "label": "Cam 1 -> Loop 3",
+  "label": "Cam 1 • Blur • Radius",
   "available": true,
   "reason": ""
 }
 ```
 
-`parked: true` (added 2026-10-27) means the slot just completed a throw or reached a rail and ignores
-input until the control leaves that rail by the hysteresis amount; surfaces show it (a dot or "at end")
-and do not treat the frozen value as a fault. `nudge_fader` and `set_fader_value` on a parked slot are
-accepted and unpark it, since they are deliberate.
+`display_value` (added in `0.4.0`) carries the engine's human-formatted value string (`"14.1 px"`, `"-40%"`,
+`"-6.0 dB"`, `"0 (Off)"`, `"42%"`). Surfaces connected to `0.3.0` fall back to `${Math.round(value * 100)}%`
+when `display_value` is absent.
 
-`available: false` with a `reason` sentence ("Studio Mode is off", "Source 'Loop 3' not found") is how a
-surface learns why a dial does nothing. Surfaces show the reason as text; they never guess.
+`parked: true` means the slot just completed a throw or reached a rail and ignores physical MIDI input until
+the control leaves that rail by the hysteresis amount; surfaces show it (a dot or "at end") and do not treat
+the frozen value as a fault. `nudge_fader`, `set_fader_value`, and `reset_fx` on a parked slot are accepted
+and unpark it, since they are deliberate.
+
+`available: false` with a `reason` sentence ("Studio Mode is off", "Filter 'Blur' was removed from 'Cam 1'")
+is how a surface learns why a dial does nothing. Surfaces show the reason as text; they never guess.
 
 ## Events (Midi Fadester emits, surfaces subscribe)
 
 | eventType | eventData | When |
 |---|---|---|
-| `fader_changed` | `{ slot, value, origin }` | Any slot value change from any origin (`midi`, `ui`, `api`, `auto_fade`). Coalesced to at most 30 per second per slot. |
-| `state_changed` | `get_state` response | Slot assignment, device or Studio Mode changed. |
+| `fader_changed` | `{ slot, value, display_value, origin }` | Any slot value change from any origin (`midi`, `ui`, `api`, `auto_fade`, `obs`). `origin: "obs"` is emitted when an operator edits a bound filter setting directly inside OBS Filters UI (arming Soft Takeover for physical MIDI controls while syncing Stream Deck dials immediately). Coalesced to at most 30 per second per slot. |
+| `state_changed` | `get_state` response | Slot assignment, filter availability/rename/properties, controller profile, MIDI device, or Studio Mode changed. |
 
 ## Errors
 
 Transport-level errors (unknown `vendorName` or `requestType`) use obs-websocket's outer `requestStatus`.
 Because `obs-websocket-api.h`'s `obs_websocket_request_callback_function` (`void (*)(obs_data_t *request_data, obs_data_t *response_data, void *priv_data)`) returns `void` and cannot set the outer `requestStatus`, vendor-level validation errors return `{ "error": "<sentence>", "comment": "<sentence>" }` inside `responseData`, with the sentence giving the fix — for example:
-`"Slot 'fader_9' does not exist. Valid slots: crossfader, fader_1 .. fader_8, master."`
+`"Slot 'fader_9' does not exist. Valid slots: crossfader, fader_1 .. fader_8, master, fx_1 .. fx_8."`
 
 ## In-process bridge (plugin to plugin, inside OBS)
 
 Plugins in the same OBS do not go through obs-websocket. They use `obs_get_proc_handler()` and
-`obs_get_signal_handler()`. One owner per concept: Midi Fadester owns fader slots, Visual Sidechain owns
+`obs_get_signal_handler()`. One owner per concept: Midi Fadester owns fader/FX slots, Visual Sidechain owns
 audio signals. Neither plugin re-exposes the other's data over its own vendor API.
 
 Midi Fadester registers:
@@ -73,7 +89,7 @@ Midi Fadester registers:
 |---|---|---|
 | proc `midi_fadester_get_slot_value` | `string slot` | `float value`, `bool ok`, `string reason` |
 | proc `midi_fadester_set_fader_value` | `string slot`, `float value` | `bool ok`, `string reason` |
-| signal `midi_fadester_fader_changed` | `string slot`, `float value`, `string origin` | (emitted on every change, coalesced like the vendor event) |
+| signal `midi_fadester_fader_changed` | `string slot`, `float value`, `string display_value`, `string origin` | (emitted on every change, coalesced like the vendor event) |
 
 Visual Sidechain registers:
 
@@ -93,7 +109,7 @@ Rules for the bridge:
 ## Rules
 
 - Every request is covered by a headless test on the Midi Fadester side (fake websocket) and by the OBS
-  harness driving `set_fader_value` through real obs-websocket.
+  harness driving `set_fader_value`, `get_catalog`, `set_slot`, and `reset_fx` through real obs-websocket.
 - If obs-websocket is not loaded, Midi Fadester logs one line at startup and still works from MIDI.
-- Version the contract: `get_state.version` is the plugin version; `api_version` starts at 1 and only moves
-  on a breaking change.
+- Version the contract: `get_state.version` is the plugin version; `api_version` stays at `1` across additive
+  `0.4.0` fields/requests and only increments on a breaking change.

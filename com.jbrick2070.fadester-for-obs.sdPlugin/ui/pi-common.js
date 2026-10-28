@@ -36,6 +36,7 @@
     if (!selectEl) return;
 
     const selectedSlot = currentSettings.slot || "crossfader";
+    const allowAllFx = selectEl.dataset.allowAllFx === "true";
     const fallbackSlots = [
       { id: "crossfader", name: "Crossfader", label: "", available: true, reason: "" },
       { id: "fader_1", name: "Fader 1", label: "", available: true, reason: "" },
@@ -53,7 +54,7 @@
     selectEl.innerHTML = "";
 
     let currentReason = "";
-    for (const s of list) {
+    function appendSlotOption(parent, s) {
       const opt = document.createElement("option");
       opt.value = s.id;
       let text = s.name || s.id;
@@ -70,7 +71,46 @@
           currentReason = s.reason;
         }
       }
-      selectEl.appendChild(opt);
+      parent.appendChild(opt);
+    }
+
+    const faderSlots = list.filter((s) => s.kind !== "fx");
+    const fxSlots = list.filter((s) => s.kind === "fx");
+
+    if (faderSlots.length > 0) {
+      const faderGroup = document.createElement("optgroup");
+      faderGroup.label = "Faders";
+      for (const s of faderSlots) {
+        appendSlotOption(faderGroup, s);
+      }
+      selectEl.appendChild(faderGroup);
+    }
+
+    const showAllFx = allowAllFx && (fxSlots.length > 0 || selectedSlot === "__all_fx__");
+    if (fxSlots.length > 0) {
+      const fxGroup = document.createElement("optgroup");
+      fxGroup.label = "FX & Knobs";
+      for (const s of fxSlots) {
+        appendSlotOption(fxGroup, s);
+      }
+      if (showAllFx) {
+        appendSlotOption(fxGroup, {
+          id: "__all_fx__",
+          name: "All FX",
+          label: "Clean / All FX Off",
+          available: true,
+          reason: ""
+        });
+      }
+      selectEl.appendChild(fxGroup);
+    } else if (showAllFx) {
+      appendSlotOption(selectEl, {
+        id: "__all_fx__",
+        name: "All FX",
+        label: "Clean / All FX Off",
+        available: true,
+        reason: ""
+      });
     }
 
     const reasonBanner = document.getElementById("slot-reason-banner");

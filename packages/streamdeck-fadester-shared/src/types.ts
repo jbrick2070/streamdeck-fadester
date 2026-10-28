@@ -38,23 +38,39 @@ export const DEFAULT_GLOBAL_CONNECTION_SETTINGS: Required<GlobalConnectionSettin
   password: ""
 };
 
+export type SurfaceSlotKind =
+  | "crossfader"
+  | "fader"
+  | "master"
+  | "fx"
+  | (string & {});
+
 export type SurfaceTargetMode =
   | "unassigned"
   | "tbar"
   | "crossfade_ab"
   | "layer_opacity"
-  | "audio_volume";
+  | "audio_volume"
+  | "filter_param";
 
 export type SurfaceTakeoverPending = "none" | "up" | "down";
 
 export interface SurfaceSlotBase {
   id: string;
   name: string;
+  kind?: SurfaceSlotKind;
+  enabled?: boolean;
   target_mode: SurfaceTargetMode;
   scene?: string;
   source_a: string;
   source_b: string;
+  filter_name?: string;
+  filter_prop?: string;
+  from_val?: number;
+  to_val?: number;
+  bypass_at_zero?: boolean;
   value: number;
+  display_value?: string;
   cal_min?: number;
   cal_max?: number;
   takeover_pending: SurfaceTakeoverPending;
@@ -88,7 +104,8 @@ export interface SurfaceStatePayload<
 export interface SurfaceSlotValueChangeEvent {
   slot: string;
   value: number;
-  origin: "midi" | "ui" | "api" | "auto_fade" | (string & {});
+  display_value?: string;
+  origin: "midi" | "ui" | "api" | "auto_fade" | "obs" | (string & {});
 }
 
 export interface ScreenshotProvider {

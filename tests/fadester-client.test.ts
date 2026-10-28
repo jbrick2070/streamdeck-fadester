@@ -137,7 +137,7 @@ describe("Step 1.2 — FadesterClient & FadesterStore against FakeObsServer", ()
     expect(client.getStatus().kind).toBe("connected");
   });
 
-  it("executes all 6 contract requests and updates state on fader_changed and state_changed", async () => {
+  it("executes all 8 contract requests and propagates 0.4 FX state and OBS-origin values", async () => {
     server = new FakeObsServer();
     const port = await server.start();
 
@@ -149,9 +149,15 @@ describe("Step 1.2 — FadesterClient & FadesterStore against FakeObsServer", ()
 
     // 1. get_state
     const state = await client.getState();
-    expect(state.version).toBe("0.3.0");
+    expect(state.version).toBe("0.4.0");
     expect(state.profile).toBe("apc40mk2");
     expect(state.profile_tier).toBe("verified");
+    expect(state.slots).toHaveLength(18);
+    expect(state.slots.find((slot) => slot.id === "fx_1")).toMatchObject({
+      kind: "fx",
+      target_mode: "filter_param",
+      display_value: "14.1 px"
+    });
 
     // 2. set_fader_value (with release: true)
     const setRes = await client.setFaderValue({
@@ -191,6 +197,28 @@ describe("Step 1.2 — FadesterClient & FadesterStore against FakeObsServer", ()
     const profRes = await client.loadProfile({ name: "apc40mk2" });
     expect(profRes).toEqual({ loaded: "apc40mk2", profile_tier: "verified" });
 
+    // 7. get_catalog
+    const catalog = await client.getCatalog();
+    expect(catalog).toMatchObject({
+      scenes: expect.any(Array),
+      audio_sources: expect.any(Array),
+      filter_hosts: expect.any(Array)
+    });
+
+    // 8. reset_fx only cleans assigned FX slots.
+    const resetRes = await client.resetFx({ ms: 0 });
+    expect(resetRes).toEqual({
+      eligible_count: 6,
+      reset_count: 6,
+      queued_unavailable_count: 0,
+      ms: 0
+    });
+    expect(
+      server.slots
+        .filter((slot) => slot.kind === "fx" && slot.target_mode === "filter_param")
+        .every((slot) => slot.value === 0)
+    ).toBe(true);
+
     // External fader_changed event from MIDI clears takeover_pending and updates value
     const slotUpdatePromise = waitForEvent<string>(store, "slotValueChanged");
     server.emitVendorEvent("fader_changed", {
@@ -201,6 +229,33 @@ describe("Step 1.2 — FadesterClient & FadesterStore against FakeObsServer", ()
     const updatedSlotId = await slotUpdatePromise;
     expect(updatedSlotId).toBe("fader_1");
     expect(store.getSlot("fader_1")?.value).toBe(0.88);
+
+    // OBS Filter UI updates retain the formatted readout and origin instead of being
+    // mistaken for API or MIDI movement.
+    const obsSlotUpdatePromise = waitForEvent<string>(store, "slotValueChanged");
+    const obsFaderChangedPromise = waitForEvent<{
+      slot: string;
+      value: number;
+      display_value?: string;
+      origin: string;
+    }>(client, "faderChanged");
+    server.emitVendorEvent("fader_changed", {
+      slot: "fx_1",
+      value: 0.5,
+      display_value: "16.0 px",
+      origin: "obs"
+    });
+    expect(await obsSlotUpdatePromise).toBe("fx_1");
+    await expect(obsFaderChangedPromise).resolves.toMatchObject({
+      slot: "fx_1",
+      value: 0.5,
+      display_value: "16.0 px",
+      origin: "obs"
+    });
+    expect(store.getSlot("fx_1")).toMatchObject({
+      value: 0.5,
+      display_value: "16.0 px"
+    });
   });
 
   it("surfaces vendor validation error comment and calls get_state after any error", async () => {
@@ -221,7 +276,7 @@ describe("Step 1.2 — FadesterClient & FadesterStore against FakeObsServer", ()
     await expect(
       client.setFaderValue({ slot: "fader_9", value: 0.5 })
     ).rejects.toThrow(
-      "Slot 'fader_9' does not exist. Valid slots: crossfader, fader_1 .. fader_8, master."
+      "Slot 'fader_9' does not exist. Valid slots: crossfader, fader_1 .. fader_8, master, fx_1 .. fx_8."
     );
 
     await new Promise((r) => setTimeout(r, 30));
@@ -253,6 +308,8 @@ describe("Step 1.2 — FadesterClient & FadesterStore against FakeObsServer", ()
     );
     expect(store.getProfile()).toBe("apc40mk2");
     expect(store.getProfileTier()).toBe("verified");
+    expect(store.getSlots()).toHaveLength(10);
+    expect(store.getSlots().some((slot) => slot.kind === "fx")).toBe(false);
 
     // Switch to midimix (no crossfader, master present)
     const midimixChanged = waitForEvent<void>(store, "changed");

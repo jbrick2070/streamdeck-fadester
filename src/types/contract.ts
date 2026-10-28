@@ -36,16 +36,25 @@ export type SlotId =
   | "fader_7"
   | "fader_8"
   | "master"
+  | "fx_1"
+  | "fx_2"
+  | "fx_3"
+  | "fx_4"
+  | "fx_5"
+  | "fx_6"
+  | "fx_7"
+  | "fx_8"
   | (string & {});
 
-export type SlotKind = "crossfader" | "fader" | "master";
+export type SlotKind = "crossfader" | "fader" | "master" | "fx";
 
 export type TargetMode =
   | "unassigned"
   | "tbar"
   | "crossfade_ab"
   | "layer_opacity"
-  | "audio_volume";
+  | "audio_volume"
+  | "filter_param";
 
 export type CurveType =
   | "dip_free"
@@ -56,7 +65,13 @@ export type CurveType =
 
 export type TakeoverPending = "none" | "up" | "down";
 
-export type FaderChangeOrigin = "midi" | "ui" | "api" | "auto_fade";
+export type FaderChangeOrigin =
+  | "midi"
+  | "ui"
+  | "api"
+  | "auto_fade"
+  | "obs"
+  | (string & {});
 
 export interface FadesterDeviceState {
   name: string;
@@ -68,13 +83,20 @@ export interface FadesterSlot {
   id: SlotId;
   name: string;
   kind: SlotKind;
+  enabled?: boolean;
   target_mode: TargetMode;
   scene?: string;
   source_a: string;
   source_b: string;
+  filter_name?: string;
+  filter_prop?: string;
+  from_val?: number;
+  to_val?: number;
+  bypass_at_zero?: boolean;
   curve: CurveType;
   afv: boolean;
   value: number;
+  display_value?: string;
   cal_min?: number;
   cal_max?: number;
   takeover_pending: TakeoverPending;
@@ -129,10 +151,16 @@ export interface AutoFadeResponse {
 
 export interface SetSlotRequest {
   slot: string;
+  enabled?: boolean;
   target_mode?: TargetMode;
   scene?: string;
   source_a?: string;
   source_b?: string;
+  filter_name?: string;
+  filter_prop?: string;
+  from_val?: number;
+  to_val?: number;
+  bypass_at_zero?: boolean;
   curve?: CurveType;
   afv?: boolean;
   cal_min?: number;
@@ -150,9 +178,80 @@ export interface LoadProfileResponse {
   profile_tier?: ProfileTier;
 }
 
+export interface GetCatalogRequest {
+  source?: string;
+}
+
+export interface CatalogLayerItem {
+  name: string;
+  has_audio: boolean;
+}
+
+export interface CatalogSceneItem {
+  name: string;
+  layers: CatalogLayerItem[];
+}
+
+export interface CatalogAudioSourceItem {
+  name: string;
+  db: number;
+}
+
+export interface CatalogFilterHostItem {
+  source: string;
+  is_scene: boolean;
+  filter_count: number;
+}
+
+export interface CatalogOverviewResponse {
+  scenes: CatalogSceneItem[];
+  audio_sources: CatalogAudioSourceItem[];
+  filter_hosts: CatalogFilterHostItem[];
+}
+
+export interface CatalogNumericPropertyItem {
+  name: string;
+  label: string;
+  type: "float" | "int";
+  min: number;
+  max: number;
+  step: number;
+  suffix: string;
+  current: number;
+}
+
+export interface CatalogFilterItem {
+  name: string;
+  type_id: string;
+  enabled: boolean;
+  properties: CatalogNumericPropertyItem[];
+}
+
+export interface CatalogSourceFiltersResponse {
+  source: string;
+  is_scene: boolean;
+  filters: CatalogFilterItem[];
+}
+
+export type GetCatalogResponse =
+  | CatalogOverviewResponse
+  | CatalogSourceFiltersResponse;
+
+export interface ResetFxRequest {
+  ms?: number;
+}
+
+export interface ResetFxResponse {
+  eligible_count: number;
+  reset_count: number;
+  queued_unavailable_count: number;
+  ms: number;
+}
+
 export interface FaderChangedEvent {
   slot: string;
   value: number;
+  display_value?: string;
   origin: FaderChangeOrigin;
 }
 

@@ -203,4 +203,96 @@ describe("Step 1.4 — End-to-End Fader Dial & Auto-fade Key Integration", () =>
     dialCtrl.disappear();
     keyCtrl.disappear();
   });
+
+  it("cleans all FX, refreshes its key from any FX update, and uses a released value for a zero-duration single-slot key", async () => {
+    server = new FakeObsServer();
+    const port = await server.start();
+
+    client = new FadesterClient({ host: "127.0.0.1", port, password: "" });
+    const store = new FadesterStore(client);
+    await new Promise<void>((resolve) => {
+      client!.once("statusChanged", () => resolve());
+      client!.start();
+    });
+    await new Promise((r) => setTimeout(r, 30));
+
+    const allFxImages: string[] = [];
+    const allFxCtrl = new AutoFadeKeyInstanceController(
+      store,
+      {
+        setImage: async (img) => {
+          allFxImages.push(decodeSvgUri(img));
+        },
+        showAlert: async () => {}
+      },
+      { slot: "__all_fx__", to: 0, durationMs: 0 },
+      16
+    );
+    allFxCtrl.appear();
+    expect(allFxCtrl.renderSvgString()).toContain('data-key="clean-fx"');
+
+    const imagesBeforeFxUpdate = allFxImages.length;
+    await client.setFaderValue({ slot: "fx_1", value: 0.6 });
+    await new Promise((r) => setTimeout(r, 30));
+    expect(allFxImages.length).toBeGreaterThan(imagesBeforeFxUpdate);
+
+    await allFxCtrl.handleKeyDown();
+    const resetCall = server.vendorCallLog
+      .filter((call) => call.requestType === "reset_fx")
+      .at(-1);
+    expect(resetCall?.requestData).toEqual({ ms: 0 });
+
+    const zeroCtrl = new AutoFadeKeyInstanceController(
+      store,
+      {
+        setImage: async () => {},
+        showAlert: async () => {}
+      },
+      { slot: "fader_1", to: 0, durationMs: 0 },
+      16
+    );
+    zeroCtrl.appear();
+    const autoFadeCallsBefore = server.vendorCallLog.filter(
+      (call) => call.requestType === "auto_fade"
+    ).length;
+    await zeroCtrl.handleKeyDown();
+    const setCall = server.vendorCallLog
+      .filter((call) => call.requestType === "set_fader_value")
+      .at(-1);
+    expect(setCall?.requestData).toEqual({
+      slot: "fader_1",
+      value: 0,
+      release: true
+    });
+    expect(
+      server.vendorCallLog.filter((call) => call.requestType === "auto_fade")
+        .length
+    ).toBe(autoFadeCallsBefore);
+
+    allFxCtrl.disappear();
+    zeroCtrl.disappear();
+  });
+
+  it("shows an explicit upgrade status for a saved all-FX key against Midi Fadester 0.3.0", async () => {
+    server = new FakeObsServer({ fadesterVersion: "0.3.0" });
+    const port = await server.start();
+
+    client = new FadesterClient({ host: "127.0.0.1", port, password: "" });
+    const store = new FadesterStore(client);
+    await new Promise<void>((resolve) => {
+      client!.once("statusChanged", () => resolve());
+      client!.start();
+    });
+    await new Promise((r) => setTimeout(r, 30));
+
+    const allFxCtrl = new AutoFadeKeyInstanceController(
+      store,
+      { setImage: async () => {}, showAlert: async () => {} },
+      { slot: "__all_fx__", to: 0, durationMs: 0 },
+      16
+    );
+    expect(allFxCtrl.renderSvgString()).toContain(
+      "Update Midi Fadester to 0.4.0"
+    );
+  });
 });

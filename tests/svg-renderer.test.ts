@@ -21,6 +21,14 @@ function assertMinStrokeWidth(svg: string, minPx = 3): void {
   }
 }
 
+function assertSvgRules(svg: string): void {
+  assertMinStrokeWidth(svg, 3);
+  const textRows = new Set(
+    [...svg.matchAll(/<text\b[^>]*\by="([^"]+)"/g)].map((match) => match[1])
+  );
+  expect(textRows.size).toBeLessThanOrEqual(2);
+}
+
 describe("Step 1.3 — Playlister Runtime SVG Renderer (Dial Cells & Keys)", () => {
   it("renders Fader cell with A-to-B gradient bar, takeover arrow, and >= 3px strokes", () => {
     const slot: FadesterSlot = {
@@ -50,7 +58,7 @@ describe("Step 1.3 — Playlister Runtime SVG Renderer (Dial Cells & Keys)", () 
     expect(svg).toContain('data-takeover="up"');
     expect(svg).toContain(PLAYLISTER_PALETTE.bgTop);
     expect(svg).toContain(PLAYLISTER_PALETTE.orangeAccent);
-    assertMinStrokeWidth(svg, 3);
+    assertSvgRules(svg);
   });
 
   it("renders T-bar cell with green Preview, red Program, and transition glow mid-throw", () => {
@@ -84,7 +92,7 @@ describe("Step 1.3 — Playlister Runtime SVG Renderer (Dial Cells & Keys)", () 
     expect(svg).toContain("Stage Main");
     expect(svg).toContain(PLAYLISTER_PALETTE.previewGreen);
     expect(svg).toContain(PLAYLISTER_PALETTE.programRed);
-    assertMinStrokeWidth(svg, 3);
+    assertSvgRules(svg);
   });
 
   it("renders Crossfade cell with dual 96x54 live thumbnails and fader knob", () => {
@@ -118,7 +126,7 @@ describe("Step 1.3 — Playlister Runtime SVG Renderer (Dial Cells & Keys)", () 
     expect(svg).toContain('data-thumb="b"');
     expect(svg).toContain('width="96" height="54"');
     expect(svg).toContain('data-knob="true"');
-    assertMinStrokeWidth(svg, 3);
+    assertSvgRules(svg);
   });
 
   it("renders the 800 ms Hold indicator overlay when holdingForLongPress is true", () => {
@@ -147,7 +155,7 @@ describe("Step 1.3 — Playlister Runtime SVG Renderer (Dial Cells & Keys)", () 
 
     expect(svg).toContain('data-hold-indicator="true"');
     expect(svg).toContain("HOLD 3s FADE");
-    assertMinStrokeWidth(svg, 3);
+    assertSvgRules(svg);
   });
 
   it("enforces the Never-Blank rule for Unassigned, Unavailable (verbatim reason), and Disconnected", () => {
@@ -172,7 +180,7 @@ describe("Step 1.3 — Playlister Runtime SVG Renderer (Dial Cells & Keys)", () 
       slotId: "fader_3"
     });
     expect(unassignedSvg).toContain("Unassigned, set in OBS");
-    assertMinStrokeWidth(unassignedSvg, 3);
+    assertSvgRules(unassignedSvg);
 
     const unavailableSlot: FadesterSlot = {
       ...unassignedSlot,
@@ -188,7 +196,7 @@ describe("Step 1.3 — Playlister Runtime SVG Renderer (Dial Cells & Keys)", () 
       slotId: "crossfader"
     });
     expect(unavailableSvg).toContain("Studio Mode is off");
-    assertMinStrokeWidth(unavailableSvg, 3);
+    assertSvgRules(unavailableSvg);
 
     const disconnectedSvg = renderDialCellSvg({
       status: {
@@ -200,7 +208,7 @@ describe("Step 1.3 — Playlister Runtime SVG Renderer (Dial Cells & Keys)", () 
       slotId: "crossfader"
     });
     expect(disconnectedSvg).toContain("Wrong password");
-    assertMinStrokeWidth(disconnectedSvg, 3);
+    assertSvgRules(disconnectedSvg);
 
     const keySvg = renderAutoFadeKeySvg({
       status: CONNECTED_STATUS,
@@ -210,7 +218,7 @@ describe("Step 1.3 — Playlister Runtime SVG Renderer (Dial Cells & Keys)", () 
       durationMs: 1000
     });
     expect(keySvg).toContain("Studio Mode is off");
-    assertMinStrokeWidth(keySvg, 3);
+    assertSvgRules(keySvg);
   });
 
   it("renders Midi Fadester 0.3.0 verbatim reason for profile-disabled slots (target_mode=unassigned, available=false) and parked indicator", () => {
@@ -240,7 +248,7 @@ describe("Step 1.3 — Playlister Runtime SVG Renderer (Dial Cells & Keys)", () 
     expect(dialSvg).toContain(PLAYLISTER_PALETTE.orangeAccent);
     expect(dialSvg).not.toContain("Unassigned, set in OBS");
     expect(dialSvg).not.toContain("72%");
-    assertMinStrokeWidth(dialSvg, 3);
+    assertSvgRules(dialSvg);
 
     const keySvg = renderAutoFadeKeySvg({
       status: CONNECTED_STATUS,
@@ -252,7 +260,7 @@ describe("Step 1.3 — Playlister Runtime SVG Renderer (Dial Cells & Keys)", () 
     expect(keySvg).toContain("Not used. Click to set up.");
     expect(keySvg).not.toContain("Unassigned, set in OBS");
     expect(keySvg).not.toContain("72%");
-    assertMinStrokeWidth(keySvg, 3);
+    assertSvgRules(keySvg);
 
     const parkedSlot: FadesterSlot = {
       ...disabledByProfileSlot,
@@ -268,6 +276,96 @@ describe("Step 1.3 — Playlister Runtime SVG Renderer (Dial Cells & Keys)", () 
       slotId: "crossfader"
     });
     expect(parkedSvg).toContain('data-parked="true"');
-    assertMinStrokeWidth(parkedSvg, 3);
+    assertSvgRules(parkedSvg);
+  });
+
+  it("renders FX readouts and All FX states within the two-line, 3px-stroke visual rules", () => {
+    const fxSlot: FadesterSlot = {
+      id: "fx_1",
+      name: "FX 1",
+      kind: "fx",
+      enabled: true,
+      target_mode: "filter_param",
+      source_a: "Cam 1",
+      source_b: "",
+      filter_name: "Blur",
+      filter_prop: "radius",
+      from_val: 0,
+      to_val: 32,
+      bypass_at_zero: true,
+      curve: "linear",
+      afv: false,
+      value: 0.44,
+      display_value: "14.1 px",
+      takeover_pending: "none",
+      label: "Cam 1 • Blur",
+      available: true,
+      reason: ""
+    };
+
+    const fxDialSvg = renderDialCellSvg({
+      status: CONNECTED_STATUS,
+      slot: fxSlot,
+      slotId: "fx_1"
+    });
+    expect(fxDialSvg).toContain('data-cell="fx"');
+    expect(fxDialSvg).toContain("14.1 px");
+    expect(fxDialSvg).toContain(PLAYLISTER_PALETTE.fxCyanStart);
+    expect(fxDialSvg).toContain(PLAYLISTER_PALETTE.fxAmberEnd);
+    assertSvgRules(fxDialSvg);
+
+    const fxKeySvg = renderAutoFadeKeySvg({
+      status: CONNECTED_STATUS,
+      slot: fxSlot,
+      slotId: "fx_1",
+      to: 0,
+      durationMs: 0
+    });
+    expect(fxKeySvg).toContain('data-key="auto-fade"');
+    expect(fxKeySvg).toContain("14.1 px");
+    assertSvgRules(fxKeySvg);
+
+    const allFxSvg = renderAutoFadeKeySvg({
+      status: CONNECTED_STATUS,
+      slots: [
+        fxSlot,
+        {
+          ...fxSlot,
+          id: "fx_2",
+          name: "FX 2",
+          target_mode: "unassigned",
+          value: 0,
+          display_value: "0 (Off)",
+          label: "FX 2"
+        }
+      ],
+      slotId: "__all_fx__",
+      to: 0,
+      durationMs: 0
+    });
+    expect(allFxSvg).toContain('data-key="clean-fx"');
+    expect(allFxSvg).toContain('data-active-fx="1"');
+    expect(allFxSvg).toContain("CLEAN FX");
+    assertSvgRules(allFxSvg);
+
+    const legacyAllFxSvg = renderAutoFadeKeySvg({
+      status: CONNECTED_STATUS,
+      slots: [
+        {
+          ...fxSlot,
+          id: "fader_1",
+          name: "Fader 1",
+          kind: "fader",
+          target_mode: "layer_opacity",
+          label: "Cam 1"
+        }
+      ],
+      slotId: "__all_fx__",
+      to: 0,
+      durationMs: 0
+    });
+    expect(legacyAllFxSvg).toContain('data-key="status"');
+    expect(legacyAllFxSvg).toContain("Update Midi Fadester to 0.4.0");
+    assertSvgRules(legacyAllFxSvg);
   });
 });

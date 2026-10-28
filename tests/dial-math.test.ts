@@ -25,7 +25,7 @@ describe("Step 1.4 — Dial Math (Steps, Acceleration, Press, 800 ms Long Press,
     expect(computeDialDelta(-4, 0.02, true, 120)).toBe(-0.24);
   });
 
-  it("resolves all 5 short-press modes with exact release and rail rules", () => {
+  it("resolves all short-press modes with exact release and rail rules", () => {
     expect(resolveDialPressCommand("crossfader", 0.2, "snap_0_100")).toEqual({
       kind: "set_fader_value",
       request: { slot: "crossfader", value: 1.0, release: true }
@@ -33,6 +33,10 @@ describe("Step 1.4 — Dial Math (Steps, Acceleration, Press, 800 ms Long Press,
     expect(resolveDialPressCommand("crossfader", 0.5, "snap_0_100")).toEqual({
       kind: "set_fader_value",
       request: { slot: "crossfader", value: 0.0, release: true }
+    });
+    expect(resolveDialPressCommand("fader_1", 0.9, "clean_0")).toEqual({
+      kind: "set_fader_value",
+      request: { slot: "fader_1", value: 0.0, release: true }
     });
     expect(resolveDialPressCommand("fader_1", 0.1, "auto_fade_1s")).toEqual({
       kind: "auto_fade",
@@ -48,7 +52,7 @@ describe("Step 1.4 — Dial Math (Steps, Acceleration, Press, 800 ms Long Press,
     });
   });
 
-  it("resolves 800 ms long-press commands (Auto-fade 3 s, Finish T-bar, None)", () => {
+  it("resolves 800 ms long-press commands (Auto-fade 3 s, Clean All FX, Finish T-bar, None)", () => {
     expect(
       resolveDialLongPressCommand("crossfader", 0.25, "auto_fade_3s")
     ).toEqual({
@@ -60,6 +64,12 @@ describe("Step 1.4 — Dial Math (Steps, Acceleration, Press, 800 ms Long Press,
     ).toEqual({
       kind: "auto_fade",
       request: { slot: "crossfader", to: 0.0, ms: 3000 }
+    });
+    expect(
+      resolveDialLongPressCommand("fader_1", 0.75, "clean_all_fx")
+    ).toEqual({
+      kind: "reset_fx",
+      request: { ms: 0 }
     });
     expect(resolveDialLongPressCommand("crossfader", 0.2, "none")).toBeNull();
   });

@@ -9,6 +9,7 @@ import {
 } from "@elgato/streamdeck";
 import { FadesterStore } from "../state/fadester-store.js";
 import {
+  ALL_FX_SLOT_ID,
   AutoFadeKeySettings,
   DEFAULT_AUTO_FADE_KEY_SETTINGS
 } from "../types/settings.js";
@@ -32,7 +33,7 @@ export class AutoFadeKeyInstanceController {
   };
 
   private readonly onSlotValueChanged = (slotId: string): void => {
-    if (slotId === this.settings.slot) {
+    if (slotId === this.settings.slot || this.settings.slot === ALL_FX_SLOT_ID) {
       this.renderNow();
     }
   };
@@ -85,6 +86,20 @@ export class AutoFadeKeyInstanceController {
     }
 
     try {
+      if (this.settings.slot === ALL_FX_SLOT_ID) {
+        await this.store.getClient().resetFx({ ms: this.settings.durationMs });
+        return;
+      }
+
+      if (this.settings.durationMs === 0) {
+        await this.store.getClient().setFaderValue({
+          slot: this.settings.slot,
+          value: this.settings.to,
+          release: true
+        });
+        return;
+      }
+
       await this.store.getClient().autoFade({
         slot: this.settings.slot,
         to: this.settings.to,
@@ -100,6 +115,7 @@ export class AutoFadeKeyInstanceController {
     return renderAutoFadeKeySvg({
       status: this.store.getStatus(),
       slot,
+      slots: this.store.getSlots(),
       slotId: this.settings.slot,
       to: this.settings.to,
       durationMs: this.settings.durationMs
@@ -120,8 +136,11 @@ export class AutoFadeKeyInstanceController {
       (raw?.slot && String(raw.slot).trim()) || DEFAULT_AUTO_FADE_KEY_SETTINGS.slot;
     const to: 0 | 1 = Number(raw?.to) === 0 ? 0 : 1;
     const rawMs = Number(raw?.durationMs ?? DEFAULT_AUTO_FADE_KEY_SETTINGS.durationMs);
-    const durationMs = Number.isFinite(rawMs)
-      ? Math.max(50, Math.min(20000, Math.round(rawMs)))
+    const rounded = Math.round(rawMs);
+    const durationMs = Number.isFinite(rounded)
+      ? rounded === 0
+        ? 0
+        : Math.max(50, Math.min(20000, rounded))
       : DEFAULT_AUTO_FADE_KEY_SETTINGS.durationMs;
     return { slot, to, durationMs };
   }

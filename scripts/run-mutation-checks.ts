@@ -131,6 +131,26 @@ const MUTATIONS: MutationCheck[] = [
     target: "this.holdingForLongPress = true;",
     mutated: "this.holdingForLongPress = false;",
     testFile: "tests/actions-integration.test.ts"
+  },
+  {
+    id: "M-1.4c",
+    step: "Step 1.4 (All-FX Auto-fade Key Dispatch)",
+    description:
+      "Disable the __all_fx__ reset branch and verify actions-integration.test.ts fails",
+    filePath: resolve(ROOT, "src/actions/auto-fade-key.ts"),
+    target: "if (this.settings.slot === ALL_FX_SLOT_ID) {",
+    mutated: "if (false) {",
+    testFile: "tests/actions-integration.test.ts"
+  },
+  {
+    id: "M-1.4d",
+    step: "Step 1.4 (Zero-Duration Auto-fade Key Release)",
+    description:
+      "Disable the zero-duration release branch and verify actions-integration.test.ts fails",
+    filePath: resolve(ROOT, "src/actions/auto-fade-key.ts"),
+    target: "if (this.settings.durationMs === 0) {",
+    mutated: "if (false) {",
+    testFile: "tests/actions-integration.test.ts"
   }
 ];
 

@@ -13,10 +13,13 @@ export const DEFAULT_GLOBAL_SETTINGS: Required<FadesterGlobalSettings> = {
   password: ""
 };
 
+export const ALL_FX_SLOT_ID = "__all_fx__" as const;
+
 export type DialStepPerTick = 0.01 | 0.02 | 0.05;
 
 export type DialPressAction =
   | "snap_0_100"
+  | "clean_0"
   | "auto_fade_1s"
   | "auto_fade_2s"
   | "cut"
@@ -24,6 +27,7 @@ export type DialPressAction =
 
 export type DialLongPressAction =
   | "auto_fade_3s"
+  | "clean_all_fx"
   | "finish_tbar"
   | "none";
 

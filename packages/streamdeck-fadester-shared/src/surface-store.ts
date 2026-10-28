@@ -85,6 +85,9 @@ export class SurfaceStore<
       const existing = this.slotMap.get(ev.slot);
       if (existing) {
         existing.value = Math.max(0, Math.min(1, ev.value));
+        if (typeof ev.display_value === "string") {
+          existing.display_value = ev.display_value;
+        }
         if (ev.origin === "midi") {
           existing.takeover_pending = "none";
         }

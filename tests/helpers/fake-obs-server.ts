@@ -75,12 +75,51 @@ const FAKE_PROFILES: Record<string, FakeProfileMeta> = {
   }
 };
 
-export function createDefaultSlots(studioMode = true): FadesterSlot[] {
-  return [
+const LEGACY_VALID_SLOTS =
+  "crossfader, fader_1 .. fader_8, master";
+const CURRENT_VALID_SLOTS = `${LEGACY_VALID_SLOTS}, fx_1 .. fx_8`;
+
+function formatDisplayValue(slot: Pick<FadesterSlot, "id" | "value">): string {
+  const value = Math.max(0, Math.min(1, slot.value));
+  switch (slot.id) {
+    case "fx_1":
+      return `${(value * 32).toFixed(1)} px`;
+    case "fx_2":
+      return `${Math.round(-100 + value * 200)}%`;
+    case "fx_3":
+      return `${(-60 + value * 60).toFixed(1)} dB`;
+    case "fx_4":
+      return value === 0 ? "0 (Off)" : `${Math.round(value * 100)}%`;
+    default:
+      return `${Math.round(value * 100)}%`;
+  }
+}
+
+function withDisplayValue(slot: FadesterSlot): FadesterSlot {
+  return {
+    ...slot,
+    display_value: formatDisplayValue(slot)
+  };
+}
+
+function supportsFxApi(version: string): boolean {
+  const [majorText = "0", minorText = "0"] = version.split(/[.-]/, 3);
+  const major = Number(majorText);
+  const minor = Number(minorText);
+  return Number.isFinite(major) && Number.isFinite(minor) &&
+    (major > 0 || (major === 0 && minor >= 4));
+}
+
+export function createDefaultSlots(
+  studioMode = true,
+  includeFx = true
+): FadesterSlot[] {
+  const baseSlots: FadesterSlot[] = [
     {
       id: "crossfader",
       name: "Crossfader",
       kind: "crossfader",
+      enabled: true,
       target_mode: "tbar",
       source_a: "",
       source_b: "",
@@ -96,6 +135,7 @@ export function createDefaultSlots(studioMode = true): FadesterSlot[] {
       id: "fader_1",
       name: "Fader 1",
       kind: "fader",
+      enabled: true,
       target_mode: "crossfade_ab",
       source_a: "Cam 1",
       source_b: "Loop 3",
@@ -111,6 +151,7 @@ export function createDefaultSlots(studioMode = true): FadesterSlot[] {
       id: "fader_2",
       name: "Fader 2",
       kind: "fader",
+      enabled: true,
       target_mode: "layer_opacity",
       source_a: "Logo Overlay",
       source_b: "",
@@ -126,6 +167,7 @@ export function createDefaultSlots(studioMode = true): FadesterSlot[] {
       id: "fader_3",
       name: "Fader 3",
       kind: "fader",
+      enabled: true,
       target_mode: "unassigned",
       source_a: "",
       source_b: "",
@@ -137,10 +179,27 @@ export function createDefaultSlots(studioMode = true): FadesterSlot[] {
       available: true,
       reason: ""
     },
+    ...Array.from({ length: 5 }, (_, index): FadesterSlot => ({
+      id: `fader_${index + 4}`,
+      name: `Fader ${index + 4}`,
+      kind: "fader",
+      enabled: true,
+      target_mode: "unassigned",
+      source_a: "",
+      source_b: "",
+      curve: "linear",
+      afv: false,
+      value: 0.0,
+      takeover_pending: "none",
+      label: "",
+      available: true,
+      reason: ""
+    })),
     {
       id: "master",
       name: "Master",
       kind: "master",
+      enabled: true,
       target_mode: "audio_volume",
       source_a: "Desktop Audio",
       source_b: "",
@@ -153,6 +212,169 @@ export function createDefaultSlots(studioMode = true): FadesterSlot[] {
       reason: ""
     }
   ];
+
+  const fxSlots: FadesterSlot[] = [
+    {
+      id: "fx_1",
+      name: "FX 1",
+      kind: "fx",
+      enabled: true,
+      target_mode: "filter_param",
+      source_a: "Cam 1",
+      source_b: "",
+      filter_name: "Blur",
+      filter_prop: "radius",
+      from_val: 0,
+      to_val: 32,
+      bypass_at_zero: true,
+      curve: "linear",
+      afv: false,
+      value: 0.44,
+      takeover_pending: "none",
+      label: "Cam 1 • Blur • Radius",
+      available: true,
+      reason: ""
+    },
+    {
+      id: "fx_2",
+      name: "FX 2",
+      kind: "fx",
+      enabled: true,
+      target_mode: "filter_param",
+      source_a: "Logo Overlay",
+      source_b: "",
+      filter_name: "Color Correction",
+      filter_prop: "saturation",
+      from_val: -100,
+      to_val: 100,
+      bypass_at_zero: false,
+      curve: "linear",
+      afv: false,
+      value: 0.3,
+      takeover_pending: "none",
+      label: "Logo Overlay • Color Correction • Saturation",
+      available: true,
+      reason: ""
+    },
+    {
+      id: "fx_3",
+      name: "FX 3",
+      kind: "fx",
+      enabled: true,
+      target_mode: "filter_param",
+      source_a: "Mic/Aux",
+      source_b: "",
+      filter_name: "Compressor",
+      filter_prop: "threshold",
+      from_val: -60,
+      to_val: 0,
+      bypass_at_zero: false,
+      curve: "linear",
+      afv: false,
+      value: 0.9,
+      takeover_pending: "none",
+      label: "Mic/Aux • Compressor • Threshold",
+      available: true,
+      reason: ""
+    },
+    {
+      id: "fx_4",
+      name: "FX 4",
+      kind: "fx",
+      enabled: true,
+      target_mode: "filter_param",
+      source_a: "Cam 1",
+      source_b: "",
+      filter_name: "Crop/Pad",
+      filter_prop: "left",
+      from_val: 0,
+      to_val: 960,
+      bypass_at_zero: false,
+      curve: "linear",
+      afv: false,
+      value: 0.0,
+      takeover_pending: "none",
+      label: "Cam 1 • Crop/Pad • Left",
+      available: true,
+      reason: ""
+    },
+    {
+      id: "fx_5",
+      name: "FX 5",
+      kind: "fx",
+      enabled: true,
+      target_mode: "filter_param",
+      source_a: "Loop 3",
+      source_b: "",
+      filter_name: "Sharpen",
+      filter_prop: "sharpness",
+      from_val: 0,
+      to_val: 1,
+      bypass_at_zero: true,
+      curve: "linear",
+      afv: false,
+      value: 0.55,
+      takeover_pending: "none",
+      label: "Loop 3 • Sharpen • Sharpness",
+      available: true,
+      reason: ""
+    },
+    {
+      id: "fx_6",
+      name: "FX 6",
+      kind: "fx",
+      enabled: true,
+      target_mode: "filter_param",
+      source_a: "Desktop Audio",
+      source_b: "",
+      filter_name: "Limiter",
+      filter_prop: "threshold",
+      from_val: -30,
+      to_val: 0,
+      bypass_at_zero: false,
+      curve: "linear",
+      afv: false,
+      value: 0.7,
+      takeover_pending: "none",
+      label: "Desktop Audio • Limiter • Threshold",
+      available: true,
+      reason: ""
+    },
+    {
+      id: "fx_7",
+      name: "FX 7",
+      kind: "fx",
+      enabled: true,
+      target_mode: "unassigned",
+      source_a: "",
+      source_b: "",
+      curve: "linear",
+      afv: false,
+      value: 0.0,
+      takeover_pending: "none",
+      label: "",
+      available: true,
+      reason: ""
+    },
+    {
+      id: "fx_8",
+      name: "FX 8",
+      kind: "fx",
+      enabled: true,
+      target_mode: "unassigned",
+      source_a: "",
+      source_b: "",
+      curve: "linear",
+      afv: false,
+      value: 0.0,
+      takeover_pending: "none",
+      label: "",
+      available: true,
+      reason: ""
+    }
+  ];
+
+  return [...baseSlots, ...(includeFx ? fxSlots : [])].map(withDisplayValue);
 }
 
 export class FakeObsServer {
@@ -177,7 +399,8 @@ export class FakeObsServer {
     "Cam 1",
     "Loop 3",
     "Logo Overlay",
-    "Desktop Audio"
+    "Desktop Audio",
+    "Mic/Aux"
   ]);
 
   public vendorCallLog: Array<{
@@ -192,14 +415,17 @@ export class FakeObsServer {
   public constructor(opts?: FakeObsServerOptions) {
     this.password = opts?.password ?? "";
     this.obsVersion = opts?.obsVersion ?? "33.0.0";
-    this.fadesterVersion = opts?.fadesterVersion ?? "0.3.0";
+    this.fadesterVersion = opts?.fadesterVersion ?? "0.4.0";
     this.buildCommit = opts?.buildCommit ?? "";
     this.apiVersion = opts?.apiVersion ?? 1;
     this.profile = opts?.profile ?? "apc40mk2";
     this.missingPlugin = opts?.missingPlugin ?? false;
     this.studioMode = opts?.studioMode ?? true;
     this.screenshotDelayMs = opts?.screenshotDelayMs ?? 5;
-    this.slots = createDefaultSlots(this.studioMode);
+    this.slots = createDefaultSlots(
+      this.studioMode,
+      supportsFxApi(this.fadesterVersion)
+    );
     this.applyProfileTopology(this.profile);
   }
 
@@ -265,17 +491,20 @@ export class FakeObsServer {
     const cross = this.slots.find((s) => s.id === "crossfader");
     if (cross) {
       if (!meta.hasCrossfader) {
+        cross.enabled = false;
         cross.target_mode = "unassigned";
         cross.label = "Disabled";
         cross.available = false;
         cross.reason = "Not used. Click to set up.";
         cross.value = 0.0;
       } else if (meta.slug === "apc40mk2") {
+        cross.enabled = true;
         cross.target_mode = "tbar";
         cross.label = "Studio Mode T-bar";
         cross.available = this.studioMode;
         cross.reason = this.studioMode ? "" : "Studio Mode is off";
       } else {
+        cross.enabled = false;
         cross.target_mode = "unassigned";
         cross.label = "Unassigned";
         cross.available = false;
@@ -286,6 +515,7 @@ export class FakeObsServer {
     const master = this.slots.find((s) => s.id === "master");
     if (master) {
       if (!meta.hasMaster) {
+        master.enabled = false;
         master.target_mode = "unassigned";
         master.source_a = "";
         master.label = "Disabled";
@@ -293,12 +523,14 @@ export class FakeObsServer {
         master.reason = "Not used. Click to set up.";
         master.value = 0.0;
       } else if (meta.slug === "generic") {
+        master.enabled = false;
         master.target_mode = "unassigned";
         master.source_a = "";
         master.label = "Unassigned";
         master.available = false;
         master.reason = "Not used. Click to set up.";
       } else if (master.target_mode === "unassigned") {
+        master.enabled = true;
         master.target_mode = "audio_volume";
         master.source_a = "Desktop Audio";
         master.label = "Desktop Audio";
@@ -307,6 +539,34 @@ export class FakeObsServer {
         master.value = 1.0;
       }
     }
+
+    for (const slot of this.slots) {
+      slot.display_value = formatDisplayValue(slot);
+    }
+  }
+
+  public emitFaderChanged(slotId: string, origin = "api"): void {
+    const slot = this.slots.find((candidate) => candidate.id === slotId);
+    if (!slot) {
+      return;
+    }
+    slot.display_value = formatDisplayValue(slot);
+    this.emitVendorEvent("fader_changed", {
+      slot: slot.id,
+      value: slot.value,
+      ...(supportsFxApi(this.fadesterVersion)
+        ? { display_value: slot.display_value }
+        : {}),
+      origin
+    });
+  }
+
+  private stateSlot(slot: FadesterSlot): FadesterSlot {
+    const copy = { ...slot };
+    if (!supportsFxApi(this.fadesterVersion)) {
+      delete copy.display_value;
+    }
+    return copy;
   }
 
   public getStatePayload(): GetStateResponse {
@@ -331,7 +591,7 @@ export class FakeObsServer {
         connected: true,
         error: ""
       },
-      slots: this.slots.map((s) => ({ ...s }))
+      slots: this.slots.map((slot) => this.stateSlot(slot))
     };
   }
 
@@ -499,32 +759,160 @@ export class FakeObsServer {
       return { loaded: meta.slug, profile_tier: meta.tier };
     }
 
+    if (vReqType === "get_catalog") {
+      if (!supportsFxApi(this.fadesterVersion)) {
+        const msg =
+          "The 'get_catalog' request requires Midi Fadester 0.4.0 or newer.";
+        return { error: msg, comment: msg };
+      }
+      const source =
+        typeof vReqData.source === "string" ? vReqData.source : "";
+      if (!source) {
+        return {
+          scenes: [
+            {
+              name: "Scene Live",
+              layers: [
+                { name: "Cam 1", has_audio: false },
+                { name: "Logo Overlay", has_audio: false }
+              ]
+            },
+            {
+              name: "Scene Preview",
+              layers: [{ name: "Loop 3", has_audio: false }]
+            }
+          ],
+          audio_sources: [
+            { name: "Desktop Audio", db: -6 },
+            { name: "Mic/Aux", db: -12 }
+          ],
+          filter_hosts: [
+            { source: "Cam 1", is_scene: false, filter_count: 2 },
+            { source: "Logo Overlay", is_scene: false, filter_count: 1 },
+            { source: "Scene Live", is_scene: true, filter_count: 0 }
+          ]
+        };
+      }
+      if (source === "Cam 1") {
+        return {
+          source,
+          is_scene: false,
+          filters: [
+            {
+              name: "Blur",
+              type_id: "box_filter",
+              enabled: true,
+              properties: [
+                {
+                  name: "radius",
+                  label: "Radius",
+                  type: "float",
+                  min: 0,
+                  max: 32,
+                  step: 0.1,
+                  suffix: "px",
+                  current: 14.1
+                }
+              ]
+            },
+            {
+              name: "Crop/Pad",
+              type_id: "crop_filter",
+              enabled: true,
+              properties: [
+                {
+                  name: "left",
+                  label: "Left",
+                  type: "int",
+                  min: 0,
+                  max: 960,
+                  step: 1,
+                  suffix: "px",
+                  current: 0
+                }
+              ]
+            }
+          ]
+        };
+      }
+      if (source === "Logo Overlay") {
+        return {
+          source,
+          is_scene: false,
+          filters: [
+            {
+              name: "Color Correction",
+              type_id: "color_filter",
+              enabled: true,
+              properties: [
+                {
+                  name: "saturation",
+                  label: "Saturation",
+                  type: "float",
+                  min: -100,
+                  max: 100,
+                  step: 0.1,
+                  suffix: "%",
+                  current: -40
+                }
+              ]
+            }
+          ]
+        };
+      }
+      return { source, is_scene: source.startsWith("Scene "), filters: [] };
+    }
+
+    if (vReqType === "reset_fx") {
+      if (!supportsFxApi(this.fadesterVersion)) {
+        const msg =
+          "The 'reset_fx' request requires Midi Fadester 0.4.0 or newer.";
+        return { error: msg, comment: msg };
+      }
+      const ms = vReqData.ms === undefined ? 0 : Number(vReqData.ms);
+      if (!Number.isFinite(ms) || (ms !== 0 && (ms < 50 || ms > 20000))) {
+        const msg = "Duration 'ms' must be 0 or between 50 and 20000.";
+        return { error: msg, comment: msg };
+      }
+      const eligible = this.slots.filter(
+        (slot) => slot.kind === "fx" && slot.target_mode === "filter_param"
+      );
+      for (const slot of eligible) {
+        slot.value = 0;
+        slot.display_value = formatDisplayValue(slot);
+        this.emitFaderChanged(slot.id, "api");
+      }
+      return {
+        eligible_count: eligible.length,
+        reset_count: eligible.length,
+        queued_unavailable_count: 0,
+        ms
+      };
+    }
+
     const slotId = String(vReqData.slot ?? "");
     const slot = this.slots.find((s) => s.id === slotId);
     if (!slot) {
-      const msg = `Slot '${slotId}' does not exist. Valid slots: crossfader, fader_1 .. fader_8, master.`;
+      const validSlots = supportsFxApi(this.fadesterVersion)
+        ? CURRENT_VALID_SLOTS
+        : LEGACY_VALID_SLOTS;
+      const msg = `Slot '${slotId}' does not exist. Valid slots: ${validSlots}.`;
       return { error: msg, comment: msg };
     }
 
     if (vReqType === "set_fader_value") {
       const rawVal = Number(vReqData.value ?? 0);
       slot.value = Math.max(0, Math.min(1, rawVal));
-      this.emitVendorEvent("fader_changed", {
-        slot: slot.id,
-        value: slot.value,
-        origin: "api"
-      });
+      slot.display_value = formatDisplayValue(slot);
+      this.emitFaderChanged(slot.id, "api");
       return { slot: slot.id, value: slot.value };
     }
 
     if (vReqType === "nudge_fader") {
       const delta = Number(vReqData.delta ?? 0);
       slot.value = Math.max(0, Math.min(1, Number((slot.value + delta).toFixed(4))));
-      this.emitVendorEvent("fader_changed", {
-        slot: slot.id,
-        value: slot.value,
-        origin: "api"
-      });
+      slot.display_value = formatDisplayValue(slot);
+      this.emitFaderChanged(slot.id, "api");
       return { slot: slot.id, value: slot.value };
     }
 
@@ -536,11 +924,8 @@ export class FakeObsServer {
         return { error: msg, comment: msg };
       }
       slot.value = Math.max(0, Math.min(1, to));
-      this.emitVendorEvent("fader_changed", {
-        slot: slot.id,
-        value: slot.value,
-        origin: "auto_fade"
-      });
+      slot.display_value = formatDisplayValue(slot);
+      this.emitFaderChanged(slot.id, "auto_fade");
       return { slot: slot.id };
     }
 
@@ -564,6 +949,12 @@ export class FakeObsServer {
       if (typeof vReqData.target_mode === "string") {
         slot.target_mode = vReqData.target_mode as FadesterSlot["target_mode"];
       }
+      if (typeof vReqData.enabled === "boolean") {
+        slot.enabled = vReqData.enabled;
+      }
+      if (typeof vReqData.scene === "string") {
+        slot.scene = vReqData.scene;
+      }
       if (typeof vReqData.source_a === "string") {
         slot.source_a = vReqData.source_a;
       }
@@ -576,11 +967,33 @@ export class FakeObsServer {
       if (typeof vReqData.afv === "boolean") {
         slot.afv = vReqData.afv;
       }
+      if (typeof vReqData.filter_name === "string") {
+        slot.filter_name = vReqData.filter_name;
+      }
+      if (typeof vReqData.filter_prop === "string") {
+        slot.filter_prop = vReqData.filter_prop;
+      }
+      if (typeof vReqData.from_val === "number") {
+        slot.from_val = vReqData.from_val;
+      }
+      if (typeof vReqData.to_val === "number") {
+        slot.to_val = vReqData.to_val;
+      }
+      if (typeof vReqData.bypass_at_zero === "boolean") {
+        slot.bypass_at_zero = vReqData.bypass_at_zero;
+      }
+      if (typeof vReqData.cal_min === "number") {
+        slot.cal_min = vReqData.cal_min;
+      }
+      if (typeof vReqData.cal_max === "number") {
+        slot.cal_max = vReqData.cal_max;
+      }
+      slot.display_value = formatDisplayValue(slot);
       this.emitVendorEvent(
         "state_changed",
         this.getStatePayload() as unknown as Record<string, unknown>
       );
-      return { ...slot } as unknown as Record<string, unknown>;
+      return this.stateSlot(slot) as unknown as Record<string, unknown>;
     }
 
     const msg = `Unknown vendor request '${vReqType}'.`;

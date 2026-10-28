@@ -165,14 +165,15 @@ describe("Step 1.2 — FadesterClient & FadesterStore against FakeObsServer", ()
       value: 0.5,
       release: true
     });
-    expect(setRes).toEqual({ slot: "crossfader", value: 0.5 });
+    expect(setRes).toEqual({ slot: "crossfader", value: 0 });
+    expect(server.tbarCompletionCount).toBe(1);
 
     // 3. nudge_fader
     const nudgeRes = await client.nudgeFader({
       slot: "crossfader",
       delta: 0.1
     });
-    expect(nudgeRes).toEqual({ slot: "crossfader", value: 0.6 });
+    expect(nudgeRes).toEqual({ slot: "crossfader", value: 0.1 });
 
     // 4. auto_fade
     const fadeRes = await client.autoFade({
@@ -205,18 +206,18 @@ describe("Step 1.2 — FadesterClient & FadesterStore against FakeObsServer", ()
       filter_hosts: expect.any(Array)
     });
 
-    // 8. reset_fx only cleans assigned FX slots.
+    // 8. Profile reset cleared all filter assignments, so nothing is eligible.
     const resetRes = await client.resetFx({ ms: 0 });
     expect(resetRes).toEqual({
-      eligible_count: 6,
-      reset_count: 6,
+      eligible_count: 0,
+      reset_count: 0,
       queued_unavailable_count: 0,
       ms: 0
     });
     expect(
       server.slots
-        .filter((slot) => slot.kind === "fx" && slot.target_mode === "filter_param")
-        .every((slot) => slot.value === 0)
+        .filter((slot) => slot.kind === "fx")
+        .every((slot) => slot.target_mode === "unassigned")
     ).toBe(true);
 
     // External fader_changed event from MIDI clears takeover_pending and updates value
@@ -322,7 +323,7 @@ describe("Step 1.2 — FadesterClient & FadesterStore against FakeObsServer", ()
     expect(store.getSlot("crossfader")?.reason).toBe(
       "Not used. Click to set up."
     );
-    expect(store.getSlot("master")?.available).toBe(true);
+    expect(store.getSlot("master")).toMatchObject({ available: false, enabled: true, target_mode: "unassigned" });
 
     // Switch to nanokontrol2 (no crossfader AND no master)
     const nanoChanged = waitForEvent<void>(store, "changed");

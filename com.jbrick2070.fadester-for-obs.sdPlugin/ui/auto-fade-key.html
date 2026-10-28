@@ -27,14 +27,14 @@
     <label for="duration-input">Duration (ms)</label>
     <input type="number" id="duration-input" value="1000" min="0" max="20000" step="50" />
   </div>
-  <p class="muted" id="duration-hint">0 ms = instant (released at the rail). 50–20000 ms = timed fade following the slot's curve.</p>
+  <p class="muted" id="duration-hint">0 ms = instant. A T-bar return to 0 % cancels the throw. 50–20000 ms = timed fade following the slot's curve.</p>
 
   <div class="row">
     <label for="label-input">Label</label>
     <input type="text" id="label-input" maxlength="14" placeholder="From OBS (leave blank)" />
   </div>
 
-  <div class="row">
+  <div class="row" id="readout-row">
     <label for="readout-select">Readout</label>
     <select id="readout-select">
       <option value="auto" selected>Engine value (px, dB, %)</option>
@@ -50,11 +50,13 @@
       const isAllFx = settings.slot === "__all_fx__";
       const toRow = document.getElementById("to-row");
       const hint = document.getElementById("duration-hint");
+      const readoutRow = document.getElementById("readout-row");
       if (toRow) toRow.style.display = isAllFx ? "none" : "";
+      if (readoutRow) readoutRow.style.display = isAllFx ? "none" : "";
       if (hint) {
         hint.textContent = isAllFx
-          ? "All FX: resets every assigned FX slot to 0 %. 0 ms = instant, 50–20000 ms = timed ramp."
-          : "0 ms = instant (released at the rail). 50–20000 ms = timed fade following the slot's curve.";
+          ? "All FX: resets enabled filter bindings in either bank to 0 %. Audio and layer controls stay unchanged. 0 ms = instant; 50–20000 ms = timed ramp."
+          : "0 ms = instant. A T-bar return to 0 % cancels the throw. 50–20000 ms = timed fade following the slot's curve.";
       }
     }
 

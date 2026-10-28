@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { FadesterClient } from "../src/obs/fadester-client.js";
 import { FadesterStore } from "../src/state/fadester-store.js";
 import {
@@ -60,6 +60,7 @@ describe("Property Inspector bridge", () => {
   let h: Harness | null = null;
 
   afterEach(async () => {
+    vi.restoreAllMocks();
     if (h) {
       h.client.stop();
       await h.server.stop();
@@ -107,6 +108,41 @@ describe("Property Inspector bridge", () => {
     const state = lastState(h);
     expect(state.capabilities.catalog).toBe(false);
     expect(state.capabilities.fxSlots).toBe(false);
+  });
+
+  it("sends live values separately so inspector drafts need not be rebuilt", async () => {
+    h = await connect();
+    h.sent.length = 0;
+    await h.client.setFaderValue({ slot: "fader_2", value: 0.63 });
+    await vi.waitFor(() => {
+      expect(lastReply(h!, "slotValueChanged")).toMatchObject({
+        slot: "fader_2", value: 0.63
+      });
+    });
+    expect(typeof lastReply(h, "slotValueChanged").display_value).toBe("string");
+    expect(h.sent.some((p) => p.event === "fadesterState")).toBe(false);
+  });
+
+  it("reports an explicit error if an older server silently ignores enabled", async () => {
+    h = await connect();
+    const slot = h.store.getSlot("fx_1")!;
+    vi.spyOn(h.client, "setSlot").mockResolvedValue({ ...slot, enabled: true });
+    await h.bridge.handleMessage({ event: "setSlot", slot: "fx_1", fields: { enabled: false } });
+    expect(lastReply(h, "setSlotResult")).toMatchObject({
+      ok: false,
+      error: "Midi Fadester did not apply the enabled state. Update Midi Fadester to a build that supports slot enable controls."
+    });
+  });
+
+  it("broadcasts calibration and confirms enabled changes from the returned slot", async () => {
+    h = await connect();
+    const slot = h.store.getSlot("fx_1")!;
+    slot.cal_min = 3;
+    slot.cal_max = 125;
+    expect(h.bridge.buildStatePayload().slots.find((s) => s.id === "fx_1")).toMatchObject({ cal_min: 3, cal_max: 125 });
+    vi.spyOn(h.client, "setSlot").mockResolvedValue({ ...slot, enabled: false });
+    await h.bridge.handleMessage({ event: "setSlot", slot: "fx_1", fields: { enabled: false } });
+    expect(lastReply(h, "setSlotResult")).toMatchObject({ ok: true, enabled: false });
   });
 
   it("re-saving identical host/port keeps the socket and the stored password; a typed password reconnects", async () => {

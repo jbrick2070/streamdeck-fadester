@@ -32,9 +32,9 @@ describe("Step 1.4 — Dial Math (Steps, Acceleration, Press, 800 ms Long Press,
     });
     expect(resolveDialPressCommand("crossfader", 0.5, "snap_0_100")).toEqual({
       kind: "set_fader_value",
-      request: { slot: "crossfader", value: 0.0, release: true }
+      request: { slot: "crossfader", value: 0.0, release: false }
     });
-    expect(resolveDialPressCommand("fader_1", 0.9, "clean_0")).toEqual({
+    expect(resolveDialPressCommand("fader_1", 0.9, "clean_0", "filter_param")).toEqual({
       kind: "set_fader_value",
       request: { slot: "fader_1", value: 0.0, release: true }
     });
@@ -49,6 +49,26 @@ describe("Step 1.4 — Dial Math (Steps, Acceleration, Press, 800 ms Long Press,
     expect(resolveDialPressCommand("crossfader", 0.3, "finish_tbar")).toEqual({
       kind: "set_fader_value",
       request: { slot: "crossfader", value: 1.0, release: true }
+    });
+  });
+
+  it("never releases a zero T-bar or unknown target, while keeping normal fader rails", () => {
+    for (const mode of ["tbar", "unassigned", undefined] as const) {
+      for (const action of ["clean_0", "cut", "snap_0_100"] as const) {
+        expect(resolveDialPressCommand("fader_7", 0.8, action, mode)).toEqual({
+          kind: "set_fader_value",
+          request: { slot: "fader_7", value: 0, release: false }
+        });
+      }
+    }
+    for (const mode of ["audio_volume", "crossfade_ab", "layer_opacity", "filter_param"] as const) {
+      expect(resolveDialPressCommand("fx_1", 0.8, "clean_0", mode)).toEqual({
+        kind: "set_fader_value",
+        request: { slot: "fx_1", value: 0, release: true }
+      });
+    }
+    expect(mapTouchTapToRequest("fader_7", 10, 75, "tbar", false)).toEqual({
+      slot: "fader_7", value: 0, release: false
     });
   });
 

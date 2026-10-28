@@ -183,7 +183,8 @@ export class FaderDialInstanceController {
     const cmd = resolveDialPressCommand(
       this.settings.slot,
       currentValue,
-      this.settings.pressAction
+      this.settings.pressAction,
+      slot?.target_mode
     );
     await this.executeCommand(cmd);
   }

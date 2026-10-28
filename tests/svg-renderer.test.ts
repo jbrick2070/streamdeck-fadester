@@ -348,6 +348,33 @@ describe("Step 1.3 — Playlister Runtime SVG Renderer (Dial Cells & Keys)", () 
     expect(allFxSvg).toContain("CLEAN FX");
     assertSvgRules(allFxSvg);
 
+    const mixedSlots: FadesterSlot[] = [
+      { ...fxSlot, target_mode: "audio_volume", value: 0.8 },
+      { ...fxSlot, id: "fx_2", enabled: false, value: 0.9 },
+      { ...fxSlot, id: "fx_3", target_mode: "crossfade_ab", value: 0.7 },
+      { ...fxSlot, id: "fx_4", target_mode: "layer_opacity", value: 0.6 },
+      { ...fxSlot, id: "fader_7", kind: "fader", value: 0.4 }
+    ];
+    const renderMixed = (slots: FadesterSlot[]) => renderAutoFadeKeySvg({
+      status: CONNECTED_STATUS,
+      slots,
+      slotId: "__all_fx__",
+      to: 0,
+      durationMs: 0,
+      labelOverride: "Panic & FX"
+    });
+    const mixedSvg = renderMixed(mixedSlots);
+    expect(mixedSvg).toContain('data-active-fx="1"');
+    expect(mixedSvg).toContain("Panic &amp; FX");
+    assertSvgRules(mixedSvg);
+    const cleanSvg = renderMixed(mixedSlots.map((slot) =>
+      slot.id === "fader_7" ? { ...slot, value: 0 } : slot
+    ));
+    expect(cleanSvg).toContain('data-active-fx="0"');
+    expect(cleanSvg).toContain("ALL 0%");
+    expect(cleanSvg).toContain("Panic &amp; FX");
+    assertSvgRules(cleanSvg);
+
     const legacyAllFxSvg = renderAutoFadeKeySvg({
       status: CONNECTED_STATUS,
       slots: [

@@ -7,8 +7,10 @@ import {
 } from "../../src/obs/fadester-client.js";
 import {
   FadesterSlot,
-  GetStateResponse
+  GetStateResponse,
+  CatalogSourceFiltersResponse
 } from "../../src/types/contract.js";
+import { isResetFxEligible } from "../../packages/streamdeck-fadester-shared/src/fx-policy.js";
 
 export interface FakeObsServerOptions {
   password?: string;
@@ -411,6 +413,12 @@ export class FakeObsServer {
   public activeScreenshotRequests = 0;
   public maxConcurrentScreenshots = 0;
   public connectionCount = 0;
+  public tbarCompletionCount = 0;
+  public tbarAbortCount = 0;
+  public faderChangedCount = 0;
+  public readonly pendingCleanSlots = new Set<string>();
+  public readonly outputWriteCounts = new Map<string, number>();
+  private readonly reversedTbarDials = new Set<string>();
 
   public constructor(opts?: FakeObsServerOptions) {
     this.password = opts?.password ?? "";
@@ -545,11 +553,104 @@ export class FakeObsServer {
     }
   }
 
+  private loadProfileDefaults(meta: FakeProfileMeta): void {
+    this.profile = meta.slug;
+    this.pendingCleanSlots.clear();
+    this.reversedTbarDials.clear();
+    // The initial fixture is a configured demo desk. Loading a profile replaces
+    // every assignment, as mfd_engine_load_profile_defaults does in real OBS.
+    this.slots = this.slots.map((slot): FadesterSlot => {
+      const enabled = slot.kind === "fx" || meta.slug === "generic" ||
+        (slot.id === "crossfader" ? meta.hasCrossfader :
+          slot.id === "master" ? meta.hasMaster : true);
+      const isTbar = meta.slug === "apc40mk2" && slot.id === "crossfader";
+      return withDisplayValue({
+        id: slot.id,
+        name: slot.name,
+        kind: slot.kind,
+        enabled,
+        target_mode: isTbar ? "tbar" : "unassigned",
+        source_a: "",
+        source_b: "",
+        scene: "",
+        curve: slot.kind === "fx" ? "linear" : "dip_free",
+        afv: false,
+        value: 0,
+        takeover_pending: "none",
+        parked: false,
+        label: !enabled ? "Disabled" : isTbar ? "Studio Mode T-Bar" : "Unassigned",
+        available: isTbar && this.studioMode,
+        reason: isTbar ? (this.studioMode ? "" : "Studio Mode is off.") :
+          "Not used. Click to set up."
+      });
+    });
+  }
+
+  public setSlotAvailability(slotId: string, available: boolean, reason = ""): void {
+    const slot = this.slots.find((candidate) => candidate.id === slotId);
+    if (!slot) throw new Error(`Slot '${slotId}' does not exist.`);
+    slot.available = available;
+    slot.reason = reason;
+    if (available && this.pendingCleanSlots.delete(slotId) && isResetFxEligible(slot)) {
+      slot.value = 0;
+      this.recordOutputWrite(slot);
+      this.emitFaderChanged(slot.id);
+    }
+    this.emitVendorEvent("state_changed", this.getStatePayload() as unknown as Record<string, unknown>);
+  }
+
+  private recordOutputWrite(slot: FadesterSlot): void {
+    this.outputWriteCounts.set(slot.id, (this.outputWriteCounts.get(slot.id) ?? 0) + 1);
+  }
+
+  private isSlotWritable(slot: FadesterSlot): boolean {
+    // The provider retains values on enabled unassigned slots without driving OBS.
+    return slot.enabled !== false && (slot.target_mode === "unassigned" || slot.available);
+  }
+
+  private applyValue(slot: FadesterSlot, value: number, release: boolean, origin = "api"): void {
+    if (!this.isSlotWritable(slot)) return;
+    this.pendingCleanSlots.delete(slot.id);
+    const wasParked = slot.parked === true;
+    if (slot.target_mode === "unassigned") {
+      // Unassigned slots have neither two-rail takeover nor an output binding.
+      slot.value = value;
+      slot.parked = false;
+      this.emitFaderChanged(slot.id, origin);
+      return;
+    }
+    if (slot.target_mode === "tbar") {
+      if (release || value === 1) {
+        if (wasParked) return;
+        this.tbarCompletionCount++;
+        slot.value = 0; // OBS completion resets the logical throw while parking it.
+        slot.parked = true;
+      } else if (value === 0) {
+        if (slot.value === 0 && !wasParked) return;
+        if (!wasParked) this.tbarAbortCount++;
+        slot.value = 0;
+        slot.parked = false;
+      } else {
+        slot.value = value;
+        slot.parked = false;
+      }
+    } else {
+      slot.value = release ? (value >= 0.5 ? 1 : 0) : value;
+      slot.parked = slot.value === 0 || slot.value === 1;
+    }
+    this.recordOutputWrite(slot);
+    this.emitFaderChanged(slot.id, origin);
+    if (wasParked !== slot.parked || slot.target_mode === "tbar" && value === 0) {
+      this.emitVendorEvent("state_changed", this.getStatePayload() as unknown as Record<string, unknown>);
+    }
+  }
+
   public emitFaderChanged(slotId: string, origin = "api"): void {
     const slot = this.slots.find((candidate) => candidate.id === slotId);
     if (!slot) {
       return;
     }
+    this.faderChangedCount++;
     slot.display_value = formatDisplayValue(slot);
     this.emitVendorEvent("fader_changed", {
       slot: slot.id,
@@ -751,7 +852,7 @@ export class FakeObsServer {
         const msg = `Unknown profile '${name}'. Valid profiles: apc40mk2, apcminimk2, midimix, nanokontrol2, launchcontrolxl, generic.`;
         return { error: msg, comment: msg };
       }
-      this.applyProfileTopology(meta.slug);
+      this.loadProfileDefaults(meta);
       this.emitVendorEvent(
         "state_changed",
         this.getStatePayload() as unknown as Record<string, unknown>
@@ -860,7 +961,12 @@ export class FakeObsServer {
           ]
         };
       }
-      return { source, is_scene: source.startsWith("Scene "), filters: [] };
+      const isScene = source === "Scene Live" || source === "Scene Preview";
+      if (!isScene && !this.validSources.has(source)) {
+        const msg = `Source '${source}' not found. Create the source in OBS first or check its spelling.`;
+        return { error: msg, comment: msg };
+      }
+      return { source, is_scene: isScene, filters: [] };
     }
 
     if (vReqType === "reset_fx") {
@@ -871,21 +977,29 @@ export class FakeObsServer {
       }
       const ms = vReqData.ms === undefined ? 0 : Number(vReqData.ms);
       if (!Number.isFinite(ms) || (ms !== 0 && (ms < 50 || ms > 20000))) {
-        const msg = "Duration 'ms' must be 0 or between 50 and 20000.";
+        const msg = "Duration 'ms' must be 0 (instant) or between 50 and 20000 ms.";
         return { error: msg, comment: msg };
       }
-      const eligible = this.slots.filter(
-        (slot) => slot.kind === "fx" && slot.target_mode === "filter_param"
-      );
+      const eligible = this.slots.filter(isResetFxEligible);
+      let queued = 0;
       for (const slot of eligible) {
         slot.value = 0;
-        slot.display_value = formatDisplayValue(slot);
+        if (!slot.available) {
+          this.pendingCleanSlots.add(slot.id);
+          queued++;
+        } else {
+          this.pendingCleanSlots.delete(slot.id);
+          this.recordOutputWrite(slot);
+        }
+        // Fake fades settle immediately; counts and unavailable intent still
+        // follow the real provider's instant/timed request contract.
         this.emitFaderChanged(slot.id, "api");
       }
+      this.emitVendorEvent("state_changed", this.getStatePayload() as unknown as Record<string, unknown>);
       return {
         eligible_count: eligible.length,
-        reset_count: eligible.length,
-        queued_unavailable_count: 0,
+        reset_count: eligible.length - queued,
+        queued_unavailable_count: queued,
         ms
       };
     }
@@ -900,19 +1014,30 @@ export class FakeObsServer {
       return { error: msg, comment: msg };
     }
 
+    if (["set_fader_value", "nudge_fader", "auto_fade"].includes(vReqType) &&
+        !this.isSlotWritable(slot)) {
+      const msg = slot.reason || "This slot is unavailable. Configure it in Midi Fadester first.";
+      return { error: msg, comment: msg };
+    }
+
     if (vReqType === "set_fader_value") {
       const rawVal = Number(vReqData.value ?? 0);
-      slot.value = Math.max(0, Math.min(1, rawVal));
-      slot.display_value = formatDisplayValue(slot);
-      this.emitFaderChanged(slot.id, "api");
+      this.reversedTbarDials.delete(slot.id);
+      this.applyValue(slot, Math.max(0, Math.min(1, rawVal)), vReqData.release === true);
       return { slot: slot.id, value: slot.value };
     }
 
     if (vReqType === "nudge_fader") {
       const delta = Number(vReqData.delta ?? 0);
-      slot.value = Math.max(0, Math.min(1, Number((slot.value + delta).toFixed(4))));
-      slot.display_value = formatDisplayValue(slot);
-      this.emitFaderChanged(slot.id, "api");
+      if (slot.target_mode === "tbar" && slot.parked && delta === 0) {
+        return { slot: slot.id, value: slot.value };
+      }
+      if (slot.target_mode === "tbar" && slot.parked) {
+        if (delta < 0) this.reversedTbarDials.add(slot.id);
+        else this.reversedTbarDials.delete(slot.id);
+      }
+      const effectiveDelta = this.reversedTbarDials.has(slot.id) ? -delta : delta;
+      this.applyValue(slot, Math.max(0, Math.min(1, Number((slot.value + effectiveDelta).toFixed(4)))), false);
       return { slot: slot.id, value: slot.value };
     }
 
@@ -923,13 +1048,18 @@ export class FakeObsServer {
         const msg = "Duration 'ms' must be between 50 and 20000.";
         return { error: msg, comment: msg };
       }
-      slot.value = Math.max(0, Math.min(1, to));
-      slot.display_value = formatDisplayValue(slot);
-      this.emitFaderChanged(slot.id, "auto_fade");
+      if (slot.target_mode === "tbar" && slot.available && slot.enabled !== false) {
+        slot.parked = false;
+      }
+      this.applyValue(slot, Math.max(0, Math.min(1, to)), false, "auto_fade");
       return { slot: slot.id };
     }
 
     if (vReqType === "set_slot") {
+      if ("enabled" in vReqData && typeof vReqData.enabled !== "boolean") {
+        const msg = "Parameter 'enabled' must be a boolean.";
+        return { error: msg, comment: msg };
+      }
       if (
         typeof vReqData.source_a === "string" &&
         vReqData.source_a.length > 0 &&
@@ -946,11 +1076,51 @@ export class FakeObsServer {
         const msg = `Source '${vReqData.source_b}' not found in OBS. Choose an existing source name.`;
         return { error: msg, comment: msg };
       }
+      const candidate = { ...slot, ...vReqData } as FadesterSlot;
+      candidate.enabled = typeof vReqData.enabled === "boolean"
+        ? vReqData.enabled : ("target_mode" in vReqData ? true : slot.enabled);
+      const pureDisable = vReqData.enabled === false &&
+        !["target_mode", "source_a", "filter_name", "filter_prop", "from_val", "to_val", "bypass_at_zero"]
+          .some((key) => key in vReqData);
+      let filterBounds: { from_val: number; to_val: number } | undefined;
+      if (candidate.target_mode === "filter_param" && !pureDisable) {
+        const detail = this.handleVendorCall("get_catalog", { source: candidate.source_a });
+        if (detail.error) return detail;
+        const filter = (detail as unknown as CatalogSourceFiltersResponse).filters
+          ?.find((entry) => entry.name === candidate.filter_name);
+        const property = filter?.properties.find((entry) => entry.name === candidate.filter_prop);
+        if (!property) {
+          const msg = `Filter setting '${candidate.filter_prop || ""}' on '${candidate.filter_name || ""}' was not found. Choose a numeric setting from the catalog.`;
+          return { error: msg, comment: msg };
+        }
+        const sameBinding = slot.target_mode === "filter_param" && slot.source_a === candidate.source_a &&
+          slot.filter_name === candidate.filter_name && slot.filter_prop === candidate.filter_prop;
+        const from = "from_val" in vReqData ? Number(vReqData.from_val) : sameBinding ? slot.from_val! : property.min;
+        const to = "to_val" in vReqData ? Number(vReqData.to_val) : sameBinding ? slot.to_val! : property.max;
+        if (!Number.isFinite(from) || !Number.isFinite(to) || from < property.min || from > property.max || to < property.min || to > property.max) {
+          const msg = "Filter range bounds must be finite and within the property's range.";
+          return { error: msg, comment: msg };
+        }
+        if (Math.abs(to - from) < 1e-6) {
+          const msg = "'from_val' and 'to_val' must differ so the control has a range to sweep.";
+          return { error: msg, comment: msg };
+        }
+        const owner = candidate.enabled !== false && this.slots.find((other) => other.id !== slot.id &&
+          other.enabled !== false && other.target_mode === "filter_param" && other.source_a === candidate.source_a &&
+          other.filter_name === candidate.filter_name && other.filter_prop === candidate.filter_prop);
+        if (owner) {
+          const msg = `Setting '${candidate.filter_prop}' on '${candidate.filter_name}' is already controlled by ${owner.label || owner.id}.`;
+          return { error: msg, comment: msg };
+        }
+        filterBounds = { from_val: from, to_val: to };
+      }
       if (typeof vReqData.target_mode === "string") {
         slot.target_mode = vReqData.target_mode as FadesterSlot["target_mode"];
+        slot.enabled = true;
       }
       if (typeof vReqData.enabled === "boolean") {
         slot.enabled = vReqData.enabled;
+        if (!slot.enabled) this.pendingCleanSlots.delete(slot.id);
       }
       if (typeof vReqData.scene === "string") {
         slot.scene = vReqData.scene;
@@ -979,6 +1149,7 @@ export class FakeObsServer {
       if (typeof vReqData.to_val === "number") {
         slot.to_val = vReqData.to_val;
       }
+      if (filterBounds) Object.assign(slot, filterBounds);
       if (typeof vReqData.bypass_at_zero === "boolean") {
         slot.bypass_at_zero = vReqData.bypass_at_zero;
       }
@@ -987,6 +1158,14 @@ export class FakeObsServer {
       }
       if (typeof vReqData.cal_max === "number") {
         slot.cal_max = vReqData.cal_max;
+      }
+      if (!slot.enabled || slot.target_mode === "unassigned") {
+        slot.available = false;
+        slot.label = slot.enabled ? "Unassigned" : "Disabled";
+        slot.reason = "Not used. Click to set up.";
+      } else {
+        slot.available = slot.target_mode !== "tbar" || this.studioMode;
+        slot.reason = slot.available ? "" : "Studio Mode is off.";
       }
       slot.display_value = formatDisplayValue(slot);
       this.emitVendorEvent(

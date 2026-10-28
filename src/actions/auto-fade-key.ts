@@ -17,6 +17,7 @@ import {
 } from "../types/settings.js";
 import { CellRateLimiter } from "../gfx/cell-rate-limiter.js";
 import { renderAutoFadeKeySvg, toSvgDataUri } from "../gfx/svg-renderer.js";
+import { shouldReleaseRail } from "./dial-math.js";
 
 export interface KeyImageSink {
   setImage(image: string): Promise<void>;
@@ -106,7 +107,10 @@ export class AutoFadeKeyInstanceController {
         await this.store.getClient().setFaderValue({
           slot: this.settings.slot,
           value: this.settings.to,
-          release: true
+          release: shouldReleaseRail(
+            this.settings.to,
+            this.store.getSlot(this.settings.slot)?.target_mode
+          )
         });
         return;
       }

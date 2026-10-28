@@ -109,6 +109,15 @@ h3 .scope {
   opacity: 0.5;
   cursor: default;
 }
+.editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0;
+}
+#af-catalog-error {
+  margin-top: 8px;
+}
 a.release-link {
   color: #F97316;
   font-weight: 700;

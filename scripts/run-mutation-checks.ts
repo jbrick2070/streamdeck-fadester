@@ -17,6 +17,24 @@ const ROOT = resolve(process.cwd());
 
 const MUTATIONS: MutationCheck[] = [
   {
+    id: "M-3.1",
+    step: "Cross-bank Clean FX eligibility",
+    description: "Include nonfilter controls in Clean FX and verify the renderer rejects the wrong active count",
+    filePath: resolve(ROOT, "packages/streamdeck-fadester-shared/src/fx-policy.ts"),
+    target: 'slot.enabled !== false && slot.target_mode === "filter_param"',
+    mutated: 'slot.enabled !== false && slot.target_mode !== "unassigned"',
+    testFile: "tests/svg-renderer.test.ts"
+  },
+  {
+    id: "M-3.2",
+    step: "All FX custom labels",
+    description: "Ignore the All FX label override and verify the saved label remains covered",
+    filePath: resolve(ROOT, "packages/streamdeck-fadester-shared/src/svg-renderer.ts"),
+    target: 'override || (activeCount > 0 ? "CLEAN FX" : "FX CLEAN")',
+    mutated: '(activeCount > 0 ? "CLEAN FX" : "FX CLEAN")',
+    testFile: "tests/svg-renderer.test.ts"
+  },
+  {
     id: "M-1.1",
     step: "Step 1.1 (Manifest & Bundle Hygiene)",
     description:

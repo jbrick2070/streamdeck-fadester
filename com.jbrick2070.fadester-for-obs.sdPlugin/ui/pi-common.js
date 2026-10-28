@@ -51,6 +51,34 @@
   let overviewCatalog = null;
   let sourceCatalogCache = {};
   let editorDirty = false;
+  let editorBaseline = null;
+  let editorConflict = false;
+  let editorGeneration = 0;
+  let editRevision = 0;
+  let catalogGeneration = 0;
+  let applySequence = 0;
+  let applying = false;
+  let profileDraft = null;
+  let profileLoading = false;
+
+  function markEditorDirty() {
+    editorDirty = true;
+    editRevision += 1;
+    setBanner($("assign-draft"), "Unsaved changes. Apply in OBS when ready.", "info");
+  }
+
+  function resetEditorContext() {
+    editorGeneration += 1;
+    applySequence += 1;
+    applying = false;
+    editorDirty = false;
+    editorBaseline = null;
+    editorConflict = false;
+    const applyBtn = $("assign-apply");
+    if (applyBtn) applyBtn.disabled = false;
+    setBanner($("assign-draft"), "", "info");
+    setBanner($("assign-result"), "", "info");
+  }
 
   function $(id) {
     return document.getElementById(id);
@@ -95,6 +123,8 @@
 
   function setBanner(el, text, kind) {
     if (!el) return;
+    el.setAttribute("role", "status");
+    el.setAttribute("aria-live", "polite");
     if (!text) {
       el.style.display = "none";
       el.textContent = "";
@@ -151,7 +181,8 @@
       '<p class="muted">Changes apply in Midi Fadester for the APC40, Stream Deck and every other surface. Pickers list only what the live OBS catalog offers.</p>',
       '<div class="row"><label for="assign-mode">What it does</label><select id="assign-mode"></select></div>',
       '<div id="assign-fields"></div>',
-      '<div class="row"><label></label><button id="assign-apply" class="btn" type="button">Apply in OBS</button><button id="assign-refresh" class="btn secondary" type="button">Refresh lists</button></div>',
+      '<div id="assign-draft" class="status-banner status-info" style="display:none;"></div>',
+      '<div class="editor-actions"><button id="assign-apply" class="btn" type="button">Apply in OBS</button><button id="assign-refresh" class="btn secondary" type="button">Refresh lists</button><button id="assign-discard" class="btn secondary" type="button">Discard edits</button></div>',
       '<div id="assign-result" class="status-banner" style="display:none;"></div>',
       "</details>",
 
@@ -298,12 +329,12 @@
             text: kp.displayName + " — " + kp.tierLabel + (kp.slug === active ? " (active)" : "")
           };
         }),
-        active,
+        profileDraft === null ? active : profileDraft,
         ""
       );
     }
     const loadBtn = $("profile-load");
-    if (loadBtn) loadBtn.disabled = !connected;
+    if (loadBtn) loadBtn.disabled = !connected || profileLoading;
   }
 
   // ---------------------------------------------------------------- connection panel
@@ -354,7 +385,7 @@
     const slotId = currentSettings.slot || "crossfader";
     const connected = state.status && state.status.kind === "connected";
     if (slotId === ALL_FX_ID) {
-      setBanner(el, "All FX: cleans every assigned FX slot. Nothing to assign here.", "info");
+      setBanner(el, "All FX: cleans enabled filter bindings in either bank. Audio and layer controls stay unchanged.", "info");
       if (editor) editor.style.display = "none";
       return;
     }
@@ -403,10 +434,11 @@
     const row = document.createElement("div");
     row.className = "row";
     const label = document.createElement("label");
-    label.htmlFor = id;
+    label.htmlFor = control.checkbox ? id + "-input" : id;
     label.textContent = labelText;
     row.appendChild(label);
     control.id = id;
+    if (control.checkbox) control.checkbox.id = id + "-input";
     row.appendChild(control);
     return row;
   }
@@ -440,14 +472,56 @@
     return scene ? scene.layers || [] : [];
   }
 
-  function renderModeFields(mode) {
+  function captureEditorDraft() {
+    const draft = {};
+    const fields = {
+      "af-scene": "scene", "af-source-a": "source_a", "af-source-b": "source_b",
+      "af-filter": "filter_name", "af-prop": "filter_prop", "af-from": "from_val",
+      "af-to": "to_val", "af-curve": "curve", "af-cal-min": "cal_min", "af-cal-max": "cal_max"
+    };
+    for (const id of Object.keys(fields)) {
+      const el = $(id);
+      if (el) draft[fields[id]] = el.value;
+    }
+    for (const pair of [["af-enabled", "enabled"], ["af-bypass", "bypass_at_zero"], ["af-afv", "afv"]]) {
+      const el = $(pair[0]);
+      if (el && el.checkbox) draft[pair[1]] = el.checkbox.checked;
+    }
+    return draft;
+  }
+
+  function renderModeFields(mode, draft) {
     const host = $("assign-fields");
     if (!host) return;
     host.innerHTML = "";
-    const slot = currentSlotObject() || {};
+    const generation = ++editorGeneration;
+    if (!editorBaseline || (!editorDirty && !applying)) {
+      editorBaseline = Object.assign({}, currentSlotObject() || {});
+    }
+    const slot = Object.assign({}, currentSlotObject() || {}, draft || {});
     const state = lastState || {};
     const catalog = Boolean(state.capabilities && state.capabilities.catalog) && overviewCatalog;
     const curves = (state.curves || []).map(function (c) { return { value: c.id, text: c.label }; });
+
+    if (typeof slot.enabled === "boolean") {
+      host.appendChild(fieldRow("af-enabled", "Enabled", makeCheckbox(slot.enabled, "keeps this slot's assignment when turned off")));
+    }
+    if (slot.cal_min !== undefined && slot.cal_max !== undefined) {
+      const calibration = document.createElement("details");
+      calibration.className = "editor";
+      const summary = document.createElement("summary");
+      summary.textContent = "MIDI calibration";
+      calibration.appendChild(summary);
+      for (const pair of [["af-cal-min", "Minimum", "cal_min"], ["af-cal-max", "Maximum", "cal_max"]]) {
+        const input = document.createElement("input");
+        input.type = "number";
+        input.min = "0";
+        input.step = "1";
+        input.value = String(slot[pair[2]]);
+        calibration.appendChild(fieldRow(pair[0], pair[1], input));
+      }
+      host.appendChild(calibration);
+    }
 
     function noteNoCatalog() {
       if (catalog) return;
@@ -582,18 +656,29 @@
       const fromInp = document.createElement("input");
       fromInp.type = "number";
       fromInp.step = "any";
-      fromInp.value = typeof slot.from_val === "number" ? String(slot.from_val) : "";
+      fromInp.value = slot.from_val !== undefined ? String(slot.from_val) : "";
       host.appendChild(fieldRow("af-from", "At 0 %", fromInp));
       const toInp = document.createElement("input");
       toInp.type = "number";
       toInp.step = "any";
-      toInp.value = typeof slot.to_val === "number" ? String(slot.to_val) : "";
+      toInp.value = slot.to_val !== undefined ? String(slot.to_val) : "";
       host.appendChild(fieldRow("af-to", "At 100 %", toInp));
       host.appendChild(fieldRow("af-bypass", "Bypass at 0 %", makeCheckbox(slot.bypass_at_zero !== false, "disables the filter when the fader is fully down")));
       const rangeHint = document.createElement("p");
       rangeHint.className = "muted";
       rangeHint.id = "af-range-hint";
       host.appendChild(rangeHint);
+      const fullRangeBtn = document.createElement("button");
+      fullRangeBtn.type = "button";
+      fullRangeBtn.id = "af-full-range";
+      fullRangeBtn.className = "btn secondary";
+      fullRangeBtn.textContent = "Use full range";
+      fullRangeBtn.disabled = true;
+      host.appendChild(fullRangeBtn);
+      const catalogError = document.createElement("div");
+      catalogError.id = "af-catalog-error";
+      catalogError.style.display = "none";
+      host.appendChild(catalogError);
 
       function propsFor(source, filterName) {
         const detail = sourceCatalogCache[source];
@@ -616,23 +701,38 @@
         const p = props.find(function (x) { return x.name === propSel.value; });
         if (!p) {
           rangeHint.textContent = "";
+          fullRangeBtn.disabled = true;
           return;
         }
-        rangeHint.textContent = (p.label || p.name) + ": " + p.min + " to " + p.max + (p.suffix ? " " + p.suffix : "") + ", now " + p.current + ". Leave the range blank to use the full range.";
+        fullRangeBtn.disabled = false;
+        rangeHint.textContent = (p.label || p.name) + ": " + p.min + " to " + p.max + (p.suffix ? " " + p.suffix : "") + ". Blank bounds keep the existing range, or use defaults for a new binding.";
         if (fromInp.value === "" && toInp.value === "") {
           fromInp.placeholder = String(p.min);
           toInp.placeholder = String(p.max);
         }
       }
 
+      fullRangeBtn.addEventListener("click", function () {
+        const p = propsFor(hostSel.value, filterSel.value).find(function (x) { return x.name === propSel.value; });
+        if (!p) return;
+        fromInp.value = String(p.min);
+        toInp.value = String(p.max);
+        markEditorDirty();
+      });
+
+      let sourceRequest = 0;
       function loadFilters(keepSelection) {
         const source = hostSel.value;
+        const requestVersion = ++sourceRequest;
+        const catalogVersion = catalogGeneration;
+        setBanner(catalogError, "", "info");
         if (!source) {
           fillSelect(filterSel, [], "", "Choose a filter");
           fillSelect(propSel, [], "", "Choose a setting");
           return;
         }
         const render = function () {
+          if (generation !== editorGeneration || catalogVersion !== catalogGeneration || requestVersion !== sourceRequest || hostSel.value !== source) return;
           const detail = sourceCatalogCache[source];
           const filters = detail && Array.isArray(detail.filters) ? detail.filters : [];
           const selected = keepSelection ? filterSel.value || slot.filter_name || "" : "";
@@ -646,7 +746,12 @@
           return;
         }
         request({ event: "getCatalog", source: source }).then(function (reply) {
+          if (generation !== editorGeneration || catalogVersion !== catalogGeneration || requestVersion !== sourceRequest || hostSel.value !== source) return;
           if (reply && reply.data) sourceCatalogCache[source] = reply.data;
+          else {
+            setBanner(catalogError, (reply && reply.error) || "OBS did not return a filter list.", "err");
+            return;
+          }
           render();
         });
       }
@@ -668,6 +773,12 @@
       const el = $(id);
       return el && el.checkbox ? el.checkbox.checked : undefined;
     }
+    const enabled = checked("af-enabled");
+    if (typeof enabled === "boolean") fields.enabled = enabled;
+    for (const pair of [["af-cal-min", "cal_min"], ["af-cal-max", "cal_max"]]) {
+      const raw = val(pair[0]);
+      if (raw !== undefined && raw !== "") fields[pair[1]] = Number(raw);
+    }
     if (mode === "crossfade_ab" || mode === "layer_opacity") {
       fields.scene = val("af-scene") || "";
       fields.source_a = val("af-source-a") || "";
@@ -680,22 +791,41 @@
     } else if (mode === "audio_volume") {
       fields.source_a = val("af-source-a") || "";
     } else if (mode === "filter_param") {
-      fields.source_a = val("af-source-a") || "";
-      fields.filter_name = val("af-filter") || "";
-      fields.filter_prop = val("af-prop") || "";
+      // While the catalog is loading these controls do not exist. Omission
+      // preserves the binding; an actual empty control remains an explicit edit.
+      for (const pair of [["af-source-a", "source_a"], ["af-filter", "filter_name"], ["af-prop", "filter_prop"]]) {
+        const raw = val(pair[0]);
+        if (raw !== undefined) fields[pair[1]] = raw;
+      }
       const from = val("af-from");
       const to = val("af-to");
-      if (from !== undefined && from !== "" && to !== undefined && to !== "") {
-        fields.from_val = Number(from);
-        fields.to_val = Number(to);
-      }
+      if (from !== undefined && from !== "") fields.from_val = Number(from);
+      if (to !== undefined && to !== "") fields.to_val = Number(to);
       const bypass = checked("af-bypass");
       if (typeof bypass === "boolean") fields.bypass_at_zero = bypass;
     }
-    return fields;
+    // Send only edits relative to the form's baseline. Other surfaces may have
+    // changed untouched calibration or assignment fields while this draft was open.
+    const patch = {};
+    for (const key of Object.keys(fields)) {
+      if (!editorBaseline || fields[key] !== editorBaseline[key]) patch[key] = fields[key];
+    }
+    // A target change auto-enables on the provider unless the checkbox is explicit.
+    if (patch.target_mode !== undefined && typeof enabled === "boolean") patch.enabled = enabled;
+    return patch;
   }
 
-  function validateFields(mode, fields) {
+  function validateFields(mode, patch) {
+    if (Object.keys(patch).length === 0) return "There are no changes to apply.";
+    if (Object.keys(patch).length === 1 && typeof patch.enabled === "boolean") return "";
+    const fields = Object.assign({}, currentSlotObject() || {}, patch);
+    for (const key of ["from_val", "to_val", "cal_min", "cal_max"]) {
+      if (fields[key] !== undefined && !Number.isFinite(fields[key])) return "Enter a finite number for every range or calibration bound.";
+    }
+    for (const key of ["cal_min", "cal_max"]) {
+      if (fields[key] !== undefined && (!Number.isInteger(fields[key]) || fields[key] < 0)) return "Calibration bounds must be nonnegative whole numbers.";
+    }
+    if (fields.cal_min !== undefined && fields.cal_max !== undefined && fields.cal_max <= fields.cal_min) return "Calibration maximum must be greater than minimum.";
     if (mode === "crossfade_ab") {
       if (!fields.scene) return "Choose a scene.";
       if (!fields.source_a || !fields.source_b) return "Choose both layers.";
@@ -717,16 +847,22 @@
 
   function refreshCatalog(force) {
     if (!lastState || !lastState.capabilities || !lastState.capabilities.catalog) return Promise.resolve();
+    if (!lastState.status || lastState.status.kind !== "connected") return Promise.resolve();
     if (overviewCatalog && !force) return Promise.resolve();
     if (force) sourceCatalogCache = {};
+    const requestVersion = ++catalogGeneration;
+    const slotId = currentSettings.slot || "crossfader";
     return request({ event: "getCatalog" }).then(function (reply) {
+      if (requestVersion !== catalogGeneration) return;
       if (reply && reply.data) {
         overviewCatalog = reply.data;
       } else if (reply && reply.error) {
         setBanner($("assign-result"), reply.error, "err");
       }
       const modeSel = $("assign-mode");
-      if (modeSel) renderModeFields(modeSel.value);
+      if (modeSel && slotId === (currentSettings.slot || "crossfader") && $("assign-editor").open) {
+        renderModeFields(modeSel.value, captureEditorDraft());
+      }
     });
   }
 
@@ -735,7 +871,7 @@
     if (!editor || editor.style.display === "none") return;
     buildModeSelect(state);
     if (!editor.open) return; // closed: nothing to draw yet
-    if (editorDirty) return; // operator is mid-edit; keep their fields
+    if (editorDirty || applying) return; // operator is mid-edit; keep their fields
     const modeSel = $("assign-mode");
     renderModeFields(modeSel ? modeSel.value : "unassigned");
     refreshCatalog(false);
@@ -750,26 +886,30 @@
 
     editor.addEventListener("toggle", function () {
       if (editor.open) {
-        editorDirty = false;
         if (lastState) refreshEditor(lastState);
-      } else {
-        editorDirty = false;
-        setBanner($("assign-result"), "", "info");
       }
     });
     modeSel.addEventListener("change", function () {
-      editorDirty = true;
+      markEditorDirty();
       renderModeFields(modeSel.value);
     });
-    editor.addEventListener("input", function () { editorDirty = true; });
+    editor.addEventListener("input", markEditorDirty);
+    const discardBtn = $("assign-discard");
+    if (discardBtn) discardBtn.addEventListener("click", function () {
+      resetEditorContext();
+      if (lastState) refreshEditor(lastState);
+    });
     if (refreshBtn) {
       refreshBtn.addEventListener("click", function () {
-        editorDirty = false;
         refreshCatalog(true);
       });
     }
     if (applyBtn) {
       applyBtn.addEventListener("click", function () {
+        if (editorConflict) {
+          setBanner($("assign-result"), "This slot's assignment changed on another surface. Discard edits to load the current assignment before applying.", "err");
+          return;
+        }
         const slotId = currentSettings.slot || "crossfader";
         const mode = modeSel.value;
         const fields = collectSetSlotFields(mode);
@@ -780,12 +920,22 @@
           return;
         }
         applyBtn.disabled = true;
+        applying = true;
+        const sequence = ++applySequence;
+        const revision = editRevision;
         setBanner(resultEl, "Applying in OBS…", "info");
         request({ event: "setSlot", slot: slotId, fields: fields }).then(function (reply) {
+          if (sequence !== applySequence || slotId !== (currentSettings.slot || "crossfader")) return;
+          applying = false;
           applyBtn.disabled = false;
           if (reply && reply.ok) {
-            editorDirty = false;
-            const tail = reply.available === false && reply.reason ? " " + reply.reason : "";
+            editorBaseline = Object.assign({}, editorBaseline || {}, fields);
+            if (revision === editRevision) {
+              editorDirty = false;
+              setBanner($("assign-draft"), "", "info");
+            }
+            const tail = (reply.available === false && reply.reason ? " " + reply.reason : "") +
+              (revision !== editRevision ? " Newer edits are still unsaved." : "");
             const modeLabel = ((lastState && lastState.targetModes) || []).reduce(function (acc, m) {
               return m.id === mode ? m.label : acc;
             }, mode);
@@ -802,6 +952,7 @@
     const loadBtn = $("profile-load");
     const sel = $("profile-select");
     if (!loadBtn || !sel) return;
+    sel.addEventListener("change", function () { profileDraft = sel.value; });
     loadBtn.addEventListener("click", function () {
       const name = sel.value;
       const resultEl = $("profile-result");
@@ -810,10 +961,13 @@
         return;
       }
       loadBtn.disabled = true;
+      profileLoading = true;
       setBanner(resultEl, "Loading profile in Midi Fadester…", "info");
       request({ event: "loadProfile", name: name }).then(function (reply) {
         loadBtn.disabled = false;
+        profileLoading = false;
         if (reply && reply.ok) {
+          if (profileDraft === name) profileDraft = null;
           setBanner(resultEl, "Loaded " + (reply.loaded || name) + ". Slot defaults were reset in Midi Fadester.", "ok");
         } else {
           setBanner(resultEl, (reply && reply.error) || "Midi Fadester rejected the profile.", "err");
@@ -859,15 +1013,52 @@
   }
 
   function applyState(state) {
+    function connectionIdentity(value) {
+      const connection = value.connection || {};
+      const status = value.status || {};
+      return JSON.stringify([connection.host, connection.port, status.kind === "connected", status.buildCommit, status.fadesterVersion]);
+    }
+    const connectionChanged = lastState && connectionIdentity(lastState) !== connectionIdentity(state);
+    if (connectionChanged) {
+      overviewCatalog = null;
+      sourceCatalogCache = {};
+      catalogGeneration += 1;
+      editorGeneration += 1;
+      applySequence += 1;
+      applying = false;
+      if (editorDirty) {
+        setBanner($("assign-result"), "The OBS connection changed. Your edits are kept; review the refreshed source lists before applying.", "warn");
+      }
+    }
     lastState = state;
+    if (editorDirty && !applying && editorBaseline) {
+      const current = currentSlotObject();
+      const bindingKeys = ["target_mode", "scene", "source_a", "source_b", "filter_name", "filter_prop"];
+      if (!current || bindingKeys.some(function (key) { return current[key] !== editorBaseline[key]; })) {
+        editorConflict = true;
+        setBanner($("assign-result"), "This slot's assignment changed on another surface. Discard edits to load the current assignment before applying.", "err");
+      }
+    }
+    const applyBtn = $("assign-apply");
+    if (applyBtn) applyBtn.disabled = applying || editorConflict || !state.status || state.status.kind !== "connected";
     updateConnectionPanel(state);
     updateControllerPanel(state);
     populateSlotsDropdown(state);
     updateAssignmentSentence(state);
     refreshEditor(state);
+    if (connectionChanged && editorDirty) refreshCatalog(false);
     if (typeof window.onFadesterState === "function") {
       window.onFadesterState(state, currentSettings);
     }
+  }
+
+  function applySlotValue(payload) {
+    if (!lastState) return;
+    const slot = (lastState.slots || []).find(function (s) { return s.id === payload.slot; });
+    if (!slot) return;
+    slot.value = payload.value;
+    if (typeof payload.display_value === "string") slot.display_value = payload.display_value;
+    updateAssignmentSentence(lastState);
   }
 
   window.initFadesterPropertyInspector = function (bindControlsFn) {
@@ -891,7 +1082,7 @@
         saveActionSettings(partial);
         if (partial && Object.prototype.hasOwnProperty.call(partial, "slot")) {
           lastSlotSignature = "";
-          editorDirty = false;
+          resetEditorContext();
           if (lastState) applyState(lastState);
         }
       }
@@ -912,7 +1103,9 @@
           return;
         }
         if (msg.event === "didReceiveSettings" && msg.payload) {
+          const previousSlot = currentSettings.slot || "crossfader";
           currentSettings = msg.payload.settings || {};
+          if (previousSlot !== (currentSettings.slot || "crossfader")) resetEditorContext();
           bindControlsFn(currentSettings, saveAndRefresh);
           lastSlotSignature = "";
           if (lastState) applyState(lastState);
@@ -920,6 +1113,8 @@
           const p = msg.payload;
           if (p.event === "fadesterState") {
             applyState(p);
+          } else if (p.event === "slotValueChanged") {
+            applySlotValue(p);
           } else if (p.requestId && pendingReplies.has(p.requestId)) {
             const cb = pendingReplies.get(p.requestId);
             pendingReplies.delete(p.requestId);

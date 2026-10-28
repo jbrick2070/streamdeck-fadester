@@ -1,4 +1,4 @@
-# Fadester API contract (draft 2, 2026-10-28)
+# Fadester API contract (revision 3, 2026-10-28)
 
 The agreement between Midi Fadester (inside OBS) and every surface that controls it: Fadester for OBS
 (Stream Deck), scripts, Companion. Midi Fadester implements it as an obs-websocket vendor API; the surfaces
@@ -13,13 +13,29 @@ Values are floats 0.0 to 1.0. Slot ids are stable strings, never display names:
 | requestType | requestData | responseData | Notes |
 |---|---|---|---|
 | `get_state` | none | `{ version, build: { commit, built_at }, api_version, studio_mode, profile, profile_display_name, profile_tier, device: { name, connected, error }, slots: [slot...] }` | The whole picture in one call. Surfaces call it on connect and after any error. `build` carries the short git commit and build time. `profile` is the active controller profile slug (`apc40mk2`, `apcminimk2`, `midimix`, `nanokontrol2`, `launchcontrolxl`, `generic`), `profile_display_name` is the human-readable desk name, and `profile_tier` is `verified`, `beta`, or `custom`. |
-| `set_fader_value` | `{ slot, value, release? }` | `{ slot, value }` | Moves a slot like a fader would. Goes through the same smoothing and curve as MIDI. `release: true` on a T-bar slot finishes the transition (the same as letting go of the T-bar). Soft takeover does not apply to this call. |
+| `set_fader_value` | `{ slot, value, release? }` | `{ slot, value }` | Moves a slot directly through its target mapping. `release: true` on a T-bar explicitly finishes the transition, even if `value` is zero; a zero abort uses `release: false`. Soft takeover does not apply to this call. |
 | `nudge_fader` | `{ slot, delta }` | `{ slot, value }` | For endless knobs and dials: adds `delta` (may be negative), clamps to 0..1. |
 | `auto_fade` | `{ slot, to, ms }` | `{ slot }` | Timed fade from the current value to `to` over `ms` (50..20000). A new call on the same slot replaces the running one. |
 | `set_slot` | `{ slot, enabled?, target_mode?, scene?, source_a?, source_b?, filter_name?, filter_prop?, from_val?, to_val?, bypass_at_zero?, curve?, afv?, cal_min?, cal_max? }` | the updated slot | Same fields as the OBS dialog. Unknown scene, source, filter, or property names — or duplicate `(source_a, filter_name, filter_prop)` writers across any of the 18 slots — return a validation error, never a silent no-op. |
 | `load_profile` | `{ name }` | `{ loaded, profile_tier }` | `name`: `apc40mk2` (`verified`), `apcminimk2`, `midimix`, `nanokontrol2`, `launchcontrolxl` (`beta`), or `generic` (`custom`). Profiles for desks without a physical crossfader or master turn those fader slots off (`enabled: false`, `available: false`, `reason: "Not used. Click to set up."`), while `fx_1 .. fx_8` stay `enabled: true` across all 6 profiles so Stream Deck + and WebSocket surfaces always have 8 dedicated FX slots. |
 | `get_catalog` | `{ source? }` | Overview (no `source`): `{ scenes: [{ name, layers: [{ name, has_audio }] }], audio_sources: [{ name, db }], filter_hosts: [{ source, is_scene, filter_count }] }`<br>Source detail (`source` set): `{ source, is_scene, filters: [{ name, type_id, enabled, properties: [{ name, label, type: "float" \| "int", min, max, step, suffix, current }] }] }` | Added in `0.4.0`. Discovers scenes, audio sources, filter-capable sources/scenes, and numeric (`OBS_PROPERTY_FLOAT` / `OBS_PROPERTY_INT`, recursing nested `OBS_PROPERTY_GROUP`s) filter settings without polling or calling `obs_source_properties()` on the video tick. Internal `__midi_fadester_opacity__` filters are excluded. |
-| `reset_fx` | `{ ms? }` | `{ eligible_count, reset_count, queued_unavailable_count, ms }` | Added in `0.4.0` (`Clean / All FX Off`). Resets every assigned slot where `kind == "fx"` or `target_mode == "filter_param"` to `0.0` (`from_val`), either instantly (`ms` omitted or `0`) or over a timed ramp (`ms` in `50..20000`), releasing `bypass_at_zero` filter enable states at `0%` without touching non-filter channel faders or A/B crossfades. Slots currently unavailable queue a clean-on-availability flag so re-added filters restore cleanly to `0%`. |
+| `reset_fx` | `{ ms? }` | `{ eligible_count, reset_count, queued_unavailable_count, ms }` | Added in `0.4.0` (`Clean / All FX Off`). Resets every enabled `filter_param` slot, in either bank, to `0.0` (`from_val`), instantly (`ms` omitted or `0`) or over a timed ramp (`ms` in `50..20000`). It applies aggregated `bypass_at_zero` ownership. Nonfilter audio, opacity, A/B crossfade and T-bar assignments are untouched, including those in `fx_1..fx_8`. Unavailable eligible slots queue a clean for when availability returns. |
+
+`set_slot.enabled` must be a boolean. An explicit value overrides automatic enablement from a
+`target_mode` edit; if absent, target edits enable the slot and other edits preserve its enabled state.
+Disabling releases filter ownership and cancels active fades and queued cleans while preserving the
+binding. A pure disable remains possible when that filter is missing. Re-enabling validates ownership,
+reads the current live filter value, and does not write to the filter merely to enable the slot. Older
+builds that ignore this field must not be reported as successfully applying an enabled change.
+
+Filter `from_val` and `to_val` can be sent independently. On an unchanged binding, omitted bounds retain
+their current values; on a new binding they default to the property's limits. To select the full range
+explicitly, send both catalog limits. `load_profile` replaces all 18 slot configurations with the chosen
+profile's defaults; it is not a merge and does not preserve existing channel or FX assignments.
+
+For T-bar zero/abort commands use `release: false`. `release: true` always means finish, even with
+`value: 0`; completion returns the T-bar to normalized `value: 0` with `parked: true`. An abort returns
+`value: 0` without parking or committing the scene transition. Explicit Finish always uses release.
 
 Slot object (`0.4.0`, backward-compatible superset of `0.3.0`):
 
@@ -58,8 +74,8 @@ when `display_value` is absent.
 
 `parked: true` means the slot just completed a throw or reached a rail and ignores physical MIDI input until
 the control leaves that rail by the hysteresis amount; surfaces show it (a dot or "at end") and do not treat
-the frozen value as a fault. `nudge_fader`, `set_fader_value`, and `reset_fx` on a parked slot are accepted
-and unpark it, since they are deliberate.
+the frozen value as a fault. A deliberate move away from the parked rail can unpark it; repeating the
+same parked-rail value is a no-op. `reset_fx` applies only to enabled filter bindings, regardless of park.
 
 `available: false` with a `reason` sentence ("Studio Mode is off", "Filter 'Blur' was removed from 'Cam 1'")
 is how a surface learns why a dial does nothing. Surfaces show the reason as text; they never guess.
@@ -99,6 +115,12 @@ Visual Sidechain registers:
 | signal `visual_sidechain_signals` | none | `float` fields as above, emitted at most 30 times per second |
 
 Rules for the bridge:
+
+- The stable slot order is Crossfader, Fader 1–8, Master, then FX 1–8 (indices 0–17). Visual Sidechain's
+  saved fader signal IDs remain 200–209 for the original ten slots; FX 1–8 append IDs 210–217.
+- Visual Sidechain shader uniforms append `fader_fx_1` through `fader_fx_8`; existing uniform names
+  remain unchanged. For a clean-neutral reactivity trim, bind a numeric `slot_N_amount_pct` setting
+  with explicit `from_val: 0` and `to_val: 100`; its full property range also permits negative amounts.
 
 - A consumer that finds the proc missing shows "Midi Fadester is not loaded" (or "Visual Sidechain is not
   loaded") in its UI next to the source that needs it, and reads 0. Never silent.

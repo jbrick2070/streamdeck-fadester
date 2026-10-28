@@ -13,6 +13,13 @@ import {
 
 export const DIAL_HOLD_THRESHOLD_MS = 800 as const;
 
+/** A T-bar release finishes the transition, even when its requested value is zero. */
+export function shouldReleaseRail(value: number, targetMode?: TargetMode): boolean {
+  return value === 1 ||
+    (value === 0 && targetMode !== undefined && targetMode !== "tbar" &&
+      targetMode !== "unassigned");
+}
+
 export type ResolvedDialCommand =
   | { kind: "set_fader_value"; request: SetFaderValueRequest }
   | { kind: "auto_fade"; request: AutoFadeRequest }
@@ -59,7 +66,8 @@ export function computeDialDelta(
 export function resolveDialPressCommand(
   slot: string,
   currentValue: number,
-  pressAction: DialPressAction
+  pressAction: DialPressAction,
+  targetMode?: TargetMode
 ): ResolvedDialCommand {
   const targetRail = currentValue < 0.5 ? 1.0 : 0.0;
 
@@ -67,7 +75,7 @@ export function resolveDialPressCommand(
     case "clean_0":
       return {
         kind: "set_fader_value",
-        request: { slot, value: 0.0, release: true }
+        request: { slot, value: 0.0, release: shouldReleaseRail(0, targetMode) }
       };
     case "finish_tbar":
       return {
@@ -89,7 +97,7 @@ export function resolveDialPressCommand(
     default:
       return {
         kind: "set_fader_value",
-        request: { slot, value: targetRail, release: true }
+        request: { slot, value: targetRail, release: shouldReleaseRail(targetRail, targetMode) }
       };
   }
 }
@@ -159,6 +167,6 @@ export function mapTouchTapToRequest(
   return {
     slot,
     value,
-    release: value === 0.0 || value === 1.0
+    release: shouldReleaseRail(value, targetMode)
   };
 }

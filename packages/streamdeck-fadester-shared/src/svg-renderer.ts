@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import { ConnectionStatusInfo, SurfaceSlotBase } from "./types.js";
 import { PLAYLISTER_PALETTE, getSourcePairGradientColors } from "./palette.js";
+import { isResetFxEligible } from "./fx-policy.js";
 
 export interface DialCellRenderInput<
   TSlot extends SurfaceSlotBase = SurfaceSlotBase
@@ -363,15 +364,12 @@ export function renderAutoFadeKeySvg<TSlot extends SurfaceSlotBase>(
       return renderKeyStatusSvg("Clean FX", "Update Midi Fadester to 0.4.0");
     }
 
-    const eligible = slotList.filter(
-      (s) =>
-        (s.kind === "fx" || s.target_mode === "filter_param") &&
-        s.target_mode !== "unassigned" &&
-        s.enabled !== false
-    );
+    const eligible = slotList.filter(isResetFxEligible);
     const activeCount = eligible.filter((s) => s.value > 0.005).length;
     const borderColor = activeCount > 0 ? P.orangeAccent : P.previewGreen;
-    const line1 = activeCount > 0 ? "CLEAN FX" : "FX CLEAN";
+    const line1 = escapeXml(
+      truncateLabel(override || (activeCount > 0 ? "CLEAN FX" : "FX CLEAN"), 10)
+    );
     const line2 = activeCount > 0 ? `${activeCount} ACTIVE` : "ALL 0%";
 
     return [

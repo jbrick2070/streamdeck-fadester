@@ -80,16 +80,17 @@ describe("Step 1.4 — End-to-End Fader Dial & Auto-fade Key Integration", () =>
     expect(dialCanvasHistory.at(-1)).toContain("6%");
     expect(keyImageHistory.at(-1)).toContain("6%");
 
-    // 2. Short press (< 800 ms): shows Hold indicator on down, clears and snaps to 100% on up
+    // 2. A completed throw parks at logical zero, matching OBS's T-bar reset.
     dialCtrl.handleDialDown();
     expect(dialCtrl.renderSvgString()).toContain("HOLD 3s FADE");
     await dialCtrl.handleDialUp();
     await new Promise((r) => setTimeout(r, 30));
     expect(dialCtrl.renderSvgString()).not.toContain("HOLD 3s FADE");
-    expect(store.getSlot("crossfader")?.value).toBe(1.0);
-    expect(dialCanvasHistory.at(-1)).toContain("100%");
+    expect(store.getSlot("crossfader")).toMatchObject({ value: 0, parked: true });
+    expect(server.tbarCompletionCount).toBe(1);
+    expect(dialCanvasHistory.at(-1)).toContain("0%");
 
-    // 3. Long press (>= 800 ms): fires 3000 ms auto_fade to 0% and does NOT fire short press on release
+    // 3. The next long press starts a new throw and never also fires a short press.
     const autoFadeCountBefore = server.vendorCallLog.filter(
       (c) => c.requestType === "auto_fade"
     ).length;
@@ -115,7 +116,7 @@ describe("Step 1.4 — End-to-End Fader Dial & Auto-fade Key Integration", () =>
     ).toBe(autoFadeCountBefore + 1);
     expect(lastAutoFade?.requestData).toEqual({
       slot: "crossfader",
-      to: 0.0,
+      to: 1.0,
       ms: 3000
     });
 
@@ -127,7 +128,8 @@ describe("Step 1.4 — End-to-End Fader Dial & Auto-fade Key Integration", () =>
     // 5. Auto-fade key press -> runs auto_fade(crossfader, to: 1, ms: 1200)
     await keyCtrl.handleKeyDown();
     await new Promise((r) => setTimeout(r, 30));
-    expect(store.getSlot("crossfader")?.value).toBe(1.0);
+    expect(store.getSlot("crossfader")).toMatchObject({ value: 0, parked: true });
+    expect(server.tbarCompletionCount).toBe(3);
 
     dialCtrl.disappear();
     keyCtrl.disappear();
@@ -193,12 +195,12 @@ describe("Step 1.4 — End-to-End Fader Dial & Auto-fade Key Integration", () =>
     expect(keyImageHistory.at(-1)).toContain("Not used. Click to set up.");
     expect(keyImageHistory.at(-1)).not.toContain(">100%<");
 
-    // Switch back to apc40mk2 -> both recover live without restart
+    // A profile reset restores the T-bar but deliberately clears master assignment.
     await client.loadProfile({ name: "apc40mk2" });
     await new Promise((r) => setTimeout(r, 40));
     expect(dialCanvasHistory.at(-1)).toContain('data-cell="tbar"');
-    expect(keyImageHistory.at(-1)).toContain('data-key="auto-fade"');
-    expect(keyImageHistory.at(-1)).toContain(">100%<");
+    expect(store.getSlot("master")).toMatchObject({ target_mode: "unassigned", enabled: true });
+    expect(keyImageHistory.at(-1)).toContain("Not used. Click to set up.");
 
     dialCtrl.disappear();
     keyCtrl.disappear();

@@ -29,7 +29,7 @@ const ACTION_UUID =
     : "com.jbrick2070.fadester-for-obs.fader";
 
 async function main(): Promise<void> {
-  const obs = new FakeObsServer({ password: "harness-pw", buildCommit: "h4rn355" });
+  const obs = new FakeObsServer({ password: "harness-pw", buildCommit: "h4rn355", fadesterVersion: "0.6.0" });
   const obsPort = await obs.start();
 
   const client = new FadesterClient({ host: "127.0.0.1", port: obsPort, password: "harness-pw" });
@@ -90,7 +90,7 @@ async function main(): Promise<void> {
     });
   });
 
-  const bootstrap = `
+  const bootstrap = () => `
 <script>
   window.addEventListener("load", function () {
     window.connectElgatoStreamDeckSocket(
@@ -116,7 +116,7 @@ async function main(): Promise<void> {
     const type = ext === ".html" ? "text/html" : ext === ".js" ? "text/javascript" : ext === ".css" ? "text/css" : "application/octet-stream";
     let body = readFileSync(file, "utf8");
     if (ext === ".html") {
-      body = body.replace("</body>", bootstrap + "</body>");
+      body = body.replace("</body>", bootstrap() + "</body>");
     }
     res.writeHead(200, { "content-type": `${type}; charset=utf-8` });
     res.end(body);

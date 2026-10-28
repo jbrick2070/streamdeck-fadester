@@ -70,6 +70,8 @@ export type PiSlot = Pick<
   | "from_val"
   | "to_val"
   | "bypass_at_zero"
+  | "cal_min"
+  | "cal_max"
   | "curve"
   | "afv"
   | "value"
@@ -161,6 +163,17 @@ export class PropertyInspectorBridge {
     this.transport = transport;
     store.on("changed", () => this.broadcast());
     store.on("vendorError", () => this.broadcast());
+    store.on("slotValueChanged", (slotId: string) => {
+      const slot = this.store.getSlot(slotId);
+      if (slot) {
+        this.transport.sendToPropertyInspector({
+          event: "slotValueChanged",
+          slot: slot.id,
+          value: slot.value,
+          display_value: slot.display_value
+        });
+      }
+    });
   }
 
   public buildStatePayload(): PiStatePayload {
@@ -231,6 +244,8 @@ export class PropertyInspectorBridge {
         from_val: s.from_val,
         to_val: s.to_val,
         bypass_at_zero: s.bypass_at_zero,
+        cal_min: s.cal_min,
+        cal_max: s.cal_max,
         curve: s.curve,
         afv: s.afv,
         value: s.value,
@@ -355,10 +370,15 @@ export class PropertyInspectorBridge {
       return;
     }
     try {
-      const updated = await this.client.setSlot(
-        sanitizeSetSlotFields(slot, msg.fields)
-      );
+      const request = sanitizeSetSlotFields(slot, msg.fields);
+      const updated = await this.client.setSlot(request);
+      if (typeof request.enabled === "boolean" && updated.enabled !== request.enabled) {
+        throw new Error(
+          "Midi Fadester did not apply the enabled state. Update Midi Fadester to a build that supports slot enable controls."
+        );
+      }
       reply.ok = true;
+      reply.enabled = updated.enabled;
       reply.label = updated.label;
       reply.available = updated.available;
       reply.reason = updated.reason;

@@ -37,6 +37,11 @@ describe("Step 1.1 — Manifest, Layout, Icons & Repository Hygiene", () => {
 
     expect(manifest.Name).toBe("Fadester for OBS");
     expect(manifest.Category).toBe("Fadester for OBS");
+    const packageJson = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
+    const lockfile = JSON.parse(readFileSync(join(ROOT, "package-lock.json"), "utf8"));
+    expect(manifest.Version).toBe(`${packageJson.version}.0`);
+    expect(lockfile.version).toBe(packageJson.version);
+    expect(lockfile.packages[""].version).toBe(packageJson.version);
     expect(manifest.SDKVersion).toBe(3);
     expect((manifest.Nodejs as { Version: string }).Version).toBe("24");
     expect((manifest.Software as { MinimumVersion: string }).MinimumVersion).toBe(

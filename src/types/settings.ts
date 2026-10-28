@@ -15,7 +15,11 @@ export const DEFAULT_GLOBAL_SETTINGS: Required<FadesterGlobalSettings> = {
 
 export const ALL_FX_SLOT_ID = "__all_fx__" as const;
 
-export type DialStepPerTick = 0.01 | 0.02 | 0.05;
+export type DialStepPerTick = 0.005 | 0.01 | 0.02 | 0.05 | 0.1;
+
+export type ReadoutStyle = "auto" | "percent";
+
+export const MAX_LABEL_OVERRIDE_CHARS = 14 as const;
 
 export type DialPressAction =
   | "snap_0_100"
@@ -39,6 +43,8 @@ export interface FaderDialSettings {
   pressAction?: DialPressAction;
   longPressAction?: DialLongPressAction;
   showThumbnails?: boolean;
+  labelOverride?: string;
+  readoutStyle?: ReadoutStyle;
 }
 
 export const DEFAULT_FADER_DIAL_SETTINGS: Required<FaderDialSettings> = {
@@ -47,18 +53,35 @@ export const DEFAULT_FADER_DIAL_SETTINGS: Required<FaderDialSettings> = {
   acceleration: true,
   pressAction: "snap_0_100",
   longPressAction: "auto_fade_3s",
-  showThumbnails: true
+  showThumbnails: true,
+  labelOverride: "",
+  readoutStyle: "auto"
 };
+
+export function normalizeLabelOverride(raw: unknown): string {
+  if (typeof raw !== "string") {
+    return "";
+  }
+  return raw.replace(/\s+/g, " ").trim().slice(0, MAX_LABEL_OVERRIDE_CHARS);
+}
+
+export function normalizeReadoutStyle(raw: unknown): ReadoutStyle {
+  return raw === "percent" ? "percent" : "auto";
+}
 
 export interface AutoFadeKeySettings {
   [key: string]: string | number | boolean | undefined;
   slot?: string;
   to?: 0 | 1;
   durationMs?: number;
+  labelOverride?: string;
+  readoutStyle?: ReadoutStyle;
 }
 
 export const DEFAULT_AUTO_FADE_KEY_SETTINGS: Required<AutoFadeKeySettings> = {
   slot: "crossfader",
   to: 1,
-  durationMs: 1000
+  durationMs: 1000,
+  labelOverride: "",
+  readoutStyle: "auto"
 };

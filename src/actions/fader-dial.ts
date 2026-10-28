@@ -15,7 +15,9 @@ import {
   DEFAULT_FADER_DIAL_SETTINGS,
   DialLongPressAction,
   DialPressAction,
-  FaderDialSettings
+  FaderDialSettings,
+  normalizeLabelOverride,
+  normalizeReadoutStyle
 } from "../types/settings.js";
 import { CellRateLimiter } from "../gfx/cell-rate-limiter.js";
 import { ThumbnailFetcher } from "../gfx/thumbnail-fetcher.js";
@@ -111,9 +113,7 @@ export class FaderDialInstanceController {
   }
 
   public async handleRotate(ticks: number, now = Date.now()): Promise<void> {
-    if (!this.store.getClient().isConnected()) {
-      this.store.getClient().reconnectNow();
-      await this.sink.showAlert();
+    if (!(await this.ensureReady(now))) {
       return;
     }
 
@@ -174,9 +174,7 @@ export class FaderDialInstanceController {
       return;
     }
 
-    if (!this.store.getClient().isConnected()) {
-      this.store.getClient().reconnectNow();
-      await this.sink.showAlert();
+    if (!(await this.ensureReady())) {
       return;
     }
 
@@ -191,9 +189,7 @@ export class FaderDialInstanceController {
   }
 
   public async handleTouchTap(tapX: number, tapY: number): Promise<void> {
-    if (!this.store.getClient().isConnected()) {
-      this.store.getClient().reconnectNow();
-      await this.sink.showAlert();
+    if (!(await this.ensureReady())) {
       return;
     }
 
@@ -218,6 +214,26 @@ export class FaderDialInstanceController {
     }
   }
 
+  /**
+   * Offline: one throttled reconnect nudge plus an alert, no request.
+   * Slot known and unavailable: alert only, so OBS never sees a request the
+   * engine would reject (and we skip the error-driven resync).
+   */
+  private async ensureReady(now = Date.now()): Promise<boolean> {
+    const client = this.store.getClient();
+    if (!client.isConnected()) {
+      client.nudgeReconnect(2000, now);
+      await this.sink.showAlert();
+      return false;
+    }
+    const slot = this.store.getSlot(this.settings.slot);
+    if (slot && !slot.available) {
+      await this.sink.showAlert();
+      return false;
+    }
+    return true;
+  }
+
   public renderSvgString(): string {
     const slot = this.store.getSlot(this.settings.slot);
     const thumbs = this.thumbnailFetcher.getLatest();
@@ -237,7 +253,9 @@ export class FaderDialInstanceController {
       thumbnailA: thumbs.thumbnailA,
       thumbnailB: thumbs.thumbnailB,
       holdingForLongPress: this.holdingForLongPress,
-      holdLabel
+      holdLabel,
+      labelOverride: this.settings.labelOverride,
+      readoutStyle: this.settings.readoutStyle
     });
   }
 
@@ -261,8 +279,14 @@ export class FaderDialInstanceController {
   }
 
   private async executeLongPress(): Promise<void> {
-    if (!this.store.getClient().isConnected()) {
-      await this.sink.showAlert();
+    // Clean All FX is slot-independent; everything else needs the slot ready.
+    const slotIndependent = this.settings.longPressAction === "clean_all_fx";
+    if (slotIndependent) {
+      if (!this.store.getClient().isConnected()) {
+        await this.sink.showAlert();
+        return;
+      }
+    } else if (!(await this.ensureReady())) {
       return;
     }
     const slot = this.store.getSlot(this.settings.slot);
@@ -334,7 +358,9 @@ export class FaderDialInstanceController {
       showThumbnails:
         raw?.showThumbnails !== undefined
           ? Boolean(raw.showThumbnails)
-          : DEFAULT_FADER_DIAL_SETTINGS.showThumbnails
+          : DEFAULT_FADER_DIAL_SETTINGS.showThumbnails,
+      labelOverride: normalizeLabelOverride(raw?.labelOverride),
+      readoutStyle: normalizeReadoutStyle(raw?.readoutStyle)
     };
   }
 }

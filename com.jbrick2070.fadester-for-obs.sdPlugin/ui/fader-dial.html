@@ -4,83 +4,10 @@
 <head>
   <meta charset="utf-8" />
   <title>Fadester for OBS — Fader Dial</title>
-  <style>
-    body {
-      background: #111827;
-      color: #F8FAFC;
-      font-family: "Segoe UI", Arial, sans-serif;
-      font-size: 12px;
-      margin: 0;
-      padding: 10px 12px;
-    }
-    h3 {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: #93C5FD;
-      margin: 12px 0 6px 0;
-      border-bottom: 1px solid #334155;
-      padding-bottom: 4px;
-    }
-    .row {
-      display: flex;
-      align-items: center;
-      margin-bottom: 8px;
-      gap: 8px;
-    }
-    .row label {
-      width: 105px;
-      flex-shrink: 0;
-      color: #CBD5E1;
-    }
-    .row select, .row input[type="text"], .row input[type="number"], .row input[type="password"] {
-      flex: 1;
-      background: #1E293B;
-      color: #F8FAFC;
-      border: 1px solid #475569;
-      border-radius: 4px;
-      padding: 4px 6px;
-      font-size: 12px;
-    }
-    .status-banner {
-      padding: 6px 8px;
-      border-radius: 4px;
-      font-weight: 600;
-      margin-bottom: 6px;
-    }
-    .status-ok {
-      background: #064E3B;
-      border: 1px solid #22C55E;
-      color: #D1FAE5;
-    }
-    .status-err {
-      background: #451A03;
-      border: 1px solid #F97316;
-      color: #FFEDD5;
-    }
-    .btn {
-      background: #2563EB;
-      color: #F8FAFC;
-      border: none;
-      border-radius: 4px;
-      padding: 5px 10px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .btn:hover {
-      background: #1D4ED8;
-    }
-    a.release-link {
-      color: #F97316;
-      font-weight: 700;
-      text-decoration: underline;
-      display: none;
-      margin-bottom: 8px;
-    }
-  </style>
+  <link rel="stylesheet" href="pi.css" />
 </head>
 <body>
-  <h3>Fadester Dial Control</h3>
+  <h3>Fader dial <span class="scope">this action</span></h3>
   <div id="slot-reason-banner" class="status-banner status-err" style="display:none;"></div>
 
   <div class="row">
@@ -89,24 +16,39 @@
   </div>
 
   <div class="row">
+    <label for="label-input">Label</label>
+    <input type="text" id="label-input" maxlength="14" placeholder="From OBS (leave blank)" />
+  </div>
+
+  <div class="row">
+    <label for="readout-select">Readout</label>
+    <select id="readout-select">
+      <option value="auto" selected>Engine value (px, dB, %)</option>
+      <option value="percent">Always percent</option>
+    </select>
+  </div>
+
+  <div class="row">
     <label for="step-select">Step per tick</label>
     <select id="step-select">
+      <option value="0.005">0.5 % (fine)</option>
       <option value="0.01">1 %</option>
-      <option value="0.02" selected>2 % (Default)</option>
+      <option value="0.02" selected>2 % (default)</option>
       <option value="0.05">5 %</option>
+      <option value="0.1">10 % (coarse)</option>
     </select>
   </div>
 
   <div class="row">
     <label for="accel-check">Acceleration</label>
     <input type="checkbox" id="accel-check" checked />
-    <span>Fast turns take bigger steps</span>
+    <span class="hint">Fast turns take bigger steps</span>
   </div>
 
   <div class="row">
-    <label for="press-select">Dial Press</label>
+    <label for="press-select">Dial press</label>
     <select id="press-select">
-      <option value="snap_0_100" selected>Snap 0 / 100 %</option>
+      <option value="snap_0_100" selected>Snap to 0 / 100 %</option>
       <option value="clean_0">Clean (0 %)</option>
       <option value="auto_fade_1s">Auto-fade 1 s</option>
       <option value="auto_fade_2s">Auto-fade 2 s</option>
@@ -126,40 +68,31 @@
   </div>
 
   <div class="row">
-    <label for="thumb-check">Live Thumbnails</label>
+    <label for="thumb-check">Live thumbnails</label>
     <input type="checkbox" id="thumb-check" checked />
-    <span>96×54 in Crossfade A/B cell (1–2 FPS)</span>
+    <span class="hint">96×54 in Mix two layers cells (1–2 FPS)</span>
   </div>
 
-  <h3>OBS WebSocket Connection (Global)</h3>
-  <div id="conn-status" class="status-banner status-err">
-    OBS is not running or the websocket is off (Tools &gt; WebSocket Server Settings)
-  </div>
-  <a id="conn-link" class="release-link" href="https://github.com/jbrick2070/midi-fadester/releases" target="_blank">
-    Download Midi Fadester for OBS Studio 33
-  </a>
-
-  <div class="row">
-    <label for="conn-host">Host</label>
-    <input type="text" id="conn-host" value="127.0.0.1" />
-  </div>
-  <div class="row">
-    <label for="conn-port">Port</label>
-    <input type="number" id="conn-port" value="4455" min="1" max="65535" />
-  </div>
-  <div class="row">
-    <label for="conn-password">Password</label>
-    <input type="password" id="conn-password" placeholder="Leave blank if authentication is off" />
-  </div>
-  <div class="row">
-    <label></label>
-    <button id="conn-test-btn" class="btn" type="button">Connect / Test</button>
-  </div>
+  <div id="shared-sections"></div>
 
   <script src="pi-common.js"></script>
   <script>
+    window.onFadesterState = function (state) {
+      const longPressEl = document.getElementById("long-press-select");
+      if (!longPressEl) return;
+      const opt = longPressEl.querySelector('option[value="clean_all_fx"]');
+      if (!opt) return;
+      const connected = state.status && state.status.kind === "connected";
+      const supported = state.capabilities && state.capabilities.resetFx;
+      opt.textContent = connected && !supported
+        ? "Clean All FX — needs Midi Fadester 0.4.0+"
+        : "Clean All FX";
+    };
+
     window.initFadesterPropertyInspector(function (settings, save) {
       const slotEl = document.getElementById("slot-select");
+      const labelEl = document.getElementById("label-input");
+      const readoutEl = document.getElementById("readout-select");
       const stepEl = document.getElementById("step-select");
       const accelEl = document.getElementById("accel-check");
       const pressEl = document.getElementById("press-select");
@@ -167,6 +100,8 @@
       const thumbEl = document.getElementById("thumb-check");
 
       if (slotEl && settings.slot) slotEl.value = settings.slot;
+      if (labelEl) labelEl.value = settings.labelOverride || "";
+      if (readoutEl) readoutEl.value = settings.readoutStyle === "percent" ? "percent" : "auto";
       if (stepEl) stepEl.value = String(settings.stepPerTick || 0.02);
       if (accelEl) accelEl.checked = settings.acceleration !== false;
       if (pressEl) pressEl.value = settings.pressAction || "snap_0_100";
@@ -174,6 +109,8 @@
       if (thumbEl) thumbEl.checked = settings.showThumbnails !== false;
 
       if (slotEl) slotEl.onchange = () => save({ slot: slotEl.value });
+      if (labelEl) labelEl.onchange = () => save({ labelOverride: labelEl.value.trim() });
+      if (readoutEl) readoutEl.onchange = () => save({ readoutStyle: readoutEl.value });
       if (stepEl) stepEl.onchange = () => save({ stepPerTick: Number(stepEl.value) });
       if (accelEl) accelEl.onchange = () => save({ acceleration: accelEl.checked });
       if (pressEl) pressEl.onchange = () => save({ pressAction: pressEl.value });

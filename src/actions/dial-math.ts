@@ -19,7 +19,13 @@ export type ResolvedDialCommand =
   | { kind: "reset_fx"; request: ResetFxRequest };
 
 export function normalizeStepPerTick(raw?: number): DialStepPerTick {
-  if (raw === 0.01 || raw === 0.02 || raw === 0.05) {
+  if (
+    raw === 0.005 ||
+    raw === 0.01 ||
+    raw === 0.02 ||
+    raw === 0.05 ||
+    raw === 0.1
+  ) {
     return raw;
   }
   return 0.02;

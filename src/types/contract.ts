@@ -20,6 +20,38 @@ export type ControllerProfileSlug =
 
 export type ProfileTier = "verified" | "beta" | "custom" | (string & {});
 
+/**
+ * Profile metadata as documented in API-CONTRACT.md (`load_profile`). This is
+ * the contract's list, not a hardware discovery: Midi Fadester has no
+ * `list_profiles` request, so only the *active* profile reported by
+ * `get_state` is treated as truth about the connected desk. Only `apc40mk2`
+ * is verified on physical hardware.
+ */
+export interface ControllerProfileMeta {
+  slug: (typeof CONTROLLER_PROFILES)[number];
+  displayName: string;
+  tier: "verified" | "beta" | "custom";
+}
+
+export const CONTROLLER_PROFILE_META: readonly ControllerProfileMeta[] = [
+  { slug: "apc40mk2", displayName: "Akai APC40 mkII", tier: "verified" },
+  { slug: "apcminimk2", displayName: "Akai APC mini mk2", tier: "beta" },
+  { slug: "midimix", displayName: "Akai MIDImix", tier: "beta" },
+  { slug: "nanokontrol2", displayName: "Korg nanoKONTROL2", tier: "beta" },
+  {
+    slug: "launchcontrolxl",
+    displayName: "Novation Launch Control XL",
+    tier: "beta"
+  },
+  { slug: "generic", displayName: "Generic MIDI (Custom)", tier: "custom" }
+];
+
+export const PROFILE_TIER_LABELS: Record<string, string> = {
+  verified: "Verified on hardware",
+  beta: "Beta, untested on hardware",
+  custom: "Custom"
+};
+
 export interface FadesterBuildInfo {
   commit: string;
   built_at: string;
@@ -279,4 +311,53 @@ export interface ConnectionStatusInfo {
   profile?: ControllerProfileSlug;
   profileTier?: ProfileTier;
   linkUrl?: string;
+}
+
+/** Operator-facing words for `target_mode`, per MIDI-FADESTER-UI.md. */
+export const TARGET_MODE_LABELS: Record<TargetMode, string> = {
+  unassigned: "Not used",
+  tbar: "Switch scenes (T-bar)",
+  crossfade_ab: "Mix two layers",
+  layer_opacity: "Show or hide a layer",
+  audio_volume: "Volume",
+  filter_param: "Filter setting (FX)"
+};
+
+export const CURVE_LABELS: Record<CurveType, string> = {
+  dip_free: "Dip-free (picture never darkens)",
+  full_center: "Full center",
+  equal_power: "Equal power",
+  linear: "Linear",
+  cut: "Cut"
+};
+
+/** Parses "0.4.0" style versions; returns [major, minor] or null. */
+export function parseFadesterVersion(
+  version: string | undefined
+): [number, number] | null {
+  if (!version) {
+    return null;
+  }
+  const [majorText = "", minorText = ""] = version.split(/[.-]/, 3);
+  const major = Number(majorText);
+  const minor = Number(minorText);
+  if (!Number.isFinite(major) || !Number.isFinite(minor)) {
+    return null;
+  }
+  return [major, minor];
+}
+
+/** `get_catalog` and `reset_fx` were added in Midi Fadester 0.4.0. */
+export function supportsCatalogApi(
+  version: string | undefined,
+  slots: readonly { kind?: string }[] = []
+): boolean {
+  const parsed = parseFadesterVersion(version);
+  if (parsed) {
+    const [major, minor] = parsed;
+    if (major > 0 || minor >= 4) {
+      return true;
+    }
+  }
+  return slots.some((s) => s.kind === "fx");
 }

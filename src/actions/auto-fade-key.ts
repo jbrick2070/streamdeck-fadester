@@ -11,7 +11,9 @@ import { FadesterStore } from "../state/fadester-store.js";
 import {
   ALL_FX_SLOT_ID,
   AutoFadeKeySettings,
-  DEFAULT_AUTO_FADE_KEY_SETTINGS
+  DEFAULT_AUTO_FADE_KEY_SETTINGS,
+  normalizeLabelOverride,
+  normalizeReadoutStyle
 } from "../types/settings.js";
 import { CellRateLimiter } from "../gfx/cell-rate-limiter.js";
 import { renderAutoFadeKeySvg, toSvgDataUri } from "../gfx/svg-renderer.js";
@@ -78,11 +80,20 @@ export class AutoFadeKeyInstanceController {
     return { ...this.settings };
   }
 
-  public async handleKeyDown(): Promise<void> {
-    if (!this.store.getClient().isConnected()) {
-      this.store.getClient().reconnectNow();
+  public async handleKeyDown(now = Date.now()): Promise<void> {
+    const client = this.store.getClient();
+    if (!client.isConnected()) {
+      client.nudgeReconnect(2000, now);
       await this.sink.showAlert();
       return;
+    }
+
+    if (this.settings.slot !== ALL_FX_SLOT_ID) {
+      const slot = this.store.getSlot(this.settings.slot);
+      if (slot && !slot.available) {
+        await this.sink.showAlert();
+        return;
+      }
     }
 
     try {
@@ -118,7 +129,9 @@ export class AutoFadeKeyInstanceController {
       slots: this.store.getSlots(),
       slotId: this.settings.slot,
       to: this.settings.to,
-      durationMs: this.settings.durationMs
+      durationMs: this.settings.durationMs,
+      labelOverride: this.settings.labelOverride,
+      readoutStyle: this.settings.readoutStyle
     });
   }
 
@@ -142,7 +155,13 @@ export class AutoFadeKeyInstanceController {
         ? 0
         : Math.max(50, Math.min(20000, rounded))
       : DEFAULT_AUTO_FADE_KEY_SETTINGS.durationMs;
-    return { slot, to, durationMs };
+    return {
+      slot,
+      to,
+      durationMs,
+      labelOverride: normalizeLabelOverride(raw?.labelOverride),
+      readoutStyle: normalizeReadoutStyle(raw?.readoutStyle)
+    };
   }
 }
 

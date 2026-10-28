@@ -1,6 +1,6 @@
 {
   "name": "streamdeck-fadester",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Fadester for OBS — Stream Deck + fader dial and auto-fade controller for Midi Fadester in OBS Studio 33",
   "license": "GPL-2.0-or-later",
   "type": "module",
@@ -18,6 +18,7 @@
     "test": "vitest run",
     "test:mutation": "node --import tsx scripts/run-mutation-checks.ts",
     "test:obs-live": "node --import tsx tests/obs-live-conformance.ts",
+    "pi:harness": "node --import tsx scripts/pi-harness.ts",
     "validate": "streamdeck validate com.jbrick2070.fadester-for-obs.sdPlugin",
     "pack": "streamdeck pack com.jbrick2070.fadester-for-obs.sdPlugin --output release --force"
   },

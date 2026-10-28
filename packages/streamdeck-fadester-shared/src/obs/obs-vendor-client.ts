@@ -128,6 +128,7 @@ export class ObsVendorClient<
   protected identified = false;
   private status: ConnectionStatusInfo = makeUnreachableStatus();
   private connectAttemptCount = 0;
+  private lastNudgeAt = 0;
 
   public constructor(
     initialSettings?: GlobalConnectionSettings,
@@ -178,11 +179,40 @@ export class ObsVendorClient<
     this.cleanupSocket();
   }
 
-  public updateSettings(next: GlobalConnectionSettings): void {
+  /**
+   * Applies new connection settings. Reconnects only when host, port or
+   * password actually changed, so a Property Inspector re-saving the same
+   * values never drops a healthy connection. Returns true when it reconnected.
+   */
+  public updateSettings(next: GlobalConnectionSettings): boolean {
+    const before = this.settings;
     this.applySettingsObject(next);
-    if (!this.stopped) {
+    const changed =
+      before.host !== this.settings.host ||
+      before.port !== this.settings.port ||
+      before.password !== this.settings.password;
+    if (changed && !this.stopped) {
       this.reconnectNow();
+      return true;
     }
+    return false;
+  }
+
+  /**
+   * Throttled reconnect for user gestures (dial ticks, key presses) while
+   * offline: at most one forced reconnect per `minIntervalMs`, and never while
+   * halted on a wrong password (OBS would log a failed login per gesture).
+   */
+  public nudgeReconnect(minIntervalMs = 2000, now = Date.now()): boolean {
+    if (this.isConnected() || this.haltedReason === "wrong_password") {
+      return false;
+    }
+    if (now - this.lastNudgeAt < minIntervalMs) {
+      return false;
+    }
+    this.lastNudgeAt = now;
+    this.reconnectNow();
+    return true;
   }
 
   public reconnectNow(): void {
@@ -675,6 +705,10 @@ export class ObsVendorClient<
       const s = this.ws;
       this.ws = null;
       s.removeAllListeners();
+      // `ws` reports "closed before the connection was established" as an
+      // asynchronous 'error' when a CONNECTING socket is terminated; with no
+      // listener that would be an uncaught exception and crash the plugin.
+      s.on("error", () => {});
       try {
         s.terminate();
       } catch {

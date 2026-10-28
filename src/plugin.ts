@@ -1,9 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import streamDeck from "@elgato/streamdeck";
+import type { JsonObject } from "@elgato/utils";
 import { FadesterClient } from "./obs/fadester-client.js";
 import { FadesterStore } from "./state/fadester-store.js";
 import { FaderDialAction } from "./actions/fader-dial.js";
 import { AutoFadeKeyAction } from "./actions/auto-fade-key.js";
+import {
+  PiIncomingMessage,
+  PropertyInspectorBridge
+} from "./pi/pi-bridge.js";
 import {
   DEFAULT_GLOBAL_SETTINGS,
   FadesterGlobalSettings
@@ -12,75 +17,29 @@ import {
 const client = new FadesterClient(DEFAULT_GLOBAL_SETTINGS);
 const store = new FadesterStore(client);
 
-function broadcastToPropertyInspector(): void {
-  if (!streamDeck.ui.action) {
-    return;
+const bridge = new PropertyInspectorBridge(store, client, {
+  sendToPropertyInspector(payload) {
+    if (!streamDeck.ui.action) {
+      return;
+    }
+    void streamDeck.ui.sendToPropertyInspector(payload as JsonObject);
+  },
+  async persistGlobalSettings(settings) {
+    await streamDeck.settings.setGlobalSettings(settings);
   }
-  const status = store.getStatus();
-  const slots = store.getSlots().map((s) => ({
-    id: s.id,
-    name: s.name,
-    label: s.label,
-    kind: s.kind,
-    target_mode: s.target_mode,
-    available: s.available,
-    reason: s.reason
-  }));
-  void streamDeck.ui.sendToPropertyInspector({
-    event: "fadesterState",
-    status: {
-      kind: status.kind,
-      sentence: status.sentence,
-      cellReason: status.cellReason,
-      linkUrl: status.linkUrl ?? ""
-    },
-    profile: store.getProfile(),
-    profileDisplayName: store.getProfileDisplayName(),
-    profileTier: store.getProfileTier(),
-    globalSettings: client.getSettings(),
-    slots,
-    lastErrorComment: store.getLastErrorComment()
-  });
-}
-
-store.on("changed", broadcastToPropertyInspector);
-store.on("vendorError", broadcastToPropertyInspector);
+});
 
 streamDeck.settings.onDidReceiveGlobalSettings<FadesterGlobalSettings>((ev) => {
   client.updateSettings(ev.settings);
-  broadcastToPropertyInspector();
+  bridge.broadcast();
 });
 
 streamDeck.ui.onDidAppear(() => {
-  broadcastToPropertyInspector();
+  bridge.broadcast();
 });
 
-streamDeck.ui.onSendToPlugin<{
-  event?: string;
-  host?: string;
-  port?: number;
-  password?: string;
-}>((ev) => {
-  const payload = ev.payload ?? {};
-  if (payload.event === "piReady") {
-    broadcastToPropertyInspector();
-    return;
-  }
-  if (payload.event === "updateGlobalSettings") {
-    const next: FadesterGlobalSettings = {
-      host: payload.host ?? DEFAULT_GLOBAL_SETTINGS.host,
-      port: Number(payload.port ?? DEFAULT_GLOBAL_SETTINGS.port),
-      password: payload.password ?? DEFAULT_GLOBAL_SETTINGS.password
-    };
-    void streamDeck.settings.setGlobalSettings(next);
-    client.updateSettings(next);
-    broadcastToPropertyInspector();
-    return;
-  }
-  if (payload.event === "testConnection") {
-    client.reconnectNow();
-    broadcastToPropertyInspector();
-  }
+streamDeck.ui.onSendToPlugin<JsonObject>((ev) => {
+  void bridge.handleMessage(ev.payload as PiIncomingMessage);
 });
 
 streamDeck.actions.registerAction(new FaderDialAction(store));

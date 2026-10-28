@@ -15,6 +15,10 @@ export interface DialCellRenderInput<
   thumbnailB?: string;
   holdingForLongPress?: boolean;
   holdLabel?: string;
+  /** Operator-chosen label; replaces the engine label when non-empty. */
+  labelOverride?: string;
+  /** "percent" forces a 0..100 % readout; "auto" prefers display_value. */
+  readoutStyle?: "auto" | "percent";
 }
 
 export interface KeyCellRenderInput<
@@ -26,6 +30,8 @@ export interface KeyCellRenderInput<
   slotId: string;
   to: 0 | 1;
   durationMs: number;
+  labelOverride?: string;
+  readoutStyle?: "auto" | "percent";
 }
 
 export function escapeXml(raw: string): string {
@@ -110,7 +116,8 @@ export function renderDialCellSvg<TSlot extends SurfaceSlotBase>(
   input: DialCellRenderInput<TSlot>
 ): string {
   const P = PLAYLISTER_PALETTE;
-  const fallbackTitle = input.slot?.name || input.slotId || "Fader";
+  const override = (input.labelOverride ?? "").trim();
+  const fallbackTitle = override || input.slot?.name || input.slotId || "Fader";
 
   // 1. Disconnected / error state -> never blank
   if (input.status.kind !== "connected") {
@@ -271,10 +278,13 @@ export function renderDialCellSvg<TSlot extends SurfaceSlotBase>(
     ? { colorA: P.fxCyanStart, colorB: P.fxAmberEnd }
     : getSourcePairGradientColors(slot.source_a, slot.source_b);
   const displayLabel = escapeXml(
-    truncateLabel(slot.label || slot.name || slot.id, 14)
+    truncateLabel(override || slot.label || slot.name || slot.id, 14)
   );
   const readoutText = escapeXml(
-    truncateLabel(slot.display_value || pctText, 10)
+    truncateLabel(
+      input.readoutStyle === "percent" ? pctText : slot.display_value || pctText,
+      10
+    )
   );
   const readoutFontSize = readoutText.length > 6 ? 18 : 22;
   const barX = 14;
@@ -335,9 +345,9 @@ export function renderAutoFadeKeySvg<TSlot extends SurfaceSlotBase>(
 ): string {
   const P = PLAYLISTER_PALETTE;
   const isAllFx = input.slotId === "__all_fx__";
-  const fallbackTitle = isAllFx
-    ? "Clean FX"
-    : input.slot?.name || input.slotId || "Auto-fade";
+  const override = (input.labelOverride ?? "").trim();
+  const fallbackTitle =
+    override || (isAllFx ? "Clean FX" : input.slot?.name || input.slotId || "Auto-fade");
 
   if (input.status.kind !== "connected") {
     return renderKeyStatusSvg(
@@ -402,10 +412,13 @@ export function renderAutoFadeKeySvg<TSlot extends SurfaceSlotBase>(
   const gradStart = isFxSlot ? P.fxCyanStart : P.blueStart;
   const gradEnd = isFxSlot ? P.fxAmberEnd : P.violetEnd;
   const title = escapeXml(
-    truncateLabel(slot.label || slot.name || slot.id, 10)
+    truncateLabel(override || slot.label || slot.name || slot.id, 10)
   );
   const readoutText = escapeXml(
-    truncateLabel(slot.display_value || pctText, 10)
+    truncateLabel(
+      input.readoutStyle === "percent" ? pctText : slot.display_value || pctText,
+      10
+    )
   );
   const readoutFontSize = readoutText.length > 5 ? 20 : 28;
   const barX = 14;

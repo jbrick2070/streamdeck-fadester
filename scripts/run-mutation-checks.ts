@@ -151,6 +151,53 @@ const MUTATIONS: MutationCheck[] = [
     target: "if (this.settings.durationMs === 0) {",
     mutated: "if (false) {",
     testFile: "tests/actions-integration.test.ts"
+  },
+  {
+    id: "M-2.1a",
+    step: "Step 2.1 (PI Bridge Never Echoes the Password)",
+    description:
+      "Leak the stored password into the PI state payload and verify pi-bridge.test.ts fails",
+    filePath: resolve(ROOT, "src/pi/pi-bridge.ts"),
+    target: "passwordSet: settings.password.length > 0",
+    mutated:
+      "passwordSet: settings.password.length > 0, password: settings.password",
+    testFile: "tests/pi-bridge.test.ts"
+  },
+  {
+    id: "M-2.1b",
+    step: "Step 2.1 (Change-Only Reconnect on Settings Save)",
+    description:
+      "Force updateSettings() to reconnect even when nothing changed and verify pi-bridge.test.ts fails",
+    filePath: resolve(
+      ROOT,
+      "packages/streamdeck-fadester-shared/src/obs/obs-vendor-client.ts"
+    ),
+    target: "if (changed && !this.stopped) {",
+    mutated: "if (!this.stopped) {",
+    testFile: "tests/pi-bridge.test.ts"
+  },
+  {
+    id: "M-2.2a",
+    step: "Step 2.2 (Unavailable Slot Guard)",
+    description:
+      "Skip the slot.available guard in fader-dial.ts so requests reach OBS for unavailable slots and verify action-guards.test.ts fails",
+    filePath: resolve(ROOT, "src/actions/fader-dial.ts"),
+    target: "if (slot && !slot.available) {",
+    mutated: "if (false) {",
+    testFile: "tests/action-guards.test.ts"
+  },
+  {
+    id: "M-2.2b",
+    step: "Step 2.2 (Throttled Offline Reconnect Nudge)",
+    description:
+      "Remove the 2 s throttle in nudgeReconnect() and verify action-guards.test.ts fails",
+    filePath: resolve(
+      ROOT,
+      "packages/streamdeck-fadester-shared/src/obs/obs-vendor-client.ts"
+    ),
+    target: "if (now - this.lastNudgeAt < minIntervalMs) {",
+    mutated: "if (false) {",
+    testFile: "tests/action-guards.test.ts"
   }
 ];
 

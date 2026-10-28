@@ -54,6 +54,9 @@ describe("Step 1.1 — Manifest, Layout, Icons & Repository Hygiene", () => {
     expect(
       statSync(join(PLUGIN_DIR, String(actions[0].PropertyInspectorPath))).size
     ).toBeGreaterThan(0);
+    for (const shared of ["ui/pi-common.js", "ui/pi.css"]) {
+      expect(statSync(join(PLUGIN_DIR, shared)).size).toBeGreaterThan(0);
+    }
     expect(actions[1].UUID).toBe("com.jbrick2070.fadester-for-obs.auto-fade");
     expect(actions[1].Controllers).toEqual(["Keypad"]);
     expect(
@@ -116,6 +119,7 @@ describe("Step 1.1 — Manifest, Layout, Icons & Repository Hygiene", () => {
         file.endsWith(".ts") ||
         file.endsWith(".js") ||
         file.endsWith(".mjs") ||
+        file.endsWith(".css") ||
         file.endsWith(".html")
       ) {
         const text = bytes.toString("utf8");

@@ -34,6 +34,16 @@ sources, and emits its signals as events the surfaces can draw.
    loops. One checkbox in Playlister reading the beat signal.
 10. **Scrub the folder.** A dial steps through the playlist; a fader sets the still duration live.
 
+## Phone and tablet surface (decided 2026-10-27: web app, not store apps)
+
+11. **Fadester Remote, served by Midi Fadester itself.** The plugin serves a small static page over plain
+    HTTP on the LAN (for example http://PC-IP:4456/), and the phone's browser talks to obs-websocket on
+    port 4455 with the usual password. Add-to-home-screen (PWA manifest) gives an icon; no app stores, no
+    developer accounts, no cloud hosting. It must be served locally: a page hosted on HTTPS (GitHub Pages)
+    cannot open a plain ws:// connection to a LAN address, browsers block it. Show a QR code in the Midi
+    Fadester dialog to open it. LAN only; the dialog says so. Lives in midi-fadester's data folder, since
+    the plugin serves it.
+
 ## Keep in mind
 
 - Every idea above is a slot, a signal, or a key action; none needs a new kind of plumbing.

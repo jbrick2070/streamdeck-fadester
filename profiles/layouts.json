@@ -1,0 +1,211 @@
+[
+  {
+    "slug": "plus-source-desk",
+    "name": "Fadester — Source Desk + (Either Mode)",
+    "description": "Studio or regular mode: everyday one-scene source browsing, show/hide, and mixer control. Layer order stays fixed.",
+    "obsMode": "either",
+    "deviceType": 7, "deviceModel": "20GBD9901", "columns": 4, "rows": 2, "dials": 4,
+    "actions": [
+      { "controller": "Keypad", "column": 0, "row": 0, "kind": "layer", "label": "Prev source", "settings": { "scope": "auto", "target": "selected", "operation": "select_previous" } },
+      { "controller": "Keypad", "column": 1, "row": 0, "kind": "layer", "label": "Next source", "settings": { "scope": "auto", "target": "selected", "operation": "select_next" } },
+      { "controller": "Keypad", "column": 2, "row": 0, "kind": "layer", "label": "Show / hide", "settings": { "scope": "auto", "target": "selected", "operation": "show_hide" } },
+      { "controller": "Keypad", "column": 0, "row": 1, "kind": "fade", "label": "Music down", "settings": { "inputName": "__audio_main__", "to": 0, "durationMs": 1000 } },
+      { "controller": "Keypad", "column": 1, "row": 1, "kind": "fade", "label": "Music up", "settings": { "inputName": "__audio_main__", "to": 1, "durationMs": 1000 } },
+      { "controller": "Keypad", "column": 2, "row": 1, "kind": "fade", "label": "Mic down", "settings": { "inputName": "__audio_mic__", "to": 0, "durationMs": 500 } },
+      { "controller": "Keypad", "column": 3, "row": 1, "kind": "fade", "label": "Mic up", "settings": { "inputName": "__audio_mic__", "to": 1, "durationMs": 500 } },
+      { "controller": "Encoder", "column": 0, "row": 0, "kind": "layer", "label": "Select source", "settings": { "scope": "auto", "target": "selected", "operation": "select_next", "dialMode": "select_layer" } },
+      { "controller": "Encoder", "column": 1, "row": 0, "kind": "fader", "label": "Music", "settings": { "target": "input_volume", "inputName": "__audio_main__", "stepPerTick": 0.02 } },
+      { "controller": "Encoder", "column": 2, "row": 0, "kind": "fader", "label": "Mic", "settings": { "target": "input_volume", "inputName": "__audio_mic__", "stepPerTick": 0.01 } },
+      { "controller": "Encoder", "column": 3, "row": 0, "kind": "fader", "label": "Aux", "settings": { "target": "input_volume", "inputName": "__audio_aux__", "stepPerTick": 0.02 } }
+    ]
+  },
+  {
+    "slug": "plus-source-half",
+    "name": "Fadester — Half Source Desk + (Either Mode)",
+    "description": "Studio or regular mode: four keys and two dials for source browsing, visibility, and one mixer input. The other half stays empty.",
+    "obsMode": "either",
+    "deviceType": 7, "deviceModel": "20GBD9901", "columns": 4, "rows": 2, "dials": 4,
+    "actions": [
+      { "controller": "Keypad", "column": 0, "row": 0, "kind": "layer", "label": "Prev source", "settings": { "scope": "auto", "target": "selected", "operation": "select_previous" } },
+      { "controller": "Keypad", "column": 1, "row": 0, "kind": "layer", "label": "Next source", "settings": { "scope": "auto", "target": "selected", "operation": "select_next" } },
+      { "controller": "Keypad", "column": 0, "row": 1, "kind": "layer", "label": "Show / hide", "settings": { "scope": "auto", "target": "selected", "operation": "show_hide" } },
+      { "controller": "Keypad", "column": 1, "row": 1, "kind": "fade", "label": "Audio down", "settings": { "inputName": "__audio_main__", "to": 0, "durationMs": 1000 } },
+      { "controller": "Encoder", "column": 0, "row": 0, "kind": "layer", "label": "Select source", "settings": { "scope": "auto", "target": "selected", "operation": "select_next", "dialMode": "select_layer" } },
+      { "controller": "Encoder", "column": 1, "row": 0, "kind": "fader", "label": "Audio", "settings": { "target": "input_volume", "inputName": "__audio_main__", "stepPerTick": 0.02 } }
+    ]
+  },
+  {
+    "slug": "plus-creative-layer-lab",
+    "name": "Fadester — Creative Layer Lab + (Either Mode)",
+    "description": "Studio or regular mode: a creative preset for blend mode and layer order, with reordering enabled only in this lab.",
+    "obsMode": "either",
+    "deviceType": 7, "deviceModel": "20GBD9901", "columns": 4, "rows": 2, "dials": 4,
+    "actions": [
+      { "controller": "Keypad", "column": 0, "row": 0, "kind": "layer", "label": "Prev layer", "settings": { "scope": "auto", "target": "selected", "operation": "select_previous" } },
+      { "controller": "Keypad", "column": 1, "row": 0, "kind": "layer", "label": "Next layer", "settings": { "scope": "auto", "target": "selected", "operation": "select_next" } },
+      { "controller": "Keypad", "column": 2, "row": 0, "kind": "layer", "label": "Show / hide", "settings": { "scope": "auto", "target": "selected", "operation": "show_hide" } },
+      { "controller": "Keypad", "column": 3, "row": 0, "kind": "layer", "label": "Normal blend", "settings": { "scope": "auto", "target": "selected", "operation": "blend_normal" } },
+      { "controller": "Keypad", "column": 0, "row": 1, "kind": "layer", "label": "Layer down", "settings": { "scope": "auto", "target": "selected", "operation": "move_down", "allowReorder": true } },
+      { "controller": "Keypad", "column": 1, "row": 1, "kind": "layer", "label": "Layer up", "settings": { "scope": "auto", "target": "selected", "operation": "move_up", "allowReorder": true } },
+      { "controller": "Keypad", "column": 2, "row": 1, "kind": "layer", "label": "Prev blend", "settings": { "scope": "auto", "target": "selected", "operation": "blend_previous" } },
+      { "controller": "Keypad", "column": 3, "row": 1, "kind": "layer", "label": "Next blend", "settings": { "scope": "auto", "target": "selected", "operation": "blend_next" } },
+      { "controller": "Encoder", "column": 0, "row": 0, "kind": "layer", "label": "Select layer", "settings": { "scope": "auto", "target": "selected", "operation": "select_next", "dialMode": "select_layer" } },
+      { "controller": "Encoder", "column": 1, "row": 0, "kind": "layer", "label": "Blend mode", "settings": { "scope": "auto", "target": "selected", "operation": "blend_next", "dialMode": "blend" } },
+      { "controller": "Encoder", "column": 2, "row": 0, "kind": "layer", "label": "Layer order", "settings": { "scope": "auto", "target": "selected", "operation": "move_up", "dialMode": "order", "allowReorder": true } },
+      { "controller": "Encoder", "column": 3, "row": 0, "kind": "fader", "label": "Audio", "settings": { "target": "input_volume", "inputName": "__audio_main__", "stepPerTick": 0.02 } }
+    ]
+  },
+  {
+    "slug": "buttons-source-desk",
+    "name": "Fadester — Source Desk 15 Keys (Either Mode)",
+    "description": "Studio or regular mode: a 15-key source desk with fixed layer order, three audio fade pairs, and six free specialist-plugin keys.",
+    "obsMode": "either",
+    "deviceType": 0, "deviceModel": "20GAA9902", "columns": 5, "rows": 3, "dials": 0,
+    "actions": [
+      { "controller": "Keypad", "column": 0, "row": 0, "kind": "layer", "label": "Prev source", "settings": { "scope": "auto", "target": "selected", "operation": "select_previous" } },
+      { "controller": "Keypad", "column": 1, "row": 0, "kind": "layer", "label": "Next source", "settings": { "scope": "auto", "target": "selected", "operation": "select_next" } },
+      { "controller": "Keypad", "column": 2, "row": 0, "kind": "layer", "label": "Show / hide", "settings": { "scope": "auto", "target": "selected", "operation": "show_hide" } },
+      { "controller": "Keypad", "column": 0, "row": 1, "kind": "fade", "label": "Music down", "settings": { "inputName": "__audio_main__", "to": 0, "durationMs": 1000 } },
+      { "controller": "Keypad", "column": 1, "row": 1, "kind": "fade", "label": "Music up", "settings": { "inputName": "__audio_main__", "to": 1, "durationMs": 1000 } },
+      { "controller": "Keypad", "column": 2, "row": 1, "kind": "fade", "label": "Mic down", "settings": { "inputName": "__audio_mic__", "to": 0, "durationMs": 500 } },
+      { "controller": "Keypad", "column": 3, "row": 1, "kind": "fade", "label": "Mic up", "settings": { "inputName": "__audio_mic__", "to": 1, "durationMs": 500 } },
+      { "controller": "Keypad", "column": 2, "row": 2, "kind": "fade", "label": "Aux down", "settings": { "inputName": "__audio_aux__", "to": 0, "durationMs": 1000 } },
+      { "controller": "Keypad", "column": 3, "row": 2, "kind": "fade", "label": "Aux up", "settings": { "inputName": "__audio_aux__", "to": 1, "durationMs": 1000 } }
+    ]
+  },
+  {
+    "slug": "buttons-source-half",
+    "name": "Fadester — Half Source Desk 15 Keys (Either Mode)",
+    "description": "Studio or regular mode: seven source and audio keys, leaving eight keys available for existing plugins.",
+    "obsMode": "either",
+    "deviceType": 0, "deviceModel": "20GAA9902", "columns": 5, "rows": 3, "dials": 0,
+    "actions": [
+      { "controller": "Keypad", "column": 0, "row": 0, "kind": "layer", "label": "Prev source", "settings": { "scope": "auto", "target": "selected", "operation": "select_previous" } },
+      { "controller": "Keypad", "column": 1, "row": 0, "kind": "layer", "label": "Next source", "settings": { "scope": "auto", "target": "selected", "operation": "select_next" } },
+      { "controller": "Keypad", "column": 0, "row": 1, "kind": "layer", "label": "Show / hide", "settings": { "scope": "auto", "target": "selected", "operation": "show_hide" } },
+      { "controller": "Keypad", "column": 0, "row": 2, "kind": "fade", "label": "Music down", "settings": { "inputName": "__audio_main__", "to": 0, "durationMs": 1000 } },
+      { "controller": "Keypad", "column": 1, "row": 2, "kind": "fade", "label": "Music up", "settings": { "inputName": "__audio_main__", "to": 1, "durationMs": 1000 } },
+      { "controller": "Keypad", "column": 2, "row": 2, "kind": "fade", "label": "Mic down", "settings": { "inputName": "__audio_mic__", "to": 0, "durationMs": 500 } },
+      { "controller": "Keypad", "column": 3, "row": 2, "kind": "fade", "label": "Mic up", "settings": { "inputName": "__audio_mic__", "to": 1, "durationMs": 500 } }
+    ]
+  },
+  {
+    "slug": "mini-source-desk",
+    "name": "Fadester — Source Desk Mini (Either Mode)",
+    "description": "Studio or regular mode: source browsing and audio fades for Stream Deck Mini. Layer order stays fixed.",
+    "obsMode": "either",
+    "deviceType": 1, "deviceModel": "20GAI9901", "columns": 3, "rows": 2, "dials": 0,
+    "actions": [
+      { "controller": "Keypad", "column": 0, "row": 0, "kind": "layer", "label": "Prev source", "settings": { "scope": "auto", "target": "selected", "operation": "select_previous" } },
+      { "controller": "Keypad", "column": 1, "row": 0, "kind": "layer", "label": "Next source", "settings": { "scope": "auto", "target": "selected", "operation": "select_next" } },
+      { "controller": "Keypad", "column": 2, "row": 0, "kind": "layer", "label": "Show / hide", "settings": { "scope": "auto", "target": "selected", "operation": "show_hide" } },
+      { "controller": "Keypad", "column": 0, "row": 1, "kind": "fade", "label": "Audio down", "settings": { "inputName": "__audio_main__", "to": 0, "durationMs": 1000 } },
+      { "controller": "Keypad", "column": 1, "row": 1, "kind": "fade", "label": "Audio up", "settings": { "inputName": "__audio_main__", "to": 1, "durationMs": 1000 } }
+    ]
+  },
+  {
+    "slug": "plus-scene-desk",
+    "name": "Fadester — Scene Desk + (Studio Mode)",
+    "description": "Studio Mode scene browsing and random selection, separate Cut and Transition keys, mixer dials, and the Scene T-bar.",
+    "obsMode": "studio",
+    "deviceType": 7, "deviceModel": "20GBD9901", "columns": 4, "rows": 2, "dials": 4,
+    "actions": [
+      { "controller": "Keypad", "column": 0, "row": 0, "kind": "scene", "label": "Prev scene", "settings": { "sceneTarget": "__previous_scene__", "operation": "preview" } },
+      { "controller": "Keypad", "column": 1, "row": 0, "kind": "scene", "label": "Next scene", "settings": { "sceneTarget": "__next_scene__", "operation": "preview" } },
+      { "controller": "Keypad", "column": 2, "row": 0, "kind": "scene", "label": "Cut preview", "settings": { "sceneTarget": "__current_preview__", "operation": "cut" } },
+      { "controller": "Keypad", "column": 3, "row": 0, "kind": "scene", "label": "Transition", "settings": { "sceneTarget": "__current_preview__", "operation": "transition", "transitionName": "__current_transition__" } },
+      { "controller": "Keypad", "column": 0, "row": 1, "kind": "scene", "label": "Scene 1", "settings": { "sceneTarget": "__scene_index_0__", "operation": "preview" } },
+      { "controller": "Keypad", "column": 1, "row": 1, "kind": "scene", "label": "Random scene", "settings": { "sceneTarget": "__random_scene__", "operation": "preview" } },
+      { "controller": "Keypad", "column": 2, "row": 1, "kind": "fade", "label": "Mic down", "settings": { "inputName": "__audio_mic__", "to": 0, "durationMs": 500 } },
+      { "controller": "Keypad", "column": 3, "row": 1, "kind": "fade", "label": "Mic up", "settings": { "inputName": "__audio_mic__", "to": 1, "durationMs": 500 } },
+      { "controller": "Encoder", "column": 0, "row": 0, "kind": "fader", "label": "Music", "settings": { "target": "input_volume", "inputName": "__audio_main__", "stepPerTick": 0.02 } },
+      { "controller": "Encoder", "column": 1, "row": 0, "kind": "fader", "label": "Mic", "settings": { "target": "input_volume", "inputName": "__audio_mic__", "stepPerTick": 0.01 } },
+      { "controller": "Encoder", "column": 2, "row": 0, "kind": "fader", "label": "Scene blend", "settings": { "target": "tbar", "stepPerTick": 0.02 } }
+    ]
+  },
+  {
+    "slug": "buttons-creative-layer-lab",
+    "name": "Fadester — Creative Layer Lab 15 Keys (Either Mode)",
+    "description": "Studio or regular mode: buttons-only creative layer controls with explicit blend choices and enabled layer reordering.",
+    "obsMode": "either",
+    "deviceType": 0, "deviceModel": "20GAA9902", "columns": 5, "rows": 3, "dials": 0,
+    "actions": [
+      { "controller": "Keypad", "column": 0, "row": 0, "kind": "layer", "label": "Prev layer", "settings": { "scope": "auto", "target": "selected", "operation": "select_previous" } },
+      { "controller": "Keypad", "column": 1, "row": 0, "kind": "layer", "label": "Next layer", "settings": { "scope": "auto", "target": "selected", "operation": "select_next" } },
+      { "controller": "Keypad", "column": 2, "row": 0, "kind": "layer", "label": "Show / hide", "settings": { "scope": "auto", "target": "selected", "operation": "show_hide" } },
+      { "controller": "Keypad", "column": 3, "row": 0, "kind": "layer", "label": "Normal blend", "settings": { "scope": "auto", "target": "selected", "operation": "blend_normal" } },
+      { "controller": "Keypad", "column": 0, "row": 1, "kind": "layer", "label": "Layer down", "settings": { "scope": "auto", "target": "selected", "operation": "move_down", "allowReorder": true } },
+      { "controller": "Keypad", "column": 1, "row": 1, "kind": "layer", "label": "Layer up", "settings": { "scope": "auto", "target": "selected", "operation": "move_up", "allowReorder": true } },
+      { "controller": "Keypad", "column": 2, "row": 1, "kind": "layer", "label": "Prev blend", "settings": { "scope": "auto", "target": "selected", "operation": "blend_previous" } },
+      { "controller": "Keypad", "column": 3, "row": 1, "kind": "layer", "label": "Next blend", "settings": { "scope": "auto", "target": "selected", "operation": "blend_next" } },
+      { "controller": "Keypad", "column": 0, "row": 2, "kind": "fade", "label": "Music down", "settings": { "inputName": "__audio_main__", "to": 0, "durationMs": 1000 } },
+      { "controller": "Keypad", "column": 1, "row": 2, "kind": "fade", "label": "Music up", "settings": { "inputName": "__audio_main__", "to": 1, "durationMs": 1000 } },
+      { "controller": "Keypad", "column": 2, "row": 2, "kind": "fade", "label": "Mic down", "settings": { "inputName": "__audio_mic__", "to": 0, "durationMs": 500 } },
+      { "controller": "Keypad", "column": 3, "row": 2, "kind": "fade", "label": "Mic up", "settings": { "inputName": "__audio_mic__", "to": 1, "durationMs": 500 } }
+    ]
+  },
+  {
+    "slug": "buttons-scene-desk",
+    "name": "Fadester — Scene Desk 15 Keys (Studio Mode)",
+    "description": "A buttons-only Studio Mode desk: scene browsing and random selection, Cut and Transition, four scene shortcuts, and audio fade pairs.",
+    "obsMode": "studio",
+    "deviceType": 0, "deviceModel": "20GAA9902", "columns": 5, "rows": 3, "dials": 0,
+    "actions": [
+      { "controller": "Keypad", "column": 0, "row": 0, "kind": "scene", "label": "Prev scene", "settings": { "sceneTarget": "__previous_scene__", "operation": "preview" } },
+      { "controller": "Keypad", "column": 1, "row": 0, "kind": "scene", "label": "Next scene", "settings": { "sceneTarget": "__next_scene__", "operation": "preview" } },
+      { "controller": "Keypad", "column": 2, "row": 0, "kind": "scene", "label": "Cut preview", "settings": { "sceneTarget": "__current_preview__", "operation": "cut" } },
+      { "controller": "Keypad", "column": 3, "row": 0, "kind": "scene", "label": "Transition", "settings": { "sceneTarget": "__current_preview__", "operation": "transition", "transitionName": "__current_transition__" } },
+      { "controller": "Keypad", "column": 4, "row": 0, "kind": "scene", "label": "Random scene", "settings": { "sceneTarget": "__random_scene__", "operation": "preview" } },
+      { "controller": "Keypad", "column": 0, "row": 1, "kind": "scene", "label": "Scene 1", "settings": { "sceneTarget": "__scene_index_0__", "operation": "preview" } },
+      { "controller": "Keypad", "column": 1, "row": 1, "kind": "scene", "label": "Scene 2", "settings": { "sceneTarget": "__scene_index_1__", "operation": "preview" } },
+      { "controller": "Keypad", "column": 2, "row": 1, "kind": "scene", "label": "Scene 3", "settings": { "sceneTarget": "__scene_index_2__", "operation": "preview" } },
+      { "controller": "Keypad", "column": 3, "row": 1, "kind": "scene", "label": "Scene 4", "settings": { "sceneTarget": "__scene_index_3__", "operation": "preview" } },
+      { "controller": "Keypad", "column": 0, "row": 2, "kind": "fade", "label": "Music down", "settings": { "inputName": "__audio_main__", "to": 0, "durationMs": 1000 } },
+      { "controller": "Keypad", "column": 1, "row": 2, "kind": "fade", "label": "Music up", "settings": { "inputName": "__audio_main__", "to": 1, "durationMs": 1000 } },
+      { "controller": "Keypad", "column": 2, "row": 2, "kind": "fade", "label": "Mic down", "settings": { "inputName": "__audio_mic__", "to": 0, "durationMs": 500 } },
+      { "controller": "Keypad", "column": 3, "row": 2, "kind": "fade", "label": "Mic up", "settings": { "inputName": "__audio_mic__", "to": 1, "durationMs": 500 } }
+    ]
+  },
+  {
+    "slug": "plus-scene-regular",
+    "name": "Fadester — Scene Desk + (Regular Mode)",
+    "description": "Regular OBS mode: previous/next/random scenes transition directly to Program, with three scene shortcuts and mixer dials. No Preview or T-bar controls.",
+    "obsMode": "regular",
+    "deviceType": 7, "deviceModel": "20GBD9901", "columns": 4, "rows": 2, "dials": 4,
+    "actions": [
+      { "controller": "Keypad", "column": 0, "row": 0, "kind": "scene", "label": "Prev scene", "settings": { "sceneTarget": "__previous_scene__", "operation": "transition", "transitionName": "__current_transition__" } },
+      { "controller": "Keypad", "column": 1, "row": 0, "kind": "scene", "label": "Next scene", "settings": { "sceneTarget": "__next_scene__", "operation": "transition", "transitionName": "__current_transition__" } },
+      { "controller": "Keypad", "column": 2, "row": 0, "kind": "scene", "label": "Scene 1", "settings": { "sceneTarget": "__scene_index_0__", "operation": "transition", "transitionName": "__current_transition__" } },
+      { "controller": "Keypad", "column": 3, "row": 0, "kind": "scene", "label": "Scene 2", "settings": { "sceneTarget": "__scene_index_1__", "operation": "transition", "transitionName": "__current_transition__" } },
+      { "controller": "Keypad", "column": 0, "row": 1, "kind": "scene", "label": "Scene 3", "settings": { "sceneTarget": "__scene_index_2__", "operation": "transition", "transitionName": "__current_transition__" } },
+      { "controller": "Keypad", "column": 1, "row": 1, "kind": "scene", "label": "Random scene", "settings": { "sceneTarget": "__random_scene__", "operation": "transition", "transitionName": "__current_transition__" } },
+      { "controller": "Keypad", "column": 2, "row": 1, "kind": "fade", "label": "Mic down", "settings": { "inputName": "__audio_mic__", "to": 0, "durationMs": 500 } },
+      { "controller": "Keypad", "column": 3, "row": 1, "kind": "fade", "label": "Mic up", "settings": { "inputName": "__audio_mic__", "to": 1, "durationMs": 500 } },
+      { "controller": "Encoder", "column": 0, "row": 0, "kind": "fader", "label": "Music", "settings": { "target": "input_volume", "inputName": "__audio_main__", "stepPerTick": 0.02 } },
+      { "controller": "Encoder", "column": 1, "row": 0, "kind": "fader", "label": "Mic", "settings": { "target": "input_volume", "inputName": "__audio_mic__", "stepPerTick": 0.01 } },
+      { "controller": "Encoder", "column": 2, "row": 0, "kind": "fader", "label": "Aux", "settings": { "target": "input_volume", "inputName": "__audio_aux__", "stepPerTick": 0.02 } }
+    ]
+  },
+  {
+    "slug": "buttons-scene-regular",
+    "name": "Fadester — Scene Desk 15 Keys (Regular Mode)",
+    "description": "Regular OBS mode: direct scene transitions, Cut navigation and random selection, four scene shortcuts, and audio fade pairs. No Preview or T-bar controls.",
+    "obsMode": "regular",
+    "deviceType": 0, "deviceModel": "20GAA9902", "columns": 5, "rows": 3, "dials": 0,
+    "actions": [
+      { "controller": "Keypad", "column": 0, "row": 0, "kind": "scene", "label": "Prev scene", "settings": { "sceneTarget": "__previous_scene__", "operation": "transition", "transitionName": "__current_transition__" } },
+      { "controller": "Keypad", "column": 1, "row": 0, "kind": "scene", "label": "Next scene", "settings": { "sceneTarget": "__next_scene__", "operation": "transition", "transitionName": "__current_transition__" } },
+      { "controller": "Keypad", "column": 2, "row": 0, "kind": "scene", "label": "Cut previous", "settings": { "sceneTarget": "__previous_scene__", "operation": "cut" } },
+      { "controller": "Keypad", "column": 3, "row": 0, "kind": "scene", "label": "Cut next", "settings": { "sceneTarget": "__next_scene__", "operation": "cut" } },
+      { "controller": "Keypad", "column": 4, "row": 0, "kind": "scene", "label": "Random scene", "settings": { "sceneTarget": "__random_scene__", "operation": "transition", "transitionName": "__current_transition__" } },
+      { "controller": "Keypad", "column": 0, "row": 1, "kind": "scene", "label": "Scene 1", "settings": { "sceneTarget": "__scene_index_0__", "operation": "transition", "transitionName": "__current_transition__" } },
+      { "controller": "Keypad", "column": 1, "row": 1, "kind": "scene", "label": "Scene 2", "settings": { "sceneTarget": "__scene_index_1__", "operation": "transition", "transitionName": "__current_transition__" } },
+      { "controller": "Keypad", "column": 2, "row": 1, "kind": "scene", "label": "Scene 3", "settings": { "sceneTarget": "__scene_index_2__", "operation": "transition", "transitionName": "__current_transition__" } },
+      { "controller": "Keypad", "column": 3, "row": 1, "kind": "scene", "label": "Scene 4", "settings": { "sceneTarget": "__scene_index_3__", "operation": "transition", "transitionName": "__current_transition__" } },
+      { "controller": "Keypad", "column": 0, "row": 2, "kind": "fade", "label": "Music down", "settings": { "inputName": "__audio_main__", "to": 0, "durationMs": 1000 } },
+      { "controller": "Keypad", "column": 1, "row": 2, "kind": "fade", "label": "Music up", "settings": { "inputName": "__audio_main__", "to": 1, "durationMs": 1000 } },
+      { "controller": "Keypad", "column": 2, "row": 2, "kind": "fade", "label": "Mic down", "settings": { "inputName": "__audio_mic__", "to": 0, "durationMs": 500 } },
+      { "controller": "Keypad", "column": 3, "row": 2, "kind": "fade", "label": "Mic up", "settings": { "inputName": "__audio_mic__", "to": 1, "durationMs": 500 } }
+    ]
+  }
+]

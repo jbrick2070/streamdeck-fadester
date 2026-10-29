@@ -1,16 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 export const PLAYLISTER_PALETTE = {
-  bgTop: "#0B1020",
-  bgBottom: "#111827",
-  trackBg: "#1E293B",
-  trackBorder: "#334155",
-  blueStart: "#2563EB",
-  violetEnd: "#7C3AED",
-  fxCyanStart: "#06B6D4",
-  fxAmberEnd: "#F59E0B",
-  whiteGlyph: "#F8FAFC",
-  mutedText: "#CBD5E1",
+  bgTop: "#08070B",
+  bgBottom: "#0D0913",
+  trackBg: "#24152F",
+  trackBorder: "#68418C",
+  accentPurple: "#9146FF",
+  accentYellow: "#FFF04B",
+  // Keep the shared property names compatible with the optional MIDI renderer.
+  blueStart: "#9146FF",
+  violetEnd: "#C084FC",
+  fxCyanStart: "#BF73FF",
+  fxAmberEnd: "#FFF04B",
+  whiteGlyph: "#FAF7FF",
+  mutedText: "#CFC0DF",
   orangeAccent: "#F97316",
   orangeDeep: "#D97706",
   previewGreen: "#22C55E",
@@ -18,8 +21,8 @@ export const PLAYLISTER_PALETTE = {
   minStrokePx: 3
 } as const;
 
-const SOURCE_A_PALETTE = ["#2563EB", "#0284C7", "#0EA5E9", "#3B82F6"] as const;
-const SOURCE_B_PALETTE = ["#7C3AED", "#9333EA", "#6366F1", "#8B5CF6"] as const;
+const SOURCE_A_PALETTE = ["#9146FF", "#A855F7", "#9333EA", "#8B3DF0"] as const;
+const SOURCE_B_PALETTE = ["#C084FC", "#E879F9", "#D8B4FE", "#D946EF"] as const;
 
 function hashName(name: string): number {
   let h = 0;

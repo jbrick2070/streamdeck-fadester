@@ -85,3 +85,78 @@ export const DEFAULT_AUTO_FADE_KEY_SETTINGS: Required<AutoFadeKeySettings> = {
   labelOverride: "",
   readoutStyle: "auto"
 };
+
+/** New direct controls follow automatic OBS targets. Explicit empty choices
+ * remain unconfigured, and manual bindings always take precedence. */
+export type ObsFaderTarget = "unconfigured" | "input_volume" | "tbar";
+export type ObsFaderPressAction =
+  | "finish_transition"
+  | "next_blend"
+  | "previous_blend"
+  | "normal_blend"
+  | "toggle_source"
+  | "next_blend_and_finish"
+  | "none";
+
+export interface ObsFaderDialSettings {
+  [key: string]: string | number | boolean | undefined;
+  target?: ObsFaderTarget;
+  inputName?: string;
+  stepPerTick?: DialStepPerTick;
+  acceleration?: boolean;
+  labelOverride?: string;
+  autoQueueNextScene?: boolean;
+  pressAction?: ObsFaderPressAction;
+}
+
+export const DEFAULT_OBS_FADER_DIAL_SETTINGS: Required<ObsFaderDialSettings> = {
+  target: "input_volume",
+  inputName: "__audio_main__",
+  stepPerTick: 0.02,
+  acceleration: true,
+  labelOverride: "",
+  autoQueueNextScene: false,
+  pressAction: "finish_transition"
+};
+
+export interface ObsFadeKeySettings {
+  [key: string]: string | number | boolean | undefined;
+  inputName?: string;
+  to?: 0 | 1;
+  durationMs?: number;
+  labelOverride?: string;
+}
+
+export const DEFAULT_OBS_FADE_KEY_SETTINGS: Required<ObsFadeKeySettings> = {
+  inputName: "__audio_main__",
+  to: 1,
+  durationMs: 1000,
+  labelOverride: ""
+};
+
+export type ObsSceneOperation = "preview" | "cut" | "transition";
+
+export interface ObsSceneTransitionKeySettings {
+  [key: string]: string | number | boolean | undefined;
+  /** A scene name, __next_scene__, or __previous_scene__. */
+  sceneTarget?: string;
+  operation?: ObsSceneOperation;
+  /** __current_transition__, __cut__, or an OBS transition name. */
+  transitionName?: string;
+  labelOverride?: string;
+}
+
+export const DEFAULT_OBS_SCENE_TRANSITION_KEY_SETTINGS: Required<ObsSceneTransitionKeySettings> = {
+  sceneTarget: "__next_scene__",
+  operation: "transition",
+  transitionName: "__current_transition__",
+  labelOverride: ""
+};
+
+export function normalizeDurationMs(raw: unknown, fallback = 1000): number {
+  const rounded = Math.round(Number(raw ?? fallback));
+  if (!Number.isFinite(rounded)) {
+    return fallback;
+  }
+  return rounded === 0 ? 0 : Math.max(50, Math.min(20000, rounded));
+}

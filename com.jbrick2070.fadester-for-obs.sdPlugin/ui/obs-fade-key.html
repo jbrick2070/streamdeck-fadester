@@ -1,0 +1,74 @@
+<!-- SPDX-License-Identifier: GPL-2.0-or-later -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Fadester for OBS — OBS Fade</title>
+  <link rel="stylesheet" href="pi.css" />
+</head>
+<body>
+  <h3>OBS fade <span class="scope">this key</span></h3>
+  <p class="muted">Starts with Main audio from your current OBS mixer. Choose a fixed input to keep this button assigned to it.</p>
+  <div id="direct-fade-status" class="status-banner status-info" style="display:none;"></div>
+  <div class="row">
+    <label for="obs-fade-input">Mixer input</label>
+    <select id="obs-fade-input"></select>
+    <button id="obs-fade-refresh" class="btn secondary" type="button">Refresh</button>
+  </div>
+  <div class="row">
+    <label for="obs-fade-to">Fade to</label>
+    <select id="obs-fade-to"><option value="1">100 %</option><option value="0">0 %</option></select>
+  </div>
+  <div class="row">
+    <label for="obs-fade-duration">Duration (ms)</label>
+    <input id="obs-fade-duration" type="number" min="0" max="20000" step="50" value="1000" />
+  </div>
+  <p class="muted">0 ms is instant. Any new volume move cancels a running fade for that input.</p>
+  <div class="row">
+    <label for="obs-fade-label">Label</label>
+    <input id="obs-fade-label" type="text" maxlength="14" placeholder="From OBS (leave blank)" />
+  </div>
+  <div id="direct-shared-sections"></div>
+  <script src="direct-pi.js"></script>
+  <script>
+    window.initDirectObsPropertyInspector(function (settings, save, state) {
+      const input = document.getElementById("obs-fade-input");
+      const to = document.getElementById("obs-fade-to");
+      const duration = document.getElementById("obs-fade-duration");
+      const label = document.getElementById("obs-fade-label");
+      const banner = document.getElementById("direct-fade-status");
+      const catalog = state && state.catalog ? state.catalog : {};
+      const selectedInput = settings.inputName === undefined ? "__audio_main__" : settings.inputName;
+      const generatedLabel = function () {
+        const caption = String(settings.labelOverride || "").trim();
+        if (selectedInput === "__audio_main__") return /^(music|desktop|audio)( down| up)?$/i.test(caption);
+        if (selectedInput === "__audio_mic__") return /^mic( down| up)?$/i.test(caption);
+        if (selectedInput === "__audio_aux__" || selectedInput === "__audio_input_2__") return /^aux( down| up)?$/i.test(caption);
+        return false;
+      };
+      window.directObsFillSelect(input, window.directObsAudioItems(state), selectedInput, "Choose a mixer input");
+      if (to && document.activeElement !== to) to.value = String(settings.to === 0 ? 0 : 1);
+      if (duration && document.activeElement !== duration) duration.value = String(settings.durationMs !== undefined ? settings.durationMs : 1000);
+      if (label && document.activeElement !== label) label.value = settings.labelOverride || "";
+      if (banner) {
+        const automatic = state && state.automaticInputs && Object.prototype.hasOwnProperty.call(state.automaticInputs, selectedInput);
+        const missing = automatic ? !state.automaticInputs[selectedInput] : selectedInput && !Object.prototype.hasOwnProperty.call(catalog.inputVolumes || {}, selectedInput);
+        const show = !selectedInput || missing;
+        banner.textContent = missing ? "This audio input is unavailable in OBS. Choose another mixer input above." : "Choose an OBS mixer input to fade.";
+        banner.className = "status-banner status-info";
+        banner.style.display = show ? "block" : "none";
+      }
+      if (input) input.onchange = function () {
+        const update = { inputName: input.value };
+        if (input.value !== selectedInput && generatedLabel()) update.labelOverride = "";
+        save(update);
+      };
+      if (to) to.onchange = function () { save({ to: Number(to.value) === 0 ? 0 : 1 }); };
+      if (duration) duration.onchange = function () { save({ durationMs: Number(duration.value) }); };
+      if (label) label.onchange = function () { save({ labelOverride: label.value.trim() }); };
+      const refresh = document.getElementById("obs-fade-refresh");
+      if (refresh) refresh.onclick = function () { window.directObsRefresh(); };
+    });
+  </script>
+</body>
+</html>

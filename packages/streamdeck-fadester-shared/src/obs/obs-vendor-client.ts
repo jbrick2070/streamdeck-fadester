@@ -10,10 +10,20 @@ import {
 } from "../types.js";
 
 export const OBS_WS_EVENT_SUB_SCENES = 1 << 2;
+export const OBS_WS_EVENT_SUB_INPUTS = 1 << 3;
+export const OBS_WS_EVENT_SUB_TRANSITIONS = 1 << 4;
+export const OBS_WS_EVENT_SUB_SCENE_ITEMS = 1 << 7;
 export const OBS_WS_EVENT_SUB_UI = 1 << 10;
 export const OBS_WS_EVENT_SUB_VENDORS = 1 << 9;
 export const OBS_WS_DEFAULT_SUBSCRIPTIONS =
-  OBS_WS_EVENT_SUB_SCENES | OBS_WS_EVENT_SUB_UI | OBS_WS_EVENT_SUB_VENDORS;
+  1 | // General events.
+  (1 << 1) | // Config events include scene collection changes.
+  OBS_WS_EVENT_SUB_SCENES |
+  OBS_WS_EVENT_SUB_INPUTS |
+  OBS_WS_EVENT_SUB_TRANSITIONS |
+  OBS_WS_EVENT_SUB_SCENE_ITEMS |
+  OBS_WS_EVENT_SUB_UI |
+  OBS_WS_EVENT_SUB_VENDORS;
 
 export class ObsVendorError extends Error {
   public readonly code: number;
@@ -122,11 +132,11 @@ export class ObsVendorClient<
   private nextRequestId = 1;
   private readonly pending = new Map<string, PendingRequest>();
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  private reconnectAttempt = 0;
+  protected reconnectAttempt = 0;
   private stopped = true;
-  private haltedReason: "none" | "wrong_password" | "missing_plugin" = "none";
+  protected haltedReason: "none" | "wrong_password" | "missing_plugin" = "none";
   protected identified = false;
-  private status: ConnectionStatusInfo = makeUnreachableStatus();
+  protected status: ConnectionStatusInfo = makeUnreachableStatus();
   private connectAttemptCount = 0;
   private lastNudgeAt = 0;
 
@@ -332,7 +342,7 @@ export class ObsVendorClient<
     this.settings = { host, port, password };
   }
 
-  private setStatus(next: ConnectionStatusInfo): void {
+  protected setStatus(next: ConnectionStatusInfo): void {
     const changed =
       this.status.kind !== next.kind ||
       this.status.sentence !== next.sentence ||
@@ -462,13 +472,15 @@ export class ObsVendorClient<
     }
   }
 
-  private async initializeAfterIdentify(): Promise<void> {
+  protected async initializeAfterIdentify(): Promise<void> {
     try {
       const versionData = await this.sendObsRequest("GetVersion");
       const obsVersion =
-        typeof versionData.obsStudioVersion === "string"
-          ? versionData.obsStudioVersion
-          : "33.0.0";
+        typeof versionData.obsVersion === "string"
+          ? versionData.obsVersion
+          : typeof versionData.obsStudioVersion === "string"
+            ? versionData.obsStudioVersion
+            : "OBS";
 
       let state: TState;
       try {
@@ -560,9 +572,10 @@ export class ObsVendorClient<
     }
   }
 
-  private handleObsEvent(d: Record<string, unknown>): void {
+  protected handleObsEvent(d: Record<string, unknown>): void {
     const eventType = d.eventType;
     const eventData = (d.eventData ?? {}) as Record<string, unknown>;
+    this.emit("obsEvent", eventType, eventData);
 
     if (eventType === "VendorEvent" && eventData.vendorName === this.vendorName) {
       const vendorEventType = String(eventData.eventType ?? "");

@@ -1,0 +1,182 @@
+<!-- SPDX-License-Identifier: GPL-2.0-or-later -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Fadester for OBS — OBS Fader</title>
+  <link rel="stylesheet" href="pi.css" />
+</head>
+<body>
+  <h3>OBS fader <span class="scope">this dial</span></h3>
+  <p class="muted">Starts with Main audio from your current OBS mixer. Choose an automatic target or a fixed input to customize this dial.</p>
+  <div id="direct-target-status" class="status-banner status-info" style="display:none;"></div>
+
+  <div class="row">
+    <label for="obs-fader-target">Control</label>
+    <select id="obs-fader-target">
+      <option value="unconfigured" selected>Choose an OBS control</option>
+      <option value="input_volume">Audio volume</option>
+      <option value="tbar">Blend Live into Next scene</option>
+    </select>
+  </div>
+  <div class="row" id="obs-fader-input-row">
+    <label for="obs-fader-input">Audio source</label>
+    <select id="obs-fader-input"></select>
+    <button id="obs-fader-refresh" class="btn secondary" type="button">Refresh</button>
+  </div>
+  <p id="obs-fader-tbar-hint" class="muted" style="display:none;">Turn to move from LIVE to NEXT. NEXT is the scene in OBS Preview. This manual transition control (T-bar) needs Studio Mode.</p>
+  <div id="obs-fader-cycle-row" style="display:none;">
+    <div class="row"><label for="obs-fader-cycle">Scene loop</label><input id="obs-fader-cycle" type="checkbox" /><span class="hint">Queue the next scene after each transition</span></div>
+    <p class="muted">After your fade finishes, the following scene in the OBS scene list becomes NEXT. Wraps to the first scene at the end. You still control every fade with the dial.</p>
+  </div>
+  <div class="row"><label for="obs-fader-press">Dial press</label><select id="obs-fader-press">
+    <option value="finish_transition">Take Next scene live</option>
+    <option value="next_blend">Next blend mode on selected source</option>
+    <option value="previous_blend">Previous blend mode on selected source</option>
+    <option value="normal_blend">Reset selected source to Normal blend</option>
+    <option value="toggle_source">Show / hide selected source</option>
+    <option value="next_blend_and_finish">Next blend mode, then take Next live</option>
+    <option value="none">Do nothing</option>
+  </select></div>
+  <div id="obs-fader-press-layer-row" style="display:none;">
+    <div class="row"><label for="obs-fader-press-layer">Selected source</label><select id="obs-fader-press-layer"></select></div>
+    <p class="muted" id="obs-fader-press-hint">This source selection is shared with Source &amp; Layer controls on the deck.</p>
+  </div>
+  <div class="row">
+    <label for="obs-fader-step">Step per tick</label>
+    <select id="obs-fader-step">
+      <option value="0.005">0.5 % (fine)</option>
+      <option value="0.01">1 %</option>
+      <option value="0.02" selected>2 % (default)</option>
+      <option value="0.05">5 %</option>
+      <option value="0.1">10 % (coarse)</option>
+    </select>
+  </div>
+  <div class="row">
+    <label for="obs-fader-accel">Acceleration</label>
+    <input id="obs-fader-accel" type="checkbox" checked />
+    <span class="hint">Fast turns take bigger steps</span>
+  </div>
+  <div class="row">
+    <label for="obs-fader-label">Display name</label>
+    <input id="obs-fader-label" type="text" maxlength="14" placeholder="Automatic (leave blank)" />
+  </div>
+  <p class="muted">Optional text on this dial. Scene names always come from OBS.</p>
+
+  <div id="direct-shared-sections"></div>
+
+  <script src="direct-pi.js"></script>
+  <script>
+    let pressSourceSignature = "";
+    window.initDirectObsPropertyInspector(function (settings, save, state) {
+      const target = document.getElementById("obs-fader-target");
+      const input = document.getElementById("obs-fader-input");
+      const inputRow = document.getElementById("obs-fader-input-row");
+      const tbarHint = document.getElementById("obs-fader-tbar-hint");
+      const cycleRow = document.getElementById("obs-fader-cycle-row");
+      const cycle = document.getElementById("obs-fader-cycle");
+      const press = document.getElementById("obs-fader-press");
+      const pressLayerRow = document.getElementById("obs-fader-press-layer-row");
+      const pressLayer = document.getElementById("obs-fader-press-layer");
+      const pressHint = document.getElementById("obs-fader-press-hint");
+      const step = document.getElementById("obs-fader-step");
+      const accel = document.getElementById("obs-fader-accel");
+      const label = document.getElementById("obs-fader-label");
+      const banner = document.getElementById("direct-target-status");
+      const catalog = state && state.catalog ? state.catalog : {};
+      const selectedTarget = settings.target === undefined ? "input_volume" : settings.target || "unconfigured";
+      const selectedInput = settings.inputName === undefined ? "__audio_main__" : settings.inputName;
+      const generatedLabel = function () {
+        const caption = String(settings.labelOverride || "").trim();
+        if (selectedTarget === "tbar") return /^(scene blend|scene transition)$/i.test(caption);
+        if (selectedInput === "__audio_main__") return /^(music|desktop|audio)( down| up)?$/i.test(caption);
+        if (selectedInput === "__audio_mic__") return /^mic( down| up)?$/i.test(caption);
+        if (selectedInput === "__audio_aux__" || selectedInput === "__audio_input_2__") return /^aux( down| up)?$/i.test(caption);
+        return false;
+      };
+      const pressAction = settings.pressAction || "finish_transition";
+      const pressInstructions = {
+        finish_transition: "Press to take NEXT live.",
+        next_blend: "Press for the selected source’s next blend mode.",
+        previous_blend: "Press for the selected source’s previous blend mode.",
+        normal_blend: "Press to reset the selected source to Normal blend.",
+        toggle_source: "Press to show or hide the selected source.",
+        next_blend_and_finish: "Press to change the selected source’s blend mode, then take NEXT live.",
+        none: "Dial press is disabled."
+      };
+      if (tbarHint) tbarHint.textContent = "Turn to move from LIVE to NEXT. NEXT is the scene in OBS Preview. " +
+        (pressInstructions[pressAction] || pressInstructions.finish_transition) + " This manual transition control (T-bar) needs Studio Mode.";
+      if (press) {
+        const finishOption = press.querySelector('option[value="finish_transition"]');
+        const combinedOption = press.querySelector('option[value="next_blend_and_finish"]');
+        if (finishOption) finishOption.textContent = selectedTarget === "tbar" ? "Take Next scene live" : "Do nothing (audio default)";
+        if (combinedOption) combinedOption.disabled = selectedTarget !== "tbar";
+      }
+      const usesSource = ["next_blend", "previous_blend", "normal_blend", "toggle_source", "next_blend_and_finish"].includes(pressAction);
+      const pressScene = catalog.studioMode ? catalog.currentPreviewScene : catalog.currentProgramScene;
+      const layerState = state && state.layerScenes && state.layerScenes[pressScene];
+      if (press && document.activeElement !== press) press.value = pressAction;
+      if (pressLayerRow) pressLayerRow.style.display = usesSource ? "" : "none";
+      window.directObsFillSelect(pressLayer, (layerState && layerState.layers || []).map(function (layer) {
+        return { value: String(layer.sceneItemId), text: layer.sourceName };
+      }), layerState && layerState.selectedId >= 0 ? String(layerState.selectedId) : "", "Choose a source");
+      if (pressHint) pressHint.textContent = (catalog.studioMode ? "Preview" : "Live") + " scene: " + (pressScene || "Connect OBS") +
+        ". Source selection is shared across the deck until the plugin restarts or the scene collection changes. A separate Source & Layer action can be saved with a fixed source." +
+        (pressAction === "next_blend_and_finish" ? " Blend + take changes this source first, then takes Next live." : "");
+      const signature = JSON.stringify([usesSource, pressScene, state && state.status && state.status.kind]);
+      if (usesSource && pressScene && signature !== pressSourceSignature) {
+        pressSourceSignature = signature;
+        window.directObsRefreshLayers({ scope: "auto" });
+      }
+
+      if (target && document.activeElement !== target) target.value = selectedTarget;
+      if (step && document.activeElement !== step) step.value = String(settings.stepPerTick || 0.02);
+      if (accel && document.activeElement !== accel) accel.checked = settings.acceleration !== false;
+      if (label && document.activeElement !== label) label.value = settings.labelOverride || "";
+      window.directObsFillSelect(input, window.directObsAudioItems(state), selectedInput, "Choose an audio source");
+      if (inputRow) inputRow.style.display = selectedTarget === "input_volume" ? "" : "none";
+      if (tbarHint) tbarHint.style.display = selectedTarget === "tbar" ? "" : "none";
+      if (cycleRow) cycleRow.style.display = selectedTarget === "tbar" ? "" : "none";
+      if (cycle) cycle.checked = settings.autoQueueNextScene === true;
+      if (banner) {
+        if (selectedTarget === "tbar" && catalog.studioMode === false) {
+          banner.textContent = "Turn on OBS Studio Mode to blend Live into Next. For a single-scene setup, use Source & Layer.";
+          banner.className = "status-banner status-warn";
+          banner.style.display = "block";
+        } else if (selectedTarget === "tbar" && catalog.currentProgramScene && catalog.currentProgramScene === catalog.currentPreviewScene) {
+          banner.textContent = "Live and Next are the same scene. Choose a different scene in OBS Preview to blend between them.";
+          banner.className = "status-banner status-warn";
+          banner.style.display = "block";
+        } else if (selectedTarget === "unconfigured") {
+          banner.textContent = "Choose what this dial should control.";
+          banner.className = "status-banner status-info";
+          banner.style.display = "block";
+        } else {
+          banner.style.display = "none";
+        }
+      }
+
+      if (target) target.onchange = function () {
+        const update = { target: target.value };
+        if (target.value !== selectedTarget && generatedLabel()) update.labelOverride = "";
+        save(update);
+      };
+      if (cycle) cycle.onchange = function () { save({ autoQueueNextScene: cycle.checked }); };
+      if (press) press.onchange = function () { save({ pressAction: press.value }); };
+      if (pressLayer) pressLayer.onchange = function () {
+        if (pressLayer.value && pressScene) window.directObsSelectLayer(pressScene, Number(pressLayer.value));
+      };
+      if (input) input.onchange = function () {
+        const update = { inputName: input.value };
+        if (input.value !== selectedInput && generatedLabel()) update.labelOverride = "";
+        save(update);
+      };
+      if (step) step.onchange = function () { save({ stepPerTick: Number(step.value) }); };
+      if (accel) accel.onchange = function () { save({ acceleration: accel.checked }); };
+      if (label) label.onchange = function () { save({ labelOverride: label.value.trim() }); };
+      const refresh = document.getElementById("obs-fader-refresh");
+      if (refresh) refresh.onclick = function () { window.directObsRefresh(); };
+    });
+  </script>
+</body>
+</html>

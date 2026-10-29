@@ -195,13 +195,16 @@
       '<div id="profile-result" class="status-banner" style="display:none;"></div>',
       "</details>",
 
-      '<h3>OBS connection <span class="scope">shared</span></h3>',
+      '<h3>OBS connection <span class="scope">all Fadester controls</span></h3>',
       '<div id="conn-status" class="status-banner status-err">Waiting for the plugin…</div>',
       '<a id="conn-link" class="release-link" href="https://github.com/jbrick2070/midi-fadester/releases" target="_blank">Download Midi Fadester for OBS Studio 33</a>',
+      '<p class="muted">Connect once for every Fadester button and dial, including the direct OBS actions.</p>',
+      '<details id="conn-editor" class="editor" open><summary>Edit shared connection</summary>',
       '<div class="row"><label for="conn-host">Host</label><input type="text" id="conn-host" value="127.0.0.1" /></div>',
       '<div class="row"><label for="conn-port">Port</label><input type="number" id="conn-port" value="4455" min="1" max="65535" /></div>',
       '<div class="row"><label for="conn-password">Password</label><input type="password" id="conn-password" autocomplete="off" placeholder="Leave blank if authentication is off" /></div>',
-      '<div class="row"><label></label><button id="conn-test-btn" class="btn" type="button">Save &amp; test</button><span class="hint" id="conn-hint"></span></div>'
+      '<div class="row"><label></label><button id="conn-test-btn" class="btn" type="button">Save for all controls &amp; test</button><span class="hint" id="conn-hint"></span></div>',
+      '</details>'
     ].join("");
   }
 
@@ -352,9 +355,14 @@
       if (passEl && !passwordDirty && document.activeElement !== passEl) {
         passEl.value = "";
         passEl.placeholder = state.connection.passwordSet
-          ? "Password saved (type to replace)"
+          ? "Saved for all Fadester controls (leave blank to keep)"
           : "Leave blank if authentication is off";
       }
+    }
+    const connEditor = $("conn-editor");
+    if (connEditor && !connEditor.dataset.initialized && state.connection) {
+      connEditor.open = !state.connection.passwordSet || state.status.kind === "wrong_password";
+      connEditor.dataset.initialized = "true";
     }
     if (statusEl && state.status) {
       statusEl.textContent = state.status.sentence || "";
@@ -367,7 +375,7 @@
     if (hintEl) {
       hintEl.textContent = state.lastErrorComment && state.status.kind === "connected"
         ? "Last OBS error: " + state.lastErrorComment
-        : "";
+        : state.connection && state.connection.passwordSet ? "Password saved for all Fadester buttons and dials." : "";
     }
   }
 

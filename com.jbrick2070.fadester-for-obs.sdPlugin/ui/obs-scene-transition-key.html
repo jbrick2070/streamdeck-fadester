@@ -1,0 +1,103 @@
+<!-- SPDX-License-Identifier: GPL-2.0-or-later -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Fadester for OBS — Scene &amp; Transition</title>
+  <link rel="stylesheet" href="pi.css" />
+</head>
+<body>
+  <h3>Scene &amp; transition <span class="scope">this key</span></h3>
+  <p class="muted">Previous, Next, and Random work with every scene in your current OBS collection. Automatic Scene 1/2/3 follows the OBS scene-list order, including renamed or reordered scenes.</p>
+  <div id="direct-scene-status" class="status-banner status-info" style="display:none;"></div>
+  <div class="row">
+    <label for="obs-scene-target">Scene</label>
+    <select id="obs-scene-target"></select>
+    <button id="obs-scene-refresh" class="btn secondary" type="button">Refresh</button>
+  </div>
+  <div class="row">
+    <label for="obs-scene-operation">When pressed</label>
+    <select id="obs-scene-operation">
+      <option value="transition">Transition to it</option>
+      <option value="cut">Cut to it</option>
+      <option value="preview">Put it in Preview</option>
+    </select>
+  </div>
+  <div class="row" id="obs-transition-row">
+    <label for="obs-transition-name">Transition</label>
+    <select id="obs-transition-name"></select>
+  </div>
+  <p id="obs-scene-hint" class="muted">Cut and Transition work in regular and Studio Mode. Preview and Current Preview need Studio Mode. A chosen transition applies to this press and preserves the scene’s saved transition override.</p>
+  <div class="row">
+    <label for="obs-scene-label">Label</label>
+    <input id="obs-scene-label" type="text" maxlength="14" placeholder="From OBS (leave blank)" />
+  </div>
+  <div id="direct-shared-sections"></div>
+  <script src="direct-pi.js"></script>
+  <script>
+    window.initDirectObsPropertyInspector(function (settings, save, state) {
+      const scene = document.getElementById("obs-scene-target");
+      const operation = document.getElementById("obs-scene-operation");
+      const transition = document.getElementById("obs-transition-name");
+      const transitionRow = document.getElementById("obs-transition-row");
+      const label = document.getElementById("obs-scene-label");
+      const banner = document.getElementById("direct-scene-status");
+      const catalog = state && state.catalog ? state.catalog : {};
+      const selectedOperation = settings.operation || "transition";
+      const selectedTarget = typeof settings.sceneTarget === "string" ? settings.sceneTarget : "__next_scene__";
+      const generatedLabel = function () {
+        const caption = String(settings.labelOverride || "").trim();
+        const index = /^__scene_index_(\d+)__$/.exec(selectedTarget);
+        if (index) {
+          const number = Number(index[1]) + 1;
+          const letter = String.fromCharCode(65 + Number(index[1]));
+          return new RegExp("^Scene\\s*(" + number + "|" + letter + ")$", "i").test(caption);
+        }
+        if (selectedTarget === "__next_scene__") return /^(next scene|cut next)$/i.test(caption);
+        if (selectedTarget === "__previous_scene__") return /^(prev scene|cut previous)$/i.test(caption);
+        if (selectedTarget === "__current_preview__") return /^(cut preview|transition)$/i.test(caption);
+        if (selectedTarget === "__random_scene__") return /^(random|random scene)$/i.test(caption);
+        return false;
+      };
+      const scenes = catalog.scenes || [];
+      const sceneItems = [
+        { value: "__current_preview__", text: "Current Preview (take it live)" },
+        { value: "__next_scene__", text: "Next scene" },
+        { value: "__previous_scene__", text: "Previous scene" },
+        { value: "__random_scene__", text: "Random scene (avoids the live scene)" }
+      ].concat([0, 1, 2, 3].map(function (index) {
+        return { value: "__scene_index_" + index + "__", text: "Scene " + (index + 1) + " (automatic) — " + (scenes[index] || "not available") };
+      }), scenes.map(function (name) { return { value: name, text: name + " (fixed name)" }; }));
+      const transitionItems = [
+        { value: "__current_transition__", text: "Use OBS current transition" },
+        { value: "__cut__", text: "Cut" }
+      ].concat((catalog.transitions || []).map(function (name) { return { value: name, text: name }; }));
+      window.directObsFillSelect(scene, sceneItems, selectedTarget, "Choose a scene");
+      window.directObsFillSelect(transition, transitionItems, settings.transitionName || "__current_transition__", "Use OBS current transition");
+      if (operation && document.activeElement !== operation) operation.value = selectedOperation;
+      if (label && document.activeElement !== label) label.value = settings.labelOverride || "";
+      if (transitionRow) transitionRow.style.display = selectedOperation === "transition" ? "" : "none";
+      if (banner) {
+        let text = "";
+        const indexMatch = /^__scene_index_(\d+)__$/.exec(selectedTarget);
+        if (!selectedTarget) text = "Choose Next, Previous, Random, an automatic numbered scene, or a fixed scene.";
+        else if ((selectedOperation === "preview" || selectedTarget === "__current_preview__") && catalog.studioMode === false) text = "Enable Studio Mode below to prepare this control and Preview.";
+        else if (indexMatch && state && state.status && state.status.kind === "connected" && !scenes[Number(indexMatch[1])]) text = "Scene " + (Number(indexMatch[1]) + 1) + " is not available. Your current OBS collection has " + scenes.length + " scene(s). Next, Previous, and Random use the whole available list.";
+        banner.textContent = text;
+        banner.className = "status-banner " + (text && selectedOperation !== "cut" && selectedTarget ? "status-warn" : "status-info");
+        banner.style.display = text ? "block" : "none";
+      }
+      if (scene) scene.onchange = function () {
+        const update = { sceneTarget: scene.value, presetBindingsVersion: 1 };
+        if (scene.value !== selectedTarget && generatedLabel()) update.labelOverride = "";
+        save(update);
+      };
+      if (operation) operation.onchange = function () { save({ operation: operation.value }); };
+      if (transition) transition.onchange = function () { save({ transitionName: transition.value }); };
+      if (label) label.onchange = function () { save({ labelOverride: label.value.trim() }); };
+      const refresh = document.getElementById("obs-scene-refresh");
+      if (refresh) refresh.onclick = function () { window.directObsRefresh(); };
+    });
+  </script>
+</body>
+</html>

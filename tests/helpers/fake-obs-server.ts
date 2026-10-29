@@ -396,6 +396,21 @@ export class FakeObsServer {
   public screenshotDelayMs: number;
   public previewSceneName = "Scene Preview";
   public programSceneName = "Scene Live";
+  public sceneNames = ["Scene Live", "Scene Preview", "Scene 3"];
+  public inputNames = ["Desktop Audio", "Mic/Aux"];
+  public transitionNames = ["Cut", "Fade", "Fade to Black"];
+  public currentTransitionName = "Fade";
+  public readonly sceneTransitionOverrides = new Map<string, {
+    transitionName: string | null;
+    transitionDuration: number | null;
+  }>();
+  public lastSceneTransition = "";
+  public failNextProgramSwitch = false;
+  public readonly inputVolumes = new Map<string, number>([
+    ["Desktop Audio", 0.8],
+    ["Mic/Aux", 0.6]
+  ]);
+  public directTbarPosition = 0;
   public slots: FadesterSlot[];
   public validSources = new Set<string>([
     "Cam 1",
@@ -406,6 +421,10 @@ export class FakeObsServer {
   ]);
 
   public vendorCallLog: Array<{
+    requestType: string;
+    requestData?: Record<string, unknown>;
+  }> = [];
+  public directCallLog: Array<{
     requestType: string;
     requestData?: Record<string, unknown>;
   }> = [];
@@ -772,10 +791,84 @@ export class FakeObsServer {
   ): Promise<void> {
     if (requestType === "GetVersion") {
       this.sendResponse(ws, requestId, requestType, true, 100, "", {
+        obsVersion: this.obsVersion,
         obsStudioVersion: this.obsVersion,
         obsWebSocketVersion: "5.5.2",
         rpcVersion: 1
       });
+      return;
+    }
+
+    if (requestType === "GetStudioModeEnabled") {
+      this.sendResponse(ws, requestId, requestType, true, 100, "", {
+        studioModeEnabled: this.studioMode
+      });
+      return;
+    }
+
+    if (requestType === "SetStudioModeEnabled") {
+      this.directCallLog.push({ requestType, requestData });
+      this.studioMode = requestData.studioModeEnabled === true;
+      this.sendResponse(ws, requestId, requestType, true, 100, "", {});
+      this.emitObsEvent("StudioModeStateChanged", { studioModeEnabled: this.studioMode });
+      return;
+    }
+
+    if (requestType === "GetSceneList") {
+      this.sendResponse(ws, requestId, requestType, true, 100, "", {
+        currentProgramSceneName: this.programSceneName,
+        currentPreviewSceneName: this.previewSceneName,
+        scenes: this.sceneNames.map((sceneName, index) => ({
+          sceneName,
+          sceneIndex: this.sceneNames.length - index - 1
+        })).reverse()
+      });
+      return;
+    }
+
+    if (requestType === "GetInputList") {
+      this.sendResponse(ws, requestId, requestType, true, 100, "", {
+        inputs: this.inputNames.map((inputName) => ({ inputName }))
+      });
+      return;
+    }
+
+    if (requestType === "GetSceneTransitionList") {
+      this.sendResponse(ws, requestId, requestType, true, 100, "", {
+        currentSceneTransitionName: this.currentTransitionName,
+        transitions: this.transitionNames.map((transitionName) => ({
+          transitionName,
+          transitionKind: transitionName === "Cut" ? "cut_transition" : "fade_transition"
+        }))
+      });
+      return;
+    }
+
+    if (requestType === "GetCurrentSceneTransition") {
+      this.sendResponse(ws, requestId, requestType, true, 100, "", {
+        transitionName: this.currentTransitionName
+      });
+      return;
+    }
+
+    if (requestType === "GetSceneSceneTransitionOverride") {
+      const sceneName = String(requestData.sceneName ?? "");
+      this.sendResponse(ws, requestId, requestType, true, 100, "",
+        this.sceneTransitionOverrides.get(sceneName) ?? {
+          transitionName: null,
+          transitionDuration: null
+        });
+      return;
+    }
+
+    if (requestType === "SetSceneSceneTransitionOverride") {
+      const sceneName = String(requestData.sceneName ?? "");
+      this.directCallLog.push({ requestType, requestData });
+      this.sceneTransitionOverrides.set(sceneName, {
+        transitionName: typeof requestData.transitionName === "string" ? requestData.transitionName : null,
+        transitionDuration: typeof requestData.transitionDuration === "number" ? requestData.transitionDuration : null
+      });
+      this.sendResponse(ws, requestId, requestType, true, 100, "", {});
       return;
     }
 
@@ -792,6 +885,101 @@ export class FakeObsServer {
         currentPreviewSceneName: this.previewSceneName,
         sceneName: this.previewSceneName
       });
+      return;
+    }
+
+    if (requestType === "GetInputVolume") {
+      const inputName = String(requestData.inputName ?? "");
+      const inputVolumeMul = this.inputVolumes.get(inputName);
+      if (inputVolumeMul === undefined) {
+        this.sendResponse(ws, requestId, requestType, false, 404, `Input '${inputName}' was not found.`);
+      } else {
+        this.sendResponse(ws, requestId, requestType, true, 100, "", { inputVolumeMul });
+      }
+      return;
+    }
+
+    if (requestType === "SetInputVolume") {
+      const inputName = String(requestData.inputName ?? "");
+      const inputVolumeMul = Number(requestData.inputVolumeMul);
+      if (!this.inputVolumes.has(inputName) || !Number.isFinite(inputVolumeMul)) {
+        this.sendResponse(ws, requestId, requestType, false, 400, "Choose a valid input and volume.");
+      } else {
+        this.directCallLog.push({ requestType, requestData });
+        this.inputVolumes.set(inputName, inputVolumeMul);
+        this.sendResponse(ws, requestId, requestType, true, 100, "", {});
+        this.emitObsEvent("InputVolumeChanged", { inputName, inputVolumeMul });
+      }
+      return;
+    }
+
+    if (requestType === "SetTBarPosition") {
+      if (!this.studioMode) {
+        this.sendResponse(ws, requestId, requestType, false, 400, "Studio Mode is off.");
+      } else {
+        this.directCallLog.push({ requestType, requestData });
+        this.directTbarPosition = Number(requestData.position ?? 0);
+        this.sendResponse(ws, requestId, requestType, true, 100, "", {});
+      }
+      return;
+    }
+
+    if (requestType === "SetCurrentPreviewScene") {
+      const sceneName = String(requestData.sceneName ?? "");
+      if (!this.studioMode || !this.sceneNames.includes(sceneName)) {
+        this.sendResponse(ws, requestId, requestType, false, 400, "Choose an existing scene with Studio Mode on.");
+      } else {
+        this.directCallLog.push({ requestType, requestData });
+        this.previewSceneName = sceneName;
+        this.sendResponse(ws, requestId, requestType, true, 100, "", {});
+        this.emitObsEvent("CurrentPreviewSceneChanged", { sceneName });
+      }
+      return;
+    }
+
+    if (requestType === "SetCurrentProgramScene") {
+      const sceneName = String(requestData.sceneName ?? "");
+      if (this.failNextProgramSwitch) {
+        this.failNextProgramSwitch = false;
+        this.sendResponse(ws, requestId, requestType, false, 500, "Switch failed.");
+      } else if (!this.sceneNames.includes(sceneName)) {
+        this.sendResponse(ws, requestId, requestType, false, 400, "Choose an existing scene.");
+      } else {
+        this.directCallLog.push({ requestType, requestData });
+        this.lastSceneTransition = this.sceneTransitionOverrides.get(sceneName)?.transitionName || this.currentTransitionName;
+        const oldProgram = this.programSceneName;
+        this.programSceneName = sceneName;
+        this.sendResponse(ws, requestId, requestType, true, 100, "", {});
+        this.emitObsEvent("CurrentProgramSceneChanged", { sceneName });
+        if (this.studioMode) {
+          this.previewSceneName = oldProgram;
+          this.emitObsEvent("CurrentPreviewSceneChanged", { sceneName: oldProgram });
+        }
+      }
+      return;
+    }
+
+    if (requestType === "SetCurrentSceneTransition") {
+      const transitionName = String(requestData.transitionName ?? "");
+      if (!this.transitionNames.includes(transitionName)) {
+        this.sendResponse(ws, requestId, requestType, false, 400, "Choose an existing transition.");
+      } else {
+        this.directCallLog.push({ requestType, requestData });
+        this.currentTransitionName = transitionName;
+        this.sendResponse(ws, requestId, requestType, true, 100, "", {});
+      }
+      return;
+    }
+
+    if (requestType === "TriggerStudioModeTransition") {
+      if (!this.studioMode) {
+        this.sendResponse(ws, requestId, requestType, false, 400, "Studio Mode is off.");
+      } else {
+        this.directCallLog.push({ requestType, requestData });
+        this.programSceneName = this.previewSceneName;
+        this.sendResponse(ws, requestId, requestType, true, 100, "", {});
+        this.emitObsEvent("CurrentProgramSceneChanged", { sceneName: this.programSceneName });
+      }
       return;
     }
 

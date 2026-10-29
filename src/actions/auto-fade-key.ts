@@ -185,6 +185,7 @@ export class AutoFadeKeyAction extends SingletonAction<AutoFadeKeySettings> {
     if (!ev.action.isKey()) {
       return;
     }
+    this.store.getClient().ensureStarted();
     const keyAction = ev.action;
     const ctrl = new AutoFadeKeyInstanceController(
       this.store,

@@ -149,6 +149,7 @@ export function sanitizeSetSlotFields(
 }
 
 export class PropertyInspectorBridge {
+  private connectionQueue: Promise<void> = Promise.resolve();
   private readonly store: FadesterStore;
   private readonly client: FadesterClient;
   private readonly transport: PiTransport;
@@ -269,13 +270,14 @@ export class PropertyInspectorBridge {
     const msg = payload ?? {};
     switch (msg.event) {
       case "piReady":
+        this.client.ensureStarted();
         this.broadcast();
         return;
       case "updateGlobalSettings":
-        await this.handleUpdateGlobalSettings(msg);
+        await this.queueConnection(() => this.handleUpdateGlobalSettings(msg));
         return;
       case "testConnection":
-        await this.handleTestConnection();
+        await this.queueConnection(() => this.handleTestConnection());
         return;
       case "getCatalog":
         await this.handleGetCatalog(msg);
@@ -422,5 +424,11 @@ export class PropertyInspectorBridge {
       return err.message;
     }
     return String(err);
+  }
+
+  private queueConnection(run: () => Promise<void>): Promise<void> {
+    const task = this.connectionQueue.catch(() => {}).then(run);
+    this.connectionQueue = task;
+    return task;
   }
 }

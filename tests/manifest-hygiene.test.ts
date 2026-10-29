@@ -2,6 +2,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { profilePathForSlug, READY_LAYOUTS } from "../src/types/layouts.js";
 
 const ROOT = process.cwd();
 const PLUGIN_DIR = join(ROOT, "com.jbrick2070.fadester-for-obs.sdPlugin");
@@ -28,7 +29,7 @@ function walkFiles(dir: string): string[] {
 }
 
 describe("Step 1.1 — Manifest, Layout, Icons & Repository Hygiene", () => {
-  it("validates manifest.json targets SDK 3, Node 24, Stream Deck 7.1, and 2 launch actions", () => {
+  it("validates manifest.json targets SDK 3, Node 24, Stream Deck 7.1, and direct plus optional actions", () => {
     const manifestPath = join(PLUGIN_DIR, "manifest.json");
     const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as Record<
       string,
@@ -50,23 +51,76 @@ describe("Step 1.1 — Manifest, Layout, Icons & Repository Hygiene", () => {
 
     const actions = manifest.Actions as Array<Record<string, unknown>>;
     expect(Array.isArray(actions)).toBe(true);
-    expect(actions).toHaveLength(2);
-    expect(actions[0].UUID).toBe("com.jbrick2070.fadester-for-obs.fader");
-    expect(actions[0].Controllers).toEqual(["Encoder"]);
-    const encoderLayoutRel = (actions[0].Encoder as { layout: string }).layout;
+    expect(actions).toHaveLength(6);
+    const byId = (id: string) => actions.find((entry) => entry.UUID === `com.jbrick2070.fadester-for-obs.${id}`)!;
+    expect(actions.slice(0, 4).every((entry) => !String(entry.Name).includes("optional"))).toBe(true);
+    expect(byId("fader").Controllers).toEqual(["Encoder"]);
+    const encoderLayoutRel = (byId("fader").Encoder as { layout: string }).layout;
     expect(encoderLayoutRel).toBe("layouts/fader-cell.json");
     expect(statSync(join(PLUGIN_DIR, encoderLayoutRel)).size).toBeGreaterThan(0);
     expect(
-      statSync(join(PLUGIN_DIR, String(actions[0].PropertyInspectorPath))).size
+      statSync(join(PLUGIN_DIR, String(byId("fader").PropertyInspectorPath))).size
     ).toBeGreaterThan(0);
     for (const shared of ["ui/pi-common.js", "ui/pi.css"]) {
       expect(statSync(join(PLUGIN_DIR, shared)).size).toBeGreaterThan(0);
     }
-    expect(actions[1].UUID).toBe("com.jbrick2070.fadester-for-obs.auto-fade");
-    expect(actions[1].Controllers).toEqual(["Keypad"]);
+    expect(byId("auto-fade").Controllers).toEqual(["Keypad"]);
     expect(
-      statSync(join(PLUGIN_DIR, String(actions[1].PropertyInspectorPath))).size
+      statSync(join(PLUGIN_DIR, String(byId("auto-fade").PropertyInspectorPath))).size
     ).toBeGreaterThan(0);
+    expect(byId("obs-fader")).toMatchObject({
+      UUID: "com.jbrick2070.fadester-for-obs.obs-fader",
+      Controllers: ["Encoder"],
+      PropertyInspectorPath: "ui/obs-fader-dial.html"
+    });
+    expect(byId("scene-transition")).toMatchObject({
+      UUID: "com.jbrick2070.fadester-for-obs.scene-transition",
+      Controllers: ["Keypad"],
+      PropertyInspectorPath: "ui/obs-scene-transition-key.html"
+    });
+    expect(byId("obs-fade")).toMatchObject({
+      UUID: "com.jbrick2070.fadester-for-obs.obs-fade",
+      Controllers: ["Keypad"],
+      PropertyInspectorPath: "ui/obs-fade-key.html"
+    });
+    expect(byId("layer-control")).toMatchObject({
+      UUID: "com.jbrick2070.fadester-for-obs.layer-control",
+      Controllers: ["Keypad", "Encoder"],
+      PropertyInspectorPath: "ui/obs-layer-control.html"
+    });
+    for (const direct of actions.slice(2)) {
+      expect(
+        statSync(join(PLUGIN_DIR, String(direct.PropertyInspectorPath))).size
+      ).toBeGreaterThan(0);
+    }
+  });
+
+  it("bundles compatible editable layouts only on request and keeps ordinary source desks in fixed order", () => {
+    const manifest = JSON.parse(readFileSync(join(PLUGIN_DIR, "manifest.json"), "utf8"));
+    const layouts = JSON.parse(readFileSync(join(ROOT, "profiles/layouts.json"), "utf8"));
+    expect(manifest.Profiles).toHaveLength(layouts.length);
+    expect(manifest.Profiles.map((profile: { Name: string }) => profile.Name).sort())
+      .toEqual(READY_LAYOUTS.map((layout) => profilePathForSlug(layout.slug)).sort());
+    for (const profile of manifest.Profiles) {
+      expect(profile).toMatchObject({ AutoInstall: false, DontAutoSwitchWhenInstalled: true, Readonly: false });
+      expect(statSync(join(PLUGIN_DIR, profile.Name + ".streamDeckProfile")).size).toBeGreaterThan(100);
+    }
+    for (const layout of layouts) {
+      const bindings = new Set<string>();
+      for (const entry of layout.actions) {
+        const binding = JSON.stringify([
+          entry.controller, entry.kind,
+          Object.entries(entry.settings).sort(([left], [right]) => left.localeCompare(right))
+        ]);
+        expect(bindings.has(binding), `${layout.slug}: repeated binding for ${entry.label}`).toBe(false);
+        bindings.add(binding);
+        if (!layout.slug.includes("creative")) {
+          expect(entry.settings.allowReorder).not.toBe(true);
+          expect(["move_up", "move_down", "blend_next", "blend_previous", "blend_normal"])
+            .not.toContain(entry.settings.operation);
+        }
+      }
+    }
   });
 
   it("validates layouts/fader-cell.json defines a 200x100 full-canvas pixmap layout", () => {

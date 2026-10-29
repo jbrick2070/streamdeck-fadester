@@ -6,6 +6,7 @@ import {
 } from "../src/gfx/svg-renderer.js";
 import { PLAYLISTER_PALETTE } from "../src/gfx/palette.js";
 import { ConnectionStatusInfo, FadesterSlot } from "../src/types/contract.js";
+import { renderDirectDialSvg, renderDirectKeySvg } from "../src/gfx/direct-obs-renderer.js";
 
 const CONNECTED_STATUS: ConnectionStatusInfo = {
   kind: "connected",
@@ -30,6 +31,58 @@ function assertSvgRules(svg: string): void {
 }
 
 describe("Step 1.3 — Playlister Runtime SVG Renderer (Dial Cells & Keys)", () => {
+  it("shows the native scene mixer's Live/Next endpoints with semantic colors and scene names", () => {
+    const svg = renderDirectDialSvg({
+      connected: true, reason: "", configured: true, target: "tbar", studioMode: true,
+      label: "Scene transition", value: 0.56,
+      programSceneName: "Camera & Mic", previewSceneName: "Next <Cam>"
+    });
+    expect(svg).toContain('data-cell="scene-mixer"');
+    expect(svg).toContain('>LIVE</text>');
+    expect(svg).toContain('>NEXT</text>');
+    expect(svg).toContain("Next &lt;Cam&gt;");
+    expect(svg).toContain(PLAYLISTER_PALETTE.programRed);
+    expect(svg).toContain(PLAYLISTER_PALETTE.previewGreen);
+    expect(svg).toContain(PLAYLISTER_PALETTE.orangeAccent);
+    expect(svg).toContain('stroke-width="4"');
+    expect(svg).toContain("Press to take Next live");
+  });
+
+  it("shows custom audio press instructions but gives connection problems priority", () => {
+    const input = {
+      connected: true, configured: true, reason: "", target: "input_volume" as const,
+      label: "Desktop Audio", value: 0.4, pressHint: "Press: next blend"
+    };
+    const ready = renderDirectDialSvg(input);
+    expect(ready).toContain("40 %");
+    expect(ready).toContain("Press: next blend");
+    const offline = renderDirectDialSvg({ ...input, connected: false, reason: "Wrong password" });
+    expect(offline).toContain("Wrong password");
+    expect(offline).not.toContain("Press: next blend");
+  });
+
+  it("keeps long scene names readable on two escaped lines with their operation visible", () => {
+    const svg = renderDirectKeySvg({
+      connected: true, configured: true, reason: "", title: "Camera & opening slate",
+      subtitle: "Next · Preview", icon: "next"
+    });
+    expect(svg).toMatch(/<text[^>]+y="69"[^>]*>Camera &amp;<\/text>/);
+    expect(svg).toMatch(/<text[^>]+y="85"[^>]*>opening slate<\/text>/);
+    expect(svg).toMatch(/<text[^>]+y="107"[^>]*>Next · Preview<\/text>/);
+  });
+
+  it("makes a same-scene or disabled Studio Mode mixer actionable instead of showing a working fader", () => {
+    const input = {
+      connected: true, reason: "", configured: true, target: "tbar" as const, studioMode: true,
+      label: "Scene transition", value: 0.56,
+      programSceneName: "Scene", previewSceneName: "Scene"
+    };
+    expect(renderDirectDialSvg(input)).toContain("Choose a different Next scene");
+    expect(renderDirectDialSvg({ ...input, studioMode: false })).toContain("Turn on OBS Studio Mode");
+    const offline = renderDirectDialSvg({ ...input, connected: false, reason: "Wrong password" });
+    expect(offline).toContain("Wrong password");
+    expect(offline).not.toContain("56%");
+  });
   it("renders Fader cell with A-to-B gradient bar, takeover arrow, and >= 3px strokes", () => {
     const slot: FadesterSlot = {
       id: "fader_1",
@@ -219,6 +272,52 @@ describe("Step 1.3 — Playlister Runtime SVG Renderer (Dial Cells & Keys)", () 
     });
     expect(keySvg).toContain("Studio Mode is off");
     assertSvgRules(keySvg);
+  });
+
+  it("wraps long key target names instead of truncating Crossfader (A/B)", () => {
+    const crossfaderSlot: FadesterSlot = {
+      id: "crossfader",
+      name: "Crossfader (A/B)",
+      kind: "crossfader",
+      target_mode: "layer_opacity",
+      source_a: "",
+      source_b: "",
+      curve: "dip_free",
+      afv: false,
+      value: 0.5,
+      takeover_pending: "none",
+      label: "",
+      available: true,
+      reason: ""
+    };
+
+    const connectedSvg = renderAutoFadeKeySvg({
+      status: CONNECTED_STATUS,
+      slot: crossfaderSlot,
+      slotId: "crossfader",
+      to: 1,
+      durationMs: 1000
+    });
+    expect(connectedSvg).toContain('data-title-lines="2"');
+    expect(connectedSvg).toContain("Crossfader<tspan");
+    expect(connectedSvg).toContain("(A/B)</tspan>");
+    expect(connectedSvg).not.toContain("Crossfade…");
+    assertSvgRules(connectedSvg);
+
+    const disconnectedSvg = renderAutoFadeKeySvg({
+      status: {
+        kind: "obs_unreachable",
+        sentence: "OBS is not running or the websocket is off (Tools > WebSocket Server Settings)",
+        cellReason: "OBS is not running or websocket is off"
+      },
+      slot: crossfaderSlot,
+      slotId: "crossfader",
+      to: 1,
+      durationMs: 1000
+    });
+    expect(disconnectedSvg).toContain('data-title-lines="2"');
+    expect(disconnectedSvg).toContain("Crossfader<tspan");
+    assertSvgRules(disconnectedSvg);
   });
 
   it("renders Midi Fadester 0.3.0 verbatim reason for profile-disabled slots (target_mode=unassigned, available=false) and parked indicator", () => {

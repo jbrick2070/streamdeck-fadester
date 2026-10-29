@@ -382,6 +382,7 @@ export class FaderDialAction extends SingletonAction<FaderDialSettings> {
     if (!ev.action.isDial()) {
       return;
     }
+    this.store.getClient().ensureStarted();
     const dialAction = ev.action;
     const ctrl = new FaderDialInstanceController(
       this.store,

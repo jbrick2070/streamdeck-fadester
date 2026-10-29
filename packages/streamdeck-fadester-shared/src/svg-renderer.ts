@@ -52,6 +52,60 @@ export function truncateLabel(text: string, maxChars: number): string {
   return clean.slice(0, Math.max(1, maxChars - 1)).trimEnd() + "…";
 }
 
+type CompactKeyTitle = {
+  firstLine: string;
+  secondLine?: string;
+  fontSize: number;
+};
+
+/** Keep target names readable on a 120px Stream Deck key. */
+function compactKeyTitle(raw: string): CompactKeyTitle {
+  const title = truncateLabel(raw || "Auto-fade", 24);
+  if (title.length <= 12) {
+    return { firstLine: title, fontSize: 14 };
+  }
+
+  const words = title.split(/\s+/).filter(Boolean);
+  if (words.length > 1) {
+    let firstLine = words[0];
+    let secondLine = words.slice(1).join(" ");
+    let bestDifference = Math.abs(firstLine.length - secondLine.length);
+
+    for (let index = 1; index < words.length - 1; index += 1) {
+      const candidateFirst = words.slice(0, index + 1).join(" ");
+      const candidateSecond = words.slice(index + 1).join(" ");
+      const difference = Math.abs(candidateFirst.length - candidateSecond.length);
+      if (difference < bestDifference) {
+        firstLine = candidateFirst;
+        secondLine = candidateSecond;
+        bestDifference = difference;
+      }
+    }
+
+    const longestLine = Math.max(firstLine.length, secondLine.length);
+    return {
+      firstLine,
+      secondLine,
+      fontSize: longestLine > 12 ? 10 : longestLine > 10 ? 11 : 13
+    };
+  }
+
+  return { firstLine: title, fontSize: 10 };
+}
+
+function renderCompactKeyTitle(
+  layout: CompactKeyTitle,
+  fill: string,
+  singleLineY: number,
+  twoLineY: number
+): string {
+  const attributes = `x="60" text-anchor="middle" fill="${fill}" font-family="Segoe UI, Arial, sans-serif" font-size="${layout.fontSize}" font-weight="700"`;
+  if (layout.secondLine) {
+    return `<text data-title-lines="2" ${attributes} y="${twoLineY}">${escapeXml(layout.firstLine)}<tspan x="60" dy="14">${escapeXml(layout.secondLine)}</tspan></text>`;
+  }
+  return `<text data-title-lines="1" ${attributes} y="${singleLineY}">${escapeXml(layout.firstLine)}</text>`;
+}
+
 export function toSvgDataUri(svg: string): string {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
@@ -324,8 +378,9 @@ export function renderDialCellSvg<TSlot extends SurfaceSlotBase>(
 
 function renderKeyStatusSvg(title: string, reason: string): string {
   const P = PLAYLISTER_PALETTE;
-  const safeTitle = escapeXml(truncateLabel(title || "Auto-fade", 16));
+  const titleLayout = compactKeyTitle(title);
   const safeReason = escapeXml(truncateLabel(reason || "Unavailable", 40));
+  const reasonY = titleLayout.secondLine ? 86 : 78;
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" data-key="status">`,
     `<defs>`,
@@ -335,8 +390,8 @@ function renderKeyStatusSvg(title: string, reason: string): string {
     `</linearGradient>`,
     `</defs>`,
     `<rect x="3" y="3" width="114" height="114" rx="14" fill="url(#bg)" stroke="${P.orangeAccent}" stroke-width="3"/>`,
-    `<text x="60" y="46" text-anchor="middle" fill="${P.whiteGlyph}" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700">${safeTitle}</text>`,
-    `<text x="60" y="78" text-anchor="middle" fill="${P.orangeAccent}" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="700">${safeReason}</text>`,
+    renderCompactKeyTitle(titleLayout, P.whiteGlyph, 46, 34),
+    `<text x="60" y="${reasonY}" text-anchor="middle" fill="${P.orangeAccent}" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="700">${safeReason}</text>`,
     `</svg>`
   ].join("");
 }
@@ -409,8 +464,8 @@ export function renderAutoFadeKeySvg<TSlot extends SurfaceSlotBase>(
   const isFxSlot = slot.target_mode === "filter_param" || slot.kind === "fx";
   const gradStart = isFxSlot ? P.fxCyanStart : P.blueStart;
   const gradEnd = isFxSlot ? P.fxAmberEnd : P.violetEnd;
-  const title = escapeXml(
-    truncateLabel(override || slot.label || slot.name || slot.id, 10)
+  const titleLayout = compactKeyTitle(
+    override || slot.label || slot.name || slot.id
   );
   const readoutText = escapeXml(
     truncateLabel(
@@ -436,7 +491,7 @@ export function renderAutoFadeKeySvg<TSlot extends SurfaceSlotBase>(
     `</linearGradient>`,
     `</defs>`,
     `<rect x="3" y="3" width="114" height="114" rx="14" fill="url(#bg)" stroke="${P.trackBorder}" stroke-width="3"/>`,
-    `<text x="60" y="32" text-anchor="middle" fill="${P.mutedText}" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700">${title}</text>`,
+    renderCompactKeyTitle(titleLayout, P.mutedText, 32, 24),
     `<text x="60" y="72" text-anchor="middle" fill="${P.whiteGlyph}" font-family="Segoe UI, Arial, sans-serif" font-size="${readoutFontSize}" font-weight="800">${readoutText}</text>`,
     `<rect x="${barX}" y="90" width="${barW}" height="16" rx="6" fill="${P.trackBg}" stroke="${P.trackBorder}" stroke-width="3"/>`,
     fillW > 0

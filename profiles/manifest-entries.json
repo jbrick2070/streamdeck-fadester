@@ -1,0 +1,79 @@
+[
+  {
+    "Name": "profiles/plus-source-desk-v3",
+    "DeviceType": 7,
+    "Readonly": false,
+    "AutoInstall": false,
+    "DontAutoSwitchWhenInstalled": true
+  },
+  {
+    "Name": "profiles/plus-source-half-v2",
+    "DeviceType": 7,
+    "Readonly": false,
+    "AutoInstall": false,
+    "DontAutoSwitchWhenInstalled": true
+  },
+  {
+    "Name": "profiles/plus-creative-layer-lab-v2",
+    "DeviceType": 7,
+    "Readonly": false,
+    "AutoInstall": false,
+    "DontAutoSwitchWhenInstalled": true
+  },
+  {
+    "Name": "profiles/buttons-source-desk-v4",
+    "DeviceType": 0,
+    "Readonly": false,
+    "AutoInstall": false,
+    "DontAutoSwitchWhenInstalled": true
+  },
+  {
+    "Name": "profiles/buttons-source-half-v2",
+    "DeviceType": 0,
+    "Readonly": false,
+    "AutoInstall": false,
+    "DontAutoSwitchWhenInstalled": true
+  },
+  {
+    "Name": "profiles/mini-source-desk-v2",
+    "DeviceType": 1,
+    "Readonly": false,
+    "AutoInstall": false,
+    "DontAutoSwitchWhenInstalled": true
+  },
+  {
+    "Name": "profiles/plus-scene-desk-v2",
+    "DeviceType": 7,
+    "Readonly": false,
+    "AutoInstall": false,
+    "DontAutoSwitchWhenInstalled": true
+  },
+  {
+    "Name": "profiles/buttons-creative-layer-lab-v2",
+    "DeviceType": 0,
+    "Readonly": false,
+    "AutoInstall": false,
+    "DontAutoSwitchWhenInstalled": true
+  },
+  {
+    "Name": "profiles/buttons-scene-desk-v2",
+    "DeviceType": 0,
+    "Readonly": false,
+    "AutoInstall": false,
+    "DontAutoSwitchWhenInstalled": true
+  },
+  {
+    "Name": "profiles/plus-scene-regular-v3",
+    "DeviceType": 7,
+    "Readonly": false,
+    "AutoInstall": false,
+    "DontAutoSwitchWhenInstalled": true
+  },
+  {
+    "Name": "profiles/buttons-scene-regular-v2",
+    "DeviceType": 0,
+    "Readonly": false,
+    "AutoInstall": false,
+    "DontAutoSwitchWhenInstalled": true
+  }
+]

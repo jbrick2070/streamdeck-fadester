@@ -1,0 +1,112 @@
+<!-- SPDX-License-Identifier: GPL-2.0-or-later -->
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8" /><title>Fadester — Source &amp; Layer</title><link rel="stylesheet" href="pi.css" /></head>
+<body>
+  <h3>Source &amp; layer <span class="scope">this control</span></h3>
+  <p class="muted">Browse the sources already in your scene. The deck shares one selected source per scene until the plugin restarts or the scene collection changes. Browsing keeps your layer order unchanged.</p>
+  <div id="layer-status" class="status-banner status-info">Connect OBS to list sources.</div>
+  <div class="row"><label for="layer-scope">Scene</label><select id="layer-scope">
+    <option value="auto">Follow Preview in Studio Mode, Live otherwise</option>
+    <option value="program">Always follow Live</option>
+    <option value="fixed">A specific scene</option>
+  </select></div>
+  <div class="row" id="layer-scene-row"><label for="layer-scene">Which scene</label><select id="layer-scene"></select></div>
+  <div class="row" id="layer-operation-row"><label for="layer-operation">Button does</label><select id="layer-operation">
+    <option value="select_next">Select next source</option><option value="select_previous">Select previous source</option>
+    <option value="show_hide">Show / hide selected source</option>
+    <optgroup label="Creative controls"><option value="move_up">Move layer up</option><option value="move_down">Move layer down</option>
+      <option value="blend_next">Next blend mode</option><option value="blend_previous">Previous blend mode</option><option value="blend_normal">Reset blend to Normal</option></optgroup>
+  </select></div>
+  <div class="row" id="layer-dial-row"><label for="layer-dial-mode">Dial does</label><select id="layer-dial-mode">
+    <option value="select_layer">Browse sources · press to show / hide</option>
+    <option value="blend">Cycle blend modes · press for Normal</option>
+    <option value="order">Reorder layers · press to show / hide</option>
+  </select></div>
+  <div class="row" id="layer-target-row"><label for="layer-target">Act on</label><select id="layer-target">
+    <option value="selected">The source selected on the deck</option><option value="fixed">A fixed source</option>
+  </select></div>
+  <div class="row" id="layer-item-row"><label for="layer-item">Fixed source</label><select id="layer-item"></select></div>
+  <p class="muted">To save a source on a control across restarts, choose a non-browsing action and select A fixed source above.</p>
+  <div class="row" id="layer-reorder-row"><label for="layer-reorder">Reordering</label><input id="layer-reorder" type="checkbox" /><span class="hint">Allow this control to change layer order</span></div>
+  <p class="muted" id="layer-live-note">Layer edits change scene content immediately. Even in Studio Mode, editing a scene also on Program changes the live output. Blend modes are discrete choices, not a smooth crossfade.</p>
+  <p class="muted">Lists show top-level sources and groups; a group is controlled as one layer.</p>
+  <div class="row"><label for="layer-label">Label</label><input id="layer-label" maxlength="20" placeholder="Automatic" /></div>
+  <div class="row"><label></label><button class="btn secondary" id="layer-refresh" type="button">Refresh sources</button></div>
+  <div id="direct-shared-sections"></div>
+  <script src="direct-pi.js"></script>
+  <script>
+    let layerRequestSignature = "";
+    window.initDirectObsPropertyInspector(function (settings, save, state) {
+      const el = function (id) { return document.getElementById(id); };
+      const catalog = state && state.catalog || {};
+      const scope = settings.scope || "auto";
+      const sceneName = scope === "fixed" ? settings.sceneName || "" :
+        scope === "program" || !catalog.studioMode ? catalog.currentProgramScene : catalog.currentPreviewScene;
+      const scene = state && state.layerScenes && state.layerScenes[sceneName];
+      const controller = window.directObsController || "Keypad";
+      const dial = controller === "Encoder";
+      const operation = settings.operation || "select_next";
+      const dialMode = settings.dialMode || "select_layer";
+      const browsing = dial ? dialMode === "select_layer" : operation === "select_next" || operation === "select_previous";
+      const reorder = dial ? dialMode === "order" : operation === "move_up" || operation === "move_down";
+      const fixedTarget = !browsing && settings.target === "fixed";
+      const identityMatches = function (item) {
+        return settings.sourceUuid ? item.sourceUuid === settings.sourceUuid : !settings.sourceName || item.sourceName === settings.sourceName;
+      };
+      const fixedSource = scene && scene.layers.find(function (item) {
+        return item.sceneItemId === Number(settings.sceneItemId) && identityMatches(item);
+      });
+      const missingFixedSource = fixedTarget && Number(settings.sceneItemId) >= 0 && scene && !fixedSource;
+      const assign = function (id, value) { if (el(id) && document.activeElement !== el(id)) el(id).value = value; };
+      assign("layer-scope", scope); assign("layer-operation", operation); assign("layer-dial-mode", dialMode);
+      assign("layer-target", settings.target || "selected"); assign("layer-label", settings.labelOverride || "");
+      el("layer-reorder").checked = settings.allowReorder === true;
+      window.directObsFillSelect(el("layer-scene"), (catalog.scenes || []).map(function (name) { return { value: name, text: name }; }), settings.sceneName || "", "Choose a scene");
+      const fixedItems = (scene && scene.layers || []).map(function (item) {
+        return { value: String(item.sceneItemId), text: item.sourceName + (item.enabled ? " · shown" : " · hidden") };
+      });
+      if (missingFixedSource) fixedItems.unshift({ value: "__missing_fixed_source__", text: (settings.sourceName || "Saved source") + " · unavailable" });
+      window.directObsFillSelect(el("layer-item"), fixedItems,
+        missingFixedSource ? "__missing_fixed_source__" : Number(settings.sceneItemId) >= 0 ? String(settings.sceneItemId) : "", "Choose a source");
+      el("layer-scene-row").style.display = scope === "fixed" ? "" : "none";
+      el("layer-operation-row").style.display = dial ? "none" : "";
+      el("layer-dial-row").style.display = dial ? "" : "none";
+      el("layer-target-row").style.display = browsing ? "none" : "";
+      el("layer-item-row").style.display = !browsing && settings.target === "fixed" ? "" : "none";
+      el("layer-reorder-row").style.display = reorder ? "" : "none";
+      const selected = fixedTarget ? fixedSource : scene && scene.layers.find(function (item) { return item.sceneItemId === scene.selectedId; });
+      const live = sceneName && sceneName === catalog.currentProgramScene;
+      const sceneRole = live ? "LIVE" : catalog.studioMode && sceneName === catalog.currentPreviewScene ? "PREVIEW" : "SCENE";
+      el("layer-status").textContent = !state || !state.status || state.status.kind !== "connected" ? "Connect OBS to list sources." :
+        scene && scene.error ? scene.error :
+          selected ? sceneRole + " · " + sceneName + (fixedTarget ? " · Fixed source: " : " · Selected: ") + selected.sourceName :
+            missingFixedSource ? "Saved source unavailable. Choose a fixed source above to change this binding." :
+            scene ? scene.layers.length ? (fixedTarget ? "Choose a fixed source above." : "Choose a source with the deck’s source browsing controls.") : "No sources in " + sceneName + ". Add a source in OBS." :
+              sceneName ? "Loading sources in " + sceneName + "…" : "Choose an OBS scene.";
+      el("layer-status").className = "status-banner " + (live ? "status-warn" : "status-info");
+      el("layer-scope").onchange = function () { save({ scope: el("layer-scope").value, target: "selected", sceneItemId: -1, sourceUuid: "", sourceName: "" }); };
+      el("layer-scene").onchange = function () { save({ sceneName: el("layer-scene").value, sceneItemId: -1, sourceUuid: "", sourceName: "" }); };
+      el("layer-operation").onchange = function () { save({ operation: el("layer-operation").value }); };
+      el("layer-dial-mode").onchange = function () { save({ dialMode: el("layer-dial-mode").value, target: "selected", sceneItemId: -1, sourceUuid: "", sourceName: "" }); };
+      el("layer-target").onchange = function () {
+        if (el("layer-target").value === "fixed") save({ target: "fixed", scope: "fixed", sceneName: sceneName || "", sceneItemId: -1, sourceUuid: "", sourceName: "" });
+        else save({ target: "selected", sceneItemId: -1, sourceUuid: "", sourceName: "" });
+      };
+      el("layer-item").onchange = function () {
+        if (el("layer-item").value === "__missing_fixed_source__") return;
+        const item = scene && scene.layers.find(function (entry) { return String(entry.sceneItemId) === el("layer-item").value; });
+        save({ sceneItemId: item ? item.sceneItemId : -1, sourceUuid: item && item.sourceUuid || "", sourceName: item && item.sourceName || "" });
+      };
+      el("layer-reorder").onchange = function () { save({ allowReorder: el("layer-reorder").checked }); };
+      el("layer-label").onchange = function () { save({ labelOverride: el("layer-label").value.trim() }); };
+      el("layer-refresh").onclick = function () { window.directObsRefreshLayers(settings); };
+      const signature = JSON.stringify([scope, sceneName, state && state.status && state.status.kind]);
+      if (sceneName && signature !== layerRequestSignature) {
+        layerRequestSignature = signature;
+        window.directObsRefreshLayers(settings);
+      }
+    });
+  </script>
+</body>
+</html>

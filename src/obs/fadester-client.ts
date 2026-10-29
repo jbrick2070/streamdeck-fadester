@@ -70,6 +70,8 @@ export type FadesterClientOptions = Pick<
 >;
 
 export class FadesterClient extends ObsVendorClient<GetStateResponse> {
+  private legacySurfaceStarted = false;
+
   public constructor(
     initialSettings?: FadesterGlobalSettings,
     options?: FadesterClientOptions
@@ -92,6 +94,16 @@ export class FadesterClient extends ObsVendorClient<GetStateResponse> {
       value: req.value,
       ...(req.release !== undefined ? { release: req.release } : {})
     });
+  }
+
+  /** Starts the optional enhanced backend once a legacy action is actually in
+   * use. Direct OBS users should never get a missing-Midi-Fadester status. */
+  public ensureStarted(): void {
+    if (this.legacySurfaceStarted) {
+      return;
+    }
+    this.legacySurfaceStarted = true;
+    this.start();
   }
 
   public async nudgeFader(req: NudgeFaderRequest): Promise<NudgeFaderResponse> {

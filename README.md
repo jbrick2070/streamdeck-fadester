@@ -1,55 +1,75 @@
 # Fadester for OBS
 
-**Fadester for OBS 0.6.0** turns the Stream Deck +'s four rotary dials, `200 × 100` touch strip cells, and `120 × 120` keypad buttons into direct fader and FX controls for OBS Studio (**requires Elgato Stream Deck 7.1 or later — Stream Deck 6.x is not supported**). It connects directly to OBS over `obs-websocket` 5 and calls Midi Fadester's `midi-fadester` vendor API (`API-CONTRACT.md`), so the property inspector always uses the live slot catalog rather than asking for an opaque slot ID. Midi Fadester and Visual Sidechain share the 0.6.0 integration version while remaining separate plugins.
+**Fadester for OBS 0.7.6** makes a Stream Deck or Stream Deck + a simple, direct control surface for normal OBS Studio. It connects to OBS’s built-in WebSocket server on port `4455`; you do **not** need an APC40, a MIDI controller, or Midi Fadester to use the main actions.
 
-## 0.6.0: coordinated controls and safer inspector edits
+The default look uses deep black backgrounds, punchy purple controls, and bright yellow accents. Distinct action symbols make scene navigation, source controls, and audio fades easier to tell apart; the scene mixer keeps red Live and green Next labels.
 
-This update preserves the 0.3.0 slot editor and controller panel, adds an **Enabled** control that keeps assignments, and exposes MIDI calibration bounds. Only changed fields are applied, so a label or range edit cannot overwrite newer settings from another surface. Conflicting external assignment changes require refreshing the draft.
+The starter Scene Desks load your current OBS scene list dynamically. Previous, Next, and Random work without assigning scene names; numbered shortcuts follow positions in the OBS Scenes list. Opening a Studio layout offers to enable Studio Mode and prepare a different Preview scene.
 
-MIDI device selection and MIDI Learn still require Midi Fadester in OBS; the current vendor API does not expose those operations.
+The first setup is intentionally small:
 
-## Configure slots, controller, and connection from the Property Inspector
+1. In OBS, open **Tools → WebSocket Server Settings**, enable the server, and leave password authentication on.
+2. In Stream Deck, add a direct action and enter that password locally in its Property Inspector. The plugin never sends a saved password back to the inspector.
+3. The presets follow your current OBS scenes, sources, and audio automatically. Newly added scene keys start with Next Scene; audio keys and dials start with Main Audio. Choose a fixed target in the inspector when you want a saved manual assignment. Controls act when you press or turn them.
 
-Every Fadester action's Property Inspector now has four clearly scoped sections:
+## Direct OBS actions
 
-| Section | Scope | What you can do |
+| Action | What it does | Needs |
 |---|---|---|
-| **Fader dial / Auto-fade key** | this action | Slot, label override, readout style (engine value or percent), step per tick (0.5 % to 10 %), acceleration, press and hold behaviour, thumbnails; fade target, duration (0 ms = instant). "Fade to" hides itself for **All FX**. |
-| **Slot assignment in OBS** | shared by every surface | See what the slot does in plain words and change it: **Switch scenes (T-bar)**, **Mix two layers**, **Show or hide a layer**, **Volume**, **Filter setting (FX)**. Scenes, layers (with "has audio"), audio sources (with dB), filter hosts, filters and numeric settings (with range and unit) come from Midi Fadester's live `get_catalog`; **Apply in OBS** calls `set_slot` and shows the engine's own error sentence if it refuses. Feel (curve), "Also fade audio", filter range and "Bypass at 0 %" are exposed where the mode uses them. |
-| **Controller** | shared | Active profile with its tier (**Verified on hardware** for APC40 mkII; **Beta, untested on hardware** for the others; **Custom** for generic), MIDI device connected or the device's error sentence, Studio Mode state. A guarded profile switch (`load_profile`) says up front that it resets slot defaults. |
-| **OBS connection** | shared | Host, port, password, live status sentence. The stored password is never sent back to the inspector (it shows "Password saved"), and re-saving host or port never wipes it. **Save & test** re-reads `get_state` over the live socket instead of dropping it. |
+| **Source & Layer** | Browse existing scene sources using a dial or Previous/Next keys. Show/hide the deck-selected source. Optional creative controls cycle blend modes or reorder layers. | Any Stream Deck; works in Studio and regular mode. Reordering needs an explicit setting. |
+| **OBS Fader** | Adjust an audio source, or **Blend Live into Next scene**. The scene mixer keeps the original colorful track and orange handle, with LIVE/NEXT scene names. Press to take Next live. | Stream Deck + for a dial; scene blending needs two different scenes in OBS Studio Mode. |
+| **Scene & Transition** | Select a fixed scene, **Next scene**, **Previous scene**, or **Current Preview**; Cut or use a chosen transition. | Cut/Transition work in both modes. Preview selection and Current Preview need Studio Mode. |
+| **OBS Fade** | Fade one OBS mixer input up or down over a chosen time, or instantly. A later volume move cancels that input’s running fade. | Any Stream Deck key. |
 
-Menus rebuild only when the option set changes and never while you have one open, so `state_changed` events from OBS (profile change, filter removed, Studio Mode toggled) update the lists live without fighting the mouse. Offline, the slot list is labelled as contract defaults; live names and availability replace it on connect.
+Source selection is shared across Fadester controls for each scene and lasts until the plugin restarts or the scene collection changes. To save an assignment across restarts, choose a non-browsing Source & Layer action and select **A fixed source** for that action. A fixed action keeps its own assignment; it does not pin the shared selection used by a fader's press. Browsing selects a control target; Show/hide changes its visibility and keeps your stack order. A visible source may still be covered by an opaque layer above it. The list handles top-level sources and treats groups as one layer.
 
-Robustness: settings are applied with a change-only reconnect, offline dial ticks and key presses nudge a reconnect at most once per 2 s (never while halted on a wrong password), an unavailable slot alerts locally instead of sending a request OBS would reject, and terminating a still-connecting socket no longer risks an uncaught `ws` error.
+Everyday Source Desk layouts keep layer order fixed. The separate Creative Layer Lab explicitly enables order changes and discrete Normal/Additive/Subtract/Screen/Multiply/Lighten/Darken blend modes. These compositing modes are separate from transitions or a continuous A/B crossfade; generic layer opacity and A/B crossfading remain outside native OBS WebSocket capabilities.
 
-The integration hardening preserves inspector drafts and pending profile choices, ignores obsolete catalog replies, shows catalog errors beside the editor, and keeps the displayed slot value current. Filter bounds are explicit, with a **Use full range** action. T-bar zero gestures abort rather than finish the transition. Clean FX counts and resets only enabled filter bindings in either bank, and All FX keys honor custom labels.
+By default, layer controls follow Preview in Studio Mode and Program in regular mode. A scene's content is shared: when Preview and Program use the same scene, layer edits also affect the live output. The dial and inspector label that scene LIVE.
 
-What the Midi Fadester API does not offer, and therefore the inspector cannot: mixer layers or banks (18 flat slots, no bank concept), auto-fade easing (`auto_fade` has only `to` and `ms`; the slot's curve shapes the fade), and a `list_profiles` request (the switcher's list is the contract's documented set, marked as such; only the active profile is read from the device).
+Use **Cut** for an immediate switch or **Transition** for a scene transition in either mode. Choose **Use OBS current transition**, **Cut**, **Fade**, **Fade to Black**, or any transition installed in OBS. A chosen per-key transition applies to that press and preserves the scene's saved transition settings afterward. Audio fades run independently of scene-transition duration.
 
-Hardware: earlier workflows were checked with an APC40 mkII and Stream Deck +, but the current 0.6.0 inspector and integration changes still require the operator's on-device acceptance. Other controller profiles remain Beta. Do not treat automated tests or the browser harness as hardware verification.
+On the manual scene mixer, **Scene loop → Queue the next scene after each transition** is optional. Turn the dial toward NEXT; reaching the end completes the transition. Only after OBS confirms completion does the following scene become NEXT, wrapping from the last scene to the first. You control each fade; the option does not start unattended transitions. It needs Studio Mode and at least two scenes.
 
-`npm run pi:harness [-- --page auto-fade-key]` serves the real inspector pages at `http://127.0.0.1:4480/` against the fake OBS server for development without Stream Deck or OBS.
+**Dial press** is configurable: take Next live, cycle the selected source's blend mode, restore Normal blend, show/hide that source, or do nothing. **Next blend mode, then take Next live** is a two-step press: change the chosen source in Preview, then finish the scene transition. Choose the source in the inspector or through a Source & Layer control. Scene-loop queuing can follow this combined press too.
 
-## 0.2.0: live Faders, FX & Knobs, and Clean actions
+## Starting deck layouts
 
-Midi Fadester `0.4.0+` exposes all 18 slots: `Crossfader`, `Fader 1–8`, `Master`, and `FX 1–8`. The Stream Deck property inspectors group them as **Faders** and **FX & Knobs**, keep a saved selection visible, and show **All FX — Clean / All FX Off** when supported (or preserve a previously saved selection with a compatibility message). **Clean (0 %)** sends a target-aware zero command; **Clean All FX** resets enabled filter bindings in any bank while leaving audio, opacity, A/B and T-bar controls unchanged.
+Eleven importable full, compact, buttons-only, scene, and creative profiles are in [DECK-LAYOUTS.md](DECK-LAYOUTS.md). Every layout name says **Studio Mode**, **Regular Mode**, or **Either Mode**. In a direct action's inspector, expand **Ready-made layouts** and open a compatible current starter layout. Studio layouts offer an explicit setup step to enable Studio Mode and prepare Preview. Scene buttons follow the current OBS list; audio controls automatically select matching Main audio and Microphone inputs. Aux chooses another mixer input, keeping it distinct from Main and Microphone. A missing role or numbered scene stays unavailable until that target exists. You can override any binding in the inspector. The current starter revision opens as an editable profile and preserves older customized profiles. You can also import the `.streamDeckProfile` files yourself. Half-deck layouts leave room for the specialist OBS plugins you already use.
 
-FX cells use the engine's human-readable value (for example, `14.1 px` or `-6.0 dB`) and update immediately when the operator changes a bound filter in OBS. Auto-fade keys can also run an immediate clean with a `0 ms` duration.
+## Optional Midi Fadester integration
 
-Midi Fadester `0.3.0` remains compatible with normal fader controls. It has no FX catalog or reset operation; a saved All FX key makes that limitation explicit with an update message instead of falling back silently.
+The two actions explicitly labelled **Midi Fadester … (optional)** keep the older enhanced shared-slot workflow for people who use Midi Fadester with an APC40 or another MIDI controller. They provide fixed slots, shared controller profiles, advanced filter bindings, and Midi Fadester’s A/B mixing behavior.
 
-> **Disclaimer:** Fadester for OBS is an independent third-party plugin and is not made, endorsed, or supported by the OBS Project or Elgato.
+That integration is separate from the normal direct OBS controls:
 
-## Development & AI Disclosure
+- Direct actions never require a MIDI controller or probe for Midi Fadester.
+- Existing saved Midi Fadester actions keep their original slots and behavior.
+- The direct inspectors show the integration only as an optional note, so a new Stream Deck user is not sent into MIDI setup.
 
-This plugin is written with AI coding tools under human direction, review, and hardware verification on a real Stream Deck + and OBS Studio 33.
+## Connection and safety
+
+Set up the OBS connection once for all Fadester keys, dials, and layouts. After setup the inspector says **Password saved for all Fadester buttons and dials**; host, port, and password stay under **Edit shared connection**. **Save for all controls & test** updates that shared connection. A saved password is never echoed back to the browser Property Inspector. Other plugins manage their own connection settings separately.
+
+When OBS is unavailable, an action alerts and performs at most one reconnect nudge every two seconds. Wrong-password status tells you exactly where to correct it in OBS without exposing the password.
+
+## Development
+
+```powershell
+npm test
+npm run build
+npm run validate
+npm run pack
+```
+
+`npm run pi:harness [-- --page auto-fade-key]` serves the legacy optional Midi Fadester inspectors against the fake OBS server for development. Direct OBS controls are covered by the raw WebSocket client and action tests.
 
 ## Documentation
 
-- [FEATURE-AUDIT.md](FEATURE-AUDIT.md) — Ranked feature audit behind 0.3.0: what the API allows, what was missing, what was done, and what is blocked by the contract.
-- [PUBLISHING.md](PUBLISHING.md) — Separate-plugin distribution plan, hardware acceptance, and Elgato Marketplace submission checklist.
-- [REQUIREMENTS.md](REQUIREMENTS.md) — Numbered requirements covering identity and branding (`R-ID-*`), licensing (`R-LIC-*`), runtime stack (`R-STK-*`), connection and status reporting (`R-CON-*`), `API-CONTRACT.md` vendor API compliance (`R-API-*`), launch actions (`R-ACT-*`), Playlister-styled runtime SVG graphics and rate limiting (`R-GFX-*`), testing and mutation checks (`R-TST-*`), and operator decisions (`D-1..D-4`).
-- [PLAN.md](PLAN.md) — Local environment audit, architecture, file layout, phased implementation plan (Phase 1 launch set and Phases 2–4 roadmap from `GRAPHICS-NOTES.md` and `IDEAS.md`), per-step unit tests and mutation checks, manual hardware verification checklist, and operator decisions (`D-1..D-4`).
-- [API-CONTRACT.md](API-CONTRACT.md) — Shared `midi-fadester` `obs-websocket` 5 vendor API contract between Midi Fadester and Fadester for OBS.
-- [LICENSE](LICENSE) — GNU General Public License v2.0 (source headers `GPL-2.0-or-later`).
+- [DECK-LAYOUTS.md](DECK-LAYOUTS.md) — recommended full, compact, and all-button layouts.
+- [API-CONTRACT.md](API-CONTRACT.md) — optional `midi-fadester` vendor API contract.
+- [FEATURE-AUDIT.md](FEATURE-AUDIT.md) — feature tradeoffs and constraints.
+- [PUBLISHING.md](PUBLISHING.md) — packaging and Marketplace checklist.
+- [LICENSE](LICENSE) — GNU General Public License v2.0.
+
+> **Disclaimer:** Fadester for OBS is an independent third-party plugin and is not made, endorsed, or supported by the OBS Project or Elgato.

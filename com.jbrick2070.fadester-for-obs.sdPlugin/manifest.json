@@ -1,9 +1,9 @@
 {
   "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
   "Name": "Fadester for OBS",
-  "Version": "0.6.0.0",
+  "Version": "0.7.6.0",
   "Author": "Jeffrey A. Brick",
-  "Description": "Turn Stream Deck + dials, touch cells, and keys into direct fader controls for Midi Fadester in OBS Studio 33.",
+  "Description": "Direct OBS source browsing, show/hide, scenes, transitions, mixer fades, and optional creative layer controls. Midi Fadester integration is optional.",
   "Category": "Fadester for OBS",
   "CategoryIcon": "imgs/plugin/category-icon",
   "Icon": "imgs/plugin/plugin-icon",
@@ -23,12 +23,175 @@
   "Nodejs": {
     "Version": "24"
   },
+  "Profiles": [
+    {
+      "Name": "profiles/plus-source-desk-v3",
+      "DeviceType": 7,
+      "Readonly": false,
+      "AutoInstall": false,
+      "DontAutoSwitchWhenInstalled": true
+    },
+    {
+      "Name": "profiles/plus-source-half-v2",
+      "DeviceType": 7,
+      "Readonly": false,
+      "AutoInstall": false,
+      "DontAutoSwitchWhenInstalled": true
+    },
+    {
+      "Name": "profiles/plus-creative-layer-lab-v2",
+      "DeviceType": 7,
+      "Readonly": false,
+      "AutoInstall": false,
+      "DontAutoSwitchWhenInstalled": true
+    },
+    {
+      "Name": "profiles/buttons-source-desk-v4",
+      "DeviceType": 0,
+      "Readonly": false,
+      "AutoInstall": false,
+      "DontAutoSwitchWhenInstalled": true
+    },
+    {
+      "Name": "profiles/buttons-source-half-v2",
+      "DeviceType": 0,
+      "Readonly": false,
+      "AutoInstall": false,
+      "DontAutoSwitchWhenInstalled": true
+    },
+    {
+      "Name": "profiles/mini-source-desk-v2",
+      "DeviceType": 1,
+      "Readonly": false,
+      "AutoInstall": false,
+      "DontAutoSwitchWhenInstalled": true
+    },
+    {
+      "Name": "profiles/plus-scene-desk-v2",
+      "DeviceType": 7,
+      "Readonly": false,
+      "AutoInstall": false,
+      "DontAutoSwitchWhenInstalled": true
+    },
+    {
+      "Name": "profiles/buttons-creative-layer-lab-v2",
+      "DeviceType": 0,
+      "Readonly": false,
+      "AutoInstall": false,
+      "DontAutoSwitchWhenInstalled": true
+    },
+    {
+      "Name": "profiles/buttons-scene-desk-v2",
+      "DeviceType": 0,
+      "Readonly": false,
+      "AutoInstall": false,
+      "DontAutoSwitchWhenInstalled": true
+    },
+    {
+      "Name": "profiles/plus-scene-regular-v3",
+      "DeviceType": 7,
+      "Readonly": false,
+      "AutoInstall": false,
+      "DontAutoSwitchWhenInstalled": true
+    },
+    {
+      "Name": "profiles/buttons-scene-regular-v2",
+      "DeviceType": 0,
+      "Readonly": false,
+      "AutoInstall": false,
+      "DontAutoSwitchWhenInstalled": true
+    }
+  ],
   "Actions": [
     {
-      "Name": "Fader",
+      "Name": "Source & Layer",
+      "UUID": "com.jbrick2070.fadester-for-obs.layer-control",
+      "Icon": "imgs/actions/source-layer/icon",
+      "Tooltip": "Browse existing scene sources and show or hide the deck-selected source. Creative controls add blend modes and optional layer reordering.",
+      "PropertyInspectorPath": "ui/obs-layer-control.html",
+      "Controllers": [
+        "Keypad",
+        "Encoder"
+      ],
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": false,
+      "Encoder": {
+        "layout": "layouts/fader-cell.json",
+        "TriggerDescription": {
+          "Rotate": "Browse sources, blend modes, or explicitly enabled layer order",
+          "Push": "Show/hide source, or reset blend to Normal",
+          "Touch": "Show/hide source, or reset blend to Normal"
+        }
+      },
+      "States": [
+        {
+          "Image": "imgs/actions/source-layer/key"
+        }
+      ]
+    },
+    {
+      "Name": "OBS Fader",
+      "UUID": "com.jbrick2070.fadester-for-obs.obs-fader",
+      "Icon": "imgs/actions/fader/icon",
+      "Tooltip": "Adjust an audio source, or blend the Live scene into Next with the colorful scene mixer.",
+      "PropertyInspectorPath": "ui/obs-fader-dial.html",
+      "Controllers": [
+        "Encoder"
+      ],
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": false,
+      "Encoder": {
+        "layout": "layouts/fader-cell.json",
+        "TriggerDescription": {
+          "Rotate": "Adjust audio volume, or blend Live into Next",
+          "Push": "Run the press action chosen in settings"
+        }
+      },
+      "States": [
+        {
+          "Image": "imgs/actions/fader/key"
+        }
+      ]
+    },
+    {
+      "Name": "Scene & Transition",
+      "UUID": "com.jbrick2070.fadester-for-obs.scene-transition",
+      "Icon": "imgs/actions/scene-transition/icon",
+      "Tooltip": "Select next or previous OBS scene, cut, preview, or run a chosen transition.",
+      "PropertyInspectorPath": "ui/obs-scene-transition-key.html",
+      "Controllers": [
+        "Keypad"
+      ],
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": true,
+      "States": [
+        {
+          "Image": "imgs/actions/scene-transition/key"
+        }
+      ]
+    },
+    {
+      "Name": "OBS Fade",
+      "UUID": "com.jbrick2070.fadester-for-obs.obs-fade",
+      "Icon": "imgs/actions/audio-fade/icon",
+      "Tooltip": "Directly fade an OBS mixer input up or down without changing scene-transition settings.",
+      "PropertyInspectorPath": "ui/obs-fade-key.html",
+      "Controllers": [
+        "Keypad"
+      ],
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": true,
+      "States": [
+        {
+          "Image": "imgs/actions/audio-fade/key"
+        }
+      ]
+    },
+    {
+      "Name": "Midi Fadester Fader (optional)",
       "UUID": "com.jbrick2070.fadester-for-obs.fader",
       "Icon": "imgs/actions/fader/icon",
-      "Tooltip": "Control a Midi Fadester slot with a Stream Deck + rotary dial and touch cell.",
+      "Tooltip": "Optional enhanced control for an existing Midi Fadester slot.",
       "PropertyInspectorPath": "ui/fader-dial.html",
       "Controllers": [
         "Encoder"
@@ -50,10 +213,10 @@
       ]
     },
     {
-      "Name": "Auto-fade",
+      "Name": "Midi Fadester Auto-fade (optional)",
       "UUID": "com.jbrick2070.fadester-for-obs.auto-fade",
       "Icon": "imgs/actions/auto-fade/icon",
-      "Tooltip": "Run an instant or timed fade on a Midi Fadester slot, or clean all enabled filter bindings.",
+      "Tooltip": "Optional enhanced fade for an existing Midi Fadester slot.",
       "PropertyInspectorPath": "ui/auto-fade-key.html",
       "Controllers": [
         "Keypad"

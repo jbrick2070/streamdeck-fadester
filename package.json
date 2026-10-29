@@ -1,7 +1,7 @@
 {
   "name": "streamdeck-fadester",
-  "version": "0.6.0",
-  "description": "Fadester for OBS — Stream Deck + fader dial and auto-fade controller for Midi Fadester in OBS Studio 33",
+  "version": "0.7.6",
+  "description": "Fadester for OBS — direct OBS scene, transition, mixer-fade, and Stream Deck + fader controls with optional Midi Fadester integration",
   "license": "GPL-2.0-or-later",
   "type": "module",
   "author": "Jeffrey A. Brick",
@@ -13,8 +13,9 @@
     "node": ">=24.0.0"
   },
   "scripts": {
-    "build": "rollup -c",
+    "build": "npm run build:profiles && rollup -c",
     "watch": "rollup -c -w",
+    "build:profiles": "node --import tsx scripts/build-profiles.ts",
     "test": "vitest run",
     "test:mutation": "node --import tsx scripts/run-mutation-checks.ts",
     "test:obs-live": "node --import tsx tests/obs-live-conformance.ts",

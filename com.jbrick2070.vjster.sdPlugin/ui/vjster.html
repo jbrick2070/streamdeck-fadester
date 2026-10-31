@@ -1,0 +1,30 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-2.0-or-later -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>VJster</title>
+    <link rel="stylesheet" href="vjster.css" />
+  </head>
+  <body>
+    <section id="fields"></section>
+
+    <section class="global">
+      <h2>VJster link</h2>
+      <div id="status" class="status">Checking...</div>
+      <label class="row">
+        <span>Port</span>
+        <input id="port" type="number" min="1024" max="65535" />
+      </label>
+      <label class="row">
+        <span>Only this extension</span>
+        <input id="ext" type="text" placeholder="any extension" spellcheck="false" />
+      </label>
+      <p class="note">Leave empty to accept any Chrome extension, or paste the id the VJster extension shows in its options. Everything stays on this computer.</p>
+      <div id="obs" class="note"></div>
+      <button id="save-global" type="button">Save link settings</button>
+    </section>
+
+    <script src="vjster.js"></script>
+  </body>
+</html>

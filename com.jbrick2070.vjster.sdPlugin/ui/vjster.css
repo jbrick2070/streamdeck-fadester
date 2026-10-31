@@ -1,0 +1,76 @@
+/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* VJster settings page, sized for Stream Deck's property inspector. */
+:root {
+  color-scheme: dark;
+  font: 12px/1.45 "Segoe UI", Arial, sans-serif;
+  color: #e6e6ee;
+  background: #2d2d2d;
+}
+body {
+  margin: 0;
+  padding: 10px 12px 16px;
+}
+h2 {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #a0a0b4;
+  margin: 14px 0 6px;
+}
+.row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0;
+}
+.row > span {
+  color: #c8c8d4;
+}
+input[type="number"],
+input[type="text"],
+select {
+  width: 100%;
+  box-sizing: border-box;
+  background: #3d3d3d;
+  color: #f0f0f6;
+  border: 1px solid #505050;
+  border-radius: 3px;
+  padding: 3px 5px;
+  font: inherit;
+}
+input[type="checkbox"] {
+  justify-self: start;
+}
+.note {
+  color: #9a9aae;
+  margin: 4px 0 8px;
+}
+.status {
+  padding: 6px 8px;
+  border-radius: 3px;
+  background: #383838;
+  font-weight: 600;
+}
+.status.ok {
+  color: #3dffa0;
+}
+.status.bad {
+  color: #ff6b78;
+}
+button {
+  background: #4a4a5a;
+  color: #fff;
+  border: 0;
+  border-radius: 3px;
+  padding: 5px 10px;
+  font: inherit;
+  cursor: pointer;
+}
+button:hover {
+  background: #5a5a70;
+}
+.global {
+  border-top: 1px solid #444;
+  margin-top: 14px;
+}

@@ -11,7 +11,7 @@ Phase 0b, and steps 2 to 6.
 
 ## 1. Toolchain findings on this machine (checked 2026-10-30)
 
-- Stream Deck app 7.4.2.22730, confirmed 2026-10-30 from the app's own log (build May 11 2026). Fadester's committed manifest asks for 7.1; an uncommitted change in this working tree raises it to 7.6, above the installed app, which would then refuse the plugin (F-7). The standalone VJster manifest will ask for 7.4.
+- Stream Deck app 7.4.2.22730, confirmed 2026-10-30 from the app's own log (build May 11 2026). Fadester's committed manifest asks for 7.1; an uncommitted change in this working tree raises it to 7.6, above the installed app, which would then refuse the plugin (F-7). The standalone VJster manifest asks for 7.1 (step 5).
 - Node v25.9.0, npm 11.12.1. VJster builds with Fadester's own `package.json`: Node >= 24, `@elgato/streamdeck` 3.0.3, `@elgato/cli` 1.10.3, rollup 4.65.1, TypeScript 5.9.3, vitest 3.2.7, tsx 4.23.15, and `ws` 8.22.0 through `@elgato/streamdeck` (R-STD-3).
 - Fadester's baseline on 2026-10-30, with its uncommitted work in the tree: `npx tsc --noEmit` clean, `npm test` 22 files and 234 tests passing; with the Phase 0b files added, 23 files and 237 tests. A clean worktree of HEAD 7cf7207 plus only the Phase 0b files: `npm ci`, `npx tsc --noEmit` clean, `npm test` 22 files and 234 tests passing.
 - `npm run test:mutation` fails on Fadester's own HEAD 7cf7207, with or without the VJster files: mutation M-1.1 (the encoder layout path in the plugin manifest) survives `tests/manifest-hygiene.test.ts`. The mutation rewrites the first `"layout"` line, which at HEAD belongs to the `layer-control` action, while the committed hygiene test checks only the `fader` action's layout; the uncommitted version of that test checks every Encoder action and would likely kill it. Fadester's runner throws at the first surviving mutation and has no filter, so nothing after M-1.1 runs. Both files carry uncommitted work, so VJster leaves them alone (R-HOME-5) and keeps its own runner (R-TST-4).
@@ -63,15 +63,20 @@ C:\streamdeck-fadester
       coalesce.ts        50 ms coalescing with last-value guarantee (R-BEH-3)
     plugin/
       link-server.ts     ws server on 127.0.0.1, origin and token checks, ping (R-LNK-1..4)
-      targets.ts         current state per target, change notifications
-      display.ts         strip text, bar values, key titles (R-SPD-6, R-QLT-3)
-  src/actions/
-    vjster-speed-dial.ts      Encoder (step 5)
-    vjster-quality-dial.ts    Encoder
-    vjster-speed-key.ts       Keypad: preset or step
-    vjster-quality-key.ts     Keypad: preset
-    vjster-pin-key.ts         Keypad: pin this tab (R-TGT-2)
-    vjster-transport-key.ts   Keypad: play/pause
+      hub.ts             the shared server, latest state per target, start/stop rule, reconfigure
+      display.ts         strip and key artwork as SVG, status words (R-SPD-6, R-QLT-3, R-BEH-4)
+      settings.ts        per-action and plugin-wide settings with safe defaults
+      controllers.ts     what each action does with a turn, press or tap (no SDK)
+      actions.ts         the Stream Deck SDK glue: one class per action
+      standalone.ts      the standalone plugin's entry (D-12)
+  com.jbrick2070.vjster.sdPlugin/   the standalone plugin (D-12)
+    manifest.json        seven actions, three bundled profiles
+    imgs/                plugin and category icons, action icons, default key images
+    layouts/vjster-strip.json   one full-canvas pixmap per dial
+    ui/                  vjster.html, vjster.js, vjster.css: the settings page
+    profiles/            VJster Live + (Stream Deck +), VJster Live (15 keys), VJster Mini
+    bin/                 built plugin.js (git-ignored)
+  vjster-plugin/rollup.config.mjs   builds the standalone plugin
   vjster-extension/
     tsconfig.json        DOM lib, no Node types, includes ../src/vjster/shared
     rollup.config.mjs    four bundles plus an inline step that copies the static files
@@ -101,10 +106,13 @@ C:\streamdeck-fadester
   tests/vjster-*.test.ts   includes the extension's logic tests, tests/vjster-ext-*.test.ts
   scripts/vjster/
     run-mutation-checks.ts  VJster's flips, clean worktree only (step 2, R-TST-4)
+    build-profiles.ts    writes the bundled profiles (deterministic)
+    make-plugin-images.ts   writes the plugin's SVG icons and default keys
+    deck-sim.ts          a pretend Stream Deck and Chrome tab around the real code
     probe-player-api.js  Phase 1 step 1 probe, pasted into a watch page's console (done 2026-10-30)
 ```
 
-The deck code is bundled into Fadester's own `plugin.js` by Fadester's rollup config once `src/plugin.ts` registers the VJster actions (step 5). The extension and the page have their own rollup configs and tsconfigs because they run in a browser, not in Node. The shared folder has no imports from `@elgato/streamdeck`, `ws` or `chrome.*`, so it tests as plain functions (R-TST-1, R-TST-3), and nothing in `src/vjster` imports Fadester's OBS code (R-HOME-3). The `tsconfig.json`, rollup and vitest configs written in `C:\vjster` are not carried over; Fadester's apply.
+Step 5 bundles the deck code into the standalone plugin's own `plugin.js` with `vjster-plugin/rollup.config.mjs` (D-12); a Fadester-hosted copy would register the same classes from Fadester's `src/plugin.ts` once that file is free. The extension and the page have their own rollup configs and tsconfigs because they run in a browser, not in Node. The shared folder has no imports from `@elgato/streamdeck`, `ws` or `chrome.*`, so it tests as plain functions (R-TST-1, R-TST-3), and nothing in `src/vjster` imports Fadester's OBS code (R-HOME-3). The `tsconfig.json`, rollup and vitest configs written in `C:\vjster` are not carried over; Fadester's apply.
 
 ### 3.2 Data flow
 
@@ -112,7 +120,7 @@ The deck code is bundled into Fadester's own `plugin.js` by Fadester's rollup co
 2. The extension's service worker receives it, picks the target tab (`target.ts`) and forwards it to that tab's bridge script.
 3. The bridge posts it to the main-world adapter, which calls the player API or the video element.
 4. The adapter reads the result back (rate at once, quality by event or polling), the bridge relays a state report, the worker forwards it over the socket.
-5. `targets.ts` stores it and `display.ts` redraws every action bound to that target. The strip shows what the page reported (R-BEH-4).
+5. `hub.ts` stores it and `display.ts` redraws every action bound to that target. The strip shows what the page reported (R-BEH-4).
 
 Unsolicited state reports follow the same path upward: play, pause, navigation, ad start and end, tab close.
 
@@ -166,15 +174,15 @@ As built in step 2 (`target.ts`): `chooseTarget(tabs, {focusedWindowId, activeTa
 
 | Action | Controller | Settings | Strip or key |
 |--------|-----------|----------|--------------|
-| Speed | Encoder | target, step, fine step, range, extended range, hold speed | `1.25x`, bar with 1.0 mark, title |
-| Quality | Encoder | target, hold quality | `1080p` or `Auto 1080p`, bar over the level list |
-| Speed preset | Keypad | target, rate | rate text, lit when active |
-| Speed step | Keypad | target, +/- | `+0.25` |
-| Quality preset | Keypad | target, level | level, dimmed when unavailable |
-| Pin tab | Keypad | | pinned title or `Pin` |
-| Play/Pause | Keypad | target | state icon |
+| Speed | Encoder | strip label, step, held-turn step, extended range, hold speed, target | label, `1.25x` in a magenta-to-cyan glow, a bar with 1x marked, the title; `EXT` for a direct rate, `AD` during an ad |
+| Quality | Encoder | strip label, hold quality, target | `1080p` with `AUTO` or `FIXED`, one segment per offered level |
+| Speed Preset | Keypad | rate (0.1 to 16), direct write, hold, target | the rate, framed in neon while it plays |
+| Speed Step | Keypad | direction, step, extended range, target | `+0.25` and the rate playing |
+| Quality Preset | Keypad | level or Auto, hold, target | the level, dimmed when the video lacks it |
+| Pin Tab | Keypad | | pin glyph, the pinned tab's title (or `PINNED`), or `PIN TAB` |
+| Play / Pause | Keypad | target | play or pause glyph, `PLAYING` or `PAUSED` |
 
-Every action also reads the global settings: port, pinned extension id (optional), log level.
+As built in step 5, every action reads the plugin-wide settings on its settings page: the port (default 48150), the extension ids allowed to connect (empty allows any), and a link status line; the OBS page token is created once and kept there (Phase 2). Status words on the strip and keys: `EXTENSION OFF`, `NO PAGE`, `NO VIDEO`, `N/A`, `AD PLAYING`, `PORT IN USE` (R-BEH-4).
 
 ## 4. Phases
 
@@ -213,9 +221,11 @@ Tests in Node: `tests/vjster-ext-adapter`, `-messages`, `-router`, `-link` and `
 
 The review found the registry lost on a worker restart, stale tabs after leaving a site, answers accepted from any tab, no read-back after Auto, all of YouTube lost over one missing quality method, test gaps (46 of its 75 flips survived), and doc errors; all are fixed. Its second pass ran 116 flips of its own on the fixes and asked for tests of the `played` flag through the worker and of the YouTube call forms, and for a held level that survives an empty level list after navigation; all are done. Not checked yet, because they need the operator's Chrome: loading the extension, the service worker's socket to the plugin, the ad markers, the navigations V-4 lists, the probe in Chrome 156, a worker restart and two Chrome profiles; all are in TESTING.md section 1.
 
-Step 5, deck actions (R-SPD-3, R-SPD-5..6, R-QLT-5, R-TGT-2, R-BEH-4..5). The seven actions, named VJster Speed and so on, in Fadester's category (R-HOME-2), property inspectors, the indicator layouts, icons. Registering them changes `src/plugin.ts`, the plugin manifest and `tests/manifest-hygiene.test.ts`, which counts the actions (6 at HEAD, 7 in the uncommitted work) and, in its uncommitted version, requires every Encoder action to use `layouts/fader-cell.json`, a rule the VJster indicator layouts break; the step extends that test for the VJster actions and their layouts, and waits until no other work modifies those files (R-HOME-5). Gate: D-10, the Stream Deck app version; the speed and quality actions count from their own unanswered request (section 3.2); titles are escaped before they are drawn and never logged (R-BEH-5); `streamdeck validate`; `streamdeck link` to the Stream Deck app; TESTING.md items 1.1 onward with expected strip text; operator hands-on on the Stream Deck + with a watch page, a paused page, two tabs, Picture-in-Picture, an ad, extension reload, Chrome restart, Stream Deck restart.
+Step 5, deck actions (R-SPD-3, R-SPD-5..6, R-QLT-5, R-TGT-2, R-BEH-4..5). The seven actions, named VJster Speed and so on, in Fadester's category (R-HOME-2), property inspectors, the indicator layouts, icons. Registering them changes `src/plugin.ts`, the plugin manifest and `tests/manifest-hygiene.test.ts`, which counts the actions (6 at HEAD, 7 in the uncommitted work) and, in its uncommitted version, requires every Encoder action to use `layouts/fader-cell.json`, a rule the VJster indicator layouts break; the step extends that test for the VJster actions and their layouts, and waits until no other work modifies those files (R-HOME-5). Gate: D-10, the Stream Deck app version (step 5 sidesteps it with D-12); the speed and quality actions count from their own unanswered request (section 3.2); titles are escaped before they are drawn and never logged (R-BEH-5); `streamdeck validate`; `streamdeck link` to the Stream Deck app; TESTING.md items 1.1 onward with expected strip text; operator hands-on on the Stream Deck + with a watch page, a paused page, two tabs, Picture-in-Picture, an ad, extension reload, Chrome restart, Stream Deck restart.
 
-Step 6, release. The VJster actions ship in the next Fadester for OBS release; the extension ships as a zip of `vjster-extension/bin` next to it, with install steps in docs/vjster. No Marketplace, no Web Store (D-3, D-8). The standalone VJster plugin (R-HOME-2) is planned after this release.
+DONE 2026-10-31 as the standalone VJster plugin (D-12): `com.jbrick2070.vjster.sdPlugin`, built by `npx rollup -c vjster-plugin/rollup.config.mjs`, accepted by `npx streamdeck validate com.jbrick2070.vjster.sdPlugin`. Seven actions (section 3.8) over one shared `Hub`; each dial and key has a controller with no SDK in it, so it is tested with a fake hub and a fake clock. The speed and quality dials count from their own unanswered request while it is pending (section 3.2), coalesce to one request per 50 ms, reset on a press only when not turned while held, and alert instead of sending when the target is off; turns during an ad are sent and held by the page (R-BEH-1). The hub serializes reconfigures: an early version left two servers running when Stream Deck echoed the settings while a new OBS token was being saved, which the deck simulator caught. Three profiles are bundled and installed without switching to them: VJster Live + for the Stream Deck + (keys 0.1x FX, 0.5x, 1x, 2x / play-pause, pin, Auto, 8x FX; dials SPEED, NUDGE in 0.05 steps for beat-matching, QUALITY, FX SPEED in 0.5 steps over 0.1x to 16x), VJster Live for the 15-key Stream Deck, and VJster Mini; `scripts/vjster/build-profiles.ts` writes them byte for byte the same each time. `scripts/vjster/deck-sim.ts` runs the real plugin under a pretend Stream Deck with the real extension logic around a fake YouTube player, so the whole path from a dial turn to the page and back to the strip is tested without hardware (`tests/vjster-plugin-e2e.test.ts`). Tests: `tests/vjster-plugin-units`, `-package` and `-e2e.test.ts`, 66 tests. Mutation flips M-V-30 to M-V-37, and after the review M-V-64 to M-V-72. The Sonnet 5.5 review found that an unanswered or refused request could leave its dim value on the strip for good (now it redraws when it expires, and an error drops it at once), that a title with a lone surrogate or a noncharacter froze a strip (now replaced by a space), and that the Pin key did not show the pinned title as R-TGT-2 says (now it does). Also fixed from its list: the server waits for the stored settings before it starts, so it never runs on the default port or without the extension pin; a malformed pinned extension id now makes the server refuse every extension instead of quietly allowing any; a settings write without the OBS token keeps it; the settings page gets its status again when it appears; a taken port is tried again every 30 s; draws go out at most every 100 ms per action, the last one always; turns during an ad add up while the page holds them; and only the ad's status word lets a control through. Not done here, because they change the operator's Stream Deck app: linking the plugin and trying it on the device (TESTING.md section 2).
+
+Step 6, release. As built, the standalone plugin ships as `com.jbrick2070.vjster.streamDeckPlugin` from `npx streamdeck pack`, and the extension as a zip of `vjster-extension/bin`, with install steps in docs/vjster; a Fadester-hosted copy follows D-12. Tagging and publishing are the operator's call. No Marketplace, no Web Store (D-3, D-8). The standalone VJster plugin (R-HOME-2) is planned after this release.
 
 ### Phase 2 -- the OBS browser-source target
 
@@ -234,6 +244,7 @@ Seek dial, volume dial, load a video by id from a key, A/B rate toggle, a Midi F
 - `npx tsc --noEmit` (and, from step 4, the same for `vjster-extension/tsconfig.json`), then `npm test`, Fadester's whole vitest suite, which picks up `tests/vjster-*.test.ts`. The VJster tests stay under 30 s.
 - `node --import tsx scripts/vjster/run-mutation-checks.ts` (from step 2) runs every VJster flip in a linked git worktree and reads vitest's JSON report. A flip is killed only when an assertion in its named test files fails; a filter that matches no file, a flip that stops a test file from loading, or a vitest run over 180 s is an error. Every flip runs, survivors and errors both fail the run, each file is put back byte for byte (also on Ctrl+C or exit; only a hard kill can leave it flipped, and the runner names the file first), and the VJster tests run again at the end. It refuses to run in a checkout that is not a linked worktree unless given `--here`; `--list` prints the flips. `tests/vjster-mutations.test.ts` checks in the normal suite that every flip still matches its code exactly once. Fadester's `npm run test:mutation` is not a VJster gate while M-1.1 survives (section 1).
 - Fadester's manifest-hygiene test covers every VJster file (R-HOME-4).
+- `tests/vjster-plugin-e2e.test.ts` starts the real plugin from source under `scripts/vjster/deck-sim.ts` on a free port and drives it like a Stream Deck +; it needs no hardware and no Chrome.
 - TESTING.md holds the manual items with expected strip text; each release lists which items were run and by whom.
 - Nothing automated touches the live YouTube site; the probe in Phase 1 step 1 is run by hand and its output pasted into section 2.
 

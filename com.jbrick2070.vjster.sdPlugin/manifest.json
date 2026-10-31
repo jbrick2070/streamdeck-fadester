@@ -1,0 +1,186 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
+  "Name": "VJster",
+  "Version": "0.1.0.0",
+  "Author": "Jeffrey A. Brick",
+  "Description": "Ride the speed and quality of the video playing in Chrome from your Stream Deck: dials for speed, fine nudge and FX speed, keys for presets, play/pause and tab pinning. Works with the VJster Chrome extension; nothing leaves this computer.",
+  "Category": "VJster",
+  "CategoryIcon": "imgs/plugin/category-icon",
+  "Icon": "imgs/plugin/plugin-icon",
+  "URL": "https://github.com/jbrick2070/streamdeck-fadester/tree/main/docs/vjster",
+  "UUID": "com.jbrick2070.vjster",
+  "CodePath": "bin/plugin.js",
+  "SDKVersion": 3,
+  "Software": {
+    "MinimumVersion": "7.1"
+  },
+  "OS": [
+    {
+      "Platform": "windows",
+      "MinimumVersion": "10"
+    }
+  ],
+  "Nodejs": {
+    "Version": "24"
+  },
+  "Actions": [
+    {
+      "Name": "Speed",
+      "UUID": "com.jbrick2070.vjster.speed",
+      "Icon": "imgs/actions/speed/icon",
+      "Tooltip": "Turn for speed, hold and turn for fine steps, press for 1x, tap the strip to play or pause.",
+      "PropertyInspectorPath": "ui/vjster.html",
+      "Controllers": [
+        "Encoder"
+      ],
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": false,
+      "Encoder": {
+        "layout": "layouts/vjster-strip.json",
+        "TriggerDescription": {
+          "Rotate": "Speed (hold for fine steps)",
+          "Push": "Back to 1x",
+          "Touch": "Play or pause"
+        }
+      },
+      "States": [
+        {
+          "Image": "imgs/actions/speed/key"
+        }
+      ]
+    },
+    {
+      "Name": "Quality",
+      "UUID": "com.jbrick2070.vjster.quality",
+      "Icon": "imgs/actions/quality/icon",
+      "Tooltip": "Turn to step through the video's quality levels, press or tap for Auto. YouTube only.",
+      "PropertyInspectorPath": "ui/vjster.html",
+      "Controllers": [
+        "Encoder"
+      ],
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": false,
+      "Encoder": {
+        "layout": "layouts/vjster-strip.json",
+        "TriggerDescription": {
+          "Rotate": "Quality level",
+          "Push": "Auto",
+          "Touch": "Auto"
+        }
+      },
+      "States": [
+        {
+          "Image": "imgs/actions/quality/key"
+        }
+      ]
+    },
+    {
+      "Name": "Speed Preset",
+      "UUID": "com.jbrick2070.vjster.speed-preset",
+      "Icon": "imgs/actions/speed-preset/icon",
+      "Tooltip": "One fixed speed. Lights up while it is the speed playing.",
+      "PropertyInspectorPath": "ui/vjster.html",
+      "Controllers": [
+        "Keypad"
+      ],
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": true,
+      "States": [
+        {
+          "Image": "imgs/actions/speed-preset/key"
+        }
+      ]
+    },
+    {
+      "Name": "Speed Step",
+      "UUID": "com.jbrick2070.vjster.speed-step",
+      "Icon": "imgs/actions/speed-step/icon",
+      "Tooltip": "Faster or slower by one step.",
+      "PropertyInspectorPath": "ui/vjster.html",
+      "Controllers": [
+        "Keypad"
+      ],
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": true,
+      "States": [
+        {
+          "Image": "imgs/actions/speed-step/key"
+        }
+      ]
+    },
+    {
+      "Name": "Quality Preset",
+      "UUID": "com.jbrick2070.vjster.quality-preset",
+      "Icon": "imgs/actions/quality-preset/icon",
+      "Tooltip": "One fixed quality level, or Auto. Dimmed when the video does not offer it.",
+      "PropertyInspectorPath": "ui/vjster.html",
+      "Controllers": [
+        "Keypad"
+      ],
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": true,
+      "States": [
+        {
+          "Image": "imgs/actions/quality-preset/key"
+        }
+      ]
+    },
+    {
+      "Name": "Pin Tab",
+      "UUID": "com.jbrick2070.vjster.pin",
+      "Icon": "imgs/actions/pin/icon",
+      "Tooltip": "Keep controlling the current Chrome tab, whatever else plays. Press again to let go.",
+      "PropertyInspectorPath": "ui/vjster.html",
+      "Controllers": [
+        "Keypad"
+      ],
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": false,
+      "States": [
+        {
+          "Image": "imgs/actions/pin/key"
+        }
+      ]
+    },
+    {
+      "Name": "Play / Pause",
+      "UUID": "com.jbrick2070.vjster.transport",
+      "Icon": "imgs/actions/transport/icon",
+      "Tooltip": "Play or pause the video.",
+      "PropertyInspectorPath": "ui/vjster.html",
+      "Controllers": [
+        "Keypad"
+      ],
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": true,
+      "States": [
+        {
+          "Image": "imgs/actions/transport/key"
+        }
+      ]
+    }
+  ],
+  "Profiles": [
+    {
+      "Name": "profiles/vjster-live-plus",
+      "DeviceType": 7,
+      "Readonly": false,
+      "AutoInstall": true,
+      "DontAutoSwitchWhenInstalled": true
+    },
+    {
+      "Name": "profiles/vjster-live-15",
+      "DeviceType": 0,
+      "Readonly": false,
+      "AutoInstall": true,
+      "DontAutoSwitchWhenInstalled": true
+    },
+    {
+      "Name": "profiles/vjster-live-mini",
+      "DeviceType": 1,
+      "Readonly": false,
+      "AutoInstall": true,
+      "DontAutoSwitchWhenInstalled": true
+    }
+  ]
+}

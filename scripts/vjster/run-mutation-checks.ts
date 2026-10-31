@@ -275,6 +275,70 @@ export const MUTATIONS: readonly Mutation[] = [
     tests: ["tests/vjster-ext-messages.test.ts"]
   },
   {
+    id: "M-V-30",
+    rule: "a press resets to 1x only when the dial was not turned while held (R-SPD-3)",
+    file: "src/vjster/plugin/controllers.ts",
+    from: "    if (!wasDown || this.turnedWhileDown) return;",
+    to: "    if (!wasDown) return;",
+    tests: ["tests/vjster-plugin-units.test.ts"]
+  },
+  {
+    id: "M-V-31",
+    rule: "an answered request stops showing as pending (R-BEH-4)",
+    file: "src/vjster/plugin/controllers.ts",
+    from: "    else if (state && this.value.id !== null && state.inReplyTo === this.value.id) this.drop();",
+    to: "    else if (state && this.value.id !== null && state.inReplyTo === this.value.id) void state;",
+    tests: ["tests/vjster-plugin-units.test.ts"]
+  },
+  {
+    id: "M-V-32",
+    rule: "dial turns are coalesced to one request per 50 ms (R-BEH-3)",
+    file: "src/vjster/plugin/controllers.ts",
+    from: "    this.pending.set(rate);\n    this.out.push(rate);",
+    to: "    this.pending.set(rate);\n    this.pending.sentAs(this.sendNow({ type: \"speed.set\", rate, direct: this.settings.extended, hold: this.settings.hold }));",
+    tests: ["tests/vjster-plugin-units.test.ts"]
+  },
+  {
+    id: "M-V-33",
+    rule: "page titles are escaped before they are drawn (R-BEH-5)",
+    file: "src/vjster/plugin/display.ts",
+    from: 'ch === "<" ? "&lt;"',
+    to: 'ch === "<" ? "<"',
+    tests: ["tests/vjster-plugin-units.test.ts"]
+  },
+  {
+    id: "M-V-34",
+    rule: "settings changes reconfigure the link one after another",
+    file: "src/vjster/plugin/hub.ts",
+    from: "    const run = this.queue.then(() => this.applyOptions(options));",
+    to: "    const run = this.applyOptions(options);",
+    tests: ["tests/vjster-plugin-units.test.ts"]
+  },
+  {
+    id: "M-V-35",
+    rule: "a dial alerts instead of sending when the extension is off (R-BEH-4)",
+    file: "src/vjster/plugin/controllers.ts",
+    from: '    if (blocked(view, "speed")) return this.sink.alert();',
+    to: '    if (blocked(view, "speed") && view.state === undefined) return this.sink.alert();',
+    tests: ["tests/vjster-plugin-units.test.ts"]
+  },
+  {
+    id: "M-V-36",
+    rule: "a quality preset is dimmed and refused when the video lacks its level (R-QLT-5)",
+    file: "src/vjster/plugin/controllers.ts",
+    from: "    return this.settings.level === AUTO || (state?.availableQualities.includes(this.settings.level) ?? false);",
+    to: "    return state !== undefined;",
+    tests: ["tests/vjster-plugin-units.test.ts"]
+  },
+  {
+    id: "M-V-37",
+    rule: "bundled profiles are built byte for byte the same every time",
+    file: "scripts/vjster/build-profiles.ts",
+    from: "  const DOS_DATE = (0 << 9) | (1 << 5) | 1; // 1980-01-01",
+    to: "  const DOS_DATE = (0 << 9) | (1 << 5) | 2; // 1980-01-02",
+    tests: ["tests/vjster-plugin-package.test.ts"]
+  },
+  {
     id: "M-V-38",
     rule: "an answer counts only from the tab the intent went to (step 4 review)",
     file: "vjster-extension/src/router.ts",
@@ -401,6 +465,78 @@ export const MUTATIONS: readonly Mutation[] = [
     from: "        if (level !== null && preferred !== level && !this.adShowing()) this.safely(() => c.setQuality(level));",
     to: "        if (level !== null && preferred !== level) this.safely(() => c.setQuality(level));",
     tests: ["tests/vjster-ext-adapter.test.ts"]
+  },
+  {
+    id: "M-V-64",
+    rule: "an unanswered request redraws by itself when it expires (R-BEH-4, step 5 review)",
+    file: "src/vjster/plugin/controllers.ts",
+    from: "      this.expired();",
+    to: "      void this.expired;",
+    tests: ["tests/vjster-plugin-units.test.ts"]
+  },
+  {
+    id: "M-V-65",
+    rule: "lone surrogates never reach an SVG (step 5 review)",
+    file: "src/vjster/plugin/display.ts",
+    from: "      (code >= 0xd800 && code <= 0xdfff) ||",
+    to: "      false ||",
+    tests: ["tests/vjster-plugin-units.test.ts"]
+  },
+  {
+    id: "M-V-66",
+    rule: "no server before the stored settings are applied",
+    file: "src/vjster/plugin/hub.ts",
+    from: "    return gate ? gate.then(go) : go();",
+    to: "    return go();",
+    tests: ["tests/vjster-plugin-units.test.ts"]
+  },
+  {
+    id: "M-V-67",
+    rule: "a taken port is tried again (D-11)",
+    file: "src/vjster/plugin/hub.ts",
+    from: "    }, this.retryMs);",
+    to: "    }, this.retryMs * 1000);",
+    tests: ["tests/vjster-plugin-units.test.ts"]
+  },
+  {
+    id: "M-V-68",
+    rule: "the pin key shows the pinned title (R-TGT-2)",
+    file: "src/vjster/plugin/controllers.ts",
+    from: "sub: pinned ? (title ? fit(title, 14) : \"PINNED\") : \"PIN TAB\",",
+    to: "sub: pinned ? \"PINNED\" : \"PIN TAB\",",
+    tests: ["tests/vjster-plugin-units.test.ts"]
+  },
+  {
+    id: "M-V-69",
+    rule: "turns during an ad add up while the page holds them (R-BEH-1)",
+    file: "src/vjster/plugin/controllers.ts",
+    from: "    if (state?.adPlaying) {",
+    to: "    if (state?.adPlaying && false) {",
+    tests: ["tests/vjster-plugin-units.test.ts"]
+  },
+  {
+    id: "M-V-70",
+    rule: "an error drops the pending value it answers",
+    file: "src/vjster/plugin/controllers.ts",
+    from: "    if (!this.value || id === null || this.value.id !== id) return false;",
+    to: "    if (true) return false;",
+    tests: ["tests/vjster-plugin-units.test.ts"]
+  },
+  {
+    id: "M-V-71",
+    rule: "only the ad word lets a control through (step 5 review)",
+    file: "src/vjster/plugin/controllers.ts",
+    from: "  return w !== null && w.word !== AD_WORD;",
+    to: "  return w !== null && w.word !== AD_WORD && w.word !== \"N/A\";",
+    tests: ["tests/vjster-plugin-units.test.ts"]
+  },
+  {
+    id: "M-V-72",
+    rule: "a malformed pinned extension id is kept, so the server fails closed",
+    file: "src/vjster/plugin/settings.ts",
+    from: "    .filter((id) => id.length > 0 && id.length <= 64)",
+    to: "    .filter((id) => /^[a-p]{32}$/.test(id))",
+    tests: ["tests/vjster-plugin-units.test.ts"]
   }
 ];
 

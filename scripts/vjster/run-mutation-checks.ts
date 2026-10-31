@@ -105,6 +105,110 @@ export const MUTATIONS: readonly Mutation[] = [
     from: "      return { ...env, type };",
     to: "      return { ...raw, ...env, type } as Intent;",
     tests: ["tests/vjster-protocol.test.ts"]
+  },
+  {
+    id: "M-V-9",
+    rule: "origin check: only a Chrome extension may connect without a token (R-LNK-2)",
+    file: "src/vjster/plugin/link-server.ts",
+    from: 'if (!match) return { ok: false, reason: "origin" };',
+    to: 'if (!match) return { ok: true, target: "browser" };',
+    tests: ["tests/vjster-link-server.test.ts"]
+  },
+  {
+    id: "M-V-10",
+    rule: "Host check: the Host header must name the server itself (R-LNK-2, DNS rebinding)",
+    file: "src/vjster/plugin/link-server.ts",
+    from: 'if (host !== `${LINK_HOST}:${port}` && host !== `localhost:${port}`) return { ok: false, reason: "host" };',
+    to: 'void host;',
+    tests: ["tests/vjster-link-server.test.ts"]
+  },
+  {
+    id: "M-V-11",
+    rule: "token check: the OBS page must present the exact token (R-LNK-2)",
+    file: "src/vjster/plugin/link-server.ts",
+    from: 'const same = timingSafeEqual(Buffer.from(token, "utf8"), Buffer.from(obsToken, "utf8"));',
+    to: "const same = true;",
+    tests: ["tests/vjster-link-server.test.ts"]
+  },
+  {
+    id: "M-V-12",
+    rule: "latest wins: a newer connection closes the older one (R-LNK-4)",
+    file: "src/vjster/plugin/link-server.ts",
+    from: '      previous.socket.close(CLOSE_REPLACED, "replaced by a newer connection");',
+    to: "      void previous;",
+    tests: ["tests/vjster-link-server.test.ts"]
+  },
+  {
+    id: "M-V-13",
+    rule: "keepalive: a peer silent past the idle timeout is closed (R-LNK-3)",
+    file: "src/vjster/plugin/link-server.ts",
+    from: "if (now - peer.lastHeardAt > this.idleTimeoutMs) {",
+    to: "if (now - peer.lastHeardAt > this.idleTimeoutMs * 1000) {",
+    tests: ["tests/vjster-link-server.test.ts"]
+  },
+  {
+    id: "M-V-14",
+    rule: "a report must carry the target of the connection it came on (PLAN.md 3.3)",
+    file: "src/vjster/plugin/link-server.ts",
+    from: "if (!result.ok || result.message.target !== peer.target) {",
+    to: "if (!result.ok) {",
+    tests: ["tests/vjster-link-server.test.ts"]
+  },
+  {
+    id: "M-V-15",
+    rule: "the server stops only after the stop delay, so a page switch keeps the link (R-LNK-1)",
+    file: "src/vjster/plugin/link-server.ts",
+    from: "    }, this.stopDelayMs);",
+    to: "    }, 0);",
+    tests: ["tests/vjster-link-server.test.ts"]
+  },
+  {
+    id: "M-V-16",
+    rule: "a replaced or closed connection no longer speaks for its target (step 3 review)",
+    file: "src/vjster/plugin/link-server.ts",
+    from: "    if (this.peers.get(peer.target) !== peer) return;",
+    to: "    void 0;",
+    tests: ["tests/vjster-link-server.test.ts"]
+  },
+  {
+    id: "M-V-17",
+    rule: "a dropped report is re-asked at most once per 2 s (PLAN.md 3.3)",
+    file: "src/vjster/plugin/link-server.ts",
+    from: "      if (now - peer.lastReaskAt >= REASK_MIN_MS) {",
+    to: "      if (now >= 0) {",
+    tests: ["tests/vjster-link-server.test.ts"]
+  },
+  {
+    id: "M-V-18",
+    rule: "stop reports every live connection gone (R-BEH-4)",
+    file: "src/vjster/plugin/link-server.ts",
+    from: '      peer.socket.close(CLOSE_SHUTDOWN, "server stopping");\n      this.emit({ type: "disconnected", target: peer.target });',
+    to: '      peer.socket.close(CLOSE_SHUTDOWN, "server stopping");',
+    tests: ["tests/vjster-link-server.test.ts"]
+  },
+  {
+    id: "M-V-19",
+    rule: "two Host headers are refused (R-LNK-2)",
+    file: "src/vjster/plugin/link-server.ts",
+    from: 'if (hostHeaders !== 1) return this.refuse("host", socket);',
+    to: "void hostHeaders;",
+    tests: ["tests/vjster-link-server.test.ts"]
+  },
+  {
+    id: "M-V-20",
+    rule: "refusals are logged at most once per 10 s (step 3 review)",
+    file: "src/vjster/plugin/link-server.ts",
+    from: "if (now - this.lastRefusalLogAt >= REFUSAL_LOG_MS) {",
+    to: "if (now >= 0) {",
+    tests: ["tests/vjster-link-server.test.ts"]
+  },
+  {
+    id: "M-V-21",
+    rule: "a throwing listener is logged without its text (R-BEH-5)",
+    file: "src/vjster/plugin/link-server.ts",
+    from: "      } catch {\n        // The exception's text could carry page content (R-BEH-5): log a fixed line.",
+    to: "      } catch (e) {\n        this.log.warn(String(e));",
+    tests: ["tests/vjster-link-server.test.ts"]
   }
 ];
 

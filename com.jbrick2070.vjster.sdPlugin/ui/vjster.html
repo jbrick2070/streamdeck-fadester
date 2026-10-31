@@ -21,8 +21,27 @@
         <input id="ext" type="text" placeholder="any extension" spellcheck="false" />
       </label>
       <p class="note">Leave empty to accept any Chrome extension, or paste the id the VJster extension shows in its options. Everything stays on this computer.</p>
-      <div id="obs" class="note"></div>
       <button id="save-global" type="button">Save link settings</button>
+    </section>
+
+    <section class="global">
+      <h2>OBS page</h2>
+      <div id="obs-status" class="status">Checking...</div>
+      <label class="row">
+        <span>YouTube link or id</span>
+        <input id="obs-video" type="text" placeholder="paste a YouTube link" spellcheck="false" />
+      </label>
+      <label class="row">
+        <span>Address</span>
+        <input id="obs-address" type="text" readonly spellcheck="false" />
+      </label>
+      <button id="obs-copy" type="button">Copy address</button>
+      <label class="row">
+        <span>Keep the link on</span>
+        <input id="obs-always" type="checkbox" />
+      </label>
+      <p class="note">OBS loads the page only when it starts or when the source is refreshed, so the link stays on while Stream Deck runs. This turns on by itself the first time an OBS page connects.</p>
+      <p class="note">In OBS, add a Browser source, untick Local file, and paste this address as its URL. Then set an action's Control to OBS page or Both. The address carries this computer's OBS page key: keep it out of screenshots and chat.</p>
     </section>
 
     <script src="vjster.js"></script>

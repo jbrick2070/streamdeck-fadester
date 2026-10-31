@@ -57,6 +57,12 @@ abstract class Base {
 
   protected abstract get targetChoice(): TargetChoice;
 
+  /** A key caption that names the target when it is not Chrome (Phase 2): `OBS SPEED`, `SYNC PLAYING`. */
+  protected caption(word: string): string {
+    const t = this.targetChoice;
+    return t === "obs" ? `OBS ${word}` : t === "both" ? `SYNC ${word}` : word;
+  }
+
   /** Send now to every chosen target; false when none is connected (R-BEH-4: the strip already says why). */
   protected sendNow(body: IntentBody): string | null {
     let first: string | null = null;
@@ -326,7 +332,7 @@ export class SpeedPresetController extends Base {
     const rate = view.state?.rate ?? null;
     const active = rate !== null && Math.abs(rate - this.settings.rate) < 1e-6;
     const dim = blocked(view, "speed");
-    this.sink.draw(keyImage({ main: formatRate(this.settings.rate), sub: this.settings.extended ? "FX SPEED" : "SPEED", active, dim }));
+    this.sink.draw(keyImage({ main: formatRate(this.settings.rate), sub: this.caption(this.settings.extended ? "FX SPEED" : "SPEED"), active, dim }));
   }
 }
 
@@ -352,7 +358,7 @@ export class SpeedStepController extends Base {
     this.sink.draw(
       keyImage({
         main: `${sign}${this.settings.step}`,
-        sub: rate != null ? formatRate(rate) : "SPEED",
+        sub: this.caption(rate != null ? formatRate(rate) : "SPEED"),
         active: false,
         dim: blocked(view, "speed"),
         glyph: undefined
@@ -388,7 +394,7 @@ export class QualityPresetController extends Base {
     const auto = this.settings.level === AUTO;
     const active = s !== null && (auto ? s.qualityAuto === true : s.qualityAuto === false && s.quality === this.settings.level);
     const dim = (blocked(view, "quality")) || !this.offered(s);
-    this.sink.draw(keyImage({ main: auto ? "AUTO" : qualityLabel(this.settings.level), sub: "QUALITY", active, dim }));
+    this.sink.draw(keyImage({ main: auto ? "AUTO" : qualityLabel(this.settings.level), sub: this.caption("QUALITY"), active, dim }));
   }
 }
 
@@ -434,6 +440,6 @@ export class TransportController extends Base {
     const view = this.view();
     const playing = view.state?.playing === true;
     const dim = blocked(view, "transport");
-    this.sink.draw(keyImage({ main: "", sub: playing ? "PLAYING" : "PAUSED", active: playing, dim, glyph: playing ? "pause" : "play" }));
+    this.sink.draw(keyImage({ main: "", sub: this.caption(playing ? "PLAYING" : "PAUSED"), active: playing, dim, glyph: playing ? "pause" : "play" }));
   }
 }

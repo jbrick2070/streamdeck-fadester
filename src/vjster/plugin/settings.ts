@@ -101,6 +101,8 @@ export interface GlobalSettings {
   readonly extensionIds: readonly string[];
   /** The OBS page token (Phase 2); created once and kept. */
   readonly obsToken: string | null;
+  /** Keep the link running while the plugin runs, so OBS can load its page at any time (obs-keepalive.ts); null until chosen. */
+  readonly obsAlwaysOn: boolean | null;
 }
 
 export function globalSettings(raw: unknown): GlobalSettings {
@@ -114,5 +116,5 @@ export function globalSettings(raw: unknown): GlobalSettings {
     .filter((id) => id.length > 0 && id.length <= 64)
     .slice(0, 16);
   const token = typeof r.obsToken === "string" && /^[0-9a-f]{32}$/.test(r.obsToken) ? r.obsToken : null;
-  return { port, extensionIds: [...new Set(ids)], obsToken: token };
+  return { port, extensionIds: [...new Set(ids)], obsToken: token, obsAlwaysOn: r.obsAlwaysOn === true ? true : r.obsAlwaysOn === false ? false : null };
 }

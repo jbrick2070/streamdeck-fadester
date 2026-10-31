@@ -6,16 +6,17 @@
 // Who may connect, checked on the HTTP upgrade before any WebSocket exists:
 // - exactly one Host header, naming the server itself (127.0.0.1 or localhost
 //   on its port), which defeats DNS rebinding;
-// - with a `token` query parameter, that parameter decides alone: it must
-//   equal the OBS page token (compared in constant time) and the connection
-//   is the `obs` target;
+// - with a `token` query parameter, that parameter decides: it must equal
+//   the OBS page token (compared in constant time), the Origin must be the
+//   page's own (`http://127.0.0.1:<port>` or `http://localhost:<port>`, the
+//   plugin serves it, Phase 2), and the connection is the `obs` target;
 // - without one, the Origin must be `chrome-extension://<32 letters a-p>`,
 //   one of the pinned extension ids when there are any, and the connection is
 //   the `browser` target.
 // Anything else gets a plain HTTP 403 and no WebSocket.
 
 import { randomBytes, timingSafeEqual } from "node:crypto";
-import { createServer, type IncomingMessage, type Server } from "node:http";
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import type { Duplex } from "node:stream";
 import { WebSocket, WebSocketServer, type RawData } from "ws";
@@ -81,7 +82,31 @@ export interface LinkServerOptions {
   idleTimeoutMs?: number;
   log?: LinkLog;
   clock?: LinkClock;
+  /** Files handed out over plain HTTP by path, such as the OBS page (Phase 2); everything else gets 426. */
+  pages?: ReadonlyMap<string, ServedFile>;
 }
+
+/** A file the server hands out over plain HTTP. */
+export interface ServedFile {
+  readonly type: string;
+  readonly body: string | Uint8Array;
+}
+
+/**
+ * The page may run its own script, YouTube's player script and frame, and a
+ * socket back to this computer; nothing else, and no other site may frame it.
+ */
+export const PAGE_CSP = [
+  "default-src 'none'",
+  "script-src 'self' https://www.youtube.com https://s.ytimg.com",
+  "frame-src https://www.youtube.com",
+  "connect-src ws://127.0.0.1:* ws://localhost:*",
+  "style-src 'unsafe-inline'",
+  "img-src 'self' data:",
+  "base-uri 'none'",
+  "form-action 'none'",
+  "frame-ancestors 'none'"
+].join("; ");
 
 /** An intent as the deck builds it; the server adds `v`, `id` and `target`. */
 export type IntentBody = Intent extends infer I ? (I extends Intent ? Omit<I, "v" | "id" | "target"> : never) : never;
@@ -121,6 +146,10 @@ export function classifyUpgrade(
   const query = url.includes("?") ? url.slice(url.indexOf("?") + 1) : "";
   const token = new URLSearchParams(query).get("token");
   if (token !== null) {
+    // The OBS page is served by this server (Phase 2), so a real one always comes from its own origin;
+    // a web page that somehow learned the token still cannot use it.
+    const origin = headers.origin ?? "";
+    if (origin !== `http://${LINK_HOST}:${port}` && origin !== `http://localhost:${port}`) return { ok: false, reason: "origin" };
     if (obsToken === null || !TOKEN_PATTERN.test(token) || !TOKEN_PATTERN.test(obsToken)) return { ok: false, reason: "token" };
     const same = timingSafeEqual(Buffer.from(token, "utf8"), Buffer.from(obsToken, "utf8"));
     return same ? { ok: true, target: "obs" } : { ok: false, reason: "token" };
@@ -150,6 +179,7 @@ export class LinkServer {
   private readonly clock: LinkClock;
   private readonly listeners = new Set<(event: LinkEvent) => void>();
   private readonly peers = new Map<Target, Peer>();
+  private readonly pages: ReadonlyMap<string, ServedFile>;
   private http: Server | null = null;
   private wss: WebSocketServer | null = null;
   private pingTimer: unknown = null;
@@ -166,6 +196,7 @@ export class LinkServer {
     this.idleTimeoutMs = options.idleTimeoutMs ?? DEFAULT_IDLE_TIMEOUT_MS;
     this.log = options.log ?? silentLog;
     this.clock = options.clock ?? realClock;
+    this.pages = options.pages ?? new Map();
     // Bad settings would refuse everyone silently; say so once, and fail closed.
     const ids = (options.allowedExtensionIds ?? []).map((id) => id.toLowerCase());
     const goodIds = ids.filter((id) => EXTENSION_ID.test(id));
@@ -216,11 +247,7 @@ export class LinkServer {
 
   private async doStart(): Promise<void> {
     if (this.http) return;
-    const http = createServer((_req, res) => {
-      // Plain HTTP gets nothing but a refusal: this server only upgrades.
-      res.writeHead(426, { "content-type": "text/plain", connection: "close" });
-      res.end("upgrade required");
-    });
+    const http = createServer((req, res) => this.onRequest(req, res));
     const wss = new WebSocketServer({ noServer: true, maxPayload: MAX_PAYLOAD_BYTES });
     http.on("upgrade", (req: IncomingMessage, socket: Duplex, head: Buffer) => this.onUpgrade(wss, req, socket, head));
     await new Promise<void>((resolve, reject) => {
@@ -310,7 +337,11 @@ export class LinkServer {
   private refuse(reason: string, socket: Duplex): void {
     socket.write("HTTP/1.1 403 Forbidden\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
     socket.destroy();
-    // Anyone on this machine can knock; keep the log from filling up.
+    this.noteRefusal(reason);
+  }
+
+  /** Anyone on this machine can knock; log a refusal at most once every 10 s, with a count. */
+  private noteRefusal(reason: string): void {
     this.refusalsSinceLog++;
     const now = this.clock.now();
     if (now - this.lastRefusalLogAt >= REFUSAL_LOG_MS) {
@@ -319,6 +350,40 @@ export class LinkServer {
       this.lastRefusalLogAt = now;
       this.refusalsSinceLog = 0;
     }
+  }
+
+  /** Exactly one Host header, naming this server (DNS rebinding, R-LNK-2). */
+  private hostIsSelf(req: IncomingMessage): boolean {
+    const port = this.boundPort ?? this.port;
+    // Node keeps only the first of two Host headers; a browser never sends two, so refuse them.
+    const hostHeaders = req.rawHeaders.filter((_v, i) => i % 2 === 0 && req.rawHeaders[i].toLowerCase() === "host").length;
+    const host = req.headers.host ?? "";
+    return hostHeaders === 1 && (host === `${LINK_HOST}:${port}` || host === `localhost:${port}`);
+  }
+
+  /** Plain HTTP: one of the served pages, else a refusal, since this server otherwise only upgrades. */
+  private onRequest(req: IncomingMessage, res: ServerResponse): void {
+    const path = (req.url ?? "/").split(/[?#]/)[0];
+    const page = this.pages.get(path);
+    if (!page || (req.method !== "GET" && req.method !== "HEAD")) {
+      res.writeHead(426, { "content-type": "text/plain", connection: "close" });
+      res.end("upgrade required");
+      return;
+    }
+    if (!this.hostIsSelf(req)) {
+      this.noteRefusal("host");
+      res.writeHead(403, { "content-type": "text/plain", connection: "close" });
+      res.end("forbidden");
+      return;
+    }
+    res.writeHead(200, {
+      "content-type": page.type,
+      "cache-control": "no-store",
+      "x-content-type-options": "nosniff",
+      "referrer-policy": "strict-origin",
+      "content-security-policy": PAGE_CSP
+    });
+    res.end(req.method === "HEAD" ? undefined : page.body);
   }
 
   private onUpgrade(wss: WebSocketServer, req: IncomingMessage, socket: Duplex, head: Buffer): void {

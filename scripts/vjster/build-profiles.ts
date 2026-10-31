@@ -54,12 +54,16 @@ interface Layout {
 
 const fx = (rate: number) => ({ rate, extended: true, hold: true });
 const preset = (rate: number) => ({ rate, extended: false, hold: true });
+const on = <T extends Record<string, unknown>>(target: "browser" | "obs" | "both", settings: T) => ({ ...settings, target });
 
 /**
  * The layouts. Built for a live VJ set: the most used speeds under the
  * fingers, the FX extremes (ultra slow-motion and hyper speed) on the corners,
  * play/pause and pin always in the same place, and on the Stream Deck + four
  * dials: speed, a fine nudge for beat-matching, quality, and FX speed.
+ * VJster Dual + (Phase 2) plays two sources side by side: the video in Chrome
+ * and the OBS page, a dial each, a SYNC dial and keys that drive both at once,
+ * and an FX dial for Chrome's extended range.
  */
 export const LAYOUTS: Layout[] = [
   {
@@ -85,6 +89,31 @@ export const LAYOUTS: Layout[] = [
       { kind: "speed", at: [1, 0], settings: { label: "NUDGE", step: 0.05, fineStep: 0.05, extended: false, hold: true } },
       { kind: "quality", at: [2, 0], settings: { label: "QUALITY", hold: true } },
       { kind: "speed", at: [3, 0], settings: { label: "FX SPEED", step: 0.5, fineStep: 0.1, extended: true, hold: true } }
+    ]
+  },
+  {
+    file: "vjster-dual-plus",
+    name: "VJster Dual +",
+    deviceType: 7,
+    model: "20GBD9901",
+    columns: 4,
+    rows: 2,
+    dials: 4,
+    keys: [
+      { kind: "speed-preset", at: [0, 0], settings: on("browser", preset(1)) },
+      { kind: "transport", at: [1, 0], settings: { target: "browser" } },
+      { kind: "speed-preset", at: [2, 0], settings: on("obs", preset(1)) },
+      { kind: "transport", at: [3, 0], settings: { target: "obs" } },
+      { kind: "speed-preset", at: [0, 1], settings: on("both", preset(0.5)) },
+      { kind: "speed-preset", at: [1, 1], settings: on("both", preset(1)) },
+      { kind: "speed-preset", at: [2, 1], settings: on("both", preset(2)) },
+      { kind: "pin", at: [3, 1] }
+    ],
+    encoders: [
+      { kind: "speed", at: [0, 0], settings: on("browser", { label: "CHROME", step: 0.25, fineStep: 0.05, extended: false, hold: true }) },
+      { kind: "speed", at: [1, 0], settings: on("obs", { label: "OBS", step: 0.25, fineStep: 0.05, extended: false, hold: true }) },
+      { kind: "speed", at: [2, 0], settings: on("both", { label: "SYNC", step: 0.25, fineStep: 0.05, extended: false, hold: true }) },
+      { kind: "speed", at: [3, 0], settings: on("browser", { label: "CHROME FX", step: 0.5, fineStep: 0.1, extended: true, hold: true }) }
     ]
   },
   {

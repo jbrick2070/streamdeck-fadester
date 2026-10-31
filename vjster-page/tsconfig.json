@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": [],
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts", "../src/vjster/shared/**/*.ts", "../vjster-extension/src/adapter-core.ts", "../vjster-extension/src/link-client.ts", "../vjster-extension/src/page-state.ts"]
+}

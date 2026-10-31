@@ -80,6 +80,8 @@ export class DeckSim {
   readonly alerts: string[] = [];
   readonly globalSettings: Record<string, unknown> = {};
   readonly placed: Placed[] = [];
+  /** What the plugin sent to the settings page (sendToPropertyInspector payloads). */
+  readonly toPage: Record<string, unknown>[] = [];
   private registered: Promise<void> | null = null;
   player = fakePlayer();
   adapter: Adapter | null = null;
@@ -91,7 +93,7 @@ export class DeckSim {
    * through tsx. `linkPort` is stored as the plugin-wide port setting first, so
    * a simulation never collides with a real VJster on 48150.
    */
-  async start(fromSource = true, linkPort?: number): Promise<void> {
+  async start(fromSource = true, linkPort?: number, env: Record<string, string> = {}): Promise<void> {
     if (linkPort !== undefined) this.globalSettings.port = linkPort;
     this.wss = new WebSocketServer({ host: "127.0.0.1", port: 0 });
     await new Promise<void>((r) => this.wss!.once("listening", () => r()));
@@ -115,7 +117,7 @@ export class DeckSim {
     };
     const args = ["-port", String(port), "-pluginUUID", UUID, "-registerEvent", "registerPlugin", "-info", JSON.stringify(info)];
     const entry = fromSource ? ["--import", "tsx", join(root, "src/vjster/plugin/standalone.ts")] : [join(PLUGIN_DIR, "bin/plugin.js")];
-    this.child = spawn(process.execPath, [...entry, ...args], { cwd: PLUGIN_DIR, stdio: ["ignore", "pipe", "pipe"] });
+    this.child = spawn(process.execPath, [...entry, ...args], { cwd: PLUGIN_DIR, stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, ...env } });
     this.child.stdout?.on("data", (d) => (this.log += d.toString()));
     this.child.stderr?.on("data", (d) => (this.log += d.toString()));
     await Promise.race([
@@ -128,10 +130,12 @@ export class DeckSim {
     if (m.event === "setFeedback" && m.context && typeof m.payload?.canvas === "string") this.images.set(m.context, m.payload.canvas);
     else if (m.event === "setImage" && m.context && typeof m.payload?.image === "string") this.images.set(m.context, m.payload.image);
     else if (m.event === "showAlert" && m.context) this.alerts.push(m.context);
+    else if (m.event === "sendToPropertyInspector" && m.payload) this.toPage.push(m.payload);
     else if (m.event === "getGlobalSettings") this.toPlugin({ event: "didReceiveGlobalSettings", payload: { settings: { ...this.globalSettings } } });
     else if (m.event === "setGlobalSettings" && m.payload) {
+      // Like Stream Deck: the plugin's write replaces what is stored, and only a settings page hears of it.
+      for (const k of Object.keys(this.globalSettings)) delete this.globalSettings[k];
       Object.assign(this.globalSettings, m.payload);
-      this.toPlugin({ event: "didReceiveGlobalSettings", payload: { settings: { ...this.globalSettings } } });
     }
   }
 
@@ -182,6 +186,25 @@ export class DeckSim {
     const b = this.base(context);
     this.toPlugin({ ...b, event: "keyDown", payload: { ...b.payload, isInMultiAction: false, state: 0 } });
     this.toPlugin({ ...b, event: "keyUp", payload: { ...b.payload, isInMultiAction: false, state: 0 } });
+  }
+
+  /** The settings page of an action sends the plugin a message (sendToPlugin). */
+  fromPage(context: string, payload: Record<string, unknown>): void {
+    const p = this.find(context);
+    this.toPlugin({ event: "sendToPlugin", action: p.action, context, payload });
+  }
+
+  /** The settings page saved plugin-wide settings: Stream Deck keeps them and tells the plugin. */
+  saveGlobal(settings: Record<string, unknown>): void {
+    for (const k of Object.keys(this.globalSettings)) delete this.globalSettings[k];
+    Object.assign(this.globalSettings, settings);
+    this.toPlugin({ event: "didReceiveGlobalSettings", payload: { settings: { ...settings } } });
+  }
+
+  /** The settings page appeared (propertyInspectorDidAppear). */
+  pageAppeared(context: string): void {
+    const p = this.find(context);
+    this.toPlugin({ event: "propertyInspectorDidAppear", action: p.action, context, device: DEVICE });
   }
 
   /** The settings page changed an action's settings (didReceiveSettings). */

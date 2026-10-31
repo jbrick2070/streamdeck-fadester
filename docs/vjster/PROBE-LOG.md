@@ -138,3 +138,62 @@ while the fake ad flag was set.
 | ad starts during the restore's wait | rate and preference put back, pause skipped (`pauseSkipped`) |
 
 The harnesses are not part of the repository.
+
+## Embed probe (Phase 2, 2026-10-31)
+
+A scratch page served from `http://127.0.0.1:48190` loaded YouTube's IFrame
+Player API and embedded the same 4K Creative Commons video, muted, at 1280
+by 720, in the desktop app's built-in pane (Chromium 152). The player object
+offered `getAvailablePlaybackRates`, `getAvailableQualityLevels`,
+`getPlaybackQuality`, `setPlaybackQuality` and `setPlaybackRate`, and no
+`setPlaybackQualityRange` or `getPreferredQuality`. The rate list was 0.25,
+0.5, 0.75, 1, 1.25, 1.5, 1.75, 2; the level list hd2160 to tiny plus auto.
+
+| Asked | Read at once | After the event | Measured from the clock |
+|-------|--------------|-----------------|-------------------------|
+| 1.5 | 1 (the old rate) | 1.5, event after 26 ms | |
+| 1.3, 1.05, 0.3 | the old rate | as asked | |
+| 3 | the old rate | 3 | 3.00 |
+| 4 | | 4 | 3.99 |
+| 4.5, 5, 16 | | 4 | 4.00 to 4.04 |
+| 1.33 | | 1.3 | 1.30 |
+| 1.37 | | 1.35 | 1.35 |
+| 0.1, 0.27 | | 0.25 | 0.25 |
+
+Quality: `setPlaybackQuality("small")` left hd720 playing after 6 s. Shrinking
+the iframe to 256 by 144 and scaling it back up with a CSS transform left
+hd720 for 30 s. A new player created at 256 by 144 started at large (480p)
+and stayed there through `setSize` to 1280 by 720 and back. A new player at
+1280 by 720 with `vq=small` started at hd1440. So the embed offers no
+quality control the page could use (R-QLT-6 dropped).
+
+## Live page run (Phase 2, 2026-10-31)
+
+The built page was served by a real `LinkServer` with a test token and
+opened in the built-in pane at `/obs?v=aqz-KE-bpKQ&mute=1#token=...`. The
+address bar showed it without the token at once, and the embed's `forigin`
+parameter carried it without the token. The page connected as the `obs`
+target and reported the video (rates 0.25 to 2, capabilities speed and
+transport). Driven from the server: `speed.set` 1.5, 3 and a step of 0.25
+were answered with 1.5, 3 and 3.25; `speed.set` 8 with `direct` with 4;
+`quality.set` with `unsupported`; two `transport.toggle` with paused, then
+playing; `speed.reset` with 1. Each answer carried the rate the player had
+taken, not the lagging one. (This build still added 4 to the listed rates;
+after the OBS check the page reports the list as it is.)
+
+## OBS check (V-8, 2026-10-31)
+
+In the portable OBS 33.0.0 (`--portable`, obs-browser 2.27.4, CEF
+150.0.7871.252), on a separate scene collection made for the test, one
+Browser source at 1280 by 720 with the page's address (served by a scratch
+link server on port 48192, muted, audio routed to OBS). OBS was started
+minimized with `--disable-updater`. Within 8 s the page connected and
+reported the video playing at 1x. Then: `speed.set` 1.5 answered 1.5;
+`speed.set` 3 answered 2; a step of 0.25 answered 2 after the 300 ms wait
+(no rate change); `speed.set` 8 with `direct` answered 2; `quality.set`
+`unsupported`; play/pause paused and resumed; `speed.reset` answered 1. So
+in OBS the embed stops at 2x, its listed range. OBS was closed by its own
+window message (a clean exit, no crash marker); its `user.ini` and
+`global.ini` were restored from a backup to their earlier checksums and the
+test collection removed. OBS's websocket needs the operator's password, so
+no screenshot of the source was taken.

@@ -156,9 +156,50 @@
     }
     document.getElementById("port").value = String(s.port);
     document.getElementById("ext").value = (s.extensionIds || []).join(", ");
-    var obs = document.getElementById("obs");
-    obs.textContent = s.obsPageQuery ? "OBS page address ends with: " + s.obsPageQuery : "";
+    var obs = document.getElementById("obs-status");
+    if (!s.obsPage) {
+      obs.textContent = "This copy of the plugin has no OBS page";
+      obs.className = "status bad";
+    } else {
+      obs.textContent = s.obs === "connected" ? "OBS page connected" : "No OBS page connected";
+      obs.className = "status " + (s.obs === "connected" ? "ok" : "bad");
+    }
+    // A port change changes the address: ask again for what was pasted, or show the placeholder.
+    var pasted = document.getElementById("obs-video").value;
+    if (pasted) send({ event: "sendToPlugin", action: PREFIX + kind, context: context, payload: { event: "obs-address", input: pasted } });
+    else showAddress(s);
+    document.getElementById("obs-always").checked = s.obsAlwaysOn === true;
   }
+
+  document.getElementById("obs-always").addEventListener("change", function (event) {
+    global.obsAlwaysOn = event.target.checked;
+    send({ event: "setGlobalSettings", context: context, payload: global });
+  });
+
+  function showAddress(m) {
+    var field = document.getElementById("obs-address");
+    field.value = m.address || "";
+    field.className = m.found ? "found" : "";
+  }
+
+  document.getElementById("obs-video").addEventListener("input", function (event) {
+    send({ event: "sendToPlugin", action: PREFIX + kind, context: context, payload: { event: "obs-address", input: event.target.value } });
+  });
+
+  document.getElementById("obs-copy").addEventListener("click", function () {
+    var field = document.getElementById("obs-address");
+    field.select();
+    var done = function () {
+      document.getElementById("obs-copy").textContent = "Copied";
+      window.setTimeout(function () {
+        document.getElementById("obs-copy").textContent = "Copy address";
+      }, 1500);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(field.value).then(done, function () {
+      if (document.execCommand("copy")) done();
+    });
+    else if (document.execCommand("copy")) done();
+  });
 
   document.getElementById("save-global").addEventListener("click", function () {
     var port = Number(document.getElementById("port").value);
@@ -211,6 +252,7 @@
         render();
       }
       if (m.event === "sendToPropertyInspector" && m.payload && m.payload.event === "status") showStatus(m.payload);
+      if (m.event === "sendToPropertyInspector" && m.payload && m.payload.event === "obs-address") showAddress(m.payload);
     };
   };
 })();

@@ -4,7 +4,7 @@
 // Reconnects with backoff from 1 s to 30 s, answers pings, answers a
 // malformed message with `error`, hands valid intents to the router.
 
-import { PROTOCOL_VERSION, errorReply, parse, serialize, type Intent, type Message } from "../../src/vjster/shared/protocol.js";
+import { PROTOCOL_VERSION, errorReply, parse, serialize, type Intent, type Message, type Target } from "../../src/vjster/shared/protocol.js";
 
 /** The part of a WebSocket the client uses (the browser's, or `ws` in tests). */
 export interface SocketLike {
@@ -27,6 +27,8 @@ export interface LinkClientOptions {
   timers?: { setTimeout(fn: () => void, ms: number): unknown; clearTimeout(handle: unknown): void };
   /** Jitter source in [0, 1); tests pass a constant. */
   random?: () => number;
+  /** Which target this client is: the extension (default) or the OBS page (Phase 2). */
+  target?: Target;
 }
 
 export const MIN_BACKOFF_MS = 1000;
@@ -132,12 +134,12 @@ export class LinkClient {
   private onMessage(data: unknown): void {
     const result = parse(typeof data === "string" ? data : null, "intents");
     if (!result.ok) {
-      this.send(errorReply(result.code, result.reason, result.inReplyTo, { id: this.options.newId(), target: "browser" }));
+      this.send(errorReply(result.code, result.reason, result.inReplyTo, { id: this.options.newId(), target: this.options.target ?? "browser" }));
       return;
     }
     const m = result.message;
     if (m.type === "ping") {
-      this.send({ v: PROTOCOL_VERSION, id: this.options.newId(), target: "browser", type: "pong", t: m.t });
+      this.send({ v: PROTOCOL_VERSION, id: this.options.newId(), target: this.options.target ?? "browser", type: "pong", t: m.t });
       return;
     }
     if (m.type === "pong" || m.type === "state" || m.type === "error") return;

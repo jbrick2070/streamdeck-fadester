@@ -95,9 +95,9 @@ npx streamdeck validate com.jbrick2070.vjster.sdPlugin
 2.1 **Link the plugin (changes the Stream Deck app).** Run
 `npx streamdeck link com.jbrick2070.vjster.sdPlugin`, then
 `npx streamdeck restart com.jbrick2070.vjster`. Expected: a VJster category
-in the action list with seven actions and their icons; three profiles,
-VJster Live +, VJster Live and VJster Mini, in the profile list, not switched
-to. Undo with `npx streamdeck unlink com.jbrick2070.vjster`.
+in the action list with seven actions and their icons; four profiles,
+VJster Live +, VJster Dual +, VJster Live and VJster Mini, in the profile
+list, not switched to. Undo with `npx streamdeck unlink com.jbrick2070.vjster`.
 
 2.2 **Extension off.** Switch to VJster Live + with Chrome closed. Expected:
 every dial strip says `EXTENSION OFF` in red; turning a dial shows Stream
@@ -161,4 +161,47 @@ The same flows run without hardware in `tests/vjster-plugin-e2e.test.ts`.
 
 ## 3. OBS browser-source page (Phase 2)
 
-Added with Phase 2.
+Build the page with the plugin, from the repository root, then link the plugin as in 2.1:
+
+```
+npx rollup -c vjster-page/rollup.config.mjs
+npx rollup -c vjster-plugin/rollup.config.mjs
+```
+
+3.1 **Add the page to OBS.** Open any VJster action's settings, find OBS page,
+paste a YouTube link, press Copy address. In OBS add a Browser source, untick
+Local file, paste the address as its URL, size 1920 by 1080. Expected: the
+video plays with sound. Close and reopen the settings page: it says `OBS page
+connected`, and Keep the link on is ticked.
+
+3.2 **Drive OBS.** Set a Speed dial's Control to OBS page. Expected: the strip
+shows the video's title and `1x`; turns go from 0.25x to 2x, no further;
+Quality set to OBS page says `n/a`. Play/Pause set to OBS page toggles the
+video and its caption says `OBS PLAYING` or `OBS PAUSED`.
+
+3.3 **Both.** Set the dial to Both, with a video in Chrome too. Expected: a turn
+changes both videos to the same speed; the strip shows Chrome's state.
+
+3.4 **Studio Mode, hidden and shown.** In Studio Mode put the source in Preview
+only: it still follows the deck. Hide the source and show it again: with
+Shutdown source when not visible off (the default) nothing changes; with it
+on, the page reloads and reconnects within a few seconds.
+
+3.5 **Restarts.** Restart OBS while Stream Deck runs: the page loads and
+connects. Restart Stream Deck while OBS runs: the strip says `NO PAGE`, then
+the page reconnects within 30 s.
+
+3.6 **Keep the link on, off.** Untick it, leave the VJster profile for more
+than a minute, then refresh the browser source. Expected: OBS shows an error
+page, because nothing serves the page; show a VJster action again and refresh
+the source.
+
+3.7 **Offline start.** With the network off, start OBS: the page says it is
+trying YouTube's player again. Turn the network on: the video starts within
+30 s without refreshing the source.
+
+3.8 **VJster Dual +.** Switch to the bundled VJster Dual + profile with a video
+in Chrome and the OBS page. Expected: the CHROME and OBS dials drive one video
+each, SYNC drives both, and the keys' captions name their target.
+
+The page's logic runs without OBS in `tests/vjster-page.test.ts`.

@@ -196,13 +196,17 @@ describe("classifyUpgrade (R-LNK-2)", () => {
     expect(ok({ host: "127.0.0.1:48150", origin: EXT_ORIGIN }, "/", [OTHER_ID])).toEqual({ ok: false, reason: "extension-id" });
   });
 
-  it("lets a token parameter decide alone: the right token is the OBS page, a wrong one is refused even with an extension origin", () => {
-    expect(ok({ host: "127.0.0.1:48150", origin: "null" }, `/?token=${TOKEN}`, [], TOKEN)).toEqual({ ok: true, target: "obs" });
-    expect(ok({ host: "127.0.0.1:48150" }, `/?token=${TOKEN}`, [], TOKEN)).toEqual({ ok: true, target: "obs" });
-    for (const url of [`/?token=${TOKEN.replace("0", "1")}`, "/?token=", `/?token=${TOKEN}0`, "/?token=ZZ"]) {
-      expect(ok({ host: "127.0.0.1:48150", origin: EXT_ORIGIN }, url, [], TOKEN)).toEqual({ ok: false, reason: "token" });
+  it("lets a token parameter decide, from the served page's own origin only: the right token is the OBS page", () => {
+    const PAGE = "http://127.0.0.1:48150";
+    expect(ok({ host: "127.0.0.1:48150", origin: PAGE }, `/?token=${TOKEN}`, [], TOKEN)).toEqual({ ok: true, target: "obs" });
+    expect(ok({ host: "localhost:48150", origin: "http://localhost:48150" }, `/?token=${TOKEN}`, [], TOKEN)).toEqual({ ok: true, target: "obs" });
+    for (const origin of [undefined, "null", EXT_ORIGIN, "http://127.0.0.1:48151", "https://127.0.0.1:48150", "http://evil.example"]) {
+      expect(ok({ host: "127.0.0.1:48150", origin }, `/?token=${TOKEN}`, [], TOKEN)).toEqual({ ok: false, reason: "origin" });
     }
-    expect(ok({ host: "127.0.0.1:48150" }, `/?token=${TOKEN}`, [], null)).toEqual({ ok: false, reason: "token" });
+    for (const url of [`/?token=${TOKEN.replace("0", "1")}`, "/?token=", `/?token=${TOKEN}0`, "/?token=ZZ"]) {
+      expect(ok({ host: "127.0.0.1:48150", origin: PAGE }, url, [], TOKEN)).toEqual({ ok: false, reason: "token" });
+    }
+    expect(ok({ host: "127.0.0.1:48150", origin: PAGE }, `/?token=${TOKEN}`, [], null)).toEqual({ ok: false, reason: "token" });
   });
 
   it("makes 128-bit tokens of 32 hex digits", () => {
@@ -288,7 +292,7 @@ describe("LinkServer: binding and the gate (R-LNK-1, R-LNK-2)", () => {
   it("warns about a malformed OBS token and refuses every token connection", async () => {
     const { port, warnings } = await startServer({ obsToken: "NOT-A-TOKEN" });
     expect(warnings).toContain("ignored a malformed OBS page token; OBS pages cannot connect");
-    await expect(connect(port, { path: "/?token=NOT-A-TOKEN" })).rejects.toThrow("HTTP 403");
+    await expect(connect(port, { path: "/?token=NOT-A-TOKEN", origin: `http://127.0.0.1:${port}` })).rejects.toThrow("HTTP 403");
   });
 });
 
@@ -308,7 +312,7 @@ describe("LinkServer: connections and messages (R-LNK-3..5, PLAN.md 3.3)", () =>
     const { port, server, events } = await startServer({ obsToken: TOKEN });
     const ext = await connect(port, { origin: EXT_ORIGIN });
     await nextMessage(ext);
-    const page = await connect(port, { path: `/?token=${TOKEN}` });
+    const page = await connect(port, { path: `/?token=${TOKEN}`, origin: `http://127.0.0.1:${port}` });
     expect(await nextMessage(page)).toMatchObject({ target: "obs", type: "state.get" });
     expect(server.isConnected("obs")).toBe(true);
     expect(server.isConnected("browser")).toBe(true);
@@ -508,7 +512,7 @@ describe("LinkServer: start and stop", () => {
     const { server, port, events } = await startServer({ obsToken: TOKEN });
     const ws = await connect(port, { origin: EXT_ORIGIN });
     await nextMessage(ws);
-    const page = await connect(port, { path: `/?token=${TOKEN}` });
+    const page = await connect(port, { path: `/?token=${TOKEN}`, origin: `http://127.0.0.1:${port}` });
     await nextMessage(page);
     const code = closed(ws);
     await server.stop();

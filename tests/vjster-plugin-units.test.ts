@@ -185,12 +185,16 @@ describe("settings (D-7, R-LNK-1)", () => {
   });
 
   it("reads plugin-wide settings safely", () => {
-    expect(globalSettings({})).toEqual({ port: 48150, extensionIds: [], obsToken: null });
+    expect(globalSettings({})).toEqual({ port: 48150, extensionIds: [], obsToken: null, obsAlwaysOn: null });
     expect(globalSettings({ port: 80, extensionIds: "abcdefghijklmnopabcdefghijklmnop, bad", obsToken: "XYZ" })).toEqual({
       port: 48150,
       extensionIds: ["abcdefghijklmnopabcdefghijklmnop", "bad"],
-      obsToken: null
+      obsToken: null,
+      obsAlwaysOn: null
     });
+    expect(globalSettings({ obsAlwaysOn: true }).obsAlwaysOn).toBe(true);
+    expect(globalSettings({ obsAlwaysOn: false }).obsAlwaysOn).toBe(false);
+    expect(globalSettings({ obsAlwaysOn: "true" }).obsAlwaysOn).toBeNull();
     expect(globalSettings({ port: 50000, obsToken: "0123456789abcdef0123456789abcdef" })).toMatchObject({ port: 50000, obsToken: "0123456789abcdef0123456789abcdef" });
   });
 });
@@ -540,6 +544,24 @@ describe("Hub (R-LNK-1, R-BEH-4, D-11)", () => {
     expect(made[0].log).toEqual(["start", "stop"]);
     expect(made[1].log).toEqual(["start"]);
     expect(made[1].running).toBe(true);
+  });
+});
+
+describe("key captions name the target (Phase 2)", () => {
+  it("says OBS or SYNC on keys that do not drive Chrome", () => {
+    const views = { browser: connected(), obs: connected(state({ target: "obs" })) };
+    const caption = (make: (hub: HubLike, s: ReturnType<typeof sink>) => { render(): void }) => {
+      const { hub } = fakeHub(views);
+      const s = sink();
+      make(hub, s).render();
+      return words(s.last());
+    };
+    expect(caption((h, s) => new SpeedPresetController(h, s, speedPresetSettings({ rate: 1 })))).toContain("SPEED");
+    expect(caption((h, s) => new SpeedPresetController(h, s, speedPresetSettings({ rate: 1, target: "obs" })))).toContain("OBS SPEED");
+    expect(caption((h, s) => new SpeedPresetController(h, s, speedPresetSettings({ rate: 8, target: "both" })))).toContain("SYNC FX SPEED");
+    expect(caption((h, s) => new TransportController(h, s, transportSettings({ target: "obs" })))).toContain("OBS PLAYING");
+    expect(caption((h, s) => new QualityPresetController(h, s, qualityPresetSettings({ level: "auto", target: "both" })))).toContain("SYNC QUALITY");
+    expect(caption((h, s) => new SpeedStepController(h, s, speedStepSettings({ direction: 1, target: "obs" })))).toContain("OBS 1x");
   });
 });
 

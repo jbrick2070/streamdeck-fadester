@@ -262,7 +262,7 @@ export const MUTATIONS: readonly Mutation[] = [
     id: "M-V-28",
     rule: "the extension answers a malformed message with an error (R-INT-3)",
     file: "vjster-extension/src/link-client.ts",
-    from: '      this.send(errorReply(result.code, result.reason, result.inReplyTo, { id: this.options.newId(), target: "browser" }));',
+    from: '      this.send(errorReply(result.code, result.reason, result.inReplyTo, { id: this.options.newId(), target: this.options.target ?? "browser" }));',
     to: "      void result;",
     tests: ["tests/vjster-ext-link.test.ts"]
   },
@@ -467,6 +467,78 @@ export const MUTATIONS: readonly Mutation[] = [
     tests: ["tests/vjster-ext-adapter.test.ts"]
   },
   {
+    id: "M-V-54",
+    rule: "the OBS page is served only to this computer's own Host (R-LNK-2)",
+    file: "src/vjster/plugin/link-server.ts",
+    from: "    if (!this.hostIsSelf(req)) {",
+    to: "    if (!this.hostIsSelf(req) && req.method === \"PUT\") {",
+    tests: ["tests/vjster-page.test.ts"]
+  },
+  {
+    id: "M-V-55",
+    rule: "the OBS page carries its Content-Security-Policy",
+    file: "src/vjster/plugin/link-server.ts",
+    from: "      \"content-security-policy\": PAGE_CSP",
+    to: "      \"x-content-security-policy-off\": PAGE_CSP",
+    tests: ["tests/vjster-page.test.ts"]
+  },
+  {
+    id: "M-V-56",
+    rule: "the page takes the token out of its own address (R-OBS-2)",
+    file: "vjster-page/src/page-params.ts",
+    from: "  q.delete(\"token\");",
+    to: "  void q;",
+    tests: ["tests/vjster-page.test.ts"]
+  },
+  {
+    id: "M-V-57",
+    rule: "an intent answered with an error is never answered again",
+    file: "vjster-page/src/settle.ts",
+    from: "        for (const id of ids) if (this.settling.delete(id)) answer(id);",
+    to: "        for (const id of ids) answer(id);",
+    tests: ["tests/vjster-page.test.ts"]
+  },
+  {
+    id: "M-V-58",
+    rule: "the page answers speed only once the embed confirms it (V-10)",
+    file: "vjster-page/src/settle.ts",
+    from: "    return false;\n  }\n\n  playerEvent",
+    to: "    return true;\n  }\n\n  playerEvent",
+    tests: ["tests/vjster-page.test.ts"]
+  },
+  {
+    id: "M-V-59",
+    rule: "keep the link on turns itself on only when an OBS page connects",
+    file: "src/vjster/plugin/obs-keepalive.ts",
+    from: "    if (this.hub.view(\"obs\").status !== \"connected\") return;",
+    to: "    void this.hub;",
+    tests: ["tests/vjster-page.test.ts"]
+  },
+  {
+    id: "M-V-60",
+    rule: "only YouTube addresses give a video id",
+    file: "src/vjster/plugin/obs-page.ts",
+    from: "  const youtube = host === \"youtube.com\"",
+    to: "  const youtube = true || host === \"youtube.com\"",
+    tests: ["tests/vjster-page.test.ts"]
+  },
+  {
+    id: "M-V-61",
+    rule: "the OBS page answers pings as the obs target",
+    file: "vjster-extension/src/link-client.ts",
+    from: "      this.send({ v: PROTOCOL_VERSION, id: this.options.newId(), target: this.options.target ?? \"browser\", type: \"pong\", t: m.t });",
+    to: "      this.send({ v: PROTOCOL_VERSION, id: this.options.newId(), target: \"browser\", type: \"pong\", t: m.t });",
+    tests: ["tests/vjster-page.test.ts"]
+  },
+  {
+    id: "M-V-62",
+    rule: "keys name their target when it is not Chrome (Phase 2)",
+    file: "src/vjster/plugin/controllers.ts",
+    from: "    return t === \"obs\" ? `OBS ${word}` : t === \"both\" ? `SYNC ${word}` : word;",
+    to: "    return word;",
+    tests: ["tests/vjster-plugin-units.test.ts"]
+  },
+  {
     id: "M-V-64",
     rule: "an unanswered request redraws by itself when it expires (R-BEH-4, step 5 review)",
     file: "src/vjster/plugin/controllers.ts",
@@ -537,6 +609,70 @@ export const MUTATIONS: readonly Mutation[] = [
     from: "    .filter((id) => id.length > 0 && id.length <= 64)",
     to: "    .filter((id) => /^[a-p]{32}$/.test(id))",
     tests: ["tests/vjster-plugin-units.test.ts"]
+  },
+  {
+    id: "M-V-73",
+    rule: "an operator's choice for keeping the link on sticks (Phase 2 review)",
+    file: "src/vjster/plugin/obs-keepalive.ts",
+    from: "    if (this.choice !== null || this.asked) return;",
+    to: "    if (this.asked) return;",
+    tests: ["tests/vjster-page.test.ts", "tests/vjster-page-e2e.test.ts"]
+  },
+  {
+    id: "M-V-74",
+    rule: "the token works only from the served page's own origin",
+    file: "src/vjster/plugin/link-server.ts",
+    from: "    if (origin !== `http://${LINK_HOST}:${port}` && origin !== `http://localhost:${port}`) return { ok: false, reason: \"origin\" };",
+    to: "    void origin;",
+    tests: ["tests/vjster-link-server.test.ts"]
+  },
+  {
+    id: "M-V-75",
+    rule: "YouTube's script is tried again when it fails to load",
+    file: "vjster-page/src/page-boot.ts",
+    from: "      env.timers.setTimeout(load, wait);",
+    to: "      void wait;",
+    tests: ["tests/vjster-page.test.ts"]
+  },
+  {
+    id: "M-V-76",
+    rule: "a settings change keeps the OBS page served",
+    file: "src/vjster/plugin/standalone.ts",
+    from: "obsToken: settings.obsToken, log, pages });",
+    to: "obsToken: settings.obsToken, log });",
+    tests: ["tests/vjster-page-e2e.test.ts"]
+  },
+  {
+    id: "M-V-77",
+    rule: "a settings write that drops the OBS token gets it back",
+    file: "src/vjster/plugin/standalone.ts",
+    from: "    if (incoming.obsToken === null) repaired.obsToken = current.obsToken ?? newObsToken();",
+    to: "    void newObsToken;",
+    tests: ["tests/vjster-page-e2e.test.ts"]
+  },
+  {
+    id: "M-V-78",
+    rule: "a held rate goes back on at the first play after a playlist rollover",
+    file: "vjster-page/src/page-core.ts",
+    from: "    } else if (state === PLAYING && this.rolledOver) {",
+    to: "    } else if (false) {",
+    tests: ["tests/vjster-page.test.ts"]
+  },
+  {
+    id: "M-V-79",
+    rule: "the page takes the token out of its address before YouTube's script loads",
+    file: "vjster-page/src/page-boot.ts",
+    from: "  env.replaceAddress(withoutToken(env.location.pathname, env.location.search));",
+    to: "  void withoutToken;",
+    tests: ["tests/vjster-page.test.ts"]
+  },
+  {
+    id: "M-V-80",
+    rule: "a stale settings page's write keeps the keep-the-link-on choice",
+    file: "src/vjster/plugin/standalone.ts",
+    from: "    if (!(\"obsAlwaysOn\" in ev.settings) && current.obsAlwaysOn !== null) repaired.obsAlwaysOn = current.obsAlwaysOn;",
+    to: "    void current;",
+    tests: ["tests/vjster-page-e2e.test.ts"]
   }
 ];
 

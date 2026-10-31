@@ -169,6 +169,13 @@
       "DontAutoSwitchWhenInstalled": true
     },
     {
+      "Name": "profiles/vjster-dual-plus",
+      "DeviceType": 7,
+      "Readonly": false,
+      "AutoInstall": true,
+      "DontAutoSwitchWhenInstalled": true
+    },
+    {
       "Name": "profiles/vjster-live-15",
       "DeviceType": 0,
       "Readonly": false,

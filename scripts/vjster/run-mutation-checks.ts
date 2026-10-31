@@ -539,6 +539,14 @@ export const MUTATIONS: readonly Mutation[] = [
     tests: ["tests/vjster-plugin-units.test.ts"]
   },
   {
+    id: "M-V-63",
+    rule: "an extension build missing a file Chrome needs is refused (step 6)",
+    file: "scripts/vjster/pack-extension.ts",
+    from: "    if (!entries.some((e) => e.name === needed)) throw new Error(`the build has no ${needed}; build the extension first`);",
+    to: "    void needed;",
+    tests: ["tests/vjster-release.test.ts"]
+  },
+  {
     id: "M-V-64",
     rule: "an unanswered request redraws by itself when it expires (R-BEH-4, step 5 review)",
     file: "src/vjster/plugin/controllers.ts",

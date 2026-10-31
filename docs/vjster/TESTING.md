@@ -205,3 +205,19 @@ in Chrome and the OBS page. Expected: the CHROME and OBS dials drive one video
 each, SYNC drives both, and the keys' captions name their target.
 
 The page's logic runs without OBS in `tests/vjster-page.test.ts`.
+
+## 4. Release files (step 6)
+
+Build them as INSTALL.md says, in a clean worktree of the release commit.
+
+4.1 **The plugin file.** Double-click `release/com.jbrick2070.vjster.streamDeckPlugin`
+(after 2.1's `npx streamdeck unlink com.jbrick2070.vjster` if it was linked).
+Expected: Stream Deck installs VJster 0.1.0.0 with seven actions; it may ask
+to install the bundled profiles; an action's settings page shows the OBS page
+section.
+
+4.2 **The extension zip.** Unzip `release/vjster-chrome-extension-<version>.zip`
+into a new folder and load that folder unpacked. Expected: as 1.1, with no
+error about a missing file or icon.
+
+4.3 **Together.** With both installed from the release files, run 2.3 and 3.1.

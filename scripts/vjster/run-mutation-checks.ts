@@ -209,6 +209,198 @@ export const MUTATIONS: readonly Mutation[] = [
     from: "      } catch {\n        // The exception's text could carry page content (R-BEH-5): log a fixed line.",
     to: "      } catch (e) {\n        this.log.warn(String(e));",
     tests: ["tests/vjster-link-server.test.ts"]
+  },
+  {
+    id: "M-V-22",
+    rule: "ad hold: nothing changes while an ad plays (R-BEH-1)",
+    file: "vjster-extension/src/adapter-core.ts",
+    from: "    if (c.adShowing()) {",
+    to: "    if (c.adShowing() && kind === undefined) {",
+    tests: ["tests/vjster-ext-adapter.test.ts"]
+  },
+  {
+    id: "M-V-23",
+    rule: "two play/pause toggles during one ad cancel (R-BEH-1)",
+    file: "vjster-extension/src/adapter-core.ts",
+    from: 'if (kind === "transport" && this.held.get("transport")) this.held.delete("transport");',
+    to: 'if (kind === undefined) this.held.delete("transport");',
+    tests: ["tests/vjster-ext-adapter.test.ts"]
+  },
+  {
+    id: "M-V-24",
+    rule: "after a direct write the element really plays the asked rate (R-SPD-2)",
+    file: "vjster-extension/src/adapter-core.ts",
+    from: 'if (c.kind === "youtube" && c.elementRate() !== target) c.setElementRate(target);',
+    to: "void target;",
+    tests: ["tests/vjster-ext-adapter.test.ts"]
+  },
+  {
+    id: "M-V-25",
+    rule: "the worker takes only a plain host name from the bridge (R-LNK-5)",
+    file: "vjster-extension/src/messages.ts",
+    from: 'const host = typeof data.host === "string" && /^[A-Za-z0-9.-]{1,253}$/.test(data.host) ? data.host : null;',
+    to: 'const host = typeof data.host === "string" ? data.host : null;',
+    tests: ["tests/vjster-ext-messages.test.ts"]
+  },
+  {
+    id: "M-V-26",
+    rule: "a tab joins the registry only once its video has played (R-TGT-1)",
+    file: "vjster-extension/src/router.ts",
+    from: "    } else if (before || state.playing || played) {",
+    to: "    } else {",
+    tests: ["tests/vjster-ext-router.test.ts"]
+  },
+  {
+    id: "M-V-27",
+    rule: "reconnect backoff stops doubling at 30 s (R-LNK-3)",
+    file: "vjster-extension/src/link-client.ts",
+    from: "this.backoff = Math.min(MAX_BACKOFF_MS, this.backoff * 2);",
+    to: "this.backoff = this.backoff * 2;",
+    tests: ["tests/vjster-ext-link.test.ts"]
+  },
+  {
+    id: "M-V-28",
+    rule: "the extension answers a malformed message with an error (R-INT-3)",
+    file: "vjster-extension/src/link-client.ts",
+    from: '      this.send(errorReply(result.code, result.reason, result.inReplyTo, { id: this.options.newId(), target: "browser" }));',
+    to: "      void result;",
+    tests: ["tests/vjster-ext-link.test.ts"]
+  },
+  {
+    id: "M-V-29",
+    rule: "titles lose control characters before they leave the page (PLAN.md 3.3)",
+    file: "vjster-extension/src/page-state.ts",
+    from: '.replace(CONTROL, " ")',
+    to: '.replace(/~/g, " ")',
+    tests: ["tests/vjster-ext-messages.test.ts"]
+  },
+  {
+    id: "M-V-38",
+    rule: "an answer counts only from the tab the intent went to (step 4 review)",
+    file: "vjster-extension/src/router.ts",
+    from: "    if (inReplyTo !== null && this.claim(inReplyTo, tabId)) {",
+    to: "    if (inReplyTo !== null) {",
+    tests: ["tests/vjster-ext-router.test.ts"]
+  },
+  {
+    id: "M-V-39",
+    rule: "a page error counts only from the tab the intent went to",
+    file: "vjster-extension/src/router.ts",
+    from: "    if (inReplyTo === null || !this.claim(inReplyTo, tabId)) return;",
+    to: "    if (inReplyTo === null) return;",
+    tests: ["tests/vjster-ext-router.test.ts"]
+  },
+  {
+    id: "M-V-40",
+    rule: "the bridge listens only to its own window, never a frame",
+    file: "vjster-extension/src/bridge-core.ts",
+    from: "    if (event.source !== win) return;",
+    to: "    void win;",
+    tests: ["tests/vjster-ext-wiring.test.ts"]
+  },
+  {
+    id: "M-V-41",
+    rule: "the worker takes page reports only from this extension's own bridge",
+    file: "vjster-extension/src/worker-core.ts",
+    from: "    if (sender.id !== c.runtime.id || tabId === undefined || sender.frameId !== 0) return;",
+    to: "    if (tabId === undefined || sender.frameId !== 0) return;",
+    tests: ["tests/vjster-ext-wiring.test.ts"]
+  },
+  {
+    id: "M-V-42",
+    rule: "intents go to a tab's top frame only",
+    file: "vjster-extension/src/worker-core.ts",
+    from: "        await c.tabs.sendMessage(tabId, { kind: \"intent\", intent: plainIntent(intent) }, { frameId: 0 });",
+    to: "        await c.tabs.sendMessage(tabId, { kind: \"intent\", intent: plainIntent(intent) }, { frameId: 1 });",
+    tests: ["tests/vjster-ext-wiring.test.ts"]
+  },
+  {
+    id: "M-V-43",
+    rule: "a page that is left says its video is gone",
+    file: "vjster-extension/src/bridge-core.ts",
+    from: "  win.addEventListener(\"pagehide\", () => toWorker(",
+    to: "  win.addEventListener(\"pagehide-never\" as \"pagehide\", () => toWorker(",
+    tests: ["tests/vjster-ext-wiring.test.ts"]
+  },
+  {
+    id: "M-V-44",
+    rule: "a return to Auto is read back (R-QLT-3)",
+    file: "vjster-extension/src/adapter-core.ts",
+    from: "    if (ok) this.pollQuality({ from });",
+    to: "    void from;",
+    tests: ["tests/vjster-ext-adapter.test.ts"]
+  },
+  {
+    id: "M-V-45",
+    rule: "a replaced connection waits the longest delay before taking the link back",
+    file: "vjster-extension/src/link-client.ts",
+    from: "      if (closeCode(ev) === CLOSE_REPLACED) this.backoff = MAX_BACKOFF_MS;",
+    to: "      void ev;",
+    tests: ["tests/vjster-ext-link.test.ts"]
+  },
+  {
+    id: "M-V-46",
+    rule: "missing quality methods lose only quality control (R-QLT-2)",
+    file: "vjster-extension/src/youtube.ts",
+    from: "  if (!el || !hasAll(el, CORE_METHODS)) return null;",
+    to: "  if (!el || !hasAll(el, [...CORE_METHODS, ...QUALITY_METHODS])) return null;",
+    tests: ["tests/vjster-ext-wiring.test.ts"]
+  },
+  {
+    id: "M-V-47",
+    rule: "the adapter listens only to its own window",
+    file: "vjster-extension/src/page-wiring.ts",
+    from: "    if (event.source !== win) return;",
+    to: "    void win;",
+    tests: ["tests/vjster-ext-wiring.test.ts"]
+  },
+  {
+    id: "M-V-48",
+    rule: "a link that opens asks every tab for fresh state",
+    file: "vjster-extension/src/router.ts",
+    from: "    this.deps.refreshTabs();\n    this.pushTarget(null);",
+    to: "    this.pushTarget(null);",
+    tests: ["tests/vjster-ext-router.test.ts", "tests/vjster-ext-link.test.ts"]
+  },
+  {
+    id: "M-V-49",
+    rule: "an unsolicited report that says nothing new is skipped",
+    file: "vjster-extension/src/adapter-core.ts",
+    from: "      if (text === this.lastSent) return;",
+    to: "      void text;",
+    tests: ["tests/vjster-ext-adapter.test.ts"]
+  },
+  {
+    id: "M-V-50",
+    rule: "the worker passes on whether a paused tab's video has played",
+    file: "vjster-extension/src/worker-core.ts",
+    from: "router.pageState(tabId, sender.tab?.windowId ?? -1, s, message.host, message.inReplyTo, message.played);",
+    to: "router.pageState(tabId, sender.tab?.windowId ?? -1, s, message.host, message.inReplyTo, false);",
+    tests: ["tests/vjster-ext-wiring.test.ts"]
+  },
+  {
+    id: "M-V-51",
+    rule: "a held level is resolved again while the list fills in after navigation (R-QLT-7)",
+    file: "vjster-extension/src/adapter-core.ts",
+    from: "      this.pollQuality({ held });",
+    to: "      void held;",
+    tests: ["tests/vjster-ext-adapter.test.ts"]
+  },
+  {
+    id: "M-V-52",
+    rule: "a buffering YouTube player counts as playing",
+    file: "vjster-extension/src/youtube.ts",
+    from: "const PLAYING_STATES = new Set([1, 3]);",
+    to: "const PLAYING_STATES = new Set([1]);",
+    tests: ["tests/vjster-ext-wiring.test.ts"]
+  },
+  {
+    id: "M-V-53",
+    rule: "a held level is not re-applied while an ad shows (R-BEH-1)",
+    file: "vjster-extension/src/adapter-core.ts",
+    from: "        if (level !== null && preferred !== level && !this.adShowing()) this.safely(() => c.setQuality(level));",
+    to: "        if (level !== null && preferred !== level) this.safely(() => c.setQuality(level));",
+    tests: ["tests/vjster-ext-adapter.test.ts"]
   }
 ];
 
@@ -313,7 +505,11 @@ function main(): number {
     const path = resolve(ROOT, m.file);
     const original = readFileSync(path);
     const text = original.toString("utf8");
-    const count = text.split(m.from).length - 1;
+    // A Windows checkout may have CRLF line endings; match the flip the same way.
+    const eol = text.includes("\r\n") ? "\r\n" : "\n";
+    const from = m.from.split("\n").join(eol);
+    const to = m.to.split("\n").join(eol);
+    const count = text.split(from).length - 1;
     if (count !== 1) {
       errors.push(`${m.id}: target found ${count} times in ${m.file}; it must be found exactly once`);
       console.log(`[ERROR]    ${m.id} target found ${count} times in ${m.file}`);
@@ -322,7 +518,7 @@ function main(): number {
     console.log(`           ${m.id} flipping ${m.file}`);
     try {
       active = { path, original };
-      writeFileSync(path, Buffer.from(text.replace(m.from, m.to), "utf8"));
+      writeFileSync(path, Buffer.from(text.replace(from, () => to), "utf8"));
       const outcome = vitest(m.tests);
       if (outcome.kind === "failed-assertion") {
         killed++;

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- SPDX-License-Identifier: GPL-2.0-or-later -->
+  <!-- VJster icon: a speed dial wrapped around a play mark. Drawn for VJster. -->
+  <defs>
+    <linearGradient id="arc" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#ff2bd6"/>
+      <stop offset="1" stop-color="#2bf0ff"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="120" height="120" rx="28" fill="#12121a"/>
+  <path d="M 30 92 A 42 42 0 1 1 98 92" fill="none" stroke="#2a2a3a" stroke-width="12" stroke-linecap="round"/>
+  <path d="M 30 92 A 42 42 0 1 1 92 36" fill="none" stroke="url(#arc)" stroke-width="12" stroke-linecap="round"/>
+  <path d="M 54 44 L 86 64 L 54 84 Z" fill="#ffffff"/>
+</svg>

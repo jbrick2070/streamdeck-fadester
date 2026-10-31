@@ -47,7 +47,8 @@ const fullState: StateReport = {
   host: "www.youtube.com",
   playing: true,
   adPlaying: false,
-  capabilities: ["speed", "quality", "transport"]
+  capabilities: ["speed", "quality", "transport"],
+  pinned: false
 };
 
 describe("VJster protocol constants", () => {
@@ -163,7 +164,7 @@ describe("state reports (R-INT-2, R-LNK-5)", () => {
   });
 
   it("carries the flags in their other state too", () => {
-    const other = { ...fullState, adPlaying: true, rateDirect: true, qualityAuto: false, playing: false };
+    const other = { ...fullState, adPlaying: true, rateDirect: true, qualityAuto: false, playing: false, pinned: true };
     expect(ok(serialize(other), "reports")).toEqual(other);
   });
 
@@ -205,9 +206,17 @@ describe("state reports (R-INT-2, R-LNK-5)", () => {
       host: null,
       playing: false,
       adPlaying: false,
-      capabilities: []
+      capabilities: [],
+      pinned: false
     };
     expect(ok(text(none), "reports")).toEqual(none);
+  });
+
+  it("defaults pinned to false and refuses a pinned that is not true or false", () => {
+    const { pinned: _p, ...rest } = fullState;
+    void _p;
+    expect((ok(text(rest), "reports") as StateReport).pinned).toBe(false);
+    expect(failure(text({ ...fullState, pinned: "yes" }), "reports").code).toBe("bad-message");
   });
 
   it("accepts the player's unknown quality and defaults rateDirect", () => {

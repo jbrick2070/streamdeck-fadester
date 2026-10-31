@@ -5,8 +5,9 @@ Status: APPROVED 2026-10-30 by the operator. Phase 0 and Phase 1 step 1 done in
 docs/vjster/REQUIREMENTS.md; every step cites the rows it serves. File names
 such as REQUIREMENTS.md and PROBE-LOG.md mean the files in `docs/vjster`.
 Sections changed after that approval await the operator's review: 3.1, 3.3
-to 3.6 (the `hold` and `direct` fields, and the rules step 2 settled), Phase
-0b, and steps 2 to 6.
+to 3.7 (the `hold` and `direct` fields, the rules step 2 settled, and the
+extension details of step 4, which replaced the approved per-page nonce),
+Phase 0b, and steps 2 to 6.
 
 ## 1. Toolchain findings on this machine (checked 2026-10-30)
 
@@ -35,7 +36,8 @@ Rows here start as "to confirm" and become "confirmed <date>" or are corrected, 
 | V-8 | OBS 33's browser source, loading `file:///C:/streamdeck-fadester/vjster-page/player.html`, can open a WebSocket to 127.0.0.1 and autoplays with sound (R-OBS-2). | to confirm, Phase 2 |
 | V-9 | A rate set through the API survives in-page navigation; the chosen quality level does not (R-SPD-4, R-QLT-7). | confirmed in four runs (PROBE-LOG.md): 1.5 stayed 1.5, read from the player and the element, on the next video; `hd720` became `auto` every time |
 | V-10 | The IFrame embed used by the Phase 2 page behaves like the watch page for rates and quality. F-3 says the embed rounds an unsupported rate toward 1, while the watch page clamped 5 to 4. | to confirm, Phase 2: probe the embed separately |
-| V-11 | The probe results (V-1, V-2, V-9, F-10) hold in the operator's Chrome 156; they were seen in the built-in pane's Chromium 152. | to confirm, Phase 1 step 4 |
+| V-11 | The probe results (V-1, V-2, V-9, F-10) hold in the operator's Chrome 156; they were seen in the built-in pane's Chromium 152. | to confirm by the operator: TESTING.md 1.5 |
+| V-12 | Chrome loads the manifest's `ws://127.0.0.1/*` host permission without complaint, and the service worker can open `ws://127.0.0.1:48150` (with or without it; Chrome's local network access rules may ask). | to confirm by the operator: TESTING.md 1.1 and 1.3 |
 
 ## 3. Architecture
 
@@ -71,20 +73,32 @@ C:\streamdeck-fadester
     vjster-pin-key.ts         Keypad: pin this tab (R-TGT-2)
     vjster-transport-key.ts   Keypad: play/pause
   vjster-extension/
-    tsconfig.json        DOM lib, @types/chrome, includes ../src/vjster/shared
-    rollup.config.mjs    four bundles: service worker, bridge, adapter, options page
+    tsconfig.json        DOM lib, no Node types, includes ../src/vjster/shared
+    rollup.config.mjs    four bundles plus an inline step that copies the static files
     manifest.json        MV3, host permissions per D-4
     options.html
+    icons/               icon.svg and the 16, 48 and 128 pixel PNGs rendered from it
     src/
-      background.ts      service worker: link client, tab registry, target choice
-      content-main.ts    MAIN world: YouTube adapter and generic video adapter
-      content-bridge.ts  ISOLATED world: relays page <-> worker, nothing else
-      options.ts         port, pinned extension id display, all-sites toggle
-    tests/               unit tests of the extension logic: run by the root vitest
-                         (no chrome.* globals, R-TST-3), type-checked by this tsconfig
+      chrome.d.ts        hand-written types for the Chrome APIs used (R-STD-3)
+      page-state.ts      the sender rules: clean title, host, rates, levels
+      adapter-core.ts    applies intents to a MediaControl; ads, holds, read-back
+      youtube.ts         YouTube's player as a MediaControl
+      generic-video.ts   any page's video element as a MediaControl
+      video-choice.ts    which video on a page is the video (R-TGT-3)
+      messages.ts        page, bridge and worker messages and their validators
+      router.ts          the worker's logic: tab registry, target, reports
+      link-client.ts     the worker's socket: backoff, pings, errors
+      settings.ts        port, all-sites scripts, storage keys
+      page-wiring.ts     the adapter's page boundary: run once, listen to this window only
+      content-main.ts    MAIN world entry: the adapter around YouTube's player or a video
+      bridge-core.ts     the bridge: relays page <-> worker, fills in the host, says when the page is left
+      content-bridge.ts  ISOLATED world entry: hands bridge-core the real window
+      worker-core.ts     the worker's wiring of the router and the link to Chrome
+      background.ts      service worker entry: hands worker-core the real chrome object
+      options.ts         port, this extension's id, all-sites toggle
     bin/                 built unpacked extension, what Chrome loads (git-ignored)
   vjster-page/           Phase 2: player.html, src/player.ts, bin/ (git-ignored)
-  tests/vjster-*.test.ts
+  tests/vjster-*.test.ts   includes the extension's logic tests, tests/vjster-ext-*.test.ts
   scripts/vjster/
     run-mutation-checks.ts  VJster's flips, clean worktree only (step 2, R-TST-4)
     probe-player-api.js  Phase 1 step 1 probe, pasted into a watch page's console (done 2026-10-30)
@@ -115,7 +129,7 @@ Unsolicited state reports follow the same path upward: play, pause, navigation, 
 | deck -> target | `transport.toggle` | |
 | deck -> target | `state.get` | |
 | deck -> target | `pin.set` | `pinned` (true/false) |
-| target -> deck | `state` | as R-INT-2, plus `rateDirect` (the rate was written to the element, so the site's menu does not show it) and `inReplyTo` (null when unsolicited); with no video, `rate`, `quality`, `qualityAuto`, `title` and `host` are null and the lists empty |
+| target -> deck | `state` | as R-INT-2, plus `rateDirect` (the rate was written to the element, so the site's menu does not show it), `pinned` (the reported tab is the pinned one; the browser target only) and `inReplyTo` (null when unsolicited); with no video, `rate`, `quality`, `qualityAuto`, `title` and `host` are null and the lists empty |
 | target -> deck | `error` | `code`, `message`, `inReplyTo` |
 | both | `ping` / `pong` | `t` |
 
@@ -143,10 +157,10 @@ As built in step 2 (`target.ts`): `chooseTarget(tabs, {focusedWindowId, activeTa
 
 ### 3.7 Extension details
 
-- `manifest.json`: `manifest_version` 3; `background.service_worker`; `content_scripts` twice for the same matches, one with `"world": "MAIN"` (adapter) and one isolated (bridge); `permissions`: `storage`, `alarms`, `tabs`; `host_permissions` per D-4; `optional_host_permissions` for all sites per D-4; `options_page`.
-- The adapter finds `#movie_player` on youtube.com and music.youtube.com; elsewhere it finds video elements (R-TGT-3). It listens to `play`, `pause`, `ratechange`, `loadedmetadata` on the element, the player's quality-change event, and `yt-navigate-finish` (V-4). On each `yt-navigate-finish` it checks that `#movie_player` and its video element are still the ones it bound (they were in every probed watch-to-watch navigation, V-4) and re-binds if not, waiting for `#movie_player` when a page starts without one (home, search); then it re-reads the video data, re-applies the held level when "hold quality" is on (default on, R-QLT-7) and reports state. Ad state comes from the `ad-showing` or `ad-interrupting` class on the player or the `.ytp-ad-player-overlay` element (V-3, still to confirm on a monetized video); while an ad shows, intents are queued, at most one per kind, and applied after it clears (R-BEH-1).
-- The bridge and the adapter talk with `window.postMessage` tagged with a per-page nonce so another script on the page cannot inject intents.
-- The worker keeps a map of tabs from the bridges' reports, reconnects the socket with backoff, answers pings, and re-checks on a one-minute alarm (R-LNK-3).
+- `manifest.json`: `manifest_version` 3; `background.service_worker` (an ES module); `content_scripts` twice for the same matches, one with `"world": "MAIN"` (adapter) and one isolated (bridge); `permissions`: `storage`, `alarms` and `scripting`, no `tabs`; `host_permissions` per D-4; `optional_host_permissions` for all sites per D-4; `options_page`.
+- The adapter finds `#movie_player` on youtube.com and its subdomains, music.youtube.com included; elsewhere it finds video elements (R-TGT-3). It listens to `play`, `playing`, `pause`, `ratechange`, `loadedmetadata`, `emptied` and `ended` on the element, to class changes on the player (ads), and to `yt-navigate-finish` (V-4). Quality is read back by polling (R-QLT-3), not by the player's quality-change event. On each `yt-navigate-finish` it re-binds `#movie_player` and its video element if they changed (they did not in any probed watch-to-watch navigation, V-4), and it watches the page grow only while there is no player (home, search); then it re-applies the held level when "hold quality" is on (default on, R-QLT-7), retrying while the read-back runs, and reports state. Ad state comes from the `ad-showing` or `ad-interrupting` class on the player or the `.ytp-ad-player-overlay` element (V-3, still to confirm on a monetized video); while an ad shows, intents are held, at most one per kind, and applied after it clears (R-BEH-1). Unsolicited reports that say nothing new are skipped. A player without the quality methods keeps speed and play/pause; the worker notes it once per tab in its own console (R-QLT-2).
+- The bridge and the adapter talk with `window.postMessage`, tagged `vjster-page` and `vjster-bridge`; each listens only to messages from its own window, never from a frame. As built in step 4 there is no nonce: the adapter shares its JavaScript world with the page, so a page can always forge what the adapter says, and a secret in that world would not stay secret. Instead every hop validates what it receives (`messages.ts`): the adapter re-parses each intent with the link's own parser, the bridge and the worker rebuild page state with the sender rules of section 3.3 and strip controls from error messages, the bridge fills in the host name from its own `location`, and the worker accepts an answer or an error only from the tab it sent that intent to, and only once. The worst a page can do is misreport its own video, or claim to play so that it becomes the target.
+- The worker keeps a map of tabs from the bridges' reports (this extension's bridges, top frame only), reconnects the socket with backoff from 1 s doubling to 30 s with up to 20 % jitter (the longest wait, 24 to 30 s, at once after close code 4000, when a second copy of the extension took the link), answers pings, answers a malformed message with `error`, and re-checks on a one-minute alarm (R-LNK-3). The pinned tab is kept in `chrome.storage.session`, so it survives the worker being stopped; only a tab whose video has played can be pinned. A tab joins the registry when its video plays, or when it answers a refresh saying its video has played since the page loaded, and leaves when its page reports no video, when the page is left (`pagehide` in the bridge) or when the tab closes. Chrome stops an idle worker after 30 s, which empties the registry, so the worker asks every tab's bridge for fresh state when it starts, whenever the link opens and after a tab failed to take an intent, and a page restored from the back-forward cache reports again.
 
 ### 3.8 Stream Deck actions
 
@@ -185,7 +199,19 @@ Step 3, link server (R-LNK-1..4, R-TST-2). `src/vjster/plugin/link-server.ts` wi
 
 DONE 2026-10-31, revised after the Sonnet 5.5 review. `LinkServer` listens on 127.0.0.1 through a plain HTTP server that only upgrades: plain HTTP gets 426, and an upgrade is refused with HTTP 403, before any WebSocket exists, unless it carries exactly one Host header naming `127.0.0.1:<port>` or `localhost:<port>` (DNS rebinding) and passes one of two checks. A `token` query parameter decides alone: it must equal the OBS page token (32 hex digits, compared in constant time; target `obs`), and a wrong token is refused even with an extension Origin. Without one, the Origin must be `chrome-extension://` plus 32 letters a to p, one of the pinned ids if any are set (target `browser`). Pinned ids are compared in lower case; malformed pinned ids or a malformed token are dropped with a warning, failing closed. A refusal is logged with its reason only, at most once every 10 s with a count of the ones in between. `maxPayload` is 49152 bytes: a frame of exactly that size is read (and dropped as too long by `parse`); a larger one closes the socket, with code 1009 when the frame arrived whole (a very large frame may just reset the connection). On connect the server sends `state.get`. A newer connection for the same target closes the older one with code 4000, which is not reported as a disconnect; the browser and OBS connections never replace each other. Every 20 s it sends a JSON `ping` (JSON, not a WebSocket ping frame, because a Chrome service worker stays alive on messages it receives, F-5); a peer silent past 60 s is closed with 4001 and reported gone once, so with the default timers a silent peer goes 60 to 80 s after its last message. The keepalive uses a monotonic clock, so sleep and clock steps do not close healthy peers. A ping from a peer gets a pong with the same `t`. A malformed report, a binary frame, or a report naming the other target is dropped, warned about once per connection without its content, and answered with `state.get` at most once every 2 s. A message from a connection that was replaced or closed is ignored. A listener that throws is logged with a fixed line. `send(target, intent)` adds `v`, `id` and `target` and returns the id, or null when the target is not connected. `stop()` reports every live connection gone, closes them with 1001 and frees the port; `start()` and `stop()` may overlap safely (one shared start; a stop waits for a pending start). An error on the HTTP server after it listens is logged, never thrown. A taken or reserved port (EADDRINUSE or EACCES) rejects `start()` with `LinkPortInUseError` (D-11). `LinkLifecycle` starts the server on the first `acquire` and stops it 60 s after the last `release`, records a failed start, retries on the next acquire, and clears the error once a start works. `ws` is imported through `@elgato/streamdeck` and is not yet in `package.json` (R-STD-3, R-HOME-5). Tests: `tests/vjster-link-server.test.ts`, 39 tests with real WebSocket clients on an ephemeral port; the keepalive, the re-ask throttle and the refusal-log throttle run on a fake clock. Mutation flips M-V-9 to M-V-21.
 
-Step 4, extension (R-SPD-4, R-QLT-2..3, R-TGT, R-LNK-3, R-BEH-1..2). Adapter, bridge, worker, options page in `vjster-extension/`; logic in modules with unit tests in `vjster-extension/tests/`; built to `vjster-extension/bin`, which `.gitignore` then lists; loaded unpacked (D-3 a). Manual check: the worker's console shows the socket connected to a stub server run by a test script. The adapter follows the sender rules of section 3.3 (title, host, rate, level ids). Step 4 also repeats the probe in Chrome 156 (V-11), confirms the ad markers (V-3), and checks the navigations V-4 lists as not probed. Adds the ad-hold flip (R-TST-4). Build inputs settled by the Phase 0 QA: the extension gets its own `vjster-extension/tsconfig.json` (DOM lib, `@types/chrome`) so Fadester's Node tsconfig stays as it is, and a small `tsx` script copies `manifest.json`, `options.html` and the icons into `vjster-extension/bin` after rollup, since R-STD-3 allows no copy plugin. Every emitted `.js` keeps the SPDX header (R-HOME-4) even though `bin` folders are outside the hygiene walk.
+Step 4, extension (R-SPD-4, R-QLT-2..3, R-TGT, R-LNK-3, R-BEH-1..2). Adapter, bridge, worker, options page in `vjster-extension/`; logic in modules with unit tests in `tests/vjster-ext-*.test.ts`; built to `vjster-extension/bin`, which `.gitignore` then lists; loaded unpacked (D-3 a). Manual check: the worker's console shows the socket connected to a stub server run by a test script. The adapter follows the sender rules of section 3.3 (title, host, rate, level ids). Step 4 also repeats the probe in Chrome 156 (V-11), confirms the ad markers (V-3), and checks the navigations V-4 lists as not probed. Adds the ad-hold flip (R-TST-4).
+
+DONE 2026-10-31, revised after the Sonnet 5.5 review. The extension is in `vjster-extension/` (section 3.1); `npx tsc --noEmit -p vjster-extension` type-checks it and `npx rollup -c vjster-extension/rollup.config.mjs` builds it into `vjster-extension/bin`, with the SPDX banner on every bundle (R-HOME-4). An inline rollup plugin copies `manifest.json`, `options.html` and the icons next to the bundles, and `vjster-extension/tsconfig.json` uses the DOM lib with the hand-written `src/chrome.d.ts` and `types: []`, so Fadester's Node tsconfig stays as it is (R-STD-3).
+
+Manifest: MV3, minimum Chrome 116, content scripts on `*://*.youtube.com/*` at `document_idle` (adapter in the MAIN world, bridge isolated), permissions `storage`, `alarms` and `scripting`, host permissions `*://*.youtube.com/*` and `ws://127.0.0.1/*`, and optional `<all_urls>` for the all-sites option, which registers the same two scripts for every site but YouTube. By Chromium's source `ws://127.0.0.1/*` is a valid host permission, though the worker's socket does not need it; it stays until V-12 is checked. There is no `tabs` permission: titles come from the player, hosts from the bridge, and tab ids from `chrome.tabs.query`, which gives ids without it.
+
+The adapter (`adapter-core.ts`) answers every intent with a state report or an error, also when the player throws (R-INT-4). It applies speed through the player, or to the element for extended range (marked `rateDirect`) and for plain videos, and makes sure the element really plays the asked rate after a direct write. It re-applies a held element rate when the element is replaced or an ad ends, and a held level after navigation, retrying while the read-back runs (R-SPD-4, R-QLT-7). It reads a new level back every 500 ms for up to 5 s, and after a return to Auto until the level playing changes (R-QLT-3). During an ad it changes nothing and keeps the latest intent of each kind: two play/pause toggles cancel, and a held `speed.step` keeps only the latest step. It applies them in the order speed, quality, play/pause when the ad ends (R-BEH-1). It skips unsolicited reports that say nothing new, and it says whether the page's video has played since the page loaded. A YouTube player missing only the quality methods keeps speed and play/pause, and the worker notes it once per tab in its own console (R-QLT-2, R-BEH-5).
+
+The worker (section 3.7) accepts an answer only from the tab it sent that intent to. It asks every tab for fresh state when it starts and when the link opens, so a restarted worker finds playing and paused videos again. It drops a tab whose page is left, asks the tabs again after one failed to take an intent, and waits 24 to 30 s before taking the link back from a second copy of the extension.
+
+Tests in Node: `tests/vjster-ext-adapter`, `-messages`, `-router`, `-link` and `-wiring.test.ts`, 142 tests. The link tests run the extension's link client and router against the real link server of step 3, with a fake tab around the real adapter; the wiring tests run the bridge, the page boundary and the worker against fake browser objects. The page wiring that needs a DOM (the mutation observers and the capture-phase media events in `content-main.ts`) and the options page are covered only by the manual checks. Before the review fixes, the built adapter was also run on the live YouTube page in the desktop app's built-in browser, driven as the bridge drives it (PROBE-LOG.md, live adapter check). Mutation flips M-V-22 to M-V-29, and after the review M-V-38 to M-V-53 (M-V-30 to M-V-37 belong to step 5).
+
+The review found the registry lost on a worker restart, stale tabs after leaving a site, answers accepted from any tab, no read-back after Auto, all of YouTube lost over one missing quality method, test gaps (46 of its 75 flips survived), and doc errors; all are fixed. Its second pass ran 116 flips of its own on the fixes and asked for tests of the `played` flag through the worker and of the YouTube call forms, and for a held level that survives an empty level list after navigation; all are done. Not checked yet, because they need the operator's Chrome: loading the extension, the service worker's socket to the plugin, the ad markers, the navigations V-4 lists, the probe in Chrome 156, a worker restart and two Chrome profiles; all are in TESTING.md section 1.
 
 Step 5, deck actions (R-SPD-3, R-SPD-5..6, R-QLT-5, R-TGT-2, R-BEH-4..5). The seven actions, named VJster Speed and so on, in Fadester's category (R-HOME-2), property inspectors, the indicator layouts, icons. Registering them changes `src/plugin.ts`, the plugin manifest and `tests/manifest-hygiene.test.ts`, which counts the actions (6 at HEAD, 7 in the uncommitted work) and, in its uncommitted version, requires every Encoder action to use `layouts/fader-cell.json`, a rule the VJster indicator layouts break; the step extends that test for the VJster actions and their layouts, and waits until no other work modifies those files (R-HOME-5). Gate: D-10, the Stream Deck app version; the speed and quality actions count from their own unanswered request (section 3.2); titles are escaped before they are drawn and never logged (R-BEH-5); `streamdeck validate`; `streamdeck link` to the Stream Deck app; TESTING.md items 1.1 onward with expected strip text; operator hands-on on the Stream Deck + with a watch page, a paused page, two tabs, Picture-in-Picture, an ad, extension reload, Chrome restart, Stream Deck restart.
 

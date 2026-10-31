@@ -1,0 +1,36 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-2.0-or-later -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>VJster options</title>
+    <style>
+      :root { color-scheme: light dark; font: 14px/1.5 system-ui, sans-serif; }
+      body { max-width: 34rem; margin: 2rem auto; padding: 0 1rem; }
+      h1 { font-size: 1.3rem; margin: 0 0 1rem; }
+      label { display: block; margin: 1rem 0 0.25rem; font-weight: 600; }
+      input[type="number"] { width: 8rem; padding: 0.3rem; }
+      code { font-size: 0.95em; padding: 0.1rem 0.3rem; border-radius: 4px; background: rgba(127, 127, 127, 0.15); user-select: all; }
+      button { margin-left: 0.5rem; padding: 0.3rem 0.9rem; }
+      p.note { opacity: 0.75; margin: 0.25rem 0 0; }
+      #status { margin-top: 1.25rem; min-height: 1.5em; font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <h1>VJster</h1>
+
+    <label for="port">Link port</label>
+    <input id="port" type="number" min="1024" max="65535" /><button id="save">Save</button>
+    <p class="note">The port the VJster actions on your Stream Deck listen on, on this computer only. Change it only if you changed it there.</p>
+
+    <label>This extension's id</label>
+    <code id="ext-id"></code>
+    <p class="note">To let only this extension connect, paste the id into the VJster settings on your Stream Deck.</p>
+
+    <label><input id="all-sites" type="checkbox" /> Control videos on every site, not only YouTube</label>
+    <p class="note">Speed only: quality needs YouTube's player. Chrome asks for permission to read and change every site.</p>
+
+    <div id="status" role="status"></div>
+    <script src="options.js"></script>
+  </body>
+</html>

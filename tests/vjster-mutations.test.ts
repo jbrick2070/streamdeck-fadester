@@ -18,7 +18,9 @@ describe("VJster mutation flips", () => {
   for (const m of MUTATIONS) {
     it(`${m.id} targets text that appears exactly once and names test files that exist`, () => {
       const text = readFileSync(resolve(ROOT, m.file), "utf8");
-      expect(text.split(m.from).length - 1).toBe(1);
+      // Match line endings the way the runner does, so a CRLF checkout is checked the same.
+      const eol = text.includes("\r\n") ? "\r\n" : "\n";
+      expect(text.split(m.from.split("\n").join(eol)).length - 1).toBe(1);
       expect(m.to).not.toBe(m.from);
       for (const t of m.tests) expect(existsSync(resolve(ROOT, t)), t).toBe(true);
     });

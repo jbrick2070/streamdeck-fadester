@@ -92,6 +92,33 @@ No ad class and no overlay element appeared in any sample.
 | S2 | 1 | not reported | auto | 2 (paused) |
 | S3 | 1 | 1 | auto | 2 (paused) |
 
+## Live adapter check (step 4, 2026-10-31)
+
+The extension's page adapter, built with esbuild (minified) from
+`vjster-extension/src/content-main.ts` as it stood before the step 4 review
+(the shipped bundle is built by rollup from the same source), was injected into the watch page in
+the built-in pane (Chromium 152) and driven exactly as the bridge drives it,
+by `window.postMessage` with the `vjster-bridge` tag. Every answer came back
+naming its intent; "player" is what the real player reported afterwards.
+
+| Intent | Answer | Player |
+|--------|--------|--------|
+| first report, unsolicited | rate 1, Auto, large, 9 levels, 12 rates, title | |
+| speed.set 1.5 | rate 1.5 | API 1.5, element 1.5 |
+| speed.step +0.25 | rate 1.75 | 1.75, 1.75 |
+| speed.step -0.5 | rate 1.5 | 1.5, 1.5 |
+| speed.set 4.5, direct | rate 4.5, rateDirect true | API 1.5, element 4.5 |
+| speed.reset | rate 1, rateDirect false | 1, 1 |
+| quality.set hd1080, hold | Auto false, level still large; a follow-up report 1.5 s later: hd1080 | preferred hd1080 |
+| quality.step -1, hold | Auto false | preferred hd720 |
+| quality.reset | Auto true | preferred auto |
+| transport.toggle | playing false | paused |
+| transport.toggle | playing false at once; play events then reported playing true | playing |
+| speed.set 0 | no answer: the adapter drops an intent the parser refuses | unchanged |
+| speed.set 9 | rate 4 | 4, 4 |
+
+The page was then set back to 1x and Auto and paused.
+
 ## Fake-player checks of the committed script (2026-10-31)
 
 Scratch harnesses written by the reviewers ran the committed script against a

@@ -113,6 +113,8 @@ export type StateReport = Envelope & {
   readonly playing: boolean;
   readonly adPlaying: boolean;
   readonly capabilities: readonly Capability[];
+  /** The current video's tab is pinned (R-TGT-2), so the Pin key can show it; false when absent. */
+  readonly pinned: boolean;
 };
 
 export type ErrorReport = Envelope & {
@@ -250,7 +252,8 @@ function readState(raw: Raw, env: Envelope): StateReport {
     host: nullableText(raw, "host", 253, HOST_PATTERN),
     playing: bool(raw, "playing"),
     adPlaying: bool(raw, "adPlaying"),
-    capabilities
+    capabilities,
+    pinned: bool(raw, "pinned", false)
   };
 }
 

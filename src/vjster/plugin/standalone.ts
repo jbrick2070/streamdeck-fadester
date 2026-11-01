@@ -60,7 +60,7 @@ const keepAlive = new ObsKeepAlive(hub, () => {
 function obsAddress(input: unknown): { address: string; found: boolean } {
   if (!current.obsToken) return { address: "", found: false };
   const id = typeof input === "string" ? videoIdFrom(input) : null;
-  return { address: obsPageAddress(current.port, current.obsToken, id), found: id !== null };
+  return { address: obsPageAddress(current.port, current.obsToken, id, streamDeck.info.application.language), found: id !== null };
 }
 
 streamDeck.settings.onDidReceiveGlobalSettings<JsonObject>((ev) => {

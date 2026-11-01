@@ -51,6 +51,11 @@ describe("VJster plugin end to end, in another language", () => {
     expect(words(sim.svg("key-0-1"))).toContain("PAUSE");
     expect(words(sim.svg("key-1-1"))).toContain("ANHEFTEN");
     expect(words(sim.svg("key-2-1"))).toEqual(expect.arrayContaining(["AUTO", "QUALITÄT"]));
+    // The OBS page address carries Stream Deck's language (PLAN.md 8.6).
+    sim.pageAppeared("dial-0");
+    await until(() => sim.toPage.some((m) => m.event === "status"));
+    const status = sim.toPage.find((m) => m.event === "status") as { address: string };
+    expect(status.address).toMatch(/\/obs\?v=VIDEO_ID&hl=de#token=[0-9a-f]{32}$/);
   }, 30_000);
 
   it("draws English for a language that has no file", async () => {

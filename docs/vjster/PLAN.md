@@ -384,6 +384,17 @@ Fadester files are not touched (someone else's work is uncommitted there). Each 
 6. **Step 8.6 -- OBS page.** The four setup notes come from a table of the ten languages; the language comes from an
    `hl=` parameter the property inspector adds to the address it builds (from Stream Deck's language), else
    `navigator.language`.
+   *As built (2026-10-31):* `vjster-page/src/page-text.ts` holds `NOTES` (en, de; four notes, `{s}` for the retry
+   seconds) and `pageLanguage(tag)`: the exact language and region (`pt-BR` -> `pt_BR`), then aliases (`zh`,
+   `zh-SG` -> `zh_CN`; `zh-HK`, `zh-MO`, `zh-Hant` -> `zh_TW`; `pt` -> `pt_BR`), then the base language, else
+   English; a note missing in a language is English. The plugin's `obsPageAddress` takes Stream Deck's language and
+   puts `&hl=<lang>` before `#token` when it is a Stream Deck code (`de`, `zh_CN`), else none; the page, not the
+   plugin, normalises the tag (this replaces "the plugin's `obsPageAddress` ... normalised" in Review round 1, since
+   Stream Deck's codes need no normalising); `readParams` reads `hl` (a
+   language tag, else null) and `bootPage` uses it, else `navigator.language` (OBS's CEF), else English, and sets
+   `<html lang>`. Decision: `hl` is not passed on to YouTube's player, whose controls are hidden on the page
+   (`controls: 0`). `tests/vjster-page-i18n.test.ts` checks the required languages are complete with English's
+   placeholders, the tag matching, the `hl=` check, and the order address, browser, English.
 7. **Step 8.7 -- Translations and checks.** Claude drafts every file, Gemini 4 Argon reviews each language and its
    corrections are applied unless one breaks a rule; Sonnet 5.5 QA before the build; all VJster tests, the three
    tsc runs, `streamdeck validate` on the plugin folder, the extension and plugin packages rebuilt. One commit per

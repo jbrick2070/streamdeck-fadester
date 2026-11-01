@@ -737,6 +737,22 @@ export const MUTATIONS: readonly Mutation[] = [
     from: "        if (field[2] === \"text\" && String(value).trim() === \"\") delete settings[key];",
     to: "        if (false) delete settings[key];",
     tests: ["tests/vjster-pi.test.ts"]
+  },
+  {
+    id: "M-V-88",
+    rule: "only a Stream Deck language code goes into the OBS page address (PLAN.md 8.6)",
+    file: "src/vjster/plugin/obs-page.ts",
+    from: "  const hl = language !== null && LANGUAGE.test(language) ? `&hl=${language}` : \"\";",
+    to: "  const hl = language !== null ? `&hl=${language}` : \"\";",
+    tests: ["tests/vjster-page.test.ts"]
+  },
+  {
+    id: "M-V-89",
+    rule: "the OBS page's notes follow hl= before the browser's language (PLAN.md 8.6)",
+    file: "vjster-page/src/page-boot.ts",
+    from: "  const lang = pageLanguage(params.hl ?? env.language);",
+    to: "  const lang = pageLanguage(env.language);",
+    tests: ["tests/vjster-page-i18n.test.ts"]
   }
 ];
 

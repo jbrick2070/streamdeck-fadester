@@ -32,7 +32,8 @@ describe("page address (R-OBS-2)", () => {
       port: 48150,
       loop: false,
       mute: false,
-      start: 0
+      start: 0,
+      hl: null
     });
   });
 
@@ -223,6 +224,9 @@ describe("the plugin's side of the page (R-OBS-1..2)", () => {
     expect(obsPageAddress(48151, TOKEN)).toBe(`http://127.0.0.1:48151/obs?v=${VIDEO_PLACEHOLDER}#token=${TOKEN}`);
     expect(obsPageAddress(48150, TOKEN, "bad")).toContain(`v=${VIDEO_PLACEHOLDER}`);
     expect(() => obsPageAddress(48150, "nope")).toThrow();
+    // Stream Deck's language goes in before the fragment (PLAN.md 8.6); anything else is left out.
+    expect(obsPageAddress(48150, TOKEN, VIDEO, "zh_CN")).toBe(`http://127.0.0.1:48150/obs?v=${VIDEO}&hl=zh_CN#token=${TOKEN}`);
+    for (const bad of ["", "de&x=1", "de#token=x", "DE", "deutsch"]) expect(obsPageAddress(48150, TOKEN, VIDEO, bad)).toBe(`http://127.0.0.1:48150/obs?v=${VIDEO}#token=${TOKEN}`);
   });
 
   it("loads the built page files, or warns once and serves nothing", () => {

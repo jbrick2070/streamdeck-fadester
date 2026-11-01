@@ -20,6 +20,8 @@ declare global {
 bootPage({
   location,
   replaceAddress: (url) => history.replaceState(null, "", url),
+  language: navigator.language,
+  setLanguage: (lang) => document.documentElement.setAttribute("lang", lang.replace("_", "-")),
   show: (text) => {
     const note = document.getElementById("note");
     if (note) note.textContent = text;

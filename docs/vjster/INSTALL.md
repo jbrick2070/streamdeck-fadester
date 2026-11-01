@@ -62,7 +62,10 @@ the plugin's settings page and the same port in the extension's options.
 ## Languages
 
 VJster follows the language of Stream Deck (the plugin, its action names and
-the words on keys and dials). With no translation for a word or a language,
+the words on keys and dials). The OBS page's address carries Stream Deck's
+language as `hl=` (for example `&hl=de`); without it the page uses OBS's
+language. The page shows text only when its address is incomplete or
+YouTube's player does not load. With no translation for a word or a language,
 the English text is shown.
 
 | Part | Languages now | Files |
@@ -70,6 +73,7 @@ the English text is shown.
 | Stream Deck plugin | English, German | `com.jbrick2070.vjster.sdPlugin/<lang>.json` |
 | Its settings page | English, German | `Localization.pi` in the same files; after a change run `node --import tsx scripts/vjster/make-pi-strings.ts` to rewrite `ui/i18n.js` |
 | Chrome extension (description, options page) | English, German | `vjster-extension/_locales/<lang>/messages.json` |
+| OBS page (its setup notes) | English, German | `vjster-page/src/page-text.ts` |
 
 The Chrome extension follows Chrome's language. Chrome's `messages.json`
 format has no room for a comment, so this note stands for those files: the

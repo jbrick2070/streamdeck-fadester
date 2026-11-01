@@ -8,6 +8,7 @@ import type { SocketLike } from "../../vjster-extension/src/link-client.js";
 import type { EmbedPlayer } from "./embed-control.js";
 import { ObsPage, playerVars } from "./page-core.js";
 import { readParams, setupProblem, withoutToken } from "./page-params.js";
+import { note, pageLanguage } from "./page-text.js";
 import type { SettleTimers } from "./settle.js";
 
 export const API_URL = "https://www.youtube.com/iframe_api";
@@ -29,6 +30,10 @@ export interface BootEnv {
   replaceAddress(url: string): void;
   /** Show a line on the page ("" clears it). */
   show(text: string): void;
+  /** The browser's language (navigator.language), used when the address names none. */
+  readonly language?: string;
+  /** Mark the page as being in this language (`<html lang>`). */
+  setLanguage?(lang: string): void;
   /** Add a script element; `onError` runs if it fails to load. */
   addScript(src: string, onError: () => void): void;
   /** Run `fn` once YouTube's API is ready (window.onYouTubeIframeAPIReady). */
@@ -45,7 +50,10 @@ export function bootPage(env: BootEnv): ObsPage | null {
   const params = readParams(env.location.search, env.location.hash, env.location.port);
   // Take the token out of the address before any other script can read it.
   env.replaceAddress(withoutToken(env.location.pathname, env.location.search));
-  const problem = setupProblem(params);
+  // The notes' language: the plugin's hl= (Stream Deck's language), else the browser's, else English (PLAN.md 8.6).
+  const lang = pageLanguage(params.hl ?? env.language);
+  env.setLanguage?.(lang);
+  const problem = setupProblem(params, lang);
   if (problem) {
     env.show(problem);
     return null;
@@ -72,7 +80,7 @@ export function bootPage(env: BootEnv): ObsPage | null {
         onError: () => page.playerError()
       }
     });
-    if (!player) env.show("VJster: YouTube's player did not load.");
+    if (!player) env.show(note(lang, "playerMissing"));
   });
 
   let attempt = 0;
@@ -80,7 +88,7 @@ export function bootPage(env: BootEnv): ObsPage | null {
     env.addScript(API_URL, () => {
       const wait = SCRIPT_RETRY_MS[Math.min(attempt, SCRIPT_RETRY_MS.length - 1)];
       attempt++;
-      env.show(`VJster: YouTube's player could not be loaded; trying again in ${Math.round(wait / 1000)} s.`);
+      env.show(note(lang, "retry", { s: String(Math.round(wait / 1000)) }));
       env.timers.setTimeout(load, wait);
     });
   load();

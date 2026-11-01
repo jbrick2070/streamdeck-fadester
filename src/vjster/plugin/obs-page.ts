@@ -14,6 +14,8 @@ export const VIDEO_PLACEHOLDER = "VIDEO_ID";
 
 const VIDEO_ID = /^[A-Za-z0-9_-]{11}$/;
 const TOKEN = /^[0-9a-f]{32}$/;
+/** A Stream Deck language code: `de`, `zh_CN`. */
+const LANGUAGE = /^[a-z]{2}(_[A-Z]{2})?$/;
 
 /**
  * The page files from the plugin's `bin/obs` folder (built by
@@ -64,9 +66,14 @@ export function videoIdFrom(input: string): string | null {
   return candidate !== null && VIDEO_ID.test(candidate) && candidate !== "videoseries" ? candidate : null;
 }
 
-/** The browser source address for OBS; the token goes in the fragment, which is never sent to a server. */
-export function obsPageAddress(port: number, token: string, videoId: string | null = null): string {
+/**
+ * The browser source address for OBS; the token goes in the fragment, which
+ * is never sent to a server. `language` is Stream Deck's language; it goes in
+ * as `hl=`, before the fragment, so the page's notes are in it (PLAN.md 8.6).
+ */
+export function obsPageAddress(port: number, token: string, videoId: string | null = null, language: string | null = null): string {
   if (!TOKEN.test(token)) throw new Error("not an OBS page token");
   const v = videoId !== null && VIDEO_ID.test(videoId) ? videoId : VIDEO_PLACEHOLDER;
-  return `http://${LINK_HOST}:${port}${OBS_PAGE_PATH}?v=${v}#token=${token}`;
+  const hl = language !== null && LANGUAGE.test(language) ? `&hl=${language}` : "";
+  return `http://${LINK_HOST}:${port}${OBS_PAGE_PATH}?v=${v}${hl}#token=${token}`;
 }

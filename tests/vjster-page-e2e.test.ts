@@ -83,14 +83,14 @@ describe("the plugin serves and manages the OBS page", () => {
     const status = sim.toPage.find((m) => m.event === "status") as Record<string, unknown>;
     const token = sim.globalSettings.obsToken as string;
     expect(token).toMatch(/^[0-9a-f]{32}$/);
-    expect(status).toMatchObject({ obsPage: true, obsAlwaysOn: null, found: false, address: `http://127.0.0.1:${port}/obs?v=VIDEO_ID#token=${token}` });
+    expect(status).toMatchObject({ obsPage: true, obsAlwaysOn: null, found: false, address: `http://127.0.0.1:${port}/obs?v=VIDEO_ID&hl=en#token=${token}` });
   });
 
   it("builds the address from a pasted YouTube link", async () => {
     sim.fromPage("dial-0", { event: "obs-address", input: `https://youtu.be/${VIDEO}?si=x` });
     await until(() => sim.toPage.some((m) => m.event === "obs-address"));
     const token = sim.globalSettings.obsToken as string;
-    expect(sim.toPage.find((m) => m.event === "obs-address")).toEqual({ event: "obs-address", address: `http://127.0.0.1:${port}/obs?v=${VIDEO}#token=${token}`, found: true });
+    expect(sim.toPage.find((m) => m.event === "obs-address")).toEqual({ event: "obs-address", address: `http://127.0.0.1:${port}/obs?v=${VIDEO}&hl=en#token=${token}`, found: true });
   });
 
   it("keeps serving the page after the port changes", async () => {

@@ -2,13 +2,14 @@
 // VJster OBS page: what the browser source address says (docs/vjster/
 // REQUIREMENTS.md R-OBS-1..2). The address is the whole configuration:
 //
-//   http://127.0.0.1:48150/obs?v=<video id>#token=<32 hex digits>
+//   http://127.0.0.1:48150/obs?v=<video id>&hl=<language>#token=<32 hex digits>
 //
 // The token sits in the fragment, which no browser sends to any server or in
 // a Referer; the page also removes it from its own address before YouTube's
 // script loads (player-page.ts).
 
 import { DEFAULT_LINK_PORT, LINK_HOST } from "../../src/vjster/shared/protocol.js";
+import { note } from "./page-text.js";
 
 export interface PageParams {
   /** The YouTube video id, 11 letters, digits, `-` or `_`; null when missing or malformed. */
@@ -24,11 +25,14 @@ export interface PageParams {
   readonly mute: boolean;
   /** Start this many whole seconds in. */
   readonly start: number;
+  /** The language of the page's notes, as the address names it (`de`, `zh_CN`, `pt-BR`); null when missing or malformed (PLAN.md 8.6). */
+  readonly hl: string | null;
 }
 
 const VIDEO_ID = /^[A-Za-z0-9_-]{11}$/;
 const PLAYLIST_ID = /^[A-Za-z0-9_-]{10,64}$/;
 const TOKEN = /^[0-9a-f]{32}$/;
+const LANGUAGE = /^[A-Za-z]{2,3}([-_][A-Za-z0-9]{2,8}){0,2}$/;
 
 const flag = (v: string | null): boolean => v === "1" || v === "true";
 
@@ -52,6 +56,7 @@ export function readParams(search: string, hash: string, servedPort: string): Pa
   const list = q.get("list");
   const token = h.get("token");
   const start = Number(q.get("start") ?? "0");
+  const hl = q.get("hl");
   return {
     videoId: v !== null && VIDEO_ID.test(v) ? v : null,
     playlistId: list !== null && PLAYLIST_ID.test(list) ? list : null,
@@ -59,7 +64,8 @@ export function readParams(search: string, hash: string, servedPort: string): Pa
     port: readPort(servedPort === "" ? null : servedPort),
     loop: flag(q.get("loop")),
     mute: flag(q.get("mute")),
-    start: Number.isInteger(start) && start > 0 && start < 86400 ? start : 0
+    start: Number.isInteger(start) && start > 0 && start < 86400 ? start : 0,
+    hl: hl !== null && LANGUAGE.test(hl) ? hl : null
   };
 }
 
@@ -76,9 +82,9 @@ export function withoutToken(pathname: string, search: string): string {
   return rest === "" ? pathname : `${pathname}?${rest}`;
 }
 
-/** What the page says when its address is incomplete; null when it can start. */
-export function setupProblem(params: PageParams): string | null {
-  if (params.token === null) return "VJster: this address has no token. Copy the OBS page address from the VJster settings in Stream Deck.";
-  if (params.videoId === null && params.playlistId === null) return "VJster: add ?v= and a YouTube video id to this address.";
+/** What the page says, in `lang` (page-text.ts), when its address is incomplete; null when it can start. */
+export function setupProblem(params: PageParams, lang = "en"): string | null {
+  if (params.token === null) return note(lang, "noToken");
+  if (params.videoId === null && params.playlistId === null) return note(lang, "noVideo");
   return null;
 }

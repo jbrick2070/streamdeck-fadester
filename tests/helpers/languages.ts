@@ -9,7 +9,7 @@ export const PLUGIN_DIR = resolve(process.cwd(), "com.jbrick2070.fadester-for-ob
  * The languages that must ship. Extend this one list when a language is added;
  * every other test takes its languages from the files present.
  */
-export const REQUIRED_LANGUAGES: readonly string[] = ["en", "de"];
+export const REQUIRED_LANGUAGES: readonly string[] = ["en", "de", "es", "fr", "ja", "ko", "zh_CN", "zh_TW"];
 
 export function languageFilePath(language: string): string {
   return join(PLUGIN_DIR, `${language}.json`);

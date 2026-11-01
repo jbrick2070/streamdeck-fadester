@@ -56,6 +56,17 @@ Set up the OBS connection once for all Fadester keys, dials, layouts, and the Ne
 
 When OBS is unavailable, an action alerts and performs at most one reconnect nudge every two seconds. Wrong-password status tells you exactly where to correct it in OBS without exposing the password.
 
+## Languages
+
+Fadester for OBS follows Stream Deck's language: English, German, Spanish, French, Japanese, Korean, Simplified
+Chinese and Traditional Chinese (the languages Stream Deck offers). OBS's own words (Studio Mode, Preview, Program,
+Scene, Source, Transition) follow OBS's translation for that language, so the deck matches OBS. Your scene, source
+and filter names, and the texts Midi Fadester sends, are shown as they are. The translations were drafted by an AI
+model (Claude) and reviewed by a second one (Gemini), whose corrections were taken; no native speaker has checked them
+yet. If something reads wrong, please open an issue or a pull request: the files are
+`com.jbrick2070.fadester-for-obs.sdPlugin/<language>.json`, with `en.json` as the English source. (VJster's languages
+are described in `docs/vjster/INSTALL.md`.)
+
 ## Development
 
 ```powershell

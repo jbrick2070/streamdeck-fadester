@@ -386,7 +386,9 @@ step's diff before its build; one commit per step; one push at the end.
    `textFitAttributes`, `splitTitle` (two lines at a space; CJK also between characters; one long Latin word stays
    whole) and `fontFamilyFor` (VJster's CJK font lists, by script). The old estimate (capitals 1 em, every
    non-ASCII character 1.2 em) is gone, so English is squeezed less often than before, and `truncateLabel` is
-   removed. Every text on the direct key and dial, the scene mixer (LIVE/NEXT too), the layer dial and the Midi
+   removed. So English output is not byte-identical to 0.7.7: besides "40 %" becoming "40%", a long scene or
+   source name is now cut by measured width rather than at a fixed character count, so its cut point can
+   differ, and some names that were squeezed before are drawn at full size. Every text on the direct key and dial, the scene mixer (LIVE/NEXT too), the layer dial and the Midi
    Fadester cells is fitted to its box and gets its font list; the direct key title wraps by width (14 px, else
    12 px, else two lines), the Midi Fadester key title too (14 px, else two lines at 13, 11 or 10 px); the dial
    status title and reason, the hold badge (now 112 to 188 px wide), the T-bar scene names (16, 14 or 12 px in

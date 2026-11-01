@@ -495,3 +495,202 @@ steps above where they differ.**
   takes `t` by injection (default English) rather than importing `src/`.
 - *Host*: this PC runs Stream Deck 7.6.0 (checked 2026-10-31), so the 7.6 minimum of 0.7.7 is met; no Neo hardware
   here, so the Info Bar's device check stays pending.
+
+---
+
+## 9. Playlister transport (design by Codex, reviewed 2026-10-31; requested by the operator 2026-11-01)
+
+Goal: six Fadester for OBS keys (Previous, Next, Play/Pause, Stop, Restart, Status) drive one Playlister source
+(`obs_playlister_source`, `C:\Users\jeffr\Documents\obs-playlister\src\obs\playlister-source.c:118`) through OBS's own
+`GetMediaInputStatus` and `TriggerMediaInputAction` (obs-websocket 5.6.3 protocol.md). The binding design is Codex's
+(ChatGPT), reviewed in four rounds by Gemini 4 Argon and Claude:
+`C:\Users\jeffr\Documents\obs-playlister\kibitz-runs\2026-10-31-playlister-tempo\r4\final.md` with `r4\judgment.md`.
+Out of scope here: any speed or tempo control (Properties Speed stays as it is), presets or per-item selection,
+vendor requests (`CallVendorRequest`), VJster's browser rate, and every dial (the starter leaves all four unassigned).
+Only Fadester's files change. Each step ends with `npx vitest run`, `npx tsc --noEmit`, `npm run test:mutation` and,
+when the plugin folder changes, `npm run validate`, all green; Sonnet 5.5 QA of the step's diff before its build; one
+commit per step; one push at the end; SPDX headers on every new file. The version changes on the operator's word.
+
+Wire constants, pinned in `src/obs/direct-obs-client.ts` and `tests/helpers/fake-obs-server.ts` (protocol.md 5.6.3):
+states `OBS_MEDIA_STATE_NONE|PLAYING|OPENING|BUFFERING|PAUSED|STOPPED|ENDED|ERROR`; actions
+`OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PLAY|PAUSE|STOP|RESTART|NEXT|PREVIOUS` (`NONE` never sent); `GetMediaInputStatus`
+and `TriggerMediaInputAction` take `inputUuid`; `mediaDuration` and `mediaCursor` are `null` when not playing;
+`GetVersion.availableRequests` is `Array<String>`; `InputRemoved` carries `inputName` and `inputUuid`;
+`InputNameChanged` carries `inputUuid`, `oldInputName`, `inputName`. No `MediaInputs` (1 << 8) subscription is added
+(`packages/streamdeck-fadester-shared/src/obs/obs-vendor-client.ts:20-26` stays).
+
+1. **Step 9.1 -- Fake server: identity, capabilities, media model.** `tests/helpers/fake-obs-server.ts`: inputs become
+   `{ inputName, inputUuid, inputKind, unversionedInputKind }` (today `inputNames: string[]` at :400 and
+   `GetInputList` answering `{ inputName }` only at :829-834; `inputVolumes` keeps its names). `GetVersion` (:792-799)
+   gains `availableRequests` (every request the fake handles; an option `availableRequests?: string[]` to omit some).
+   A `mediaInputs: Map<uuid, { state, durationMs, cursorMs }>` with the eight states; `GetMediaInputStatus` answers by
+   `inputUuid` (604 on unknown, 500 with OBS's wording on a non-media kind) and sends `null` cursor and duration unless
+   PLAYING or PAUSED; `TriggerMediaInputAction` applies the native rules (PLAY: PLAYING/PAUSED stays or resumes,
+   STOPPED/ENDED/NONE loads if the fake list has items else stays; PAUSE: PLAYING to PAUSED, ignored when stopped;
+   STOP to STOPPED; RESTART to PLAYING; NEXT/PREVIOUS keep the state), logs to `directCallLog`, and accepts an
+   optional `mediaActionDelayMs` and `mediaFailNext` for in-flight tests. Helpers `addInput`, `removeInput`,
+   `renameInput` emit `InputCreated`, `InputRemoved`, `InputNameChanged` with the fields above through `emitObsEvent`
+   (:741). Existing tests keep passing with the two audio inputs. Tests (`tests/fake-obs-server.test.ts`, new):
+   "answers GetMediaInputStatus with null cursor and duration outside PLAYING and PAUSED", "applies each
+   TriggerMediaInputAction as the native source does". Mutations: *M-9.1a* send a numeric cursor in STOPPED (test MUST
+   fail); *M-9.1b* let PAUSE in STOPPED produce PAUSED.
+2. **Step 9.2 -- Client: metadata, capabilities, watches, polling, transport queue.** `src/obs/direct-obs-client.ts`:
+   - `DirectObsCatalog` (:47-58) gains `inputDetails: DirectObsInputInfo[]` (`inputUuid`, `inputName`, `inputKind`,
+     `unversionedInputKind`), filled in `refreshCatalog` beside `inputs` (:216) and copied in `getCatalog` (:179-187);
+     `inputs: string[]` and the name-keyed audio paths (`resolveInputName` :370, `queueInput` :811) are untouched.
+   - `initializeAfterIdentify` (:612-635) reads `versionData.availableRequests` into `this.mediaCapability`
+     (`"ok" | "unsupported"`) before `refreshCatalog()` at :623, so the first publication carries it;
+     `getMediaCapability()` is public. Required: `GetInputList`, `GetMediaInputStatus`, `TriggerMediaInputAction`.
+   - `watchMedia(uuid): () => void` with a refcount per UUID and an idempotent unsubscribe; a 500 ms poll (setTimeout
+     chain, `unref`) runs only while the UUID has a watcher, is connected, not `collectionChanging`, present in
+     `inputDetails` with `unversionedInputKind === "obs_playlister_source"` (fallback `inputKind`), and the
+     capability is `ok`. One status request in flight per UUID; a post-command read is coalesced with it. Each
+     request takes `++statusSequence` for that UUID and a `mediaGeneration` stamp; a reply applies only when its
+     sequence is above the last applied and the generation matches.
+   - `getMediaState(uuid): MediaTargetState` (immutable copy): `availability`
+     (`unbound|missing|wrong_kind|unsupported|disconnected|ok`), `mediaState` (the eight or `unknown`),
+     `mediaCursor`/`mediaDuration` (`null` unless finite and duration `> 0`, cursor clamped to `0..duration`),
+     `pending` (`none|play|pause|unconfirmed`), `queued`, `lastError: LocalText | null`.
+   - `mediaCommand(uuid, op)` for `previous|next|playpause|stop|restart`: a serial queue per UUID bounded at four
+     entries including the one in flight; a fifth throws `DirectObsError(ownText("errorMediaBusy"))` and sends
+     nothing; Stop first purges that UUID's unsent entries, then enqueues; nothing is retried; nothing is merged.
+     Unbound, missing, wrong kind, unsupported, disconnected or `collectionChanging` throw before any request.
+     `playpause` reads a fresh status inside the queue: PLAYING sends PAUSE; PAUSED, STOPPED, ENDED, NONE send PLAY;
+     OPENING/BUFFERING keep an existing pending intent and otherwise throw `errorMediaChanging`; ERROR or an unmapped
+     state throws `errorMediaAmbiguous` (Stop still sends). A press while `pending` is `play` or `pause` throws
+     `errorMediaPending`. After PLAY one post-command read releases `pending`; after PAUSE `pending` stays until
+     PAUSED, STOPPED, ENDED, NONE or ERROR is observed, an explicit Stop/Next/Previous/Restart, lifecycle
+     invalidation, or 20 s (then `unconfirmed`, cleared by the next observed change or command).
+   - Event `mediaStateChanged(uuid, state)` only when the state's signature changed; never through
+     `directStateChanged` (the bridge rebroadcasts the whole catalog on it, `src/pi/direct-obs-bridge.ts:40-41`).
+   - Reconcile: after every catalog publication (:286), on `InputCreated`/`InputNameChanged` (through the existing
+     refresh at :742-753), on `InputRemoved` matched by `eventData.inputUuid` (today :672-674 reads `inputName`
+     only): purge the queue, clear pending, mark `missing`, emit. `CurrentSceneCollectionChanging` (:659-670),
+     non-connected status (:143-152), `stop()` and `reconnectNow()` bump `mediaGeneration`, stop every poll, purge
+     every queue and clear every pending; `Changed`/reconnect resume after the next catalog. Late replies and expired
+     waits of an old generation never touch state.
+   Tests (`tests/playlister-media.test.ts`, named per the design's Acceptance paragraph): "sends the exact
+   OBS_WEBSOCKET_MEDIA_INPUT_ACTION strings by inputUuid and reads null cursor and duration outside PLAYING and
+   PAUSED"; "shares one 500 ms poller between two watchers of the same Playlister and stops it after the last
+   unsubscribe, twice"; "sends nothing for an unbound, missing, wrong-kind, unsupported or disconnected target";
+   "captures availableRequests before the first catalog and marks media unsupported when a request is missing";
+   "applies no older status reply over a newer one, from a poll or a post-command read"; "cancels a target on
+   InputRemoved by inputUuid, keeps it across a rename, and invalidates every target on a collection change and on
+   disconnect"; "rejects the fifth press as busy without a request, and Stop drops that Playlister's unsent presses
+   first"; "toggles PLAYING to PAUSE and PAUSED, STOPPED, ENDED and NONE to PLAY, refuses a toggle in ERROR, keeps a
+   pending intent through OPENING"; "releases PLAY after the post-command read, holds PAUSE up to 20 s, then shows
+   unconfirmed rather than failure"; "never retries Next or Previous and never merges two accepted presses";
+   "does not repaint a retargeted watcher from a cancelled wait or a late reply". Mutations: *M-9.2a* remove the
+   four-entry bound; *M-9.2b* let Stop skip the purge; *M-9.2c* let an older status reply overwrite; *M-9.2d* retry a
+   failed NEXT once; *M-9.2e* poll an unwatched UUID; *M-9.2f* match `InputRemoved` by name again.
+3. **Step 9.3 -- The action.** `src/actions/playlister-transport-key.ts`: `PlaylisterTransportInstanceController`
+   (client, sink, settings) and `PlaylisterTransportKeyAction` on UUID
+   `com.jbrick2070.fadester-for-obs.playlister-transport`, Keypad only, after the pattern of
+   `src/actions/obs-fade-key.ts` (`appear`/`disappear` :50-65, `CellRateLimiter` at 100 ms :45-47,
+   `onWillAppear` :141-158). Settings in `src/types/settings.ts`: `PlaylisterTransportSettings { inputUuid: string;
+   operation: "previous"|"next"|"playpause"|"stop"|"restart"|"status"; inputName?: string (display hint only, never
+   used to resolve); labelOverride }`, default `operation: "playpause"`, `inputUuid: ""`. `appear` subscribes to
+   `statusChanged`, `directStateChanged` and `mediaStateChanged` (filtered by its UUID) and calls `watchMedia`;
+   `updateSettings` releases and re-acquires the watch; `disappear` releases it and disposes the limiter.
+   `handleKeyDown`: `status` renders only; unbound shows the alert and "Choose a Playlister"; disconnected calls
+   `nudgeReconnect` and alerts; otherwise `client.mediaCommand(uuid, op)` and `lastError` on failure. Rendering uses
+   `renderDirectKeySvg` (`src/gfx/direct-obs-renderer.ts:133`): title the operation word (or a custom caption),
+   subtitle the observed state word, with `m:ss/m:ss` when cursor and duration are known, or the pending, unconfirmed
+   or busy word; `problem` for missing, wrong kind, unsupported and the last RPC error; the connection reason as
+   today. `DirectKeyIcon` (:18-20) and `keyGlyph` (:180-203) gain `media-previous`, `media-next`, `play-pause`,
+   `stop`, `restart`, `status`. `manifest.json`: the action inserted before the two "(optional)" actions with
+   `Controllers: ["Keypad"]`, `SupportedInMultiActions: true`, `PropertyInspectorPath: "ui/playlister-transport-key.html"`,
+   icons `imgs/actions/playlister-transport/{icon,key}.svg` (original, Playlister palette); registration in
+   `src/plugin.ts` before `streamDeck.connect()` (:95-103). `tests/manifest-hygiene.test.ts:54-56` moves to eight
+   actions and the first five non-optional. Tests (`tests/playlister-transport.test.ts`): "draws the observed state
+   word and time, and the connection, missing, wrong-kind, unsupported and RPC problems"; "a Status press sends
+   nothing, another press sends one request, and overflow shows busy without a request"; "acquires and releases its
+   watch on appear, retarget and disappear". Mutations: *M-9.3a* send the RPC when unbound; *M-9.3b* draw a fixed
+   "Playing" instead of the observed state.
+4. **Step 9.4 -- Inspector.** `ui/playlister-transport-key.html` after `ui/obs-fade-key.html`: a Playlister picker
+   filled from `state.catalog.inputDetails` where `unversionedInputKind === "obs_playlister_source"`, option value the
+   UUID, text the name (display only), `fillSelect`'s "not in OBS now" row for a bound UUID that is gone; an operation
+   picker with the six words; the label field; banners for choose, missing, wrong kind and unsupported
+   (`mediaCapability` added to the `directObsState` payload in `src/pi/direct-obs-bridge.ts:50-71`); the shared
+   connection sections through `window.initDirectObsPropertyInspector` (`ui/direct-pi.js:261`); every static word
+   `data-i18n`, loaded `i18n.js`, `preset-captions.js`, `direct-pi.js` in that order. Tests
+   (`tests/playlister-inspector.test.ts`, vm after `tests/direct-inspector-feedback.test.ts`): "lists only Playlister
+   sources by UUID with names for display, saves operation and inputUuid, and shows each banner";
+   `tests/inspector-i18n.test.ts` covers the page automatically. Mutation: *M-9.4a* list every input kind.
+5. **Step 9.5 -- Starter profile.** `profiles/layouts.json`: `plus-playlister-transport`, "Fadester — Playlister
+   Transport + (Either Mode)", deviceType 7, kind `playlister`; keys row 0 Previous, Next, Play / pause, Stop; row 1
+   Restart, Status, two empty; no dials. `scripts/build-profiles.ts:14-50` gains the `playlister` kind;
+   `src/types/layouts.ts` gains the entry in `READY_LAYOUTS` and `"plus-playlister-transport": 1` in the revisions;
+   `manifest.json` `Profiles` gains the generated entry (`tests/manifest-hygiene.test.ts:135` compares the two).
+   `src/obs/preset-captions.ts` gains a `playlister` action keyed by operation with the six shipped captions
+   (`tests/preset-captions.test.ts:47` moves from 38 to 44) and `ui/preset-captions.js` is regenerated. `DECK-LAYOUTS.md`,
+   `profiles/README.md` and README's layouts paragraph say twelve. Test: `preset-captions.test.ts` renders the six
+   unbound keys on a German deck without an English caption.
+6. **Step 9.6 -- Texts.** `src/i18n/strings.ts`: the operation words, the state words (`mediaStateNone` "Empty"
+   through `mediaStateError`, `mediaStateUnknown`), `mediaTime` "{state} {cursor}/{duration}", `mediaPendingPlay`,
+   `mediaPendingPause`, `mediaUnconfirmed` "Sent; state unconfirmed", `mediaBusy`, `plChoose`, and the errors
+   `errorMediaChoose`, `errorMediaMissing`, `errorMediaWrongKind` "{input}", `errorMediaUnsupported`,
+   `errorMediaBusy`, `errorMediaPending`, `errorMediaChanging`, `errorMediaAmbiguous`; the inspector keys under
+   `Localization.pi`; the action's `Name` and `Tooltip`; all in `en.json` and drafted in de, es, fr, ja, ko, zh_CN,
+   zh_TW using OBS's own media terms, marked for the usual Gemini 4 Argon review (8.6). `ui/i18n.js` regenerated.
+   `tests/deck-fit.test.ts` lists the new key title and subtitle (longest sample: Buffering with 59:59/59:59) so every
+   language fits the 96 px subtitle; `tests/i18n-strings.test.ts:65-84` covers the new UUID. Mutation: *M-9.6a* draw
+   the English state word regardless of language.
+7. **Step 9.7 -- Acceptance.** Full suite, `npm run test:mutation` (M-9.1a..M-9.6a killed), `npm run validate`,
+   `npm run build`, package. Real-OBS run, by the operator, in the portable OBS 33 with Playlister 0.5.0
+   (`C:\Users\jeffr\OBS-Studio-33-Portable\plugins\obs-playlister\obs-playlister.dll`; the conformance runner's own
+   root `tests/obs-live-conformance.ts:11` is not changed), watching Program output and the OBS log, not RPC results:
+   Next and Previous at both ends with loop on (wraps) and off (no-op, state unchanged); shuffle on, Next past the
+   last unplayed item (no-op); an empty list (NONE, Play stays idle) and a hidden source (visibility behavior
+   stop/restart and pause/unpause); Play/pause from playing, paused, stopped and ended; Stop; Restart in both
+   restart_behavior modes; a rename (key keeps working), a delete (key says missing at once), OBS restart (keys
+   recover after reconnect); live queue edits while playing; two keys on one source and six on two. Findings are
+   recorded under this step before the push.
+
+Where the reviewed design and today's code disagree (found while drafting, 2026-11-01): `InputRemoved` is matched by
+`inputName` only (`direct-obs-client.ts:672-674`), the design needs `inputUuid`; `GetVersion.availableRequests` is
+discarded (:615-622) and the fake's `GetVersion` lacks it; no UUID or kind exists anywhere yet (catalog `inputs:
+string[]`, fake `{ inputName }`, name-keyed `queueInput`), so media gets its own UUID-keyed queue; the bridge
+rebroadcasts the whole catalog on `directStateChanged`, so media changes need their own event; shuffle's "no-op at the
+end" shows only with loop off (`playlister-source.c:1290-1296`, loop defaults to true at :2616); `mps_get_duration`
+clamps to 0 (:1065) while the protocol sends `null`, and the client treats both as unknown; the live conformance runner
+points at another portable root (`tests/obs-live-conformance.ts:11`) and is left alone. Native facts relied on, all
+confirmed in `playlister-source.c`: PLAY while stopped/ended/empty reloads (:1198-1235); `mps_end_reached` points at the
+first playable row (:722-730); NONE for an empty list (:711-712); PAUSE while stopped is ignored (:1230); Restart
+honours `restart_behavior` (:1247-1251); held-pause windows are 5 s local and 15 s URL (`player.c:154-155`), inside
+the 20 s PAUSE horizon. No native change is needed for this delivery.
+
+**Review round 1 (2026-11-01, Claude pass against the code; Gemini 4 Argon's pass folded in below when it lands):
+taken, and binding for the steps above where they differ.**
+
+- *Poll start:* `refreshCatalog()` publishes the first catalog before the status becomes `connected` (:287 vs :627-630),
+  so a reconcile gated on "connected" would never start a poll after connect or reconnect. Reconcile runs on the
+  `statusChanged` to `connected` (the second emission, :631) and on every later catalog publication.
+- *Post-command read:* coalescing never adopts a read already in flight. After the trigger reply, exactly one fresh
+  status read is issued (queued behind an in-flight one), and only that reply can release PLAY's pending mark or
+  clear PAUSE's.
+- *Collection change:* `CurrentSceneCollectionChanging` clears `inputDetails` together with `inputs` (:665-668), and a
+  bumped generation keeps every poll off until the next catalog publication after `Changed`; stale UUIDs never pass
+  the presence gate.
+- *Fake server fidelity:* NEXT and PREVIOUS load the next item from any state and end in PLAYING
+  (`playlister-source.c:1341-1344`, `play_media_at_index` sets PLAYING at :495); they keep the state only at the end
+  with loop off (:1335-1340) or with the shuffle used up (:1290). A non-media kind answers NONE with null cursor and
+  duration (obs-websocket 5.6.3 validates the input only; `obs_source_media_get_state` returns NONE without a
+  `media_get_state`), not a 500. `GetVersion` in the fake reports 5.6.3. OPENING, BUFFERING and ERROR never come from
+  Playlister's child (`obs-ffmpeg-source.c` sets only ENDED, PLAYING, PAUSED, STOPPED), so those paths are fake-only
+  and the real-OBS run does not look for them.
+- *Purged presses:* a press that Stop purges settles as a quiet cancellation (its own outcome kind), never as
+  `lastError`; the Next key does not paint a problem because Stop was pressed. `lastError` clears on the next
+  successful command or observed state change for that target.
+- *Retarget race:* commands carry the action's settings generation; a rejection from the old target after
+  `updateSettings` is dropped.
+- *Missing target row:* the inspector's "not in OBS now" row shows the stored `inputName` hint, never the raw UUID.
+- *Test plumbing:* `server.inputNames` stays as a compatible accessor (nine test sites assign it); the German render
+  test for the six captions is named in 9.5 and `preset-captions.test.ts` gets a `playlister` branch;
+  `manifest-hygiene` counts six non-optional actions of eight; the deck-fit sample is "120:00/120:00" (a two-hour
+  item), and times above 99:59 are drawn as "h:mm:ss"; `SupportedInMultiActions` is false, as for the other actions.
+- *Simpler:* one global monotonic sequence plus the generation (no per-UUID counters); `mediaStateChanged` carries
+  `availability`, so the key subscribes to `statusChanged` and `mediaStateChanged` only.
+- *Confirmed as designed:* per-UUID bound and Stop purge; `InputRemoved` by UUID; capabilities before the first
+  catalog; PLAY release vs the 20 s PAUSE wait (held windows `player.c:154-155`, dropped natively by a later load,
+  stop or play, :206-207); no `MediaInputs` subscription; a separate per-UUID event.

@@ -1135,6 +1135,29 @@ ships unbound.
    what it made; OBS is started only when no obs64 runs and closed cleanly; the operator's sources are never touched.
    Device checks stay with the operator: import, page wrap 4 to 1, page 1 after `switchToProfile`, touch-strip swipe
    and dial swap, `willAppear` on page return, legibility at arm's length, Panic and Restore watched on Program output.
+   *Automated part (2026-11-01):* `tests/vj-rig-live-check.ts` (run by hand: `node --import tsx
+   tests/vj-rig-live-check.ts`; never inside vitest) refuses to run while an obs64 is up, starts the portable OBS
+   with `--portable --disable-updater --multi`, reads the websocket password from OBS's config into memory only,
+   creates its own color source "Fadester VJ live check <run>" in the Program scene (as the Playlister check does)
+   with its own Shader Filter, checks every step against an expected value (a miss fails the run), removes the
+   source with its filters and closes OBS through its main window, waiting on its own process. Panic and Restore are
+   sent only when no saved scene collection mentions `visual_sidechain_` and the live OBS has no other Visual
+   Sidechain filter on any scene, group or input (an unreadable source counts as one); a Restore always follows a
+   sent Panic. Result (OBS 33.0.1; its obs-websocket reports 5.7.6, not the 5.6.3 the plan names; Visual Sidechain
+   0.6.0 with the Restore fix): every check passed: a +20 % turn moved Effect mix 50 to 70 in OBS (two slewed
+   writes) and the deck agreed; a 0.5 s glide reached 20; drop-and-return read 0, then 20; a setting our own Audio
+   Modulator targets was refused ("Driven by …"); the filter toggled off and on (OBS agreed); Panic latched the deck,
+   OBS logged "Panic hotkey triggered…", a turn was refused ("Restore first") and Visual Sidechain wrote 0 to the
+   shader's `aura_intensity` and `fft_reactivity`; Restore cleared the latch, OBS logged "Restore hotkey
+   triggered…", wrote back 1.4 and 1 (the defaults those uniforms had, now stored explicitly) and left Effect mix at
+   20. OBS shut down cleanly with no memory leaks, and the saved collection holds only its own "Scene" again (logs
+   `2026-11-01 05-54-31.txt`, `06-08-42.txt`, `06-09-33.txt`). Found on the way: an earlier version made a scene
+   of its own with `CreateScene`; on one run that request never answered within 4 s and OBS then would not close
+   through its window, so the check killed it after 30 s (log `06-06-37.txt`, which ends at the client's
+   disconnect). Not investigated further (it may be a deadlock between a frontend scene handler and another plugin);
+   the check no longer creates a scene. If the operator's next start of the portable OBS offers Safe Mode, that kill
+   is why; the `.sentinel` folder was empty afterwards. Also, OBS's own `Untitled.json.bak` (its previous save) may
+   hold the check's source from a mid-run autosave; the live `Untitled.json` does not.
 
 **Decisions taken overnight (the operator may overrule any).**
 - Studio Mode only; plain page names (Perform, Layers, Visuals, Scenes); Midi Fadester and VJster speed stay out.

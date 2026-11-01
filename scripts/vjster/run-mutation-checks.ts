@@ -721,6 +721,22 @@ export const MUTATIONS: readonly Mutation[] = [
     from: "  return STATUS.sizes.find((s) => textWidth(word, s, STATUS.spacing) <= STATUS.width) ?? null;",
     to: "  return word.length > 9 ? 17 : 22;",
     tests: ["tests/vjster-deck-fit.test.ts", "tests/vjster-plugin-units.test.ts"]
+  },
+  {
+    id: "M-V-86",
+    rule: "the settings page speaks Stream Deck's language (PLAN.md 8.4)",
+    file: "com.jbrick2070.vjster.sdPlugin/ui/vjster.js",
+    from: "      lang = pickLanguage(app && app.language);",
+    to: "      lang = pickLanguage(\"en\");",
+    tests: ["tests/vjster-pi.test.ts"]
+  },
+  {
+    id: "M-V-87",
+    rule: "the settings page never stores the default label (R-I18N-2)",
+    file: "com.jbrick2070.vjster.sdPlugin/ui/vjster.js",
+    from: "        if (field[2] === \"text\" && String(value).trim() === \"\") delete settings[key];",
+    to: "        if (false) delete settings[key];",
+    tests: ["tests/vjster-pi.test.ts"]
   }
 ];
 

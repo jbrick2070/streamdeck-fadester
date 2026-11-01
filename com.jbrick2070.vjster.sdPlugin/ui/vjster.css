@@ -26,6 +26,9 @@ h2 {
 }
 .row > span {
   color: #c8c8d4;
+  /* Long words in some languages (German compounds) break instead of overflowing. */
+  overflow-wrap: anywhere;
+  hyphens: auto;
 }
 input[type="number"],
 input[type="text"],

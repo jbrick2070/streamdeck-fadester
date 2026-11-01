@@ -68,6 +68,7 @@ the English text is shown.
 | Part | Languages now | Files |
 |------|---------------|-------|
 | Stream Deck plugin | English, German | `com.jbrick2070.vjster.sdPlugin/<lang>.json` |
+| Its settings page | English, German | `Localization.pi` in the same files; after a change run `node --import tsx scripts/vjster/make-pi-strings.ts` to rewrite `ui/i18n.js` |
 
 The English texts were written with Claude Opus 5.5, an AI model. Every other
 language was drafted by Claude Opus 5.5 and is to be reviewed by a second AI

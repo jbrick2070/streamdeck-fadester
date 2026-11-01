@@ -2,7 +2,9 @@
 // VJster settings page (docs/vjster/PLAN.md 3.8). Plain script for Stream
 // Deck's property inspector: it shows the fields of the action it was opened
 // for, saves them with setSettings, and shows the link status the plugin
-// reports. No library, nothing loaded from the internet (R-ID-5).
+// reports. No library, nothing loaded from the internet (R-ID-5). Its texts
+// come from i18n.js, loaded before it, in Stream Deck's language (PLAN.md 8.4);
+// a text that starts with "@" in the tables below is such a key.
 /* global WebSocket, document, window */
 (function () {
   "use strict";
@@ -15,12 +17,12 @@
     ["0.5", "0.5x"]
   ];
   var TARGETS = [
-    ["browser", "Chrome tab"],
-    ["obs", "OBS page"],
-    ["both", "Both"]
+    ["browser", "@targetBrowser"],
+    ["obs", "@targetObs"],
+    ["both", "@targetBoth"]
   ];
   var LEVELS = [
-    ["auto", "Auto"],
+    ["auto", "@levelAuto"],
     ["hd2160", "2160p"],
     ["hd1440", "1440p"],
     ["hd1080", "1080p"],
@@ -31,41 +33,87 @@
     ["tiny", "144p"]
   ];
 
-  /** Field lists per action: [key, label, kind, options/default]. */
+  /**
+   * Field lists per action: [key, label key, kind, options/default]. A text
+   * field's default is the deck word it shows when left empty; it is never
+   * stored, so an empty label stays unset (PLAN.md 8, Review round 1).
+   */
   var FIELDS = {
     speed: [
-      ["label", "Strip label", "text", "SPEED"],
-      ["step", "Turn step", "select", STEPS, "0.25"],
-      ["fineStep", "Held-turn step", "select", STEPS, "0.05"],
-      ["extended", "Extended range (0.1x to 16x, FX)", "check", false],
-      ["hold", "Keep the speed on the next video", "check", true],
-      ["target", "Control", "select", TARGETS, "browser"]
+      ["label", "fieldLabel", "text", "speed"],
+      ["step", "fieldStep", "select", STEPS, "0.25"],
+      ["fineStep", "fieldFineStep", "select", STEPS, "0.05"],
+      ["extended", "fieldExtended", "check", false],
+      ["hold", "fieldHoldSpeed", "check", true],
+      ["target", "fieldControl", "select", TARGETS, "browser"]
     ],
     quality: [
-      ["label", "Strip label", "text", "QUALITY"],
-      ["hold", "Keep the level on the next video", "check", true],
-      ["target", "Control", "select", TARGETS, "browser"]
+      ["label", "fieldLabel", "text", "quality"],
+      ["hold", "fieldHoldLevel", "check", true],
+      ["target", "fieldControl", "select", TARGETS, "browser"]
     ],
     "speed-preset": [
-      ["rate", "Speed (0.1 to 16)", "number", 1],
-      ["extended", "Write the video directly (needed below 0.25x or above 4x)", "check", false],
-      ["hold", "Keep the speed on the next video", "check", true],
-      ["target", "Control", "select", TARGETS, "browser"]
+      ["rate", "fieldRate", "number", 1],
+      ["extended", "fieldDirect", "check", false],
+      ["hold", "fieldHoldSpeed", "check", true],
+      ["target", "fieldControl", "select", TARGETS, "browser"]
     ],
     "speed-step": [
-      ["direction", "Direction", "select", [["1", "Faster"], ["-1", "Slower"]], "1"],
-      ["step", "Step", "select", STEPS, "0.25"],
-      ["extended", "Extended range", "check", false],
-      ["target", "Control", "select", TARGETS, "browser"]
+      ["direction", "fieldDirection", "select", [["1", "@faster"], ["-1", "@slower"]], "1"],
+      ["step", "fieldStepSize", "select", STEPS, "0.25"],
+      ["extended", "fieldExtendedShort", "check", false],
+      ["target", "fieldControl", "select", TARGETS, "browser"]
     ],
     "quality-preset": [
-      ["level", "Level", "select", LEVELS, "auto"],
-      ["hold", "Keep the level on the next video", "check", true],
-      ["target", "Control", "select", TARGETS, "browser"]
+      ["level", "fieldLevel", "select", LEVELS, "auto"],
+      ["hold", "fieldHoldLevel", "check", true],
+      ["target", "fieldControl", "select", TARGETS, "browser"]
     ],
     pin: [],
-    transport: [["target", "Control", "select", TARGETS, "browser"]]
+    transport: [["target", "fieldControl", "select", TARGETS, "browser"]]
   };
+
+  var STRINGS = window.VJSTER_PI_STRINGS || {};
+  /** The language the texts are in: Stream Deck's, its base language, or English. */
+  var lang = "en";
+
+  function pickLanguage(wanted) {
+    var w = typeof wanted === "string" ? wanted : "";
+    if (Object.prototype.hasOwnProperty.call(STRINGS, w)) return w;
+    var base = w.split(/[_-]/)[0];
+    if (Object.prototype.hasOwnProperty.call(STRINGS, base)) return base;
+    return "en";
+  }
+
+  function lookup(part, key) {
+    var chain = [lang, "en"];
+    for (var i = 0; i < chain.length; i++) {
+      var table = Object.prototype.hasOwnProperty.call(STRINGS, chain[i]) ? STRINGS[chain[i]][part] : null;
+      if (table && Object.prototype.hasOwnProperty.call(table, key) && typeof table[key] === "string" && table[key] !== "") return table[key];
+    }
+    return key;
+  }
+
+  /** A settings page text with its {placeholders} filled; values are put in as given. */
+  function t(key, values) {
+    return lookup("pi", key).replace(/\{([A-Za-z0-9_]+)\}/g, function (all, name) {
+      return values && Object.prototype.hasOwnProperty.call(values, name) ? String(values[name]) : all;
+    });
+  }
+
+  /** An option or field text: a key when it starts with "@", else shown as it is (numbers such as 0.25x). */
+  function shown(text) {
+    return text.charAt(0) === "@" ? t(text.slice(1)) : text;
+  }
+
+  /** Put the page's fixed texts in the current language. */
+  function translatePage() {
+    document.documentElement.setAttribute("lang", lang.replace("_", "-"));
+    var nodes = document.querySelectorAll("[data-i18n]");
+    for (var i = 0; i < nodes.length; i++) nodes[i].textContent = t(nodes[i].getAttribute("data-i18n"));
+    var inputs = document.querySelectorAll("[data-i18n-placeholder]");
+    for (var j = 0; j < inputs.length; j++) inputs[j].setAttribute("placeholder", t(inputs[j].getAttribute("data-i18n-placeholder")));
+  }
 
   var ws = null;
   var context = "";
@@ -102,20 +150,20 @@
     box.textContent = "";
     var fields = FIELDS[kind] || [];
     if (fields.length === 0) {
-      box.appendChild(el("p", { class: "note" }, kind === "pin" ? "Press to keep controlling the Chrome tab that is active now; press again to let go." : ""));
+      box.appendChild(el("p", { class: "note" }, kind === "pin" ? t("pinNote") : ""));
       return;
     }
-    box.appendChild(el("h2", {}, "This action"));
+    box.appendChild(el("h2", {}, t("thisAction")));
     fields.forEach(function (field) {
       var key = field[0];
       var row = el("label", { class: "row" });
-      row.appendChild(el("span", {}, field[1]));
+      row.appendChild(el("span", {}, t(field[1])));
       var input;
       var current = settings[key];
       if (field[2] === "select") {
         input = el("select", {});
         field[3].forEach(function (opt) {
-          var o = el("option", { value: opt[0] }, opt[1]);
+          var o = el("option", { value: opt[0] }, shown(opt[1]));
           input.appendChild(o);
         });
         input.value = current === undefined ? field[4] : String(current);
@@ -126,11 +174,16 @@
         input = el("input", { type: "number", min: "0.1", max: "16", step: "0.05" });
         input.value = current === undefined ? String(field[3]) : String(current);
       } else {
-        input = el("input", { type: "text", maxlength: "16" });
-        input.value = current === undefined ? field[3] : String(current);
+        // The default label is the placeholder, in the deck's language, never the value (R-I18N-2).
+        var word = field[3] === "speed" && settings.extended === true ? "fxSpeed" : field[3];
+        var placeholder = lookup("deck", word);
+        input = el("input", { type: "text", maxlength: "16", placeholder: placeholder === word ? "" : placeholder });
+        input.value = current === undefined ? "" : String(current);
       }
       input.addEventListener("change", function () {
-        settings[key] = readValue(field, input);
+        var value = readValue(field, input);
+        if (field[2] === "text" && String(value).trim() === "") delete settings[key];
+        else settings[key] = value;
         send({ event: "setSettings", context: context, payload: settings });
       });
       row.appendChild(input);
@@ -141,27 +194,25 @@
   function showStatus(s) {
     var box = document.getElementById("status");
     var words = {
-      connected: "Chrome extension connected",
-      "extension-off": "Waiting for the Chrome extension",
-      "port-in-use": "Port " + s.port + " is in use by another program"
+      connected: t("statusConnected"),
+      "extension-off": t("statusWaiting"),
+      "port-in-use": t("statusPortInUse", { port: s.port })
     };
     box.textContent = words[s.portInUse ? "port-in-use" : s.browser] || String(s.browser);
     box.className = "status " + (s.browser === "connected" ? "ok" : "bad");
     if (s.badIds > 0) {
       var allBad = s.badIds >= (s.extensionIds || []).length;
-      box.textContent = allBad
-        ? "No entry is a Chrome extension id: no extension can connect"
-        : s.badIds + " entry(s) ignored: not a Chrome extension id";
+      box.textContent = allBad ? t("noValidId") : t(s.badIds === 1 ? "badIdOne" : "badIdMany", { n: s.badIds });
       box.className = "status bad";
     }
     document.getElementById("port").value = String(s.port);
     document.getElementById("ext").value = (s.extensionIds || []).join(", ");
     var obs = document.getElementById("obs-status");
     if (!s.obsPage) {
-      obs.textContent = "This copy of the plugin has no OBS page";
+      obs.textContent = t("noObsPage");
       obs.className = "status bad";
     } else {
-      obs.textContent = s.obs === "connected" ? "OBS page connected" : "No OBS page connected";
+      obs.textContent = s.obs === "connected" ? t("obsConnected") : t("obsWaiting");
       obs.className = "status " + (s.obs === "connected" ? "ok" : "bad");
     }
     // A port change changes the address: ask again for what was pasted, or show the placeholder.
@@ -190,9 +241,9 @@
     var field = document.getElementById("obs-address");
     field.select();
     var done = function () {
-      document.getElementById("obs-copy").textContent = "Copied";
+      document.getElementById("obs-copy").textContent = t("copied");
       window.setTimeout(function () {
-        document.getElementById("obs-copy").textContent = "Copy address";
+        document.getElementById("obs-copy").textContent = t("copy");
       }, 1500);
     };
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(field.value).then(done, function () {
@@ -222,6 +273,14 @@
 
   window.connectElgatoStreamDeckSocket = function (inPort, inUUID, inRegisterEvent, inInfo, inActionInfo) {
     context = inUUID;
+    // Stream Deck's language, before anything is drawn (PLAN.md 8, Review round 1).
+    try {
+      var app = JSON.parse(inInfo).application;
+      lang = pickLanguage(app && app.language);
+    } catch (e) {
+      lang = "en";
+    }
+    translatePage();
     var info = {};
     try {
       info = JSON.parse(inActionInfo);

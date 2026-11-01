@@ -347,6 +347,25 @@ Fadester files are not touched (someone else's work is uncommitted there). Each 
    language, loaded before `vjster.js`), `vjster.js` reads `application.language` from the `inInfo` it already
    receives, `vjster.html` marks texts with `data-i18n`; the "entry(s)" message becomes a one and a many text. A test
    checks `i18n.js` has the same keys and placeholders in every language.
+   *Change to the review decision (2026-10-31, from the review of Fadester's plan in the same repo):* the PI does
+   not fetch `../<lang>.json`. Stream Deck loads the PI from a file in its CEF, where a fetch of a sibling file is not
+   reliable, and a vm-run PI test has no fetch. The PI's texts still live only in `Localization.pi` of the
+   `<lang>.json` files; `scripts/vjster/make-pi-strings.ts` writes them into `ui/i18n.js` (a plain script with an
+   SPDX header, loaded before `vjster.js`), and a test fails when that file is not current.
+   *As built (2026-10-31):* `ui/i18n.js` sets `window.VJSTER_PI_STRINGS = { <lang>: { pi, deck } }`, where `deck`
+   holds the three deck words the page shows as label placeholders (SPEED, FX SPEED, QUALITY). `vjster.js` starts
+   in English, and in `connectElgatoStreamDeckSocket`, before the first render, reads
+   `JSON.parse(inInfo).application.language`, picks that language, its base (`de_AT` -> `de`) or English, sets
+   `<html lang>`, and fills every `data-i18n` text and `data-i18n-placeholder`; field labels and option texts are
+   keys (`"@targetObs"` in the option tables, numbers such as `0.25x` stay literal). A missing or empty text falls
+   back to English, then to the key. `Port {port} is in use` and `{n} entry/entries ignored` are placeholders with
+   a one and a many text. The label input's value is the stored label or empty; the translated default (FX SPEED
+   when extended range is on) is its placeholder, and clearing the input removes the label from the settings, so
+   a translated default is never saved. The HTML keeps its English text, which a test keeps equal to `en.json`;
+   `vjster.css` lets long words in row labels wrap. Mutations M-V-86 (language ignored) and M-V-87 (empty label stored). `tests/vjster-pi.test.ts` checks `i18n.js` is current, every key
+   the page uses exists in English and every English key is used, and runs `i18n.js` and `vjster.js` in a small
+   stand-in DOM (German, a regional German, a language without a file, both counts, the port placeholder, the
+   unstored default label). `tests/vjster-i18n-files.test.ts` already compares `Localization.pi` across languages.
 5. **Step 8.5 -- Chrome extension.** `_locales/<lang>/messages.json` for the ten languages and English,
    `default_locale`, `__MSG_x__` in manifest.json, the options page filled through `chrome.i18n.getMessage`, the
    typings in `chrome.d.ts`, `_locales` in the rollup copy step, `pack-extension.ts` and the release test.

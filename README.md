@@ -1,6 +1,6 @@
 # Fadester for OBS
 
-**Fadester for OBS 0.7.7** makes a Stream Deck or Stream Deck + a simple, direct control surface for normal OBS Studio. It connects to OBS’s built-in WebSocket server on port `4455`; you do **not** need an APC40, a MIDI controller, or Midi Fadester to use the main actions.
+**Fadester for OBS 0.8.0** makes a Stream Deck or Stream Deck + a simple, direct control surface for normal OBS Studio. It connects to OBS’s built-in WebSocket server on port `4455`; you do **not** need an APC40, a MIDI controller, or Midi Fadester to use the main actions.
 
 The plugin requires Stream Deck software 7.6 or later on Windows 10 or later. Stream Deck Neo users can add a read-only Info Bar display for OBS connection and scene status; its regular keys can also use the plugin's key actions.
 

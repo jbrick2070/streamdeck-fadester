@@ -1,0 +1,60 @@
+{
+  "extDescription": {
+    "message": "Управление скоростью и качеством видео в Chrome со Stream Deck. Связывается только с действиями VJster на этом компьютере."
+  },
+  "htmlLang": {
+    "message": "ru"
+  },
+  "optionsTitle": {
+    "message": "Параметры VJster"
+  },
+  "portLabel": {
+    "message": "Порт подключения"
+  },
+  "save": {
+    "message": "Сохранить"
+  },
+  "portNote": {
+    "message": "Порт (только на этом компьютере), который слушают действия VJster на вашем Stream Deck. Меняйте его, только если изменили там."
+  },
+  "idLabel": {
+    "message": "Идентификатор этого расширения"
+  },
+  "idNote": {
+    "message": "Чтобы подключаться могло только это расширение, вставьте идентификатор в настройки VJster на Stream Deck."
+  },
+  "allSites": {
+    "message": "Управлять видео на всех сайтах, а не только на YouTube"
+  },
+  "allSitesNote": {
+    "message": "Только скорость: для качества нужен проигрыватель YouTube. Chrome запросит разрешение на просмотр и изменение данных на всех сайтах."
+  },
+  "statusBadPort": {
+    "message": "Введите целое число от 1024 до 65535; по умолчанию $DEFAULT$.",
+    "placeholders": {
+      "default": {
+        "content": "$1"
+      }
+    }
+  },
+  "statusSaved": {
+    "message": "Сохранено. Теперь VJster подключается к порту $PORT$.",
+    "placeholders": {
+      "port": {
+        "content": "$1"
+      }
+    }
+  },
+  "statusNotAllowed": {
+    "message": "Не разрешено: VJster по-прежнему работает только на YouTube."
+  },
+  "statusAllSites": {
+    "message": "Теперь VJster управляет видео на всех сайтах. Перезагрузите открытые вкладки, чтобы управление заработало и в них."
+  },
+  "statusYouTubeOnly": {
+    "message": "VJster снова работает только на YouTube."
+  },
+  "statusYouTubeOnlyKept": {
+    "message": "VJster снова работает только на YouTube; Chrome сохранил разрешение для всех сайтов, удалите его на странице сведений о расширении."
+  }
+}

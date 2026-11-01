@@ -45,7 +45,7 @@
     "Tooltip": "Das Video abspielen oder anhalten."
   },
   "Localization": {
-    "_comment": "Deutsch: entworfen von Claude Opus 5.5 (ein KI-Modell); die Prüfung durch ein zweites KI-Modell steht noch aus (docs/vjster/PLAN.md 8.7). Korrekturen: siehe docs/vjster/INSTALL.md.",
+    "_comment": "Deutsch: entworfen von Claude Opus 5.5 und geprüft von Gemini 4 Argon (zwei KI-Modelle); noch nicht von Muttersprachlern geprüft. Korrekturen: siehe docs/vjster/INSTALL.md.",
     "statusPortInUse": "PORT BELEGT",
     "statusExtensionOff": "ERWEITERUNG AUS",
     "statusPageOff": "KEINE SEITE",
@@ -80,7 +80,7 @@
       "fieldControl": "Steuerung",
       "fieldHoldLevel": "Stufe beim nächsten Video beibehalten",
       "fieldRate": "Tempo (0.1 bis 16)",
-      "fieldDirect": "Direkt ins Video schreiben (nötig unter 0.25x oder über 4x)",
+      "fieldDirect": "Tempo direkt am Video setzen (nötig unter 0.25x oder über 4x)",
       "fieldDirection": "Richtung",
       "faster": "Schneller",
       "slower": "Langsamer",
@@ -91,7 +91,7 @@
       "targetBrowser": "Chrome-Tab",
       "targetObs": "OBS-Seite",
       "targetBoth": "Beide",
-      "pinNote": "Drücken, um den gerade aktiven Chrome-Tab weiter zu steuern; erneut drücken, um loszulassen.",
+      "pinNote": "Drücken, um den gerade aktiven Chrome-Tab weiter zu steuern; erneut drücken zum Lösen.",
       "linkTitle": "VJster-Verbindung",
       "checking": "Wird geprüft...",
       "port": "Port",
@@ -106,7 +106,7 @@
       "badIdOne": "{n} Eintrag ignoriert: keine Chrome-Erweiterungs-ID",
       "badIdMany": "{n} Einträge ignoriert: keine Chrome-Erweiterungs-IDs",
       "obsTitle": "OBS-Seite",
-      "noObsPage": "Diese Kopie des Plugins hat keine OBS-Seite",
+      "noObsPage": "Diese Version des Plugins enthält keine OBS-Seite",
       "obsConnected": "OBS-Seite verbunden",
       "obsWaiting": "Keine OBS-Seite verbunden",
       "videoInput": "YouTube-Link oder ID",
@@ -114,8 +114,8 @@
       "address": "Adresse",
       "copy": "Adresse kopieren",
       "copied": "Kopiert",
-      "keepOn": "Verbindung eingeschaltet lassen",
-      "keepOnNote": "OBS lädt die Seite nur beim Start oder wenn die Quelle aktualisiert wird, deshalb bleibt die Verbindung an, solange Stream Deck läuft. Das schaltet sich von selbst ein, sobald sich zum ersten Mal eine OBS-Seite verbindet.",
+      "keepOn": "Verbindung aktiv halten",
+      "keepOnNote": "OBS lädt die Seite nur beim Start oder wenn die Quelle aktualisiert wird, deshalb bleibt die Verbindung aktiv, solange Stream Deck läuft. Diese Option aktiviert sich automatisch, sobald sich zum ersten Mal eine OBS-Seite verbindet.",
       "obsNote": "In OBS eine Browser-Quelle hinzufügen, Lokale Datei abwählen und diese Adresse als URL einfügen. Dann bei einer Aktion unter Steuerung OBS-Seite oder Beide wählen. Die Adresse enthält den OBS-Seiten-Schlüssel dieses Computers: nicht in Screenshots oder Chats zeigen."
     }
   }

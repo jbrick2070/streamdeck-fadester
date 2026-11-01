@@ -70,18 +70,18 @@ the English text is shown.
 
 | Part | Languages now | Files |
 |------|---------------|-------|
-| Stream Deck plugin | English, German | `com.jbrick2070.vjster.sdPlugin/<lang>.json` |
-| Its settings page | English, German | `Localization.pi` in the same files; after a change run `node --import tsx scripts/vjster/make-pi-strings.ts` to rewrite `ui/i18n.js` |
-| Chrome extension (description, options page) | English, German | `vjster-extension/_locales/<lang>/messages.json` |
-| OBS page (its setup notes) | English, German | `vjster-page/src/page-text.ts` |
+| Stream Deck plugin | English, German, Spanish, French, Japanese, Korean, Chinese (Simplified), Chinese (Traditional) | `com.jbrick2070.vjster.sdPlugin/<lang>.json` |
+| Its settings page | English, German, Spanish, French, Japanese, Korean, Chinese (Simplified), Chinese (Traditional) | `Localization.pi` in the same files; after a change run `node --import tsx scripts/vjster/make-pi-strings.ts` to rewrite `ui/i18n.js` |
+| Chrome extension (description, options page) | English, German, Spanish, French, Japanese, Korean, Portuguese (Brazil), Russian, Turkish, Chinese (Simplified), Chinese (Traditional) | `vjster-extension/_locales/<lang>/messages.json` |
+| OBS page (its setup notes) | English, German, Spanish, French, Japanese, Korean, Portuguese (Brazil), Russian, Turkish, Chinese (Simplified), Chinese (Traditional) | `vjster-page/src/page-text.ts` |
 
 The Chrome extension follows Chrome's language. Chrome's `messages.json`
 format has no room for a comment, so this note stands for those files: the
 English texts were written with Claude Opus 5.5, an AI model. Every other
-language was drafted by Claude Opus 5.5 and is to be reviewed by a second AI
-model (Gemini 4 Argon) before release (PLAN.md 8.7); the German files are
-drafts until then. Corrections are welcome as a GitHub issue or pull request
-on `jbrick2070/streamdeck-fadester`: name the file, the text and your
+language was drafted by Claude Opus 5.5 and reviewed by a second AI model,
+Gemini 4 Argon, whose corrections were taken (PLAN.md 8.7); no native speaker
+has checked them yet. Corrections are welcome as a GitHub issue or pull
+request on `jbrick2070/streamdeck-fadester`: name the file, the text and your
 suggested wording. Words drawn on keys must stay short (a test checks they fit).
 
 ## Uninstall

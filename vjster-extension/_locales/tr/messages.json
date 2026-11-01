@@ -1,0 +1,60 @@
+{
+  "extDescription": {
+    "message": "Chrome'daki videonun hızını ve kalitesini Stream Deck'ten kontrol edin. Yalnızca bu bilgisayardaki VJster eylemleriyle konuşur."
+  },
+  "htmlLang": {
+    "message": "tr"
+  },
+  "optionsTitle": {
+    "message": "VJster seçenekleri"
+  },
+  "portLabel": {
+    "message": "Bağlantı noktası"
+  },
+  "save": {
+    "message": "Kaydet"
+  },
+  "portNote": {
+    "message": "Stream Deck'inizdeki VJster eylemlerinin yalnızca bu bilgisayarda dinlediği bağlantı noktası. Yalnızca orada değiştirdiyseniz değiştirin."
+  },
+  "idLabel": {
+    "message": "Bu uzantının kimliği"
+  },
+  "idNote": {
+    "message": "Yalnızca bu uzantının bağlanmasına izin vermek için kimliği Stream Deck'inizdeki VJster ayarlarına yapıştırın."
+  },
+  "allSites": {
+    "message": "Yalnızca YouTube'da değil, tüm sitelerde videoları kontrol et"
+  },
+  "allSitesNote": {
+    "message": "Yalnızca hız: kalite için YouTube oynatıcısı gerekir. Chrome, tüm sitelerdeki verileri okuma ve değiştirme izni ister."
+  },
+  "statusBadPort": {
+    "message": "1024 ile 65535 arasında bir tam sayı kullanın; varsayılan değer $DEFAULT$.",
+    "placeholders": {
+      "default": {
+        "content": "$1"
+      }
+    }
+  },
+  "statusSaved": {
+    "message": "Kaydedildi. VJster artık $PORT$ numaralı bağlantı noktasına bağlanıyor.",
+    "placeholders": {
+      "port": {
+        "content": "$1"
+      }
+    }
+  },
+  "statusNotAllowed": {
+    "message": "İzin verilmedi: VJster yalnızca YouTube'da çalışmaya devam ediyor."
+  },
+  "statusAllSites": {
+    "message": "VJster artık tüm sitelerdeki videoları kontrol ediyor. Açık sekmeleri dahil etmek için yeniden yükleyin."
+  },
+  "statusYouTubeOnly": {
+    "message": "VJster yeniden yalnızca YouTube'da çalışıyor."
+  },
+  "statusYouTubeOnlyKept": {
+    "message": "VJster yeniden yalnızca YouTube'da çalışıyor; Chrome tüm siteler iznini korudu, bunu uzantının ayrıntılar sayfasından kaldırın."
+  }
+}

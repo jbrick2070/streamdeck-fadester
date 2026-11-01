@@ -1,0 +1,60 @@
+{
+  "extDescription": {
+    "message": "Chrome で再生中の動画の速度と画質を Stream Deck から操作します。通信するのはこのパソコン上の VJster アクションだけです。"
+  },
+  "htmlLang": {
+    "message": "ja"
+  },
+  "optionsTitle": {
+    "message": "VJster のオプション"
+  },
+  "portLabel": {
+    "message": "接続ポート"
+  },
+  "save": {
+    "message": "保存"
+  },
+  "portNote": {
+    "message": "Stream Deck の VJster アクションが待ち受けるポートです (このパソコン内のみ)。Stream Deck 側で変更した場合にだけ変更してください。"
+  },
+  "idLabel": {
+    "message": "この拡張機能の ID"
+  },
+  "idNote": {
+    "message": "この拡張機能だけが接続できるようにするには、この ID を Stream Deck の VJster 設定に貼り付けてください。"
+  },
+  "allSites": {
+    "message": "YouTube だけでなく、すべてのサイトの動画を操作する"
+  },
+  "allSitesNote": {
+    "message": "速度のみ: 画質の変更には YouTube のプレーヤーが必要です。Chrome から、すべてのサイトのデータの読み取りと変更の許可を求められます。"
+  },
+  "statusBadPort": {
+    "message": "1024～65535 の整数を入力してください。デフォルトは $DEFAULT$ です。",
+    "placeholders": {
+      "default": {
+        "content": "$1"
+      }
+    }
+  },
+  "statusSaved": {
+    "message": "保存しました。VJster はポート $PORT$ に接続します。",
+    "placeholders": {
+      "port": {
+        "content": "$1"
+      }
+    }
+  },
+  "statusNotAllowed": {
+    "message": "許可されませんでした: VJster は引き続き YouTube のみで動作します。"
+  },
+  "statusAllSites": {
+    "message": "VJster ですべてのサイトの動画を操作できるようになりました。すでに開いているタブに適用するには、そのタブを再読み込みしてください。"
+  },
+  "statusYouTubeOnly": {
+    "message": "VJster は YouTube のみに戻りました。"
+  },
+  "statusYouTubeOnlyKept": {
+    "message": "VJster は YouTube のみに戻りました。Chrome にはすべてのサイトへのアクセス権限が残っているため、拡張機能の詳細ページでこの権限を解除してください。"
+  }
+}

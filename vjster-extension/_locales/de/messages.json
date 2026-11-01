@@ -1,6 +1,6 @@
 {
   "extDescription": {
-    "message": "Stream-Deck-Steuerung für Tempo und Qualität des Videos in Chrome. Spricht nur mit den VJster-Aktionen auf diesem Computer."
+    "message": "Steuerung für Tempo und Qualität des Videos in Chrome per Stream Deck. Kommuniziert nur mit den VJster-Aktionen auf diesem Computer."
   },
   "htmlLang": {
     "message": "de"
@@ -46,15 +46,15 @@
     }
   },
   "statusNotAllowed": {
-    "message": "Nicht erlaubt: VJster bleibt nur auf YouTube."
+    "message": "Nicht erlaubt: VJster bleibt auf YouTube beschränkt."
   },
   "statusAllSites": {
     "message": "VJster steuert jetzt Videos auf allen Websites. Offene Tabs neu laden, um sie einzubeziehen."
   },
   "statusYouTubeOnly": {
-    "message": "VJster ist wieder nur auf YouTube."
+    "message": "VJster ist wieder auf YouTube beschränkt."
   },
   "statusYouTubeOnlyKept": {
-    "message": "VJster ist wieder nur auf YouTube; Chrome hat die Berechtigung für alle Websites behalten. Sie lässt sich auf der Detailseite der Erweiterung entfernen."
+    "message": "VJster ist wieder auf YouTube beschränkt; Chrome hat die Berechtigung für alle Websites behalten. Sie lässt sich auf der Detailseite der Erweiterung entfernen."
   }
 }

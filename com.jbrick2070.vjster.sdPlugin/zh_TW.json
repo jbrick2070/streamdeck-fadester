@@ -1,0 +1,122 @@
+{
+  "Name": "VJster",
+  "Description": "在 Stream Deck 上控制 Chrome 中正在播放的影片速度與畫質：旋鈕調整速度、微調和 FX 速度，按鍵用於預設、播放/暫停和固定分頁。搭配 VJster Chrome 擴充功能使用；任何資料都不會離開這台電腦。",
+  "Category": "VJster",
+  "com.jbrick2070.vjster.speed": {
+    "Name": "速度",
+    "Tooltip": "旋轉調整速度，按住旋轉進行微調，按下恢復 1x，輕觸觸控條播放或暫停。",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "速度（按住：微調）",
+        "Push": "恢復 1x",
+        "Touch": "播放或暫停"
+      }
+    }
+  },
+  "com.jbrick2070.vjster.quality": {
+    "Name": "畫質",
+    "Tooltip": "旋轉逐級切換影片的畫質，按下或輕觸切換為自動。僅限 YouTube。",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "畫質等級",
+        "Push": "自動",
+        "Touch": "自動"
+      }
+    }
+  },
+  "com.jbrick2070.vjster.speed-preset": {
+    "Name": "速度預設",
+    "Tooltip": "單一固定速度。目前播放速度為此速度時亮起。"
+  },
+  "com.jbrick2070.vjster.speed-step": {
+    "Name": "速度增減",
+    "Tooltip": "加快或減慢一級。"
+  },
+  "com.jbrick2070.vjster.quality-preset": {
+    "Name": "畫質預設",
+    "Tooltip": "單一固定畫質等級或自動。影片不提供此畫質時會變暗。"
+  },
+  "com.jbrick2070.vjster.pin": {
+    "Name": "固定分頁",
+    "Tooltip": "無論其他地方播放什麼，都繼續控制目前的 Chrome 分頁。再按一次即可取消。"
+  },
+  "com.jbrick2070.vjster.transport": {
+    "Name": "播放 / 暫停",
+    "Tooltip": "播放或暫停影片。"
+  },
+  "Localization": {
+    "_comment": "繁體中文：由 Claude Opus 5.5 起草，經 Gemini 4 Argon 審閱（皆為 AI 模型）；尚未經母語人士審閱。如需提交更正，請參閱 docs/vjster/INSTALL.md。",
+    "statusPortInUse": "連接埠使用中",
+    "statusExtensionOff": "擴充功能未開啟",
+    "statusPageOff": "無頁面",
+    "statusNoVideo": "無影片",
+    "statusNotAvailable": "不適用",
+    "statusAd": "正在播放廣告",
+    "tagWeb": "WEB",
+    "tagObs": "OBS",
+    "tagAd": "廣告",
+    "tagExt": "EXT",
+    "tagAuto": "自動",
+    "tagFixed": "固定",
+    "auto": "自動",
+    "speed": "速度",
+    "fxSpeed": "FX 速度",
+    "quality": "畫質",
+    "nudge": "微調",
+    "sync": "同步",
+    "pinned": "已固定",
+    "pinTab": "固定分頁",
+    "playing": "播放中",
+    "paused": "已暫停",
+    "captionObs": "OBS {word}",
+    "captionSync": "同步 {word}",
+    "pi": {
+      "thisAction": "此動作",
+      "fieldLabel": "觸控條標籤",
+      "fieldStep": "旋轉級距",
+      "fieldFineStep": "按住旋轉級距",
+      "fieldExtended": "擴充範圍（0.1x 至 16x，FX）",
+      "fieldHoldSpeed": "下一部影片維持此速度",
+      "fieldControl": "控制對象",
+      "fieldHoldLevel": "下一部影片維持此畫質",
+      "fieldRate": "速度（0.1 至 16）",
+      "fieldDirect": "直接設定影片元素（低於 0.25x 或高於 4x 時需要）",
+      "fieldDirection": "方向",
+      "faster": "加快",
+      "slower": "減慢",
+      "fieldStepSize": "級距",
+      "fieldExtendedShort": "擴充範圍",
+      "fieldLevel": "畫質",
+      "levelAuto": "自動",
+      "targetBrowser": "Chrome 分頁",
+      "targetObs": "OBS 頁面",
+      "targetBoth": "兩者",
+      "pinNote": "按下後繼續控制目前使用中的 Chrome 分頁；再按一次即可取消。",
+      "linkTitle": "VJster 連線",
+      "checking": "正在檢查...",
+      "port": "連接埠",
+      "onlyExtension": "僅限此擴充功能",
+      "anyExtension": "任何擴充功能",
+      "extensionNote": "留空即接受任何 Chrome 擴充功能，或貼上 VJster 擴充功能在其選項中顯示的 ID。所有內容都留在這台電腦上。",
+      "saveLink": "儲存連線設定",
+      "statusConnected": "Chrome 擴充功能已連線",
+      "statusWaiting": "正在等待 Chrome 擴充功能",
+      "statusPortInUse": "連接埠 {port} 已被其他程式使用",
+      "noValidId": "沒有任何項目是 Chrome 擴充功能 ID：任何擴充功能都無法連線",
+      "badIdOne": "已忽略 {n} 個項目：不是 Chrome 擴充功能 ID",
+      "badIdMany": "已忽略 {n} 個項目：不是 Chrome 擴充功能 ID",
+      "obsTitle": "OBS 頁面",
+      "noObsPage": "此版本的外掛程式沒有 OBS 頁面",
+      "obsConnected": "OBS 頁面已連線",
+      "obsWaiting": "沒有已連線的 OBS 頁面",
+      "videoInput": "YouTube 連結或 ID",
+      "videoPlaceholder": "貼上 YouTube 連結",
+      "address": "位址",
+      "copy": "複製位址",
+      "copied": "已複製",
+      "keepOn": "保持連線開啟",
+      "keepOnNote": "OBS 只在啟動或重新整理來源時載入頁面，因此在 Stream Deck 執行期間連線會一直開啟。此選項會在第一次有 OBS 頁面連線時自動開啟。",
+      "obsNote": "在 OBS 中新增「瀏覽器」來源，取消勾選「本機檔案」，並將此位址貼到「URL」欄位。接著將動作的「控制對象」設為「OBS 頁面」或「兩者」。此位址包含這台電腦的 OBS 頁面金鑰：請勿在螢幕截圖或聊天中顯示。"
+    }
+  }
+}

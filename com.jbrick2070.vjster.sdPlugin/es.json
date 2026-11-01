@@ -1,0 +1,122 @@
+{
+  "Name": "VJster",
+  "Description": "Controla la velocidad y la calidad del vídeo que se reproduce en Chrome desde tu Stream Deck: diales para la velocidad, el ajuste fino y la velocidad FX, teclas para valores fijos, reproducir/pausar y fijar la pestaña. Funciona con la extensión VJster para Chrome; nada sale de este ordenador.",
+  "Category": "VJster",
+  "com.jbrick2070.vjster.speed": {
+    "Name": "Velocidad",
+    "Tooltip": "Gira para cambiar la velocidad, mantén pulsado y gira para pasos finos, pulsa para 1x, toca la barra táctil para reproducir o pausar.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "Velocidad (pulsado: pasos finos)",
+        "Push": "Volver a 1x",
+        "Touch": "Reproducir o pausar"
+      }
+    }
+  },
+  "com.jbrick2070.vjster.quality": {
+    "Name": "Calidad",
+    "Tooltip": "Gira para recorrer los niveles de calidad del vídeo; pulsa o toca para Auto. Solo YouTube.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "Nivel de calidad",
+        "Push": "Auto",
+        "Touch": "Auto"
+      }
+    }
+  },
+  "com.jbrick2070.vjster.speed-preset": {
+    "Name": "Velocidad fija",
+    "Tooltip": "Una velocidad fija. Se ilumina mientras es la velocidad en uso."
+  },
+  "com.jbrick2070.vjster.speed-step": {
+    "Name": "Paso de velocidad",
+    "Tooltip": "Un paso más rápido o más lento."
+  },
+  "com.jbrick2070.vjster.quality-preset": {
+    "Name": "Calidad fija",
+    "Tooltip": "Un nivel de calidad fijo, o Auto. Atenuado cuando el vídeo no lo ofrece."
+  },
+  "com.jbrick2070.vjster.pin": {
+    "Name": "Fijar pestaña",
+    "Tooltip": "Sigue controlando la pestaña actual de Chrome, se reproduzca lo que se reproduzca. Pulsa de nuevo para soltarla."
+  },
+  "com.jbrick2070.vjster.transport": {
+    "Name": "Reproducir / Pausar",
+    "Tooltip": "Reproduce o pausa el vídeo."
+  },
+  "Localization": {
+    "_comment": "Español: redactado por Claude Opus 5.5 y revisado por Gemini 4 Argon (dos modelos de IA); aún sin revisión de hablantes nativos. Correcciones: ver docs/vjster/INSTALL.md.",
+    "statusPortInUse": "PUERTO EN USO",
+    "statusExtensionOff": "SIN EXTENSIÓN",
+    "statusPageOff": "SIN PÁGINA",
+    "statusNoVideo": "SIN VÍDEO",
+    "statusNotAvailable": "N/D",
+    "statusAd": "ANUNCIO EN CURSO",
+    "tagWeb": "WEB",
+    "tagObs": "OBS",
+    "tagAd": "ANUNCIO",
+    "tagExt": "EXT",
+    "tagAuto": "AUTO",
+    "tagFixed": "FIJO",
+    "auto": "AUTO",
+    "speed": "VELOCIDAD",
+    "fxSpeed": "VEL. FX",
+    "quality": "CALIDAD",
+    "nudge": "FINO",
+    "sync": "SYNC",
+    "pinned": "FIJADA",
+    "pinTab": "FIJAR",
+    "playing": "EN CURSO",
+    "paused": "PAUSA",
+    "captionObs": "OBS {word}",
+    "captionSync": "SYNC {word}",
+    "pi": {
+      "thisAction": "Esta acción",
+      "fieldLabel": "Etiqueta de la barra táctil",
+      "fieldStep": "Paso al girar",
+      "fieldFineStep": "Paso al girar pulsado",
+      "fieldExtended": "Rango ampliado (0.1x a 16x, FX)",
+      "fieldHoldSpeed": "Mantener la velocidad en el siguiente vídeo",
+      "fieldControl": "Control",
+      "fieldHoldLevel": "Mantener el nivel en el siguiente vídeo",
+      "fieldRate": "Velocidad (0.1 a 16)",
+      "fieldDirect": "Modificar directamente el elemento de vídeo (necesario por debajo de 0.25x o por encima de 4x)",
+      "fieldDirection": "Dirección",
+      "faster": "Más rápido",
+      "slower": "Más lento",
+      "fieldStepSize": "Paso",
+      "fieldExtendedShort": "Rango ampliado",
+      "fieldLevel": "Nivel",
+      "levelAuto": "Auto",
+      "targetBrowser": "Pestaña de Chrome",
+      "targetObs": "Página de OBS",
+      "targetBoth": "Ambas",
+      "pinNote": "Pulsa para seguir controlando la pestaña de Chrome activa ahora; pulsa de nuevo para soltarla.",
+      "linkTitle": "Conexión de VJster",
+      "checking": "Comprobando...",
+      "port": "Puerto",
+      "onlyExtension": "Solo esta extensión",
+      "anyExtension": "cualquier extensión",
+      "extensionNote": "Déjalo vacío para aceptar cualquier extensión de Chrome, o pega el ID que muestra la extensión VJster en sus opciones. Todo se queda en este ordenador.",
+      "saveLink": "Guardar ajustes de conexión",
+      "statusConnected": "Extensión de Chrome conectada",
+      "statusWaiting": "Esperando a la extensión de Chrome",
+      "statusPortInUse": "Otro programa está usando el puerto {port}",
+      "noValidId": "Ninguna entrada es un ID de extensión de Chrome: ninguna extensión puede conectarse",
+      "badIdOne": "{n} entrada ignorada: no es un ID de extensión de Chrome",
+      "badIdMany": "{n} entradas ignoradas: no son IDs de extensión de Chrome",
+      "obsTitle": "Página de OBS",
+      "noObsPage": "Esta copia del plugin no tiene página de OBS",
+      "obsConnected": "Página de OBS conectada",
+      "obsWaiting": "Ninguna página de OBS conectada",
+      "videoInput": "Enlace o ID de YouTube",
+      "videoPlaceholder": "pega un enlace de YouTube",
+      "address": "Dirección",
+      "copy": "Copiar la dirección",
+      "copied": "Copiada",
+      "keepOn": "Mantener la conexión activa",
+      "keepOnNote": "OBS carga la página solo al iniciarse o cuando se actualiza la fuente, así que la conexión sigue activa mientras Stream Deck está en marcha. Esta opción se activa sola la primera vez que se conecta una página de OBS.",
+      "obsNote": "En OBS, añade una fuente Navegador, desmarca Archivo local y pega esta dirección como su URL. Después, en una acción, pon Control en Página de OBS o Ambas. La dirección lleva la clave de la página de OBS de este ordenador: no la muestres en capturas de pantalla ni en chats."
+    }
+  }
+}

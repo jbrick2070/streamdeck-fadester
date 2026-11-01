@@ -17,9 +17,9 @@ export const PLUGIN_DIR = join(ROOT, "com.jbrick2070.vjster.sdPlugin");
  * `vjster-page/src/page-text.ts`.
  */
 export const REQUIRED = {
-  deck: ["en", "de"],
-  chrome: ["en", "de"],
-  page: ["en", "de"]
+  deck: ["en", "de", "es", "fr", "ja", "ko", "zh_CN", "zh_TW"],
+  chrome: ["en", "de", "es", "fr", "ja", "ko", "pt_BR", "ru", "tr", "zh_CN", "zh_TW"],
+  page: ["en", "de", "es", "fr", "ja", "ko", "pt_BR", "ru", "tr", "zh_CN", "zh_TW"]
 } as const;
 
 /** The languages each part will have once all are written (R-I18N-3); not checked, only listed. */

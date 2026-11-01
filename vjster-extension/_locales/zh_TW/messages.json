@@ -1,0 +1,60 @@
+{
+  "extDescription": {
+    "message": "在 Stream Deck 上控制 Chrome 中正在播放的影片速度與畫質。只與這台電腦上的 VJster 動作通訊。"
+  },
+  "htmlLang": {
+    "message": "zh-TW"
+  },
+  "optionsTitle": {
+    "message": "VJster 選項"
+  },
+  "portLabel": {
+    "message": "連接埠"
+  },
+  "save": {
+    "message": "儲存"
+  },
+  "portNote": {
+    "message": "Stream Deck 上的 VJster 動作所監聽的連接埠，僅限這台電腦。只有在那裡變更過時才需要變更。"
+  },
+  "idLabel": {
+    "message": "此擴充功能的 ID"
+  },
+  "idNote": {
+    "message": "如果只允許此擴充功能連線，請將此 ID 貼到 Stream Deck 上的 VJster 設定中。"
+  },
+  "allSites": {
+    "message": "控制所有網站上的影片，而不只是 YouTube"
+  },
+  "allSitesNote": {
+    "message": "僅限速度：畫質需要 YouTube 的播放器。Chrome 會要求讀取和變更所有網站資料的權限。"
+  },
+  "statusBadPort": {
+    "message": "請使用 1024 到 65535 之間的整數；預設值為 $DEFAULT$。",
+    "placeholders": {
+      "default": {
+        "content": "$1"
+      }
+    }
+  },
+  "statusSaved": {
+    "message": "已儲存。VJster 現在會連線到連接埠 $PORT$。",
+    "placeholders": {
+      "port": {
+        "content": "$1"
+      }
+    }
+  },
+  "statusNotAllowed": {
+    "message": "未獲允許：VJster 仍然僅限 YouTube。"
+  },
+  "statusAllSites": {
+    "message": "VJster 現在可以控制所有網站上的影片。請重新載入已開啟的分頁以納入控制。"
+  },
+  "statusYouTubeOnly": {
+    "message": "VJster 已恢復為僅限 YouTube。"
+  },
+  "statusYouTubeOnlyKept": {
+    "message": "VJster 已恢復為僅限 YouTube；Chrome 保留了所有網站的權限，請在擴充功能的詳細資料頁面中移除。"
+  }
+}

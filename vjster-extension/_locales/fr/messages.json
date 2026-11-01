@@ -1,0 +1,60 @@
+{
+  "extDescription": {
+    "message": "Pilotage par Stream Deck de la vitesse et de la qualité de la vidéo dans Chrome. Ne parle qu'aux actions VJster de cet ordinateur."
+  },
+  "htmlLang": {
+    "message": "fr"
+  },
+  "optionsTitle": {
+    "message": "Options de VJster"
+  },
+  "portLabel": {
+    "message": "Port de liaison"
+  },
+  "save": {
+    "message": "Enregistrer"
+  },
+  "portNote": {
+    "message": "Le port sur lequel les actions VJster de votre Stream Deck écoutent, sur cet ordinateur uniquement. Ne le modifiez que si vous l'avez modifié dans Stream Deck."
+  },
+  "idLabel": {
+    "message": "ID de cette extension"
+  },
+  "idNote": {
+    "message": "Pour que seule cette extension puisse se connecter, collez l'ID dans les paramètres VJster de votre Stream Deck."
+  },
+  "allSites": {
+    "message": "Piloter les vidéos sur tous les sites, pas seulement YouTube"
+  },
+  "allSitesNote": {
+    "message": "Vitesse uniquement : la qualité nécessite le lecteur de YouTube. Chrome demande l'autorisation de lire et de modifier tous les sites."
+  },
+  "statusBadPort": {
+    "message": "Utilisez un nombre entier de 1024 à 65535 ; $DEFAULT$ est la valeur par défaut.",
+    "placeholders": {
+      "default": {
+        "content": "$1"
+      }
+    }
+  },
+  "statusSaved": {
+    "message": "Enregistré. VJster se connecte maintenant au port $PORT$.",
+    "placeholders": {
+      "port": {
+        "content": "$1"
+      }
+    }
+  },
+  "statusNotAllowed": {
+    "message": "Non autorisé : VJster reste limité à YouTube."
+  },
+  "statusAllSites": {
+    "message": "VJster pilote maintenant les vidéos sur tous les sites. Actualisez les onglets ouverts pour les inclure."
+  },
+  "statusYouTubeOnly": {
+    "message": "VJster est de nouveau limité à YouTube."
+  },
+  "statusYouTubeOnlyKept": {
+    "message": "VJster est de nouveau limité à YouTube ; Chrome a conservé l'autorisation pour tous les sites, retirez-la sur la page des détails de l'extension."
+  }
+}

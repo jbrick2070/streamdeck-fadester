@@ -1,0 +1,60 @@
+{
+  "extDescription": {
+    "message": "Controle da velocidade e da qualidade do vídeo no Chrome pelo Stream Deck. Comunica-se só com as ações do VJster neste computador."
+  },
+  "htmlLang": {
+    "message": "pt-BR"
+  },
+  "optionsTitle": {
+    "message": "Opções do VJster"
+  },
+  "portLabel": {
+    "message": "Porta de conexão"
+  },
+  "save": {
+    "message": "Salvar"
+  },
+  "portNote": {
+    "message": "A porta em que as ações do VJster no seu Stream Deck escutam, somente neste computador. Altere-a apenas se você a alterou lá."
+  },
+  "idLabel": {
+    "message": "ID desta extensão"
+  },
+  "idNote": {
+    "message": "Para permitir que somente esta extensão se conecte, cole o ID nas configurações do VJster no seu Stream Deck."
+  },
+  "allSites": {
+    "message": "Controlar vídeos em todos os sites, não só no YouTube"
+  },
+  "allSitesNote": {
+    "message": "Só a velocidade: a qualidade precisa do player do YouTube. O Chrome pede permissão para ler e alterar todos os sites."
+  },
+  "statusBadPort": {
+    "message": "Use um número inteiro de 1024 a 65535; $DEFAULT$ é o padrão.",
+    "placeholders": {
+      "default": {
+        "content": "$1"
+      }
+    }
+  },
+  "statusSaved": {
+    "message": "Salvo. O VJster agora se conecta à porta $PORT$.",
+    "placeholders": {
+      "port": {
+        "content": "$1"
+      }
+    }
+  },
+  "statusNotAllowed": {
+    "message": "Não permitido: o VJster continua só no YouTube."
+  },
+  "statusAllSites": {
+    "message": "O VJster agora controla vídeos em todos os sites. Recarregue as guias abertas para incluí-las."
+  },
+  "statusYouTubeOnly": {
+    "message": "O VJster voltou a funcionar só no YouTube."
+  },
+  "statusYouTubeOnlyKept": {
+    "message": "O VJster voltou a funcionar só no YouTube; o Chrome manteve a permissão para todos os sites. Remova-a na página de detalhes da extensão."
+  }
+}

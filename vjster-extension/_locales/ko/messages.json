@@ -1,0 +1,60 @@
+{
+  "extDescription": {
+    "message": "Chrome에서 재생 중인 동영상의 속도와 화질을 Stream Deck에서 조절합니다. 이 컴퓨터의 VJster 작업과만 통신합니다."
+  },
+  "htmlLang": {
+    "message": "ko"
+  },
+  "optionsTitle": {
+    "message": "VJster 옵션"
+  },
+  "portLabel": {
+    "message": "연결 포트"
+  },
+  "save": {
+    "message": "저장"
+  },
+  "portNote": {
+    "message": "Stream Deck의 VJster 작업이 이 컴퓨터 내부에서만 수신 대기하는 포트입니다. Stream Deck에서 변경한 경우에만 변경하세요."
+  },
+  "idLabel": {
+    "message": "이 확장 프로그램의 ID"
+  },
+  "idNote": {
+    "message": "이 확장 프로그램만 연결되게 하려면 Stream Deck의 VJster 설정에 이 ID를 붙여 넣으세요."
+  },
+  "allSites": {
+    "message": "YouTube뿐 아니라 모든 사이트의 동영상 조절"
+  },
+  "allSitesNote": {
+    "message": "속도만 해당: 화질은 YouTube 플레이어가 있어야 합니다. Chrome에서 모든 사이트의 데이터를 읽고 변경할 권한을 요청합니다."
+  },
+  "statusBadPort": {
+    "message": "1024에서 65535 사이의 정수를 사용하세요. 기본값은 $DEFAULT$입니다.",
+    "placeholders": {
+      "default": {
+        "content": "$1"
+      }
+    }
+  },
+  "statusSaved": {
+    "message": "저장되었습니다. 이제 VJster가 포트 $PORT$에 연결됩니다.",
+    "placeholders": {
+      "port": {
+        "content": "$1"
+      }
+    }
+  },
+  "statusNotAllowed": {
+    "message": "허용되지 않음: VJster는 계속 YouTube에서만 작동합니다."
+  },
+  "statusAllSites": {
+    "message": "이제 VJster가 모든 사이트의 동영상을 조절합니다. 이미 열려 있는 탭에도 적용하려면 해당 탭을 새로고침하세요."
+  },
+  "statusYouTubeOnly": {
+    "message": "VJster가 다시 YouTube에서만 작동합니다."
+  },
+  "statusYouTubeOnlyKept": {
+    "message": "VJster가 다시 YouTube에서만 작동합니다. Chrome에 모든 사이트 권한이 남아 있으니 확장 프로그램 세부정보 페이지에서 해당 권한을 해제하세요."
+  }
+}

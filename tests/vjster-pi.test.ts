@@ -182,7 +182,7 @@ describe("the settings page's texts (PLAN.md 8.4)", () => {
     expect(page.byId("obs-status").textContent).toBe("Keine OBS-Seite verbunden");
     page.toPage({ event: "status", port: 1, browser: "connected", extensionIds: ["a", "b"], badIds: 1, obsPage: false });
     expect(page.byId("status").textContent).toBe("1 Eintrag ignoriert: keine Chrome-Erweiterungs-ID");
-    expect(page.byId("obs-status").textContent).toBe("Diese Kopie des Plugins hat keine OBS-Seite");
+    expect(page.byId("obs-status").textContent).toBe("Diese Version des Plugins enthält keine OBS-Seite");
     page.toPage({ event: "status", port: 1, browser: "connected", extensionIds: ["a", "b", "c"], badIds: 2, obsPage: true, obs: "connected" });
     expect(page.byId("status").textContent).toBe("2 Einträge ignoriert: keine Chrome-Erweiterungs-IDs");
     page.toPage({ event: "status", port: 1, browser: "connected", extensionIds: ["a"], badIds: 1, obsPage: true, obs: "connected" });

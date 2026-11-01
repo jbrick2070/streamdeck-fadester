@@ -4,11 +4,6 @@ import { StringKey, t } from "../i18n/strings.js";
 const MAIN_AUDIO_NAMES = ["music", "desktop audio", "desktop", "system audio"];
 const MICROPHONE_NAMES = ["mic/aux", "microphone", "mic"];
 
-/** Keep custom captions, but let shipped role captions follow their real input. */
-export function isAutomaticInputPresetLabel(target: string, label: string): boolean {
-  return automaticInputLabel(target) !== undefined && /^(music|desktop|audio|mic|aux)( down| up)?$/i.test(label.trim());
-}
-
 /** Upgrade only untouched audio placeholders in older bundled layouts, once. */
 export function migrateAutomaticInputSettings<T extends {
   inputName?: string;

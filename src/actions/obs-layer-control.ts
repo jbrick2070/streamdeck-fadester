@@ -11,6 +11,7 @@ import { PLAYLISTER_PALETTE as P } from "../../packages/streamdeck-fadester-shar
 import { LocalText, errorLocalText, ownText, wordText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
 import { statusCellReason } from "../../packages/streamdeck-fadester-shared/src/status-text.js";
 import { StringKey, t, translate } from "../i18n/strings.js";
+import { customCaption } from "../obs/preset-captions.js";
 
 /** The key title of each operation, by key. */
 export const LAYER_OPERATION_LABELS: Record<LayerOperation, StringKey> = {
@@ -126,7 +127,8 @@ export class ObsLayerInstanceController {
         configured: true,
         reason,
         icon,
-        title: this.settings.labelOverride || operationLabel,
+        // A shipped caption ("Prev source") is a default: the key draws its translated operation.
+        title: customCaption("layerKey", this.settings) || operationLabel,
         subtitle: layer ? t("layerKeySubtitle", { state: operation.startsWith("blend_") ? blend : shownState, source: name }) : missingSource,
         ...(!layer && connected ? { problem: missingSource } : {})
       }));

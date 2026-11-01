@@ -239,6 +239,16 @@ const MUTATIONS: MutationCheck[] = [
     target: "const changed = statusSignature(this.status) !== statusSignature(next);",
     mutated: "const changed = this.status.kind !== next.kind;",
     testFile: "tests/i18n-strings.test.ts"
+  },
+  {
+    id: "M-8.2a",
+    step: "Step 8.2 (Translations: stored English captions drawn translated)",
+    description:
+      "Draw every stored caption as typed, so a bundled profile's English caption reaches a German deck, and verify preset-captions.test.ts fails",
+    filePath: resolve(ROOT, "src/obs/preset-captions.ts"),
+    target: 'return caption && !isGeneratedCaption(action, settings, caption) ? caption : "";',
+    mutated: "return caption;",
+    testFile: "tests/preset-captions.test.ts"
   }
 ];
 

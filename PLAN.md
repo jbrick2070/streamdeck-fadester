@@ -356,6 +356,26 @@ step's diff before its build; one commit per step; one push at the end.
    treat a matching caption as generated and draw the translated role (extending today's scene and audio rule to the
    layer and "Scene blend" captions). The inspectors' generated-label logic uses the same list. Profiles are not
    rebuilt and keep English captions. Tests: each caption maps to a role; a German render shows no English caption.
+   *As built (2026-10-31):* `src/obs/preset-captions.ts` holds the 38 shipped captions (14 layer: 10 key, 4 dial;
+   5 fader; 8 fade; 11 scene; a test asserts set equality with `profiles/layouts.json`) and the legacy spellings,
+   per action and context (scene target; T-bar or any automatic audio role; layer operation; layer dial mode),
+   compared case- and space-insensitively. `customCaption()` returns "" for a generated caption, so the scene key
+   draws the live OBS scene or its translated role, fader and fade draw the live input or role (the T-bar its
+   press hint), and the layer key its translated operation; any other caption is drawn as typed. It replaces the
+   three older rules (`isAutomaticInputPresetLabel`, the scene key's lists, the "Scene transition" test); the
+   migrations and their English literals are unchanged. Small unifications: a scene caption now matches only its
+   own index ("Scene 2" on Scene 2's target, as the inspector did; the key used to accept any A-D/1-4 on any
+   automatic target), "Random scene" is recognised on the deck as well, and an audio role caption is generated on
+   any automatic audio target (the key's rule; the inspectors used to tie Music to Main, Mic to Mic, Aux to Aux),
+   but no longer on a T-bar dial (whose context is the T-bar); every comparison now ignores case, so "cut next"
+   typed on a Next key counts as the default too.
+   The inspectors read the same table from the generated `ui/preset-captions.js`
+   (`scripts/generate-ui-i18n.ts`, run by hand; a test fails when it is stale), loaded before `direct-pi.js` on
+   the four direct pages; a generated caption shows as an empty label field (its placeholder is translated in
+   8.5) and is still released on retarget, now also when a layer key's job or a layer dial's mode changes. The vm
+   inspector tests load a page's own helper scripts through `tests/helpers/inspector-scripts.ts`.
+   `tests/preset-captions.test.ts` renders every distinct shipped assignment on a German deck against the fake OBS
+   and finds no English caption; M-8.2a (captions drawn as typed) is new.
 3. **Step 8.3 -- Width.** `textFitAttributes` and the fit checks measure CJK, kana, Hangul and accented capitals at
    their real widths; the three Midi Fadester status texts and the 120 px key status line that are never shrunk today
    get the same fit. A test renders every deck string of every language present and checks its box.

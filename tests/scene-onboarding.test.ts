@@ -2,6 +2,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
+import { inspectorPageScript } from "./helpers/inspector-scripts.js";
 import {
   migrateScenePresetSettings,
   ObsSceneTransitionKeyInstanceController
@@ -38,7 +39,7 @@ describe("Scene layout onboarding", () => {
     }]));
     let render!: (settings: Record<string, unknown>, save: (patch: Record<string, unknown>) => void, state: Record<string, unknown>) => void;
     const selected: Record<string, string> = {};
-    runInNewContext([...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((match) => match[1]).join("\n"), {
+    runInNewContext(inspectorPageScript(html), {
       document: { activeElement: null, getElementById: (id: string) => elements.get(id) },
       window: {
         initDirectObsPropertyInspector: (callback: typeof render) => { render = callback; },

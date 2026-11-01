@@ -8,7 +8,8 @@ import {
   WillDisappearEvent
 } from "@elgato/streamdeck";
 import { DirectObsClient } from "../obs/direct-obs-client.js";
-import { automaticInputRoleName, isAutomaticInputPresetLabel, migrateAutomaticInputSettings } from "../obs/automatic-targets.js";
+import { automaticInputRoleName, migrateAutomaticInputSettings } from "../obs/automatic-targets.js";
+import { customCaption } from "../obs/preset-captions.js";
 import {
   DEFAULT_OBS_FADE_KEY_SETTINGS,
   ObsFadeKeySettings,
@@ -94,7 +95,7 @@ export class ObsFadeKeyInstanceController {
     const configured = Boolean(this.settings.inputName);
     const inputName = this.client.resolveInputName(this.settings.inputName);
     const role = automaticInputRoleName(this.settings.inputName);
-    const customLabel = isAutomaticInputPresetLabel(this.settings.inputName, this.settings.labelOverride) ? "" : this.settings.labelOverride;
+    const customLabel = customCaption("fade", this.settings);
     const title = customLabel || inputName || role || this.settings.inputName || t("fadeTitle");
     const up = this.settings.to === 1;
     const subtitle = !configured

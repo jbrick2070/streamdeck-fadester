@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
+import { inspectorPageScript } from "./helpers/inspector-scripts.js";
 import { describe, expect, it, vi } from "vitest";
 import { DirectObsClient } from "../src/obs/direct-obs-client.js";
 import { ObsFadeKeyInstanceController } from "../src/actions/obs-fade-key.js";
@@ -13,7 +14,7 @@ function change(file: string, id: string, settings: Record<string, unknown>, val
     querySelector: () => ({ textContent: "", disabled: false }), onchange: () => {}
   }]));
   let render!: (settings: Record<string, unknown>, save: (update: Record<string, unknown>) => void, state: object) => void;
-  runInNewContext([...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((match) => match[1]).join("\n"), {
+  runInNewContext(inspectorPageScript(html), {
     document: { activeElement: null, getElementById: (name: string) => elements.get(name) },
     window: {
       initDirectObsPropertyInspector: (callback: typeof render) => { render = callback; },

@@ -33,6 +33,7 @@
     <input id="obs-scene-label" type="text" maxlength="14" placeholder="From OBS (leave blank)" />
   </div>
   <div id="direct-shared-sections"></div>
+  <script src="preset-captions.js"></script>
   <script src="direct-pi.js"></script>
   <script>
     window.initDirectObsPropertyInspector(function (settings, save, state) {
@@ -45,19 +46,9 @@
       const catalog = state && state.catalog ? state.catalog : {};
       const selectedOperation = settings.operation || "transition";
       const selectedTarget = typeof settings.sceneTarget === "string" ? settings.sceneTarget : "__next_scene__";
+      // A bundled profile's caption is a default: shown empty here, released on retarget.
       const generatedLabel = function () {
-        const caption = String(settings.labelOverride || "").trim();
-        const index = /^__scene_index_(\d+)__$/.exec(selectedTarget);
-        if (index) {
-          const number = Number(index[1]) + 1;
-          const letter = String.fromCharCode(65 + Number(index[1]));
-          return new RegExp("^Scene\\s*(" + number + "|" + letter + ")$", "i").test(caption);
-        }
-        if (selectedTarget === "__next_scene__") return /^(next scene|cut next)$/i.test(caption);
-        if (selectedTarget === "__previous_scene__") return /^(prev scene|cut previous)$/i.test(caption);
-        if (selectedTarget === "__current_preview__") return /^(cut preview|transition)$/i.test(caption);
-        if (selectedTarget === "__random_scene__") return /^(random|random scene)$/i.test(caption);
-        return false;
+        return window.FadesterPresetCaptions.isGenerated("scene", { sceneTarget: selectedTarget, labelOverride: settings.labelOverride });
       };
       const scenes = catalog.scenes || [];
       const sceneItems = [
@@ -75,7 +66,7 @@
       window.directObsFillSelect(scene, sceneItems, selectedTarget, "Choose a scene");
       window.directObsFillSelect(transition, transitionItems, settings.transitionName || "__current_transition__", "Use OBS current transition");
       if (operation && document.activeElement !== operation) operation.value = selectedOperation;
-      if (label && document.activeElement !== label) label.value = settings.labelOverride || "";
+      if (label && document.activeElement !== label) label.value = generatedLabel() ? "" : settings.labelOverride || "";
       if (transitionRow) transitionRow.style.display = selectedOperation === "transition" ? "" : "none";
       if (banner) {
         let text = "";

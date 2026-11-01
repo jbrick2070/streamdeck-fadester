@@ -65,6 +65,7 @@
 
   <div id="direct-shared-sections"></div>
 
+  <script src="preset-captions.js"></script>
   <script src="direct-pi.js"></script>
   <script>
     let pressSourceSignature = "";
@@ -86,13 +87,10 @@
       const catalog = state && state.catalog ? state.catalog : {};
       const selectedTarget = settings.target === undefined ? "input_volume" : settings.target || "unconfigured";
       const selectedInput = settings.inputName === undefined ? "__audio_main__" : settings.inputName;
+      // A bundled profile's caption is a default: shown empty here, released on retarget.
       const generatedLabel = function () {
-        const caption = String(settings.labelOverride || "").trim();
-        if (selectedTarget === "tbar") return /^(scene blend|scene transition)$/i.test(caption);
-        if (selectedInput === "__audio_main__") return /^(music|desktop|audio)( down| up)?$/i.test(caption);
-        if (selectedInput === "__audio_mic__") return /^mic( down| up)?$/i.test(caption);
-        if (selectedInput === "__audio_aux__" || selectedInput === "__audio_input_2__") return /^aux( down| up)?$/i.test(caption);
-        return false;
+        return window.FadesterPresetCaptions.isGenerated("fader",
+          { target: selectedTarget, inputName: selectedInput, labelOverride: settings.labelOverride });
       };
       const pressAction = settings.pressAction || "finish_transition";
       const pressInstructions = {
@@ -132,7 +130,7 @@
       if (target && document.activeElement !== target) target.value = selectedTarget;
       if (step && document.activeElement !== step) step.value = String(settings.stepPerTick || 0.02);
       if (accel && document.activeElement !== accel) accel.checked = settings.acceleration !== false;
-      if (label && document.activeElement !== label) label.value = settings.labelOverride || "";
+      if (label && document.activeElement !== label) label.value = generatedLabel() ? "" : settings.labelOverride || "";
       window.directObsFillSelect(input, window.directObsAudioItems(state), selectedInput, "Choose an audio source");
       if (inputRow) inputRow.style.display = selectedTarget === "input_volume" ? "" : "none";
       if (tbarHint) tbarHint.style.display = selectedTarget === "tbar" ? "" : "none";

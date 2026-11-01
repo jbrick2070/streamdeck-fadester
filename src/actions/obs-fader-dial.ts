@@ -9,7 +9,8 @@ import {
   WillDisappearEvent
 } from "@elgato/streamdeck";
 import { DirectObsClient } from "../obs/direct-obs-client.js";
-import { automaticInputRoleName, isAutomaticInputPresetLabel, migrateAutomaticInputSettings } from "../obs/automatic-targets.js";
+import { automaticInputRoleName, migrateAutomaticInputSettings } from "../obs/automatic-targets.js";
+import { customCaption } from "../obs/preset-captions.js";
 import { LayerController, LayerOperation } from "../control/layer-controller.js";
 import {
   DEFAULT_OBS_FADER_DIAL_SETTINGS,
@@ -205,10 +206,8 @@ export class ObsFaderDialInstanceController {
     const value = isTbar
       ? catalog.tbarPosition
       : catalog.inputVolumes[inputName] ?? 0;
-    // "Scene transition" was the T-bar's default name, stored by older inspectors.
-    const generatedTbarLabel = isTbar && this.settings.labelOverride === "Scene transition";
-    const customLabel = generatedTbarLabel ||
-      isAutomaticInputPresetLabel(this.settings.inputName, this.settings.labelOverride) ? "" : this.settings.labelOverride;
+    // A shipped caption ("Scene blend", "Music") is a default: the dial draws its role instead.
+    const customLabel = customCaption("fader", this.settings);
     // The T-bar's own name is a default, not a label: the scene mixer then draws its press hint.
     const label = customLabel ||
       (isTbar ? "" : inputName || inputRole || this.settings.inputName || t("faderDefault"));

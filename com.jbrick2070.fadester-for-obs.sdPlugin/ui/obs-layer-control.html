@@ -34,6 +34,7 @@
   <div class="row"><label for="layer-label">Label</label><input id="layer-label" maxlength="20" placeholder="Automatic" /></div>
   <div class="row"><label></label><button class="btn secondary" id="layer-refresh" type="button">Refresh sources</button></div>
   <div id="direct-shared-sections"></div>
+  <script src="preset-captions.js"></script>
   <script src="direct-pi.js"></script>
   <script>
     let layerRequestSignature = "";
@@ -51,6 +52,9 @@
       const browsing = dial ? dialMode === "select_layer" : operation === "select_next" || operation === "select_previous";
       const reorder = dial ? dialMode === "order" : operation === "move_up" || operation === "move_down";
       const fixedTarget = !browsing && settings.target === "fixed";
+      // A bundled profile's caption is a default: shown empty here, released when the job changes.
+      const generatedLabel = window.FadesterPresetCaptions.isGenerated(dial ? "layerDial" : "layerKey",
+        { operation: operation, dialMode: dialMode, labelOverride: settings.labelOverride });
       const identityMatches = function (item) {
         return settings.sourceUuid ? item.sourceUuid === settings.sourceUuid : !settings.sourceName || item.sourceName === settings.sourceName;
       };
@@ -60,7 +64,7 @@
       const missingFixedSource = fixedTarget && Number(settings.sceneItemId) >= 0 && scene && !fixedSource;
       const assign = function (id, value) { if (el(id) && document.activeElement !== el(id)) el(id).value = value; };
       assign("layer-scope", scope); assign("layer-operation", operation); assign("layer-dial-mode", dialMode);
-      assign("layer-target", settings.target || "selected"); assign("layer-label", settings.labelOverride || "");
+      assign("layer-target", settings.target || "selected"); assign("layer-label", generatedLabel ? "" : settings.labelOverride || "");
       el("layer-reorder").checked = settings.allowReorder === true;
       window.directObsFillSelect(el("layer-scene"), (catalog.scenes || []).map(function (name) { return { value: name, text: name }; }), settings.sceneName || "", "Choose a scene");
       const fixedItems = (scene && scene.layers || []).map(function (item) {
@@ -87,8 +91,16 @@
       el("layer-status").className = "status-banner " + (live ? "status-warn" : "status-info");
       el("layer-scope").onchange = function () { save({ scope: el("layer-scope").value, target: "selected", sceneItemId: -1, sourceUuid: "", sourceName: "" }); };
       el("layer-scene").onchange = function () { save({ sceneName: el("layer-scene").value, sceneItemId: -1, sourceUuid: "", sourceName: "" }); };
-      el("layer-operation").onchange = function () { save({ operation: el("layer-operation").value }); };
-      el("layer-dial-mode").onchange = function () { save({ dialMode: el("layer-dial-mode").value, target: "selected", sceneItemId: -1, sourceUuid: "", sourceName: "" }); };
+      el("layer-operation").onchange = function () {
+        const update = { operation: el("layer-operation").value };
+        if (!dial && update.operation !== operation && generatedLabel) update.labelOverride = "";
+        save(update);
+      };
+      el("layer-dial-mode").onchange = function () {
+        const update = { dialMode: el("layer-dial-mode").value, target: "selected", sceneItemId: -1, sourceUuid: "", sourceName: "" };
+        if (dial && update.dialMode !== dialMode && generatedLabel) update.labelOverride = "";
+        save(update);
+      };
       el("layer-target").onchange = function () {
         if (el("layer-target").value === "fixed") save({ target: "fixed", scope: "fixed", sceneName: sceneName || "", sceneItemId: -1, sourceUuid: "", sourceName: "" });
         else save({ target: "selected", sceneItemId: -1, sourceUuid: "", sourceName: "" });

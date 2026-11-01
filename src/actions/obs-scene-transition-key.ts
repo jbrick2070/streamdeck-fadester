@@ -32,6 +32,7 @@ import {
 import { LocalText, errorLocalText, ownText, wordText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
 import { statusCellReason } from "../../packages/streamdeck-fadester-shared/src/status-text.js";
 import { t, translate } from "../i18n/strings.js";
+import { customCaption } from "../obs/preset-captions.js";
 
 interface KeyImageSink {
   setImage(image: string): Promise<void>;
@@ -153,11 +154,8 @@ export class ObsSceneTransitionKeyInstanceController {
     const target = this.settings.sceneTarget;
     const catalog = this.client.getCatalog();
     const isAutomatic = sceneTargetIndex(target) !== undefined;
-    const generatedLabel = /^Scene\s*[A-D1-4]$/i.test(this.settings.labelOverride);
-    const generatedRoleLabel = target === DIRECT_SCENE_NEXT && ["Next scene", "Cut next"].includes(this.settings.labelOverride)
-      || target === DIRECT_SCENE_PREVIOUS && ["Prev scene", "Cut previous"].includes(this.settings.labelOverride)
-      || target === DIRECT_SCENE_CURRENT_PREVIEW && ["Cut preview", "Transition"].includes(this.settings.labelOverride)
-      || target === DIRECT_SCENE_RANDOM && this.settings.labelOverride === "Random";
+    // A shipped caption ("Scene 1", "Next scene") is a default: the key draws the live scene or its role.
+    const customLabel = customCaption("scene", this.settings);
     let resolved = "";
     let reason = wordText(this.lastError, translate) || statusCellReason(this.client.getStatus(), translate);
     const needsStudio = this.settings.operation === "preview" || target === DIRECT_SCENE_CURRENT_PREVIEW;
@@ -169,9 +167,7 @@ export class ObsSceneTransitionKeyInstanceController {
         if (configured && !resolved && !reason) reason = t("sceneUnavailable");
       }
     }
-    const title = this.settings.labelOverride && !(isAutomatic && generatedLabel) && !generatedRoleLabel
-      ? this.settings.labelOverride
-      : resolved || targetLabel(target) || t("sceneTitleFallback");
+    const title = customLabel || resolved || targetLabel(target) || t("sceneTitleFallback");
     // A chosen OBS transition keeps its OBS name; only our own words are translated.
     const operation = this.settings.operation === "preview"
       ? t("sceneOpPreview")

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
+import { inspectorPageScript } from "./helpers/inspector-scripts.js";
 import { describe, expect, it } from "vitest";
 
 /** Execute the shipped inline inspector callback with its observed OBS state. */
@@ -13,7 +14,7 @@ function inspector(file: string) {
   }]));
   const saved: Array<Record<string, unknown>> = [];
   let render!: (settings: Record<string, unknown>, save: (patch: Record<string, unknown>) => void, state: Record<string, unknown>) => void;
-  runInNewContext([...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((match) => match[1]).join("\n"), {
+  runInNewContext(inspectorPageScript(html), {
     document: { activeElement: null, getElementById: (id: string) => elements.get(id) },
     window: {
       initDirectObsPropertyInspector: (callback: typeof render) => { render = callback; },

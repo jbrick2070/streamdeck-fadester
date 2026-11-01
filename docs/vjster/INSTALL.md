@@ -69,8 +69,11 @@ the English text is shown.
 |------|---------------|-------|
 | Stream Deck plugin | English, German | `com.jbrick2070.vjster.sdPlugin/<lang>.json` |
 | Its settings page | English, German | `Localization.pi` in the same files; after a change run `node --import tsx scripts/vjster/make-pi-strings.ts` to rewrite `ui/i18n.js` |
+| Chrome extension (description, options page) | English, German | `vjster-extension/_locales/<lang>/messages.json` |
 
-The English texts were written with Claude Opus 5.5, an AI model. Every other
+The Chrome extension follows Chrome's language. Chrome's `messages.json`
+format has no room for a comment, so this note stands for those files: the
+English texts were written with Claude Opus 5.5, an AI model. Every other
 language was drafted by Claude Opus 5.5 and is to be reviewed by a second AI
 model (Gemini 4 Argon) before release (PLAN.md 8.7); the German files are
 drafts until then. Corrections are welcome as a GitHub issue or pull request

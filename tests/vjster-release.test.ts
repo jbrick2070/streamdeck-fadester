@@ -2,12 +2,13 @@
 // VJster release files (docs/vjster/INSTALL.md, PLAN.md Phase 1 step 6): the
 // extension zip holds every file the manifest names, the same build gives the
 // same bytes, and an incomplete build is refused.
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { inflateRawSync } from "node:zlib";
 import { afterEach, describe, expect, it } from "vitest";
-import { ALSO_NEEDED, neededFiles, packExtension } from "../scripts/vjster/pack-extension.js";
+import { ALSO_NEEDED, localesIn, neededFiles, packExtension, SOURCE_LOCALES } from "../scripts/vjster/pack-extension.js";
+import { REQUIRED } from "./vjster-languages.js";
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -16,7 +17,11 @@ afterEach(() => {
 
 /** The real extension manifest, so the fixture names what Chrome will look for. */
 const MANIFEST = JSON.parse(readFileSync(join(__dirname, "..", "vjster-extension", "manifest.json"), "utf8")) as Record<string, unknown>;
+/** The real languages of the source, which every build must carry (PLAN.md 8.5). */
+const LOCALES = localesIn(SOURCE_LOCALES);
+const LOCALE_FILES = LOCALES.map((l) => `_locales/${l}/messages.json`);
 const EXPECTED = [
+  ...LOCALE_FILES,
   "background.js",
   "content-bridge.js",
   "content-main.js",
@@ -35,6 +40,13 @@ function build(opts: { version?: unknown; skip?: string; reverse?: boolean; touc
   const names = [...EXPECTED].filter((n) => n !== opts.skip);
   if (opts.reverse) names.reverse();
   for (const name of names) {
+    if (name.startsWith("_locales/")) {
+      // The real language files, copied as the extension build copies them.
+      mkdirSync(join(dir, name, ".."), { recursive: true });
+      cpSync(join(SOURCE_LOCALES, name.slice("_locales/".length)), join(dir, name));
+      if (opts.touch) utimesSync(join(dir, name), opts.touch, opts.touch);
+      continue;
+    }
     const body = name === "manifest.json" ? JSON.stringify({ ...MANIFEST, version: "version" in opts ? opts.version : "0.1.0" }) : `// ${name}`;
     writeFileSync(join(dir, name), body);
     if (opts.touch) utimesSync(join(dir, name), opts.touch, opts.touch);
@@ -67,8 +79,11 @@ function unzip(bytes: Buffer): Map<string, string> {
 }
 
 describe("the extension zip (step 6)", () => {
-  it("needs every file the real manifest names, plus the options page's script", () => {
-    expect(neededFiles(MANIFEST)).toEqual(EXPECTED);
+  it("needs every file the real manifest names, plus the options page's script and every language", () => {
+    expect(neededFiles(MANIFEST, LOCALES)).toEqual(EXPECTED);
+    expect(neededFiles(MANIFEST)).toEqual(EXPECTED.filter((n) => !n.startsWith("_locales/") || n === "_locales/en/messages.json"));
+    expect(MANIFEST.default_locale).toBe("en");
+    expect(LOCALES).toEqual(expect.arrayContaining([...REQUIRED.chrome]));
     expect(ALSO_NEEDED).toEqual(["options.js"]);
   });
 
@@ -80,6 +95,16 @@ describe("the extension zip (step 6)", () => {
     expect([...files.keys()].sort()).toEqual(EXPECTED);
     expect(files.get("content-main.js")).toBe("// content-main.js");
     expect(files.get("icons/icon48.png")).toBe("// icons/icon48.png");
+    for (const f of LOCALE_FILES) expect(files.get(f)).toBe(readFileSync(join(SOURCE_LOCALES, f.slice("_locales/".length))).toString("latin1"));
+  });
+
+  it("carries the real languages in the real build, when one exists (vjster-extension/bin)", () => {
+    const bin = join(__dirname, "..", "vjster-extension", "bin");
+    if (!existsSync(join(bin, "manifest.json"))) return; // not built in this checkout; the release steps build it first
+    expect(existsSync(join(bin, "_locales")), "vjster-extension/bin is stale: build the extension again").toBe(true);
+    expect(readdirSync(join(bin, "_locales")).sort()).toEqual(LOCALES);
+    for (const f of LOCALE_FILES) expect(readFileSync(join(bin, f)).equals(readFileSync(join(SOURCE_LOCALES, f.slice("_locales/".length)))), f).toBe(true);
+    expect(packExtension(bin).names).toEqual(expect.arrayContaining(LOCALE_FILES));
   });
 
   it("gives the same bytes for the same build, whatever the order and times the files were written in", () => {

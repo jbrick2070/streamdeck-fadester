@@ -1,0 +1,60 @@
+{
+  "extDescription": {
+    "message": "Stream-Deck-Steuerung für Tempo und Qualität des Videos in Chrome. Spricht nur mit den VJster-Aktionen auf diesem Computer."
+  },
+  "htmlLang": {
+    "message": "de"
+  },
+  "optionsTitle": {
+    "message": "VJster-Optionen"
+  },
+  "portLabel": {
+    "message": "Verbindungsport"
+  },
+  "save": {
+    "message": "Speichern"
+  },
+  "portNote": {
+    "message": "Der Port, auf dem die VJster-Aktionen auf dem Stream Deck lauschen, nur auf diesem Computer. Nur ändern, wenn er dort geändert wurde."
+  },
+  "idLabel": {
+    "message": "ID dieser Erweiterung"
+  },
+  "idNote": {
+    "message": "Damit sich nur diese Erweiterung verbinden kann, die ID in die VJster-Einstellungen auf dem Stream Deck einfügen."
+  },
+  "allSites": {
+    "message": "Videos auf allen Websites steuern, nicht nur auf YouTube"
+  },
+  "allSitesNote": {
+    "message": "Nur Tempo: Die Qualität braucht den Player von YouTube. Chrome fragt nach der Berechtigung, alle Websites zu lesen und zu ändern."
+  },
+  "statusBadPort": {
+    "message": "Eine ganze Zahl von 1024 bis 65535 verwenden; $DEFAULT$ ist der Standard.",
+    "placeholders": {
+      "default": {
+        "content": "$1"
+      }
+    }
+  },
+  "statusSaved": {
+    "message": "Gespeichert. VJster verbindet sich jetzt mit Port $PORT$.",
+    "placeholders": {
+      "port": {
+        "content": "$1"
+      }
+    }
+  },
+  "statusNotAllowed": {
+    "message": "Nicht erlaubt: VJster bleibt nur auf YouTube."
+  },
+  "statusAllSites": {
+    "message": "VJster steuert jetzt Videos auf allen Websites. Offene Tabs neu laden, um sie einzubeziehen."
+  },
+  "statusYouTubeOnly": {
+    "message": "VJster ist wieder nur auf YouTube."
+  },
+  "statusYouTubeOnlyKept": {
+    "message": "VJster ist wieder nur auf YouTube; Chrome hat die Berechtigung für alle Websites behalten. Sie lässt sich auf der Detailseite der Erweiterung entfernen."
+  }
+}

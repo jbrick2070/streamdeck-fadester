@@ -369,6 +369,18 @@ Fadester files are not touched (someone else's work is uncommitted there). Each 
 5. **Step 8.5 -- Chrome extension.** `_locales/<lang>/messages.json` for the ten languages and English,
    `default_locale`, `__MSG_x__` in manifest.json, the options page filled through `chrome.i18n.getMessage`, the
    typings in `chrome.d.ts`, `_locales` in the rollup copy step, `pack-extension.ts` and the release test.
+   *As built (2026-10-31):* `_locales/en` and `_locales/de` (16 messages each, every entry `{ "message" }` plus
+   `placeholders` for `$PORT$` and `$DEFAULT$`; `htmlLang` names the language of the file), `"default_locale": "en"`
+   and `"description": "__MSG_extDescription__"` in manifest.json (the name stays VJster, a kept term).
+   `vjster-extension/src/i18n.ts` (no `chrome.*`) fills every `data-i18n` element, the `<title>` included, and
+   `<html lang>`; an empty `getMessage` keeps the English text in the page. The status lines are messages with
+   `$1` substitutions. `chrome.d.ts` declares `chrome.i18n.getMessage` and `getUILanguage`. The rollup copy step
+   replaces `bin/_locales` with the source folder; `pack-extension.ts` refuses a build without the default
+   language or any language of the source (`localesIn`). `tests/vjster-release.test.ts` packs the real
+   `_locales` files and, when `vjster-extension/bin` exists, checks the built languages equal the source;
+   `tests/vjster-ext-i18n.test.ts` checks the required languages, Chrome's format, no BOM, the same messages and
+   placeholders as English, no lone `$`, every message used and every used message present, the page's English
+   equal to `en`, and the page filled in German with English kept for a missing message.
 6. **Step 8.6 -- OBS page.** The four setup notes come from a table of the ten languages; the language comes from an
    `hl=` parameter the property inspector adds to the address it builds (from Stream Deck's language), else
    `navigator.language`.

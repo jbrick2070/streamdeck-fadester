@@ -3,7 +3,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>VJster options</title>
+    <title data-i18n="optionsTitle">VJster options</title>
     <style>
       :root { color-scheme: light dark; font: 14px/1.5 system-ui, sans-serif; }
       body { max-width: 34rem; margin: 2rem auto; padding: 0 1rem; }
@@ -19,16 +19,16 @@
   <body>
     <h1>VJster</h1>
 
-    <label for="port">Link port</label>
-    <input id="port" type="number" min="1024" max="65535" /><button id="save">Save</button>
-    <p class="note">The port the VJster actions on your Stream Deck listen on, on this computer only. Change it only if you changed it there.</p>
+    <label for="port" data-i18n="portLabel">Link port</label>
+    <input id="port" type="number" min="1024" max="65535" /><button id="save" data-i18n="save">Save</button>
+    <p class="note" data-i18n="portNote">The port the VJster actions on your Stream Deck listen on, on this computer only. Change it only if you changed it there.</p>
 
-    <label>This extension's id</label>
+    <label data-i18n="idLabel">This extension's id</label>
     <code id="ext-id"></code>
-    <p class="note">To let only this extension connect, paste the id into the VJster settings on your Stream Deck.</p>
+    <p class="note" data-i18n="idNote">To let only this extension connect, paste the id into the VJster settings on your Stream Deck.</p>
 
-    <label><input id="all-sites" type="checkbox" /> Control videos on every site, not only YouTube</label>
-    <p class="note">Speed only: quality needs YouTube's player. Chrome asks for permission to read and change every site.</p>
+    <label><input id="all-sites" type="checkbox" /> <span data-i18n="allSites">Control videos on every site, not only YouTube</span></label>
+    <p class="note" data-i18n="allSitesNote">Speed only: quality needs YouTube's player. Chrome asks for permission to read and change every site.</p>
 
     <div id="status" role="status"></div>
     <script src="options.js"></script>

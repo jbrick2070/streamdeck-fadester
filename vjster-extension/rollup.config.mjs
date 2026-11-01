@@ -5,10 +5,10 @@
 //
 //   npx rollup -c vjster-extension/rollup.config.mjs
 //
-// A small inline plugin copies the manifest, the options page and the icons
-// next to the bundles; no copy plugin is added (docs/vjster R-STD-3).
+// A small inline plugin copies the manifest, the options page, the icons and
+// the `_locales` folder next to the bundles; no copy plugin is added (docs/vjster R-STD-3).
 
-import { copyFileSync, mkdirSync, readdirSync } from "node:fs";
+import { copyFileSync, cpSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import commonjs from "@rollup/plugin-commonjs";
@@ -28,6 +28,9 @@ function copyStatic() {
       for (const file of readdirSync(join(here, "icons"))) {
         if (file.endsWith(".png")) copyFileSync(join(here, "icons", file), join(out, "icons", file));
       }
+      // Every language Chrome may pick (PLAN.md 8.5); a language removed from the source leaves the build too.
+      rmSync(join(out, "_locales"), { recursive: true, force: true });
+      cpSync(join(here, "_locales"), join(out, "_locales"), { recursive: true });
     }
   };
 }

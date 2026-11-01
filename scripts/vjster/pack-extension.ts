@@ -20,21 +20,39 @@ export const ALSO_NEEDED = ["options.js"] as const;
 
 interface ExtensionManifest {
   version?: unknown;
+  default_locale?: unknown;
   background?: { service_worker?: unknown };
   options_page?: unknown;
   icons?: Record<string, unknown>;
   content_scripts?: { js?: unknown[] }[];
 }
 
-/** Every file the manifest names, plus the manifest itself and ALSO_NEEDED; a build without one is refused. */
-export function neededFiles(manifest: ExtensionManifest): string[] {
+const here = fileURLToPath(import.meta.url);
+/** The extension's language folders in the source (PLAN.md 8.5). */
+export const SOURCE_LOCALES = resolve(dirname(here), "../../vjster-extension/_locales");
+
+/** The languages in a `_locales` folder: the subfolders that hold a messages.json. */
+export function localesIn(dir: string): string[] {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir)
+    .filter((name) => existsSync(join(dir, name, "messages.json")))
+    .sort();
+}
+
+/**
+ * Every file the manifest names, plus the manifest itself, ALSO_NEEDED, the
+ * default language's messages and those of `locales`; a build without one is
+ * refused.
+ */
+export function neededFiles(manifest: ExtensionManifest, locales: readonly string[] = []): string[] {
   const named = [
     manifest.background?.service_worker,
     manifest.options_page,
     ...Object.values(manifest.icons ?? {}),
     ...(manifest.content_scripts ?? []).flatMap((s) => s.js ?? [])
   ].filter((p): p is string => typeof p === "string");
-  return [...new Set(["manifest.json", ...named, ...ALSO_NEEDED])].sort();
+  const languages = [...(typeof manifest.default_locale === "string" ? [manifest.default_locale] : []), ...locales];
+  return [...new Set(["manifest.json", ...named, ...ALSO_NEEDED, ...languages.map((l) => `_locales/${l}/messages.json`)])].sort();
 }
 
 function files(dir: string): string[] {
@@ -46,8 +64,12 @@ function files(dir: string): string[] {
     });
 }
 
-/** Zip a built extension folder; returns the zip's bytes, the version from its manifest and the file names. Source maps are left out. */
-export function packExtension(bin: string): { version: string; bytes: Buffer; names: string[] } {
+/**
+ * Zip a built extension folder; returns the zip's bytes, the version from its
+ * manifest and the file names. Source maps are left out. Every language in
+ * `locales` (by default those of the source) must be in the build.
+ */
+export function packExtension(bin: string, locales: readonly string[] = localesIn(SOURCE_LOCALES)): { version: string; bytes: Buffer; names: string[] } {
   const manifestPath = join(bin, "manifest.json");
   if (!existsSync(manifestPath)) throw new Error(`${bin} has no manifest.json; build the extension first`);
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as ExtensionManifest;
@@ -55,13 +77,12 @@ export function packExtension(bin: string): { version: string; bytes: Buffer; na
   const entries = files(bin)
     .filter((f) => !f.endsWith(".map"))
     .map((f) => ({ name: relative(bin, f).split("\\").join("/"), data: readFileSync(f) }));
-  for (const needed of neededFiles(manifest)) {
+  for (const needed of neededFiles(manifest, locales)) {
     if (!entries.some((e) => e.name === needed)) throw new Error(`the build has no ${needed}; build the extension first`);
   }
   return { version: manifest.version, bytes: zip(entries), names: entries.map((e) => e.name) };
 }
 
-const here = fileURLToPath(import.meta.url);
 const invoked = (): boolean => {
   try {
     return Boolean(process.argv[1]) && realpathSync(resolve(process.argv[1])) === realpathSync(here);

@@ -65,6 +65,12 @@ declare namespace chrome {
     function remove(p: { origins?: string[] }): Promise<boolean>;
   }
 
+  namespace i18n {
+    /** The message in Chrome's language, `$1`... filled from `substitutions`; "" when there is none. */
+    function getMessage(messageName: string, substitutions?: string | string[]): string;
+    function getUILanguage(): string;
+  }
+
   namespace scripting {
     interface RegisteredContentScript {
       id: string;

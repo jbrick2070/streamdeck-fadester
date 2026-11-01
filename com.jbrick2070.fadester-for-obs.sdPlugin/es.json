@@ -41,10 +41,10 @@
   },
   "com.jbrick2070.fadester-for-obs.obs-filter": {
     "Name": "Filtro de OBS",
-    "Tooltip": "Lleva un ajuste de filtro con un dial, o activa y desactiva un filtro, fija un valor o cámbialo por pasos con una tecla. Rangos, transiciones suaves y comprobaciones de propiedad lo hacen seguro.",
+    "Tooltip": "Regula un ajuste de filtro con un dial, o activa y desactiva un filtro, fija un valor o cámbialo por pasos con una tecla. Los rangos, el suavizado gradual y las comprobaciones de control lo mantienen seguro.",
     "Encoder": {
       "TriggerDescription": {
-        "Rotate": "Llevar el ajuste del filtro",
+        "Rotate": "Regular el ajuste del filtro",
         "Push": "Bajar y volver, o activar y desactivar el filtro"
       }
     }
@@ -669,7 +669,7 @@
       "plNote": "Solo estado muestra el estado. Reproducir / pausar alterna según el estado observado. Detener descarta primero las pulsaciones no enviadas del Playlister. No se envía nada mientras el Playlister no esté disponible.",
       "fxHeading": "Filtro de OBS",
       "vpHeading": "Pánico visual",
-      "fxIntro": "Lleva un ajuste de filtro con un dial, o, desde una tecla, activa y desactiva un filtro, fija un valor o lo cambia por pasos. Elige la fuente y su filtro por nombre; el control sigue a la fuente aunque cambie de nombre.",
+      "fxIntro": "Regula un ajuste de filtro con un dial, o, desde una tecla, activa y desactiva un filtro, fija un valor o lo cambia por pasos. Elige la fuente y su filtro por nombre; el control sigue a la fuente aunque cambie de nombre.",
       "fxSource": "Fuente",
       "fxFilter": "Filtro",
       "fxSetting": "Ajuste",
@@ -685,14 +685,14 @@
       "fxKindModulator": "Visual Sidechain: Modulador de audio",
       "fxKindColor": "Corrección de color",
       "fxSettingOther": "{setting} (define un rango)",
-      "fxSettingDriven": "{setting} (lo controla {filter})",
+      "fxSettingDriven": "{setting} (bajo control de {filter})",
       "fxOwnFader": "su fader",
       "fxOpToggle": "Activar o desactivar el filtro",
-      "fxOpSet": "Fijar un valor en un tiempo",
+      "fxOpSet": "Fijar un valor a lo largo de un tiempo",
       "fxOpStepUp": "Subir un paso",
       "fxOpStepDown": "Bajar un paso",
       "fxDialPress": "Pulsar",
-      "fxPressDrop": "Bajar mientras se mantiene y volver",
+      "fxPressDrop": "Bajar mientras se mantiene pulsado y luego volver",
       "fxPressToggle": "Activar o desactivar el filtro",
       "fxPressNone": "Nada",
       "fxRange": "Rango",
@@ -706,7 +706,7 @@
       "fxUseCurrent": "Usar el actual",
       "fxDuration": "Duración (ms)",
       "fxStep": "Paso (%)",
-      "fxNote": "Cada escritura mueve como mucho una décima parte del rango, nunca un ajuste que controle un modulador de audio o un fader, y nada de un filtro de Visual Sidechain mientras el pánico siga activo.",
+      "fxNote": "Cada escritura mueve como mucho una décima parte del rango, nunca un ajuste controlado por un Modulador de audio o un fader, ni nada de un filtro de Visual Sidechain mientras el Pánico siga activo.",
       "fxBannerChooseSource": "Elige la fuente que tiene el filtro.",
       "fxBannerSourceMissing": "La fuente elegida no está en OBS ahora.",
       "fxBannerChooseFilter": "Elige uno de los filtros de la fuente.",
@@ -718,7 +718,7 @@
       "vpIntro": "Envía el Pánico o Restaurar de Visual Sidechain con los atajos de OBS; OBS no tiene que estar en primer plano.",
       "vpOptPanic": "Pánico (al instante)",
       "vpOptRestore": "Restaurar (mantén 0,8 s)",
-      "vpNote": "Cada pulsación de Pánico se envía. Las teclas de pánico muestran PÁNICO ENVIADO hasta que se acepta un Restaurar o OBS se reconecta; mientras tanto el deck no escribe ningún filtro de Visual Sidechain. Un Restaurar sin Pánico previo no cambia nada.",
+      "vpNote": "Cada pulsación de Pánico se envía. Las teclas de pánico muestran PÁNICO ENVIADO hasta que se acepta un Restaurar o OBS se reconecta; mientras tanto el deck no escribe en ningún filtro de Visual Sidechain. Un Restaurar sin Pánico previo no cambia nada.",
       "accentLabel": "Acento",
       "accentDefault": "Violeta Fadester",
       "accentBrass": "Latón",

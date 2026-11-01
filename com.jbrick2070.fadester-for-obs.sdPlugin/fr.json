@@ -41,17 +41,17 @@
   },
   "com.jbrick2070.fadester-for-obs.obs-filter": {
     "Name": "Filtre OBS",
-    "Tooltip": "Piloter un réglage de filtre au bouton rotatif, ou activer et désactiver un filtre, régler une valeur ou la faire varier par pas avec une touche. Plages, transitions douces et contrôles de pilotage le rendent sûr.",
+    "Tooltip": "Piloter un réglage de filtre au bouton rotatif, ou activer et désactiver un filtre, régler une valeur ou la faire varier par pas avec une touche. Plages, lissage et protection des réglages déjà pilotés sécurisent le contrôle.",
     "Encoder": {
       "TriggerDescription": {
         "Rotate": "Piloter le réglage du filtre",
-        "Push": "Couper et revenir, ou activer et désactiver le filtre"
+        "Push": "Baisser et revenir, ou activer et désactiver le filtre"
       }
     }
   },
   "com.jbrick2070.fadester-for-obs.visual-panic": {
     "Name": "Panique visuelle",
-    "Tooltip": "Panique (immédiate) et Restaurer (maintenir 0,8 s) de Visual Sidechain, envoyés par les raccourcis d’OBS. Les touches Panique affichent PANIQUE ENVOYÉE jusqu’à Restaurer."
+    "Tooltip": "Panique (immédiate) et Restaurer (maintenir 0,8 s) de Visual Sidechain, envoyés par les raccourcis clavier d’OBS. Les touches Panique affichent PANIQUE ENVOYÉE jusqu’au déclenchement de Restaurer."
   },
   "com.jbrick2070.fadester-for-obs.fader": {
     "Name": "Fader Midi Fadester (facultatif)",
@@ -706,7 +706,7 @@
       "fxUseCurrent": "Prendre l’actuelle",
       "fxDuration": "Durée (ms)",
       "fxStep": "Pas (%)",
-      "fxNote": "Une écriture déplace au plus un dixième de la plage, jamais un réglage piloté par un modulateur audio ou un fader, et rien d’un filtre Visual Sidechain tant que la panique est active.",
+      "fxNote": "Chaque écriture déplace la valeur d’au plus un dixième de la plage, sans jamais modifier un réglage piloté par un modulateur audio ou un fader, ni aucun filtre Visual Sidechain tant que la Panique est enclenchée.",
       "fxBannerChooseSource": "Choisissez la source qui porte le filtre.",
       "fxBannerSourceMissing": "La source choisie n’est pas dans OBS actuellement.",
       "fxBannerChooseFilter": "Choisissez un des filtres de la source.",
@@ -715,10 +715,10 @@
       "fxBannerChooseSetting": "Choisissez le réglage à piloter.",
       "fxBannerDriven": "{filter} pilote ce réglage, le deck ne l’écrit donc jamais. Retirez d’abord la liaison là-bas.",
       "fxBannerRange": "Ce réglage n’est pas dans la table des plages du deck : saisissez la plage où il peut varier.",
-      "vpIntro": "Envoie la Panique ou Restaurer de Visual Sidechain par les raccourcis d’OBS ; OBS n’a pas besoin d’être au premier plan.",
+      "vpIntro": "Envoie la commande Panique ou Restaurer de Visual Sidechain par les raccourcis clavier d’OBS ; OBS n’a pas besoin d’être au premier plan.",
       "vpOptPanic": "Panique (immédiate)",
       "vpOptRestore": "Restaurer (maintenir 0,8 s)",
-      "vpNote": "Chaque appui sur Panique est envoyé. Les touches Panique affichent PANIQUE ENVOYÉE jusqu’à ce qu’un Restaurer soit accepté ou qu’OBS se reconnecte ; entre-temps le deck n’écrit aucun filtre Visual Sidechain. Un Restaurer sans Panique avant ne change rien.",
+      "vpNote": "Chaque appui sur Panique est envoyé. Les touches Panique affichent PANIQUE ENVOYÉE jusqu’à ce que la commande Restaurer soit acceptée ou qu’OBS se reconnecte ; entre-temps le deck n’écrit aucun filtre Visual Sidechain. Déclencher Restaurer sans Panique avant ne change rien.",
       "accentLabel": "Accent",
       "accentDefault": "Violet Fadester",
       "accentBrass": "Laiton",

@@ -51,7 +51,7 @@
   },
   "com.jbrick2070.fadester-for-obs.visual-panic": {
     "Name": "视觉紧急停止",
-    "Tooltip": "通过 OBS 自身的快捷键发送 Visual Sidechain 的紧急停止（立即）和恢复（长按 0.8 秒）。紧急停止键会显示已发送紧急停止，直到恢复。"
+    "Tooltip": "通过 OBS 自身的快捷键发送 Visual Sidechain 的紧急停止（立即）和恢复（长按 0.8 秒）。紧急停止键会显示“已发送紧急停止”，直到恢复。"
   },
   "com.jbrick2070.fadester-for-obs.fader": {
     "Name": "Midi Fadester 推子（可选）",
@@ -300,7 +300,7 @@
     "vpPanic": "紧急停止",
     "vpPanicSent": "已发送紧急停止",
     "vpPanicHint": "关闭频闪和闪光",
-    "vpLatchedHint": "长按恢复键",
+    "vpLatchedHint": "长按恢复以撤销",
     "vpRestore": "恢复",
     "vpHoldSeconds": "长按 {s} 秒",
     "vpHolding": "继续按住",
@@ -317,7 +317,7 @@
     "filterSettingEffectMix": "效果混合",
     "filterSettingReactivity": "响应度",
     "filterSettingOpacity": "不透明度",
-    "filterSettingModAmount": "调制 {n} 量",
+    "filterSettingModAmount": "调制量 {n}",
     "filterSettingNone": "无设置",
     "filterPressDrop": "按下：降低后复原",
     "filterPressToggle": "按下：滤镜开关",
@@ -678,7 +678,7 @@
       "fxChooseSetting": "选择设置",
       "fxUnknownSource": "未知的源",
       "fxSourceScene": "场景：{name}",
-      "fxSourceGroup": "群组：{name}",
+      "fxSourceGroup": "分组：{name}",
       "fxSourceInput": "源：{name}",
       "fxFilterItem": "{name}（{kind}）",
       "fxKindShader": "Visual Sidechain：着色器滤镜",
@@ -715,16 +715,16 @@
       "fxBannerChooseSetting": "请选择要控制的设置。",
       "fxBannerDriven": "{filter} 控制着此设置，因此 Stream Deck 从不写入。请先在那里解除绑定。",
       "fxBannerRange": "此设置不在 Stream Deck 的范围表中：请输入它可以变化的范围。",
-      "vpIntro": "通过 OBS 快捷键发送 Visual Sidechain 的紧急停止或恢复；OBS 无需在前台。",
+      "vpIntro": "通过 OBS 快捷键发送 Visual Sidechain 自身的紧急停止或恢复；OBS 无需在前台。",
       "vpOptPanic": "紧急停止（立即）",
       "vpOptRestore": "恢复（长按 0.8 秒）",
-      "vpNote": "每次按下紧急停止都会发送。在恢复被接受或 OBS 重新连接之前，紧急停止键显示已发送紧急停止，其间 Stream Deck 不写入任何 Visual Sidechain 滤镜。之前没有紧急停止时恢复不会改变任何内容。",
+      "vpNote": "每次按下紧急停止都会发送。在恢复生效或 OBS 重新连接之前，紧急停止键会显示“已发送紧急停止”，其间 Stream Deck 不写入任何 Visual Sidechain 滤镜。若此前未触发紧急停止，执行恢复不会有任何变化。",
       "accentLabel": "强调色",
       "accentDefault": "Fadester 紫",
       "accentBrass": "黄铜",
       "accentTeal": "青绿",
       "accentMagenta": "品红",
-      "fxBannerRangeChoose": "请选择此量可以变化的范围。",
+      "fxBannerRangeChoose": "请选择此调制量可以变化的范围。",
       "fxBannerOutOfRange": "OBS 中的值为 {value}，超出此范围：在值或范围改变之前，此控件不会移动它。",
       "fxNoteOffTable": "其他任何数值设置（包括着色器自身的 uniform）在输入范围后即可控制，请谨慎选择范围。OBS 不会告诉 Stream Deck 哪些 uniform 是列表：名称以 …_mode 结尾或在着色器文本中标为列表的会被排除，其余请自行确认。"
     }

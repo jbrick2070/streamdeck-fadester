@@ -41,10 +41,10 @@
   },
   "com.jbrick2070.fadester-for-obs.obs-filter": {
     "Name": "OBS-Filter",
-    "Tooltip": "Eine Filtereinstellung am Drehregler führen oder per Taste einen Filter ein- und ausschalten, einen Wert setzen oder schrittweise ändern. Bereiche, sanfte Übergänge und Prüfungen auf fremde Steuerung machen es sicher.",
+    "Tooltip": "Eine Filtereinstellung live am Drehregler regeln oder per Taste einen Filter ein- und ausschalten, einen Wert setzen oder schrittweise ändern. Bereiche, sanfte Übergänge und Prüfungen auf fremde Steuerung machen die Steuerung sicher.",
     "Encoder": {
       "TriggerDescription": {
-        "Rotate": "Filtereinstellung führen",
+        "Rotate": "Filtereinstellung live regeln",
         "Push": "Absenken und zurück, oder Filter an/aus"
       }
     }
@@ -669,7 +669,7 @@
       "plNote": "„Nur Status“ zeigt lediglich den Zustand an. „Wiedergabe / Pause“ schaltet ausgehend vom beobachteten Zustand um. „Stopp“ verwirft zuerst die noch nicht gesendeten Befehle für diesen Playlister. Solange der Playlister nicht verfügbar ist, wird nichts gesendet.",
       "fxHeading": "OBS-Filter",
       "vpHeading": "Visuelle Panik",
-      "fxIntro": "Führt eine Filtereinstellung am Drehregler oder schaltet per Taste einen Filter ein und aus, setzt einen Wert oder ändert ihn schrittweise. Wählen Sie Quelle und Filter nach Namen; die Steuerung folgt der Quelle auch nach dem Umbenennen.",
+      "fxIntro": "Regelt eine Filtereinstellung live am Drehregler oder schaltet per Taste einen Filter ein und aus, setzt einen Wert oder ändert ihn schrittweise. Wählen Sie Quelle und Filter nach Namen; die Steuerung folgt der Quelle auch nach dem Umbenennen.",
       "fxSource": "Quelle",
       "fxFilter": "Filter",
       "fxSetting": "Einstellung",
@@ -688,7 +688,7 @@
       "fxSettingDriven": "{setting} (gesteuert von {filter})",
       "fxOwnFader": "seinem Fader",
       "fxOpToggle": "Filter ein- oder ausschalten",
-      "fxOpSet": "Wert über eine Zeit setzen",
+      "fxOpSet": "Wert mit Übergangszeit setzen",
       "fxOpStepUp": "Schritt hoch",
       "fxOpStepDown": "Schritt runter",
       "fxDialPress": "Drücken",
@@ -706,19 +706,19 @@
       "fxUseCurrent": "Aktuellen nehmen",
       "fxDuration": "Dauer (ms)",
       "fxStep": "Schritt (%)",
-      "fxNote": "Ein Schreibvorgang bewegt höchstens ein Zehntel des Bereichs, nie eine Einstellung, die ein Audio-Modulator oder ein Fader steuert, und nichts an einem Visual-Sidechain-Filter, solange Panik aktiv ist.",
+      "fxNote": "Ein Schreibvorgang ändert einen Wert um höchstens ein Zehntel des Bereichs, nie eine Einstellung, die ein Audio-Modulator oder ein Fader steuert, und nichts an einem Visual-Sidechain-Filter, solange Panik aktiv ist.",
       "fxBannerChooseSource": "Wählen Sie die Quelle mit dem Filter.",
       "fxBannerSourceMissing": "Die gewählte Quelle ist derzeit nicht in OBS.",
       "fxBannerChooseFilter": "Wählen Sie einen Filter der Quelle.",
       "fxBannerFilterMissing": "Die Quelle hat derzeit keinen Filter dieses Namens. Ein umbenannter Filter muss neu gewählt werden.",
       "fxBannerKind": "Dieser Filter ist jetzt von anderer Art. Wählen Sie ihn neu, um ihn zu steuern.",
       "fxBannerChooseSetting": "Wählen Sie die zu steuernde Einstellung.",
-      "fxBannerDriven": "{filter} steuert diese Einstellung, daher ändert das Deck sie nie. Lösen Sie dort zuerst die Bindung.",
+      "fxBannerDriven": "Diese Einstellung wird von {filter} gesteuert, daher ändert das Deck sie nie. Lösen Sie dort zuerst die Bindung.",
       "fxBannerRange": "Diese Einstellung steht nicht in der Bereichstabelle des Decks: Geben Sie den erlaubten Bereich ein.",
       "vpIntro": "Sendet Panik oder Wiederherstellen von Visual Sidechain über die Hotkeys von OBS; OBS muss nicht im Vordergrund sein.",
       "vpOptPanic": "Panik (sofort)",
       "vpOptRestore": "Wiederherstellen (0,8 s halten)",
-      "vpNote": "Jeder Panik-Druck wird gesendet. Panik-Tasten zeigen PANIK GESENDET, bis ein Wiederherstellen angenommen wird oder OBS neu verbindet; bis dahin schreibt das Deck keinen Visual-Sidechain-Filter. Ein Wiederherstellen ohne vorherige Panik ändert nichts.",
+      "vpNote": "Jeder Druck auf Panik wird gesendet. Panik-Tasten zeigen PANIK GESENDET, bis ein Wiederherstellen angenommen wird oder OBS neu verbindet; bis dahin ändert das Deck keinen Visual-Sidechain-Filter. Ein Wiederherstellen ohne vorherige Panik ändert nichts.",
       "accentLabel": "Akzent",
       "accentDefault": "Fadester-Violett",
       "accentBrass": "Messing",

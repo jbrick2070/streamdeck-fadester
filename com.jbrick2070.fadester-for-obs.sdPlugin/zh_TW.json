@@ -41,7 +41,7 @@
   },
   "com.jbrick2070.fadester-for-obs.obs-filter": {
     "Name": "OBS 濾鏡",
-    "Tooltip": "用旋鈕控制濾鏡設定，或用按鍵開關濾鏡、設定數值或分段調整。範圍、平緩變化和歸屬檢查確保安全。",
+    "Tooltip": "用旋鈕控制濾鏡設定，或用按鍵開關濾鏡、設定數值或分段調整。透過範圍限制、平緩漸變與控制權檢查確保操作安全。",
     "Encoder": {
       "TriggerDescription": {
         "Rotate": "控制濾鏡設定",
@@ -51,7 +51,7 @@
   },
   "com.jbrick2070.fadester-for-obs.visual-panic": {
     "Name": "視覺緊急停止",
-    "Tooltip": "透過 OBS 本身的快捷鍵送出 Visual Sidechain 的緊急停止（立即）和還原（長按 0.8 秒）。緊急停止鍵會顯示已送出緊急停止，直到還原。"
+    "Tooltip": "透過 OBS 本身的快捷鍵送出 Visual Sidechain 的緊急停止（立即）和還原（長按 0.8 秒）。緊急停止鍵會顯示「已送出緊急停止」，直到還原。"
   },
   "com.jbrick2070.fadester-for-obs.fader": {
     "Name": "Midi Fadester 推桿（選用）",
@@ -300,7 +300,7 @@
     "vpPanic": "緊急停止",
     "vpPanicSent": "已送出緊急停止",
     "vpPanicHint": "關閉頻閃和閃光",
-    "vpLatchedHint": "長按還原鍵",
+    "vpLatchedHint": "長按還原鍵解除",
     "vpRestore": "還原",
     "vpHoldSeconds": "長按 {s} 秒",
     "vpHolding": "繼續按住",
@@ -317,7 +317,7 @@
     "filterSettingEffectMix": "效果混合",
     "filterSettingReactivity": "反應度",
     "filterSettingOpacity": "不透明度",
-    "filterSettingModAmount": "調變 {n} 量",
+    "filterSettingModAmount": "調變 {n} 幅度",
     "filterSettingNone": "無設定",
     "filterPressDrop": "按下：降低後復原",
     "filterPressToggle": "按下：濾鏡開關",
@@ -669,7 +669,7 @@
       "plNote": "「僅狀態」只顯示狀態。「播放 / 暫停」依觀測到的狀態切換。「停止」會先捨棄該 Playlister 尚未送出的按鍵操作。Playlister 無法使用時不會送出任何指令。",
       "fxHeading": "OBS 濾鏡",
       "vpHeading": "視覺緊急停止",
-      "fxIntro": "用旋鈕控制一個濾鏡設定，或用按鍵開關濾鏡、設定數值或分段調整。依名稱選擇來源和濾鏡；來源改名後控制仍會跟隨。",
+      "fxIntro": "用旋鈕控制一個濾鏡設定，或用按鍵開關濾鏡、設定數值或分段調整。依名稱選擇來源和濾鏡；來源重新命名後，此控制項仍會跟隨。",
       "fxSource": "來源",
       "fxFilter": "濾鏡",
       "fxSetting": "設定",
@@ -688,7 +688,7 @@
       "fxSettingDriven": "{setting}（由 {filter} 控制）",
       "fxOwnFader": "其推桿",
       "fxOpToggle": "開關濾鏡",
-      "fxOpSet": "在一段時間內設定數值",
+      "fxOpSet": "在指定時間內調至數值",
       "fxOpStepUp": "調高一步",
       "fxOpStepDown": "調低一步",
       "fxDialPress": "按下",
@@ -704,7 +704,7 @@
       "fxInteger": "整數",
       "fxValue": "數值",
       "fxUseCurrent": "使用目前值",
-      "fxDuration": "時長（毫秒）",
+      "fxDuration": "漸變時間（毫秒）",
       "fxStep": "步長（%）",
       "fxNote": "每次寫入最多移動範圍的十分之一，絕不改動音訊調變器或推桿控制的設定，緊急停止期間不寫入任何 Visual Sidechain 濾鏡。",
       "fxBannerChooseSource": "請選擇帶有該濾鏡的來源。",
@@ -715,16 +715,16 @@
       "fxBannerChooseSetting": "請選擇要控制的設定。",
       "fxBannerDriven": "{filter} 控制著此設定，因此 Stream Deck 從不寫入。請先在那裡解除綁定。",
       "fxBannerRange": "此設定不在 Stream Deck 的範圍表中：請輸入它可以變化的範圍。",
-      "vpIntro": "透過 OBS 快捷鍵送出 Visual Sidechain 的緊急停止或還原；OBS 不必在前景。",
+      "vpIntro": "透過 OBS 快捷鍵送出 Visual Sidechain 本身的緊急停止或還原；OBS 不必在前景。",
       "vpOptPanic": "緊急停止（立即）",
       "vpOptRestore": "還原（長按 0.8 秒）",
-      "vpNote": "每次按下緊急停止都會送出。在還原被接受或 OBS 重新連線之前，緊急停止鍵顯示已送出緊急停止，其間 Stream Deck 不寫入任何 Visual Sidechain 濾鏡。之前沒有緊急停止時還原不會改變任何內容。",
+      "vpNote": "每次按下緊急停止都會送出。在系統接受還原或 OBS 重新連線之前，緊急停止鍵會顯示「已送出緊急停止」，期間 Stream Deck 不會寫入任何 Visual Sidechain 濾鏡。若先前未送出緊急停止，執行還原不會有任何改變。",
       "accentLabel": "強調色",
       "accentDefault": "Fadester 紫",
       "accentBrass": "黃銅",
       "accentTeal": "青綠",
       "accentMagenta": "洋紅",
-      "fxBannerRangeChoose": "請選擇此量可以變化的範圍。",
+      "fxBannerRangeChoose": "請選擇此調變幅度可以變化的範圍。",
       "fxBannerOutOfRange": "OBS 中的值為 {value}，超出此範圍：在值或範圍改變之前，此控制項不會移動它。",
       "fxNoteOffTable": "其他任何數值設定（包括著色器本身的 uniform）在輸入範圍後即可控制，請謹慎選擇範圍。OBS 不會告訴 Stream Deck 哪些 uniform 是清單：名稱以 …_mode 結尾或在著色器文字中標為清單的會被排除，其餘請自行確認。"
     }

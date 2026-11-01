@@ -98,7 +98,7 @@ async function main(): Promise<void> {
   const safety = new VisualSafety(client, filters);
   let inputUuid = "";
   let inputSent = false;
-  const results: Array<{ check: string; ok: boolean; detail: string }> = [];
+  const results: Array<{ check: string; ok: boolean; detail: string; skipped?: boolean }> = [];
   const expect = (check: string, ok: boolean, detail: string): void => {
     results.push({ check, ok, detail });
     log(`${ok ? "PASS" : "MISS"} ${check}: ${detail}`);
@@ -204,7 +204,9 @@ async function main(): Promise<void> {
       }
     }
     if (others.length > 0) {
-      log(`Panic and Restore skipped: other Visual Sidechain filters may exist (${others.length})`);
+      // Not a pass: R-RIG-8's live acceptance needs Panic and Restore sent, so the run says why and exits non-zero.
+      results.push({ check: "Panic and Restore", ok: false, skipped: true,
+        detail: `skipped, other Visual Sidechain filters may exist (${others.length}): ${others.join(", ")}` });
     } else {
       const logFile = newestLog(startedAt);
       if (!logFile) throw new Error("this run's OBS log was not found");
@@ -265,8 +267,10 @@ async function main(): Promise<void> {
       }
     }
     log("results:");
-    for (const result of results) log(`  ${result.ok ? "PASS" : "MISS"} ${result.check}: ${result.detail}`);
-    if (results.some((result) => !result.ok)) process.exitCode = 1;
+    for (const result of results) log(`  ${result.ok ? "PASS" : result.skipped ? "SKIP" : "MISS"} ${result.check}: ${result.detail}`);
+    // A miss fails the run (1); a skipped check leaves it incomplete (2), never "all passed".
+    if (results.some((result) => !result.ok && !result.skipped)) process.exitCode = 1;
+    else if (results.some((result) => result.skipped)) process.exitCode = 2;
   }
 }
 

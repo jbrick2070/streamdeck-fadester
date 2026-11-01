@@ -102,14 +102,22 @@ export class VisualPanicInstanceController {
 
   public async handleKeyDown(now = Date.now()): Promise<void> {
     this.lastError = null;
-    if (!this.client.isConnected()) {
-      this.client.nudgeReconnect(2000, now);
+    if (this.settings.operation === "panic") {
+      // Panic sends whenever the socket is identified, also while the catalog read after a reconnect runs.
+      if (this.client.isIdentified()) {
+        await this.send(() => this.safety.panic());
+        return;
+      }
+      // A socket that is opening or identifying is never torn down by a press: it is about to be usable.
+      if (!this.client.hasLiveSocket()) this.client.nudgeReconnect(2000, now);
       this.renderNow();
       await this.sink.showAlert();
       return;
     }
-    if (this.settings.operation === "panic") {
-      await this.send(() => this.safety.panic());
+    if (!this.client.isConnected()) {
+      this.client.nudgeReconnect(2000, now);
+      this.renderNow();
+      await this.sink.showAlert();
       return;
     }
     // Restore only after the hold: a brush of the key does nothing.

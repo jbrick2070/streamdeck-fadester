@@ -405,7 +405,9 @@
       "accentBrass": "Brass",
       "accentTeal": "Teal",
       "accentMagenta": "Magenta",
-      "fxBannerRangeChoose": "Choose the range this amount may move in."
+      "fxBannerRangeChoose": "Choose the range this amount may move in.",
+      "fxBannerOutOfRange": "OBS holds {value}, outside this range: the control does not move it until the value or the range changes.",
+      "fxNoteOffTable": "Any other number setting, a shader's own uniforms included, can be ridden once you type its range; choose it with care. OBS does not tell the deck which uniforms are lists: those named …_mode or marked as a list in the shader text are left out, any other you check yourself."
     },
     "de": {
       "scopeThisKey": "diese Taste",
@@ -808,7 +810,9 @@
       "accentBrass": "Messing",
       "accentTeal": "Petrol",
       "accentMagenta": "Magentarot",
-      "fxBannerRangeChoose": "Wählen Sie den Bereich, in dem sich diese Stärke bewegen darf."
+      "fxBannerRangeChoose": "Wählen Sie den Bereich, in dem sich diese Stärke bewegen darf.",
+      "fxBannerOutOfRange": "OBS hat {value}, außerhalb dieses Bereichs: Das Steuerelement bewegt den Wert erst, wenn sich der Wert oder der Bereich ändert.",
+      "fxNoteOffTable": "Jede andere Zahleneinstellung, auch die eigenen Uniforms eines Shaders, lässt sich steuern, sobald Sie ihren Bereich eingeben; wählen Sie ihn mit Bedacht. OBS teilt dem Deck nicht mit, welche Uniforms Listen sind: Solche mit Namen auf …_mode oder als Liste im Shader-Text werden ausgelassen, alle anderen prüfen Sie selbst."
     },
     "es": {
       "scopeThisKey": "esta tecla",
@@ -1211,7 +1215,9 @@
       "accentBrass": "Latón",
       "accentTeal": "Verde azulado",
       "accentMagenta": "Magenta",
-      "fxBannerRangeChoose": "Elige el rango en que puede moverse esta cantidad."
+      "fxBannerRangeChoose": "Elige el rango en que puede moverse esta cantidad.",
+      "fxBannerOutOfRange": "OBS tiene {value}, fuera de este rango: el control no lo moverá hasta que cambie el valor o el rango.",
+      "fxNoteOffTable": "Cualquier otro ajuste numérico, incluidos los uniforms propios de un shader, se puede controlar en cuanto escribas su rango; elígelo con cuidado. OBS no indica al deck qué uniforms son listas: se omiten los que terminan en …_mode o figuran como lista en el texto del shader; los demás, compruébalos tú."
     },
     "fr": {
       "scopeThisKey": "cette touche",
@@ -1614,7 +1620,9 @@
       "accentBrass": "Laiton",
       "accentTeal": "Bleu sarcelle",
       "accentMagenta": "Magenta",
-      "fxBannerRangeChoose": "Choisissez la plage où cette intensité peut varier."
+      "fxBannerRangeChoose": "Choisissez la plage où cette intensité peut varier.",
+      "fxBannerOutOfRange": "OBS a {value}, hors de cette plage : la commande ne le déplace pas tant que la valeur ou la plage ne change pas.",
+      "fxNoteOffTable": "Tout autre réglage numérique, y compris les uniforms propres à un shader, peut être piloté dès que vous saisissez sa plage ; choisissez-la avec soin. OBS n’indique pas au deck quels uniforms sont des listes : ceux nommés …_mode ou déclarés en liste dans le texte du shader sont exclus, vérifiez vous-même les autres."
     },
     "ja": {
       "scopeThisKey": "このキー",
@@ -2017,7 +2025,9 @@
       "accentBrass": "ブラス",
       "accentTeal": "ティール",
       "accentMagenta": "マゼンタ",
-      "fxBannerRangeChoose": "この量を動かせる範囲を選んでください。"
+      "fxBannerRangeChoose": "この量を動かせる範囲を選んでください。",
+      "fxBannerOutOfRange": "OBS の値は {value} で、この範囲外です。値か範囲が変わるまで、このコントロールは動かしません。",
+      "fxNoteOffTable": "その他の数値設定（シェーダー独自の uniform を含む）も、範囲を入力すれば操作できます。範囲は慎重に選んでください。どの uniform がリストかを OBS はデッキに伝えません。…_mode という名前のものや、シェーダーテキストでリストと指定されたものは除外されます。それ以外はご自身で確認してください。"
     },
     "ko": {
       "scopeThisKey": "이 키",
@@ -2420,7 +2430,9 @@
       "accentBrass": "황동",
       "accentTeal": "청록",
       "accentMagenta": "마젠타",
-      "fxBannerRangeChoose": "이 양이 움직일 수 있는 범위를 선택하세요."
+      "fxBannerRangeChoose": "이 양이 움직일 수 있는 범위를 선택하세요.",
+      "fxBannerOutOfRange": "OBS 값 {value}이(가) 이 범위 밖에 있습니다. 값이나 범위가 바뀔 때까지 이 컨트롤은 움직이지 않습니다.",
+      "fxNoteOffTable": "다른 숫자 설정(셰이더 자체 uniform 포함)도 범위를 입력하면 조절할 수 있습니다. 범위는 신중하게 고르세요. 어떤 uniform이 목록인지 OBS는 덱에 알려 주지 않습니다. 이름이 …_mode인 것과 셰이더 텍스트에 목록으로 지정된 것은 제외되며, 나머지는 직접 확인하세요."
     },
     "zh_CN": {
       "scopeThisKey": "此按键",
@@ -2823,7 +2835,9 @@
       "accentBrass": "黄铜",
       "accentTeal": "青绿",
       "accentMagenta": "品红",
-      "fxBannerRangeChoose": "请选择此量可以变化的范围。"
+      "fxBannerRangeChoose": "请选择此量可以变化的范围。",
+      "fxBannerOutOfRange": "OBS 中的值为 {value}，超出此范围：在值或范围改变之前，此控件不会移动它。",
+      "fxNoteOffTable": "其他任何数值设置（包括着色器自身的 uniform）在输入范围后即可控制，请谨慎选择范围。OBS 不会告诉 Stream Deck 哪些 uniform 是列表：名称以 …_mode 结尾或在着色器文本中标为列表的会被排除，其余请自行确认。"
     },
     "zh_TW": {
       "scopeThisKey": "此按鍵",
@@ -3226,7 +3240,9 @@
       "accentBrass": "黃銅",
       "accentTeal": "青綠",
       "accentMagenta": "洋紅",
-      "fxBannerRangeChoose": "請選擇此量可以變化的範圍。"
+      "fxBannerRangeChoose": "請選擇此量可以變化的範圍。",
+      "fxBannerOutOfRange": "OBS 中的值為 {value}，超出此範圍：在值或範圍改變之前，此控制項不會移動它。",
+      "fxNoteOffTable": "其他任何數值設定（包括著色器本身的 uniform）在輸入範圍後即可控制，請謹慎選擇範圍。OBS 不會告訴 Stream Deck 哪些 uniform 是清單：名稱以 …_mode 結尾或在著色器文字中標為清單的會被排除，其餘請自行確認。"
     }
   };
   var LANGUAGES = ["en", "de", "es", "fr", "ja", "ko", "zh_CN", "zh_TW"];

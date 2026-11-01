@@ -588,6 +588,8 @@ export class FakeObsServer {
   /** Fails the next `TriggerHotkeyByName` with this OBS comment (code 500), then clears itself. */
   public hotkeyFailNext = "";
   public hotkeyDelayMs: number;
+  /** Delays every `GetSceneList` reply (the catalog read after an identify), so a test can act in between. */
+  public sceneListDelayMs = 0;
   public filterWriteDelayMs: number;
   public filterReadDelayMs: number;
   /** Every filter request's payload as received (reads and writes, by UUID or by name). */
@@ -1247,6 +1249,7 @@ export class FakeObsServer {
     }
 
     if (requestType === "GetSceneList") {
+      if (this.sceneListDelayMs > 0) await new Promise((r) => setTimeout(r, this.sceneListDelayMs));
       this.sendResponse(ws, requestId, requestType, true, 100, "", {
         currentProgramSceneName: this.programSceneName,
         currentPreviewSceneName: this.previewSceneName,

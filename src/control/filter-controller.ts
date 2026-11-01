@@ -16,6 +16,8 @@
  *   at most 20 writes a second in all, each moving a setting at most 10 % of its
  *   range (one step for a whole-number range); a 50 ms drain carries the rest of
  *   a fast flick;
+ * - a value OBS holds outside the range is refused ("Out of range"), never
+ *   pulled to the range's edge in one write;
  * - glides (set, drop-and-return) run at 20 Hz under the same cap and are
  *   cancelled per setting; a turn on the same setting cancels one;
  * - a disconnect, reconnect or scene collection change bumps a generation that
@@ -33,6 +35,8 @@ import {
   VS_MODULATOR_FILTER_KIND,
   clampToRange,
   findOwner,
+  isDeniedForFilter,
+  isOutsideRange,
   isVisualSidechainKind,
   resolveRange,
   restValue,
@@ -51,7 +55,7 @@ export interface FilterTarget extends ExplicitRange {
 
 export type FilterAvailability =
   | "unbound" | "disconnected" | "loading" | "missing" | "wrong_kind" | "error"
-  | "denied" | "needs_range" | "owned" | "no_value" | "ok";
+  | "denied" | "needs_range" | "owned" | "no_value" | "out_of_range" | "ok";
 
 /** What a control draws: observed values only. */
 export interface FilterTargetState {
@@ -82,7 +86,10 @@ export interface FilterControllerOptions {
 export type GlideOutcome = "done" | "cancelled";
 
 interface FilterRecord {
+  /** Source, filter and the kind bound: two controls bound to one filter under two kinds keep two records. */
   key: string;
+  /** Source and filter only: what "changed" carries (the controls listen by filter). */
+  eventKey: string;
   sourceUuid: string;
   filterName: string;
   /** The kind the deck was bound to; a read showing another one is refused. */
@@ -136,8 +143,13 @@ function filterKey(sourceUuid: string, filterName: string): string {
   return `${sourceUuid}\u0000${filterName}`;
 }
 
-function settingKey(sourceUuid: string, filterName: string, setting: string): string {
-  return `${filterKey(sourceUuid, filterName)}\u0000${setting}`;
+/** A record's key: one per filter and bound kind, so a control bound to another kind never tears this one down. */
+function recordKey(target: Pick<FilterTarget, "sourceUuid" | "filterName" | "filterKind">): string {
+  return `${filterKey(target.sourceUuid, target.filterName)}\u0000${target.filterKind}`;
+}
+
+function settingKey(target: Pick<FilterTarget, "sourceUuid" | "filterName" | "filterKind" | "setting">): string {
+  return `${recordKey(target)}\u0000${target.setting}`;
 }
 
 export class FilterController extends EventEmitter {
@@ -228,9 +240,9 @@ export class FilterController extends EventEmitter {
     };
     if (!target.sourceUuid || !target.filterName) return { ...base, availability: "unbound" };
     if (!this.client.isConnected()) return { ...base, availability: "disconnected" };
-    const record = this.records.get(filterKey(target.sourceUuid, target.filterName));
+    const record = this.records.get(recordKey(target));
     const latched = this.panicLatched && isVisualSidechainKind(target.filterKind);
-    if (!record || record.filterKind !== target.filterKind) return { ...base, availability: "loading", latched };
+    if (!record) return { ...base, availability: "loading", latched };
     const state: FilterTargetState = { ...base, enabled: record.enabled, latched, error: record.error };
     if (record.read === "unknown") return { ...state, availability: "loading" };
     if (record.read !== "ok") return { ...state, availability: record.read };
@@ -240,10 +252,12 @@ export class FilterController extends EventEmitter {
     const raw = record.values[target.setting];
     const value = typeof raw === "number" && Number.isFinite(raw) ? raw : null;
     const owner = record.owners.get(target.setting) ?? null;
+    const denied = (raw !== undefined && value === null) || isDeniedForFilter(record.filterKind, target.setting, record.values);
     return {
       ...state, range: resolved.range, value, owner,
-      gliding: this.glides.has(settingKey(target.sourceUuid, target.filterName, target.setting)),
-      availability: raw !== undefined && value === null ? "denied" : owner ? "owned" : value === null ? "no_value" : "ok"
+      gliding: this.glides.has(settingKey(target)),
+      availability: denied ? "denied" : owner ? "owned" : value === null ? "no_value"
+        : isOutsideRange(value, resolved.range) ? "out_of_range" : "ok"
     };
   }
 
@@ -257,7 +271,7 @@ export class FilterController extends EventEmitter {
   public async nudge(target: FilterTarget, deltaFraction: number, now = Date.now()): Promise<void> {
     if (!Number.isFinite(deltaFraction) || deltaFraction === 0) return;
     const range = this.requireWritable(target);
-    const key = settingKey(target.sourceUuid, target.filterName, target.setting);
+    const key = settingKey(target);
     this.cancelGlide(key);
     this.drops.delete(key);
     let gesture = this.gestures.get(key);
@@ -315,7 +329,7 @@ export class FilterController extends EventEmitter {
    */
   public async dropStart(target: FilterTarget, durationMs = 500): Promise<GlideOutcome> {
     const range = this.requireWritable(target);
-    const key = settingKey(target.sourceUuid, target.filterName, target.setting);
+    const key = settingKey(target);
     const earlier = this.drops.get(key);
     let resolveSaved: (value: number | null) => void = () => {};
     const drop: Drop = earlier
@@ -335,7 +349,7 @@ export class FilterController extends EventEmitter {
 
   /** The second half: back to the saved value. Nothing when a turn or a retarget cancelled the drop. */
   public async dropReturn(target: FilterTarget, durationMs = 500): Promise<GlideOutcome> {
-    const key = settingKey(target.sourceUuid, target.filterName, target.setting);
+    const key = settingKey(target);
     const drop = this.drops.get(key);
     if (!drop || drop.returning) return "cancelled";
     drop.returning = true;
@@ -357,16 +371,25 @@ export class FilterController extends EventEmitter {
 
   /** True while a drop on this setting waits for (or runs) its return. */
   public isDropped(target: FilterTarget): boolean {
-    return this.drops.has(settingKey(target.sourceUuid, target.filterName, target.setting));
+    return this.drops.has(settingKey(target));
   }
 
-  /** Cancels a glide and a drop on one setting (a retarget); the value stays where it is. */
+  /**
+   * Cancels a glide, a drop and the queued values on one setting (a retarget):
+   * the value stays where it is, only a write already in flight may still land.
+   */
   public cancel(target: FilterTarget): boolean {
-    const key = settingKey(target.sourceUuid, target.filterName, target.setting);
-    const had = this.glides.has(key) || this.drops.has(key);
+    const key = settingKey(target);
+    const record = this.records.get(recordKey(target));
+    const queued = Boolean(target.setting && record?.pending.has(target.setting));
+    const had = this.glides.has(key) || this.drops.has(key) || queued;
     this.cancelGlide(key);
     this.drops.delete(key);
     this.gestures.delete(key);
+    if (record && target.setting) {
+      record.pending.delete(target.setting);
+      record.ranges.delete(target.setting);
+    }
     return had;
   }
 
@@ -383,7 +406,7 @@ export class FilterController extends EventEmitter {
     await this.client.setSourceFilterEnabled(target.sourceUuid, target.filterName, next);
     if (generation !== this.generation) throw new DirectObsError(ownText("errorControlChanged"), 400);
     record.enabled = next;
-    this.emit("changed", record.key);
+    this.emit("changed", record.eventKey);
     return next;
   }
 
@@ -391,7 +414,7 @@ export class FilterController extends EventEmitter {
 
   private async runGlide(target: FilterTarget, range: FilterRange, toValue: (from: number) => number, durationMs: number,
     onFrom?: (from: number) => void): Promise<GlideOutcome> {
-    const key = settingKey(target.sourceUuid, target.filterName, target.setting);
+    const key = settingKey(target);
     this.cancelGlide(key);
     this.gestures.delete(key);
     const token = ++this.glideToken;
@@ -410,7 +433,7 @@ export class FilterController extends EventEmitter {
       // Cancelled while it read: a quiet outcome, not an error.
       if (this.glides.get(key)?.token !== token) return "cancelled";
       this.glides.delete(key);
-      this.emit("changed", record.key);
+      this.emit("changed", record.eventKey);
       throw error;
     }
     const glide = this.glides.get(key);
@@ -422,7 +445,8 @@ export class FilterController extends EventEmitter {
     const step = (): void => {
       const current = this.glides.get(key);
       if (!current || current.token !== token) return;
-      if (generation !== this.generation || (this.panicLatched && isVisualSidechainKind(target.filterKind))) {
+      if (generation !== this.generation || (this.panicLatched && isVisualSidechainKind(target.filterKind)) ||
+        record.read === "wrong_kind" || record.read === "missing") {
         this.cancelGlide(key);
         return;
       }
@@ -432,7 +456,7 @@ export class FilterController extends EventEmitter {
         if (current.timer) clearInterval(current.timer);
         this.glides.delete(key);
         current.resolve("done");
-        this.emit("changed", record.key);
+        this.emit("changed", record.eventKey);
       }
     };
     glide.timer = setInterval(step, this.glideTickMs);
@@ -442,19 +466,15 @@ export class FilterController extends EventEmitter {
   }
 
   private recordFor(target: Pick<FilterTarget, "sourceUuid" | "filterName" | "filterKind">): FilterRecord {
-    const key = filterKey(target.sourceUuid, target.filterName);
+    // One record per filter and bound kind: a control bound under another kind (a filter replaced by one of
+    // another kind under the same name, one control re-picked) reads its own record and never cancels this one's
+    // glides, drops or queued values. Only a fresh read of a record's own target that finds another kind stops it.
+    const key = recordKey(target);
     let record = this.records.get(key);
-    if (record && record.filterKind !== target.filterKind) {
-      // Rebound to another kind: what was read under the old binding does not apply.
-      this.cancelFilterWork(key);
-      if (record.drainTimer) clearTimeout(record.drainTimer);
-      if (record.settleTimer) clearTimeout(record.settleTimer);
-      this.records.delete(key);
-      record = undefined;
-    }
     if (!record) {
       record = {
-        key, sourceUuid: target.sourceUuid, filterName: target.filterName, filterKind: target.filterKind,
+        key, eventKey: filterKey(target.sourceUuid, target.filterName),
+        sourceUuid: target.sourceUuid, filterName: target.filterName, filterKind: target.filterKind,
         read: "unknown", values: {}, enabled: null, error: null, pending: new Map(), ranges: new Map(),
         owners: new Map(), inFlight: false, lastWriteAt: 0, writes: 0, writtenIn: new Map(),
         drainTimer: null, settleTimer: null
@@ -488,10 +508,16 @@ export class FilterController extends EventEmitter {
     if (!target.setting) return;
     const raw = record.values[target.setting];
     if (raw !== undefined && typeof raw !== "number") throw new DirectObsError(ownText("filterDenied"), 400);
+    // A list uniform of this shader's own text (an enum): never written, whatever range is typed.
+    if (isDeniedForFilter(record.filterKind, target.setting, record.values)) throw new DirectObsError(ownText("filterDenied"), 400);
     if (typeof raw !== "number" || !Number.isFinite(raw)) throw new DirectObsError(ownText("filterNoValue"), 400);
     const owner = record.owners.get(target.setting);
     if (owner) throw new DirectObsError(owner.kind === "fader" ? ownText("filterOwnedFader")
       : ownText("filterOwnedModulator", { filter: owner.filterName }), 409);
+    // A value outside the range (an inverted modulation under a 0..100 range) is refused, never pulled to the
+    // range's edge in one write past the slew cap, and never the wrong way.
+    const resolved = resolveRange(record.filterKind, target.setting, target);
+    if (resolved.ok && isOutsideRange(raw, resolved.range)) throw new DirectObsError(ownText("filterOutOfRange"), 409);
   }
 
   /** `GetSourceFilter` merged over the kind's defaults; the kind must be the bound one. */
@@ -507,14 +533,17 @@ export class FilterController extends EventEmitter {
       const code = (error as { code?: unknown }).code;
       record.read = code === MISSING_CODE ? "missing" : "error";
       record.error = code === MISSING_CODE ? null : errorLocalText(error, ownText("errorRequestFailed", { code: 500 }));
-      this.emit("changed", record.key);
+      this.emit("changed", record.eventKey);
       return;
     }
     if (generation !== this.generation || this.records.get(record.key) !== record) return;
+    // The filter really changed kind in OBS: nothing queued for the old kind is written (running glides
+    // stop at their next tick, a drop's return re-reads and is refused).
     if (info.filterKind !== record.filterKind) {
       record.read = "wrong_kind";
       record.error = null;
-      this.emit("changed", record.key);
+      record.pending.clear();
+      this.emit("changed", record.eventKey);
       return;
     }
     const previous = record.values;
@@ -526,7 +555,7 @@ export class FilterController extends EventEmitter {
     for (const [setting, write] of record.writtenIn) {
       if (write > writesBefore && setting in previous) record.values[setting] = previous[setting];
     }
-    this.emit("changed", record.key);
+    this.emit("changed", record.eventKey);
   }
 
   /** `GetSourceFilterList` on the source: who else drives this setting (sibling modulators, the shader's fader). */
@@ -539,7 +568,7 @@ export class FilterController extends EventEmitter {
     for (const kind of kinds) defaults[kind] = await this.client.getSourceFilterDefaultSettings(kind);
     if (generation !== this.generation || this.records.get(record.key) !== record) return;
     record.owners.set(setting, findOwner(filters, defaults, { filterName: record.filterName, setting }));
-    this.emit("changed", record.key);
+    this.emit("changed", record.eventKey);
   }
 
   private setPending(record: FilterRecord, setting: string, value: number, range: FilterRange): void {
@@ -572,7 +601,7 @@ export class FilterController extends EventEmitter {
     if (record.pending.size === 0 || this.records.get(record.key) !== record) return;
     // One write in flight per filter: the reply schedules the next one.
     if (record.inFlight) return;
-    if (this.panicLatched && isVisualSidechainKind(record.filterKind)) {
+    if ((this.panicLatched && isVisualSidechainKind(record.filterKind)) || record.read === "wrong_kind" || record.read === "missing") {
       record.pending.clear();
       return;
     }
@@ -583,12 +612,15 @@ export class FilterController extends EventEmitter {
     }
     const generation = this.generation;
     const patch: Record<string, number> = {};
+    let dropped = false;
     for (const [setting, wanted] of record.pending) {
       const range = record.ranges.get(setting)!;
       const raw = record.values[setting];
-      if (typeof raw !== "number" || !Number.isFinite(raw)) {
-        // Nothing known to slew from (a read replaced the values): never jump, wait for the next gesture.
+      if (typeof raw !== "number" || !Number.isFinite(raw) || isOutsideRange(raw, range)) {
+        // Nothing known to slew from (a read replaced the values), or OBS now holds a value outside the range:
+        // never jump to the range, wait for the next gesture (which refuses an out-of-range value).
         record.pending.delete(setting);
+        dropped = true;
         continue;
       }
       const limit = slewStep(range, this.slewFraction);
@@ -597,7 +629,11 @@ export class FilterController extends EventEmitter {
       // A value OBS already has is not sent again (a turn pinned at a rail).
       if (next !== raw) patch[setting] = next;
     }
-    if (Object.keys(patch).length === 0) return;
+    if (Object.keys(patch).length === 0) {
+      // A dropped value changes what the control may say (no longer moving).
+      if (dropped) this.emit("changed", record.eventKey);
+      return;
+    }
     record.inFlight = true;
     record.lastWriteAt = now;
     record.writes++;
@@ -628,7 +664,7 @@ export class FilterController extends EventEmitter {
       this.scheduleDrain(record);
       return;
     }
-    this.emit("changed", record.key);
+    this.emit("changed", record.eventKey);
     if (record.pending.size > 0) this.scheduleDrain(record);
     else this.scheduleSettleRead(record, generation);
   }

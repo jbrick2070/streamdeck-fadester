@@ -83,6 +83,28 @@ describe("OBS Filter control", () => {
     expect(dial.alerts()).toBe(0);
   });
 
+  it("says why a drop could not return, and stays quiet when Panic stopped it", async () => {
+    const { filters, sceneUuid, aura } = await setup();
+    const settings: ObsFilterSettings = { sourceUuid: sceneUuid, filterName: "Aura", filterKind: VS_SHADER_KIND, setting: "vs_effect_mix_pct", dialPress: "drop_return" };
+    const dial = control(filters, true, settings);
+    await dial.waitImage((svg) => svg.includes(">40%<"));
+    await dial.controller.dialDown();
+    await vi.waitFor(() => expect(aura.filterSettings.vs_effect_mix_pct).toBe(0), { timeout: 3000 });
+    // Renamed in OBS while dropped: the return's fresh read finds no such filter, and the dial says so.
+    aura.filterName = "Aura renamed";
+    await dial.controller.dialUp();
+    await vi.waitFor(() => expect(dial.alerts()).toBe(1), { timeout: 3000 });
+    await dial.waitImage((svg) => svg.includes("Filter not found"));
+    aura.filterName = "Aura";
+    await dial.controller.dialDown();
+    await vi.waitFor(() => expect(aura.filterSettings.vs_effect_mix_pct).toBe(0), { timeout: 3000 });
+    filters.setPanicLatched(true);
+    await dial.controller.dialUp();
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(dial.alerts()).toBe(1);
+    await dial.waitImage((svg) => svg.includes("Restore first"));
+  });
+
   it("toggles from a fresh read of the filter's state and draws ON or OFF", async () => {
     const { server, filters, sceneUuid, aura } = await setup();
     const key = control(filters, false, { sourceUuid: sceneUuid, filterName: "Aura", filterKind: VS_SHADER_KIND, keyOperation: "toggle", labelOverride: "Look 1" });
@@ -193,7 +215,14 @@ describe("OBS Filter control", () => {
     expect(brass).not.toContain("#9146FF");
     expect(renderDirectDialSvg({ ...dial, accent: "teal" })).toContain('fill="#2DD4BF"');
     expect(renderVisualPanicKeySvg({ ...restore, accent: "magenta" })).toContain("#E879F9");
-    // Panic stays red whatever the page's accent.
-    expect(renderVisualPanicKeySvg({ operation: "panic", connected: true, reason: "", latched: false })).toContain('fill="#EF4444"');
+    // Panic stays red whatever the page's accent: byte for byte the drawing without one, latched or not.
+    for (const latched of [false, true]) {
+      const plain = renderVisualPanicKeySvg({ operation: "panic", connected: true, reason: "", latched });
+      expect(plain).toContain(latched ? 'fill="#FAF7FF"' : 'fill="#EF4444"');
+      for (const accent of ["brass", "teal", "magenta"] as const) {
+        const drawn = renderVisualPanicKeySvg({ operation: "panic", connected: true, reason: "", latched, accent });
+        expect(drawn, `${accent}, latched ${String(latched)}`).toBe(plain);
+      }
+    }
   });
 });

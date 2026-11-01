@@ -82,6 +82,30 @@ export function isDeniedSetting(setting: string): boolean {
   return DENIED_SETTINGS.has(setting) || DENIED_PATTERNS.some((pattern) => pattern.test(setting));
 }
 
+/**
+ * A Visual Sidechain shader's list uniforms (`uniform int name < string
+ * widget_type = "select"; ... >`, a list in OBS): an enum the deck never writes
+ * (R-RIG-3). obs-websocket does not report property types, so they are found
+ * in the shader's own text when the filter's settings carry it (`shader_text`).
+ * A preset or file shader's text is not readable over the WebSocket: there only
+ * the deny list's names (`*_mode` and the rest) keep a list uniform out (the
+ * bundled shaders' two list uniforms both end in `_mode`).
+ */
+export function listUniformNames(shaderText: unknown): Set<string> {
+  const names = new Set<string>();
+  if (typeof shaderText !== "string" || !shaderText) return names;
+  for (const match of shaderText.matchAll(/uniform\s+int\s+([A-Za-z_]\w*)\s*<([^>]*)>/g)) {
+    if (/widget_type\s*=\s*"(select|list)"/.test(match[2]!)) names.add(match[1]!);
+  }
+  return names;
+}
+
+/** Denied by name, or a list uniform of this filter's own shader text (its settings merged over the defaults). */
+export function isDeniedForFilter(kind: string, setting: string, settings: Readonly<Record<string, unknown>>): boolean {
+  if (isDeniedSetting(setting)) return true;
+  return kind === VS_SHADER_FILTER_KIND && listUniformNames(settings.shader_text).has(setting);
+}
+
 function tableEntry(kind: string, setting: string): TableEntry | undefined {
   return RANGE_TABLE.find((entry) => entry.kind === kind && entry.setting.test(setting));
 }
@@ -130,17 +154,31 @@ export function resolveRange(kind: string, setting: string, explicit: ExplicitRa
   const max = typeof explicit.rangeMax === "number" ? explicit.rangeMax : Number.NaN;
   if (!Number.isFinite(min) || !Number.isFinite(max) || !(min < max)) return { ok: false, reason: "needs_range" };
   if (entry && (min < entry.limits.min || max > entry.limits.max)) return { ok: false, reason: "needs_range" };
-  return { ok: true, range: { min, max, integer: explicit.integer === true, unit: entry ? "percent" : "number" } };
+  const integer = explicit.integer === true;
+  // A whole-number range must hold a whole number (0.4 to 0.6 holds none).
+  if (integer && Math.ceil(min) > Math.floor(max)) return { ok: false, reason: "needs_range" };
+  return { ok: true, range: { min, max, integer, unit: entry ? "percent" : "number" } };
 }
 
 export function clampToRange(value: number, range: FilterRange): number {
   return Math.max(range.min, Math.min(range.max, value));
 }
 
-/** The value written: clamped, rounded for an integer setting, otherwise kept to six decimals. */
+/**
+ * The value written: clamped, rounded for an integer setting (and kept inside
+ * the whole numbers of the range, so 0..2.5 never writes 3), otherwise kept to
+ * six decimals.
+ */
 export function writableValue(value: number, range: FilterRange): number {
   const clamped = clampToRange(value, range);
-  return range.integer ? Math.round(clamped) : Math.round(clamped * 1e6) / 1e6;
+  if (!range.integer) return Math.round(clamped * 1e6) / 1e6;
+  return Math.max(Math.ceil(range.min), Math.min(Math.floor(range.max), Math.round(clamped)));
+}
+
+/** A value OBS holds outside the range: the deck refuses to move it rather than jump to the edge. */
+export function isOutsideRange(value: number, range: FilterRange): boolean {
+  // The same 1e-6 the writes round to: a float conversion's 100.0000004 is not out of range.
+  return value < range.min - 1e-6 || value > range.max + 1e-6;
 }
 
 /** Drop-and-return's target: the range's value nearest 0 (0 for a bipolar range). */
@@ -153,8 +191,9 @@ export const SLEW_FRACTION = 0.1;
 
 export function slewStep(range: FilterRange, fraction = SLEW_FRACTION): number {
   const step = (range.max - range.min) * fraction;
-  // A whole-number setting moves at least one: a smaller step would round back and never arrive.
-  return range.integer ? Math.max(1, step) : step;
+  // A whole-number setting moves whole steps (never more than the cap: 10.5 is 10, not a rounded 11),
+  // and at least one: a smaller step would round back and never arrive.
+  return range.integer ? Math.max(1, Math.floor(step)) : step;
 }
 
 /** A setting's value as a 0..1 position in its range (for the dial bar). */

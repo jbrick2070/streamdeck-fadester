@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { once } from "node:events";
 import { DirectObsClient } from "../src/obs/direct-obs-client.js";
 import { FilterController, FilterTarget } from "../src/control/filter-controller.js";
-import { isDeniedSetting, resolveRange, restValue } from "../src/obs/filter-ranges.js";
+import { isDeniedSetting, listUniformNames, resolveRange, restValue, slewStep, writableValue } from "../src/obs/filter-ranges.js";
 import {
   COLOR_FILTER_KIND,
   FakeObsFilter,
@@ -309,7 +309,10 @@ describe("filter controller", () => {
     await expect(glide).resolves.toBe("cancelled");
     await sleep(50);
     const writes = server.filterWriteLog.length;
+    const requests = server.filterRequestLog.length;
     await expect(filters.nudge(mix(sceneUuid), 0.1, 5000)).rejects.toThrow(/Restore first/);
+    // Refused before any read: nothing goes to OBS for a latched Visual Sidechain filter.
+    expect(server.filterRequestLog).toHaveLength(requests);
     await expect(filters.dropStart(mix(sceneUuid))).rejects.toThrow(/Restore first/);
     await expect(filters.toggleEnabled(mix(sceneUuid))).rejects.toThrow(/Restore first/);
     expect(filters.getState(mix(sceneUuid)).latched).toBe(true);
@@ -324,6 +327,101 @@ describe("filter controller", () => {
     const before = aura.filterSettings.vs_effect_mix_pct as number;
     await filters.nudge(mix(sceneUuid), -0.05, 9000);
     await vi.waitFor(() => expect(aura.filterSettings.vs_effect_mix_pct as number).toBeCloseTo(before - 5, 6));
+  });
+
+  it("refuses a value OBS holds outside the range instead of pulling it to the range's edge", async () => {
+    let pulse: FakeObsFilter | undefined;
+    const { server, filters, sceneUuid } = await setup({}, (fake, uuid) => {
+      // An inverted modulation, under a 0..100 range.
+      pulse = fake.addFilter(uuid, { filterName: "Pulse", filterKind: VS_MODULATOR_KIND, filterSettings: { slot_2_amount_pct: -60 } });
+    });
+    const amount: FilterTarget = { sourceUuid: sceneUuid, filterName: "Pulse", filterKind: VS_MODULATOR_KIND, setting: "slot_2_amount_pct", rangeMin: 0, rangeMax: 100 };
+    await expect(filters.nudge(amount, -0.02, 1000)).rejects.toThrow(/Out of range/);
+    await expect(filters.nudge(amount, 0.02, 5000)).rejects.toThrow(/Out of range/);
+    await expect(filters.step(amount, 0.1)).rejects.toThrow(/Out of range/);
+    await expect(filters.glideTo(amount, 50, 0)).rejects.toThrow(/Out of range/);
+    await expect(filters.dropStart(amount, 0)).rejects.toThrow(/Out of range/);
+    await expect(filters.dropReturn(amount, 0)).resolves.toBe("cancelled");
+    await sleep(300);
+    expect(server.filterWriteLog).toEqual([]);
+    expect(pulse!.filterSettings.slot_2_amount_pct).toBe(-60);
+    expect(filters.getState(amount)).toMatchObject({ availability: "out_of_range", value: -60 });
+    // The bipolar range holds it: it rides as usual, within the slew cap.
+    const bipolar = { ...amount, rangeMin: -100, rangeMax: 100 };
+    await filters.nudge(bipolar, 0.05, 9000);
+    await vi.waitFor(() => expect(pulse!.filterSettings.slot_2_amount_pct).toBe(-50), { timeout: 3000 });
+    expect(writesTo(server, "slot_2_amount_pct")).toEqual([-50]);
+  });
+
+  it("keeps a whole-number setting inside the range's whole numbers and its slew cap", () => {
+    expect(writableValue(2.5, { min: 0, max: 2.5, integer: true, unit: "number" })).toBe(2);
+    expect(writableValue(0.4, { min: 0.4, max: 3, integer: true, unit: "number" })).toBe(1);
+    expect(resolveRange(VS_SHADER_KIND, "pattern_steps", { rangeMin: 0.4, rangeMax: 0.6, integer: true })).toEqual({ ok: false, reason: "needs_range" });
+    expect(resolveRange(VS_SHADER_KIND, "pattern_steps", { rangeMin: 0.4, rangeMax: 0.6 })).toMatchObject({ ok: true });
+    // 10 % of 0..105 is 10.5: a whole-number write moves 10, never a rounded 11.
+    expect(slewStep({ min: 0, max: 105, integer: true, unit: "number" })).toBe(10);
+    expect(slewStep({ min: 0, max: 4, integer: true, unit: "number" })).toBe(1);
+  });
+
+  it("never writes a list uniform its shader's own text declares, whatever range is typed", async () => {
+    const { server, filters, sceneUuid, aura } = await setup();
+    const shaderText = [
+      'uniform int pattern < string label = "Pattern"; string widget_type = "select"; string option_0 = "A"; >;',
+      'uniform int cells < string widget_type = "slider"; int minimum = 1; int maximum = 8; >;',
+      'uniform float glow < string widget_type = "slider"; >;'
+    ].join("\n");
+    expect([...listUniformNames(shaderText)]).toEqual(["pattern"]);
+    aura.filterSettings = { ...aura.filterSettings, shader_text: shaderText, pattern: 1, cells: 2 };
+    const pattern = mix(sceneUuid, { setting: "pattern", rangeMin: 0, rangeMax: 10, integer: true });
+    await expect(filters.nudge(pattern, 0.1, 1000)).rejects.toThrow(/Not writable here/);
+    await expect(filters.glideTo(pattern, 3, 0)).rejects.toThrow(/Not writable here/);
+    expect(filters.getState(pattern).availability).toBe("denied");
+    // An int slider of the same shader rides.
+    await filters.nudge(mix(sceneUuid, { setting: "cells", rangeMin: 1, rangeMax: 8, integer: true }), 0.15, 1000);
+    await vi.waitFor(() => expect(aura.filterSettings.cells).toBe(3));
+    expect(writesTo(server, "pattern")).toEqual([]);
+  });
+
+  it("keeps one control's glide when another control binds the same filter under another kind", async () => {
+    const { filters, sceneUuid, aura } = await setup();
+    // A second control still bound to the filter's old kind (Color Correction) reads and is refused...
+    const stale: FilterTarget = { sourceUuid: sceneUuid, filterName: "Aura", filterKind: COLOR_FILTER_KIND, setting: "opacity" };
+    const glide = filters.glideTo(mix(sceneUuid), 100, 600);
+    await vi.waitFor(() => expect(aura.filterSettings.vs_effect_mix_pct as number).toBeGreaterThan(40));
+    const release = filters.watch(stale);
+    cleanup.push(release);
+    await filters.refresh(stale);
+    expect(filters.getState(stale).availability).toBe("wrong_kind");
+    // ...and never cancels the other control's glide or empties its record.
+    await expect(glide).resolves.toBe("done");
+    await vi.waitFor(() => expect(aura.filterSettings.vs_effect_mix_pct).toBe(100), { timeout: 3000 });
+    expect(filters.getState(mix(sceneUuid))).toMatchObject({ availability: "ok", value: 100 });
+  });
+
+  it("drops a setting's queued values on cancel: after a retarget only a write in flight lands", async () => {
+    const { server, filters, sceneUuid, aura } = await setup({ filterWriteDelayMs: 40 });
+    // A step of half the range lands in the queue at once; the drain carries it at 10 % per write.
+    await expect(filters.step(mix(sceneUuid), 0.5)).resolves.toBe("done");
+    await vi.waitFor(() => expect(server.filterWriteLog.length).toBeGreaterThan(0));
+    expect(filters.cancel(mix(sceneUuid))).toBe(true);
+    const writes = server.filterWriteLog.length;
+    await sleep(500);
+    expect(server.filterWriteLog.length).toBeLessThanOrEqual(writes + 1);
+    expect(aura.filterSettings.vs_effect_mix_pct as number).toBeLessThan(80);
+  });
+
+  it("re-checks the latch after a toggle's fresh read: Panic during the read stops the write", async () => {
+    const { server, filters, sceneUuid } = await setup();
+    server.filterReadDelayMs = 150;
+    const toggle = filters.toggleEnabled(mix(sceneUuid));
+    await sleep(40);
+    filters.setPanicLatched(true);
+    await expect(toggle).rejects.toThrow(/Restore first/);
+    expect(server.directCallLog.filter((call) => call.requestType === "SetSourceFilterEnabled")).toEqual([]);
+    // Latched before the press: refused before any read.
+    const reads = server.filterRequestLog.length;
+    await expect(filters.toggleEnabled(mix(sceneUuid))).rejects.toThrow(/Restore first/);
+    expect(server.filterRequestLog).toHaveLength(reads);
   });
 
   it("toggles the filter from a fresh read of its enabled state", async () => {

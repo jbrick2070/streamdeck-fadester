@@ -296,6 +296,7 @@
     "filterOwnedFader": "Vom Fader gesteuert",
     "filterNoValue": "Noch kein Wert in OBS",
     "filterLatched": "Erst wiederherstellen",
+    "filterOutOfRange": "Außerhalb des Bereichs",
     "vpPanic": "PANIK",
     "vpPanicSent": "PANIK GESENDET",
     "vpPanicHint": "Strobe und Blitz aus",
@@ -723,7 +724,9 @@
       "accentBrass": "Messing",
       "accentTeal": "Petrol",
       "accentMagenta": "Magentarot",
-      "fxBannerRangeChoose": "Wählen Sie den Bereich, in dem sich diese Stärke bewegen darf."
+      "fxBannerRangeChoose": "Wählen Sie den Bereich, in dem sich diese Stärke bewegen darf.",
+      "fxBannerOutOfRange": "OBS hat {value}, außerhalb dieses Bereichs: Das Steuerelement bewegt den Wert erst, wenn sich der Wert oder der Bereich ändert.",
+      "fxNoteOffTable": "Jede andere Zahleneinstellung, auch die eigenen Uniforms eines Shaders, lässt sich steuern, sobald Sie ihren Bereich eingeben; wählen Sie ihn mit Bedacht. OBS teilt dem Deck nicht mit, welche Uniforms Listen sind: Solche mit Namen auf …_mode oder als Liste im Shader-Text werden ausgelassen, alle anderen prüfen Sie selbst."
     }
   }
 }

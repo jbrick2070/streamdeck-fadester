@@ -168,6 +168,20 @@ export class ObsVendorClient<
     return this.identified && this.status.kind === "connected";
   }
 
+  /**
+   * The socket is open and OBS has identified it: requests can be sent now,
+   * even while the catalog read after the identify still runs (the status
+   * becomes "connected" only after it). Visual Panic sends on this alone.
+   */
+  public isIdentified(): boolean {
+    return this.identified && this.ws?.readyState === WebSocket.OPEN;
+  }
+
+  /** A socket is opening or open (the handshake may still run): a reconnect now would only restart it. */
+  public hasLiveSocket(): boolean {
+    return this.ws !== null && (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN);
+  }
+
   public getConnectAttemptCount(): number {
     return this.connectAttemptCount;
   }

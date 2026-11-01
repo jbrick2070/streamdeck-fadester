@@ -60,7 +60,9 @@ describe("OBS Filter inspector", () => {
     server.addFilter(scene, {
       filterName: "Aura", filterKind: VS_SHADER_KIND, filterSettings: {
         vs_effect_mix_pct: 40, glow_amount: 0.5, max_flash_rate_hz: 3, onset_threshold: 0.3, flash_color: 4294967295,
-        param_fader_1_target: "glow_amount", param_fader_1_slot: 2, preset_shader: "fft-spectral-aura.shader"
+        param_fader_1_target: "glow_amount", param_fader_1_slot: 2, preset_shader: "fft-spectral-aura.shader",
+        // A list uniform declared in the shader's own text: an enum, never offered.
+        shader_text: 'uniform int pattern < string widget_type = "select"; string option_0 = "A"; >;', pattern: 1
       }
     });
     server.addFilter(scene, { filterName: "Pulse", filterKind: VS_MODULATOR_KIND, filterSettings: { slot_2_target_filter: "Aura", slot_2_target_setting: "vs_audio_reactivity_pct" } });
@@ -91,7 +93,7 @@ describe("OBS Filter inspector", () => {
     expect(grade!.settings.map((entry) => entry.setting)).toEqual(["opacity", "brightness", "contrast", "gamma", "hue_shift", "saturation"]);
     // Never a setting the deck does not write, whatever the filter holds.
     for (const filter of catalog.filters) {
-      for (const denied of ["max_flash_rate_hz", "onset_threshold", "flash_color", "param_fader_1_slot", "preset_shader", "color_add", "color_multiply", "mix_fader_slot"]) {
+      for (const denied of ["max_flash_rate_hz", "onset_threshold", "flash_color", "param_fader_1_slot", "preset_shader", "color_add", "color_multiply", "mix_fader_slot", "pattern"]) {
         expect(filter.settings.map((entry) => entry.setting), `${filter.filterName} ${denied}`).not.toContain(denied);
       }
     }
@@ -101,6 +103,17 @@ describe("OBS Filter inspector", () => {
     const missing = (payloads.at(-1)!.filterCatalog as Record<string, InspectorFilterCatalog>)["00000000-0000-4000-8000-0000000000aa"]!;
     expect(missing.filters).toEqual([]);
     expect(missing.error).toContain("No source was found");
+
+    // A reconnect (the status stays "connected") empties the lists, counts up the epoch the page watches, and a
+    // list read across it is dropped rather than stored as the new connection's.
+    const epoch = payloads.at(-1)!.filterEpoch as number;
+    server.filterReadDelayMs = 150;
+    const reading = bridge.handleMessage({ event: "directFilterCatalog", sourceUuid: scene });
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    client.reconnectNow();
+    await reading;
+    expect(payloads.at(-1)!.filterEpoch).toBe(epoch + 1);
+    expect(payloads.at(-1)!.filterCatalog).toEqual({});
   });
 
   it("saves UUID, filter name and kind, never resolves by name, needs a range off the table, and shows each banner", () => {
@@ -199,6 +212,36 @@ describe("OBS Filter inspector", () => {
     expect(h.text("fx-status")).toBe("No filter of that name on the source now. A renamed filter must be chosen again.");
     h.render({ ...bound, filterKind: COLOR_FILTER_KIND }, state);
     expect(h.text("fx-status")).toBe("This filter is now of another kind. Choose it again to control it.");
+  });
+
+  it("asks again after a reconnect that kept the status, and never defaults a negative amount to 0 to 100", () => {
+    const pulse = { filterName: "Pulse", filterKind: VS_MODULATOR_KIND, filterEnabled: true, settings: [
+      { setting: "slot_1_amount_pct", label: "Mod 1 amount", value: -60, table: true },
+      { setting: "slot_2_amount_pct", label: "Mod 2 amount", value: 40, table: true }
+    ] };
+    const catalog = { sceneDetails: [{ sceneName: "Scene Live", sceneUuid: "uuid-scene" }] };
+    const bound = { sourceUuid: "uuid-scene", filterName: "Pulse", filterKind: VS_MODULATOR_KIND };
+    const h = inspector("Encoder");
+    h.render(bound, { status: { kind: "connected" }, catalog, filterEpoch: 3 });
+    h.render(bound, { status: { kind: "connected" }, catalog, filterEpoch: 3 });
+    expect(h.filterRequests).toEqual(["uuid-scene"]);
+    // The plugin reconnected (a new host or password): still connected, its lists emptied, the epoch counted up.
+    h.render(bound, { status: { kind: "connected" }, catalog, filterEpoch: 4 });
+    expect(h.filterRequests).toEqual(["uuid-scene", "uuid-scene"]);
+    const state = { status: { kind: "connected" }, catalog, filterEpoch: 4, filterCatalog: { "uuid-scene": { filters: [pulse], error: "" } } };
+    h.render(bound, state);
+    h.change("fx-setting", "slot_2_amount_pct");
+    expect(h.saved.at(-1)).toEqual({ setting: "slot_2_amount_pct", rangeMin: 0, rangeMax: 100, integer: undefined });
+    // An inverted modulation: no range until the user picks one.
+    h.change("fx-setting", "slot_1_amount_pct");
+    expect(h.saved.at(-1)).toEqual({ setting: "slot_1_amount_pct", rangeMin: undefined, rangeMax: undefined, integer: undefined });
+    h.render({ ...bound, setting: "slot_1_amount_pct" }, state);
+    expect(h.text("fx-status")).toBe("Choose the range this amount may move in.");
+    // A range that leaves OBS's value outside: the banner says the control will not move it.
+    h.render({ ...bound, setting: "slot_1_amount_pct", rangeMin: 0, rangeMax: 100 }, state);
+    expect(h.text("fx-status")).toBe("OBS holds -60, outside this range: the control does not move it until the value or the range changes.");
+    h.render({ ...bound, setting: "slot_1_amount_pct", rangeMin: -100, rangeMax: 0 }, state);
+    expect(h.shown("fx-status")).toBe(false);
   });
 
   it("keys: an on/off key needs no setting; a set key offers the current value", () => {

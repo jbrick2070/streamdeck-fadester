@@ -1158,6 +1158,52 @@ ships unbound.
    the check no longer creates a scene. If the operator's next start of the portable OBS offers Safe Mode, that kill
    is why; the `.sentinel` folder was empty afterwards. Also, OBS's own `Untitled.json.bak` (its previous save) may
    hold the check's source from a mid-run autosave; the live `Untitled.json` does not.
+10. **Review fixes (2026-11-01, as built).** An adversarial review (16 findings, each put to two skeptics) and
+   Sonnet's final QA (six should-fixes, nits). *Fixed (the ten upheld 2/2):* a live value outside the range is
+   refused, never pulled to the range's edge in one write: a new availability `out_of_range` ("Out of range") from
+   every gesture, glide, step and drop, the drain drops a queued value whose live value left the range, and the
+   inspector no longer saves 0 to 100 for a modulator amount OBS holds below 0 (the user picks) and warns when OBS's
+   value lies outside the saved range; the Scene & Transition inspector offers Scene 1 to 8 (the 15-key rig's Scene 5
+   to 8); the duplicate-binding exemption applies only to unbound filter controls in the two rigs (Playlister keys
+   and every other profile are checked again); a test that the latch is set before OBS answers Panic; a Scene key
+   with no operation beside Panic is refused (the test uses the builder's own `changesProgram`); Panic sends
+   whenever the socket is identified (`isIdentified()`), also during the catalog read after the identify, and a
+   press never restarts a socket that is opening or open (`hasLiveSocket()`; `nudgeReconnect` is unchanged for the
+   other controls, where an identified socket whose catalog read failed still needs it); a whole-number value stays
+   inside `[ceil(min), floor(max)]`, a whole-number range without a whole number needs a range, and a whole-number
+   write moves `floor` of 10 % (Sonnet's 10.5 rounding to 11); a Visual Sidechain shader's list uniforms declared in
+   its own `shader_text` (`uniform int … < widget_type = "select" | "list" >`) are denied in the controller and
+   the inspector; filter records are kept per source, filter and bound kind, so a control bound under another kind
+   never cancels another control's glides, drops or queued values (a fresh read of a record's own target that finds
+   another kind stops its queue and glides); the bridge counts connection resets (`filterEpoch` in every state), the
+   page asks for its filters again when it changes, and a list read across a reset is dropped. *Verified and fixed
+   (1/2):* `cancel()` (a retarget) now drops the setting's queued values, so only a write in flight lands; the
+   toggle's latch re-check after its read is tested (Panic during a slow read); the live check records a SKIP and
+   exits 2 when it skips Panic and Restore, never "all passed"; the accent test now renders Panic with brass, teal
+   and magenta, latched and not, byte for byte the plain drawing. *Skipped (0/2):* the Playlister captions "Prev clip"
+   and "Next clip" (a user who typed exactly those words now sees the operation word; accepted), and the Panic sent
+   while a Restore is in flight (OBS may order the two hotkeys either way; Restore needs an 800 ms hold, so it needs
+   two near-simultaneous presses). *Sonnet's should-fixes:* Panic during connect (above); a drop whose return is
+   refused (driven, a read error, the filter gone) shows the error and alerts, quietly when Panic stopped it;
+   the manifest exemption (above); mutations; `validatePreset` refuses a preset with several pages and no `rig`.
+   Mutations: M-10.3c renamed ("every Panic press sends, also while latched": a press gated on the latch, not a
+   timed debounce); new *M-10.9a* out-of-range accepted, *b* latch after OBS answers, *d* and *e* the toggle's and
+   `requireWritable`'s latch gates before any read, *f* 600 keeps the latch, *g* Restore ignores the Panics counter,
+   *h* a disabled modulator owns nothing, *i* `cancel` keeps the queue, *j* records keyed without the kind, *k*
+   Panic gated on the connected status, *l* no operation counts as Preview, *m* rounding past the range, *n* list
+   uniforms ignored, *o* several pages without `rig`; M-10.5a now drops the bridge's one deny check
+   (`isDeniedForFilter`, which holds the name list); 78 in all, all killed. *Rejected as mutations:* the toggle's re-check after
+   its read (`requireReady` checks the latch too, so removing either alone changes nothing; the new test fails only
+   if both go) and the drain's latch gate (`setPanicLatched` empties the queue first, so no test can reach it); both
+   stay as defence in depth. *Nits:* all twelve single-page archives compared byte for byte; the inspector note
+   `fxNoteOffTable` says any other number setting, a shader's uniforms included, can be ridden once its range is
+   typed, and that a list uniform of a preset or file shader is not visible to the deck unless named `…_mode` (the
+   remaining gap of the list-uniform finding: obs-websocket reports no property types, and only `shader_text` is
+   readable); fake timers were not adopted (the controller tests run against the fake OBS's real socket and its
+   per-request delays; not cheap). The live check still adds its source to the Program scene and sends no Restore
+   after a Panic that timed out (unchanged; Panic is only sent when no other Visual Sidechain filter exists). New
+   keys, in all eight files (for the Gemini review): deck `filterOutOfRange`; inspector `pi.fxBannerOutOfRange`,
+   `pi.fxNoteOffTable`. No existing translated value changed.
 
 **Decisions taken overnight (the operator may overrule any).**
 - Studio Mode only; plain page names (Perform, Layers, Visuals, Scenes); Midi Fadester and VJster speed stay out.

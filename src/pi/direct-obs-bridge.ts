@@ -6,7 +6,7 @@ import { READY_LAYOUTS, readyLayoutName } from "../types/layouts.js";
 import { errorText, ownText, wordText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
 import { statusCellReason, statusSentence } from "../../packages/streamdeck-fadester-shared/src/status-text.js";
 import { translate } from "../i18n/strings.js";
-import { findOwner, isDeniedSetting, tableSettings } from "../obs/filter-ranges.js";
+import { findOwner, isDeniedForFilter, tableSettings } from "../obs/filter-ranges.js";
 import { filterSettingName } from "../actions/obs-filter-control.js";
 import {
   DEFAULT_GLOBAL_SETTINGS,
@@ -62,7 +62,8 @@ export async function readInspectorFilters(client: DirectObsClient, sourceUuid: 
   return list.map((filter) => {
     const merged = { ...(defaults[filter.filterKind] ?? {}), ...filter.filterSettings };
     const table = tableSettings(filter.filterKind).filter((setting) => typeof merged[setting] === "number");
-    const others = Object.keys(merged).filter((setting) => !table.includes(setting) && !isDeniedSetting(setting) &&
+    // Denied by name, or a list uniform of the shader's own text.
+    const others = Object.keys(merged).filter((setting) => !table.includes(setting) && !isDeniedForFilter(filter.filterKind, setting, merged) &&
       typeof merged[setting] === "number" && Number.isFinite(merged[setting])).sort();
     // A shader with very many uniforms: the first 200 are offered (the table's always among them).
     const settings = [...table, ...others].slice(0, 200).map((setting): InspectorFilterSetting => {
@@ -94,6 +95,11 @@ export class DirectObsPropertyInspectorBridge {
   private connectionQueue: Promise<void> = Promise.resolve();
   /** The filters of the sources an OBS Filter inspector asked for, by source UUID (the newest few). */
   private readonly filterCatalogs = new Map<string, InspectorFilterCatalog>();
+  /**
+   * Counts connection resets: the inspector asks for its filters again when it changes (a reconnect may keep
+   * the status "connected"), and a list read across a reset is dropped.
+   */
+  private filterEpoch = 0;
   public constructor(
     private readonly client: DirectObsClient,
     private readonly transport: DirectPiTransport,
@@ -102,7 +108,11 @@ export class DirectObsPropertyInspectorBridge {
     client.on("statusChanged", () => this.broadcast());
     client.on("directStateChanged", () => this.broadcast());
     // A filter list read under another connection is stale; the page asks again.
-    client.on("connectionReset", () => this.filterCatalogs.clear());
+    client.on("connectionReset", () => {
+      this.filterEpoch++;
+      this.filterCatalogs.clear();
+      this.broadcast();
+    });
     layers?.on("changed", () => this.broadcast());
   }
 
@@ -131,6 +141,7 @@ export class DirectObsPropertyInspectorBridge {
       automaticInputs: Object.fromEntries(["__audio_main__", "__audio_mic__", "__audio_aux__", "__audio_input_2__"]
         .map((target) => [target, resolveAutomaticInputName(target, audioInputs)])),
       filterCatalog: Object.fromEntries(this.filterCatalogs),
+      filterEpoch: this.filterEpoch,
       layerScenes: Object.fromEntries(Object.entries(this.layers?.getCatalog() ?? {}).map(([name, scene]) =>
         [name, { ...scene, error: wordText(scene.error, translate) }])),
       layouts: READY_LAYOUTS.filter((layout) => layout.deviceType === this.transport.getDeviceType?.())
@@ -167,12 +178,18 @@ export class DirectObsPropertyInspectorBridge {
         return true;
       case "directFilterCatalog": {
         const sourceUuid = typeof msg.sourceUuid === "string" ? msg.sourceUuid : "";
+        const epoch = this.filterEpoch;
         if (sourceUuid) {
           let entry: InspectorFilterCatalog;
           try {
             entry = { filters: await readInspectorFilters(this.client, sourceUuid), error: "" };
           } catch (error) {
             entry = { filters: [], error: errorText(error, ownText("errorFilterChoose"), translate) };
+          }
+          // Read under a connection that has since been reset: stale, and the page asks again.
+          if (epoch !== this.filterEpoch) {
+            this.broadcast();
+            return true;
           }
           this.filterCatalogs.delete(sourceUuid);
           this.filterCatalogs.set(sourceUuid, entry);

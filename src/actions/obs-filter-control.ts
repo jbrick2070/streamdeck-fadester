@@ -176,7 +176,17 @@ export class ObsFilterInstanceController {
   private finishDrop(): void {
     const target = this.droppedTarget;
     this.droppedTarget = null;
-    if (target) void this.filters.dropReturn(target, DROP_MS).catch(() => {});
+    if (!target) return;
+    void this.filters.dropReturn(target, DROP_MS).catch(async (error: unknown) => {
+      // A refused return (now driven, a read error, the filter gone) leaves the setting at rest: say so,
+      // unless Panic latched it (the latch is already drawn, and Restore is the way back).
+      if (this.filters.getState(target).latched) return;
+      if (JSON.stringify(target) !== JSON.stringify(this.target())) return;
+      this.lastError = errorLocalText(error, ownText("errorRequestFailed", { code: 500 }));
+      if (!this.visible) return;
+      await this.sink.showAlert();
+      this.render();
+    });
   }
 
   private async run(task: () => Promise<unknown>): Promise<void> {
@@ -228,6 +238,7 @@ export class ObsFilterInstanceController {
       case "denied": return t("filterDenied");
       case "needs_range": return t("filterNeedsRange");
       case "no_value": return t("filterNoValue");
+      case "out_of_range": return t("filterOutOfRange");
       case "owned": return state.owner?.kind === "fader" ? t("filterOwnedFader")
         : t("filterOwnedModulator", { filter: state.owner?.filterName ?? "" });
       default: return "";

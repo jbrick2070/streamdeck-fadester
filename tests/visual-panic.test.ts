@@ -177,6 +177,50 @@ describe("Visual Panic", () => {
     expect(safety.isLatched()).toBe(false);
   });
 
+  it("sets the latch before OBS answers, so no Visual Sidechain write slips in behind Panic", async () => {
+    const { server, safety, filters } = await connect();
+    server.hotkeyDelayMs = 150;
+    const panic = safety.panic();
+    // At once, not when OBS answers.
+    expect(safety.isLatched()).toBe(true);
+    expect(filters.isPanicLatched()).toBe(true);
+    const mix = { sourceUuid: "scene-uuid", filterName: "Aura", filterKind: "visual_sidechain_shader_filter", setting: "vs_effect_mix_pct" };
+    await expect(filters.nudge(mix, 0.1, Date.now())).rejects.toThrow(/Restore first/);
+    await panic;
+    expect(server.hotkeyTriggerLog.map((entry) => entry.hotkeyName)).toEqual([VS_PANIC_HOTKEY]);
+    expect(server.filterRequestLog).toEqual([]);
+  });
+
+  it("sends Panic while the catalog read after the identify still runs, and never restarts that connection", async () => {
+    const server = new FakeObsServer({ missingPlugin: true });
+    server.sceneListDelayMs = 800;
+    const port = await server.start();
+    const client = new DirectObsClient({ host: "127.0.0.1", port, password: "" });
+    const filters = new FilterController(client);
+    const safety = new VisualSafety(client, filters);
+    cleanup.push(() => client.stop(), () => server.stop());
+    const panic = keySink();
+    const key = new VisualPanicInstanceController(safety, client, panic.sink, { operation: "panic" }, 10);
+    cleanup.push(() => key.disappear());
+    key.appear();
+    // Before the socket is identified: refused, and the opening socket is not torn down.
+    client.start();
+    expect(client.hasLiveSocket()).toBe(true);
+    await key.handleKeyDown();
+    expect(panic.alerts()).toBe(1);
+    await vi.waitFor(() => expect(client.isIdentified()).toBe(true), { timeout: 2000 });
+    expect(client.isConnected()).toBe(false);
+    const attempts = client.getConnectAttemptCount();
+    expect(attempts).toBe(1);
+    await key.handleKeyDown();
+    expect(server.hotkeyTriggerLog.map((entry) => entry.hotkeyName)).toEqual([VS_PANIC_HOTKEY]);
+    expect(panic.alerts()).toBe(1);
+    expect(safety.isLatched()).toBe(true);
+    await vi.waitFor(() => expect(client.isConnected()).toBe(true), { timeout: 3000 });
+    expect(client.getConnectAttemptCount()).toBe(attempts);
+    expect(safety.isLatched()).toBe(true);
+  });
+
   it("drops a Restore hold when the key is hidden or retargeted", async () => {
     const { server, client, safety } = await connect();
     const first = new VisualPanicInstanceController(safety, client, keySink().sink, { operation: "restore" }, 10, 150);

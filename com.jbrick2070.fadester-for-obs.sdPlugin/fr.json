@@ -296,6 +296,7 @@
     "filterOwnedFader": "Piloté par son fader",
     "filterNoValue": "Aucune valeur dans OBS",
     "filterLatched": "Restaurez d’abord",
+    "filterOutOfRange": "Hors plage",
     "vpPanic": "PANIQUE",
     "vpPanicSent": "PANIQUE ENVOYÉE",
     "vpPanicHint": "Strobo et flash coupés",
@@ -723,7 +724,9 @@
       "accentBrass": "Laiton",
       "accentTeal": "Bleu sarcelle",
       "accentMagenta": "Magenta",
-      "fxBannerRangeChoose": "Choisissez la plage où cette intensité peut varier."
+      "fxBannerRangeChoose": "Choisissez la plage où cette intensité peut varier.",
+      "fxBannerOutOfRange": "OBS a {value}, hors de cette plage : la commande ne le déplace pas tant que la valeur ou la plage ne change pas.",
+      "fxNoteOffTable": "Tout autre réglage numérique, y compris les uniforms propres à un shader, peut être piloté dès que vous saisissez sa plage ; choisissez-la avec soin. OBS n’indique pas au deck quels uniforms sont des listes : ceux nommés …_mode ou déclarés en liste dans le texte du shader sont exclus, vérifiez vous-même les autres."
     }
   }
 }

@@ -53,12 +53,13 @@
         return window.FadesterPresetCaptions.isGenerated("scene", { sceneTarget: selectedTarget, labelOverride: settings.labelOverride });
       };
       const scenes = catalog.scenes || [];
+      // Scene 1 to 8: every automatic index a bundled profile ships (the 15-key VJ rig's Scenes page has 5 to 8).
       const sceneItems = [
         { value: "__current_preview__", text: T("targetCurrentPreview") },
         { value: "__next_scene__", text: T("targetNext") },
         { value: "__previous_scene__", text: T("targetPrevious") },
         { value: "__random_scene__", text: T("targetRandom") }
-      ].concat([0, 1, 2, 3].map(function (index) {
+      ].concat([0, 1, 2, 3, 4, 5, 6, 7].map(function (index) {
         return { value: "__scene_index_" + index + "__", text: T("targetIndex", { n: index + 1, scene: scenes[index] || T("notAvailable") }) };
       }), scenes.map(function (name) { return { value: name, text: T("targetFixed", { scene: name }) }; }));
       const transitionItems = [

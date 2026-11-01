@@ -622,9 +622,9 @@ const MUTATIONS: MutationCheck[] = [
   },
   {
     id: "M-10.3c",
-    step: "Step 10.3 (no Panic debounce)",
+    step: "Step 10.3 (every Panic press sends, also while latched)",
     description:
-      "Swallow a Panic while one is latched, and verify visual-panic.test.ts fails",
+      "Swallow a Panic press while the latch is set (a press gated on the latch, not a timed debounce), and verify visual-panic.test.ts fails",
     filePath: resolve(ROOT, "src/control/visual-safety.ts"),
     target: "    this.setLatched(true);",
     mutated: "    if (this.latched) return;\n    this.setLatched(true);",
@@ -656,7 +656,7 @@ const MUTATIONS: MutationCheck[] = [
     description:
       "List denied settings (max_flash_rate_hz, thresholds, colours, fader slots) in the inspector, and verify obs-filter-inspector.test.ts fails",
     filePath: resolve(ROOT, "src/pi/direct-obs-bridge.ts"),
-    target: "!table.includes(setting) && !isDeniedSetting(setting) &&",
+    target: "!table.includes(setting) && !isDeniedForFilter(filter.filterKind, setting, merged) &&",
     mutated: "!table.includes(setting) &&",
     testFile: "tests/obs-filter-inspector.test.ts"
   },
@@ -678,6 +678,146 @@ const MUTATIONS: MutationCheck[] = [
     filePath: resolve(ROOT, "scripts/profile-checks.ts"),
     target: "  const pages = presetPages(preset);\n  const multi = pages.length > 1;",
     mutated: "  const pages = presetPages(preset).slice(0, 1);\n  const multi = pages.length > 1;",
+    testFile: "tests/vj-rig-profiles.test.ts"
+  },
+  {
+    id: "M-10.9a",
+    step: "Review fixes (a live value outside the range is refused, never pulled to the edge)",
+    description:
+      "Let a gesture start from a value outside the range, and verify filter-controller.test.ts fails",
+    filePath: resolve(ROOT, "src/control/filter-controller.ts"),
+    target: "    if (resolved.ok && isOutsideRange(raw, resolved.range)) throw new DirectObsError(ownText(\"filterOutOfRange\"), 409);",
+    mutated: "",
+    testFile: "tests/filter-controller.test.ts"
+  },
+  {
+    id: "M-10.9b",
+    step: "Review fixes (the Panic latch is set before OBS answers)",
+    description:
+      "Set the latch only after OBS answered the Panic, and verify visual-panic.test.ts fails",
+    filePath: resolve(ROOT, "src/control/visual-safety.ts"),
+    target: "    this.setLatched(true);\n    try {\n      await this.client.triggerHotkeyByName(VS_PANIC_HOTKEY);",
+    mutated: "    try {\n      await this.client.triggerHotkeyByName(VS_PANIC_HOTKEY);\n      this.setLatched(true);",
+    testFile: "tests/visual-panic.test.ts"
+  },
+  {
+    id: "M-10.9d",
+    step: "Review fixes (a latched toggle is refused before any read)",
+    description:
+      "Drop the toggle's latch check before its read, and verify filter-controller.test.ts fails",
+    filePath: resolve(ROOT, "src/control/filter-controller.ts"),
+    target: "    this.requireBound(target);\n    if (this.panicLatched && isVisualSidechainKind(target.filterKind)) throw new DirectObsError(ownText(\"filterLatched\"), 409);\n    const generation = this.generation;",
+    mutated: "    this.requireBound(target);\n    const generation = this.generation;",
+    testFile: "tests/filter-controller.test.ts"
+  },
+  {
+    id: "M-10.9e",
+    step: "Review fixes (a latched setting is refused before any read)",
+    description:
+      "Drop requireWritable's latch check, and verify filter-controller.test.ts fails",
+    filePath: resolve(ROOT, "src/control/filter-controller.ts"),
+    target: "    this.requireBound(target);\n    if (this.panicLatched && isVisualSidechainKind(target.filterKind)) throw new DirectObsError(ownText(\"filterLatched\"), 409);\n    const resolved = resolveRange(",
+    mutated: "    this.requireBound(target);\n    const resolved = resolveRange(",
+    testFile: "tests/filter-controller.test.ts"
+  },
+  {
+    id: "M-10.9f",
+    step: "Review fixes (a Panic or Restore answered 600 clears the latch)",
+    description:
+      "Keep the latch when OBS has no Visual Sidechain hotkey, and verify visual-panic.test.ts fails",
+    filePath: resolve(ROOT, "src/control/visual-safety.ts"),
+    target: "    if (this.panics === panics) this.setLatched(false);\n    return new DirectObsError(",
+    mutated: "    return new DirectObsError(",
+    testFile: "tests/visual-panic.test.ts"
+  },
+  {
+    id: "M-10.9g",
+    step: "Review fixes (a Restore answered after a newer Panic keeps that Panic's latch)",
+    description:
+      "Clear the latch on every accepted Restore, ignoring the Panics counter, and verify visual-panic.test.ts fails",
+    filePath: resolve(ROOT, "src/control/visual-safety.ts"),
+    target: "    if (this.panics === panics) this.setLatched(false);\n  }",
+    mutated: "    this.setLatched(false);\n  }",
+    testFile: "tests/visual-panic.test.ts"
+  },
+  {
+    id: "M-10.9h",
+    step: "Review fixes (a disabled Audio Modulator still owns what it targets)",
+    description:
+      "Let only an enabled modulator own a setting, and verify filter-controller.test.ts fails",
+    filePath: resolve(ROOT, "src/obs/filter-ranges.ts"),
+    target: "    if (filter.filterKind === VS_MODULATOR_FILTER_KIND && filter.filterName !== target.filterName) {",
+    mutated: "    if (filter.filterKind === VS_MODULATOR_FILTER_KIND && filter.filterName !== target.filterName && filter.filterEnabled) {",
+    testFile: "tests/filter-controller.test.ts"
+  },
+  {
+    id: "M-10.9i",
+    step: "Review fixes (cancel drops the setting's queued values)",
+    description:
+      "Keep a cancelled setting's queued values draining, and verify filter-controller.test.ts fails",
+    filePath: resolve(ROOT, "src/control/filter-controller.ts"),
+    target: "      record.pending.delete(target.setting);\n      record.ranges.delete(target.setting);",
+    mutated: "      record.ranges.get(target.setting);",
+    testFile: "tests/filter-controller.test.ts"
+  },
+  {
+    id: "M-10.9j",
+    step: "Review fixes (records keyed by bound kind)",
+    description:
+      "Key filter records by source and filter only, so a control of another kind shares (and refuses) the other's record, and verify filter-controller.test.ts fails",
+    filePath: resolve(ROOT, "src/control/filter-controller.ts"),
+    target: "  return `${filterKey(target.sourceUuid, target.filterName)}\\u0000${target.filterKind}`;",
+    mutated: "  return `${filterKey(target.sourceUuid, target.filterName)}\\u0000`;",
+    testFile: "tests/filter-controller.test.ts"
+  },
+  {
+    id: "M-10.9k",
+    step: "Review fixes (Panic needs only an identified socket)",
+    description:
+      "Gate Panic on the connected status (after the catalog read), and verify visual-panic.test.ts fails",
+    filePath: resolve(ROOT, "src/actions/visual-panic-key.ts"),
+    target: "      if (this.client.isIdentified()) {",
+    mutated: "      if (this.client.isConnected()) {",
+    testFile: "tests/visual-panic.test.ts"
+  },
+  {
+    id: "M-10.9l",
+    step: "Review fixes (a Scene key with no operation counts as a Transition beside Panic)",
+    description:
+      "Count a Scene & Transition key with no operation as a Preview, and verify vj-rig-profiles.test.ts fails",
+    filePath: resolve(ROOT, "scripts/profile-checks.ts"),
+    target: '  const operation = entry.settings.operation ?? "transition";',
+    mutated: '  const operation = entry.settings.operation ?? "preview";',
+    testFile: "tests/vj-rig-profiles.test.ts"
+  },
+  {
+    id: "M-10.9m",
+    step: "Review fixes (whole numbers stay inside the range)",
+    description:
+      "Round a whole-number value without keeping it inside the range's whole numbers, and verify filter-controller.test.ts fails",
+    filePath: resolve(ROOT, "src/obs/filter-ranges.ts"),
+    target: "  return Math.max(Math.ceil(range.min), Math.min(Math.floor(range.max), Math.round(clamped)));",
+    mutated: "  return Math.round(clamped);",
+    testFile: "tests/filter-controller.test.ts"
+  },
+  {
+    id: "M-10.9n",
+    step: "Review fixes (a shader's own list uniforms are denied)",
+    description:
+      "Ignore the list uniforms of a shader's text, and verify filter-controller.test.ts fails",
+    filePath: resolve(ROOT, "src/obs/filter-ranges.ts"),
+    target: "  return kind === VS_SHADER_FILTER_KIND && listUniformNames(settings.shader_text).has(setting);",
+    mutated: "  return false;",
+    testFile: "tests/filter-controller.test.ts"
+  },
+  {
+    id: "M-10.9o",
+    step: "Review fixes (several pages need the rig's keys named)",
+    description:
+      "Build a preset with several pages but no rig keys named (so the rig's rules never run), and verify vj-rig-profiles.test.ts fails",
+    filePath: resolve(ROOT, "scripts/profile-checks.ts"),
+    target: "  if (presetPages(preset).length > 1 && !preset.rig) {",
+    mutated: "  if (false) {",
     testFile: "tests/vj-rig-profiles.test.ts"
   },
   {

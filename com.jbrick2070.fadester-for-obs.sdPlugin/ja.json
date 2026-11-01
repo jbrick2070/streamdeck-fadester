@@ -296,6 +296,7 @@
     "filterOwnedFader": "フェーダーが制御中",
     "filterNoValue": "OBS に値がまだない",
     "filterLatched": "先に復元",
+    "filterOutOfRange": "範囲外",
     "vpPanic": "パニック",
     "vpPanicSent": "パニック送信済み",
     "vpPanicHint": "ストロボとフラッシュ停止",
@@ -723,7 +724,9 @@
       "accentBrass": "ブラス",
       "accentTeal": "ティール",
       "accentMagenta": "マゼンタ",
-      "fxBannerRangeChoose": "この量を動かせる範囲を選んでください。"
+      "fxBannerRangeChoose": "この量を動かせる範囲を選んでください。",
+      "fxBannerOutOfRange": "OBS の値は {value} で、この範囲外です。値か範囲が変わるまで、このコントロールは動かしません。",
+      "fxNoteOffTable": "その他の数値設定（シェーダー独自の uniform を含む）も、範囲を入力すれば操作できます。範囲は慎重に選んでください。どの uniform がリストかを OBS はデッキに伝えません。…_mode という名前のものや、シェーダーテキストでリストと指定されたものは除外されます。それ以外はご自身で確認してください。"
     }
   }
 }

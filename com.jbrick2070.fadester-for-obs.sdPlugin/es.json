@@ -296,6 +296,7 @@
     "filterOwnedFader": "Lo controla su fader",
     "filterNoValue": "Aún sin valor en OBS",
     "filterLatched": "Restaura primero",
+    "filterOutOfRange": "Fuera de rango",
     "vpPanic": "PÁNICO",
     "vpPanicSent": "PÁNICO ENVIADO",
     "vpPanicHint": "Sin estrobo ni flash",
@@ -723,7 +724,9 @@
       "accentBrass": "Latón",
       "accentTeal": "Verde azulado",
       "accentMagenta": "Magenta",
-      "fxBannerRangeChoose": "Elige el rango en que puede moverse esta cantidad."
+      "fxBannerRangeChoose": "Elige el rango en que puede moverse esta cantidad.",
+      "fxBannerOutOfRange": "OBS tiene {value}, fuera de este rango: el control no lo moverá hasta que cambie el valor o el rango.",
+      "fxNoteOffTable": "Cualquier otro ajuste numérico, incluidos los uniforms propios de un shader, se puede controlar en cuanto escribas su rango; elígelo con cuidado. OBS no indica al deck qué uniforms son listas: se omiten los que terminan en …_mode o figuran como lista en el texto del shader; los demás, compruébalos tú."
     }
   }
 }

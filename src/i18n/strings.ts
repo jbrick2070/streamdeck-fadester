@@ -49,6 +49,7 @@ const PLUGIN_EN = {
   filterOwnedFader: "Driven by its fader",
   filterNoValue: "No value in OBS yet",
   filterLatched: "Restore first",
+  filterOutOfRange: "Out of range",
   // Visual Panic keys (Visual Sidechain's Panic and Restore)
   vpPanic: "PANIC",
   vpPanicSent: "PANIC SENT",

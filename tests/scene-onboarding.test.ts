@@ -31,6 +31,32 @@ describe("Scene layout onboarding", () => {
     vi.restoreAllMocks();
   });
 
+  it("offers Scene 1 to 8, so the 15-key VJ rig's Scene 5 to 8 keys show their own automatic target", () => {
+    const html = readFileSync("com.jbrick2070.fadester-for-obs.sdPlugin/ui/obs-scene-transition-key.html", "utf8");
+    type Element = { value: string; textContent: string; className: string; style: Record<string, string>; onchange?: () => void };
+    const elements = new Map<string, Element>([...html.matchAll(/\bid="([^"]+)"/g)].map((match) => [match[1], {
+      value: "", textContent: "", className: "", style: {}
+    }]));
+    let render!: (settings: Record<string, unknown>, save: (patch: Record<string, unknown>) => void, state: Record<string, unknown>) => void;
+    let sceneItems: Array<{ value: string; text: string }> = [];
+    runInNewContext(inspectorPageScript(html), {
+      document: { activeElement: null, getElementById: (id: string) => elements.get(id) },
+      window: {
+        initDirectObsPropertyInspector: (callback: typeof render) => { render = callback; },
+        directObsFillSelect: (element: Element, items: Array<{ value: string; text: string }>) => {
+          if (element === elements.get("obs-scene-target")) sceneItems = items;
+        }
+      }
+    });
+    const scenes = ["One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight"];
+    for (let index = 4; index < 8; index++) {
+      render({ sceneTarget: `__scene_index_${index}__`, operation: "preview" }, vi.fn(), { status: { kind: "connected" }, catalog: { scenes, studioMode: true } });
+      const item = sceneItems.find((entry) => entry.value === `__scene_index_${index}__`);
+      expect(item?.text, `Scene ${index + 1}`).toContain(scenes[index]!);
+      expect(item?.text).toContain(String(index + 1));
+    }
+  });
+
   it("shows the automatic default in the inspector and saves user choices as explicit bindings", () => {
     const html = readFileSync("com.jbrick2070.fadester-for-obs.sdPlugin/ui/obs-scene-transition-key.html", "utf8");
     type Element = { value: string; textContent: string; className: string; style: Record<string, string>; onchange?: () => void };

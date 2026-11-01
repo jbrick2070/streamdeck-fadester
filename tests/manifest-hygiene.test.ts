@@ -179,9 +179,9 @@ describe("Step 1.1 — Manifest, Layout, Icons & Repository Hygiene", () => {
             entry.controller, entry.kind,
             Object.entries(entry.settings).sort(([left], [right]) => left.localeCompare(right))
           ]);
-          // Unbound filter and Playlister controls are placeholders told apart by their captions (Look 1, Look 2).
-          const placeholder = (entry.kind === "filter" && entry.settings.sourceUuid === "") ||
-            (entry.kind === "playlister" && entry.settings.inputUuid === "");
+          // In the VJ rig only, unbound filter controls are placeholders told apart by their captions (Look 1,
+          // Look 2); everywhere else, and for every Playlister key, a repeated binding is an error.
+          const placeholder = layout.slug.includes("vj-rig") && entry.kind === "filter" && entry.settings.sourceUuid === "";
           expect(bindings.has(binding) && !placeholder, `${layout.slug} / ${page.name}: repeated binding for ${entry.label}`).toBe(false);
           bindings.add(binding);
           // Layer order and blend modes belong to the creative labs and the VJ rig only.

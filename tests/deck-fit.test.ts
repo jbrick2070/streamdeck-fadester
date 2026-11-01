@@ -96,7 +96,7 @@ function drawnTexts(): Array<{ key: StringKey; params?: TextParams; boxes: Box[]
   add("errorMediaWrongKind", [B.keySub], { input: "Camera" });
   // The OBS Filter controls' problem line, on keys and dials.
   for (const key of ["filterMissing", "filterWrongKind", "filterDenied", "filterNeedsRange", "filterOwnedFader",
-    "filterNoValue", "filterLatched"] as const) add(key, [B.keySub, B.dialReason]);
+    "filterNoValue", "filterLatched", "filterOutOfRange"] as const) add(key, [B.keySub, B.dialReason]);
   add("filterOwnedModulator", [B.keySub, B.dialReason], { filter: "Pulse" });
   // The Visual Panic keys: titles, hints and the not-loaded problem line. The fit samples of PLAN.md 10.7 are
   // "PANIC SENT" (a key title), "Restore first" (filterLatched, above) and the longest setting name (Mod 8 amount).

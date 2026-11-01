@@ -44,9 +44,12 @@ export class VisualSafety extends EventEmitter {
     return this.latched;
   }
 
-  /** Sends Visual Sidechain's Panic. Every press sends; a failure throws (shown on the key). */
+  /**
+   * Sends Visual Sidechain's Panic. Every press sends; a failure throws (shown on the key). It needs only an
+   * identified socket, not the catalog read that follows the identify: Panic is never delayed by it.
+   */
   public async panic(): Promise<void> {
-    if (!this.client.isConnected()) throw new DirectObsError(ownText("layerErrorNotConnected"), 500);
+    if (!this.client.isIdentified()) throw new DirectObsError(ownText("layerErrorNotConnected"), 500);
     const panic = ++this.panics;
     this.setLatched(true);
     try {

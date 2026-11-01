@@ -296,6 +296,7 @@
     "filterOwnedFader": "由其推子控制",
     "filterNoValue": "OBS 中尚无数值",
     "filterLatched": "请先恢复",
+    "filterOutOfRange": "超出范围",
     "vpPanic": "紧急停止",
     "vpPanicSent": "已发送紧急停止",
     "vpPanicHint": "关闭频闪和闪光",
@@ -723,7 +724,9 @@
       "accentBrass": "黄铜",
       "accentTeal": "青绿",
       "accentMagenta": "品红",
-      "fxBannerRangeChoose": "请选择此量可以变化的范围。"
+      "fxBannerRangeChoose": "请选择此量可以变化的范围。",
+      "fxBannerOutOfRange": "OBS 中的值为 {value}，超出此范围：在值或范围改变之前，此控件不会移动它。",
+      "fxNoteOffTable": "其他任何数值设置（包括着色器自身的 uniform）在输入范围后即可控制，请谨慎选择范围。OBS 不会告诉 Stream Deck 哪些 uniform 是列表：名称以 …_mode 结尾或在着色器文本中标为列表的会被排除，其余请自行确认。"
     }
   }
 }

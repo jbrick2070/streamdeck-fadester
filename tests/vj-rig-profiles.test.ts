@@ -52,8 +52,8 @@ describe("VJ rig profiles", () => {
       expect(key(nextColumn, nextRow)!.label, page.name).toBeUndefined();
       for (const entry of page.actions.filter((candidate) => candidate.controller === "Keypad")) {
         const beside = Math.abs(entry.column - panicColumn) <= 1 && Math.abs(entry.row - panicRow) <= 1;
-        const program = entry.kind === "scene" && ["cut", "transition"].includes(String(entry.settings.operation));
-        expect(beside && program, `${page.name}: ${entry.label} at ${entry.column},${entry.row}`).toBe(false);
+        // The builder's own rule (no operation counts as a Transition), not a copy of it.
+        expect(beside && changesProgram(entry), `${page.name}: ${entry.label} at ${entry.column},${entry.row}`).toBe(false);
       }
       // Every key and every dial is in use (a full rig).
       expect(page.actions.filter((entry) => entry.controller === "Keypad")).toHaveLength(rig.columns * rig.rows);
@@ -87,6 +87,16 @@ describe("VJ rig profiles", () => {
       expect(() => checkRigRules(cutBeside), operation).toThrow(/changes Program next to Panic/);
       expect(changesProgram(neighbour)).toBe(true);
     }
+    // A Scene & Transition key with no operation is a Transition (the action's default).
+    const noOperation = clone(rig);
+    const bare = noOperation.pages![0]!.actions.find((entry) => entry.controller === "Keypad" && entry.column === 2 && entry.row === 1)!;
+    Object.assign(bare, { kind: "scene", label: "Take", settings: { sceneTarget: "__current_preview__" } });
+    expect(changesProgram(bare)).toBe(true);
+    expect(() => checkRigRules(noOperation)).toThrow(/changes Program next to Panic/);
+    // Several pages without the rig's keys named: refused, never built without the rules.
+    const unnamed = clone(rig);
+    delete unnamed.rig;
+    expect(() => validatePreset(unnamed, manifest)).toThrow(/several pages needs rig/);
     // A Preview key beside Panic is fine: it does not change Program.
     const previewBeside = clone(rig);
     Object.assign(previewBeside.pages![0]!.actions.find((entry) => entry.controller === "Keypad" && entry.column === 2 && entry.row === 1)!,
@@ -145,11 +155,14 @@ describe("VJ rig profiles", () => {
     expect((manifest as unknown as { Profiles: Array<{ Name: string }> }).Profiles.map((profile) => profile.Name)).toContain(built.path);
   });
 
-  it("builds a one-page profile as before (its page and action identities unchanged)", () => {
-    const scene = presets.find((preset) => preset.slug === "plus-scene-desk")!;
-    const built = buildProfile(scene, manifest);
-    expect(readFileSync(join(PLUGIN_DIR, `${profilePathForSlug(scene.slug)}.streamDeckProfile`)).equals(zip(built.files))).toBe(true);
-    expect(built.files).toHaveLength(3);
-    expect(built.catalogEntry).not.toHaveProperty("pages");
+  it("builds every one-page profile as before (the twelve archives byte for byte, identities unchanged)", () => {
+    const single = presets.filter((preset) => !preset.pages);
+    expect(single).toHaveLength(12);
+    for (const preset of single) {
+      const built = buildProfile(preset, manifest);
+      expect(readFileSync(join(PLUGIN_DIR, `${profilePathForSlug(preset.slug)}.streamDeckProfile`)).equals(zip(built.files)), preset.slug).toBe(true);
+      expect(built.files, preset.slug).toHaveLength(3);
+      expect(built.catalogEntry, preset.slug).not.toHaveProperty("pages");
+    }
   });
 });

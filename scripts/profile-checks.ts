@@ -186,6 +186,10 @@ export function validatePreset(preset: Preset, manifest: PluginManifest): void {
   if (Boolean(preset.pages) === Boolean(preset.actions)) {
     throw new Error(`${preset.slug}: give either actions (one page) or pages.`);
   }
+  // Several pages are a rig: its Panic and Next page keys must be named, or the rig's rules would not run.
+  if (presetPages(preset).length > 1 && !preset.rig) {
+    throw new Error(`${preset.slug}: a preset with several pages needs rig: { panic, nextPage }.`);
+  }
   for (const page of presetPages(preset)) {
     const seen = new Set<string>();
     for (const entry of page.actions) {

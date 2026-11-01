@@ -75,6 +75,7 @@
     <label for="fx-step" data-i18n="fxStep">Step (%)</label>
     <input id="fx-step" type="number" min="1" max="50" step="1" />
   </div>
+  <p class="muted" id="fx-note-off-table" data-i18n="fxNoteOffTable">Any other number setting, a shader's own uniforms included, can be ridden once you type its range; choose it with care. OBS does not tell the deck which uniforms are lists: those named …_mode or marked as a list in the shader text are left out, any other you check yourself.</p>
   <p class="muted" data-i18n="fxNote">A write moves at most a tenth of the range, never a setting an Audio Modulator or a fader drives, and nothing of a Visual Sidechain filter while Panic is latched.</p>
   <div class="row">
     <label for="fx-label" data-i18n="label">Label</label>
@@ -93,6 +94,8 @@
       };
       // The source whose filters were asked for last; asked again only on Refresh or a new source.
       let requested = "";
+      // The plugin's connection-reset count: a reconnect that keeps the status "connected" still empties its lists.
+      let seenEpoch = null;
       window.initDirectObsPropertyInspector(function (settings, save, state) {
         const T = window.FadesterI18n.t;
         const $ = function (id) { return document.getElementById(id); };
@@ -109,6 +112,11 @@
         const usesSetting = dial || operation !== "toggle";
         // A dropped connection empties the plugin's filter lists: ask again once it is back.
         if (!connected) requested = "";
+        const epoch = state && typeof state.filterEpoch === "number" ? state.filterEpoch : 0;
+        if (epoch !== seenEpoch) {
+          seenEpoch = epoch;
+          requested = "";
+        }
         const show = function (id, visible) { const element = $(id); if (element) element.style.display = visible ? "" : "none"; };
         const number = function (value) { return typeof value === "number" && isFinite(value) ? value : undefined; };
         // A bundled profile's caption is a default: shown empty here, released when the control's job changes.
@@ -174,6 +182,7 @@
         show("fx-setting-row", usesSetting);
         show("fx-preset-row", usesSetting && modAmount);
         show("fx-custom-range", needsRange && !modAmount);
+        show("fx-note-off-table", needsRange && !modAmount);
         show("fx-value-row", !dial && operation === "set");
         show("fx-duration-row", !dial && operation === "set");
         show("fx-step-row", !dial && (operation === "step_up" || operation === "step_down"));
@@ -194,6 +203,12 @@
         const useCurrent = $("fx-use-current");
         if (useCurrent) useCurrent.disabled = !current;
 
+        // The range a write uses: the table's for a table setting, else the typed one (as the plugin resolves it).
+        const TABLE_RANGES = { vs_effect_mix_pct: [0, 100], vs_audio_reactivity_pct: [0, 100], opacity: [0, 1] };
+        const rangeOf = function () {
+          if (ownRange && TABLE_RANGES[setting]) return { min: TABLE_RANGES[setting][0], max: TABLE_RANGES[setting][1] };
+          return rangeMin !== undefined && rangeMax !== undefined && rangeMin < rangeMax ? { min: rangeMin, max: rangeMax } : null;
+        };
         // One banner, the most pressing first.
         const banner = $("fx-status");
         let message = "";
@@ -208,6 +223,10 @@
         else if (usesSetting && current && current.owner !== undefined) { message = T("fxBannerDriven", { filter: current.owner || T("fxOwnFader") }); kind = "status-warn"; }
         else if (needsRange && modAmount && !presetRange) message = T("fxBannerRangeChoose");
         else if (needsRange && !(rangeMin !== undefined && rangeMax !== undefined && rangeMin < rangeMax)) message = T("fxBannerRange");
+        else if (usesSetting && current && rangeOf() && (current.value < rangeOf().min || current.value > rangeOf().max)) {
+          message = T("fxBannerOutOfRange", { value: String(current.value) });
+          kind = "status-warn";
+        }
         if (banner) {
           banner.textContent = message;
           banner.className = "status-banner " + kind;
@@ -233,7 +252,8 @@
           const chosen = filterSettings.find(function (entry) { return entry.setting === settingSelect.value; });
           const update = { setting: settingSelect.value };
           const amount = filterKind === "visual_sidechain_modulator_filter" && /^slot_[1-8]_amount_pct$/.test(settingSelect.value);
-          if (amount) Object.assign(update, { rangeMin: 0, rangeMax: 100, integer: undefined });
+          // 0 to 100 by default, but never for an amount OBS holds below 0 (an inverted modulation): the user picks.
+          if (amount && !(chosen && chosen.value < 0)) Object.assign(update, { rangeMin: 0, rangeMax: 100, integer: undefined });
           else Object.assign(update, noRange);
           saveReleasing(update);
         };

@@ -87,6 +87,8 @@ export class DeckSim {
   adapter: Adapter | null = null;
   router: Router | null = null;
   log = "";
+  /** The Stream Deck language the plugin is started with, such as "de" or "zh_CN" (PLAN.md 8.3). */
+  language = "en";
 
   /**
    * Start the pretend Stream Deck and launch the plugin. `fromSource` runs src
@@ -109,7 +111,7 @@ export class DeckSim {
       });
     });
     const info = {
-      application: { font: "", language: "en", platform: "windows", platformVersion: "10.0.26200", version: "7.4.2.22730" },
+      application: { font: "", language: this.language, platform: "windows", platformVersion: "10.0.26200", version: "7.4.2.22730" },
       colors: {},
       devicePixelRatio: 1,
       devices: [{ id: DEVICE, name: "Stream Deck +", size: { columns: 4, rows: 2 }, type: 7 }],

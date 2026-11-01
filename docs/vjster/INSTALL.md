@@ -59,6 +59,23 @@ Tagging and publishing a release are the operator's call.
 If port 48150 is taken, the strips say `PORT IN USE`: choose another port on
 the plugin's settings page and the same port in the extension's options.
 
+## Languages
+
+VJster follows the language of Stream Deck (the plugin, its action names and
+the words on keys and dials). With no translation for a word or a language,
+the English text is shown.
+
+| Part | Languages now | Files |
+|------|---------------|-------|
+| Stream Deck plugin | English, German | `com.jbrick2070.vjster.sdPlugin/<lang>.json` |
+
+The English texts were written with Claude Opus 5.5, an AI model. Every other
+language was drafted by Claude Opus 5.5 and is to be reviewed by a second AI
+model (Gemini 4 Argon) before release (PLAN.md 8.7); the German files are
+drafts until then. Corrections are welcome as a GitHub issue or pull request
+on `jbrick2070/streamdeck-fadester`: name the file, the text and your
+suggested wording. Words drawn on keys must stay short (a test checks they fit).
+
 ## Uninstall
 
 Uninstall the plugin from the Plugins page of Stream Deck's preferences, and

@@ -14,6 +14,7 @@ import { newObsToken } from "./link-server.js";
 import { ObsKeepAlive } from "./obs-keepalive.js";
 import { loadObsPage, obsPageAddress, videoIdFrom } from "./obs-page.js";
 import { globalSettings, type GlobalSettings } from "./settings.js";
+import { stringsFrom } from "./strings.js";
 
 // R-BEH-5: only reasons are logged, never a URL, a title or a message body.
 const log = { info: (m: string) => streamDeck.logger.info(m), warn: (m: string) => streamDeck.logger.warn(m) };
@@ -110,8 +111,12 @@ streamDeck.ui.onSendToPlugin<JsonObject>((ev) => {
   }
 });
 
+// The deck words in Stream Deck's language, from the plugin's <lang>.json files (R-I18N-1). Read here, in the plugin
+// process, where Stream Deck's registration info exists; actions.ts never reads it, so the unit tests can import it.
+const strings = stringsFrom((key) => streamDeck.i18n.translate(key));
+
 for (const a of [SpeedDialAction, QualityDialAction, SpeedPresetAction, SpeedStepAction, QualityPresetAction, PinAction, TransportAction]) {
-  streamDeck.actions.registerAction(new a(hub));
+  streamDeck.actions.registerAction(new a(hub, strings));
 }
 
 void streamDeck.connect().then(async () => {

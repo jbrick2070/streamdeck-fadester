@@ -328,6 +328,21 @@ Fadester files are not touched (someone else's work is uncommitted there). Each 
    `actions.ts` / `standalone.ts` build the Strings from `streamDeck.i18n`. Stored default labels are shown translated
    (R-I18N-2). Tests: every file has every key and placeholder; every deck word fits (8.2); the deck-sim e2e runs once
    with `language: "de"`.
+   *As built (2026-10-31):* `en.json` and `de.json` at the plugin root (Name, Description, Category, each action's
+   Name, Tooltip and the dials' `Encoder.TriggerDescription`, and `Localization` with the 24 deck words and a
+   `_comment` saying who drafted the file). `standalone.ts` builds the table with
+   `stringsFrom((key) => streamDeck.i18n.translate(key))` before it registers the actions; the SDK tries the language,
+   its base, then `en.json`, and `stringsFrom` takes the built-in English for anything still missing.
+   `tests/vjster-languages.ts` holds the REQUIRED language lists (one place; now `en`, `de` for all three parts) and
+   reads every `<lang>.json` present; `tests/vjster-i18n-files.test.ts` checks the required files exist, no BOM, valid
+   UTF-8, the same text paths as English (nested, so `Localization.pi` is covered from 8.4), non-empty texts, the same
+   `{placeholders}`, English equal to `manifest.json` and to `EN`, a `_comment`, no dotted keys, and no OBS, YouTube
+   or Google in any action name. `DeckSim` takes a `language`; `tests/vjster-plugin-e2e-language.test.ts` runs the
+   real plugin in German (status, labels from the bundled profile, key captions) and in `it`, which has no file, to
+   show the English fallback. German deck words chosen to fit: PORT BELEGT, ERWEITERUNG AUS (drawn at 15 px), KEINE
+   SEITE, KEIN VIDEO, N/V, WERBUNG LÄUFT, tag WERBUNG, FEST, TEMPO, FX-TEMPO, QUALITÄT, FEIN, ANGEHEFTET, ANHEFTEN
+   (TAB ANHEFTEN did not fit as SYNC TAB ANHEFTEN), LÄUFT, PAUSE. INSTALL.md has a Languages section; TESTING.md
+   section 5 has the German and the pending CJK device checks.
 4. **Step 8.4 -- Property inspector.** `ui/i18n.js` holds the inspector's texts per language (one object per
    language, loaded before `vjster.js`), `vjster.js` reads `application.language` from the `inInfo` it already
    receives, `vjster.html` marks texts with `data-i18n`; the "entry(s)" message becomes a one and a many text. A test

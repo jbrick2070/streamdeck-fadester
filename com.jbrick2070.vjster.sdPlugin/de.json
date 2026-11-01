@@ -1,0 +1,74 @@
+{
+  "Name": "VJster",
+  "Description": "Steuere Tempo und Qualität des Videos, das in Chrome läuft, vom Stream Deck aus: Drehregler für Tempo, Feinschritte und FX-Tempo, Tasten für feste Vorgaben, Wiedergabe/Pause und Tab-Anheften. Arbeitet mit der VJster-Erweiterung für Chrome; nichts verlässt diesen Computer.",
+  "Category": "VJster",
+  "com.jbrick2070.vjster.speed": {
+    "Name": "Tempo",
+    "Tooltip": "Drehen für das Tempo, gedrückt drehen für feine Schritte, drücken für 1x, die Leiste antippen für Wiedergabe oder Pause.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "Tempo (gedrückt: feine Schritte)",
+        "Push": "Zurück auf 1x",
+        "Touch": "Wiedergabe oder Pause"
+      }
+    }
+  },
+  "com.jbrick2070.vjster.quality": {
+    "Name": "Qualität",
+    "Tooltip": "Drehen, um durch die Qualitätsstufen des Videos zu gehen; drücken oder antippen für Auto. Nur YouTube.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "Qualitätsstufe",
+        "Push": "Auto",
+        "Touch": "Auto"
+      }
+    }
+  },
+  "com.jbrick2070.vjster.speed-preset": {
+    "Name": "Tempo-Vorgabe",
+    "Tooltip": "Ein festes Tempo. Leuchtet, solange dieses Tempo läuft."
+  },
+  "com.jbrick2070.vjster.speed-step": {
+    "Name": "Tempo-Schritt",
+    "Tooltip": "Um einen Schritt schneller oder langsamer."
+  },
+  "com.jbrick2070.vjster.quality-preset": {
+    "Name": "Qualitäts-Vorgabe",
+    "Tooltip": "Eine feste Qualitätsstufe oder Auto. Gedimmt, wenn das Video sie nicht anbietet."
+  },
+  "com.jbrick2070.vjster.pin": {
+    "Name": "Tab anheften",
+    "Tooltip": "Steuert weiter den aktuellen Chrome-Tab, egal was sonst läuft. Erneut drücken zum Lösen."
+  },
+  "com.jbrick2070.vjster.transport": {
+    "Name": "Wiedergabe / Pause",
+    "Tooltip": "Das Video abspielen oder anhalten."
+  },
+  "Localization": {
+    "_comment": "Deutsch: entworfen von Claude Opus 5.5 (ein KI-Modell); die Prüfung durch ein zweites KI-Modell steht noch aus (docs/vjster/PLAN.md 8.7). Korrekturen: siehe docs/vjster/INSTALL.md.",
+    "statusPortInUse": "PORT BELEGT",
+    "statusExtensionOff": "ERWEITERUNG AUS",
+    "statusPageOff": "KEINE SEITE",
+    "statusNoVideo": "KEIN VIDEO",
+    "statusNotAvailable": "N/V",
+    "statusAd": "WERBUNG LÄUFT",
+    "tagWeb": "WEB",
+    "tagObs": "OBS",
+    "tagAd": "WERBUNG",
+    "tagExt": "EXT",
+    "tagAuto": "AUTO",
+    "tagFixed": "FEST",
+    "auto": "AUTO",
+    "speed": "TEMPO",
+    "fxSpeed": "FX-TEMPO",
+    "quality": "QUALITÄT",
+    "nudge": "FEIN",
+    "sync": "SYNC",
+    "pinned": "ANGEHEFTET",
+    "pinTab": "ANHEFTEN",
+    "playing": "LÄUFT",
+    "paused": "PAUSE",
+    "captionObs": "OBS {word}",
+    "captionSync": "SYNC {word}"
+  }
+}

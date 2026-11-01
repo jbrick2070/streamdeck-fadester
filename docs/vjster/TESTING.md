@@ -221,3 +221,18 @@ into a new folder and load that folder unpacked. Expected: as 1.1, with no
 error about a missing file or icon.
 
 4.3 **Together.** With both installed from the release files, run 2.3 and 3.1.
+
+## 5. Languages (PLAN.md section 8)
+
+5.1 **Stream Deck in German.** Set Stream Deck's language to Deutsch
+(Preferences, General) and restart it. Expected: the action list shows
+Tempo, Qualität, Tempo-Vorgabe and so on, with German tooltips; with Chrome
+closed the speed strip says TEMPO and ERWEITERUNG AUS, the quality strip
+QUALITÄT, the play key PAUSE, the pin key ANHEFTEN; every word stays inside
+its key or strip on the Stream Deck + and on a 15-key model.
+
+5.2 **CJK on a real Stream Deck (pending until the CJK files exist).** For
+ja, ko, zh_CN and zh_TW in turn, as 5.1. Expected: the glyphs render (no
+boxes or question marks) in the font of that language and fit their boxes
+on a 72 px key. Until this has been run, R-I18N-4 holds only for the width
+estimate of `src/vjster/plugin/display.ts`.

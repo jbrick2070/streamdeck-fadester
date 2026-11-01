@@ -1,0 +1,74 @@
+{
+  "Name": "VJster",
+  "Description": "Ride the speed and quality of the video playing in Chrome from your Stream Deck: dials for speed, fine nudge and FX speed, keys for presets, play/pause and tab pinning. Works with the VJster Chrome extension; nothing leaves this computer.",
+  "Category": "VJster",
+  "com.jbrick2070.vjster.speed": {
+    "Name": "Speed",
+    "Tooltip": "Turn for speed, hold and turn for fine steps, press for 1x, tap the strip to play or pause.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "Speed (hold for fine steps)",
+        "Push": "Back to 1x",
+        "Touch": "Play or pause"
+      }
+    }
+  },
+  "com.jbrick2070.vjster.quality": {
+    "Name": "Quality",
+    "Tooltip": "Turn to step through the video's quality levels, press or tap for Auto. YouTube only.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "Quality level",
+        "Push": "Auto",
+        "Touch": "Auto"
+      }
+    }
+  },
+  "com.jbrick2070.vjster.speed-preset": {
+    "Name": "Speed Preset",
+    "Tooltip": "One fixed speed. Lights up while it is the speed playing."
+  },
+  "com.jbrick2070.vjster.speed-step": {
+    "Name": "Speed Step",
+    "Tooltip": "Faster or slower by one step."
+  },
+  "com.jbrick2070.vjster.quality-preset": {
+    "Name": "Quality Preset",
+    "Tooltip": "One fixed quality level, or Auto. Dimmed when the video does not offer it."
+  },
+  "com.jbrick2070.vjster.pin": {
+    "Name": "Pin Tab",
+    "Tooltip": "Keep controlling the current Chrome tab, whatever else plays. Press again to let go."
+  },
+  "com.jbrick2070.vjster.transport": {
+    "Name": "Play / Pause",
+    "Tooltip": "Play or pause the video."
+  },
+  "Localization": {
+    "_comment": "VJster's English texts, the source for every other language. Written with Claude Opus 5.5 (an AI model); see docs/vjster/INSTALL.md for how to send corrections.",
+    "statusPortInUse": "PORT IN USE",
+    "statusExtensionOff": "EXTENSION OFF",
+    "statusPageOff": "NO PAGE",
+    "statusNoVideo": "NO VIDEO",
+    "statusNotAvailable": "N/A",
+    "statusAd": "AD PLAYING",
+    "tagWeb": "WEB",
+    "tagObs": "OBS",
+    "tagAd": "AD",
+    "tagExt": "EXT",
+    "tagAuto": "AUTO",
+    "tagFixed": "FIXED",
+    "auto": "AUTO",
+    "speed": "SPEED",
+    "fxSpeed": "FX SPEED",
+    "quality": "QUALITY",
+    "nudge": "NUDGE",
+    "sync": "SYNC",
+    "pinned": "PINNED",
+    "pinTab": "PIN TAB",
+    "playing": "PLAYING",
+    "paused": "PAUSED",
+    "captionObs": "OBS {word}",
+    "captionSync": "SYNC {word}"
+  }
+}

@@ -70,11 +70,13 @@ TEXTS = {
     "Kit Note": "Press a key: each page of the deck drives one scene",
     "Kit Credits": ("Clips: \u201c100 metres hurdles\u201d by FISUTV, CC BY 3.0 \u00b7 \u201cWomen's 100M Final - "
                     "28th Summer Universiade 2015 Gwangju\u201d by FISUTV, CC BY 3.0 \u00b7 \u201cT3 Train Crossing "
-                    "Cooks River\u201d by Unyxium, CC BY 4.0 \u00b7 via Wikimedia Commons \u00b7 cut and re-encoded"),
-    "Speed Note 100": "100 %",
-    "Speed Note 50": ("The hurdles clip at 50 %: a Properties setting; changing it restarts the clip. "
-                      "Live speed: see the Speed Page scene."),
-    "Speed Page Note": ("Speed from the deck, 0.25x to 2x, live\n"
+                    "Cooks River\u201d by Unyxium, CC BY 4.0 \u00b7 via Wikimedia Commons \u00b7 cut and re-encoded "
+                    "\u00b7 full credits in CREDITS.md"),
+    "Speed Note 100": ("100 %: the three clips. Previous, Play / pause and Next on the deck act on this "
+                       "Playlister."),
+    "Speed Note 50": ("50 %: the hurdles clip. Playlister speed is a setting (Properties > Speed); changing "
+                      "it restarts the clip. Live speed: see the Speed Page scene."),
+    "Speed Page Note": ("VJster: speed from the deck, 0.25x to 2x, live in OBS\n"
                         "Big Buck Bunny \u00b7 Blender Foundation \u00b7 CC BY 3.0 \u00b7 played from YouTube, "
                         "not included"),
 }
@@ -82,8 +84,8 @@ TEXTS = {
 TEXT_BOXES = {
     "Kit Note": (1600, 120, 56),
     "Kit Credits": (1800, 140, 28),
-    "Speed Note 100": (900, 110, 48),
-    "Speed Note 50": (900, 110, 30),
+    "Speed Note 100": (900, 140, 30),
+    "Speed Note 50": (900, 140, 30),
     "Speed Page Note": (1600, 160, 36),
 }
 
@@ -156,8 +158,8 @@ LAYOUT = {
     "Kit Visuals": {"Kit Motion": FULL, "Kit Beat": ((0, 0), None)},
     "Kit Layers": {"Layer A": FULL, "Layer B": FULL, "Kit Beat": ((0, 0), None)},
     "Kit Playlister": {"Kit Background": FULL, "Kit Clips": ((40, 250), (900, 506)),
-                       "Kit Clips 50%": ((980, 250), (900, 506)), "Speed Note 100": ((40, 120), None),
-                       "Speed Note 50": ((980, 120), None), "Kit Credits": ((60, 900), None),
+                       "Kit Clips 50%": ((980, 250), (900, 506)), "Speed Note 100": ((40, 100), None),
+                       "Speed Note 50": ((980, 100), None), "Kit Credits": ((60, 900), None),
                        "Kit Beat": ((0, 0), None)},
     "Kit Speed Page": {"Kit Background": FULL, "Speed Page": ((320, 100), (1280, 720)),
                        "Speed Page Note": ((160, 850), None), "Kit Beat": ((0, 0), None)},

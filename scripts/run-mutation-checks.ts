@@ -1269,6 +1269,186 @@ const MUTATIONS: MutationCheck[] = [
     target: "if not target.exists():\n            shutil.copy2(source, target)\n        elif sha256_of(target) != sha256_of(source):",
     mutated: "if True:\n            shutil.copy2(source, target)\n        elif False:",
     testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K3.1",
+    step: "Demo kit step 3 (CREDITS.md must give each clip's source page)",
+    description:
+      "Drop the page from the CREDITS.md check and verify the missing-page test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_docs.py"),
+    target: "\"licence\": f\"Licence: {s['license']}, {s['license_url']}\", \"page\": s[\"page\"],",
+    mutated: "\"licence\": f\"Licence: {s['license']}, {s['license_url']}\",",
+    testFile: "tests/demo-kit-docs.test.ts"
+  },
+  {
+    id: "M-K3.2",
+    step: "Demo kit step 3 (a credit counts only in its own clip's section)",
+    description:
+      "Search the whole file instead of the clip's section and verify the other-section test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_docs.py"),
+    target: "    return text[start:] if end < 0 else text[start:end]",
+    mutated: "    return text",
+    testFile: "tests/demo-kit-docs.test.ts"
+  },
+  {
+    id: "M-K3.3",
+    step: "Demo kit step 3 (every shipped clip is credited on screen)",
+    description:
+      "Make the on-screen check pass every line and verify the on-screen tests fail",
+    filePath: resolve(ROOT, "demo-kit/kit_docs.py"),
+    target: "        if entry not in line:",
+    mutated: "        if False:",
+    testFile: "tests/demo-kit-docs.test.ts"
+  },
+  {
+    id: "M-K3.4",
+    step: "Demo kit step 3 (the setup card runs nothing)",
+    description:
+      "Let <script> through the card check and verify the loads-or-runs test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_docs.py"),
+    target: "r\"<script|<link",
+    mutated: "r\"<link",
+    testFile: "tests/demo-kit-docs.test.ts"
+  },
+  {
+    id: "M-K3.5",
+    step: "Demo kit step 3 (the do-not-rename names are in the box itself)",
+    description:
+      "Look for the names anywhere in the README and verify the box test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_docs.py"),
+    target: "        if f\"`{name}`\" not in box:",
+    mutated: "        if f\"`{name}`\" not in readme:",
+    testFile: "tests/demo-kit-docs.test.ts"
+  },
+  {
+    id: "M-K3.6",
+    step: "Demo kit step 3 (Playlister speed is said to restart the clip)",
+    description:
+      "Drop 'restarts the clip' from the speed-text check and verify the speed-text test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_docs.py"),
+    target: "\"Playlister speed is a setting (Properties > Speed)\", \"restarts the clip\",",
+    mutated: "\"Playlister speed is a setting (Properties > Speed)\",",
+    testFile: "tests/demo-kit-docs.test.ts"
+  },
+  {
+    id: "M-K3.7",
+    step: "Demo kit step 3 (no text promises more than 2x)",
+    description:
+      "Drop the past-2x check and verify the no-live-factor test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_docs.py"),
+    target: "        if re.search(r\"\\b(4x|3x)\\b\", text):",
+    mutated: "        if False:",
+    testFile: "tests/demo-kit-docs.test.ts"
+  },
+  {
+    id: "M-K3.8",
+    step: "Demo kit step 3 (CREDITS.md states the changes made)",
+    description:
+      "Leave the Changes line out of CREDITS.md and verify the credit-field test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_docs.py"),
+    target: "            f\"- Changes: {clip['changes']}\",\n",
+    mutated: "",
+    testFile: "tests/demo-kit-docs.test.ts"
+  },
+  {
+    id: "M-K3.9",
+    step: "Demo kit step 3 (the credits step refuses a clip missing on screen)",
+    description:
+      "Skip the on-screen check in write_credits and verify the credits-step test fails",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "    problems += kd.on_screen_problems(kc.TEXTS[\"Kit Credits\"], clips)\n",
+    mutated: "",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K3.10",
+    step: "Demo kit step 3 (the committed CREDITS.md follows the stock list)",
+    description:
+      "Credit every excerpt from second 0 and verify the committed-credits test fails",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "\"sha1\": row[\"sha1\"], \"bytes\": row[\"bytes\"], \"start\": clip[\"start\"],",
+    mutated: "\"sha1\": row[\"sha1\"], \"bytes\": row[\"bytes\"], \"start\": 0,",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K3.11",
+    step: "Demo kit step 3 (the on-screen credits name every shipped clip)",
+    description:
+      "Drop the train clip from the Kit Credits text and verify the on-screen test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
+    target: "\\u201cT3 Train Crossing \"\n                    \"Cooks River\\u201d by Unyxium, CC BY 4.0 \\u00b7 ",
+    mutated: "",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K3.12",
+    step: "Demo kit step 3 (the round-trip loads the real setup card)",
+    description:
+      "Keep a differing earlier card and verify the real-card test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_obs.py"),
+    target: "        if card.exists() and card.read_bytes() != setup_card.read_bytes():\n            keep_aside(card)\n",
+    mutated: "",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K3.13",
+    step: "Demo kit step 3 (the README says each of its required phrases)",
+    description:
+      "Check no required README phrase and verify the 260-characters test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_docs.py"),
+    target: "for words in README_MUSTS if words not in readme]",
+    mutated: "for words in [] if words not in readme]",
+    testFile: "tests/demo-kit-docs.test.ts"
+  },
+  {
+    id: "M-K3.14",
+    step: "Demo kit step 3 (the README names every scene)",
+    description:
+      "Drop the scene check from the README check and verify the every-scene test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_docs.py"),
+    target: "        if scene[\"name\"] not in readme:",
+    mutated: "        if False:",
+    testFile: "tests/demo-kit-docs.test.ts"
+  },
+  {
+    id: "M-K3.15",
+    step: "Demo kit step 3 (the setup card gives every step)",
+    description:
+      "Drop the step-phrase check from the card check and verify the missing-step test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_docs.py"),
+    target: "        if words not in html:",
+    mutated: "        if False:",
+    testFile: "tests/demo-kit-docs.test.ts"
+  },
+  {
+    id: "M-K3.16",
+    step: "Demo kit step 3 (the setup card is laid out at 1280x720)",
+    description:
+      "Drop the canvas check from the card check and verify the canvas test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_docs.py"),
+    target: "    if \"width: 1280px; height: 720px\" not in html:",
+    mutated: "    if False:",
+    testFile: "tests/demo-kit-docs.test.ts"
+  },
+  {
+    id: "M-K3.17",
+    step: "Demo kit step 3 (the setup card declares UTF-8)",
+    description:
+      "Drop the charset check from the card check and verify the charset test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_docs.py"),
+    target: "    if '<meta charset=\"utf-8\">' not in html:",
+    mutated: "    if False:",
+    testFile: "tests/demo-kit-docs.test.ts"
+  },
+  {
+    id: "M-K3.18",
+    step: "Demo kit step 3 (the 100 % note says the transport keys drive it)",
+    description:
+      "Accept a bare '100 %' note and verify the transport-keys test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_docs.py"),
+    target: "\"Speed Note 100\": [\"100 %\", \"Previous, Play / pause and Next\"],",
+    mutated: "\"Speed Note 100\": [\"100 %\"],",
+    testFile: "tests/demo-kit-docs.test.ts"
   }
 ];
 

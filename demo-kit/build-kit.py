@@ -16,6 +16,10 @@ assembled read-only in --obs (under the OBS lock), lets OBS save it, and writes 
 with ./ paths as kit-template.json; the diff and OBS's log go to <out>/roundtrip/.
 check-collection checks the committed kit-ids.json and kit-template.json without OBS.
 
+Step 3: CREDITS.md (kit_docs.py), from stock-credits.json after the same check of the originals.
+
+    python demo-kit/build-kit.py credits [--stock <folder>]
+
 What it makes, all 1280x720, 30 fps where it is video:
 
 - kit-motion.mp4, layer-a.mp4, layer-b.mp4: 8 s seamless loops (240 frames) we draw
@@ -76,19 +80,21 @@ from PIL import Image, ImageDraw, ImageFont, __version__ as PIL_VERSION
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import kit_collection as kc  # noqa: E402
+import kit_docs as kd  # noqa: E402
 import kit_obs  # noqa: E402
 
 KIT_DIR = Path(__file__).resolve().parent
 DEFAULT_OUT = KIT_DIR / "build"
+CREDITS_PATH = KIT_DIR / "CREDITS.md"
 DEFAULT_STOCK = Path(r"C:\midi-fadester\docs\demo-reel\production\v2\media\stock")
 
 W, H, FPS, COUNT = 1280, 720, 30, 240
 TAU = 2 * math.pi
 S = W / 1920  # the reel's maker draws in 1920x1080 coordinates
 
-OUR_LICENSE = "CC BY 4.0"
-OUR_LICENSE_URL = "https://creativecommons.org/licenses/by/4.0"
-OUR_AUTHOR = "Jeffrey A. Brick"
+OUR_LICENSE = kd.OUR_LICENSE
+OUR_LICENSE_URL = kd.OUR_LICENSE_URL
+OUR_AUTHOR = kd.OUR_AUTHOR
 
 CLIP_SECONDS = 8
 CLIP_FRAMES = CLIP_SECONDS * FPS
@@ -573,15 +579,42 @@ def media_entries(media: Path, clips: list[dict], rows: dict[str, dict]) -> list
         entries.append({**file_entry(media, name), "kind": "original", "author": OUR_AUTHOR,
                         "license": OUR_LICENSE, "license_url": OUR_LICENSE_URL})
     for clip in clips:
-        row = rows[clip["out"]]
         entries.append({**file_entry(media, clip["out"]), "kind": "stock", "shipped": clip["shipped"],
-                        "source": {"file": stock_file_name(clip["title"]), "title": row["title"],
-                                   "page": row["page"], "artist": row["artist"],
-                                   "license": row["license"], "license_url": row["license_url"],
-                                   "sha1": row["sha1"], "bytes": row["bytes"],
-                                   "start": clip["start"], "seconds": CLIP_SECONDS},
-                        "changes": STOCK_CHANGES})
+                        **stock_credit(clip, rows[clip["out"]])})
     return entries
+
+
+def stock_credit(clip: dict, row: dict) -> dict:
+    """A stock excerpt's source row and changes, as the manifest and CREDITS.md give them."""
+    return {"source": {"file": stock_file_name(clip["title"]), "title": row["title"], "page": row["page"],
+                       "artist": row["artist"], "license": row["license"], "license_url": row["license_url"],
+                       "sha1": row["sha1"], "bytes": row["bytes"], "start": clip["start"],
+                       "seconds": CLIP_SECONDS},
+            "changes": STOCK_CHANGES}
+
+
+def stock_rows(stock_dir: Path) -> dict[str, dict]:
+    """stock-credits.json's rows for the shipped clips, keyed by output name, without hashing
+    the originals (the tests compare CREDITS.md with it; the credits step uses verify_stock)."""
+    rows = json.loads((stock_dir / "stock-credits.json").read_text(encoding="utf-8"))
+    by_title = {row["title"]: row for row in rows}
+    return {c["out"]: by_title[c["title"]] for c in clips_to_build(False)}
+
+
+def credit_clips(rows: dict[str, dict]) -> list[dict]:
+    """The shipped clips' credits, in STOCK_CLIPS order."""
+    return [{"out": c["out"], **stock_credit(c, rows[c["out"]])} for c in clips_to_build(False)]
+
+
+def write_credits(stock_dir: Path, target: Path = CREDITS_PATH) -> list[dict]:
+    """Write CREDITS.md from stock-credits.json after the size and SHA-1 check of the originals."""
+    clips = credit_clips(verify_stock(stock_dir, clips_to_build(False)))
+    problems = kd.credits_problems(kd.render_credits(clips), clips)
+    problems += kd.on_screen_problems(kc.TEXTS["Kit Credits"], clips)
+    if problems:
+        raise RuntimeError("credits check failed:\n  " + "\n  ".join(problems))
+    target.write_text(kd.render_credits(clips), encoding="utf-8", newline="\n")
+    return clips
 
 
 def stray_files(out: Path, manifest: dict) -> list[str]:
@@ -612,6 +645,8 @@ def main(argv: list[str] | None = None) -> int:
     media.add_argument("--with-spare", action="store_true", help="also cut the spare marathon clip")
     check = sub.add_parser("check-collection", help="check kit-ids.json and kit-template.json")
     check.add_argument("--template", type=Path, default=kc.TEMPLATE_PATH)
+    cred = sub.add_parser("credits", help="write CREDITS.md from stock-credits.json (originals checked first)")
+    cred.add_argument("--stock", type=Path, default=DEFAULT_STOCK)
     trip = sub.add_parser("roundtrip", help="load the draft collection in a fresh portable OBS 33, save it, "
                                             "and write kit-template.json")
     trip.add_argument("--obs", type=Path, required=True, help="the fresh portable's folder (made if absent)")
@@ -622,6 +657,14 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.step == "check-collection":
         return check_collection(args.template)
+    if args.step == "credits":
+        try:
+            clips = write_credits(args.stock)
+        except StockError as exc:
+            print(f"build-kit: {exc}", file=sys.stderr)
+            return 2
+        print(f"CREDITS.md: {len(clips)} stock excerpts, our media, the suggested YouTube video")
+        return 0
     if args.step == "roundtrip":
         report = kit_obs.roundtrip(args.obs.resolve(), args.out.resolve(), args.template,
                                    lock=args.lock, core=args.core, setup_card=KIT_DIR / kc.SETUP_CARD)

@@ -365,5 +365,104 @@ class CollectionFiles(unittest.TestCase):
         self.assertEqual(set(kit.kc.MEDIA_FILES), made)
 
 
+HAVE_STOCK = (kit.DEFAULT_STOCK / "stock-credits.json").is_file()
+NO_STOCK = f"no stock-credits.json in {kit.DEFAULT_STOCK}"
+
+
+class Credits(unittest.TestCase):
+    """CREDITS.md and the on-screen credits against the stock list (plan section 12)."""
+
+    @unittest.skipUnless(HAVE_STOCK, NO_STOCK)
+    def test_the_committed_credits_are_what_the_stock_list_gives(self):
+        clips = kit.credit_clips(kit.stock_rows(kit.DEFAULT_STOCK))
+        self.assertEqual([c["out"] for c in clips], [c["out"] for c in kit.STOCK_CLIPS if c["shipped"]])
+        committed = kit.CREDITS_PATH.read_text(encoding="utf-8")
+        self.assertEqual(committed, kit.kd.render_credits(clips),
+                         "CREDITS.md is stale: run python demo-kit/build-kit.py credits")
+        self.assertEqual(kit.kd.credits_problems(committed, clips), [])
+
+    @unittest.skipUnless(HAVE_STOCK, NO_STOCK)
+    def test_every_shipped_clip_is_credited_on_screen(self):
+        clips = kit.credit_clips(kit.stock_rows(kit.DEFAULT_STOCK))
+        self.assertEqual(kit.kd.on_screen_problems(kit.kc.TEXTS["Kit Credits"], clips), [])
+
+    def test_the_committed_credits_follow_the_clip_table(self):
+        # Runs on any machine: the stock list's rows are read back from CREDITS.md itself, so the
+        # clip table's starts and changes and the on-screen line are checked without the stock folder.
+        committed = kit.CREDITS_PATH.read_text(encoding="utf-8")
+        credited = kit.kd.parse_credits(committed)
+        shipped = [c for c in kit.STOCK_CLIPS if c["shipped"]]
+        self.assertEqual([c["out"] for c in credited], [c["out"] for c in shipped])
+        self.assertEqual([c["source"]["title"] for c in credited], [c["title"] for c in shipped])
+        keep = ("title", "page", "artist", "license", "license_url")
+        rows = {c["out"]: {**{k: c["source"][k] for k in keep}, "sha1": "", "bytes": 0} for c in credited}
+        self.assertEqual(kit.kd.render_credits(kit.credit_clips(rows)), committed,
+                         "CREDITS.md does not follow STOCK_CLIPS: run python demo-kit/build-kit.py credits")
+        self.assertEqual(kit.kd.on_screen_problems(kit.kc.TEXTS["Kit Credits"], credited), [])
+
+    def test_the_credits_step_checks_the_originals_and_writes(self):
+        data = b"original clip bytes"
+        with tempfile.TemporaryDirectory() as tmp:
+            stock, target = Path(tmp) / "stock", Path(tmp) / "CREDITS.md"
+            stock.mkdir()
+            title = CLIP["title"]
+            write_stock(stock, {kit.stock_file_name(title): data}, [row_for(title, data)])
+            line = "“A test clip” by Someone, CC BY 4.0"
+            with mock.patch.object(kit, "STOCK_CLIPS", [CLIP]), \
+                    mock.patch.dict(kit.kc.TEXTS, {"Kit Credits": line}):
+                clips = kit.write_credits(stock, target)
+                self.assertEqual(target.read_text(encoding="utf-8"), kit.kd.render_credits(clips))
+                self.assertEqual(clips[0]["out"], CLIP["out"])
+                self.assertEqual(clips[0]["source"]["start"], CLIP["start"])
+                (stock / kit.stock_file_name(title)).write_bytes(b"another file of the same size!!")
+                with self.assertRaises(kit.StockError):
+                    kit.write_credits(stock, Path(tmp) / "again.md")
+            self.assertFalse((Path(tmp) / "again.md").exists())
+
+    def test_a_clip_missing_from_the_screen_stops_the_credits_step(self):
+        data = b"original clip bytes"
+        with tempfile.TemporaryDirectory() as tmp:
+            stock, target = Path(tmp) / "stock", Path(tmp) / "CREDITS.md"
+            stock.mkdir()
+            write_stock(stock, {kit.stock_file_name(CLIP["title"]): data}, [row_for(CLIP["title"], data)])
+            with mock.patch.object(kit, "STOCK_CLIPS", [CLIP]), \
+                    mock.patch.dict(kit.kc.TEXTS, {"Kit Credits": "Clips: none named"}):
+                with self.assertRaisesRegex(RuntimeError, "on-screen credits do not say"):
+                    kit.write_credits(stock, target)
+            self.assertFalse(target.exists())
+
+
+def wrapped_lines(text: str, font, width: int) -> int:
+    """Lines a text needs in a box of this width, wrapped at spaces (as text_gdiplus wraps)."""
+    count = 0
+    for paragraph in text.split("\n"):
+        line = ""
+        count += 1
+        for word in paragraph.split(" "):
+            trial = f"{line} {word}".strip()
+            if line and font.getlength(trial) > width:
+                count += 1
+                line = word
+            else:
+                line = trial
+    return count
+
+
+class TextBoxes(unittest.TestCase):
+    @unittest.skipUnless(HAVE_FONTS, NO_FONTS)
+    def test_every_on_screen_text_fits_its_box(self):
+        from PIL import ImageFont
+        for name, text in kit.kc.TEXTS.items():
+            cx, cy, size = kit.kc.TEXT_BOXES[name]
+            font = ImageFont.truetype(str(kit.SUBTITLE_FONT), size)
+            # 10 % margin on the width, a 1.35 line height: GDI+ measures a little wider than Pillow.
+            lines = wrapped_lines(text, font, int(cx * 0.9))
+            self.assertLessEqual(lines * size * 1.35, cy, f"{name}: {lines} lines at {size} px in {cx}x{cy}")
+
+
 if __name__ == "__main__":
+    # Say why tests skip, so the vitest wrapper can print it (there is no CI to notice).
+    for have, reason in [(HAVE_FFMPEG, NO_FFMPEG), (HAVE_FONTS, NO_FONTS), (HAVE_STOCK, NO_STOCK)]:
+        if not have:
+            print(f"skipped: {reason}", file=sys.stderr)
     unittest.main(verbosity=1)

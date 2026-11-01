@@ -510,6 +510,17 @@ class PlaceKitFiles(unittest.TestCase):
         self.place()
         self.assertEqual((self.root / kc.SETUP_CARD).read_text(encoding="utf-8"), "the real card")
 
+    def test_the_real_card_replaces_a_stand_in_which_is_set_aside(self):
+        self.place()  # step 2: the stand-in
+        real = Path(self.dir.name) / "vjster-setup.html"
+        real.write_text("<!doctype html>the card that ships", encoding="utf-8")
+        self.place(real)
+        self.assertEqual((self.root / kc.SETUP_CARD).read_bytes(), real.read_bytes())
+        aside = self.root / f"{kc.SETUP_CARD}.run1"
+        self.assertIn("round-trip stand-in", aside.read_text(encoding="utf-8"))
+        self.place(real)  # the same card again: nothing more is set aside
+        self.assertFalse((self.root / f"{kc.SETUP_CARD}.run2").exists())
+
 
 class FakeProc:
     def __init__(self, exits_on_close: bool):

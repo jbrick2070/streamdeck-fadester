@@ -305,9 +305,15 @@ def place_kit_files(root: Path, media: Path, manifest: dict, setup_card: Path | 
         elif sha256_of(target) != sha256_of(source):
             raise RuntimeError(f"{target} exists and differs from {source}; use a new folder")
     card = root / kc.SETUP_CARD
-    text = setup_card.read_text(encoding="utf-8") if setup_card and setup_card.is_file() else STAND_IN_CARD
-    if not card.exists():
-        card.write_text(text, encoding="utf-8", newline="\n")
+    if setup_card and setup_card.is_file():
+        # The real card (step 3): an earlier card that differs, such as step 2's stand-in, is
+        # set aside (renamed, never deleted) so the round-trip loads the card that ships.
+        if card.exists() and card.read_bytes() != setup_card.read_bytes():
+            keep_aside(card)
+        if not card.exists():
+            shutil.copy2(setup_card, card)
+    elif not card.exists():
+        card.write_text(STAND_IN_CARD, encoding="utf-8", newline="\n")
 
 
 def keep_aside(path: Path) -> None:

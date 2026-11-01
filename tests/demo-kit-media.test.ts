@@ -24,6 +24,10 @@ describe("demo-kit build-kit.py media", () => {
       env: { ...process.env, PYTHONDONTWRITEBYTECODE: "1", PYTHONIOENCODING: "utf-8" }
     });
     const output = `${run.stdout ?? ""}\n${run.stderr ?? ""}`;
+    // No CI: a test that skips here (no ffmpeg, fonts or stock folder) is said out loud.
+    for (const reason of output.match(/^skipped: .*$/gm) ?? []) {
+      console.warn(`demo-kit media tests ${reason}`);
+    }
     expect(run.status, output).toBe(0);
     expect(output).toMatch(/Ran \d+ tests/);
   }, 120_000);

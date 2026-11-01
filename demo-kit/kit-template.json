@@ -104,7 +104,7 @@
             "id": "text_gdiplus",
             "versioned_id": "text_gdiplus_v3",
             "settings": {
-                "text": "Clips: “100 metres hurdles” by FISUTV, CC BY 3.0 · “Women's 100M Final - 28th Summer Universiade 2015 Gwangju” by FISUTV, CC BY 3.0 · “T3 Train Crossing Cooks River” by Unyxium, CC BY 4.0 · via Wikimedia Commons · cut and re-encoded",
+                "text": "Clips: “100 metres hurdles” by FISUTV, CC BY 3.0 · “Women's 100M Final - 28th Summer Universiade 2015 Gwangju” by FISUTV, CC BY 3.0 · “T3 Train Crossing Cooks River” by Unyxium, CC BY 4.0 · via Wikimedia Commons · cut and re-encoded · full credits in CREDITS.md",
                 "extents": true,
                 "font": {
                     "face": "Segoe UI",
@@ -144,11 +144,11 @@
             "id": "text_gdiplus",
             "versioned_id": "text_gdiplus_v3",
             "settings": {
-                "text": "100 %",
+                "text": "100 %: the three clips. Previous, Play / pause and Next on the deck act on this Playlister.",
                 "extents": true,
                 "font": {
                     "face": "Segoe UI",
-                    "size": 48,
+                    "size": 30,
                     "style": "Regular",
                     "flags": 0
                 },
@@ -157,7 +157,7 @@
                 "color": 16777215,
                 "extents_wrap": true,
                 "extents_cx": 900,
-                "extents_cy": 110
+                "extents_cy": 140
             },
             "mixers": 0,
             "sync": 0,
@@ -184,7 +184,7 @@
             "id": "text_gdiplus",
             "versioned_id": "text_gdiplus_v3",
             "settings": {
-                "text": "The hurdles clip at 50 %: a Properties setting; changing it restarts the clip. Live speed: see the Speed Page scene.",
+                "text": "50 %: the hurdles clip. Playlister speed is a setting (Properties > Speed); changing it restarts the clip. Live speed: see the Speed Page scene.",
                 "extents": true,
                 "font": {
                     "face": "Segoe UI",
@@ -197,7 +197,7 @@
                 "color": 16777215,
                 "extents_wrap": true,
                 "extents_cx": 900,
-                "extents_cy": 110
+                "extents_cy": 140
             },
             "mixers": 0,
             "sync": 0,
@@ -224,7 +224,7 @@
             "id": "text_gdiplus",
             "versioned_id": "text_gdiplus_v3",
             "settings": {
-                "text": "Speed from the deck, 0.25x to 2x, live\nBig Buck Bunny · Blender Foundation · CC BY 3.0 · played from YouTube, not included",
+                "text": "VJster: speed from the deck, 0.25x to 2x, live in OBS\nBig Buck Bunny · Blender Foundation · CC BY 3.0 · played from YouTube, not included",
                 "extents": true,
                 "font": {
                     "face": "Segoe UI",
@@ -1630,11 +1630,11 @@
                         "group_item_backup": false,
                         "pos": {
                             "x": 40.0,
-                            "y": 120.0
+                            "y": 100.0
                         },
                         "pos_rel": {
                             "x": -1.703703761100769,
-                            "y": -0.7777777910232544
+                            "y": -0.8148148059844971
                         },
                         "scale": {
                             "x": 1.0,
@@ -1685,11 +1685,11 @@
                         "group_item_backup": false,
                         "pos": {
                             "x": 980.0,
-                            "y": 120.0
+                            "y": 100.0
                         },
                         "pos_rel": {
                             "x": 0.03703703731298447,
-                            "y": -0.7777777910232544
+                            "y": -0.8148148059844971
                         },
                         "scale": {
                             "x": 1.0,

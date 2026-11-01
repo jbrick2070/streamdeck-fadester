@@ -534,6 +534,19 @@ and `TriggerMediaInputAction` take `inputUuid`; `mediaDuration` and `mediaCursor
    "answers GetMediaInputStatus with null cursor and duration outside PLAYING and PAUSED", "applies each
    TriggerMediaInputAction as the native source does". Mutations: *M-9.1a* send a numeric cursor in STOPPED (test MUST
    fail); *M-9.1b* let PAUSE in STOPPED produce PAUSED.
+   *As built (2026-11-01):* `inputNames: string[]` stays the audio list (nine test sites assign or push it); `inputList()`
+   gives every input as `GetInputList` lists it (audio inputs get a stable UUID by name and a `wasapi_*` kind, other
+   kinds live in `extraInputs`), `addInput`/`addPlaylister` (returns a copy), `removeInput`, `renameInput` emit the
+   three events by UUID. `mediaInputs` holds a Playlister's model (`state`, `durationMs`, `cursorMs`, `items`,
+   `index`, `loop` default true, `shuffle` with `shuffleRemaining`/`shuffleHistory`); `applyMediaAction` follows
+   `playlister-source.c`: NEXT/PREVIOUS that load an item end in PLAYING (keep the state on an empty list, at the end
+   with loop off, at the shuffle boundary, and for PREVIOUS at the start of the shuffle history even with loop on;
+   PREVIOUS gives an item back to the round), RESTART reloads the current item (restart_behavior "first file" is not
+   modelled), PAUSE acts only in PLAYING, an empty list is NONE whatever is sent. Deviations from the step text: an
+   unknown input answers 600 (ResourceNotFound, obs-websocket's code), a non-media kind answers NONE with null cursor
+   and duration (review round 1), the hello and `GetVersion` report obs-websocket 5.6.3, status reads are logged in
+   `mediaStatusLog` rather than `directCallLog` (three tests compare that log whole, and 9.2 polls), the fake reads the
+   state before `mediaStatusDelayMs` so a delayed reply is a stale one, and `mediaFailNext` carries the OBS comment.
 2. **Step 9.2 -- Client: metadata, capabilities, watches, polling, transport queue.** `src/obs/direct-obs-client.ts`:
    - `DirectObsCatalog` (:47-58) gains `inputDetails: DirectObsInputInfo[]` (`inputUuid`, `inputName`, `inputKind`,
      `unversionedInputKind`), filled in `refreshCatalog` beside `inputs` (:216) and copied in `getCatalog` (:179-187);
@@ -694,3 +707,27 @@ taken, and binding for the steps above where they differ.**
 - *Confirmed as designed:* per-UUID bound and Stop purge; `InputRemoved` by UUID; capabilities before the first
   catalog; PLAY release vs the 20 s PAUSE wait (held windows `player.c:154-155`, dropped natively by a later load,
   stop or play, :206-207); no `MediaInputs` subscription; a separate per-UUID event.
+
+*Gemini part of review round 1 (Gemini 4 Argon, 2026-11-01; binding where it says more than the above):* fake
+transitions as the native source (NEXT/PREVIOUS loading an item end in PLAYING; no-ops on an empty list, at the end with
+loop off, at the shuffle boundary and for PREVIOUS at the start of the shuffle history; RESTART on an empty list stays
+NONE; PAUSE ignored in ENDED and NONE as in STOPPED). Polls start on `statusChanged` to `connected` with an immediate
+first read. Races: a post-command read or the toggle's in-queue read is never coalesced onto a read sent before the
+command settled (one trailing fresh read); the toggle's pending intent is taken when the press is enqueued, so a rapid
+second toggle is rejected as pending rather than queued as a reverse toggle; Stop/Next/Previous/Restart clear pending
+when they execute, and a stamp keeps an older toggle from setting pending afterwards; a transient NONE observed while a
+load of ours is within the native held-pause window (15 s) does not clear a pending PAUSE; purged presses never reach
+`showAlert()` or an error; `InputRemoved` strips the UUID from `inputDetails` at once under an inputs revision guard
+checked by `refreshCatalog`, and `CurrentSceneCollectionChanging` empties `inputDetails`. The unbound transport key
+draws its operation word and "Choose a Playlister" (a renderer path for it; other actions unchanged). Every new text
+key goes into `strings.ts`, `en.json`, `de.json` and the six drafts in the same step, with `ui/i18n.js` regenerated,
+so each step stays green; 9.6 polishes. Should-fix taken: capability unsupported when `availableRequests` is absent or
+not an array and reset on disconnect; `getCatalog` clones each `inputDetails` entry; only a finite number counts as
+cursor or duration, forced null outside PLAYING/PAUSED, and a held still PLAYING with duration 0 draws no time; unknown
+input is code 600; `onWillAppear` disposes an existing controller first and `updateSettings` while invisible acquires
+no watch; the 20 s timer is `unref`'d; `presetCaptionsScript` and its tests follow the new action; manifest-hygiene
+counts eight actions, the first six non-optional; the fit sample is the longest real combination (time only in PLAYING
+and PAUSED); M-9.6a has a test asserting a non-English state word; the inspector's `inputKind` fallback is tested.
+Nits taken: `lastError` lives in the key controller (cleared on retarget and on the next press), not in the shared
+state; `plChoose` and `errorMediaChoose` are one key; the layout title is "Playlister Transport +"; `mediaCapability`
+joins the bridge broadcast in 9.2.

@@ -22,7 +22,63 @@ export interface FakeObsServerOptions {
   missingPlugin?: boolean;
   studioMode?: boolean;
   screenshotDelayMs?: number;
+  /** `GetVersion.availableRequests`; every request the fake handles when omitted. */
+  availableRequests?: string[];
+  /** Delays applied to `TriggerMediaInputAction` and `GetMediaInputStatus` for in-flight tests. */
+  mediaActionDelayMs?: number;
+  mediaStatusDelayMs?: number;
 }
+
+/** An OBS input as `GetInputList` reports it (obs-websocket 5.6.3). */
+export interface FakeObsInput {
+  inputName: string;
+  inputUuid: string;
+  inputKind: string;
+  unversionedInputKind: string;
+}
+
+export const FAKE_OBS_WEBSOCKET_VERSION = "5.6.3";
+export const PLAYLISTER_KIND = "obs_playlister_source";
+
+/** The eight `OBS_MEDIA_STATE_*` values and the seven `OBS_WEBSOCKET_MEDIA_INPUT_ACTION_*` values (protocol.md 5.6.3). */
+export const FAKE_MEDIA_STATES = [
+  "OBS_MEDIA_STATE_NONE", "OBS_MEDIA_STATE_PLAYING", "OBS_MEDIA_STATE_OPENING", "OBS_MEDIA_STATE_BUFFERING",
+  "OBS_MEDIA_STATE_PAUSED", "OBS_MEDIA_STATE_STOPPED", "OBS_MEDIA_STATE_ENDED", "OBS_MEDIA_STATE_ERROR"
+] as const;
+export type FakeMediaState = (typeof FAKE_MEDIA_STATES)[number];
+export const FAKE_MEDIA_ACTIONS = [
+  "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_NONE", "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PLAY",
+  "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE", "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_STOP",
+  "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_RESTART", "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_NEXT",
+  "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PREVIOUS"
+] as const;
+
+/**
+ * A Playlister's playback model, as `playlister-source.c` behaves: `items`
+ * rows, `index` the current one, `loop` (native default true) and `shuffle`
+ * with the unplayed items left in this round and the history behind.
+ */
+export interface FakeMediaInput {
+  state: FakeMediaState;
+  durationMs: number;
+  cursorMs: number;
+  items: number;
+  index: number;
+  loop: boolean;
+  shuffle: boolean;
+  shuffleRemaining: number;
+  shuffleHistory: number;
+}
+
+/** Every request type `handleObsRequest` answers; `GetVersion.availableRequests` by default. */
+const FAKE_REQUEST_TYPES = [
+  "GetVersion", "GetStudioModeEnabled", "SetStudioModeEnabled", "GetSceneList", "GetInputList",
+  "GetSceneTransitionList", "GetCurrentSceneTransition", "GetSceneSceneTransitionOverride",
+  "SetSceneSceneTransitionOverride", "GetCurrentProgramScene", "GetCurrentPreviewScene", "GetInputVolume",
+  "SetInputVolume", "SetTBarPosition", "SetCurrentPreviewScene", "SetCurrentProgramScene",
+  "SetCurrentSceneTransition", "TriggerStudioModeTransition", "GetSourceScreenshot", "CallVendorRequest",
+  "GetMediaInputStatus", "TriggerMediaInputAction"
+];
 
 interface FakeProfileMeta {
   slug: string;
@@ -394,10 +450,22 @@ export class FakeObsServer {
   public missingPlugin: boolean;
   public studioMode: boolean;
   public screenshotDelayMs: number;
+  public availableRequests: string[] | undefined;
+  public mediaActionDelayMs: number;
+  public mediaStatusDelayMs: number;
+  /** Fails the next `TriggerMediaInputAction` with this OBS comment, then clears itself. */
+  public mediaFailNext = "";
   public previewSceneName = "Scene Preview";
   public programSceneName = "Scene Live";
   public sceneNames = ["Scene Live", "Scene Preview", "Scene 3"];
+  /** The audio inputs by name (tests assign this list); `GetInputList` adds their UUID and kind. */
   public inputNames = ["Desktop Audio", "Mic/Aux"];
+  /** Inputs of other kinds (Playlister sources among them), added with `addInput`. */
+  public readonly extraInputs: FakeObsInput[] = [];
+  /** The media model of every media-kind input, by UUID. */
+  public readonly mediaInputs = new Map<string, FakeMediaInput>();
+  private readonly audioInputUuids = new Map<string, string>();
+  private nextInputUuid = 1;
   public transitionNames = ["Cut", "Fade", "Fade to Black"];
   public currentTransitionName = "Fade";
   public readonly sceneTransitionOverrides = new Map<string, {
@@ -428,6 +496,8 @@ export class FakeObsServer {
     requestType: string;
     requestData?: Record<string, unknown>;
   }> = [];
+  /** Every `GetMediaInputStatus` read, kept apart from `directCallLog` (tests compare that log whole). */
+  public mediaStatusLog: Array<{ inputUuid: string; mediaState: string }> = [];
   public screenshotCallCount = 0;
   public activeScreenshotRequests = 0;
   public maxConcurrentScreenshots = 0;
@@ -449,6 +519,9 @@ export class FakeObsServer {
     this.missingPlugin = opts?.missingPlugin ?? false;
     this.studioMode = opts?.studioMode ?? true;
     this.screenshotDelayMs = opts?.screenshotDelayMs ?? 5;
+    this.availableRequests = opts?.availableRequests;
+    this.mediaActionDelayMs = opts?.mediaActionDelayMs ?? 0;
+    this.mediaStatusDelayMs = opts?.mediaStatusDelayMs ?? 0;
     this.slots = createDefaultSlots(
       this.studioMode,
       supportsFxApi(this.fadesterVersion)
@@ -472,7 +545,7 @@ export class FakeObsServer {
         });
 
         const helloData: Record<string, unknown> = {
-          obsWebSocketVersion: "5.5.2",
+          obsWebSocketVersion: FAKE_OBS_WEBSOCKET_VERSION,
           rpcVersion: 1
         };
         if (this.password) {
@@ -509,6 +582,168 @@ export class FakeObsServer {
     await new Promise<void>((resolve) => {
       server.close(() => resolve());
     });
+  }
+
+  /** Every input as `GetInputList` lists it: the audio inputs (stable UUIDs by name) and the extra ones. */
+  public inputList(): FakeObsInput[] {
+    const audio = this.inputNames.map((inputName): FakeObsInput => {
+      let inputUuid = this.audioInputUuids.get(inputName);
+      if (!inputUuid) {
+        inputUuid = this.newInputUuid();
+        this.audioInputUuids.set(inputName, inputUuid);
+      }
+      const inputKind = /mic|aux/i.test(inputName) ? "wasapi_input_capture" : "wasapi_output_capture";
+      return { inputName, inputUuid, inputKind, unversionedInputKind: inputKind };
+    });
+    return [...audio, ...this.extraInputs.map((input) => ({ ...input }))];
+  }
+
+  public findInput(inputUuid: string): FakeObsInput | undefined {
+    return this.inputList().find((input) => input.inputUuid === inputUuid);
+  }
+
+  private newInputUuid(): string {
+    const n = String(this.nextInputUuid++).padStart(12, "0");
+    return `0f0f0f0f-0000-4000-8000-${n}`;
+  }
+
+  /**
+   * Adds an input of any kind and emits `InputCreated`. A Playlister
+   * gets a media model, STOPPED with three items (NONE with none).
+   */
+  public addInput(input: { inputName: string; inputKind: string; inputUuid?: string; unversionedInputKind?: string },
+    media?: Partial<FakeMediaInput>): FakeObsInput {
+    const created: FakeObsInput = {
+      inputName: input.inputName,
+      inputUuid: input.inputUuid ?? this.newInputUuid(),
+      inputKind: input.inputKind,
+      unversionedInputKind: input.unversionedInputKind ?? input.inputKind.replace(/_v\d+$/, "")
+    };
+    this.extraInputs.push(created);
+    if (created.unversionedInputKind === PLAYLISTER_KIND) {
+      const items = media?.items ?? 3;
+      this.mediaInputs.set(created.inputUuid, {
+        state: items > 0 ? "OBS_MEDIA_STATE_STOPPED" : "OBS_MEDIA_STATE_NONE",
+        durationMs: 0, cursorMs: 0, items, index: 0, loop: true, shuffle: false,
+        shuffleRemaining: Math.max(0, items - 1), shuffleHistory: 0,
+        ...media
+      });
+    }
+    this.emitObsEvent("InputCreated", {
+      ...created, inputSettings: {}, defaultInputSettings: {}
+    });
+    return { ...created };
+  }
+
+  /** A Playlister source (`obs_playlister_source`) with the given media model. */
+  public addPlaylister(inputName: string, media?: Partial<FakeMediaInput>): FakeObsInput {
+    return this.addInput({ inputName, inputKind: PLAYLISTER_KIND }, media);
+  }
+
+  public removeInput(inputUuid: string): void {
+    const audio = [...this.audioInputUuids].find(([, uuid]) => uuid === inputUuid);
+    let inputName = "";
+    if (audio) {
+      inputName = audio[0];
+      this.inputNames = this.inputNames.filter((name) => name !== inputName);
+      this.inputVolumes.delete(inputName);
+      this.audioInputUuids.delete(inputName);
+    } else {
+      const index = this.extraInputs.findIndex((input) => input.inputUuid === inputUuid);
+      if (index < 0) throw new Error(`No fake input '${inputUuid}'.`);
+      inputName = this.extraInputs[index]!.inputName;
+      this.extraInputs.splice(index, 1);
+      this.mediaInputs.delete(inputUuid);
+    }
+    this.emitObsEvent("InputRemoved", { inputName, inputUuid });
+  }
+
+  public renameInput(inputUuid: string, inputName: string): void {
+    const audio = [...this.audioInputUuids].find(([, uuid]) => uuid === inputUuid);
+    let oldInputName = "";
+    if (audio) {
+      oldInputName = audio[0];
+      this.inputNames = this.inputNames.map((name) => name === oldInputName ? inputName : name);
+      this.audioInputUuids.delete(oldInputName);
+      this.audioInputUuids.set(inputName, inputUuid);
+      const volume = this.inputVolumes.get(oldInputName);
+      this.inputVolumes.delete(oldInputName);
+      if (volume !== undefined) this.inputVolumes.set(inputName, volume);
+    } else {
+      const input = this.extraInputs.find((candidate) => candidate.inputUuid === inputUuid);
+      if (!input) throw new Error(`No fake input '${inputUuid}'.`);
+      oldInputName = input.inputName;
+      input.inputName = inputName;
+    }
+    this.emitObsEvent("InputNameChanged", { inputUuid, oldInputName, inputName });
+  }
+
+  /**
+   * Applies a media action as the native source does (playlister-source.c):
+   * PLAY resumes or reloads (nothing to load keeps the state); PAUSE acts only
+   * while PLAYING; STOP stops; RESTART and a NEXT or PREVIOUS that loads an
+   * item end in PLAYING; NEXT at the end with loop off, at the shuffle boundary,
+   * and PREVIOUS at the start of the shuffle history keep the state.
+   */
+  private applyMediaAction(media: FakeMediaInput, action: string): void {
+    const empty = media.items <= 0;
+    const load = (index: number): void => {
+      media.index = index;
+      media.cursorMs = 0;
+      media.state = "OBS_MEDIA_STATE_PLAYING";
+    };
+    switch (action) {
+      case "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PLAY":
+        if (media.state === "OBS_MEDIA_STATE_PLAYING" || media.state === "OBS_MEDIA_STATE_PAUSED") {
+          media.state = "OBS_MEDIA_STATE_PLAYING";
+        } else if (!empty) {
+          load(media.index);
+        }
+        return;
+      case "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE":
+        if (media.state === "OBS_MEDIA_STATE_PLAYING") media.state = "OBS_MEDIA_STATE_PAUSED";
+        return;
+      case "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_STOP":
+        if (!empty) media.state = "OBS_MEDIA_STATE_STOPPED";
+        return;
+      case "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_RESTART":
+        // The current item, as restart_behavior "current file"; "first file" (index 0) is not modelled.
+        if (!empty) load(media.index);
+        return;
+      case "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_NEXT":
+        if (empty) return;
+        if (media.shuffle) {
+          if (media.shuffleRemaining <= 0) {
+            // A new round (shuffler.c reshuffles and starts at 0): every item is unplayed again.
+            if (!media.loop) return;
+            media.shuffleRemaining = media.items;
+          }
+          media.shuffleRemaining--;
+          media.shuffleHistory++;
+          load((media.index + 1) % media.items);
+        } else if (media.index < media.items - 1) {
+          load(media.index + 1);
+        } else if (media.loop) {
+          load(0);
+        }
+        return;
+      case "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PREVIOUS":
+        if (empty) return;
+        if (media.shuffle) {
+          if (media.shuffleHistory <= 0) return;
+          media.shuffleHistory--;
+          // shuffler_prev steps back, so the item it leaves is unplayed again.
+          media.shuffleRemaining++;
+          load((media.index + media.items - 1) % media.items);
+        } else if (media.index > 0) {
+          load(media.index - 1);
+        } else if (media.loop) {
+          load(media.items - 1);
+        }
+        return;
+      default:
+        return;
+    }
   }
 
   public applyProfileTopology(profileSlug: string): void {
@@ -793,9 +1028,55 @@ export class FakeObsServer {
       this.sendResponse(ws, requestId, requestType, true, 100, "", {
         obsVersion: this.obsVersion,
         obsStudioVersion: this.obsVersion,
-        obsWebSocketVersion: "5.5.2",
-        rpcVersion: 1
+        obsWebSocketVersion: FAKE_OBS_WEBSOCKET_VERSION,
+        rpcVersion: 1,
+        availableRequests: [...(this.availableRequests ?? FAKE_REQUEST_TYPES)]
       });
+      return;
+    }
+
+    if (requestType === "GetMediaInputStatus" || requestType === "TriggerMediaInputAction") {
+      const inputUuid = typeof requestData.inputUuid === "string" ? requestData.inputUuid : "";
+      const input = inputUuid ? this.findInput(inputUuid)
+        : this.inputList().find((candidate) => candidate.inputName === String(requestData.inputName ?? ""));
+      if (!input) {
+        this.sendResponse(ws, requestId, requestType, false, 600,
+          inputUuid ? `No input was found by the UUID of \`${inputUuid}\`.`
+            : `No input was found by the name of \`${String(requestData.inputName ?? "")}\`.`);
+        return;
+      }
+      const media = this.mediaInputs.get(input.inputUuid);
+      if (requestType === "GetMediaInputStatus") {
+        // The state is read now and sent after the delay, so a delayed reply is a stale one.
+        // A non-media kind answers NONE (obs_source_media_get_state has no callback to call); an
+        // empty list is NONE whatever the model holds (mps_get_state).
+        const mediaState = media && media.items > 0 ? media.state : "OBS_MEDIA_STATE_NONE";
+        const showsTime = mediaState === "OBS_MEDIA_STATE_PLAYING" || mediaState === "OBS_MEDIA_STATE_PAUSED";
+        const status = {
+          mediaState,
+          mediaDuration: showsTime && media ? media.durationMs : null,
+          mediaCursor: showsTime && media ? media.cursorMs : null
+        };
+        this.mediaStatusLog.push({ inputUuid: input.inputUuid, mediaState });
+        if (this.mediaStatusDelayMs > 0) await new Promise((r) => setTimeout(r, this.mediaStatusDelayMs));
+        this.sendResponse(ws, requestId, requestType, true, 100, "", status);
+        return;
+      }
+      const mediaAction = String(requestData.mediaAction ?? "");
+      if (!(FAKE_MEDIA_ACTIONS as readonly string[]).includes(mediaAction)) {
+        this.sendResponse(ws, requestId, requestType, false, 400, "The request field `mediaAction` has an invalid value.");
+        return;
+      }
+      if (this.mediaActionDelayMs > 0) await new Promise((r) => setTimeout(r, this.mediaActionDelayMs));
+      if (this.mediaFailNext) {
+        const comment = this.mediaFailNext;
+        this.mediaFailNext = "";
+        this.sendResponse(ws, requestId, requestType, false, 500, comment);
+        return;
+      }
+      this.directCallLog.push({ requestType, requestData });
+      if (media) this.applyMediaAction(media, mediaAction);
+      this.sendResponse(ws, requestId, requestType, true, 100, "", {});
       return;
     }
 
@@ -828,7 +1109,7 @@ export class FakeObsServer {
 
     if (requestType === "GetInputList") {
       this.sendResponse(ws, requestId, requestType, true, 100, "", {
-        inputs: this.inputNames.map((inputName) => ({ inputName }))
+        inputs: this.inputList()
       });
       return;
     }

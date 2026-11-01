@@ -289,6 +289,26 @@ const MUTATIONS: MutationCheck[] = [
     target: "active = TABLES[language] || EN;",
     mutated: "active = EN;",
     testFile: "tests/inspector-i18n.test.ts"
+  },
+  {
+    id: "M-9.1a",
+    step: "Step 9.1 (Playlister transport: the fake's media status)",
+    description:
+      "Send a numeric cursor and duration in STOPPED, where the protocol sends null, and verify fake-obs-server.test.ts fails",
+    filePath: resolve(ROOT, "tests/helpers/fake-obs-server.ts"),
+    target: 'const showsTime = mediaState === "OBS_MEDIA_STATE_PLAYING" || mediaState === "OBS_MEDIA_STATE_PAUSED";',
+    mutated: 'const showsTime = mediaState === "OBS_MEDIA_STATE_PLAYING" || mediaState === "OBS_MEDIA_STATE_PAUSED" || mediaState === "OBS_MEDIA_STATE_STOPPED";',
+    testFile: "tests/fake-obs-server.test.ts"
+  },
+  {
+    id: "M-9.1b",
+    step: "Step 9.1 (Playlister transport: the fake's PAUSE rule)",
+    description:
+      "Let PAUSE in STOPPED produce PAUSED, which the native source ignores, and verify fake-obs-server.test.ts fails",
+    filePath: resolve(ROOT, "tests/helpers/fake-obs-server.ts"),
+    target: 'if (media.state === "OBS_MEDIA_STATE_PLAYING") media.state = "OBS_MEDIA_STATE_PAUSED";',
+    mutated: 'if (media.state !== "OBS_MEDIA_STATE_NONE") media.state = "OBS_MEDIA_STATE_PAUSED";',
+    testFile: "tests/fake-obs-server.test.ts"
   }
 ];
 

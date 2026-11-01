@@ -582,7 +582,7 @@ export const MUTATIONS: readonly Mutation[] = [
     id: "M-V-68",
     rule: "the pin key shows the pinned title (R-TGT-2)",
     file: "src/vjster/plugin/controllers.ts",
-    from: "sub: pinned ? (title ? fit(title, 14) : this.strings.pinned) : this.strings.pinTab,",
+    from: "sub: pinned ? (title ? fit(title, PIN_TITLE_SIZE, KEY_SUB_WIDTH) : this.strings.pinned) : this.strings.pinTab,",
     to: "sub: pinned ? this.strings.pinned : this.strings.pinTab,",
     tests: ["tests/vjster-plugin-units.test.ts"]
   },
@@ -697,6 +697,30 @@ export const MUTATIONS: readonly Mutation[] = [
     from: "  return key === undefined ? label : strings[key];",
     to: "  return label;",
     tests: ["tests/vjster-plugin-units.test.ts"]
+  },
+  {
+    id: "M-V-83",
+    rule: "CJK, kana and Hangul count one em each, so a translation that would not fit is caught (R-I18N-4)",
+    file: "src/vjster/plugin/display.ts",
+    from: "    em += WIDE.test(ch) ? 1 : ",
+    to: "    em += WIDE.test(ch) ? 0.55 : ",
+    tests: ["tests/vjster-deck-fit.test.ts"]
+  },
+  {
+    id: "M-V-84",
+    rule: "a strip label never runs into the header tag (PLAN.md 8.2)",
+    file: "src/vjster/plugin/display.ts",
+    from: "  return fit(label, HEADER.labelSize, room, HEADER.labelSpacing);",
+    to: "  return room > 0 ? label : label;",
+    tests: ["tests/vjster-deck-fit.test.ts"]
+  },
+  {
+    id: "M-V-85",
+    rule: "the status word is sized by measured width, not by its number of characters (PLAN.md 8.2)",
+    file: "src/vjster/plugin/display.ts",
+    from: "  return STATUS.sizes.find((s) => textWidth(word, s, STATUS.spacing) <= STATUS.width) ?? null;",
+    to: "  return word.length > 9 ? 17 : 22;",
+    tests: ["tests/vjster-deck-fit.test.ts", "tests/vjster-plugin-units.test.ts"]
   }
 ];
 

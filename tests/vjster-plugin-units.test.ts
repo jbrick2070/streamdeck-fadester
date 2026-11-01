@@ -121,8 +121,11 @@ describe("display (R-SPD-6, R-BEH-4, R-BEH-5)", () => {
   });
 
   it("shortens with ASCII dots and formats rates without trailing zeros", () => {
-    expect(fit("short", 10)).toBe("short");
-    expect(fit("a".repeat(40), 10)).toBe("aaaaaaa...");
+    expect(fit("short", 10, 100)).toBe("short");
+    // 0.55 em a letter and 0.27 a dot at 10 px: seven letters and the dots are 46.6 px.
+    expect(fit("a".repeat(40), 10, 47)).toBe("aaaaaaa...");
+    expect(fit("a".repeat(40), 10, 1)).toBe("a...");
+    expect(fit("速度速度速度", 10, 48)).toBe("速度速...");
     expect([1, 1.25, 0.5, 16, 0.1, 2.5].map(formatRate)).toEqual(["1x", "1.25x", "0.5x", "16x", "0.1x", "2.5x"]);
   });
 
@@ -592,7 +595,7 @@ describe("after the step 5 review", () => {
     const { hub } = fakeHub({ browser: connected(state({ pinned: true, title: "A very long video title" })) });
     const s = sink();
     new PinController(hub, s).render();
-    expect(words(s.last())).toContain("A very long...");
+    expect(words(s.last())).toContain("A very long video...");
     hub.views.browser = connected(state({ pinned: false }));
     const s2 = sink();
     new PinController(hub, s2).render();
@@ -710,5 +713,45 @@ describe("deck words by key (PLAN.md 8.1, R-I18N-1, R-I18N-2)", () => {
     expect(["CHROME", "OBS", "CHROME FX", "MY DIAL", "speed", "constructor"].map((l) => shownLabel(l, marked))).toEqual(["CHROME", "OBS", "CHROME FX", "MY DIAL", "speed", "constructor"]);
     // The stored label stays English: only the drawing translates it.
     expect(speedDialSettings({}).label).toBe("SPEED");
+  });
+});
+
+describe("measured widths (PLAN.md 8.2, R-I18N-4)", () => {
+  it("shortens a strip label that would run into the tag, and leaves one that fits", () => {
+    const label = (l: string, extra: Partial<StateReport> = {}) =>
+      words(speedStrip({ view: connected(state(extra)), target: "browser", pending: null, min: 0.1, max: 16, label: l }))[0];
+    expect(label("WWWWWWWWWWWWWWWW", { rate: 8, rateDirect: true })).toBe("WWWWWWWWWWWW...");
+    expect(label("MY LONG LABEL 16", { rate: 8, rateDirect: true })).toBe("MY LONG LABEL 16");
+    expect(label("FX SPEED", { rate: 8, rateDirect: true })).toBe("FX SPEED");
+  });
+
+  it("sizes the status word by its measured width, and shortens it only when no size fits", () => {
+    const status = (w: string) => {
+      const svg = speedStrip({
+        view: { status: "extension-off", state: null },
+        target: "browser",
+        pending: null,
+        min: 0.25,
+        max: 4,
+        label: "S",
+        strings: stringsFrom((k) => (k === "statusExtensionOff" ? w : undefined))
+      });
+      const m = /font-size="([0-9]+)"[^>]*>([^<]*)<\/text>$/.exec(svg.replace("</svg>", ""));
+      return [Number(m?.[1]), m?.[2]];
+    };
+    expect(status("EXTENSION OFF")).toEqual([17, "EXTENSION OFF"]);
+    expect(status("NO VIDEO")).toEqual([22, "NO VIDEO"]);
+    // Ten CJK glyphs are 220 px at 22 px: too wide, so they get a smaller size; no letter spacing.
+    expect(status("拡張機能がオフです。")).toEqual([17, "拡張機能がオフです。"]);
+    const [size, cut] = status("A".repeat(30));
+    expect(size).toBe(13);
+    expect(cut).toMatch(/^A+\.\.\.$/);
+  });
+
+  it("draws CJK without letter spacing and with a CJK font", () => {
+    const svg = qualityStrip({ view: { status: "page-off", state: null }, target: "obs", pending: null, label: "画質", strings: stringsFrom((k) => (k === "statusPageOff" ? "ページなし" : undefined)) });
+    expect(svg).toMatch(/font-family="Segoe UI, Yu Gothic UI,[^"]*"[^>]*>ページなし</);
+    expect(svg).not.toMatch(/letter-spacing="[^"]*">ページなし</);
+    expect(svg).toMatch(/letter-spacing="1">OBS</);
   });
 });

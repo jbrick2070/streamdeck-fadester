@@ -55,7 +55,7 @@ describe("VJster plugin end to end", () => {
   it("shows the playing video once the extension connects", async () => {
     sim.connectExtension(port);
     await until(() => words(sim.svg("dial-0")).includes("1x"));
-    expect(words(sim.svg("dial-0"))).toContain("Big Buck Bunny 60fps 4K - O...");
+    expect(words(sim.svg("dial-0"))).toContain("Big Buck Bunny 60fps 4K - Offici...");
     expect(words(sim.svg("dial-2"))).toContain("1080p");
     expect(words(sim.svg("key-2-0"))).toContain("1x");
   });
@@ -115,7 +115,7 @@ describe("VJster plugin end to end", () => {
 
   it("pins and unpins the tab, and the key shows it (R-TGT-2)", async () => {
     sim.key("key-1-1");
-    await until(() => words(sim.svg("key-1-1")).includes("Big Buck Bu..."));
+    await until(() => words(sim.svg("key-1-1")).includes("Big Buck Bunny 6..."));
     sim.key("key-1-1");
     await until(() => words(sim.svg("key-1-1")).includes("PIN TAB"));
   });

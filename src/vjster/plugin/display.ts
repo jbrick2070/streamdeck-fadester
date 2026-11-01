@@ -61,10 +61,46 @@ export function escapeText(text: string): string {
   return out;
 }
 
-/** Shorten to `max` characters with an ellipsis made of ASCII dots. */
-export function fit(text: string, max: number): string {
+/** CJK ideographs, kana, Hangul, bopomofo and full-width forms: about one em wide each. */
+const WIDE = /[\u1100-\u11ff\u2e80-\u303f\u3040-\u30ff\u3100-\u33ff\u3400-\u4dbf\u4e00-\u9fff\ua000-\ua4cf\ua960-\ua97f\uac00-\ud7ff\uf900-\ufaff\ufe10-\ufe1f\ufe30-\ufe4f\uff00-\uff60\uffe0-\uffe6]|[\u{20000}-\u{3134f}]/u;
+
+/** Whether the text has CJK, kana or Hangul in it. */
+export function hasWide(value: string): boolean {
+  return WIDE.test(value);
+}
+
+/**
+ * Rough width in em of bold Segoe UI text (or the CJK font that stands in for
+ * it): capitals of any script 0.72, digits 0.57, dot and space 0.27, CJK, kana
+ * and Hangul 1, combining marks 0, anything else 0.55 (PLAN.md 8.2).
+ */
+export function textEm(value: string): number {
+  let em = 0;
+  for (const ch of value) {
+    em += WIDE.test(ch) ? 1 : /\p{M}/u.test(ch) ? 0 : /\p{Lu}/u.test(ch) ? 0.72 : /[0-9]/.test(ch) ? 0.57 : ch === "." || ch === " " ? 0.27 : 0.55;
+  }
+  return em;
+}
+
+/** Letter spacing as drawn: none for CJK text, which has no room for it. */
+export function spacingFor(value: string, spacing: number): number {
+  return hasWide(value) ? 0 : spacing;
+}
+
+/** Estimated width in px of `value` at `size` px with `spacing` px letter spacing. */
+export function textWidth(value: string, size: number, spacing = 0): number {
+  return textEm(value) * size + spacingFor(value, spacing) * [...value].length;
+}
+
+/** Shorten to `width` px at `size` px with an ellipsis made of ASCII dots; at least one character stays, and nothing gets longer. */
+export function fit(text: string, size: number, width: number, spacing = 0): string {
   const chars = [...text];
-  return chars.length <= max ? text : `${chars.slice(0, Math.max(1, max - 3)).join("").trimEnd()}...`;
+  if (chars.length <= 1 || textWidth(text, size, spacing) <= width) return text;
+  for (let n = chars.length - 1; n > 1; n--) {
+    const shorter = `${chars.slice(0, n).join("").trimEnd()}...`;
+    if (textWidth(shorter, size, spacing) <= width) return shorter;
+  }
+  return `${chars[0] ?? ""}...`;
 }
 
 /** `1.25x`, `1x`, `0.5x`, `16x`: up to two decimals, no trailing zeros. */
@@ -116,14 +152,57 @@ function svg(w: number, h: number, body: string): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${defs}${body}</svg>`;
 }
 
-function text(x: number, y: number, size: number, value: string, fill: string, extra = ""): string {
-  return `<text x="${x}" y="${y}" font-family="Segoe UI, Arial, sans-serif" font-size="${size}" font-weight="700" fill="${fill}" ${extra}>${escapeText(value)}</text>`;
+const LATIN_FONTS = "Segoe UI, Arial, sans-serif";
+
+/**
+ * The font list for a text: Segoe UI, or for CJK text Windows' UI font for
+ * the script it shows (Hangul, kana, else Chinese), then the others. Text
+ * made of ideographs alone cannot tell Japanese from Chinese; it gets the
+ * Chinese fonts first (PLAN.md 8.2, Review round 1).
+ */
+export function fontsFor(value: string): string {
+  if (!hasWide(value)) return LATIN_FONTS;
+  if (/[\u1100-\u11ff\ua960-\ua97f\uac00-\ud7ff]/u.test(value)) return "Segoe UI, Malgun Gothic, Yu Gothic UI, Microsoft YaHei UI, Microsoft JhengHei UI, sans-serif";
+  if (/[\u3040-\u30ff]/u.test(value)) return "Segoe UI, Yu Gothic UI, Microsoft YaHei UI, Microsoft JhengHei UI, Malgun Gothic, sans-serif";
+  return "Segoe UI, Microsoft YaHei UI, Microsoft JhengHei UI, Yu Gothic UI, Malgun Gothic, sans-serif";
+}
+
+function text(x: number, y: number, size: number, value: string, fill: string, extra = "", spacing = 0): string {
+  const gap = spacingFor(value, spacing);
+  return `<text x="${x}" y="${y}" font-family="${fontsFor(value)}" font-size="${size}" font-weight="700" fill="${fill}"${extra ? ` ${extra}` : ""}${gap > 0 ? ` letter-spacing="${gap}"` : ""}>${escapeText(value)}</text>`;
+}
+
+/** The strip header: the label at the left, a tag at the right, in one line of this width. */
+export const HEADER = { width: STRIP_W - 20, gap: 8, labelSize: 12, labelSpacing: 1.5, tagSize: 11, tagSpacing: 1 } as const;
+
+/** The header's label as drawn: shortened, if need be, to the room the tag leaves (PLAN.md 8.2). */
+export function headerLabel(label: string, tag: string): string {
+  const room = HEADER.width - HEADER.gap - textWidth(tag, HEADER.tagSize, HEADER.tagSpacing);
+  return fit(label, HEADER.labelSize, room, HEADER.labelSpacing);
 }
 
 function header(label: string, target: "browser" | "obs", right: string, rightColor: string, strings: Strings): string {
-  const tag = target === "obs" ? strings.tagObs : strings.tagWeb;
-  return `${text(10, 17, 12, shownLabel(label, strings), C.dim, 'letter-spacing="1.5"')}${text(STRIP_W - 10, 17, 11, right || tag, right ? rightColor : C.dim, 'text-anchor="end" letter-spacing="1"')}`;
+  const tag = right || (target === "obs" ? strings.tagObs : strings.tagWeb);
+  return `${text(10, 17, HEADER.labelSize, headerLabel(shownLabel(label, strings), tag), C.dim, "", HEADER.labelSpacing)}${text(STRIP_W - 10, 17, HEADER.tagSize, tag, right ? rightColor : C.dim, 'text-anchor="end"', HEADER.tagSpacing)}`;
 }
+
+/** The status word in the middle of a strip: the largest of these sizes that fits this width. */
+export const STATUS = { sizes: [22, 17, 15, 13], width: STRIP_W - 16, spacing: 1 } as const;
+
+/** The size a status word is drawn at, or null when it fits at none (it is then shortened at the smallest). */
+export function statusSize(word: string): number | null {
+  return STATUS.sizes.find((s) => textWidth(word, s, STATUS.spacing) <= STATUS.width) ?? null;
+}
+
+function statusText(word: string, color: string): string {
+  const size = statusSize(word);
+  const small = STATUS.sizes[STATUS.sizes.length - 1];
+  return text(STRIP_W / 2, 62, size ?? small, size === null ? fit(word, small, STATUS.width, STATUS.spacing) : word, color, 'text-anchor="middle"', STATUS.spacing);
+}
+
+/** The big value on a strip (a rate, a level, the Auto word), and the title line under it. */
+export const STRIP_VALUE = { size: 32, width: STRIP_W - 24 } as const;
+export const STRIP_TITLE = { size: 10, width: STRIP_W - 20 } as const;
 
 export interface SpeedStripModel {
   readonly view: TargetView;
@@ -145,8 +224,7 @@ export function speedStrip(m: SpeedStripModel): string {
   let body = `<rect width="${STRIP_W}" height="${STRIP_H}" fill="${C.bg}"/>`;
   if (status && !(status.code === AD && s?.rate != null)) {
     body += header(m.label, m.target, "", C.dim, strings);
-    const word = strings[STATUS_WORD[status.code]];
-    body += text(STRIP_W / 2, 62, word.length > 9 ? 17 : 22, word, status.color, 'text-anchor="middle" letter-spacing="1"');
+    body += statusText(strings[STATUS_WORD[status.code]], status.color);
     return svg(STRIP_W, STRIP_H, body);
   }
   const rate = (s?.rate ?? 1) as number;
@@ -164,8 +242,8 @@ export function speedStrip(m: SpeedStripModel): string {
   body += `<rect x="${Math.min(one, at(shown))}" y="70" width="${Math.abs(at(shown) - one)}" height="6" rx="3" fill="url(#g)"/>`;
   body += `<rect x="${one - 1}" y="66" width="2" height="14" fill="${C.text}"/>`;
   body += `<circle cx="${at(shown)}" cy="73" r="5" fill="${C.text}"/>`;
-  const title = s?.title ? fit(s.title, 30) : "";
-  body += text(STRIP_W / 2, 95, 10, title, C.dim, 'text-anchor="middle"');
+  const title = s?.title ? fit(s.title, STRIP_TITLE.size, STRIP_TITLE.width) : "";
+  body += text(STRIP_W / 2, 95, STRIP_TITLE.size, title, C.dim, 'text-anchor="middle"');
   return svg(STRIP_W, STRIP_H, body);
 }
 
@@ -186,15 +264,14 @@ export function qualityStrip(m: QualityStripModel): string {
   const s = m.view.state;
   if (status || !s) {
     body += header(m.label, m.target, "", C.dim, strings);
-    const word = strings[STATUS_WORD[status?.code ?? "no-video"]];
-    body += text(STRIP_W / 2, 62, word.length > 9 ? 17 : 22, word, status?.color ?? C.dim, 'text-anchor="middle" letter-spacing="1"');
+    body += statusText(strings[STATUS_WORD[status?.code ?? "no-video"]], status?.color ?? C.dim);
     return svg(STRIP_W, STRIP_H, body);
   }
   const auto = s.qualityAuto === true && m.pending === null;
   const level = m.pending ?? s.quality;
   body += header(m.label, m.target, auto ? strings.tagAuto : strings.tagFixed, auto ? C.green : C.magenta, strings);
   const big = level === null || level === "unknown" ? "..." : levelText(level, strings);
-  body += text(STRIP_W / 2, 58, 32, big, m.pending !== null ? C.dim : "url(#g)", 'text-anchor="middle" filter="url(#glow)"');
+  body += text(STRIP_W / 2, 58, STRIP_VALUE.size, fit(big, STRIP_VALUE.size, STRIP_VALUE.width), m.pending !== null ? C.dim : "url(#g)", 'text-anchor="middle" filter="url(#glow)"');
   const levels = s.availableQualities.filter((l) => l !== AUTO);
   const n = Math.max(1, levels.length);
   const gap = 3;
@@ -203,7 +280,7 @@ export function qualityStrip(m: QualityStripModel): string {
     const on = l === level;
     body += `<rect x="${12 + i * (w + gap)}" y="70" width="${w}" height="8" rx="2" fill="${on ? "url(#g)" : C.track}"/>`;
   });
-  body += text(STRIP_W / 2, 95, 10, s.title ? fit(s.title, 30) : "", C.dim, 'text-anchor="middle"');
+  body += text(STRIP_W / 2, 95, STRIP_TITLE.size, s.title ? fit(s.title, STRIP_TITLE.size, STRIP_TITLE.width) : "", C.dim, 'text-anchor="middle"');
   return svg(STRIP_W, STRIP_H, body);
 }
 
@@ -234,36 +311,45 @@ function glyph(kind: NonNullable<KeyModel["glyph"]>, color: string): string {
   }
 }
 
-/** A key: dark tile, neon frame when active, big label, small sub line. */
-/** Rough width in em of bold Segoe UI text, enough to keep a key's main text inside its frame. */
-export function textEm(value: string): number {
-  let em = 0;
-  for (const ch of value) em += /[A-Z]/.test(ch) ? 0.72 : /[0-9]/.test(ch) ? 0.57 : ch === "." || ch === " " ? 0.27 : 0.55;
-  return em;
-}
-
 /** Room for the main text on a key: the frame's inside, less a margin. */
 export const KEY_TEXT_WIDTH = 116;
 /** Room for a key's small caption, such as a pinned title. */
 export const KEY_SUB_WIDTH = 124;
 
-/** The largest caption size up to `max` that fits the key. */
-function subSize(text: string, max: number): number {
-  return [max, max - 2, max - 4, max - 6].find((s) => textEm(text) * s <= KEY_SUB_WIDTH) ?? max - 7;
+/** The largest caption size the key offers that fits it, or null when none does (it is then shortened at `max - 7`). */
+export function captionSize(text: string, max: number): number | null {
+  return [max, max - 2, max - 4, max - 6].find((s) => textWidth(text, s) <= KEY_SUB_WIDTH) ?? null;
 }
 
+/** The caption size on a key with a glyph (pin, play) and on one with a main text. */
+export const CAPTION_MAX = { glyph: 17, main: 16 } as const;
+/** The sizes a key's main text may take, largest first. */
+export const MAIN_SIZES = [46, 40, 36, 30, 26, 22] as const;
+
+/** The size of a key's main text, or null when it fits at none (it is then shortened at the smallest). */
+export function mainSize(main: string): number | null {
+  const count = [...main].length;
+  const byLength = count <= 4 ? 46 : count <= 6 ? 36 : 26;
+  return MAIN_SIZES.find((s) => s <= byLength && textWidth(main, s) <= KEY_TEXT_WIDTH) ?? null;
+}
+
+function caption(y: number, sub: string, max: number): string {
+  const size = captionSize(sub, max);
+  return text(KEY / 2, y, size ?? max - 7, size === null ? fit(sub, max - 7, KEY_SUB_WIDTH) : sub, C.dim, 'text-anchor="middle"');
+}
+
+/** A key: dark tile, neon frame when active, big label, small sub line. */
 export function keyImage(m: KeyModel): string {
   const fg = m.dim ? C.dim : C.text;
   let body = `<rect width="${KEY}" height="${KEY}" fill="${C.bg}"/>`;
   body += `<rect x="6" y="6" width="${KEY - 12}" height="${KEY - 12}" rx="20" fill="${C.panel}" stroke="${m.active ? "url(#g)" : C.track}" stroke-width="${m.active ? 6 : 2}"${m.active ? ' filter="url(#glow)"' : ""}/>`;
   if (m.glyph) {
     body += glyph(m.glyph, m.active ? C.cyan : fg);
-    body += text(KEY / 2, 124, subSize(m.sub, 17), m.sub, C.dim, 'text-anchor="middle"');
+    body += caption(124, m.sub, CAPTION_MAX.glyph);
   } else {
-    const byLength = m.main.length <= 4 ? 46 : m.main.length <= 6 ? 36 : 26;
-    const size = [46, 40, 36, 30, 26, 22].find((s) => s <= byLength && textEm(m.main) * s <= KEY_TEXT_WIDTH) ?? 22;
-    body += text(KEY / 2, 84, size, m.main, m.active ? "url(#g)" : fg, 'text-anchor="middle"');
-    body += text(KEY / 2, 118, subSize(m.sub, 16), m.sub, C.dim, 'text-anchor="middle"');
+    const size = mainSize(m.main);
+    body += text(KEY / 2, 84, size ?? 22, size === null ? fit(m.main, 22, KEY_TEXT_WIDTH) : m.main, m.active ? "url(#g)" : fg, 'text-anchor="middle"');
+    body += caption(118, m.sub, CAPTION_MAX.main);
   }
   return svg(KEY, KEY, body);
 }

@@ -8,7 +8,7 @@ import { createCoalescer, realClock, type CoalesceClock, type Coalescer } from "
 import type { StateReport, Target } from "../shared/protocol.js";
 import { AUTO, normalizeLevels, stepQuality } from "../shared/quality.js";
 import { nextRate, rangeBounds, rangeFor, type RateStep } from "../shared/speed.js";
-import { AD, fit, formatRate, keyImage, levelText, qualityStrip, speedStrip, statusWord, type TargetView } from "./display.js";
+import { AD, fit, formatRate, KEY_SUB_WIDTH, keyImage, levelText, qualityStrip, speedStrip, statusWord, type TargetView } from "./display.js";
 import type { IntentBody } from "./link-server.js";
 import type {
   QualityDialSettings,
@@ -35,6 +35,9 @@ export interface Sink {
 
 /** How long a request may stay unanswered before the deck shows the reported value again. */
 export const PENDING_MS = 1500;
+
+/** The pinned title on the pin key is shortened to fit at this caption size (PLAN.md 8.2). */
+export const PIN_TITLE_SIZE = 13;
 
 /** Which target a setting shows; "both" shows the browser (R-OBS-3). */
 const shownTarget = (t: TargetChoice): Target => (t === "obs" ? "obs" : "browser");
@@ -419,7 +422,7 @@ export class PinController extends Base {
     const pinned = view.state?.pinned === true;
     // The reported tab is the pinned one, so its title is the pinned title (R-TGT-2).
     const title = pinned ? (view.state?.title ?? null) : null;
-    this.sink.draw(keyImage({ main: "", sub: pinned ? (title ? fit(title, 14) : this.strings.pinned) : this.strings.pinTab, active: pinned, dim: view.status !== "connected", glyph: "pin" }));
+    this.sink.draw(keyImage({ main: "", sub: pinned ? (title ? fit(title, PIN_TITLE_SIZE, KEY_SUB_WIDTH) : this.strings.pinned) : this.strings.pinTab, active: pinned, dim: view.status !== "connected", glyph: "pin" }));
   }
 }
 

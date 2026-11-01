@@ -311,6 +311,18 @@ Fadester files are not touched (someone else's work is uncommitted there). Each 
 2. **Step 8.2 -- Width.** `textEm` counts CJK, kana, Hangul and accented capitals at their real widths, so a fit test
    can be trusted; a test lists every Strings entry against its box (status word about 13 capitals, header tags about
    6, big key text about 7).
+   *As built (2026-10-31):* `display.ts` measures with `textEm` (capitals of any script 0.72 em, digits 0.57, dot and
+   space 0.27, CJK, kana, Hangul and full-width forms 1, combining marks 0, else 0.55) and `textWidth(text, size,
+   spacing)`, which drops letter spacing for CJK text. `fit(text, size, width)` now cuts by measured width (strip
+   titles at 10 px in 180 px, the pinned title at 13 px in the 124 px caption), so a CJK title no longer overruns the
+   strip. The status word takes the largest of 22/17/15/13 px that fits 184 px (English: PORT IN USE and AD PLAYING
+   are now drawn at 22 px, EXTENSION OFF stays at 17); the header label is cut to the room the right tag leaves; key
+   main text and captions are sized by measured width and cut only when no size fits. CJK text gets a CJK font list
+   chosen by script (Hangul: Malgun Gothic first; kana: Yu Gothic UI; ideographs alone: Microsoft YaHei UI, then
+   JhengHei UI, Yu Gothic UI, Malgun Gothic) after Segoe UI. `tests/vjster-deck-fit.test.ts` gives every deck key a
+   box and checks, for every `<lang>.json` present (`tests/vjster-languages.ts`), the status words, the Auto value on
+   strip and key, every label beside every tag, and every key caption alone and inside `OBS {word}` / `SYNC {word}`;
+   it also proves it catches an overlong word. Mutations M-V-83..85 (CJK width, header guard, sizing by length).
 3. **Step 8.3 -- Stream Deck files.** `en.json` plus de, es, fr, ja, ko, zh_CN, zh_TW `.json` at the plugin root:
    plugin Name and Description, each action UUID's Name and Tooltip, and a `Localization` object with the deck words.
    `actions.ts` / `standalone.ts` build the Strings from `streamDeck.i18n`. Stored default labels are shown translated

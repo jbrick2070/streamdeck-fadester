@@ -96,6 +96,10 @@ function drawnTexts(): Array<{ key: StringKey; params?: TextParams; boxes: Box[]
   for (const key of ["filterMissing", "filterWrongKind", "filterDenied", "filterNeedsRange", "filterOwnedFader",
     "filterNoValue", "filterLatched"] as const) add(key, [B.keySub, B.dialReason]);
   add("filterOwnedModulator", [B.keySub, B.dialReason], { filter: "Pulse" });
+  // The Visual Panic keys: titles, hints and the not-loaded problem line.
+  for (const key of ["vpPanic", "vpPanicSent", "vpRestore"] as const) add(key, [B.keyTitle]);
+  for (const key of ["vpPanicHint", "vpLatchedHint", "vpHolding", "vpNotLoaded"] as const) add(key, [B.keySub]);
+  add("vpHoldSeconds", [B.keySub], { s: "0,8" });
   // Its operation words are titles; the state, pending and busy words its subtitle. The time is drawn
   // only in PLAYING and PAUSED, so a two-hour item with those two words is the longest sample.
   for (const key of ["plOpPrevious", "plOpNext", "plOpPlayPause", "plOpStop", "plOpRestart", "plOpStatus"] as const) add(key, [B.keyTitle]);

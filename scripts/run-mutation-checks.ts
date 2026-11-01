@@ -599,6 +599,36 @@ const MUTATIONS: MutationCheck[] = [
     target: "this.globalNextWriteAt = now + this.globalIntervalMs;",
     mutated: "this.globalNextWriteAt = now;",
     testFile: "tests/filter-controller.test.ts"
+  },
+  {
+    id: "M-10.3a",
+    step: "Step 10.3 (Restore needs the 800 ms hold)",
+    description:
+      "Send Restore on a short press, and verify visual-panic.test.ts fails",
+    filePath: resolve(ROOT, "src/actions/visual-panic-key.ts"),
+    target: "    }, this.holdMs);",
+    mutated: "    }, 0);",
+    testFile: "tests/visual-panic.test.ts"
+  },
+  {
+    id: "M-10.3b",
+    step: "Step 10.3 (the latch clears on a reconnect)",
+    description:
+      "Keep the latch across a reconnect, and verify visual-panic.test.ts fails",
+    filePath: resolve(ROOT, "src/control/visual-safety.ts"),
+    target: '      this.setLatched(false);\n      this.emit("reset");',
+    mutated: '      this.emit("reset");',
+    testFile: "tests/visual-panic.test.ts"
+  },
+  {
+    id: "M-10.3c",
+    step: "Step 10.3 (no Panic debounce)",
+    description:
+      "Swallow a Panic while one is latched, and verify visual-panic.test.ts fails",
+    filePath: resolve(ROOT, "src/control/visual-safety.ts"),
+    target: "    this.setLatched(true);",
+    mutated: "    if (this.latched) return;\n    this.setLatched(true);",
+    testFile: "tests/visual-panic.test.ts"
   }
 ];
 

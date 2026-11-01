@@ -48,6 +48,7 @@ export function presetCaptionsScript(): string {
     "    if (action === \"layerKey\") return text(settings, \"operation\") || \"select_next\";",
     "    if (action === \"layerDial\") return text(settings, \"dialMode\") || \"select_layer\";",
     "    if (action === \"playlister\") return text(settings, \"operation\") || \"playpause\";",
+    "    if (action === \"panic\") return text(settings, \"operation\") || \"panic\";",
     "    return \"\";",
     "  }",
     "  function isGenerated(action, settings, caption) {",

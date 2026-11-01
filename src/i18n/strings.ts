@@ -49,6 +49,15 @@ const PLUGIN_EN = {
   filterOwnedFader: "Driven by its fader",
   filterNoValue: "No value in OBS yet",
   filterLatched: "Restore first",
+  // Visual Panic keys (Visual Sidechain's Panic and Restore)
+  vpPanic: "PANIC",
+  vpPanicSent: "PANIC SENT",
+  vpPanicHint: "Strobe and flash off",
+  vpLatchedHint: "Hold Restore to undo",
+  vpRestore: "Restore",
+  vpHoldSeconds: "Hold {s} s",
+  vpHolding: "Keep holding",
+  vpNotLoaded: "Visual Sidechain missing",
   // Playlister transport key (operation words are the titles; the state words the subtitle)
   plOpPrevious: "Previous",
   plOpNext: "Next",

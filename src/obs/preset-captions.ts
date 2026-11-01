@@ -11,7 +11,7 @@
  * (scripts/generate-ui-i18n.ts; a test keeps it current).
  */
 
-export type CaptionAction = "scene" | "fader" | "fade" | "layerKey" | "layerDial" | "playlister";
+export type CaptionAction = "scene" | "fader" | "fade" | "layerKey" | "layerDial" | "playlister" | "panic";
 
 /** Captions per action and context, lower case; `shipped` are the ones in profiles/layouts.json. */
 export const PRESET_CAPTIONS: Readonly<Record<CaptionAction, Readonly<Record<string, {
@@ -65,6 +65,11 @@ export const PRESET_CAPTIONS: Readonly<Record<CaptionAction, Readonly<Record<str
     stop: { shipped: ["Stop"], legacy: [] },
     restart: { shipped: ["Restart"], legacy: [] },
     status: { shipped: ["Status"], legacy: [] }
+  },
+  // The VJ rig's Visual Panic keys (shipped with the rig profiles, PLAN.md 10.6).
+  panic: {
+    panic: { shipped: [], legacy: [] },
+    restore: { shipped: [], legacy: [] }
   }
 };
 
@@ -87,6 +92,8 @@ export function captionContext(action: CaptionAction, settings: Readonly<Record<
       return text("dialMode") || "select_layer";
     case "playlister":
       return text("operation") || "playpause";
+    case "panic":
+      return text("operation") || "panic";
   }
 }
 

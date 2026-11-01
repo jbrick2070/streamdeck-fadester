@@ -180,6 +180,24 @@ export function normalizePlaylisterOperation(raw: unknown): PlaylisterOperation 
     ? raw as PlaylisterOperation : DEFAULT_PLAYLISTER_TRANSPORT_SETTINGS.operation;
 }
 
+/** Visual Sidechain's Panic (instant) or Restore (after a hold), PLAN.md 10.3. */
+export type VisualPanicOperation = "panic" | "restore";
+
+export interface VisualPanicSettings {
+  [key: string]: string | number | boolean | undefined;
+  operation?: VisualPanicOperation;
+  labelOverride?: string;
+}
+
+export const DEFAULT_VISUAL_PANIC_SETTINGS: Required<VisualPanicSettings> = {
+  operation: "panic",
+  labelOverride: ""
+};
+
+export function normalizeVisualPanicOperation(raw: unknown): VisualPanicOperation {
+  return raw === "restore" ? "restore" : "panic";
+}
+
 export function normalizeDurationMs(raw: unknown, fallback = 1000): number {
   const rounded = Math.round(Number(raw ?? fallback));
   if (!Number.isFinite(rounded)) {

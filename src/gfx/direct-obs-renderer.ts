@@ -11,7 +11,7 @@ import {
   textWidth
 } from "../../packages/streamdeck-fadester-shared/src/text-fit.js";
 import { PLAYLISTER_PALETTE as P } from "../../packages/streamdeck-fadester-shared/src/palette.js";
-import { t } from "../i18n/strings.js";
+import { formatNumber, t } from "../i18n/strings.js";
 
 export { textFitAttributes, toSvgDataUri };
 
@@ -170,6 +170,84 @@ export function renderDirectKeySvg(input: DirectKeyRenderInput): string {
     `<rect x="9" y="94" width="102" height="18" rx="5" fill="${P.trackBg}"/>`,
     `<text x="60" y="107" text-anchor="middle" fill="${unavailable && input.configured ? P.orangeAccent : P.mutedText}" ${subtitleText.attrs} font-weight="600">${subtitleText.text}</text>`,
     '</svg>'
+  ].join("");
+}
+
+export interface VisualPanicKeyRenderInput {
+  operation: "panic" | "restore";
+  connected: boolean;
+  reason: string;
+  /** The deck's latch: Panic was sent and no Restore has cleared it. */
+  latched: boolean;
+  /** Restore is held down, not yet long enough. */
+  holding?: boolean;
+  /** How long Restore must be held (0.8 s, the dial hold of D-3). */
+  holdSeconds?: number;
+  /** The last failed send ("Visual Sidechain not loaded" or OBS's own text). */
+  problem?: string;
+  /** A custom caption; empty draws the operation word. */
+  title?: string;
+}
+
+const PANIC_WHITE = "#FAF7FF";
+const PANIC_DARK_RED = "#7F1D1D";
+/** Red words on the white "PANIC SENT" key, dark enough to read at arm's length (about 6:1). */
+const PANIC_TEXT_RED = "#B91C1C";
+
+/** Fixed meanings on every page: a solid red key is Panic only; a white key with red words is "PANIC SENT". */
+export function renderVisualPanicKeySvg(input: VisualPanicKeyRenderInput): string {
+  if (input.operation === "restore") return renderRestoreKeySvg(input);
+  const latched = input.latched;
+  const title = input.title || t(latched ? "vpPanicSent" : "vpPanic");
+  const subtitle = !input.connected ? input.reason || t("obsNotConnected")
+    : input.problem || t(latched ? "vpLatchedHint" : "vpPanicHint");
+  const ink = latched ? PANIC_TEXT_RED : PANIC_WHITE;
+  const layout = textWidth(title, 20) <= 102 ? { lines: [title], fontSize: 20 } : keyTitleLines(title);
+  const titleMarkup = layout.lines.map((line, i) => {
+    const lineText = boxText(line, layout.fontSize, 102);
+    return `<text x="60" y="${layout.lines.length > 1 ? 76 + i * 13 : 82}" text-anchor="middle" fill="${ink}" ${lineText.attrs} font-weight="800">${lineText.text}</text>`;
+  }).join("");
+  const subtitleText = boxText(subtitle, 9, 96);
+  const problem = !input.connected || Boolean(input.problem);
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" data-icon="${latched ? "panic-sent" : "panic"}">`,
+    `<title>${escapeXml(title)} — ${escapeXml(subtitle)}</title>`,
+    `<rect x="3" y="3" width="114" height="114" rx="14" fill="${latched ? PANIC_WHITE : P.programRed}" stroke="${problem ? P.accentYellow : latched ? PANIC_TEXT_RED : PANIC_WHITE}" stroke-width="${problem ? 4 : 3}"/>`,
+    // An octagon with a bar: stop, everywhere.
+    `<path d="M52 14h16l12 12v16L68 54H52L40 42V26Z" fill="${latched ? PANIC_TEXT_RED : "none"}" stroke="${ink}" stroke-width="4" stroke-linejoin="round"/>`,
+    `<rect x="47" y="30" width="26" height="8" rx="2" fill="${latched ? PANIC_WHITE : ink}"/>`,
+    titleMarkup,
+    `<rect x="9" y="94" width="102" height="18" rx="5" fill="${latched ? "#FDE2E2" : PANIC_DARK_RED}"/>`,
+    `<text x="60" y="107" text-anchor="middle" fill="${latched ? PANIC_DARK_RED : problem ? "#FFE4CC" : PANIC_WHITE}" ${subtitleText.attrs} font-weight="700">${subtitleText.text}</text>`,
+    "</svg>"
+  ].join("");
+}
+
+/** Restore: a sunrise arc in a hold ring; the ring lights while the key is held. */
+function renderRestoreKeySvg(input: VisualPanicKeyRenderInput): string {
+  const title = input.title || t("vpRestore");
+  const subtitle = !input.connected ? input.reason || t("obsNotConnected")
+    : input.problem || (input.holding ? t("vpHolding") : t("vpHoldSeconds", { s: formatNumber(input.holdSeconds ?? 0.8) }));
+  const problem = !input.connected || Boolean(input.problem);
+  const accent = P.accentPurple;
+  const titleLayout = keyTitleLines(title);
+  const titleMarkup = titleLayout.lines.map((line, i) => {
+    const lineText = boxText(line, titleLayout.fontSize, 102);
+    return `<text x="60" y="${titleLayout.lines.length > 1 ? 72 + i * 14 : 77}" text-anchor="middle" fill="${P.whiteGlyph}" ${lineText.attrs} font-weight="700">${lineText.text}</text>`;
+  }).join("");
+  const subtitleText = boxText(subtitle, 9, 96);
+  const ring = input.holding ? P.accentYellow : P.trackBorder;
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" data-icon="restore">`,
+    `<title>${escapeXml(title)} — ${escapeXml(subtitle)}</title>`,
+    `<rect x="3" y="3" width="114" height="114" rx="14" fill="${P.bgTop}" stroke="${problem ? "#df6d38" : accent}" stroke-width="3"/>`,
+    `<circle cx="60" cy="34" r="21" fill="none" stroke="${ring}" stroke-width="${input.holding ? 5 : 3}"${input.holding ? "" : ' stroke-dasharray="6 5"'}/>`,
+    `<g fill="none" stroke="${problem ? P.orangeAccent : P.accentYellow}" stroke-width="3" stroke-linecap="round">`,
+    '<path d="M44 43h32"/><path d="M50 43a10 10 0 0 1 20 0"/><path d="M60 22v5M46 28l3 3M74 28l-3 3"/></g>',
+    titleMarkup,
+    `<rect x="9" y="94" width="102" height="18" rx="5" fill="${P.trackBg}"/>`,
+    `<text x="60" y="107" text-anchor="middle" fill="${problem ? P.orangeAccent : input.holding ? P.accentYellow : P.mutedText}" ${subtitleText.attrs} font-weight="600">${subtitleText.text}</text>`,
+    "</svg>"
   ].join("");
 }
 

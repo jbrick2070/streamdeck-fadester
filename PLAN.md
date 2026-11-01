@@ -1000,6 +1000,19 @@ ships unbound.
    retry after a failed send; Restore needs the hold; a missing hotkey says so; the latch until Restore, cleared on
    reconnect. Mutations: *M-10.3a* Restore on a short press; *M-10.3b* the latch kept across a reconnect; *M-10.3c* a
    Panic debounce.
+   *As built (2026-11-01):* `VisualSafety` (one per plugin, shared by every key) and `VisualPanicInstanceController`
+   with its `@action` class (manifest entry in 10.4). The latch clears on `connectionReset` only (fired before every
+   reconnect and on every disconnect; `connectionReady` would clear a Panic sent during the reconnect's catalog
+   read), and a Restore answered after a newer Panic leaves that Panic's latch alone (a counter of Panics sent). A
+   Panic that fails with anything but 600 keeps the latch, so the key can say "PANIC SENT" above OBS's error. The
+   Panic key is solid red with a white octagon and bar; latched, it turns white with dark red words (`#B91C1C`, about
+   6:1) and a filled octagon; a problem draws a yellow border. Restore draws a sunrise in a dashed ring that lights
+   while held, and words its hold from the controller's own hold time ("Hold 0.8 s", "0,8 s halten"). A failed send
+   alerts; an accepted Restore shows Stream Deck's check mark. Hiding or retargeting a held Restore drops the hold.
+   Texts (all eight files): `vpPanic`, `vpPanicSent`, `vpPanicHint` "Strobe and flash off", `vpLatchedHint` "Hold
+   Restore to undo", `vpRestore`, `vpHoldSeconds`, `vpHolding`, `vpNotLoaded` "Visual Sidechain missing" (the
+   plan's "not loaded" does not fit the 96 px key line); Panic and Restore follow Visual Sidechain's own locale terms.
+   A `panic` caption action (empty until 10.6). Tests: `tests/visual-panic.test.ts` (7).
 5. **Step 10.4 -- OBS Filter action.** `src/actions/obs-filter-control.ts` (`…obs-filter`, Keypad and Encoder):
    dial turn rides the setting (relative), press none, drop-and-return (down drops to the rest value, up returns) or
    toggle; a touch tap does nothing; keys toggle-enabled, set (glide to a value over a time) or step up/down. Its own

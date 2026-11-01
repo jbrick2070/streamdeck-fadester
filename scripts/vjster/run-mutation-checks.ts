@@ -534,7 +534,7 @@ export const MUTATIONS: readonly Mutation[] = [
     id: "M-V-62",
     rule: "keys name their target when it is not Chrome (Phase 2)",
     file: "src/vjster/plugin/controllers.ts",
-    from: "    return t === \"obs\" ? `OBS ${word}` : t === \"both\" ? `SYNC ${word}` : word;",
+    from: "    return t === \"obs\" ? fill(this.strings.captionObs, { word }) : t === \"both\" ? fill(this.strings.captionSync, { word }) : word;",
     to: "    return word;",
     tests: ["tests/vjster-plugin-units.test.ts"]
   },
@@ -582,8 +582,8 @@ export const MUTATIONS: readonly Mutation[] = [
     id: "M-V-68",
     rule: "the pin key shows the pinned title (R-TGT-2)",
     file: "src/vjster/plugin/controllers.ts",
-    from: "sub: pinned ? (title ? fit(title, 14) : \"PINNED\") : \"PIN TAB\",",
-    to: "sub: pinned ? \"PINNED\" : \"PIN TAB\",",
+    from: "sub: pinned ? (title ? fit(title, 14) : this.strings.pinned) : this.strings.pinTab,",
+    to: "sub: pinned ? this.strings.pinned : this.strings.pinTab,",
     tests: ["tests/vjster-plugin-units.test.ts"]
   },
   {
@@ -606,8 +606,8 @@ export const MUTATIONS: readonly Mutation[] = [
     id: "M-V-71",
     rule: "only the ad word lets a control through (step 5 review)",
     file: "src/vjster/plugin/controllers.ts",
-    from: "  return w !== null && w.word !== AD_WORD;",
-    to: "  return w !== null && w.word !== AD_WORD && w.word !== \"N/A\";",
+    from: "  return w !== null && w.code !== AD;",
+    to: "  return w !== null && w.code !== AD && w.code !== \"n-a\";",
     tests: ["tests/vjster-plugin-units.test.ts"]
   },
   {
@@ -681,6 +681,22 @@ export const MUTATIONS: readonly Mutation[] = [
     from: "    if (!(\"obsAlwaysOn\" in ev.settings) && current.obsAlwaysOn !== null) repaired.obsAlwaysOn = current.obsAlwaysOn;",
     to: "    void current;",
     tests: ["tests/vjster-page-e2e.test.ts"]
+  },
+  {
+    id: "M-V-81",
+    rule: "deck words come from the language table, not from the built-in English (R-I18N-1, PLAN.md 8.1)",
+    file: "src/vjster/plugin/strings.ts",
+    from: "    out[key] = ok ? (value as string) : EN[key];",
+    to: "    out[key] = EN[key];",
+    tests: ["tests/vjster-plugin-units.test.ts"]
+  },
+  {
+    id: "M-V-82",
+    rule: "a bundled profile's English label is drawn in the deck's language (R-I18N-2)",
+    file: "src/vjster/plugin/strings.ts",
+    from: "  return key === undefined ? label : strings[key];",
+    to: "  return label;",
+    tests: ["tests/vjster-plugin-units.test.ts"]
   }
 ];
 

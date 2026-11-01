@@ -139,6 +139,16 @@ operator answers before the phase that depends on them.
 | R-STD-4 | Each step: docs/vjster REQUIREMENTS.md and PLAN.md updated, operator approval, code, the checks of R-TST-6, a Sonnet 5.5 QA pass over the diff, commit of VJster's own paths only, tested in a clean worktree (R-HOME-5). One `git push` attempt per step; afterwards verify HEAD equals origin, no 0-byte files, no BOMs; on failure hand over a copy-paste PowerShell block. |
 | R-STD-5 | Inside Fadester for OBS the VJster actions ship in Fadester's version. The standalone plugin and the extension carry their own semantic versions, the plugin manifest in the four-part form (`0.1.0.0`). Icons are drawn for VJster; no OBS, YouTube or Elgato artwork. |
 
+## 10a. Translations (requested by the operator 2026-10-31)
+
+| ID | Requirement |
+|----|-------------|
+| R-I18N-1 | Every text a user reads comes from a language file: the Stream Deck manifest's names, tooltips and description (`<lang>.json` at the plugin root), the words VJster draws on keys and dials, the property inspector, the Chrome extension (manifest and options page, `_locales/<lang>/messages.json`) and the OBS page's setup notes. With no translation the English text is shown. Log lines, protocol messages, setting values, link-status codes, YouTube's own quality ids and page titles stay as they are. |
+| R-I18N-2 | No displayed word is used as data: the status word becomes a code (`port-in-use`, `extension-off`, `page-off`, `no-video`, `n-a`, `ad`) that logic compares, and only its display is translated. Labels stored in the bundled profiles (SPEED, NUDGE, QUALITY, FX SPEED, CHROME, OBS, SYNC, CHROME FX) stay English as data; a stored label equal to one of these defaults is shown translated, any other label as typed. |
+| R-I18N-3 | Languages: Stream Deck offers de, es, fr, ja, ko, zh_CN and zh_TW besides English (`supportedLanguages` in @elgato/streamdeck 3.0.3), so the plugin and its property inspector have those seven. Chrome offers all of them, so the extension and the OBS page have the ten of obs-playlister: zh_CN, es, pt_BR, ru, ja, de, fr, ko, zh_TW, tr. "VJster", "Stream Deck", "Chrome", "OBS", "YouTube", "FX" and numbers with units (`1.25x`, `1080p`) are kept; the rate keeps its dot decimal everywhere (as on players and DJ gear). Values in sentences are placeholders (`{n}` in our files, `$1` in Chrome's), never string concatenation; counts use separate one and many texts. |
+| R-I18N-4 | Every word drawn on a key or dial fits its box in every language (the width estimate counts CJK and accented capitals correctly); a test fails when a translation would not fit. |
+| R-I18N-5 | A test checks every language file against English: the same keys, the same placeholders, valid JSON in UTF-8 without BOM, and every required language present. Each language file says it was drafted by an AI model and reviewed by a second one (in a `_comment` key the loaders ignore, or the README where a format has no comments). README and INSTALL say which languages exist and how to send corrections. |
+
 ## 11. Non-goals
 
 - Skipping, blocking or hurrying advertisements; downloading or recording video.

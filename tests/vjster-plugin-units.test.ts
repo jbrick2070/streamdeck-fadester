@@ -27,6 +27,7 @@ import {
   speedStepSettings,
   transportSettings
 } from "../src/vjster/plugin/settings.js";
+import { DECK_KEYS, EN, fill, placeholders, shownLabel, stringsFrom, type Strings } from "../src/vjster/plugin/strings.js";
 
 const state = (extra: Partial<StateReport> = {}): StateReport => ({
   v: 1,
@@ -125,15 +126,27 @@ describe("display (R-SPD-6, R-BEH-4, R-BEH-5)", () => {
     expect([1, 1.25, 0.5, 16, 0.1, 2.5].map(formatRate)).toEqual(["1x", "1.25x", "0.5x", "16x", "0.1x", "2.5x"]);
   });
 
-  it("names the state a target is in (R-BEH-4)", () => {
-    expect(statusWord({ status: "port-in-use", state: null }, "speed")?.word).toBe("PORT IN USE");
-    expect(statusWord({ status: "extension-off", state: null }, "speed")?.word).toBe("EXTENSION OFF");
-    expect(statusWord({ status: "page-off", state: null }, "speed")?.word).toBe("NO PAGE");
-    expect(statusWord(connected(null), "speed")?.word).toBe("NO VIDEO");
-    expect(statusWord(connected(state({ rate: null })), "speed")?.word).toBe("NO VIDEO");
-    expect(statusWord(connected(state({ capabilities: ["speed"] })), "quality")?.word).toBe("N/A");
-    expect(statusWord(connected(state({ adPlaying: true })), "speed")?.word).toBe("AD PLAYING");
+  it("names the state a target is in by a code, never by the word drawn (R-BEH-4, R-I18N-2)", () => {
+    expect(statusWord({ status: "port-in-use", state: null }, "speed")?.code).toBe("port-in-use");
+    expect(statusWord({ status: "extension-off", state: null }, "speed")?.code).toBe("extension-off");
+    expect(statusWord({ status: "page-off", state: null }, "speed")?.code).toBe("page-off");
+    expect(statusWord(connected(null), "speed")?.code).toBe("no-video");
+    expect(statusWord(connected(state({ rate: null })), "speed")?.code).toBe("no-video");
+    expect(statusWord(connected(state({ capabilities: ["speed"] })), "quality")?.code).toBe("n-a");
+    expect(statusWord(connected(state({ adPlaying: true })), "speed")?.code).toBe("ad");
     expect(statusWord(connected(), "speed")).toBeNull();
+  });
+
+  it("draws each status code as its English word", () => {
+    const strip = (status: TargetView["status"], s: StateReport | null) =>
+      words(speedStrip({ view: { status, state: s }, target: "browser", pending: null, min: 0.25, max: 4, label: "SPEED" }));
+    expect(strip("port-in-use", null)).toContain("PORT IN USE");
+    expect(strip("extension-off", null)).toContain("EXTENSION OFF");
+    expect(strip("page-off", null)).toContain("NO PAGE");
+    expect(strip("connected", null)).toContain("NO VIDEO");
+    expect(strip("connected", state({ capabilities: ["quality"] }))).toContain("N/A");
+    expect(strip("connected", state({ adPlaying: true, rate: null }))).toContain("NO VIDEO");
+    expect(words(qualityStrip({ view: connected(state({ adPlaying: true })), target: "browser", pending: null, label: "Q" }))).toContain("AD PLAYING");
   });
 
   it("draws the speed strip from what the page reports, escaping the title", () => {
@@ -625,5 +638,77 @@ describe("after the step 5 review", () => {
     new SpeedStepController(hub, s, speedStepSettings({ direction: 1 })).press();
     expect(sent).toEqual([]);
     expect(s.alerts).toBe(1);
+  });
+});
+
+describe("deck words by key (PLAN.md 8.1, R-I18N-1, R-I18N-2)", () => {
+  /** A table where every word is marked, so a word drawn without a lookup shows up as English. */
+  const marked: Strings = stringsFrom((k) => (k === "captionObs" ? "<{word}> obs" : k === "captionSync" ? "<{word}> sync" : `~${EN[k]}`));
+
+  it("takes a word from the lookup, and English where the lookup has none, an empty one, the key itself or lost placeholders", () => {
+    expect(marked.statusAd).toBe("~AD PLAYING");
+    const t = stringsFrom((k) => ({ statusAd: "", speed: "speed", auto: 7, tagWeb: "  ", captionObs: "OBS", captionSync: "{word} SYNC", paused: "PAUSE" } as Record<string, unknown>)[k]);
+    expect(t.statusAd).toBe("AD PLAYING");
+    expect(t.speed).toBe("SPEED"); // the key echoed back, as Stream Deck does for a missing key
+    expect(t.auto).toBe("AUTO");
+    expect(t.tagWeb).toBe("WEB");
+    expect(t.captionObs).toBe("OBS {word}");
+    expect(t.captionSync).toBe("{word} SYNC");
+    expect(t.paused).toBe("PAUSE");
+    expect(stringsFrom(() => undefined)).toEqual(EN);
+    for (const k of DECK_KEYS) expect(k).not.toContain(".");
+  });
+
+  it("fills placeholders once, without reading values as placeholders", () => {
+    expect(fill("OBS {word}", { word: "{word}" })).toBe("OBS {word}");
+    expect(fill("{n} and {m}", { n: "1" })).toBe("1 and {m}");
+    expect(placeholders("{b} {a} x")).toEqual(["a", "b"]);
+  });
+
+  it("draws every status word, tag and caption from the table, none from code", () => {
+    const strip = (status: TargetView["status"], s: StateReport | null, target: "browser" | "obs" = "browser") =>
+      words(speedStrip({ view: { status, state: s }, target, pending: null, min: 0.25, max: 4, label: "SPEED", strings: marked }));
+    expect(strip("port-in-use", null)).toContain("~PORT IN USE");
+    expect(strip("extension-off", null)).toContain("~EXTENSION OFF");
+    expect(strip("page-off", null, "obs")).toEqual(expect.arrayContaining(["~NO PAGE", "~OBS", "~SPEED"]));
+    expect(strip("connected", null)).toEqual(expect.arrayContaining(["~NO VIDEO", "~WEB"]));
+    expect(strip("connected", state({ capabilities: ["quality"] }))).toContain("~N/A");
+    expect(strip("connected", state({ adPlaying: true }))).toContain("~AD");
+    expect(strip("connected", state({ rate: 8, rateDirect: true }))).toContain("~EXT");
+    const q = (s: StateReport | null, status: TargetView["status"] = "connected") =>
+      words(qualityStrip({ view: { status, state: s }, target: "browser", pending: null, label: "QUALITY", strings: marked }));
+    expect(q(state())).toEqual(expect.arrayContaining(["~AUTO", "~QUALITY", "1080p"]));
+    expect(q(state({ qualityAuto: false }))).toContain("~FIXED");
+    expect(q(state({ adPlaying: true }))).toContain("~AD PLAYING");
+    expect(q(null)).toContain("~NO VIDEO");
+    expect(q(state({ quality: "auto", qualityAuto: true }))).toContain("~AUTO");
+
+    const views = { browser: connected(), obs: connected(state({ target: "obs" })) };
+    const key = (make: (hub: HubLike, s: ReturnType<typeof sink>) => { render(): void }) => {
+      const { hub } = fakeHub(views);
+      const s = sink();
+      make(hub, s).render();
+      return words(s.last());
+    };
+    expect(key((h, s) => new SpeedPresetController(h, s, speedPresetSettings({ rate: 1, target: "obs" }), undefined, marked))).toContain("&lt;~SPEED&gt; obs");
+    expect(key((h, s) => new SpeedPresetController(h, s, speedPresetSettings({ rate: 8, target: "both" }), undefined, marked))).toContain("&lt;~FX SPEED&gt; sync");
+    expect(key((h, s) => new QualityPresetController(h, s, qualityPresetSettings({ level: "auto" }), undefined, marked))).toEqual(expect.arrayContaining(["~AUTO", "~QUALITY"]));
+    expect(key((h, s) => new TransportController(h, s, transportSettings({}), undefined, marked))).toContain("~PLAYING");
+    expect(key((h, s) => new PinController(h, s, undefined, marked))).toContain("~PIN TAB");
+    views.browser = connected(state({ playing: false, pinned: true, title: "" }));
+    expect(key((h, s) => new TransportController(h, s, transportSettings({}), undefined, marked))).toContain("~PAUSED");
+    expect(key((h, s) => new PinController(h, s, undefined, marked))).toContain("~PINNED");
+    views.browser = connected(state({ rate: null }));
+    expect(key((h, s) => new SpeedStepController(h, s, speedStepSettings({}), undefined, marked))).toContain("~SPEED");
+    views.browser = connected();
+    expect(key((h, s) => new SpeedDialController(h, s, speedDialSettings({ extended: true }), undefined, marked))).toContain("~FX SPEED");
+    expect(key((h, s) => new QualityDialController(h, s, qualityDialSettings({}), undefined, marked))).toContain("~QUALITY");
+  });
+
+  it("shows a bundled profile's stored label in the deck's language and any other label as typed (R-I18N-2)", () => {
+    expect(["SPEED", "FX SPEED", "QUALITY", "NUDGE", "SYNC"].map((l) => shownLabel(l, marked))).toEqual(["~SPEED", "~FX SPEED", "~QUALITY", "~NUDGE", "~SYNC"]);
+    expect(["CHROME", "OBS", "CHROME FX", "MY DIAL", "speed", "constructor"].map((l) => shownLabel(l, marked))).toEqual(["CHROME", "OBS", "CHROME FX", "MY DIAL", "speed", "constructor"]);
+    // The stored label stays English: only the drawing translates it.
+    expect(speedDialSettings({}).label).toBe("SPEED");
   });
 });

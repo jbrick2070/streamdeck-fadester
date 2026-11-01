@@ -38,6 +38,7 @@ import {
   speedStepSettings,
   transportSettings
 } from "./settings.js";
+import { EN, type Strings } from "./strings.js";
 
 export const UUID_PREFIX = "com.jbrick2070.vjster";
 
@@ -55,7 +56,11 @@ interface Rendered {
 abstract class VjsterAction<C extends Rendered> extends SingletonAction<JsonObject> {
   protected readonly instances = new Map<string, { controller: C; off: () => void; offError: () => void; stopDrawing: () => void }>();
 
-  constructor(protected readonly hub: Hub) {
+  constructor(
+    protected readonly hub: Hub,
+    /** The deck words in Stream Deck's language; standalone.ts builds them (strings.ts). */
+    protected readonly strings: Strings = EN
+  ) {
     super();
   }
 
@@ -129,7 +134,7 @@ abstract class VjsterAction<C extends Rendered> extends SingletonAction<JsonObje
 @action({ UUID: `${UUID_PREFIX}.speed` })
 export class SpeedDialAction extends VjsterAction<SpeedDialController> {
   protected make(sink: Sink, settings: JsonObject): SpeedDialController {
-    return new SpeedDialController(this.hub, sink, speedDialSettings(settings));
+    return new SpeedDialController(this.hub, sink, speedDialSettings(settings), undefined, this.strings);
   }
   protected settingsChanged(c: SpeedDialController, s: JsonObject): void {
     c.update(speedDialSettings(s));
@@ -151,7 +156,7 @@ export class SpeedDialAction extends VjsterAction<SpeedDialController> {
 @action({ UUID: `${UUID_PREFIX}.quality` })
 export class QualityDialAction extends VjsterAction<QualityDialController> {
   protected make(sink: Sink, settings: JsonObject): QualityDialController {
-    return new QualityDialController(this.hub, sink, qualityDialSettings(settings));
+    return new QualityDialController(this.hub, sink, qualityDialSettings(settings), undefined, this.strings);
   }
   protected settingsChanged(c: QualityDialController, s: JsonObject): void {
     c.update(qualityDialSettings(s));
@@ -173,7 +178,7 @@ export class QualityDialAction extends VjsterAction<QualityDialController> {
 @action({ UUID: `${UUID_PREFIX}.speed-preset` })
 export class SpeedPresetAction extends VjsterAction<SpeedPresetController> {
   protected make(sink: Sink, settings: JsonObject): SpeedPresetController {
-    return new SpeedPresetController(this.hub, sink, speedPresetSettings(settings));
+    return new SpeedPresetController(this.hub, sink, speedPresetSettings(settings), undefined, this.strings);
   }
   protected settingsChanged(c: SpeedPresetController, s: JsonObject): void {
     c.update(speedPresetSettings(s));
@@ -186,7 +191,7 @@ export class SpeedPresetAction extends VjsterAction<SpeedPresetController> {
 @action({ UUID: `${UUID_PREFIX}.speed-step` })
 export class SpeedStepAction extends VjsterAction<SpeedStepController> {
   protected make(sink: Sink, settings: JsonObject): SpeedStepController {
-    return new SpeedStepController(this.hub, sink, speedStepSettings(settings));
+    return new SpeedStepController(this.hub, sink, speedStepSettings(settings), undefined, this.strings);
   }
   protected settingsChanged(c: SpeedStepController, s: JsonObject): void {
     c.update(speedStepSettings(s));
@@ -199,7 +204,7 @@ export class SpeedStepAction extends VjsterAction<SpeedStepController> {
 @action({ UUID: `${UUID_PREFIX}.quality-preset` })
 export class QualityPresetAction extends VjsterAction<QualityPresetController> {
   protected make(sink: Sink, settings: JsonObject): QualityPresetController {
-    return new QualityPresetController(this.hub, sink, qualityPresetSettings(settings));
+    return new QualityPresetController(this.hub, sink, qualityPresetSettings(settings), undefined, this.strings);
   }
   protected settingsChanged(c: QualityPresetController, s: JsonObject): void {
     c.update(qualityPresetSettings(s));
@@ -212,7 +217,7 @@ export class QualityPresetAction extends VjsterAction<QualityPresetController> {
 @action({ UUID: `${UUID_PREFIX}.pin` })
 export class PinAction extends VjsterAction<PinController> {
   protected make(sink: Sink): PinController {
-    return new PinController(this.hub, sink);
+    return new PinController(this.hub, sink, undefined, this.strings);
   }
   protected settingsChanged(): void {
     /* no settings */
@@ -225,7 +230,7 @@ export class PinAction extends VjsterAction<PinController> {
 @action({ UUID: `${UUID_PREFIX}.transport` })
 export class TransportAction extends VjsterAction<TransportController> {
   protected make(sink: Sink, settings: JsonObject): TransportController {
-    return new TransportController(this.hub, sink, transportSettings(settings));
+    return new TransportController(this.hub, sink, transportSettings(settings), undefined, this.strings);
   }
   protected settingsChanged(c: TransportController, s: JsonObject): void {
     c.update(transportSettings(s));

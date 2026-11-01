@@ -7,6 +7,7 @@
 
 import type { StateReport } from "../shared/protocol.js";
 import { AUTO, qualityLabel } from "../shared/quality.js";
+import { EN, shownLabel, type DeckKey, type Strings } from "./strings.js";
 
 /** Strip canvas size for the Stream Deck + (one dial's share of the strip). */
 export const STRIP_W = 200;
@@ -76,19 +77,37 @@ export function svgDataUri(svg: string): string {
   return `data:image/svg+xml;charset=utf8,${encodeURIComponent(svg)}`;
 }
 
-/** The status word while an ad plays; controls still send then, and the page holds the change (R-BEH-1). */
-export const AD_WORD = "AD PLAYING";
+/** Why a target cannot show a video; logic compares these codes, never the words drawn for them (R-I18N-2). */
+export type StatusCode = "port-in-use" | "extension-off" | "page-off" | "no-video" | "n-a" | "ad";
 
-/** The status word a target is in, or null when it has a video to show (R-BEH-4). */
-export function statusWord(view: TargetView, need: "speed" | "quality" | "transport"): { word: string; color: string } | null {
-  if (view.status === "port-in-use") return { word: "PORT IN USE", color: C.red };
-  if (view.status === "extension-off") return { word: "EXTENSION OFF", color: C.red };
-  if (view.status === "page-off") return { word: "NO PAGE", color: C.red };
+/** The code while an ad plays; controls still send then, and the page holds the change (R-BEH-1). */
+export const AD: StatusCode = "ad";
+
+/** The deck word for each status code. */
+export const STATUS_WORD: Readonly<Record<StatusCode, DeckKey>> = {
+  "port-in-use": "statusPortInUse",
+  "extension-off": "statusExtensionOff",
+  "page-off": "statusPageOff",
+  "no-video": "statusNoVideo",
+  "n-a": "statusNotAvailable",
+  ad: "statusAd"
+};
+
+/** The state a target is in, or null when it has a video to show (R-BEH-4). */
+export function statusWord(view: TargetView, need: "speed" | "quality" | "transport"): { code: StatusCode; color: string } | null {
+  if (view.status === "port-in-use") return { code: "port-in-use", color: C.red };
+  if (view.status === "extension-off") return { code: "extension-off", color: C.red };
+  if (view.status === "page-off") return { code: "page-off", color: C.red };
   const s = view.state;
-  if (!s || s.rate === null) return { word: "NO VIDEO", color: C.dim };
-  if (!s.capabilities.includes(need)) return { word: "N/A", color: C.dim };
-  if (s.adPlaying) return { word: AD_WORD, color: C.amber };
+  if (!s || s.rate === null) return { code: "no-video", color: C.dim };
+  if (!s.capabilities.includes(need)) return { code: "n-a", color: C.dim };
+  if (s.adPlaying) return { code: AD, color: C.amber };
   return null;
+}
+
+/** A quality level as the deck shows it: the Auto word, `1080p`, or YouTube's own id. */
+export function levelText(level: string, strings: Strings = EN): string {
+  return level === AUTO ? strings.auto : qualityLabel(level);
 }
 
 const defs = `<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${C.magenta}"/><stop offset="1" stop-color="${C.cyan}"/></linearGradient><filter id="glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
@@ -101,9 +120,9 @@ function text(x: number, y: number, size: number, value: string, fill: string, e
   return `<text x="${x}" y="${y}" font-family="Segoe UI, Arial, sans-serif" font-size="${size}" font-weight="700" fill="${fill}" ${extra}>${escapeText(value)}</text>`;
 }
 
-function header(label: string, target: "browser" | "obs", right: string, rightColor: string): string {
-  const tag = target === "obs" ? "OBS" : "WEB";
-  return `${text(10, 17, 12, label, C.dim, 'letter-spacing="1.5"')}${text(STRIP_W - 10, 17, 11, right || tag, right ? rightColor : C.dim, 'text-anchor="end" letter-spacing="1"')}`;
+function header(label: string, target: "browser" | "obs", right: string, rightColor: string, strings: Strings): string {
+  const tag = target === "obs" ? strings.tagObs : strings.tagWeb;
+  return `${text(10, 17, 12, shownLabel(label, strings), C.dim, 'letter-spacing="1.5"')}${text(STRIP_W - 10, 17, 11, right || tag, right ? rightColor : C.dim, 'text-anchor="end" letter-spacing="1"')}`;
 }
 
 export interface SpeedStripModel {
@@ -114,22 +133,26 @@ export interface SpeedStripModel {
   readonly min: number;
   readonly max: number;
   readonly label: string;
+  /** The deck words; English when left out. */
+  readonly strings?: Strings;
 }
 
 /** The speed dial's strip: label, one big rate, a bar with 1x marked, the title (R-SPD-6). */
 export function speedStrip(m: SpeedStripModel): string {
+  const strings = m.strings ?? EN;
   const status = statusWord(m.view, "speed");
   const s = m.view.state;
   let body = `<rect width="${STRIP_W}" height="${STRIP_H}" fill="${C.bg}"/>`;
-  if (status && !(status.word === "AD PLAYING" && s?.rate != null)) {
-    body += header(m.label, m.target, "", C.dim);
-    body += text(STRIP_W / 2, 62, status.word.length > 9 ? 17 : 22, status.word, status.color, 'text-anchor="middle" letter-spacing="1"');
+  if (status && !(status.code === AD && s?.rate != null)) {
+    body += header(m.label, m.target, "", C.dim, strings);
+    const word = strings[STATUS_WORD[status.code]];
+    body += text(STRIP_W / 2, 62, word.length > 9 ? 17 : 22, word, status.color, 'text-anchor="middle" letter-spacing="1"');
     return svg(STRIP_W, STRIP_H, body);
   }
   const rate = (s?.rate ?? 1) as number;
   const shown = m.pending ?? rate;
   const direct = s?.rateDirect === true;
-  body += header(m.label, m.target, status ? "AD" : direct ? "EXT" : "", status ? C.amber : C.cyan);
+  body += header(m.label, m.target, status ? strings.tagAd : direct ? strings.tagExt : "", status ? C.amber : C.cyan, strings);
   body += text(STRIP_W / 2, 58, 34, formatRate(shown), m.pending !== null ? C.dim : "url(#g)", 'text-anchor="middle" filter="url(#glow)"');
   // Bar from min to max with 1x marked.
   const x0 = 12;
@@ -151,23 +174,26 @@ export interface QualityStripModel {
   readonly target: "browser" | "obs";
   readonly pending: string | null;
   readonly label: string;
+  /** The deck words; English when left out. */
+  readonly strings?: Strings;
 }
 
 /** The quality dial's strip: `1080p` or `AUTO 720p`, and a segment per offered level (R-QLT-3). */
 export function qualityStrip(m: QualityStripModel): string {
+  const strings = m.strings ?? EN;
   const status = statusWord(m.view, "quality");
   let body = `<rect width="${STRIP_W}" height="${STRIP_H}" fill="${C.bg}"/>`;
   const s = m.view.state;
   if (status || !s) {
-    body += header(m.label, m.target, "", C.dim);
-    const word = status?.word ?? "NO VIDEO";
+    body += header(m.label, m.target, "", C.dim, strings);
+    const word = strings[STATUS_WORD[status?.code ?? "no-video"]];
     body += text(STRIP_W / 2, 62, word.length > 9 ? 17 : 22, word, status?.color ?? C.dim, 'text-anchor="middle" letter-spacing="1"');
     return svg(STRIP_W, STRIP_H, body);
   }
   const auto = s.qualityAuto === true && m.pending === null;
   const level = m.pending ?? s.quality;
-  body += header(m.label, m.target, auto ? "AUTO" : "FIXED", auto ? C.green : C.magenta);
-  const big = level === null || level === "unknown" ? "..." : level === AUTO ? "AUTO" : qualityLabel(level);
+  body += header(m.label, m.target, auto ? strings.tagAuto : strings.tagFixed, auto ? C.green : C.magenta, strings);
+  const big = level === null || level === "unknown" ? "..." : levelText(level, strings);
   body += text(STRIP_W / 2, 58, 32, big, m.pending !== null ? C.dim : "url(#g)", 'text-anchor="middle" filter="url(#glow)"');
   const levels = s.availableQualities.filter((l) => l !== AUTO);
   const n = Math.max(1, levels.length);

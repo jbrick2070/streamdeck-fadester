@@ -167,7 +167,7 @@ As built in step 2 (`speed.ts`): everything runs in integer twentieths (0.05 uni
 
 ### 3.5 Quality logic (R-QLT)
 
-As built in step 2 (`quality.ts`): `normalizeLevels` keeps the page's own order (highest first), drops `auto`, repeats and anything that is not a level id. `stepQuality(levels, current, ticks)`: positive ticks move toward higher quality, stopping at both ends; it skips `auto` even when given the raw reported list. `current` is the fixed level when one is set, else the level playing under Auto, so the first notch from Auto moves one level from what is playing. From a level not in the list (`unknown`, or none), a turn up picks the highest level and a turn down the lowest. `qualityLabel` maps `hd2160` to `2160p` through `tiny` to `144p` and `auto` to `Auto`; unknown ids are shown as-is so a new level YouTube adds never crashes the display. `resolveHeldLevel(held, levels)` implements R-QLT-7: the held level, else the nearest lower offered level, else the lowest offered; null when the held id's height is unknown and it is not offered.
+As built in step 2 (`quality.ts`): `normalizeLevels` keeps the page's own order (highest first), drops `auto`, repeats and anything that is not a level id. `stepQuality(levels, current, ticks)`: positive ticks move toward higher quality, stopping at both ends; it skips `auto` even when given the raw reported list. `current` is the fixed level when one is set, else the level playing under Auto, so the first notch from Auto moves one level from what is playing. From a level not in the list (`unknown`, or none), a turn up picks the highest level and a turn down the lowest. `qualityLabel` maps `hd2160` to `2160p` through `tiny` to `144p` and `auto` to `Auto` (from step 8.1 the code `auto`, drawn by `levelText`); unknown ids are shown as-is so a new level YouTube adds never crashes the display. `resolveHeldLevel(held, levels)` implements R-QLT-7: the held level, else the nearest lower offered level, else the lowest offered; null when the held id's height is unknown and it is not offered.
 
 ### 3.6 Target selection (R-TGT)
 
@@ -286,3 +286,85 @@ Before every commit: `git ls-files --eol` shows only LF, no BOM (`Get-Content -E
 ## 7. Order of work
 
 Phase 0 and Phase 0b (done), then Phase 1 steps 1 to 6 in order, each step one commit after approval of its plan rows, then Phase 2. The probe in step 1 gates the quality design; nothing in steps 2 to 5 waits on it except the quality adapter in step 4.
+
+## 8. Translations (R-I18N-1..5; requested by the operator 2026-10-31)
+
+Goal: VJster speaks the languages Stream Deck and Chrome offer, as Playlister, Visual Sidechain and Midi Fadester do.
+Only VJster's own files change: `com.jbrick2070.vjster.sdPlugin/`, `src/vjster/`, `vjster-extension/`,
+`vjster-page/`, `scripts/vjster/`, `tests/vjster-*`, `docs/vjster/`. Fadester for OBS, `package.json` and the shared
+Fadester files are not touched (someone else's work is uncommitted there). Each step ends with the VJster tests
+(`npx vitest run tests/vjster-`) and the three `tsc --noEmit` runs green.
+
+1. **Step 8.1 -- Codes, not words (no visible change).** `statusWord` returns a status code; `blocked()` and
+   `display.ts:124` compare codes. A `Strings` table (English) is passed into the display and controllers, with the
+   `OBS {word}` / `SYNC {word}` captions as templates. The three mutation entries that quote the changed lines
+   (`run-mutation-checks.ts:537, 585, 609`) are updated in the same step; the unit tests compare codes.
+   *As built (2026-10-31):* `src/vjster/plugin/strings.ts` holds the English table `EN` (24 keys, no dots),
+   `stringsFrom(lookup)` (English wherever the lookup gives nothing, an empty text, the key itself or a text whose
+   `{placeholders}` differ from English), `fill()` and `shownLabel()` (the bundled profile labels SPEED, FX SPEED,
+   QUALITY, NUDGE and SYNC are drawn translated; CHROME, OBS and CHROME FX are kept terms, any other label as typed).
+   `statusWord` returns `{ code, color }` with the codes of R-I18N-2; `blocked()` compares `code !== AD`; the strips
+   draw `strings[STATUS_WORD[code]]`. `qualityLabel(AUTO)` returns the code `auto` and `levelText()` draws it. Every
+   controller and action takes the table as an optional last argument (English by default), so the unit tests and a
+   Fadester-hosted copy need no change. Mutations M-V-62, 68, 71 follow the new lines; M-V-81 (lookup bypassed) and
+   M-V-82 (profile label not translated) are new. The status-word size still counts characters: that is step 8.2.
+2. **Step 8.2 -- Width.** `textEm` counts CJK, kana, Hangul and accented capitals at their real widths, so a fit test
+   can be trusted; a test lists every Strings entry against its box (status word about 13 capitals, header tags about
+   6, big key text about 7).
+3. **Step 8.3 -- Stream Deck files.** `en.json` plus de, es, fr, ja, ko, zh_CN, zh_TW `.json` at the plugin root:
+   plugin Name and Description, each action UUID's Name and Tooltip, and a `Localization` object with the deck words.
+   `actions.ts` / `standalone.ts` build the Strings from `streamDeck.i18n`. Stored default labels are shown translated
+   (R-I18N-2). Tests: every file has every key and placeholder; every deck word fits (8.2); the deck-sim e2e runs once
+   with `language: "de"`.
+4. **Step 8.4 -- Property inspector.** `ui/i18n.js` holds the inspector's texts per language (one object per
+   language, loaded before `vjster.js`), `vjster.js` reads `application.language` from the `inInfo` it already
+   receives, `vjster.html` marks texts with `data-i18n`; the "entry(s)" message becomes a one and a many text. A test
+   checks `i18n.js` has the same keys and placeholders in every language.
+5. **Step 8.5 -- Chrome extension.** `_locales/<lang>/messages.json` for the ten languages and English,
+   `default_locale`, `__MSG_x__` in manifest.json, the options page filled through `chrome.i18n.getMessage`, the
+   typings in `chrome.d.ts`, `_locales` in the rollup copy step, `pack-extension.ts` and the release test.
+6. **Step 8.6 -- OBS page.** The four setup notes come from a table of the ten languages; the language comes from an
+   `hl=` parameter the property inspector adds to the address it builds (from Stream Deck's language), else
+   `navigator.language`.
+7. **Step 8.7 -- Translations and checks.** Claude drafts every file, Gemini 4 Argon reviews each language and its
+   corrections are applied unless one breaks a rule; Sonnet 5.5 QA before the build; all VJster tests, the three
+   tsc runs, `streamdeck validate` on the plugin folder, the extension and plugin packages rebuilt. One commit per
+   step, one push at the end. Not done here: a check on a real Stream Deck that CJK glyphs render and fit (TESTING
+   item, pending), and the version number (on the operator's word).
+
+**Review round 1 (2026-10-31, Codex GPT-6.1 Sol ultra and Gemini 4 Argon High via agy): taken, and binding for the
+steps above where they differ.**
+
+- *More text*: each action's `Encoder.TriggerDescription` (Rotate, Push, Touch) goes in the `<lang>.json` files. The
+  key images baked by `scripts/vjster/make-plugin-images.ts` (SPEED, AUTO, QUALITY, PIN TAB, PLAY) stay English, as do
+  the bundled profile and page names (they are file names and data); both are listed as exempt. The PI's
+  `placeholder` attributes, timers and messages, the extension's `<title>` and status lines are covered.
+- *Defaults*: an unset label is stored as unset; the PI shows the translated default as the input's placeholder, never
+  as its value, so a translated default can never be saved as a custom label. Profile-stored English defaults are
+  shown translated only where the deck draws them (`controllers.ts` 221, 299).
+- *Codes*: `qualityLabel` returns a code for Auto (not "Auto" vs "AUTO"); presentation decisions that use
+  `word.length` use measured width instead.
+- *Stream Deck format*: root `<lang>.json` holds `Name`, `Description`, `Category`, per-UUID `{ Name, Tooltip,
+  Encoder: { TriggerDescription } }` and `Localization`. The runtime reads only `Localization`, tries the language,
+  its base, then English, and returns the key itself for a missing key; it substitutes nothing, so VJster fills `{n}`
+  itself, keys contain no dots, and an empty or missing text falls back to the English table. `streamDeck.i18n` is
+  read inside `startStandalone`, not at import time (unit tests import the actions). `streamdeck validate` does not
+  check `<lang>.json`, so the VJster test does.
+- *PI*: `JSON.parse(inInfo).application.language` is read before the first render. The PI's texts live under
+  `Localization.pi` in the same `<lang>.json` files and are fetched from there (no second dictionary).
+- *Fit*: a fit test measures composed captions (`OBS {word}`, `SYNC {word}`), both header texts with their
+  letter-spacing, and dynamic titles by measured width, not by character count; `fit()` truncates by measured width.
+  CJK text gets a CJK font list (Yu Gothic UI, Malgun Gothic, Microsoft YaHei UI, Microsoft JhengHei UI) and no
+  positive letter-spacing. Real rendering on a Stream Deck is a pending TESTING item; R-I18N-4 is claimed only for the
+  measured estimate until then.
+- *Chrome*: `_locales/{en,de,es,fr,ja,ko,pt_BR,ru,tr,zh_CN,zh_TW}/messages.json`, `"default_locale": "en"`; every
+  entry is `{ "message": ... }` (no `_comment` entries, so the AI-drafted note goes in INSTALL.md); placeholders as
+  `$PORT$` with `placeholders`; an empty `getMessage` result keeps the English DOM text. `copyStatic` copies
+  `_locales` recursively; `pack-extension.ts` requires them; the release test checks the real built locales.
+- *OBS page*: the plugin's `obsPageAddress` adds `hl=<lang>` before `#token`, normalised (`pt-BR` -> `pt_BR`, regional
+  -> base, unknown -> English); the retry seconds become a placeholder; the page and options `<html lang>` follow the
+  chosen language.
+- *Scope and order*: the root README, `package.json` and the Fadester files are not touched; INSTALL.md and the
+  VJster docs carry the language notes. Each step adds its English entries and a German test entry at once, so fit and
+  fallback problems show while the step is built; `DeckSim` takes a language. New mutation checks: a lookup bypass
+  and a fit check. The full suite (not only `tests/vjster-`) runs before the commit.

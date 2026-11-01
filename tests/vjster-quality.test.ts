@@ -43,8 +43,8 @@ describe("qualityLabel and levelHeight", () => {
     expect(LEVELS.map(levelHeight)).toEqual([2160, 1440, 1080, 720, 480, 360, 240, 144]);
   });
 
-  it("shows Auto for auto and any other id as it is", () => {
-    expect(qualityLabel(AUTO)).toBe("Auto");
+  it("returns the AUTO code for auto and any other id as it is", () => {
+    expect(qualityLabel(AUTO)).toBe(AUTO);
     expect(qualityLabel("highres")).toBe("highres");
     expect(levelHeight("highres")).toBeNull();
     expect(levelHeight("constructor")).toBeNull();

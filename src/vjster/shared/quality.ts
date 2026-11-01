@@ -44,9 +44,13 @@ export function levelHeight(level: string): number | null {
   return Object.prototype.hasOwnProperty.call(HEIGHTS, level) ? HEIGHTS[level] : null;
 }
 
-/** Display label: `1080p` for known ids, `Auto` for auto, the id itself otherwise. */
+/**
+ * Display label: `1080p` for known ids, the id itself otherwise, and the code
+ * AUTO for auto, which the caller turns into a word in its own language
+ * (docs/vjster R-I18N-2).
+ */
 export function qualityLabel(level: string): string {
-  if (level === AUTO) return "Auto";
+  if (level === AUTO) return AUTO;
   const h = levelHeight(level);
   return h === null ? level : `${h}p`;
 }

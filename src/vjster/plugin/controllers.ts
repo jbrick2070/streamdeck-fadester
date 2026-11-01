@@ -6,9 +6,9 @@
 
 import { createCoalescer, realClock, type CoalesceClock, type Coalescer } from "../shared/coalesce.js";
 import type { StateReport, Target } from "../shared/protocol.js";
-import { AUTO, normalizeLevels, qualityLabel, stepQuality } from "../shared/quality.js";
+import { AUTO, normalizeLevels, stepQuality } from "../shared/quality.js";
 import { nextRate, rangeBounds, rangeFor, type RateStep } from "../shared/speed.js";
-import { AD_WORD, fit, formatRate, keyImage, qualityStrip, speedStrip, statusWord, type TargetView } from "./display.js";
+import { AD, fit, formatRate, keyImage, levelText, qualityStrip, speedStrip, statusWord, type TargetView } from "./display.js";
 import type { IntentBody } from "./link-server.js";
 import type {
   QualityDialSettings,
@@ -19,6 +19,7 @@ import type {
   TargetChoice,
   TransportSettings
 } from "./settings.js";
+import { EN, fill, type Strings } from "./strings.js";
 
 /** The hub as the controllers see it. */
 export interface HubLike {
@@ -39,10 +40,10 @@ export const PENDING_MS = 1500;
 const shownTarget = (t: TargetChoice): Target => (t === "obs" ? "obs" : "browser");
 const sendTargets = (t: TargetChoice): Target[] => (t === "both" ? ["browser", "obs"] : [shownTarget(t)]);
 
-/** Whether the target's state stops a control: any status word but the ad's, since the page holds changes made during an ad (R-BEH-1). */
+/** Whether the target's state stops a control: any status but the ad, since the page holds changes made during an ad (R-BEH-1). */
 function blocked(view: TargetView, need: "speed" | "quality" | "transport"): boolean {
   const w = statusWord(view, need);
-  return w !== null && w.word !== AD_WORD;
+  return w !== null && w.code !== AD;
 }
 
 /** Shared plumbing: send to the chosen targets, remember the ids, alert on an error that names one. */
@@ -52,7 +53,9 @@ abstract class Base {
   constructor(
     protected readonly hub: HubLike,
     protected readonly sink: Sink,
-    protected readonly clock: CoalesceClock
+    protected readonly clock: CoalesceClock,
+    /** The deck words in Stream Deck's language (strings.ts). */
+    protected readonly strings: Strings = EN
   ) {}
 
   protected abstract get targetChoice(): TargetChoice;
@@ -60,7 +63,7 @@ abstract class Base {
   /** A key caption that names the target when it is not Chrome (Phase 2): `OBS SPEED`, `SYNC PLAYING`. */
   protected caption(word: string): string {
     const t = this.targetChoice;
-    return t === "obs" ? `OBS ${word}` : t === "both" ? `SYNC ${word}` : word;
+    return t === "obs" ? fill(this.strings.captionObs, { word }) : t === "both" ? fill(this.strings.captionSync, { word }) : word;
   }
 
   /** Send now to every chosen target; false when none is connected (R-BEH-4: the strip already says why). */
@@ -153,8 +156,8 @@ export class SpeedDialController extends Base {
   private turnedWhileDown = false;
   private down = false;
 
-  constructor(hub: HubLike, sink: Sink, settings: SpeedDialSettings, clock: CoalesceClock = realClock) {
-    super(hub, sink, clock);
+  constructor(hub: HubLike, sink: Sink, settings: SpeedDialSettings, clock: CoalesceClock = realClock, strings: Strings = EN) {
+    super(hub, sink, clock, strings);
     this.settings = settings;
     this.pending = new Pending(clock, () => this.render());
     // Last value wins, at most one per 50 ms (R-BEH-3).
@@ -218,7 +221,7 @@ export class SpeedDialController extends Base {
     const view = this.view();
     const { min, max } = rangeBounds(this.range());
     this.sink.draw(
-      speedStrip({ view, target: shownTarget(this.settings.target), pending: this.pending.get(view.state), min, max, label: this.settings.label })
+      speedStrip({ view, target: shownTarget(this.settings.target), pending: this.pending.get(view.state), min, max, label: this.settings.label, strings: this.strings })
     );
   }
 
@@ -239,8 +242,8 @@ export class QualityDialController extends Base {
   private readonly pending: Pending<string>;
   private readonly out: Coalescer<string>;
 
-  constructor(hub: HubLike, sink: Sink, settings: QualityDialSettings, clock: CoalesceClock = realClock) {
-    super(hub, sink, clock);
+  constructor(hub: HubLike, sink: Sink, settings: QualityDialSettings, clock: CoalesceClock = realClock, strings: Strings = EN) {
+    super(hub, sink, clock, strings);
     this.settings = settings;
     this.pending = new Pending(clock, () => this.render());
     this.out = createCoalescer<string>((level) => this.pending.sentAs(this.sendNow({ type: "quality.set", level, hold: this.settings.hold })), 50, clock);
@@ -296,7 +299,7 @@ export class QualityDialController extends Base {
 
   render(): void {
     const view = this.view();
-    this.sink.draw(qualityStrip({ view, target: shownTarget(this.settings.target), pending: this.pending.get(view.state), label: this.settings.label }));
+    this.sink.draw(qualityStrip({ view, target: shownTarget(this.settings.target), pending: this.pending.get(view.state), label: this.settings.label, strings: this.strings }));
   }
 
   /** An error answered a request: forget its pending value and redraw (R-BEH-4). */
@@ -313,8 +316,8 @@ export class QualityDialController extends Base {
 
 /** Keys: one press, one intent, artwork that follows the target's state. */
 export class SpeedPresetController extends Base {
-  constructor(hub: HubLike, sink: Sink, private settings: SpeedPresetSettings, clock: CoalesceClock = realClock) {
-    super(hub, sink, clock);
+  constructor(hub: HubLike, sink: Sink, private settings: SpeedPresetSettings, clock: CoalesceClock = realClock, strings: Strings = EN) {
+    super(hub, sink, clock, strings);
   }
   protected get targetChoice(): TargetChoice {
     return this.settings.target;
@@ -332,13 +335,13 @@ export class SpeedPresetController extends Base {
     const rate = view.state?.rate ?? null;
     const active = rate !== null && Math.abs(rate - this.settings.rate) < 1e-6;
     const dim = blocked(view, "speed");
-    this.sink.draw(keyImage({ main: formatRate(this.settings.rate), sub: this.caption(this.settings.extended ? "FX SPEED" : "SPEED"), active, dim }));
+    this.sink.draw(keyImage({ main: formatRate(this.settings.rate), sub: this.caption(this.settings.extended ? this.strings.fxSpeed : this.strings.speed), active, dim }));
   }
 }
 
 export class SpeedStepController extends Base {
-  constructor(hub: HubLike, sink: Sink, private settings: SpeedStepSettings, clock: CoalesceClock = realClock) {
-    super(hub, sink, clock);
+  constructor(hub: HubLike, sink: Sink, private settings: SpeedStepSettings, clock: CoalesceClock = realClock, strings: Strings = EN) {
+    super(hub, sink, clock, strings);
   }
   protected get targetChoice(): TargetChoice {
     return this.settings.target;
@@ -358,7 +361,7 @@ export class SpeedStepController extends Base {
     this.sink.draw(
       keyImage({
         main: `${sign}${this.settings.step}`,
-        sub: this.caption(rate != null ? formatRate(rate) : "SPEED"),
+        sub: this.caption(rate != null ? formatRate(rate) : this.strings.speed),
         active: false,
         dim: blocked(view, "speed"),
         glyph: undefined
@@ -368,8 +371,8 @@ export class SpeedStepController extends Base {
 }
 
 export class QualityPresetController extends Base {
-  constructor(hub: HubLike, sink: Sink, private settings: QualityPresetSettings, clock: CoalesceClock = realClock) {
-    super(hub, sink, clock);
+  constructor(hub: HubLike, sink: Sink, private settings: QualityPresetSettings, clock: CoalesceClock = realClock, strings: Strings = EN) {
+    super(hub, sink, clock, strings);
   }
   protected get targetChoice(): TargetChoice {
     return this.settings.target;
@@ -394,13 +397,13 @@ export class QualityPresetController extends Base {
     const auto = this.settings.level === AUTO;
     const active = s !== null && (auto ? s.qualityAuto === true : s.qualityAuto === false && s.quality === this.settings.level);
     const dim = (blocked(view, "quality")) || !this.offered(s);
-    this.sink.draw(keyImage({ main: auto ? "AUTO" : qualityLabel(this.settings.level), sub: this.caption("QUALITY"), active, dim }));
+    this.sink.draw(keyImage({ main: levelText(this.settings.level, this.strings), sub: this.caption(this.strings.quality), active, dim }));
   }
 }
 
 export class PinController extends Base {
-  constructor(hub: HubLike, sink: Sink, clock: CoalesceClock = realClock) {
-    super(hub, sink, clock);
+  constructor(hub: HubLike, sink: Sink, clock: CoalesceClock = realClock, strings: Strings = EN) {
+    super(hub, sink, clock, strings);
   }
   protected get targetChoice(): TargetChoice {
     return "browser";
@@ -416,13 +419,13 @@ export class PinController extends Base {
     const pinned = view.state?.pinned === true;
     // The reported tab is the pinned one, so its title is the pinned title (R-TGT-2).
     const title = pinned ? (view.state?.title ?? null) : null;
-    this.sink.draw(keyImage({ main: "", sub: pinned ? (title ? fit(title, 14) : "PINNED") : "PIN TAB", active: pinned, dim: view.status !== "connected", glyph: "pin" }));
+    this.sink.draw(keyImage({ main: "", sub: pinned ? (title ? fit(title, 14) : this.strings.pinned) : this.strings.pinTab, active: pinned, dim: view.status !== "connected", glyph: "pin" }));
   }
 }
 
 export class TransportController extends Base {
-  constructor(hub: HubLike, sink: Sink, private settings: TransportSettings, clock: CoalesceClock = realClock) {
-    super(hub, sink, clock);
+  constructor(hub: HubLike, sink: Sink, private settings: TransportSettings, clock: CoalesceClock = realClock, strings: Strings = EN) {
+    super(hub, sink, clock, strings);
   }
   protected get targetChoice(): TargetChoice {
     return this.settings.target;
@@ -440,6 +443,6 @@ export class TransportController extends Base {
     const view = this.view();
     const playing = view.state?.playing === true;
     const dim = blocked(view, "transport");
-    this.sink.draw(keyImage({ main: "", sub: this.caption(playing ? "PLAYING" : "PAUSED"), active: playing, dim, glyph: playing ? "pause" : "play" }));
+    this.sink.draw(keyImage({ main: "", sub: this.caption(playing ? this.strings.playing : this.strings.paused), active: playing, dim, glyph: playing ? "pause" : "play" }));
   }
 }

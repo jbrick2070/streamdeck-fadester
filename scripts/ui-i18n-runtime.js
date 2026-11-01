@@ -2,7 +2,9 @@
 // The inspectors' translator. scripts/generate-ui-i18n.ts wraps this body,
 // with TABLES (each language file's Localization.pi), into ui/i18n.js.
 /* global TABLES, window, document */
+// The eight Stream Deck can select (Automatic maps onto these), and the nine a fixed choice can name (PLAN.md 11.1).
 var LANGUAGES = ["en", "de", "es", "fr", "ja", "ko", "zh_CN", "zh_TW"];
+var PLUGIN_LANGUAGES = LANGUAGES.concat(["nl"]);
 var EN = TABLES.en || {};
 var active = EN;
 var language = "en";
@@ -106,15 +108,27 @@ function applyText(element) {
   }
 }
 
-/** Sets the language, `<html lang>`, and refills the page's static texts. */
-function setLanguage(raw) {
-  language = normalize(raw);
+function use(code) {
+  language = code;
   active = TABLES[language] || EN;
   if (typeof document !== "undefined" && document && document.documentElement) {
     document.documentElement.lang = language.replace("_", "-");
     apply(document);
   }
   return language;
+}
+
+/** Sets Stream Deck's language (mapped as the plugin maps it), `<html lang>`, and refills the page's static texts. */
+function setLanguage(raw) {
+  return use(normalize(raw));
+}
+
+/**
+ * Sets a language the plugin has already resolved: an exact member of the nine
+ * (`nl` included), as the plugin sends it. Anything else changes nothing and gives null.
+ */
+function setResolved(code) {
+  return typeof code === "string" && PLUGIN_LANGUAGES.indexOf(code) !== -1 ? use(code) : null;
 }
 
 /** The language from Stream Deck's `inInfo` (a JSON string or object), English when it has none. */
@@ -133,6 +147,7 @@ window.FadesterI18n = {
   number: number,
   apply: apply,
   setLanguage: setLanguage,
+  setResolved: setResolved,
   languageFromInfo: languageFromInfo,
   language: function () { return language; }
 };

@@ -12,7 +12,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { PRESET_CAPTIONS } from "../src/obs/preset-captions.js";
-import { STREAM_DECK_LANGUAGES } from "../src/i18n/strings.js";
+import { PLUGIN_LANGUAGES } from "../src/i18n/strings.js";
 
 export const PLUGIN_ROOT = resolve(process.cwd(), "com.jbrick2070.fadester-for-obs.sdPlugin");
 export const UI_DIR = resolve(PLUGIN_ROOT, "ui");
@@ -69,10 +69,10 @@ export function presetCaptionsScript(): string {
   ].join("\n");
 }
 
-/** Every present language file's inspector table (`Localization.pi`), English first. */
+/** Every present language file's inspector table (`Localization.pi`), English first; `nl` too (PLAN.md 11.1). */
 export function inspectorTables(): Record<string, Record<string, string>> {
   const tables: Record<string, Record<string, string>> = {};
-  for (const language of STREAM_DECK_LANGUAGES) {
+  for (const language of PLUGIN_LANGUAGES) {
     const path = resolve(PLUGIN_ROOT, `${language}.json`);
     if (!existsSync(path)) continue;
     const json = JSON.parse(readFileSync(path, "utf8")) as { Localization?: { pi?: Record<string, string> } };

@@ -7,6 +7,8 @@ import {
   EN,
   StringKey,
   STREAM_DECK_LANGUAGES,
+  formatNumber,
+  localeTag,
   lookupText,
   setLanguage,
   t,
@@ -146,6 +148,20 @@ describe("lookup and fallback", () => {
   it("fills placeholders by name, never by position", () => {
     setLanguage("xx", { layerPosition: "{state}: {i} von {n}" });
     expect(t("layerPosition", { i: 2, n: 5, state: "Sichtbar" })).toBe("Sichtbar: 2 von 5");
+  });
+});
+
+describe("numbers on the deck (L.1, Fable review item 3)", () => {
+  it("Dutch gives the tag nl and a decimal comma, with no Dutch table yet", () => {
+    setLanguage("nl", null);
+    expect(localeTag()).toBe("nl");
+    expect(formatNumber(1.5)).toBe("1,5");
+  });
+
+  it("English keeps the point; Stream Deck's zh_CN becomes zh-CN", () => {
+    setLanguage("en", null);
+    expect(formatNumber(1.5)).toBe("1.5");
+    expect(localeTag("zh_CN")).toBe("zh-CN");
   });
 });
 

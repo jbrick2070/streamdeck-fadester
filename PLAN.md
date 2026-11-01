@@ -1424,6 +1424,37 @@ and OBS page (D-L7), better Chinese alias handling in VJster's Automatic.
   `global-store.ts`, which `plugin.ts` uses for both bridges; a source test checks that `plugin.ts` writes global
   settings only through the store's port. A connection save never removes a key (undefined keys are skipped; the
   pages send all three). M-11.1h..k cover these.
+- *L.2 (2026-11-01):* the pages' runtime (`scripts/ui-i18n-runtime.js`, generated into `ui/i18n.js`) keeps
+  `LANGUAGES` (the eight, for Automatic's `normalize`) and adds `PLUGIN_LANGUAGES` (nine) and `setResolved(code)`,
+  which takes an exact member only and otherwise changes nothing and gives `null`; `scripts/generate-ui-i18n.ts` loops
+  over `PLUGIN_LANGUAGES`. `direct-pi.js` has the Language section (heading and "all Fadester controls" badge, a
+  select with Automatic and the nine endonyms, each option with its own `lang`, and the R-LANG-6 note); the select
+  follows `language.choice` on every `directObsState` (an unknown choice shows Automatic) and a change sends
+  `{ event: "setLanguageChoice", choice }` through `sendToPlugin`; the page writes no settings itself. Another
+  `language.resolved` refills in place: `setResolved` (which fills the static texts and `<html lang>`), the setup
+  banner cleared, then the existing `updateConnection` and `refreshControls`. The first paint uses the language
+  remembered under `fadester:resolvedLanguage` (the inspectors of every plugin share one `file://` origin; Fable
+  review item 2), passed through `setResolved`, else Stream Deck's language; storage errors are caught. New page keys
+  `languageHeading`, `languageAuto`, `languageNote` in `en.json`. Tests: `tests/direct-pi-language.test.ts` runs each
+  whole shipped page (its scripts in page order, `i18n.js` and `direct-pi.js` included) in a vm on a small DOM
+  (`tests/helpers/mini-dom.ts`); `tests/inspector-i18n.test.ts` adds `nl`, `nl-NL` and `nl_BE` to the parity list
+  (all English under Automatic) and a `setResolved` test. Mutations M-11.2a..c as planned, plus *M-11.2d* (the first
+  paint ignores the remembered language) and *M-11.2e* (`setResolved` in `ui/i18n.js` maps any code like Automatic,
+  so a stale remembered value is used). Where the code led: there was no 400 ms hold in the code to remove (D-L5
+  chose the remembered language over adding one), so nothing was taken out. The plan's tests are in a new file
+  rather than `direct-inspector-feedback.test.ts`, because that file runs only a page's inline script with
+  `direct-pi.js` stubbed. The section sits after the Accent row (which belongs to the one control) and before the
+  OBS connection. The setup banner is cleared only when the resolved language changes, so a result shown under an
+  unchanged language stays. The inspector key test requires every language to have every English key, so the three
+  new keys are listed in `PENDING_UNTIL_L4` there (the other languages show English for them, by the usual fallback)
+  and the test fails once a language has one, so L.4 empties the list.
+  After the step's QA: a resolved language is remembered only once the page has accepted it (`setResolved`), so a
+  value the page refuses never reaches the next first paint (M-11.2f); every direct page is switched from English
+  to German and checked for any whole English text German translates, static or drawn by its `bindControls`
+  (M-11.2g drops the `refreshControls` after a state message); and the L.1 gap from Fable review item 3 is closed
+  in `tests/i18n-strings.test.ts` (`localeTag()` is `nl` and `formatNumber(1.5)` is `1,5` on the deck). Left for
+  L.4: the endonym test's Automatic text falls back to English while `languageAuto` has no German, so L.4, when it
+  empties `PENDING_UNTIL_L4`, asserts `de.languageAuto` there directly.
 
 ### 11.6 Decisions (approved by the operator 2026-11-01, every one at its recommended default)
 

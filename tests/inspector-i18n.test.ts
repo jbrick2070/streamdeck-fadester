@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import { inspectorI18nScript } from "../scripts/generate-ui-i18n.js";
 import { templatePlaceholders } from "../packages/streamdeck-fadester-shared/src/i18n.js";
 import { normalizeLanguage } from "../src/i18n/load.js";
+import { PLUGIN_LANGUAGES } from "../src/i18n/strings.js";
 import { inspectorPageScript } from "./helpers/inspector-scripts.js";
 import { PLUGIN_DIR, presentLanguages, readLanguageFile } from "./helpers/languages.js";
 
@@ -14,11 +15,16 @@ const PAGES = readdirSync(UI).filter((name) => name.endsWith(".html"));
 const RUNTIMES = ["direct-pi.js", "pi-common.js"];
 const ui = (name: string): string => readFileSync(join(UI, name), "utf8");
 const english = (): Record<string, string> => readLanguageFile("en").Localization.pi as Record<string, string>;
+// The Language section's texts are English only until step L.4 translates them (PLAN.md 11.3); the pages fall back
+// to English for them. L.4 adds them to every language and empties this list.
+const PENDING_UNTIL_L4 = ["languageHeading", "languageAuto", "languageNote"];
 
 type I18n = {
   t(key: string, params?: Record<string, unknown>): string;
   plural(base: string, count: number, params?: Record<string, unknown>): string;
   setLanguage(language: string): string;
+  setResolved(language: unknown): string | null;
+  language(): string;
   languageFromInfo(info: unknown): string;
   number(value: number, digits: number): string;
 };
@@ -36,8 +42,12 @@ describe("inspector texts (R-I18N-5)", () => {
 
   it.each(presentLanguages())("%s has every inspector text with English's placeholders", (language) => {
     const table = readLanguageFile(language).Localization.pi as Record<string, unknown>;
-    expect(Object.keys(table).sort()).toEqual(Object.keys(english()).sort());
+    const pending = language === "en" ? [] : PENDING_UNTIL_L4;
+    for (const key of pending) expect(Object.hasOwn(table, key), `${language}.pi.${key} arrived: drop it from PENDING_UNTIL_L4`).toBe(false);
+    const expected = Object.keys(english()).filter((key) => !pending.includes(key));
+    expect(Object.keys(table).sort()).toEqual(expected.sort());
     for (const [key, value] of Object.entries(english())) {
+      if (pending.includes(key)) continue;
       expect(typeof table[key], `${language}.pi.${key}`).toBe("string");
       expect(String(table[key]).trim(), `${language}.pi.${key}`).not.toBe("");
       expect(templatePlaceholders(String(table[key])), `${language}.pi.${key}`).toEqual(templatePlaceholders(value));
@@ -98,8 +108,25 @@ describe("the inspectors' translator", () => {
   it("maps Stream Deck's language exactly as the plugin does", () => {
     const i18n = loadI18n();
     for (const raw of ["en", "de", "de_AT", "de-CH", "es", "fr_CA", "ja", "ko", "zh_CN", "zh-TW", "zh_Hant", "zh-HK",
-      "zh_Hans_SG", "zh", "pt_BR", "", "xx"]) {
+      "zh_Hans_SG", "zh", "pt_BR", "", "xx", "nl", "nl-NL", "nl_BE"]) {
       expect(i18n.setLanguage(raw), raw).toBe(normalizeLanguage(raw));
+    }
+    // Stream Deck cannot select Dutch, so Automatic never gives it (PLAN.md 11.1).
+    expect(i18n.setLanguage("nl")).toBe("en");
+    expect(i18n.setLanguage("nl-NL")).toBe("en");
+  });
+
+  it("takes the plugin's resolved language only when it is one of the nine, exactly", () => {
+    const i18n = loadI18n();
+    for (const language of PLUGIN_LANGUAGES) expect(i18n.setResolved(language), language).toBe(language);
+    expect(i18n.language()).toBe("nl");
+    // nl has no table yet: every text is English, and the number format is Dutch.
+    expect(i18n.t("refresh")).toBe("Refresh");
+    expect(i18n.number(1.5, 1)).toBe("1,5");
+    i18n.setResolved("de");
+    for (const raw of ["nl-NL", "NL", "de_AT", "pt_BR", "", 42, null, undefined]) {
+      expect(i18n.setResolved(raw), String(raw)).toBeNull();
+      expect(i18n.language(), String(raw)).toBe("de");
     }
   });
 

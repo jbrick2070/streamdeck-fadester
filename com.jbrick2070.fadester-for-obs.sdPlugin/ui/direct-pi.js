@@ -10,8 +10,15 @@
   let bindControls = null;
   let connectionEditorInitialized = false;
   let layoutBusy = false;
-  // Texts come from ui/i18n.js (loaded first), in Stream Deck's language (R-I18N-1).
+  // Texts come from ui/i18n.js (loaded first), in the plugin's language: Stream Deck's, or the Language choice (R-LANG-3).
   const T = function (key, params) { return window.FadesterI18n.t(key, params); };
+  // The Language choice (PLAN.md 11.1): Automatic, then the nine languages by their own names, never translated (D-L3).
+  const LANGUAGE_CHOICES = [
+    ["en", "English"], ["de", "Deutsch"], ["es", "Español"], ["fr", "Français"], ["ja", "日本語"],
+    ["ko", "한국어"], ["zh_CN", "简体中文"], ["zh_TW", "繁體中文"], ["nl", "Nederlands"]
+  ];
+  // Every plugin's inspectors share one file:// origin, so the key names this plugin.
+  const LANGUAGE_MEMORY_KEY = "fadester:resolvedLanguage";
 
   function $(id) {
     return document.getElementById(id);
@@ -36,6 +43,24 @@
     currentSettings = Object.assign({}, currentSettings, partial, { presetBindingsVersion: 1 });
     send({ event: "setSettings", context: uuid, payload: currentSettings });
     refreshControls();
+  }
+
+  /** The language the plugin last resolved, remembered for the next page's first paint (D-L5). */
+  function recalledLanguage() {
+    try {
+      return window.localStorage.getItem(LANGUAGE_MEMORY_KEY);
+    } catch {
+      return null;
+    }
+  }
+
+  function rememberLanguage(code) {
+    if (typeof code !== "string") return;
+    try {
+      window.localStorage.setItem(LANGUAGE_MEMORY_KEY, code);
+    } catch {
+      // No storage (private mode, blocked): the next page paints in Stream Deck's language first.
+    }
   }
 
   function setBanner(el, text, kind) {
@@ -89,6 +114,15 @@
       '<div class="row" id="direct-accent-row"><label for="direct-accent" data-i18n="accentLabel">Accent</label><select id="direct-accent">',
       '<option value="default" data-i18n="accentDefault">Fadester violet</option><option value="brass" data-i18n="accentBrass">Brass</option>',
       '<option value="teal" data-i18n="accentTeal">Teal</option><option value="magenta" data-i18n="accentMagenta">Magenta</option></select></div>',
+      // One Language for the whole plugin, kept by the plugin (PLAN.md 11.1); the page only asks for a change.
+      '<h3><span data-i18n="languageHeading">Language</span> <span class="scope" data-i18n="scopeAllControls">all Fadester controls</span></h3>',
+      '<div class="row"><label for="direct-language" data-i18n="languageHeading">Language</label><select id="direct-language">',
+      '<option value="auto" data-i18n="languageAuto">Automatic (Stream Deck\'s language)</option>',
+      LANGUAGE_CHOICES.map(function (entry) {
+        return '<option value="' + entry[0] + '" lang="' + entry[0].replace("_", "-") + '">' + entry[1] + "</option>";
+      }).join(""),
+      '</select></div>',
+      '<p class="muted" id="direct-language-note" data-i18n="languageNote">Applies to all Fadester for OBS controls. Stream Deck\'s own menus, action list, tooltips and dial hints stay in Stream Deck\'s language.</p>',
       '<h3><span data-i18n="connHeading">OBS connection</span> <span class="scope" data-i18n="scopeAllControls">all Fadester controls</span></h3>',
       '<div id="direct-conn-status" class="status-banner status-err" data-i18n="connWaiting">Waiting for OBS…</div>',
       '<p class="muted" id="direct-conn-hint" data-i18n="connHintOnce">Connect once for every Fadester button and dial.</p>',
@@ -139,6 +173,11 @@
     if (test) test.onclick = function () {
       pushConnection();
       sendToPlugin({ event: "directTestConnection" });
+    };
+    const languagePicker = $("direct-language");
+    if (languagePicker) languagePicker.onchange = function () {
+      // The plugin saves and applies the choice; its next state message refills this page.
+      sendToPlugin({ event: "setLanguageChoice", choice: languagePicker.value });
     };
     const openLayout = $("direct-layout-open");
     if (openLayout) openLayout.onclick = function () {
@@ -227,6 +266,27 @@
     updateStudioSetup();
   }
 
+  /**
+   * The select shows the stored choice on every state message; another resolved
+   * language refills the page in place (R-LANG-4): static texts now, then the
+   * caller's updateConnection and refreshControls redo the dynamic ones. Typed
+   * values, focus and open sections stay; the one-off setup banner is cleared.
+   */
+  function updateLanguage(language) {
+    if (!language) return;
+    const picker = $("direct-language");
+    const known = LANGUAGE_CHOICES.some(function (entry) { return entry[0] === language.choice; });
+    if (picker) picker.value = known ? language.choice : "auto";
+    if (language.resolved === window.FadesterI18n.language()) {
+      rememberLanguage(language.resolved);
+      return;
+    }
+    // Only a language the page accepted is remembered for the next first paint.
+    if (!window.FadesterI18n.setResolved(language.resolved)) return;
+    rememberLanguage(language.resolved);
+    setBanner($("direct-setup-status"), "");
+  }
+
   function updateAccent() {
     const row = $("direct-accent-row");
     const accent = $("direct-accent");
@@ -286,8 +346,11 @@
       inInfo,
       inActionInfo
     ) {
-      // Stream Deck's language first, so every text below is drawn in it.
-      window.FadesterI18n.setLanguage(window.FadesterI18n.languageFromInfo(inInfo));
+      // The language the plugin last resolved first, with no hold (D-L5); Stream Deck's language when none is
+      // remembered or the remembered one is not one of the nine. The plugin's first state message settles it.
+      if (!window.FadesterI18n.setResolved(recalledLanguage())) {
+        window.FadesterI18n.setLanguage(window.FadesterI18n.languageFromInfo(inInfo));
+      }
       uuid = inPropertyInspectorUUID;
       actionInfo = JSON.parse(inActionInfo || "{}");
       window.directObsController = actionInfo.payload && actionInfo.payload.controller || "Keypad";
@@ -312,6 +375,7 @@
         }
         if (message.event === "sendToPropertyInspector" && message.payload && message.payload.event === "directObsState") {
           currentState = message.payload;
+          updateLanguage(currentState.language);
           updateConnection(currentState);
           refreshControls();
         }

@@ -153,7 +153,7 @@ describe("German on the deck", () => {
   it("draws the Info Bar, keys and dials from the German table", () => {
     useLanguage("de");
     const catalog = {
-      scenes: [], inputs: [], transitions: [], studioMode: false, currentProgramScene: "Opening",
+      scenes: [], inputs: [], inputDetails: [], transitions: [], studioMode: false, currentProgramScene: "Opening",
       currentPreviewScene: "", currentTransition: "", inputVolumes: {}, tbarPosition: 0
     };
     expect(buildNeoInfobarFeedback(true, catalog)).toEqual({

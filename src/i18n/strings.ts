@@ -29,6 +29,15 @@ const PLUGIN_EN = {
   errorNoCutTransition: "OBS did not provide its Cut transition. Refresh the OBS lists.",
   errorCurrentPreviewNeedsStudio: "Current Preview needs OBS Studio Mode. Choose a fixed scene, Next scene, or Previous scene in regular mode.",
   errorControlChanged: "OBS connection or scene collection changed. Try the control again.",
+  // Playlister transport errors (the first is also the unbound key's word)
+  errorMediaChoose: "Choose a Playlister",
+  errorMediaMissing: "The chosen Playlister is not in OBS now.",
+  errorMediaWrongKind: "'{input}' is not a Playlister source.",
+  errorMediaUnsupported: "OBS WebSocket has no media control here. Update OBS.",
+  errorMediaBusy: "Playlister is busy; wait for the queued presses.",
+  errorMediaPending: "Play or pause is still pending.",
+  errorMediaChanging: "Playlister is opening media; try again.",
+  errorMediaAmbiguous: "Playlister state is unclear; press Stop first.",
   // Source & Layer controller errors
   layerErrorConnectAndChoose: "Connect OBS and choose a source.",
   layerErrorCollectionChanging: "OBS scene collection is changing. Try again.",

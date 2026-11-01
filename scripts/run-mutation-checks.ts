@@ -309,6 +309,66 @@ const MUTATIONS: MutationCheck[] = [
     target: 'if (media.state === "OBS_MEDIA_STATE_PLAYING") media.state = "OBS_MEDIA_STATE_PAUSED";',
     mutated: 'if (media.state !== "OBS_MEDIA_STATE_NONE") media.state = "OBS_MEDIA_STATE_PAUSED";',
     testFile: "tests/fake-obs-server.test.ts"
+  },
+  {
+    id: "M-9.2a",
+    step: "Step 9.2 (Playlister transport: four presses per Playlister)",
+    description:
+      "Remove the four-entry bound so a fifth press queues, and verify playlister-media.test.ts fails",
+    filePath: resolve(ROOT, "src/obs/direct-obs-client.ts"),
+    target: 'if (target.queue.length >= MEDIA_QUEUE_LIMIT) throw new DirectObsError(ownText("errorMediaBusy"), 400);',
+    mutated: 'if (false) throw new DirectObsError(ownText("errorMediaBusy"), 400);',
+    testFile: "tests/playlister-media.test.ts"
+  },
+  {
+    id: "M-9.2b",
+    step: "Step 9.2 (Playlister transport: Stop purges first)",
+    description:
+      "Let Stop skip the purge of that Playlister's unsent presses, and verify playlister-media.test.ts fails",
+    filePath: resolve(ROOT, "src/obs/direct-obs-client.ts"),
+    target: 'if (op === "stop") this.purgeMediaQueue(target);',
+    mutated: "if (false) this.purgeMediaQueue(target);",
+    testFile: "tests/playlister-media.test.ts"
+  },
+  {
+    id: "M-9.2c",
+    step: "Step 9.2 (Playlister transport: late replies)",
+    description:
+      "Let a status reply of an old generation overwrite the state after a collection change, and verify playlister-media.test.ts fails",
+    filePath: resolve(ROOT, "src/obs/direct-obs-client.ts"),
+    target: "if (generation === this.mediaGeneration && sequence > target.lastAppliedSequence) {",
+    mutated: "if (sequence > target.lastAppliedSequence) {",
+    testFile: "tests/playlister-media.test.ts"
+  },
+  {
+    id: "M-9.2d",
+    step: "Step 9.2 (Playlister transport: no retry)",
+    description:
+      "Retry a failed NEXT once, and verify playlister-media.test.ts fails",
+    filePath: resolve(ROOT, "src/obs/direct-obs-client.ts"),
+    target: "      if (target.pendingStamp === stamp) this.clearMediaPending(target);\n      this.emitMediaState(target);\n      throw error;",
+    mutated: '      if (target.pendingStamp === stamp) this.clearMediaPending(target);\n      this.emitMediaState(target);\n      if (entry.op === "next") { await this.sendObsRequest("TriggerMediaInputAction", { inputUuid: target.uuid, mediaAction: OBS_MEDIA_ACTIONS[action] }); return "sent"; }\n      throw error;',
+    testFile: "tests/playlister-media.test.ts"
+  },
+  {
+    id: "M-9.2e",
+    step: "Step 9.2 (Playlister transport: polls only while watched)",
+    description:
+      "Start the poll of a target that has no watcher on a catalog publication, and verify playlister-media.test.ts fails",
+    filePath: resolve(ROOT, "src/obs/direct-obs-client.ts"),
+    target: "    } else if (target.watchers > 0) {\n      this.startMediaPoll(target);",
+    mutated: "    } else {\n      this.startMediaPoll(target);",
+    testFile: "tests/playlister-media.test.ts"
+  },
+  {
+    id: "M-9.2f",
+    step: "Step 9.2 (Playlister transport: InputRemoved by UUID)",
+    description:
+      "Match InputRemoved by inputName again, and verify playlister-media.test.ts fails",
+    filePath: resolve(ROOT, "src/obs/direct-obs-client.ts"),
+    target: 'const removedUuid = typeof eventData.inputUuid === "string" ? eventData.inputUuid : "";',
+    mutated: 'const removedUuid = this.catalog.inputDetails.find((input) => input.inputName === eventData.inputName)?.inputUuid ?? "";',
+    testFile: "tests/playlister-media.test.ts"
   }
 ];
 

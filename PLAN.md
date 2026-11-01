@@ -596,6 +596,32 @@ and `TriggerMediaInputAction` take `inputUuid`; `mediaDuration` and `mediaCursor
    "does not repaint a retargeted watcher from a cancelled wait or a late reply". Mutations: *M-9.2a* remove the
    four-entry bound; *M-9.2b* let Stop skip the purge; *M-9.2c* let an older status reply overwrite; *M-9.2d* retry a
    failed NEXT once; *M-9.2e* poll an unwatched UUID; *M-9.2f* match `InputRemoved` by name again.
+   *As built (2026-11-01):* the media section sits at the end of `DirectObsClient` with its types and the pinned
+   wire strings at the top of the file. Status reads of one UUID are serialized on a per-target chain
+   (`freshMediaRead`): a poll tick that finds a read in flight skips, a post-command read or the toggle's in-queue
+   read is queued behind the in-flight one and sent fresh, and reads queued before one is sent share it; so the
+   sequence guard (one global `mediaSequence`) can never be hit and M-9.2c mutates the generation half instead (a
+   late reply after a collection change). The toggle's intent is taken at the press by the queue (a second
+   `playpause` is rejected while one is queued or a PLAY/PAUSE intent is pending), its direction by a fresh read
+   inside the queue; each executed command gets a stamp, explicit commands clear pending and set a barrier (never
+   reachable under the serial queue, kept as cheap insurance). PLAY is released when the trailing read's attempt
+   settles; PAUSE waits `mediaPauseWaitMs` (20 s; a client option so tests use 400 ms) for an observed PAUSED,
+   STOPPED, ENDED or ERROR, or NONE outside the 15 s window after a load of ours (`loadSentAt`); then `unconfirmed`,
+   cleared by the next observed state word or command. `mediaCommand` is async (every refusal is a rejection, nothing
+   sent): collection changing, then availability (`unbound`, `disconnected`, `unsupported`, `missing`, `wrong_kind`
+   with the input's name), Stop's purge, the toggle's pending check, the bound of four. Purged presses resolve
+   `"cancelled"`; a command invalidated before its request also; one invalidated after it resolves `"sent"` and
+   touches nothing. `MediaTargetState` has no `lastError` (the key keeps it, 9.3). `mediaAvailability(uuid)` and
+   `mediaInputName(uuid)` are public for the key and the inspector; `mediaCapability` is `unknown` until GetVersion
+   and again after disconnect, `stop()` and `reconnectNow()` invalidate after the socket is gone so the targets read
+   `disconnected`. Polls start on `statusChanged` to `connected` (immediate first read) and on every catalog
+   publication, only for watched targets; the per-tick gate is availability alone, the last release stops the poll.
+   `InputRemoved` strips the UUID at once under `catalogEventRevisions.inputs` (refreshCatalog keeps the stripped
+   list when the revision moved); `InputNameChanged` renames in place. The eight error keys landed in `strings.ts`
+   and all eight language files here (es tú, fr curly apostrophes, ja spaces around Latin words, as the files do);
+   `errorMediaChanging` in Japanese was shortened to pass the 1.5x width rule. `tests/deck-fit.test.ts` lists them
+   under the key subtitle; `direct-obs-bridge.ts` broadcasts `mediaCapability`; the fake counts
+   `mediaActionAttempts` (refused ones included) for the no-retry test.
 3. **Step 9.3 -- The action.** `src/actions/playlister-transport-key.ts`: `PlaylisterTransportInstanceController`
    (client, sink, settings) and `PlaylisterTransportKeyAction` on UUID
    `com.jbrick2070.fadester-for-obs.playlister-transport`, Keypad only, after the pattern of

@@ -88,6 +88,10 @@ function drawnTexts(): Array<{ key: StringKey; params?: TextParams; boxes: Box[]
     "errorNoCutTransition", "errorCurrentPreviewNeedsStudio", "errorControlChanged", "errorConnectBeforeStudio",
     "errorStudioNotEnabled"] as const) add(key, [B.keySub]);
   add("errorNoVolume", [B.keySub], { input: "Desktop Audio" });
+  // The Playlister key draws its last error as the problem line.
+  for (const key of ["errorMediaChoose", "errorMediaMissing", "errorMediaUnsupported", "errorMediaBusy",
+    "errorMediaPending", "errorMediaChanging", "errorMediaAmbiguous"] as const) add(key, [B.keySub]);
+  add("errorMediaWrongKind", [B.keySub], { input: "Camera" });
   add("errorRoleUnavailable", [B.keySub], { role: t("audioMic") });
   for (const key of ["errorSceneIndexUnavailableOne", "errorSceneIndexUnavailableMany"] as const) add(key, [B.keySub], { n: 4, count: 3 });
   for (const key of (Object.keys(EN) as StringKey[]).filter((name) => name.startsWith("layerError"))) add(key, [B.keySub, B.layerStatus]);

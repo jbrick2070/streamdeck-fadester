@@ -498,6 +498,8 @@ export class FakeObsServer {
   }> = [];
   /** Every `GetMediaInputStatus` read, kept apart from `directCallLog` (tests compare that log whole). */
   public mediaStatusLog: Array<{ inputUuid: string; mediaState: string }> = [];
+  /** Every `TriggerMediaInputAction` received, the ones `mediaFailNext` refused included. */
+  public mediaActionAttempts = 0;
   public screenshotCallCount = 0;
   public activeScreenshotRequests = 0;
   public maxConcurrentScreenshots = 0;
@@ -1067,6 +1069,7 @@ export class FakeObsServer {
         this.sendResponse(ws, requestId, requestType, false, 400, "The request field `mediaAction` has an invalid value.");
         return;
       }
+      this.mediaActionAttempts++;
       if (this.mediaActionDelayMs > 0) await new Promise((r) => setTimeout(r, this.mediaActionDelayMs));
       if (this.mediaFailNext) {
         const comment = this.mediaFailNext;

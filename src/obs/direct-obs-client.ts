@@ -44,9 +44,140 @@ export function sceneNamesInDisplayOrder(value: unknown): string[] {
   return stringArray(entries, "sceneName");
 }
 
+/** An OBS input as `GetInputList` reports it; the Playlister keys bind by `inputUuid`. */
+export interface DirectObsInputInfo {
+  inputUuid: string;
+  inputName: string;
+  inputKind: string;
+  unversionedInputKind: string;
+}
+
+/*
+ * Playlister transport (PLAN.md 9, R-PLT-1..7): stock obs-websocket 5.6.3
+ * media requests by inputUuid, with the wire strings pinned here.
+ */
+export const PLAYLISTER_INPUT_KIND = "obs_playlister_source";
+export const MEDIA_REQUIRED_REQUESTS = ["GetInputList", "GetMediaInputStatus", "TriggerMediaInputAction"] as const;
+export const OBS_MEDIA_STATES = {
+  none: "OBS_MEDIA_STATE_NONE",
+  playing: "OBS_MEDIA_STATE_PLAYING",
+  opening: "OBS_MEDIA_STATE_OPENING",
+  buffering: "OBS_MEDIA_STATE_BUFFERING",
+  paused: "OBS_MEDIA_STATE_PAUSED",
+  stopped: "OBS_MEDIA_STATE_STOPPED",
+  ended: "OBS_MEDIA_STATE_ENDED",
+  error: "OBS_MEDIA_STATE_ERROR"
+} as const;
+export const OBS_MEDIA_ACTIONS = {
+  play: "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PLAY",
+  pause: "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE",
+  stop: "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_STOP",
+  restart: "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_RESTART",
+  next: "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_NEXT",
+  previous: "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PREVIOUS"
+} as const;
+export type MediaStateWord = keyof typeof OBS_MEDIA_STATES | "unknown";
+export type MediaAction = keyof typeof OBS_MEDIA_ACTIONS;
+export type MediaOperation = "previous" | "next" | "playpause" | "stop" | "restart";
+export type MediaAvailability = "unbound" | "missing" | "wrong_kind" | "unsupported" | "disconnected" | "ok";
+export type MediaPending = "none" | "play" | "pause" | "unconfirmed";
+export type MediaCapability = "unknown" | "ok" | "unsupported";
+/** A press that Stop purged before it was sent settles as `cancelled`, quietly. */
+export type MediaCommandOutcome = "sent" | "cancelled";
+
+/** What a Playlister key draws: observed, never inferred from an accepted request. */
+export interface MediaTargetState {
+  availability: MediaAvailability;
+  mediaState: MediaStateWord;
+  /** Milliseconds; null unless PLAYING or PAUSED with a finite, positive duration. */
+  mediaCursor: number | null;
+  mediaDuration: number | null;
+  pending: MediaPending;
+  /** Presses queued for this Playlister, the one in flight included. */
+  queued: number;
+}
+
+export const MEDIA_POLL_MS = 500;
+export const MEDIA_QUEUE_LIMIT = 4;
+export const MEDIA_PAUSE_WAIT_MS = 20000;
+/** The native held-pause window after a load (player.c STARTUP_WINDOW_URL_MS). */
+export const MEDIA_LOAD_WINDOW_MS = 15000;
+
+interface MediaStatusReply {
+  state: MediaStateWord;
+  cursor: number | null;
+  duration: number | null;
+}
+
+interface MediaCommandEntry {
+  op: MediaOperation;
+  generation: number;
+  resolve: (outcome: MediaCommandOutcome) => void;
+  reject: (error: unknown) => void;
+}
+
+interface MediaTarget {
+  uuid: string;
+  watchers: number;
+  polling: boolean;
+  pollTimer: ReturnType<typeof setTimeout> | null;
+  statusInFlight: boolean;
+  statusChain: Promise<unknown>;
+  /** A fresh read queued behind an in-flight one and not yet sent; later requests share it. */
+  trailingRead: Promise<MediaStatusReply> | null;
+  lastAppliedSequence: number;
+  mediaState: MediaStateWord;
+  cursor: number | null;
+  duration: number | null;
+  pending: MediaPending;
+  pendingStamp: number;
+  pauseTimer: ReturnType<typeof setTimeout> | null;
+  commandStamp: number;
+  /** A command with a stamp at or below this may not set a pending intent afterwards. */
+  pendingBarrier: number;
+  /** When PLAY, NEXT, PREVIOUS or RESTART was last sent; NONE within the held window keeps a pending PAUSE. */
+  loadSentAt: number;
+  queue: MediaCommandEntry[];
+  running: boolean;
+  signature: string;
+}
+
+function parseMediaStatus(data: Record<string, unknown>): MediaStatusReply {
+  const raw = typeof data.mediaState === "string" ? data.mediaState : "";
+  const state = (Object.keys(OBS_MEDIA_STATES) as Array<keyof typeof OBS_MEDIA_STATES>)
+    .find((word) => OBS_MEDIA_STATES[word] === raw) ?? "unknown";
+  const showsTime = state === "playing" || state === "paused";
+  // null, non-finite or non-positive is unknown (a held still is PLAYING with duration 0).
+  const duration = showsTime && typeof data.mediaDuration === "number" && Number.isFinite(data.mediaDuration) &&
+    data.mediaDuration > 0 ? data.mediaDuration : null;
+  const cursor = duration !== null && typeof data.mediaCursor === "number" && Number.isFinite(data.mediaCursor)
+    ? Math.max(0, Math.min(duration, data.mediaCursor)) : null;
+  return { state, cursor, duration };
+}
+
+function readInputDetails(value: unknown): DirectObsInputInfo[] {
+  if (!Array.isArray(value)) return [];
+  const details: DirectObsInputInfo[] = [];
+  for (const entry of value) {
+    if (!entry || typeof entry !== "object") continue;
+    const record = entry as Record<string, unknown>;
+    if (typeof record.inputUuid !== "string" || typeof record.inputName !== "string" || !record.inputUuid) continue;
+    const inputKind = typeof record.inputKind === "string" ? record.inputKind : "";
+    details.push({
+      inputUuid: record.inputUuid,
+      inputName: record.inputName,
+      inputKind,
+      unversionedInputKind: typeof record.unversionedInputKind === "string" ? record.unversionedInputKind : inputKind.replace(/_v\d+$/, "")
+    });
+  }
+  return details;
+}
+
 export interface DirectObsCatalog {
   scenes: string[];
   inputs: string[];
+  /** Every input with UUID and kind; `inputs` keeps the names for the audio paths. */
+  inputDetails: DirectObsInputInfo[];
   transitions: string[];
   studioMode: boolean;
   currentProgramScene: string;
@@ -60,7 +191,10 @@ export interface DirectObsCatalog {
 export type DirectObsClientOptions = Pick<
   ObsVendorClientOptions,
   "baseReconnectMs" | "maxReconnectMs" | "requestTimeoutMs"
->;
+> & {
+  /** How long a sent PAUSE waits for an observed PAUSED before the key says "unconfirmed" (tests shorten it). */
+  mediaPauseWaitMs?: number;
+};
 
 /** A string is an OBS text (shown verbatim); our own messages pass a key (`ownText`). */
 export class DirectObsError extends ObsVendorError {
@@ -106,6 +240,7 @@ export class DirectObsClient extends ObsVendorClient {
   private catalog: DirectObsCatalog = {
     scenes: [],
     inputs: [],
+    inputDetails: [],
     transitions: [],
     studioMode: false,
     currentProgramScene: "",
@@ -123,12 +258,17 @@ export class DirectObsClient extends ObsVendorClient {
   private connectionGeneration = 0;
   private controlGeneration = 0;
   private collectionChanging = false;
-  private readonly catalogEventRevisions = { scenes: 0, studio: 0, program: 0, preview: 0, transition: 0, volumes: 0 };
+  private readonly catalogEventRevisions = { scenes: 0, studio: 0, program: 0, preview: 0, transition: 0, volumes: 0, inputs: 0 };
   private readonly inputVolumeEventRevisions = new Map<string, number>();
   private sceneCycleGeneration = 0;
   private sceneCycle: {
     token: number; live: string; next: string; transition: string; started: boolean; ended: boolean;
   } | null = null;
+  private mediaCapability: MediaCapability = "unknown";
+  private mediaGeneration = 0;
+  private mediaSequence = 0;
+  private readonly mediaTargets = new Map<string, MediaTarget>();
+  private readonly mediaPauseWaitMs: number;
 
   public constructor(
     initialSettings?: FadesterGlobalSettings,
@@ -138,6 +278,7 @@ export class DirectObsClient extends ObsVendorClient {
       ...options,
       surfaceDisplayName: "Fadester for OBS"
     });
+    this.mediaPauseWaitMs = options?.mediaPauseWaitMs ?? MEDIA_PAUSE_WAIT_MS;
     // Several controls on a full deck intentionally share this one client.
     this.setMaxListeners(0);
     this.on("statusChanged", (status: ConnectionStatusInfo) => {
@@ -148,6 +289,11 @@ export class DirectObsClient extends ObsVendorClient {
         this.catalogRefreshGeneration++;
         this.cancelAllInputFades();
         this.cancelSceneCycle();
+        this.mediaCapability = "unknown";
+        this.invalidateMediaTargets();
+      } else {
+        // The first catalog is published before the status turns connected: polls start here.
+        this.reconcileMediaTargets();
       }
     });
   }
@@ -159,7 +305,10 @@ export class DirectObsClient extends ObsVendorClient {
     this.catalogRefreshGeneration++;
     this.cancelAllInputFades();
     this.cancelSceneCycle();
+    this.mediaCapability = "unknown";
     super.stop();
+    // After the socket is gone, so the targets read as disconnected.
+    this.invalidateMediaTargets();
   }
 
   public override reconnectNow(): void {
@@ -169,7 +318,9 @@ export class DirectObsClient extends ObsVendorClient {
     this.catalogRefreshGeneration++;
     this.cancelAllInputFades();
     this.cancelSceneCycle();
+    this.mediaCapability = "unknown";
     super.reconnectNow();
+    this.invalidateMediaTargets();
   }
 
   public override getStatus(): ConnectionStatusInfo {
@@ -181,6 +332,7 @@ export class DirectObsClient extends ObsVendorClient {
       ...this.catalog,
       scenes: [...this.catalog.scenes],
       inputs: [...this.catalog.inputs],
+      inputDetails: this.catalog.inputDetails.map((input) => ({ ...input })),
       transitions: [...this.catalog.transitions],
       inputVolumes: { ...this.catalog.inputVolumes }
     };
@@ -214,6 +366,7 @@ export class DirectObsClient extends ObsVendorClient {
     }
     if (inputs.status === "fulfilled") {
       next.inputs = stringArray(inputs.value.inputs, "inputName");
+      next.inputDetails = readInputDetails(inputs.value.inputs);
     }
     if (transitions.status === "fulfilled") {
       next.transitions = stringArray(
@@ -274,6 +427,10 @@ export class DirectObsClient extends ObsVendorClient {
     if (revisions.program !== this.catalogEventRevisions.program) next.currentProgramScene = this.catalog.currentProgramScene;
     if (revisions.preview !== this.catalogEventRevisions.preview) next.currentPreviewScene = this.catalog.currentPreviewScene;
     if (revisions.transition !== this.catalogEventRevisions.transition) next.currentTransition = this.catalog.currentTransition;
+    // An InputRemoved or rename applied meanwhile is newer than this listing: never resurrect the input.
+    if (revisions.inputs !== this.catalogEventRevisions.inputs) {
+      next.inputDetails = this.catalog.inputDetails.map((input) => ({ ...input }));
+    }
     if (revisions.volumes !== this.catalogEventRevisions.volumes) {
       for (const name of Object.keys(next.inputVolumes)) {
         if (volumeRevisions.get(name) !== this.inputVolumeEventRevisions.get(name) && Object.hasOwn(this.catalog.inputVolumes, name)) {
@@ -284,6 +441,7 @@ export class DirectObsClient extends ObsVendorClient {
     next.tbarPosition = this.catalog.tbarPosition;
     this.cutTransitionName = cutTransitionName;
     this.catalog = next;
+    this.reconcileMediaTargets();
     this.emitDirectState();
     return this.getCatalog();
   }
@@ -620,6 +778,10 @@ export class DirectObsClient extends ObsVendorClient {
           : typeof versionData.obsStudioVersion === "string"
             ? versionData.obsStudioVersion
             : "OBS";
+      // Captured before the first catalog publication (R-PLT-2): absent or malformed is unsupported.
+      const available = versionData.availableRequests;
+      this.mediaCapability = Array.isArray(available) &&
+        MEDIA_REQUIRED_REQUESTS.every((request) => available.includes(request)) ? "ok" : "unsupported";
       await this.refreshCatalog();
       if (connection !== this.connectionGeneration) return;
       this.reconnectAttempt = 0;
@@ -663,14 +825,35 @@ export class DirectObsClient extends ObsVendorClient {
       this.cancelAllInputFades();
       this.cancelSceneCycle();
       this.catalog = {
-        ...this.catalog, scenes: [], inputs: [], inputVolumes: {},
+        ...this.catalog, scenes: [], inputs: [], inputDetails: [], inputVolumes: {},
         currentProgramScene: "", currentPreviewScene: "", tbarPosition: 0
       };
+      // Stale UUIDs never pass the presence gate; polls resume with the next catalog after Changed.
+      if (this.collectionChanging) this.invalidateMediaTargets();
+      else this.reconcileMediaTargets();
       this.emitDirectState();
     }
 
-    if (eventType === "InputRemoved" && typeof eventData.inputName === "string") {
-      this.cancelInputFade(eventData.inputName);
+    if (eventType === "InputRemoved") {
+      if (typeof eventData.inputName === "string") this.cancelInputFade(eventData.inputName);
+      // Identity is the UUID (a rename keeps it): the input leaves the catalog at once, and the
+      // refresh below cannot bring it back (inputs revision).
+      const removedUuid = typeof eventData.inputUuid === "string" ? eventData.inputUuid : "";
+      if (removedUuid && this.catalog.inputDetails.some((input) => input.inputUuid === removedUuid)) {
+        this.catalogEventRevisions.inputs++;
+        this.catalog.inputDetails = this.catalog.inputDetails.filter((input) => input.inputUuid !== removedUuid);
+        this.reconcileMediaTargets();
+        this.emitDirectState();
+      }
+    }
+
+    if (eventType === "InputNameChanged" && typeof eventData.inputUuid === "string" && typeof eventData.inputName === "string") {
+      const renamed = this.catalog.inputDetails.find((input) => input.inputUuid === eventData.inputUuid);
+      if (renamed) {
+        this.catalogEventRevisions.inputs++;
+        renamed.inputName = eventData.inputName;
+        this.emitDirectState();
+      }
     }
 
     if (eventType === "SceneListChanged") {
@@ -834,5 +1017,372 @@ export class DirectObsClient extends ObsVendorClient {
 
   private cancelAllInputFades(): void {
     for (const inputName of this.inputFadeTokens.keys()) this.cancelInputFade(inputName);
+  }
+
+  // ---- Playlister transport (PLAN.md 9.2) -------------------------------------------------------
+
+  /** Whether this OBS offers the three media requests; known once GetVersion answered. */
+  public getMediaCapability(): MediaCapability {
+    return this.mediaCapability;
+  }
+
+  /** Why a bound Playlister cannot be driven now, or `ok`. Names never resolve a target. */
+  public mediaAvailability(inputUuid: string): MediaAvailability {
+    if (!inputUuid) return "unbound";
+    if (!this.isConnected()) return "disconnected";
+    if (this.mediaCapability !== "ok") return "unsupported";
+    const info = this.catalog.inputDetails.find((input) => input.inputUuid === inputUuid);
+    if (!info) return "missing";
+    const kind = info.unversionedInputKind || info.inputKind.replace(/_v\d+$/, "");
+    return kind === PLAYLISTER_INPUT_KIND ? "ok" : "wrong_kind";
+  }
+
+  /** The display name of a bound input, for messages only. */
+  public mediaInputName(inputUuid: string): string {
+    return this.catalog.inputDetails.find((input) => input.inputUuid === inputUuid)?.inputName ?? "";
+  }
+
+  public getMediaState(inputUuid: string): MediaTargetState {
+    const target = this.mediaTargets.get(inputUuid);
+    return target ? this.mediaStateOf(target) : {
+      availability: this.mediaAvailability(inputUuid), mediaState: "unknown",
+      mediaCursor: null, mediaDuration: null, pending: "none", queued: 0
+    };
+  }
+
+  /**
+   * Observes a Playlister: one 500 ms poll per UUID shared by every watcher,
+   * running only while the target is present, a Playlister, supported and
+   * connected. Returns an idempotent release.
+   */
+  public watchMedia(inputUuid: string): () => void {
+    if (!inputUuid) return () => {};
+    const target = this.mediaTargetFor(inputUuid);
+    target.watchers++;
+    this.reconcileMediaTarget(target);
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      target.watchers--;
+      if (target.watchers <= 0) {
+        target.watchers = 0;
+        this.stopMediaPoll(target);
+        this.releaseMediaTarget(target);
+      }
+    };
+  }
+
+  /**
+   * Queues one press for a Playlister: at most four per UUID including the one
+   * in flight, Stop purging the unsent ones first, nothing retried or merged.
+   * Everything that cannot be sent throws before any request.
+   */
+  public async mediaCommand(inputUuid: string, op: MediaOperation): Promise<MediaCommandOutcome> {
+    if (this.collectionChanging) throw new DirectObsError(ownText("errorControlChanged"), 400);
+    const availability = this.mediaAvailability(inputUuid);
+    if (availability !== "ok") throw this.mediaAvailabilityError(availability, inputUuid);
+    const target = this.mediaTargetFor(inputUuid);
+    if (op === "stop") this.purgeMediaQueue(target);
+    // A toggle's intent is taken at the press: a second one is pending, never a reverse toggle.
+    if (op === "playpause" && (target.queue.some((entry) => entry.op === "playpause") ||
+      target.pending === "play" || target.pending === "pause")) {
+      throw new DirectObsError(ownText("errorMediaPending"), 400);
+    }
+    if (target.queue.length >= MEDIA_QUEUE_LIMIT) throw new DirectObsError(ownText("errorMediaBusy"), 400);
+    const outcome = new Promise<MediaCommandOutcome>((resolve, reject) => {
+      target.queue.push({ op, generation: this.mediaGeneration, resolve, reject });
+    });
+    this.emitMediaState(target);
+    void this.runMediaQueue(target);
+    return outcome;
+  }
+
+  private mediaAvailabilityError(availability: MediaAvailability, inputUuid: string): DirectObsError {
+    switch (availability) {
+      case "unbound": return new DirectObsError(ownText("errorMediaChoose"), 400);
+      case "disconnected": return new DirectObsError(ownText("layerErrorNotConnected"), 500);
+      case "unsupported": return new DirectObsError(ownText("errorMediaUnsupported"), 400);
+      case "wrong_kind": return new DirectObsError(ownText("errorMediaWrongKind", { input: this.mediaInputName(inputUuid) }), 400);
+      default: return new DirectObsError(ownText("errorMediaMissing"), 404);
+    }
+  }
+
+  private mediaTargetFor(inputUuid: string): MediaTarget {
+    let target = this.mediaTargets.get(inputUuid);
+    if (!target) {
+      target = {
+        uuid: inputUuid, watchers: 0, polling: false, pollTimer: null, statusInFlight: false,
+        statusChain: Promise.resolve(), trailingRead: null, lastAppliedSequence: 0,
+        mediaState: "unknown", cursor: null, duration: null, pending: "none", pendingStamp: 0, pauseTimer: null,
+        commandStamp: 0, pendingBarrier: 0, loadSentAt: 0, queue: [], running: false, signature: ""
+      };
+      this.mediaTargets.set(inputUuid, target);
+    }
+    return target;
+  }
+
+  private releaseMediaTarget(target: MediaTarget): void {
+    if (target.watchers > 0 || target.queue.length > 0 || target.running) return;
+    this.clearMediaPending(target);
+    if (this.mediaTargets.get(target.uuid) === target) this.mediaTargets.delete(target.uuid);
+  }
+
+  private mediaStateOf(target: MediaTarget): MediaTargetState {
+    return {
+      availability: this.mediaAvailability(target.uuid),
+      mediaState: target.mediaState,
+      mediaCursor: target.cursor,
+      mediaDuration: target.duration,
+      pending: target.pending,
+      queued: target.queue.length
+    };
+  }
+
+  /** `mediaStateChanged(uuid, state)` when the state's signature changed; never through the catalog event. */
+  private emitMediaState(target: MediaTarget): void {
+    if (this.mediaTargets.get(target.uuid) !== target) return;
+    const state = this.mediaStateOf(target);
+    const signature = JSON.stringify(state);
+    if (signature === target.signature) return;
+    target.signature = signature;
+    this.emit("mediaStateChanged", target.uuid, state);
+  }
+
+  private resetMediaObservation(target: MediaTarget): void {
+    target.mediaState = "unknown";
+    target.cursor = null;
+    target.duration = null;
+  }
+
+  /** After connect, every catalog publication, a removal or a collection change: polls and validity follow. */
+  private reconcileMediaTargets(): void {
+    for (const target of this.mediaTargets.values()) this.reconcileMediaTarget(target);
+  }
+
+  private reconcileMediaTarget(target: MediaTarget): void {
+    if (this.mediaAvailability(target.uuid) !== "ok") {
+      this.stopMediaPoll(target);
+      this.purgeMediaQueue(target);
+      this.clearMediaPending(target);
+      this.resetMediaObservation(target);
+    } else if (target.watchers > 0) {
+      this.startMediaPoll(target);
+    }
+    this.emitMediaState(target);
+  }
+
+  /** Disconnect, stop, reconnect or a collection change: every poll off, every queue purged, every wait void. */
+  private invalidateMediaTargets(): void {
+    this.mediaGeneration++;
+    for (const target of this.mediaTargets.values()) {
+      this.stopMediaPoll(target);
+      // A read queued under the old generation is not shared with the next one.
+      target.trailingRead = null;
+      this.purgeMediaQueue(target);
+      this.clearMediaPending(target);
+      this.resetMediaObservation(target);
+      this.emitMediaState(target);
+    }
+  }
+
+  /** Polls are started only for watched targets and stopped by the last release; this gates each tick. */
+  private mediaPollAllowed(target: MediaTarget): boolean {
+    return this.mediaAvailability(target.uuid) === "ok";
+  }
+
+  private startMediaPoll(target: MediaTarget): void {
+    if (target.polling) return;
+    target.polling = true;
+    this.scheduleMediaPoll(target, 0);
+  }
+
+  private stopMediaPoll(target: MediaTarget): void {
+    target.polling = false;
+    if (target.pollTimer) {
+      clearTimeout(target.pollTimer);
+      target.pollTimer = null;
+    }
+  }
+
+  private scheduleMediaPoll(target: MediaTarget, delayMs: number): void {
+    if (target.pollTimer) return;
+    target.pollTimer = setTimeout(() => {
+      target.pollTimer = null;
+      void this.pollMedia(target);
+    }, delayMs);
+    target.pollTimer.unref?.();
+  }
+
+  private async pollMedia(target: MediaTarget): Promise<void> {
+    if (!target.polling) return;
+    if (!this.mediaPollAllowed(target)) {
+      target.polling = false;
+      return;
+    }
+    // One status request in flight per UUID: a tick that finds one skips.
+    if (!target.statusInFlight) await this.freshMediaRead(target).catch(() => {});
+    if (!target.polling) return;
+    if (this.mediaPollAllowed(target)) this.scheduleMediaPoll(target, MEDIA_POLL_MS);
+    else target.polling = false;
+  }
+
+  /**
+   * A status read sent after any read in flight has settled (never adopted
+   * from one sent earlier); reads queued before it is sent share it.
+   */
+  private freshMediaRead(target: MediaTarget): Promise<MediaStatusReply> {
+    if (target.trailingRead) return target.trailingRead;
+    const generation = this.mediaGeneration;
+    const read = target.statusChain.then(() => {
+      if (target.trailingRead === read) target.trailingRead = null;
+      return this.readMediaStatus(target, generation);
+    });
+    target.statusChain = read.catch(() => {});
+    target.trailingRead = read;
+    return read;
+  }
+
+  private async readMediaStatus(target: MediaTarget, generation: number): Promise<MediaStatusReply> {
+    if (generation !== this.mediaGeneration) throw new DirectObsError(ownText("errorControlChanged"), 400);
+    const sequence = ++this.mediaSequence;
+    target.statusInFlight = true;
+    try {
+      const data = await this.sendObsRequest("GetMediaInputStatus", { inputUuid: target.uuid });
+      const reply = parseMediaStatus(data);
+      // A late reply of an old generation, or one older than what was applied, never touches state.
+      if (generation === this.mediaGeneration && sequence > target.lastAppliedSequence) {
+        target.lastAppliedSequence = sequence;
+        this.applyMediaStatus(target, reply);
+      }
+      return reply;
+    } finally {
+      target.statusInFlight = false;
+    }
+  }
+
+  private applyMediaStatus(target: MediaTarget, reply: MediaStatusReply): void {
+    const previous = target.mediaState;
+    target.mediaState = reply.state;
+    target.cursor = reply.cursor;
+    target.duration = reply.duration;
+    if (target.pending === "pause") {
+      // A load of ours unloads the child (NONE) before the native held pause lands: NONE inside that
+      // window is not the pause's outcome.
+      const settled = reply.state === "paused" || reply.state === "stopped" || reply.state === "ended" ||
+        reply.state === "error" || (reply.state === "none" && Date.now() - target.loadSentAt > MEDIA_LOAD_WINDOW_MS);
+      if (settled) this.clearMediaPending(target);
+    } else if (target.pending === "unconfirmed" && reply.state !== previous) {
+      this.clearMediaPending(target);
+    }
+    this.emitMediaState(target);
+  }
+
+  private setMediaPending(target: MediaTarget, pending: "play" | "pause", stamp: number): void {
+    if (stamp <= target.pendingBarrier) return;
+    this.clearMediaPending(target);
+    target.pending = pending;
+    target.pendingStamp = stamp;
+    if (pending === "pause") {
+      const generation = this.mediaGeneration;
+      target.pauseTimer = setTimeout(() => {
+        target.pauseTimer = null;
+        if (generation !== this.mediaGeneration || target.pending !== "pause" || target.pendingStamp !== stamp) return;
+        target.pending = "unconfirmed";
+        this.emitMediaState(target);
+      }, this.mediaPauseWaitMs);
+      target.pauseTimer.unref?.();
+    }
+    this.emitMediaState(target);
+  }
+
+  private clearMediaPending(target: MediaTarget): void {
+    if (target.pauseTimer) {
+      clearTimeout(target.pauseTimer);
+      target.pauseTimer = null;
+    }
+    target.pending = "none";
+  }
+
+  /** Settles every unsent press as cancelled; the one in flight cannot be undone. */
+  private purgeMediaQueue(target: MediaTarget): void {
+    const keep = target.running ? 1 : 0;
+    const purged = target.queue.splice(keep);
+    for (const entry of purged) entry.resolve("cancelled");
+    if (purged.length > 0) this.emitMediaState(target);
+  }
+
+  private async runMediaQueue(target: MediaTarget): Promise<void> {
+    if (target.running) return;
+    target.running = true;
+    try {
+      while (target.queue.length > 0) {
+        const entry = target.queue[0]!;
+        try {
+          entry.resolve(await this.executeMediaCommand(target, entry));
+        } catch (error) {
+          entry.reject(error);
+        }
+        if (target.queue[0] === entry) target.queue.shift();
+        this.emitMediaState(target);
+      }
+    } finally {
+      target.running = false;
+      this.releaseMediaTarget(target);
+    }
+  }
+
+  private async executeMediaCommand(target: MediaTarget, entry: MediaCommandEntry): Promise<MediaCommandOutcome> {
+    const stamp = ++target.commandStamp;
+    const generation = entry.generation;
+    // Invalidated before anything was sent: a quiet cancellation, never an error.
+    if (generation !== this.mediaGeneration || this.mediaAvailability(target.uuid) !== "ok") return "cancelled";
+    let action: MediaAction;
+    if (entry.op === "playpause") {
+      // The direction comes from a fresh read inside the queue, never from the key's last picture.
+      let reply: MediaStatusReply;
+      try {
+        reply = await this.freshMediaRead(target);
+      } catch (error) {
+        if (generation !== this.mediaGeneration) return "cancelled";
+        throw error;
+      }
+      // The read took time: the input may have left meanwhile (InputRemoved bumps no generation).
+      if (generation !== this.mediaGeneration || this.mediaAvailability(target.uuid) !== "ok") return "cancelled";
+      switch (reply.state) {
+        case "playing": action = "pause"; break;
+        case "paused": case "stopped": case "ended": case "none": action = "play"; break;
+        case "opening": case "buffering":
+          throw new DirectObsError(ownText("errorMediaChanging"), 400);
+        default:
+          throw new DirectObsError(ownText("errorMediaAmbiguous"), 400);
+      }
+      this.setMediaPending(target, action, stamp);
+    } else {
+      action = entry.op;
+      // An explicit transport command drops any pending intent and bars an older toggle from setting one.
+      this.clearMediaPending(target);
+      target.pendingBarrier = stamp;
+      this.emitMediaState(target);
+    }
+    try {
+      await this.sendObsRequest("TriggerMediaInputAction", { inputUuid: target.uuid, mediaAction: OBS_MEDIA_ACTIONS[action] });
+    } catch (error) {
+      if (target.pendingStamp === stamp) this.clearMediaPending(target);
+      this.emitMediaState(target);
+      throw error;
+    }
+    if (generation !== this.mediaGeneration) return "sent";
+    if (action !== "pause" && action !== "stop") target.loadSentAt = Date.now();
+    // Exactly one trailing fresh read; only its attempt releases PLAY's mark (PAUSE waits for an observation).
+    const trailing = this.freshMediaRead(target).catch(() => undefined);
+    if (action === "play") {
+      void trailing.then(() => {
+        if (generation !== this.mediaGeneration || target.pending !== "play" || target.pendingStamp !== stamp) return;
+        this.clearMediaPending(target);
+        this.emitMediaState(target);
+      });
+    }
+    return "sent";
   }
 }

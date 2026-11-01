@@ -62,6 +62,8 @@ export class DirectObsPropertyInspectorBridge {
         passwordSet: settings.password.length > 0
       },
       catalog,
+      // Whether this OBS offers the media requests (the Playlister inspector's compatibility banner).
+      mediaCapability: this.client.getMediaCapability(),
       automaticInputs: Object.fromEntries(["__audio_main__", "__audio_mic__", "__audio_aux__", "__audio_input_2__"]
         .map((target) => [target, resolveAutomaticInputName(target, audioInputs)])),
       layerScenes: Object.fromEntries(Object.entries(this.layers?.getCatalog() ?? {}).map(([name, scene]) =>

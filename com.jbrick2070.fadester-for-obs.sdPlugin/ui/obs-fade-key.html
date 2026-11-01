@@ -7,31 +7,34 @@
   <link rel="stylesheet" href="pi.css" />
 </head>
 <body>
-  <h3>OBS fade <span class="scope">this key</span></h3>
-  <p class="muted">Starts with Main audio from your current OBS mixer. Choose a fixed input to keep this button assigned to it.</p>
+  <h3><span data-i18n="fadeHeading">OBS fade</span> <span class="scope" data-i18n="scopeThisKey">this key</span></h3>
+  <p class="muted" data-i18n="fadeIntro">Starts with Main audio from your current OBS mixer. Choose a fixed input to keep this button assigned to it.</p>
   <div id="direct-fade-status" class="status-banner status-info" style="display:none;"></div>
   <div class="row">
-    <label for="obs-fade-input">Mixer input</label>
+    <label for="obs-fade-input" data-i18n="mixerInput">Mixer input</label>
     <select id="obs-fade-input"></select>
-    <button id="obs-fade-refresh" class="btn secondary" type="button">Refresh</button>
+    <button id="obs-fade-refresh" class="btn secondary" type="button" data-i18n="refresh">Refresh</button>
   </div>
   <div class="row">
-    <label for="obs-fade-to">Fade to</label>
-    <select id="obs-fade-to"><option value="1">100 %</option><option value="0">0 %</option></select>
+    <label for="obs-fade-to" data-i18n="fadeTo">Fade to</label>
+    <select id="obs-fade-to"><option value="1" data-i18n="percent100">100 %</option><option value="0" data-i18n="percent0">0 %</option></select>
   </div>
   <div class="row">
-    <label for="obs-fade-duration">Duration (ms)</label>
+    <label for="obs-fade-duration" data-i18n="durationMs">Duration (ms)</label>
     <input id="obs-fade-duration" type="number" min="0" max="20000" step="50" value="1000" />
   </div>
-  <p class="muted">0 ms is instant. Any new volume move cancels a running fade for that input.</p>
+  <p class="muted" data-i18n="fadeInstantNote">0 ms is instant. Any new volume move cancels a running fade for that input.</p>
   <div class="row">
-    <label for="obs-fade-label">Label</label>
-    <input id="obs-fade-label" type="text" maxlength="14" placeholder="From OBS (leave blank)" />
+    <label for="obs-fade-label" data-i18n="label">Label</label>
+    <input id="obs-fade-label" type="text" maxlength="14" placeholder="From OBS (leave blank)" data-i18n-placeholder="placeholderFromObs" />
   </div>
   <div id="direct-shared-sections"></div>
+  <script src="i18n.js"></script>
+  <script src="preset-captions.js"></script>
   <script src="direct-pi.js"></script>
   <script>
     window.initDirectObsPropertyInspector(function (settings, save, state) {
+      const T = window.FadesterI18n.t;
       const input = document.getElementById("obs-fade-input");
       const to = document.getElementById("obs-fade-to");
       const duration = document.getElementById("obs-fade-duration");
@@ -39,22 +42,19 @@
       const banner = document.getElementById("direct-fade-status");
       const catalog = state && state.catalog ? state.catalog : {};
       const selectedInput = settings.inputName === undefined ? "__audio_main__" : settings.inputName;
+      // A bundled profile's caption is a default: shown empty here, released on retarget.
       const generatedLabel = function () {
-        const caption = String(settings.labelOverride || "").trim();
-        if (selectedInput === "__audio_main__") return /^(music|desktop|audio)( down| up)?$/i.test(caption);
-        if (selectedInput === "__audio_mic__") return /^mic( down| up)?$/i.test(caption);
-        if (selectedInput === "__audio_aux__" || selectedInput === "__audio_input_2__") return /^aux( down| up)?$/i.test(caption);
-        return false;
+        return window.FadesterPresetCaptions.isGenerated("fade", { inputName: selectedInput, labelOverride: settings.labelOverride });
       };
-      window.directObsFillSelect(input, window.directObsAudioItems(state), selectedInput, "Choose a mixer input");
+      window.directObsFillSelect(input, window.directObsAudioItems(state), selectedInput, T("fadeChooseInput"));
       if (to && document.activeElement !== to) to.value = String(settings.to === 0 ? 0 : 1);
       if (duration && document.activeElement !== duration) duration.value = String(settings.durationMs !== undefined ? settings.durationMs : 1000);
-      if (label && document.activeElement !== label) label.value = settings.labelOverride || "";
+      if (label && document.activeElement !== label) label.value = generatedLabel() ? "" : settings.labelOverride || "";
       if (banner) {
         const automatic = state && state.automaticInputs && Object.prototype.hasOwnProperty.call(state.automaticInputs, selectedInput);
         const missing = automatic ? !state.automaticInputs[selectedInput] : selectedInput && !Object.prototype.hasOwnProperty.call(catalog.inputVolumes || {}, selectedInput);
         const show = !selectedInput || missing;
-        banner.textContent = missing ? "This audio input is unavailable in OBS. Choose another mixer input above." : "Choose an OBS mixer input to fade.";
+        banner.textContent = T(missing ? "fadeInputUnavailable" : "fadeChooseToFade");
         banner.className = "status-banner status-info";
         banner.style.display = show ? "block" : "none";
       }

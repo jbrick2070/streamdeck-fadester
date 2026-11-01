@@ -9,7 +9,8 @@ import {
   WillDisappearEvent
 } from "@elgato/streamdeck";
 import { DirectObsClient } from "../obs/direct-obs-client.js";
-import { automaticInputLabel, isAutomaticInputPresetLabel, migrateAutomaticInputSettings } from "../obs/automatic-targets.js";
+import { automaticInputRoleName, migrateAutomaticInputSettings } from "../obs/automatic-targets.js";
+import { customCaption } from "../obs/preset-captions.js";
 import { LayerController, LayerOperation } from "../control/layer-controller.js";
 import {
   DEFAULT_OBS_FADER_DIAL_SETTINGS,
@@ -24,6 +25,8 @@ import {
   toSvgDataUri
 } from "../gfx/direct-obs-renderer.js";
 import { computeDialDelta, normalizeStepPerTick } from "./dial-math.js";
+import { statusCellReason } from "../../packages/streamdeck-fadester-shared/src/status-text.js";
+import { StringKey, t, translate } from "../i18n/strings.js";
 
 interface DialFeedbackSink {
   setFeedback(feedback: { canvas: string }): Promise<void>;
@@ -199,31 +202,34 @@ export class ObsFaderDialInstanceController {
       (this.settings.target === "input_volume" && Boolean(this.settings.inputName));
     const isTbar = this.settings.target === "tbar";
     const inputName = isTbar ? "" : this.client.resolveInputName(this.settings.inputName);
-    const inputRole = automaticInputLabel(this.settings.inputName)?.replace(" (automatic)", "");
+    const inputRole = automaticInputRoleName(this.settings.inputName);
     const value = isTbar
       ? catalog.tbarPosition
       : catalog.inputVolumes[inputName] ?? 0;
-    const customLabel = isAutomaticInputPresetLabel(this.settings.inputName, this.settings.labelOverride) ? "" : this.settings.labelOverride;
+    // A shipped caption ("Scene blend", "Music") is a default: the dial draws its role instead.
+    const customLabel = customCaption("fader", this.settings);
+    // The T-bar's own name is a default, not a label: the scene mixer then draws its press hint.
     const label = customLabel ||
-      (isTbar ? "Scene transition" : inputName || inputRole || this.settings.inputName || "OBS fader");
-    const pressHints: Partial<Record<ObsFaderPressAction, string>> = {
-      next_blend: "Press: next blend",
-      previous_blend: "Press: previous blend",
-      normal_blend: "Press: Normal blend",
-      toggle_source: "Press: show / hide",
-      next_blend_and_finish: "Press: blend + take Next live",
-      none: "Press disabled"
+      (isTbar ? "" : inputName || inputRole || this.settings.inputName || t("faderDefault"));
+    const pressHints: Partial<Record<ObsFaderPressAction, StringKey>> = {
+      next_blend: "pressNextBlend",
+      previous_blend: "pressPreviousBlend",
+      normal_blend: "pressNormalBlend",
+      toggle_source: "pressShowHide",
+      next_blend_and_finish: "pressBlendTake",
+      none: "pressDisabled"
     };
+    const pressHint = pressHints[this.settings.pressAction];
     this.rateLimiter.push(
       renderDirectDialSvg({
         connected: this.client.isConnected(),
-        reason: this.client.getStatus().cellReason,
+        reason: statusCellReason(this.client.getStatus(), translate),
         label,
         value,
         configured,
-        ...(!isTbar && configured && !inputName ? { problem: inputRole ? `${inputRole} unavailable` : "Audio input unavailable" } : {}),
+        ...(!isTbar && configured && !inputName ? { problem: inputRole ? t("roleUnavailable", { role: inputRole }) : t("audioInputUnavailable") } : {}),
         target: this.settings.target,
-        ...(pressHints[this.settings.pressAction] ? { pressHint: pressHints[this.settings.pressAction] } : {}),
+        ...(pressHint ? { pressHint: t(pressHint) } : {}),
         ...(isTbar ? {
           studioMode: catalog.studioMode,
           programSceneName: catalog.currentProgramScene,

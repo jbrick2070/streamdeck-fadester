@@ -328,24 +328,125 @@ step's diff before its build; one commit per step; one push at the end.
    `label !== "Scene transition"` test (`direct-obs-renderer.ts:105`) becomes a default-label flag. The mutation
    entries that quote changed lines (M-3.2 "CLEAN FX", M-1.3b "Unassigned, set in OBS", and any other) are updated in
    the same step; the tests keep asserting English.
+   *As built (2026-10-31, worktree `fadester-i18n`):* `src/i18n/strings.ts` holds `EN` (the shared package's
+   `SHARED_EN` plus the plugin's words), `t()`, `translate()` (the same, typed for the shared package),
+   `lookupText()` (English for a missing, empty, key-echo or placeholder-changed text, as VJster), `setLanguage()`,
+   `formatNumber()` (Intl, "1,5" in German). `packages/streamdeck-fadester-shared/src/i18n.ts` has `LocalText`
+   (`{ key, params }` for our words, `{ verbatim }` for OBS and Midi Fadester texts), `wordText()`, and
+   `LocalizedError`, which `ObsVendorError`, `DirectObsError` and `FadesterVendorError` extend: a string argument is
+   foreign and shown verbatim, our own messages pass `ownText(key, params)`; `message`/`comment` keep the English
+   wording, so logs and the `toThrow("...")` tests read English. `ConnectionStatusInfo` lost `sentence` and
+   `cellReason`; it carries `pluginName`, `surfaceName`, `apiVersion`, `supportedApiVersion`, and
+   `status-text.ts` words it (`statusSentence`, `statusCellReason`); `setStatus` diffs `statusSignature` (kind
+   plus the parameters the words use, no more). The shared renderers take `t` in their input (English when
+   omitted); `SurfaceStore` starts with empty Preview/Program names and keeps the last error as `LocalText`.
+   Decisions: the T-bar's default label is now empty (a stored "Scene transition" is treated as generated), so the
+   `!== "Scene transition"` test is gone; "40 %" and "40%" are one `percent` template (English "{n}%", German
+   "{n} %"), the one visible English change; the fade key's seconds use `formatNumber`; `READY_LAYOUTS` carry the
+   profile `title` (kept as named, R-I18N-1) and the picker shows it after a translated mode tag; the "OBS"
+   version fallback stays (a kept term); "Could not queue the next scene." is not shown anywhere and stays.
+   `en.json` and `de.json` exist from this step with `Localization` only (the deck table; 8.4 adds the
+   manifest texts); `tests/helpers/languages.ts` holds `REQUIRED_LANGUAGES` (en, de; extend there) and takes
+   every other list from the files present; `tests/i18n-strings.test.ts` checks keys, placeholders, BOM, the
+   fallbacks, German renders, own-versus-foreign errors and status diffing. Mutations M-3.2 and M-1.3b follow the
+   new lines; M-8.1a (lookup bypass) and M-8.1b (status diff by kind only) are new; the runner now requires a
+   failing test, not just a non-zero exit.
 2. **Step 8.2 -- Stored English captions shown translated.** `src/obs/preset-captions.ts` lists the 38 captions the
    bundled profiles store (English, compare-only) with each one's role; the scene, fader, fade and layer controllers
    treat a matching caption as generated and draw the translated role (extending today's scene and audio rule to the
    layer and "Scene blend" captions). The inspectors' generated-label logic uses the same list. Profiles are not
    rebuilt and keep English captions. Tests: each caption maps to a role; a German render shows no English caption.
+   *As built (2026-10-31):* `src/obs/preset-captions.ts` holds the 38 shipped captions (14 layer: 10 key, 4 dial;
+   5 fader; 8 fade; 11 scene; a test asserts set equality with `profiles/layouts.json`) and the legacy spellings,
+   per action and context (scene target; T-bar or any automatic audio role; layer operation; layer dial mode),
+   compared case- and space-insensitively. `customCaption()` returns "" for a generated caption, so the scene key
+   draws the live OBS scene or its translated role, fader and fade draw the live input or role (the T-bar its
+   press hint), and the layer key its translated operation; any other caption is drawn as typed. It replaces the
+   three older rules (`isAutomaticInputPresetLabel`, the scene key's lists, the "Scene transition" test); the
+   migrations and their English literals are unchanged. Small unifications: a scene caption now matches only its
+   own index ("Scene 2" on Scene 2's target, as the inspector did; the key used to accept any A-D/1-4 on any
+   automatic target), "Random scene" is recognised on the deck as well, and an audio role caption is generated on
+   any automatic audio target (the key's rule; the inspectors used to tie Music to Main, Mic to Mic, Aux to Aux),
+   but no longer on a T-bar dial (whose context is the T-bar); every comparison now ignores case, so "cut next"
+   typed on a Next key counts as the default too.
+   The inspectors read the same table from the generated `ui/preset-captions.js`
+   (`scripts/generate-ui-i18n.ts`, run by hand; a test fails when it is stale), loaded before `direct-pi.js` on
+   the four direct pages; a generated caption shows as an empty label field (its placeholder is translated in
+   8.5) and is still released on retarget, now also when a layer key's job or a layer dial's mode changes. The vm
+   inspector tests load a page's own helper scripts through `tests/helpers/inspector-scripts.ts`.
+   `tests/preset-captions.test.ts` renders every distinct shipped assignment on a German deck against the fake OBS
+   and finds no English caption; M-8.2a (captions drawn as typed) is new.
 3. **Step 8.3 -- Width.** `textFitAttributes` and the fit checks measure CJK, kana, Hangul and accented capitals at
    their real widths; the three Midi Fadester status texts and the 120 px key status line that are never shrunk today
    get the same fit. A test renders every deck string of every language present and checks its box.
+   *As built (2026-10-31):* `packages/streamdeck-fadester-shared/src/text-fit.ts` holds the estimate (`textEm`:
+   CJK, kana and Hangul 1 em, combining marks 0, capitals of any script 0.74, narrow letters and punctuation 0.36,
+   m/w/@/%/…/— 0.95, others 0.6; a little above Segoe UI Bold), `fitsBox` (fits when squeezed no further than
+   `MIN_SQUEEZE` 0.8), `fitText` (shortens by width with "…", never by a count of characters), the moved
+   `textFitAttributes`, `splitTitle` (two lines at a space; CJK also between characters; one long Latin word stays
+   whole) and `fontFamilyFor` (VJster's CJK font lists, by script). The old estimate (capitals 1 em, every
+   non-ASCII character 1.2 em) is gone, so English is squeezed less often than before, and `truncateLabel` is
+   removed. So English output is not byte-identical to 0.7.7: besides "40 %" becoming "40%", a long scene or
+   source name is now cut by measured width rather than at a fixed character count, so its cut point can
+   differ, and some names that were squeezed before are drawn at full size. Every text on the direct key and dial, the scene mixer (LIVE/NEXT too), the layer dial and the Midi
+   Fadester cells is fitted to its box and gets its font list; the direct key title wraps by width (14 px, else
+   12 px, else two lines), the Midi Fadester key title too (14 px, else two lines at 13, 11 or 10 px); the dial
+   status title and reason, the hold badge (now 112 to 188 px wide), the T-bar scene names (16, 14 or 12 px in
+   66 px each) and percent, the readouts (the label gets what the readout leaves) and the Clean FX lines were not
+   fitted before and are now; the key status reason (often Midi Fadester's own sentence) gets two lines. Tests
+   that looked for a wrapped reason read the drawn words through `tests/helpers/svg-text.ts`.
+   `tests/deck-fit.test.ts` lists every deck key with the boxes it is drawn in (composites with their parts, an
+   Info Bar line as native text that must fit 220 px unsqueezed) or as not drawn on the deck, and for every
+   language present requires each text to fit wherever the English fits; status and error sentences that do not
+   fit a 9 px key line even in English are shortened there by design, and may be at most half again as wide as
+   the English. `textFitAttributes` still sets `textLength` whenever the estimate exceeds the box, as before (a
+   text a little narrower in reality is then stretched slightly; overflow was judged worse). German deck texts were shortened to fit
+   (for example "Von OBS getrennt.", "{role} fehlt", and OBS's "Negativ multiplizieren" as "Negativ mult." in the
+   9 px key line). M-8.3a (CJK at Latin width) and M-8.3b (no shortening) are new.
 4. **Step 8.4 -- Stream Deck files.** `en.json` plus de, es, fr, ja, ko, zh_CN, zh_TW at the plugin root: Name,
    Description, Category, the seven action UUIDs' Name, Tooltip and Encoder TriggerDescription, and a `Localization`
    object holding the strings table (and `Localization.pi` for the inspectors). The plugin takes the language from
    `streamDeck.info.application.language` at start and uses its own `t()` over the tables (the SDK's translate has no
    placeholders and returns the bare key when the files are not in the working folder, as in tests).
+   *As built (2026-11-01):* `en.json` and `de.json` now hold `Name`, `Description`, `Category`, every action UUID's
+   `Name` and `Tooltip`, and `Encoder.TriggerDescription` (Rotate, Push, Touch) where the manifest has one, as
+   VJster's files do; `Name` and `Category` stay "Fadester for OBS" (R-ID-1) and the English file repeats the
+   manifest's texts (a test compares them). `src/i18n/load.ts` maps Stream Deck's language to one it offers
+   (`zh-CN` to `zh_CN`, `de_AT` to `de`, anything else to English), reads that file's `Localization` (without the
+   inspectors' `pi`) from the plugin folder, and English stands when the file is missing or broken; `plugin.ts`
+   calls it once with `streamDeck.info.application.language` before any action draws. Whether Stream Deck
+   reloads the plugin on a language change is left to the device check (8.7). Tests check every present file's
+   shape against `manifest.json` (no missing or extra UUIDs, the same trigger names) and the loader; es, fr, ja,
+   ko, zh_CN and zh_TW are not written yet (step 8.6). M-8.4a (start always in English) is new.
 5. **Step 8.5 -- Property inspectors.** All seven pages read `JSON.parse(inInfo).application.language` before their
    first render, set `<html lang>`, and fill texts from the plugin's `<lang>.json` `Localization.pi` (the same pattern
    as VJster; if the vm-based inspector tests cannot load JSON, a generated `ui/i18n.js` checked against the
    `<lang>.json` files by a test). Static markup uses `data-i18n`; dynamic texts are keyed; scene and filter counts get
    one/many pairs. The vm test stubs and `pi-harness.ts` take a language.
+   *As built (2026-11-01):* the inspectors' texts live in each `<lang>.json` under `Localization.pi` (about 280
+   keys; English in `en.json` is the source). `scripts/generate-ui-i18n.ts` writes `ui/i18n.js` from every present
+   file plus the runtime in `scripts/ui-i18n-runtime.js` (run by hand; a test fails when it is stale), loaded
+   synchronously before `direct-pi.js` / `pi-common.js` on all seven pages: `window.FadesterI18n` with `t`,
+   `plural` (one/many pairs: scene count, filter count), `number` (Intl, "-3,5 dB"), `apply` (`data-i18n`,
+   `data-i18n-placeholder`, `data-i18n-label` for the optgroup; an element with `data-slot` children keeps them
+   where its template has `{slot}`, so "choose **OBS Fader** instead" is one sentence to translate) and
+   `setLanguage`, which both runtimes call first in `connectElgatoStreamDeckSocket` from `inInfo`, setting
+   `<html lang>` and refilling the page before anything is drawn; English until then. Fallback as on the deck. The
+   shared markup and every dynamic text in `direct-pi.js`, `pi-common.js` and the inline page scripts are keyed;
+   texts that come from Midi Fadester or OBS (slot name, label, reason, display_value, device name and error,
+   filter property labels and suffixes, scene/source/filter names, the status sentence and errors the plugin
+   words) are filled in as parameters, never looked up; sentences that were glued are separate keys joined as
+   whole sentences. The offline slot names stay English (they mirror the API). Placeholders of generated labels
+   describe the default ("From OBS (leave blank)", "Automatic"), translated, rather than repeating the deck word.
+   `pi.css` lets the 105 px label column wrap long words. `scripts/pi-harness.ts --lang de` sets the plugin side
+   and the page alike. The vm tests load the page's `i18n.js` (`tests/helpers/inspector-scripts.ts`, and
+   `pi-dom.test.ts` before `pi-common.js`); `tests/inspector-i18n.test.ts` checks currency, keys and placeholders
+   per language, that every used key exists and every text is used, that each page loads `i18n.js` first and
+   marks every static word, the runtime's fallback, counts, numbers and slot filling, and a German page. The
+   German deck sentence for the Studio layout button now quotes the German button. M-8.5a (inspectors stay
+   English; the behaviour test kills it on its own too) is new. The pages' `<title>` stays English (Stream Deck
+   does not show it). Not done here: es, fr, ja, ko, zh_CN, zh_TW (step 8.6) and a look at the pages in a real
+   Stream Deck window (8.7).
 6. **Step 8.6 -- Translations and checks.** Claude drafts the seven languages using OBS's own translated terms for that
    language (from OBS 33's frontend locale files); Gemini 4 Argon reviews each language; corrections are applied
    unless one breaks a rule. The fit test (8.3) passes for all; `npm run build` leaves the profiles unchanged;

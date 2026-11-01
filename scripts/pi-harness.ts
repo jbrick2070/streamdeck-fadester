@@ -5,7 +5,7 @@
  * PropertyInspectorBridge, so the PI JavaScript can be exercised in a browser
  * without Stream Deck or OBS. Development aid only; not shipped.
  *
- *   node --import tsx scripts/pi-harness.ts [--page fader-dial|auto-fade-key]
+ *   node --import tsx scripts/pi-harness.ts [--page fader-dial|auto-fade-key] [--lang de]
  *   open http://127.0.0.1:4480/
  */
 import { createServer } from "node:http";
@@ -17,10 +17,15 @@ import { FadesterStore } from "../src/state/fadester-store.js";
 import { PropertyInspectorBridge } from "../src/pi/pi-bridge.js";
 import { FakeObsServer } from "../tests/helpers/fake-obs-server.js";
 import { FadesterGlobalSettings } from "../src/types/settings.js";
+import { useStreamDeckLanguage } from "../src/i18n/load.js";
 
 const HTTP_PORT = Number(process.env.PI_HARNESS_HTTP_PORT ?? 4480);
 const SD_WS_PORT = Number(process.env.PI_HARNESS_SD_PORT ?? 4481);
 const UI_DIR = join(process.cwd(), "com.jbrick2070.fadester-for-obs.sdPlugin", "ui");
+const langArgIndex = process.argv.indexOf("--lang");
+// The plugin side and the page take the same language, as under Stream Deck.
+const LANGUAGE = useStreamDeckLanguage(langArgIndex >= 0 ? process.argv[langArgIndex + 1] : "en",
+  join(process.cwd(), "com.jbrick2070.fadester-for-obs.sdPlugin"));
 const pageArgIndex = process.argv.indexOf("--page");
 const PAGE = pageArgIndex >= 0 ? process.argv[pageArgIndex + 1] : "fader-dial";
 const ACTION_UUID =
@@ -97,7 +102,7 @@ async function main(): Promise<void> {
       ${SD_WS_PORT},
       "pi-uuid-1",
       "registerPropertyInspector",
-      JSON.stringify({ application: { version: "7.1" } }),
+      JSON.stringify({ application: { version: "7.1", language: ${JSON.stringify(LANGUAGE)} } }),
       JSON.stringify({ action: ${JSON.stringify(ACTION_UUID)}, context: "ctx-1", payload: { settings: ${JSON.stringify(actionSettings)} } })
     );
   });

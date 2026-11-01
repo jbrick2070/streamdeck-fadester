@@ -22,6 +22,14 @@ import {
   DEFAULT_GLOBAL_SETTINGS,
   FadesterGlobalSettings
 } from "./types/settings.js";
+import { useStreamDeckLanguage } from "./i18n/load.js";
+
+// Stream Deck's language, read once before any control draws (PLAN.md 8.4; 8.7 checks a language change).
+try {
+  useStreamDeckLanguage(streamDeck.info.application.language);
+} catch {
+  useStreamDeckLanguage("en");
+}
 
 const enhancedClient = new FadesterClient(DEFAULT_GLOBAL_SETTINGS);
 const store = new FadesterStore(enhancedClient);

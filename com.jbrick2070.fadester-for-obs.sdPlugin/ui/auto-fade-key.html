@@ -7,44 +7,45 @@
   <link rel="stylesheet" href="pi.css" />
 </head>
 <body>
-  <h3>Midi Fadester auto-fade <span class="scope">optional integration</span></h3>
-  <p class="muted">This is the advanced shared-slot integration. For a normal OBS mixer-input fade, choose <strong>OBS Fade</strong> instead.</p>
+  <h3><span data-i18n="mfAutoHeading">Midi Fadester auto-fade</span> <span class="scope" data-i18n="scopeOptional">optional integration</span></h3>
+  <p class="muted" data-i18n="mfAutoIntro">This is the advanced shared-slot integration. For a normal OBS mixer-input fade, choose <strong data-slot="action" data-i18n="actionObsFade">OBS Fade</strong> instead.</p>
   <div id="slot-reason-banner" class="status-banner status-err" style="display:none;"></div>
 
   <div class="row">
-    <label for="slot-select">Slot</label>
+    <label for="slot-select" data-i18n="slot">Slot</label>
     <select id="slot-select" data-allow-all-fx="true"></select>
   </div>
 
   <div class="row" id="to-row">
-    <label for="to-select">Fade to</label>
+    <label for="to-select" data-i18n="fadeTo">Fade to</label>
     <select id="to-select">
-      <option value="1" selected>100 %</option>
-      <option value="0">0 %</option>
+      <option value="1" selected data-i18n="percent100">100 %</option>
+      <option value="0" data-i18n="percent0">0 %</option>
     </select>
   </div>
 
   <div class="row">
-    <label for="duration-input">Duration (ms)</label>
+    <label for="duration-input" data-i18n="durationMs">Duration (ms)</label>
     <input type="number" id="duration-input" value="1000" min="0" max="20000" step="50" />
   </div>
-  <p class="muted" id="duration-hint">0 ms = instant. A T-bar return to 0 % cancels the throw. 50–20000 ms = timed fade following the slot's curve.</p>
+  <p class="muted" id="duration-hint" data-i18n="durationHint">0 ms = instant. A T-bar return to 0 % cancels the throw. 50–20000 ms = timed fade following the slot's curve.</p>
 
   <div class="row">
-    <label for="label-input">Label</label>
-    <input type="text" id="label-input" maxlength="14" placeholder="From OBS (leave blank)" />
+    <label for="label-input" data-i18n="label">Label</label>
+    <input type="text" id="label-input" maxlength="14" placeholder="From OBS (leave blank)" data-i18n-placeholder="placeholderFromObs" />
   </div>
 
   <div class="row" id="readout-row">
-    <label for="readout-select">Readout</label>
+    <label for="readout-select" data-i18n="readout">Readout</label>
     <select id="readout-select">
-      <option value="auto" selected>Engine value (px, dB, %)</option>
-      <option value="percent">Always percent</option>
+      <option value="auto" selected data-i18n="readoutAuto">Engine value (px, dB, %)</option>
+      <option value="percent" data-i18n="readoutPercent">Always percent</option>
     </select>
   </div>
 
   <div id="shared-sections"></div>
 
+  <script src="i18n.js"></script>
   <script src="pi-common.js"></script>
   <script>
     function syncAllFxVisibility(settings) {
@@ -55,9 +56,7 @@
       if (toRow) toRow.style.display = isAllFx ? "none" : "";
       if (readoutRow) readoutRow.style.display = isAllFx ? "none" : "";
       if (hint) {
-        hint.textContent = isAllFx
-          ? "All FX: resets enabled filter bindings in either bank to 0 %. Audio and layer controls stay unchanged. 0 ms = instant; 50–20000 ms = timed ramp."
-          : "0 ms = instant. A T-bar return to 0 % cancels the throw. 50–20000 ms = timed fade following the slot's curve.";
+        hint.textContent = window.FadesterI18n.t(isAllFx ? "durationHintAllFx" : "durationHint");
       }
     }
 

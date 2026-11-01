@@ -2,6 +2,9 @@
 import { ConnectionStatusInfo, SurfaceSlotBase } from "./types.js";
 import { PLAYLISTER_PALETTE, getSourcePairGradientColors } from "./palette.js";
 import { isResetFxEligible } from "./fx-policy.js";
+import { Translate, englishShared } from "./i18n.js";
+import { statusCellReason, statusSentence } from "./status-text.js";
+import { fitText, fontFamilyFor, splitTitle, textFitAttributes, textWidth } from "./text-fit.js";
 
 export interface DialCellRenderInput<
   TSlot extends SurfaceSlotBase = SurfaceSlotBase
@@ -20,6 +23,8 @@ export interface DialCellRenderInput<
   labelOverride?: string;
   /** "percent" forces a 0..100 % readout; "auto" prefers display_value. */
   readoutStyle?: "auto" | "percent";
+  /** The plugin's translator; English when omitted. */
+  t?: Translate;
 }
 
 export interface KeyCellRenderInput<
@@ -33,6 +38,8 @@ export interface KeyCellRenderInput<
   durationMs: number;
   labelOverride?: string;
   readoutStyle?: "auto" | "percent";
+  /** The plugin's translator; English when omitted. */
+  t?: Translate;
 }
 
 export function escapeXml(raw: string): string {
@@ -44,53 +51,44 @@ export function escapeXml(raw: string): string {
     .replace(/'/g, "&apos;");
 }
 
-export function truncateLabel(text: string, maxChars: number): string {
-  const clean = text.trim();
-  if (clean.length <= maxChars) {
-    return clean;
-  }
-  return clean.slice(0, Math.max(1, maxChars - 1)).trimEnd() + "…";
+/** A text element's fitted content: shortened by width, squeezed into its box, in a font that has its glyphs. */
+function fitted(raw: string, fontSize: number, maxWidth: number): { text: string; attrs: string; font: string } {
+  const text = fitText(raw, fontSize, maxWidth);
+  const fit = textFitAttributes(text, maxWidth, fontSize);
+  return { text: escapeXml(text), attrs: fit ? ` ${fit}` : "", font: fontFamilyFor(text) };
 }
 
+/** Width a key's text may use: the 120 px key less its border and margins. */
+const KEY_TEXT_WIDTH = 104;
+
+/** Width a dial row may use from x=14 to x=186. */
+const DIAL_TEXT_WIDTH = 172;
+
+/** A text is shortened by width (`fitText`), never by a count of characters (R-I18N-4). */
 type CompactKeyTitle = {
   firstLine: string;
   secondLine?: string;
   fontSize: number;
 };
 
-/** Keep target names readable on a 120px Stream Deck key. */
-function compactKeyTitle(raw: string): CompactKeyTitle {
-  const title = truncateLabel(raw || "Auto-fade", 24);
-  if (title.length <= 12) {
+/** Keep target names readable on a 120px Stream Deck key: one line at 14 px
+ * when it fits, else two lines at the largest size both fit (by width, so CJK
+ * and long German words are measured, not counted). */
+export function compactKeyTitle(raw: string, t: Translate = englishShared): CompactKeyTitle {
+  const title = (raw.trim() || t("cellAutoFadeTitle")).trim().replace(/\s+/g, " ");
+  if (textWidth(title, 14) <= KEY_TEXT_WIDTH) {
     return { firstLine: title, fontSize: 14 };
   }
-
-  const words = title.split(/\s+/).filter(Boolean);
-  if (words.length > 1) {
-    let firstLine = words[0];
-    let secondLine = words.slice(1).join(" ");
-    let bestDifference = Math.abs(firstLine.length - secondLine.length);
-
-    for (let index = 1; index < words.length - 1; index += 1) {
-      const candidateFirst = words.slice(0, index + 1).join(" ");
-      const candidateSecond = words.slice(index + 1).join(" ");
-      const difference = Math.abs(candidateFirst.length - candidateSecond.length);
-      if (difference < bestDifference) {
-        firstLine = candidateFirst;
-        secondLine = candidateSecond;
-        bestDifference = difference;
-      }
+  for (const fontSize of [13, 11, 10]) {
+    const lines = splitTitle(title, fontSize, KEY_TEXT_WIDTH);
+    if (lines.every((line) => textWidth(line, fontSize) <= KEY_TEXT_WIDTH)) {
+      return lines.length === 2 ? { firstLine: lines[0], secondLine: lines[1], fontSize } : { firstLine: lines[0], fontSize };
     }
-
-    const longestLine = Math.max(firstLine.length, secondLine.length);
-    return {
-      firstLine,
-      secondLine,
-      fontSize: longestLine > 12 ? 10 : longestLine > 10 ? 11 : 13
-    };
   }
-
-  return { firstLine: title, fontSize: 10 };
+  const lines = splitTitle(title, 10, KEY_TEXT_WIDTH);
+  return lines.length === 2
+    ? { firstLine: lines[0], secondLine: lines[1], fontSize: 10 }
+    : { firstLine: lines[0], fontSize: 10 };
 }
 
 function renderCompactKeyTitle(
@@ -99,11 +97,15 @@ function renderCompactKeyTitle(
   singleLineY: number,
   twoLineY: number
 ): string {
-  const attributes = `x="60" text-anchor="middle" fill="${fill}" font-family="Segoe UI, Arial, sans-serif" font-size="${layout.fontSize}" font-weight="700"`;
+  const first = fitted(layout.firstLine, layout.fontSize, KEY_TEXT_WIDTH);
+  const font = fontFamilyFor(layout.firstLine + (layout.secondLine ?? ""));
+  const attributes = `x="60" text-anchor="middle" fill="${fill}" font-family="${font}" font-size="${layout.fontSize}" font-weight="700"`;
   if (layout.secondLine) {
-    return `<text data-title-lines="2" ${attributes} y="${twoLineY}">${escapeXml(layout.firstLine)}<tspan x="60" dy="14">${escapeXml(layout.secondLine)}</tspan></text>`;
+    const second = fitted(layout.secondLine, layout.fontSize, KEY_TEXT_WIDTH);
+    const firstLine = first.attrs ? `<tspan${first.attrs}>${first.text}</tspan>` : first.text;
+    return `<text data-title-lines="2" ${attributes} y="${twoLineY}">${firstLine}<tspan x="60" dy="14"${second.attrs}>${second.text}</tspan></text>`;
   }
-  return `<text data-title-lines="1" ${attributes} y="${singleLineY}">${escapeXml(layout.firstLine)}</text>`;
+  return `<text data-title-lines="1" ${attributes} y="${singleLineY}"${first.attrs}>${first.text}</text>`;
 }
 
 export function toSvgDataUri(svg: string): string {
@@ -113,10 +115,11 @@ export function toSvgDataUri(svg: string): string {
 function renderDialStatusSvg(
   title: string,
   reason: string,
-  borderColor: string
+  borderColor: string,
+  t: Translate
 ): string {
-  const safeTitle = escapeXml(truncateLabel(title || "Fadester", 18));
-  const safeReason = escapeXml(truncateLabel(reason || "Unavailable", 26));
+  const safeTitle = fitted(title || t("cellFadesterTitle"), 18, DIAL_TEXT_WIDTH);
+  const safeReason = fitted(reason || t("cellUnavailable"), 14, DIAL_TEXT_WIDTH);
   const P = PLAYLISTER_PALETTE;
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100">`,
@@ -127,8 +130,8 @@ function renderDialStatusSvg(
     `</linearGradient>`,
     `</defs>`,
     `<rect x="2" y="2" width="196" height="96" rx="10" fill="url(#bg)" stroke="${borderColor}" stroke-width="3"/>`,
-    `<text x="14" y="38" fill="${P.whiteGlyph}" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700">${safeTitle}</text>`,
-    `<text x="14" y="70" fill="${P.orangeAccent}" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700">${safeReason}</text>`,
+    `<text x="14" y="38" fill="${P.whiteGlyph}" font-family="${safeTitle.font}" font-size="18" font-weight="700"${safeTitle.attrs}>${safeTitle.text}</text>`,
+    `<text x="14" y="70" fill="${P.orangeAccent}" font-family="${safeReason.font}" font-size="14" font-weight="700"${safeReason.attrs}>${safeReason.text}</text>`,
     `</svg>`
   ].join("");
 }
@@ -147,15 +150,17 @@ function renderTakeoverArrow(
   return "";
 }
 
-function renderHoldOverlay(label = "HOLD 3s FADE"): string {
+function renderHoldOverlay(label: string | undefined, t: Translate): string {
   const P = PLAYLISTER_PALETTE;
-  const safeLabel = escapeXml(truncateLabel(label || "HOLD 3s FADE", 15));
-  const boxW = safeLabel.length > 12 ? 128 : 112;
+  // The badge grows with its words (112 to 188 px); its text is fitted inside.
+  const raw = label || t("cellHoldFade");
+  const boxW = Math.max(112, Math.min(188, Math.ceil(textWidth(raw, 13) + 20)));
+  const safeLabel = fitted(raw, 13, boxW - 12);
   const boxX = Math.round((200 - boxW) / 2);
   return [
     `<rect data-hold-indicator="true" x="3" y="3" width="194" height="94" rx="10" fill="none" stroke="${P.orangeAccent}" stroke-width="4"/>`,
     `<rect x="${boxX}" y="6" width="${boxW}" height="24" rx="6" fill="${P.orangeAccent}" stroke="${P.whiteGlyph}" stroke-width="3"/>`,
-    `<text x="100" y="23" text-anchor="middle" fill="${P.bgTop}" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="800">${safeLabel}</text>`
+    `<text x="100" y="23" text-anchor="middle" fill="${P.bgTop}" font-family="${safeLabel.font}" font-size="13" font-weight="800"${safeLabel.attrs}>${safeLabel.text}</text>`
   ].join("");
 }
 
@@ -171,15 +176,17 @@ export function renderDialCellSvg<TSlot extends SurfaceSlotBase>(
   input: DialCellRenderInput<TSlot>
 ): string {
   const P = PLAYLISTER_PALETTE;
+  const t = input.t ?? englishShared;
   const override = (input.labelOverride ?? "").trim();
-  const fallbackTitle = override || input.slot?.name || input.slotId || "Fader";
+  const fallbackTitle = override || input.slot?.name || input.slotId || t("cellFaderTitle");
 
   // 1. Disconnected / error state -> never blank
   if (input.status.kind !== "connected") {
     return renderDialStatusSvg(
       fallbackTitle,
-      input.status.cellReason || input.status.sentence,
-      P.orangeAccent
+      statusCellReason(input.status, t) || statusSentence(input.status, t),
+      P.orangeAccent,
+      t
     );
   }
 
@@ -188,8 +195,9 @@ export function renderDialCellSvg<TSlot extends SurfaceSlotBase>(
   if (!slot) {
     return renderDialStatusSvg(
       fallbackTitle,
-      `Slot '${input.slotId}' not found`,
-      P.orangeAccent
+      t("cellSlotNotFound", { slot: input.slotId }),
+      P.orangeAccent,
+      t
     );
   }
 
@@ -198,12 +206,13 @@ export function renderDialCellSvg<TSlot extends SurfaceSlotBase>(
     const unavailableReason =
       slot.reason ||
       (slot.target_mode === "unassigned"
-        ? "Unassigned, set in OBS"
-        : "Unavailable in OBS");
+        ? t("cellUnassigned")
+        : t("cellUnavailableInObs"));
     return renderDialStatusSvg(
       slot.name || slot.id,
       unavailableReason,
-      P.orangeAccent
+      P.orangeAccent,
+      t
     );
   }
 
@@ -211,27 +220,32 @@ export function renderDialCellSvg<TSlot extends SurfaceSlotBase>(
   if (slot.target_mode === "unassigned") {
     return renderDialStatusSvg(
       slot.name || slot.id,
-      "Unassigned, set in OBS",
-      P.trackBorder
+      t("cellUnassigned"),
+      P.trackBorder,
+      t
     );
   }
 
   const clamped = Math.max(0, Math.min(1, slot.value));
   const pct = Math.round(clamped * 100);
-  const pctText = `${pct}%`;
+  const pctText = t("percent", { n: pct });
   const holdMarkup = input.holdingForLongPress
-    ? renderHoldOverlay(input.holdLabel)
+    ? renderHoldOverlay(input.holdLabel, t)
     : "";
   const parkedMarkup = renderParkedIndicator(slot.parked);
 
   // 5. Studio Mode T-bar cell (GRAPHICS-NOTES.md #3)
   if (slot.target_mode === "tbar") {
-    const prevName = escapeXml(
-      truncateLabel(input.previewSceneName || "Preview", 10)
-    );
-    const progName = escapeXml(
-      truncateLabel(input.programSceneName || "Program", 10)
-    );
+    // Scene names left and right of the centred percent: 66 px each.
+    // Scene names 62 px each, a 50 px percent between them, 4 px apart.
+    const sceneSize = (name: string): number => [16, 14].find((size) => textWidth(name, size) <= 62) ?? 12;
+    const prevRaw = input.previewSceneName || t("cellPreview");
+    const progRaw = input.programSceneName || t("cellProgram");
+    const prevSize = sceneSize(prevRaw);
+    const progSize = sceneSize(progRaw);
+    const prevName = fitted(prevRaw, prevSize, 62);
+    const progName = fitted(progRaw, progSize, 62);
+    const tbarPct = fitted(pctText, 18, 50);
     const inTransition = clamped > 0.001 && clamped < 0.999;
     const borderStroke = inTransition ? P.orangeAccent : P.trackBorder;
     const borderWidth = inTransition ? 4 : 3;
@@ -259,9 +273,9 @@ export function renderDialCellSvg<TSlot extends SurfaceSlotBase>(
       `</linearGradient>`,
       `</defs>`,
       `<rect x="2" y="2" width="196" height="96" rx="10" fill="url(#bg)" stroke="${borderStroke}" stroke-width="${borderWidth}"/>`,
-      `<text x="12" y="34" fill="${P.previewGreen}" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="800">${prevName}</text>`,
-      `<text x="100" y="34" text-anchor="middle" fill="${P.whiteGlyph}" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="800">${pctText}</text>`,
-      `<text x="188" y="34" text-anchor="end" fill="${P.programRed}" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="800">${progName}</text>`,
+      `<text x="12" y="34" fill="${P.previewGreen}" font-family="${prevName.font}" font-size="${prevSize}" font-weight="800"${prevName.attrs}>${prevName.text}</text>`,
+      `<text x="100" y="34" text-anchor="middle" fill="${P.whiteGlyph}" font-family="${tbarPct.font}" font-size="18" font-weight="800"${tbarPct.attrs}>${tbarPct.text}</text>`,
+      `<text x="188" y="34" text-anchor="end" fill="${P.programRed}" font-family="${progName.font}" font-size="${progSize}" font-weight="800"${progName.attrs}>${progName.text}</text>`,
       `<rect x="${barX}" y="58" width="${barW}" height="24" rx="8" fill="${P.trackBg}" stroke="${P.trackBorder}" stroke-width="3"/>`,
       fillW > 0
         ? `<rect x="${barX}" y="58" width="${fillW}" height="24" rx="8" fill="url(#tbarGrad)"/>`
@@ -319,7 +333,7 @@ export function renderDialCellSvg<TSlot extends SurfaceSlotBase>(
       `<rect x="102" y="4" width="96" height="54" rx="4" fill="none" stroke="${colorB}" stroke-width="3"/>`,
       `<rect x="${barX}" y="68" width="${barW}" height="18" rx="6" fill="url(#abGrad)" stroke="${P.whiteGlyph}" stroke-width="3"/>`,
       `<rect data-knob="true" x="${knobX - 6}" y="62" width="12" height="30" rx="4" fill="${P.orangeAccent}" stroke="${P.whiteGlyph}" stroke-width="3"/>`,
-      `<text x="100" y="52" text-anchor="middle" fill="${P.whiteGlyph}" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="800">${pctText}</text>`,
+      `<text x="100" y="52" text-anchor="middle" fill="${P.whiteGlyph}" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="800">${escapeXml(pctText)}</text>`,
       takeoverSvg,
       parkedMarkup,
       holdMarkup,
@@ -332,16 +346,13 @@ export function renderDialCellSvg<TSlot extends SurfaceSlotBase>(
   const { colorA, colorB } = isFxCell
     ? { colorA: P.fxCyanStart, colorB: P.fxAmberEnd }
     : getSourcePairGradientColors(slot.source_a, slot.source_b);
-  const displayLabel = escapeXml(
-    truncateLabel(override || slot.label || slot.name || slot.id, 14)
-  );
-  const readoutText = escapeXml(
-    truncateLabel(
-      input.readoutStyle === "percent" ? pctText : slot.display_value || pctText,
-      10
-    )
-  );
-  const readoutFontSize = readoutText.length > 6 ? 18 : 22;
+  // The readout (Midi Fadester's display_value, verbatim, or our percent) takes
+  // the right of the row, up to 80 px; the label gets the rest.
+  const rawReadout = input.readoutStyle === "percent" ? pctText : slot.display_value || pctText;
+  const readoutFontSize = textWidth(rawReadout, 22) > 72 ? 18 : 22;
+  const readout = fitted(rawReadout, readoutFontSize, 80);
+  const readoutWidth = Math.min(80, textWidth(fitText(rawReadout, readoutFontSize, 80), readoutFontSize));
+  const label = fitted(override || slot.label || slot.name || slot.id, 18, Math.max(60, DIAL_TEXT_WIDTH - readoutWidth - 10));
   const barX = 14;
   const barW = 172;
   const fillW = Math.round(barW * clamped);
@@ -362,8 +373,8 @@ export function renderDialCellSvg<TSlot extends SurfaceSlotBase>(
     `</linearGradient>`,
     `</defs>`,
     `<rect x="2" y="2" width="196" height="96" rx="10" fill="url(#bg)" stroke="${P.trackBorder}" stroke-width="3"/>`,
-    `<text x="14" y="38" fill="${P.whiteGlyph}" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700">${displayLabel}</text>`,
-    `<text x="186" y="38" text-anchor="end" fill="${P.whiteGlyph}" font-family="Segoe UI, Arial, sans-serif" font-size="${readoutFontSize}" font-weight="800">${readoutText}</text>`,
+    `<text x="14" y="38" fill="${P.whiteGlyph}" font-family="${label.font}" font-size="18" font-weight="700"${label.attrs}>${label.text}</text>`,
+    `<text x="186" y="38" text-anchor="end" fill="${P.whiteGlyph}" font-family="${readout.font}" font-size="${readoutFontSize}" font-weight="800"${readout.attrs}>${readout.text}</text>`,
     `<rect x="${barX}" y="58" width="${barW}" height="24" rx="8" fill="${P.trackBg}" stroke="${P.trackBorder}" stroke-width="3"/>`,
     fillW > 0
       ? `<rect x="${barX}" y="58" width="${fillW}" height="24" rx="8" fill="url(#abGrad)"/>`
@@ -376,11 +387,17 @@ export function renderDialCellSvg<TSlot extends SurfaceSlotBase>(
   ].join("");
 }
 
-function renderKeyStatusSvg(title: string, reason: string): string {
+function renderKeyStatusSvg(title: string, reason: string, t: Translate): string {
   const P = PLAYLISTER_PALETTE;
-  const titleLayout = compactKeyTitle(title);
-  const safeReason = escapeXml(truncateLabel(reason || "Unavailable", 40));
+  const titleLayout = compactKeyTitle(title, t);
+  // The reason (often Midi Fadester's own sentence) gets two lines of 108 px.
+  const reasonLines = splitTitle(reason.trim() || t("cellUnavailable"), 11, 108).map((line) => fitted(line, 11, 108));
   const reasonY = titleLayout.secondLine ? 86 : 78;
+  const reasonFont = fontFamilyFor(reasonLines.map((line) => line.text).join(""));
+  const reasonMarkup = reasonLines.length > 1
+    ? `${reasonLines[0].attrs ? `<tspan${reasonLines[0].attrs}>${reasonLines[0].text}</tspan>` : reasonLines[0].text}<tspan x="60" dy="13"${reasonLines[1].attrs}>${reasonLines[1].text}</tspan>`
+    : reasonLines[0].text;
+  const reasonAttrs = reasonLines.length > 1 ? "" : reasonLines[0].attrs;
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" data-key="status">`,
     `<defs>`,
@@ -391,7 +408,7 @@ function renderKeyStatusSvg(title: string, reason: string): string {
     `</defs>`,
     `<rect x="3" y="3" width="114" height="114" rx="14" fill="url(#bg)" stroke="${P.orangeAccent}" stroke-width="3"/>`,
     renderCompactKeyTitle(titleLayout, P.whiteGlyph, 46, 34),
-    `<text x="60" y="${reasonY}" text-anchor="middle" fill="${P.orangeAccent}" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="700">${safeReason}</text>`,
+    `<text x="60" y="${reasonY}" text-anchor="middle" fill="${P.orangeAccent}" font-family="${reasonFont}" font-size="11" font-weight="700"${reasonAttrs}>${reasonMarkup}</text>`,
     `</svg>`
   ].join("");
 }
@@ -400,15 +417,17 @@ export function renderAutoFadeKeySvg<TSlot extends SurfaceSlotBase>(
   input: KeyCellRenderInput<TSlot>
 ): string {
   const P = PLAYLISTER_PALETTE;
+  const t = input.t ?? englishShared;
   const isAllFx = input.slotId === "__all_fx__";
   const override = (input.labelOverride ?? "").trim();
   const fallbackTitle =
-    override || (isAllFx ? "Clean FX" : input.slot?.name || input.slotId || "Auto-fade");
+    override || (isAllFx ? t("cleanFxTitle") : input.slot?.name || input.slotId || t("cellAutoFadeTitle"));
 
   if (input.status.kind !== "connected") {
     return renderKeyStatusSvg(
       fallbackTitle,
-      input.status.cellReason || input.status.sentence
+      statusCellReason(input.status, t) || statusSentence(input.status, t),
+      t
     );
   }
 
@@ -416,16 +435,14 @@ export function renderAutoFadeKeySvg<TSlot extends SurfaceSlotBase>(
     const slotList = input.slots ?? [];
     const hasFxSupport = slotList.some((s) => s.kind === "fx");
     if (!hasFxSupport) {
-      return renderKeyStatusSvg("Clean FX", "Update Midi Fadester to 0.4.0");
+      return renderKeyStatusSvg(t("cleanFxTitle"), t("cleanFxNeedsUpdate"), t);
     }
 
     const eligible = slotList.filter(isResetFxEligible);
     const activeCount = eligible.filter((s) => s.value > 0.005).length;
     const borderColor = activeCount > 0 ? P.orangeAccent : P.previewGreen;
-    const line1 = escapeXml(
-      truncateLabel(override || (activeCount > 0 ? "CLEAN FX" : "FX CLEAN"), 10)
-    );
-    const line2 = activeCount > 0 ? `${activeCount} ACTIVE` : "ALL 0%";
+    const line1 = fitted(override || (activeCount > 0 ? t("cleanFxActiveTitle") : t("cleanFxIdleTitle")), 16, KEY_TEXT_WIDTH);
+    const line2 = fitted(activeCount > 0 ? t("cleanFxActiveCount", { n: activeCount }) : t("cleanFxAllZero"), 15, KEY_TEXT_WIDTH);
 
     return [
       `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" data-key="clean-fx" data-active-fx="${activeCount}">`,
@@ -436,44 +453,41 @@ export function renderAutoFadeKeySvg<TSlot extends SurfaceSlotBase>(
       `</linearGradient>`,
       `</defs>`,
       `<rect x="3" y="3" width="114" height="114" rx="14" fill="url(#bg)" stroke="${borderColor}" stroke-width="3"/>`,
-      `<text x="60" y="50" text-anchor="middle" fill="${P.whiteGlyph}" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="800">${line1}</text>`,
-      `<text x="60" y="80" text-anchor="middle" fill="${borderColor}" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="800">${line2}</text>`,
+      `<text x="60" y="50" text-anchor="middle" fill="${P.whiteGlyph}" font-family="${line1.font}" font-size="16" font-weight="800"${line1.attrs}>${line1.text}</text>`,
+      `<text x="60" y="80" text-anchor="middle" fill="${borderColor}" font-family="${line2.font}" font-size="15" font-weight="800"${line2.attrs}>${line2.text}</text>`,
       `</svg>`
     ].join("");
   }
 
   const slot = input.slot;
   if (!slot) {
-    return renderKeyStatusSvg(fallbackTitle, "Slot missing");
+    return renderKeyStatusSvg(fallbackTitle, t("cellSlotMissing"), t);
   }
   if (!slot.available) {
     const unavailableReason =
       slot.reason ||
       (slot.target_mode === "unassigned"
-        ? "Unassigned, set in OBS"
-        : "Unavailable");
-    return renderKeyStatusSvg(slot.name || slot.id, unavailableReason);
+        ? t("cellUnassigned")
+        : t("cellUnavailable"));
+    return renderKeyStatusSvg(slot.name || slot.id, unavailableReason, t);
   }
   if (slot.target_mode === "unassigned") {
-    return renderKeyStatusSvg(slot.name || slot.id, "Unassigned, set in OBS");
+    return renderKeyStatusSvg(slot.name || slot.id, t("cellUnassigned"), t);
   }
 
   const clamped = Math.max(0, Math.min(1, slot.value));
   const pct = Math.round(clamped * 100);
-  const pctText = `${pct}%`;
+  const pctText = t("percent", { n: pct });
   const isFxSlot = slot.target_mode === "filter_param" || slot.kind === "fx";
   const gradStart = isFxSlot ? P.fxCyanStart : P.blueStart;
   const gradEnd = isFxSlot ? P.fxAmberEnd : P.violetEnd;
   const titleLayout = compactKeyTitle(
-    override || slot.label || slot.name || slot.id
+    override || slot.label || slot.name || slot.id,
+    t
   );
-  const readoutText = escapeXml(
-    truncateLabel(
-      input.readoutStyle === "percent" ? pctText : slot.display_value || pctText,
-      10
-    )
-  );
-  const readoutFontSize = readoutText.length > 5 ? 20 : 28;
+  const rawReadout = input.readoutStyle === "percent" ? pctText : slot.display_value || pctText;
+  const readoutFontSize = textWidth(rawReadout, 28) > KEY_TEXT_WIDTH ? 20 : 28;
+  const readout = fitted(rawReadout, readoutFontSize, KEY_TEXT_WIDTH);
   const barX = 14;
   const barW = 92;
   const fillW = Math.round(barW * clamped);
@@ -492,7 +506,7 @@ export function renderAutoFadeKeySvg<TSlot extends SurfaceSlotBase>(
     `</defs>`,
     `<rect x="3" y="3" width="114" height="114" rx="14" fill="url(#bg)" stroke="${P.trackBorder}" stroke-width="3"/>`,
     renderCompactKeyTitle(titleLayout, P.mutedText, 32, 24),
-    `<text x="60" y="72" text-anchor="middle" fill="${P.whiteGlyph}" font-family="Segoe UI, Arial, sans-serif" font-size="${readoutFontSize}" font-weight="800">${readoutText}</text>`,
+    `<text x="60" y="72" text-anchor="middle" fill="${P.whiteGlyph}" font-family="${readout.font}" font-size="${readoutFontSize}" font-weight="800"${readout.attrs}>${readout.text}</text>`,
     `<rect x="${barX}" y="90" width="${barW}" height="16" rx="6" fill="${P.trackBg}" stroke="${P.trackBorder}" stroke-width="3"/>`,
     fillW > 0
       ? `<rect x="${barX}" y="90" width="${fillW}" height="16" rx="6" fill="url(#ab)"/>`

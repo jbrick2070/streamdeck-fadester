@@ -7,9 +7,10 @@
   <link rel="stylesheet" href="pi.css" />
 </head>
 <body>
-  <h3>OBS Scene Info Bar</h3>
-  <p class="muted">Shows the live scene and, in Studio Mode, the preview scene. The Info Bar is display-only.</p>
+  <h3 data-i18n="infobarHeading">OBS Scene Info Bar</h3>
+  <p class="muted" data-i18n="infobarNote">Shows the live scene and, in Studio Mode, the preview scene. The Info Bar is display-only.</p>
   <div id="direct-shared-sections"></div>
+  <script src="i18n.js"></script>
   <script src="direct-pi.js"></script>
   <script>window.initDirectObsPropertyInspector(function () {});</script>
 </body>

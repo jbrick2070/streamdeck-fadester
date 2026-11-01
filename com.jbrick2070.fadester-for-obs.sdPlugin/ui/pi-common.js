@@ -18,6 +18,9 @@
  */
 (function () {
   const ALL_FX_ID = "__all_fx__";
+  // Texts come from ui/i18n.js (loaded first), in Stream Deck's language (R-I18N-1).
+  // Slot names below mirror Midi Fadester's API names and stay as the API has them.
+  const T = function (key, params) { return window.FadesterI18n.t(key, params); };
   const CONTRACT_SLOT_FALLBACK = [
     { id: "crossfader", name: "Crossfader", kind: "crossfader" },
     { id: "fader_1", name: "Fader 1", kind: "fader" },
@@ -64,7 +67,7 @@
   function markEditorDirty() {
     editorDirty = true;
     editRevision += 1;
-    setBanner($("assign-draft"), "Unsaved changes. Apply in OBS when ready.", "info");
+    setBanner($("assign-draft"), T("assignDraft"), "info");
   }
 
   function resetEditorContext() {
@@ -111,7 +114,7 @@
     return new Promise(function (resolve) {
       const timer = setTimeout(function () {
         pendingReplies.delete(requestId);
-        resolve({ error: "No reply from the plugin after 6 s." });
+        resolve({ error: T("noReply") });
       }, 6000);
       pendingReplies.set(requestId, function (reply) {
         clearTimeout(timer);
@@ -165,7 +168,7 @@
     }
     if (selectedValue && !found) {
       selectEl.appendChild(
-        option(selectedValue, selectedValue + " (not in OBS now)", true, false)
+        option(selectedValue, T("notInObsNow", { value: selectedValue }), true, false)
       );
     }
   }
@@ -174,50 +177,52 @@
   function renderSharedSections(mount) {
     if (!mount) return;
     mount.innerHTML = [
-      '<h3>Slot assignment in OBS <span class="scope">shared by every surface</span></h3>',
+      '<h3><span data-i18n="assignHeading">Slot assignment in OBS</span> <span class="scope" data-i18n="scopeSharedSurfaces">shared by every surface</span></h3>',
       '<div id="assign-sentence" class="status-banner status-info"></div>',
       '<details id="assign-editor" class="editor">',
-      "<summary>Change what this slot does</summary>",
-      '<p class="muted">Changes apply in Midi Fadester for the APC40, Stream Deck and every other surface. Pickers list only what the live OBS catalog offers.</p>',
-      '<div class="row"><label for="assign-mode">What it does</label><select id="assign-mode"></select></div>',
+      '<summary data-i18n="changeSlot">Change what this slot does</summary>',
+      '<p class="muted" data-i18n="assignIntro">Changes apply in Midi Fadester for the APC40, Stream Deck and every other surface. Pickers list only what the live OBS catalog offers.</p>',
+      '<div class="row"><label for="assign-mode" data-i18n="whatItDoes">What it does</label><select id="assign-mode"></select></div>',
       '<div id="assign-fields"></div>',
       '<div id="assign-draft" class="status-banner status-info" style="display:none;"></div>',
-      '<div class="editor-actions"><button id="assign-apply" class="btn" type="button">Apply in OBS</button><button id="assign-refresh" class="btn secondary" type="button">Refresh lists</button><button id="assign-discard" class="btn secondary" type="button">Discard edits</button></div>',
+      '<div class="editor-actions"><button id="assign-apply" class="btn" type="button" data-i18n="applyInObs">Apply in OBS</button><button id="assign-refresh" class="btn secondary" type="button" data-i18n="refreshLists">Refresh lists</button><button id="assign-discard" class="btn secondary" type="button" data-i18n="discardEdits">Discard edits</button></div>',
       '<div id="assign-result" class="status-banner" style="display:none;"></div>',
       "</details>",
 
-      '<h3>Controller <span class="scope">shared</span></h3>',
+      '<h3><span data-i18n="controllerHeading">Controller</span> <span class="scope" data-i18n="scopeShared">shared</span></h3>',
       '<div id="ctrl-status" class="status-banner status-info"></div>',
-      '<details class="editor"><summary>Switch controller profile</summary>',
-      '<p class="muted">Loading a profile resets slot defaults in Midi Fadester for every surface. Only the active profile reports what the connected desk can do; this list is the API contract’s known profiles. Only APC40 mkII is verified on real hardware.</p>',
-      '<div class="row"><label for="profile-select">Profile</label><select id="profile-select"></select></div>',
-      '<div class="row"><label></label><button id="profile-load" class="btn danger" type="button">Load profile</button></div>',
+      '<details class="editor"><summary data-i18n="switchProfile">Switch controller profile</summary>',
+      '<p class="muted" data-i18n="profileIntro">Loading a profile resets slot defaults in Midi Fadester for every surface. Only the active profile reports what the connected desk can do; this list is the API contract’s known profiles. Only APC40 mkII is verified on real hardware.</p>',
+      '<div class="row"><label for="profile-select" data-i18n="profile">Profile</label><select id="profile-select"></select></div>',
+      '<div class="row"><label></label><button id="profile-load" class="btn danger" type="button" data-i18n="loadProfile">Load profile</button></div>',
       '<div id="profile-result" class="status-banner" style="display:none;"></div>',
       "</details>",
 
-      '<h3>OBS connection <span class="scope">all Fadester controls</span></h3>',
-      '<div id="conn-status" class="status-banner status-err">Waiting for the plugin…</div>',
-      '<a id="conn-link" class="release-link" href="https://github.com/jbrick2070/midi-fadester/releases" target="_blank">Download Midi Fadester for OBS Studio 33</a>',
-      '<p class="muted">Connect once for every Fadester button and dial, including the direct OBS actions.</p>',
-      '<details id="conn-editor" class="editor" open><summary>Edit shared connection</summary>',
-      '<div class="row"><label for="conn-host">Host</label><input type="text" id="conn-host" value="127.0.0.1" /></div>',
-      '<div class="row"><label for="conn-port">Port</label><input type="number" id="conn-port" value="4455" min="1" max="65535" /></div>',
-      '<div class="row"><label for="conn-password">Password</label><input type="password" id="conn-password" autocomplete="off" placeholder="Leave blank if authentication is off" /></div>',
-      '<div class="row"><label></label><button id="conn-test-btn" class="btn" type="button">Save for all controls &amp; test</button><span class="hint" id="conn-hint"></span></div>',
+      '<h3><span data-i18n="connHeading">OBS connection</span> <span class="scope" data-i18n="scopeAllControls">all Fadester controls</span></h3>',
+      '<div id="conn-status" class="status-banner status-err" data-i18n="connWaitingPlugin">Waiting for the plugin…</div>',
+      '<a id="conn-link" class="release-link" href="https://github.com/jbrick2070/midi-fadester/releases" target="_blank" data-i18n="downloadMf">Download Midi Fadester for OBS Studio 33</a>',
+      '<p class="muted" data-i18n="connIntroMf">Connect once for every Fadester button and dial, including the direct OBS actions.</p>',
+      '<details id="conn-editor" class="editor" open><summary data-i18n="connEdit">Edit shared connection</summary>',
+      '<div class="row"><label for="conn-host" data-i18n="host">Host</label><input type="text" id="conn-host" value="127.0.0.1" /></div>',
+      '<div class="row"><label for="conn-port" data-i18n="port">Port</label><input type="number" id="conn-port" value="4455" min="1" max="65535" /></div>',
+      '<div class="row"><label for="conn-password" data-i18n="password">Password</label><input type="password" id="conn-password" autocomplete="off" placeholder="Leave blank if authentication is off" data-i18n-placeholder="passwordPlaceholderAuthOff" /></div>',
+      '<div class="row"><label></label><button id="conn-test-btn" class="btn" type="button" data-i18n="saveAndTest">Save for all controls &amp; test</button><span class="hint" id="conn-hint"></span></div>',
       '</details>'
     ].join("");
+    window.FadesterI18n.apply(mount);
   }
 
   // ---------------------------------------------------------------- slot dropdown
+  // Slot name, label and reason are Midi Fadester's own texts and are shown as they come.
   function slotOptionText(s) {
     let text = s.name || s.id;
     if (s.label && s.label !== s.name) {
-      text += " — " + s.label;
+      text = T("slotOptionLabel", { name: text, label: s.label });
     }
     if (s.available === false && s.reason) {
-      text += " (" + s.reason + ")";
+      text = T("slotOptionReason", { text: text, reason: s.reason });
     } else if (s.live && s.target_mode === "unassigned") {
-      text += " (not used)";
+      text = T("slotOptionNotUsed", { text: text });
     }
     return text;
   }
@@ -267,23 +272,21 @@
 
     const faders = list.filter(function (s) { return s.kind !== "fx"; });
     const fx = list.filter(function (s) { return s.kind === "fx"; });
-    const offlineTag = liveSlots ? "" : " (offline: contract defaults, connect OBS for live names)";
-    appendGroup("Faders" + offlineTag, faders);
-    appendGroup("FX & Knobs" + offlineTag, fx);
+    const groupLabel = function (key) { return liveSlots ? T(key) : T("groupOffline", { group: T(key) }); };
+    appendGroup(groupLabel("groupFaders"), faders);
+    appendGroup(groupLabel("groupFx"), fx);
 
     if (allowAllFx && (fxSupported || selectedSlot === ALL_FX_ID || !liveSlots)) {
       const group = document.createElement("optgroup");
-      group.label = "All FX";
-      const text = fxSupported || !liveSlots
-        ? "All FX — Clean / All FX Off"
-        : "All FX — needs Midi Fadester 0.4.0+";
+      group.label = T("groupAllFx");
+      const text = T(fxSupported || !liveSlots ? "allFxClean" : "allFxNeeds");
       group.appendChild(option(ALL_FX_ID, text, selectedSlot === ALL_FX_ID, false));
       selectEl.appendChild(group);
       if (selectedSlot === ALL_FX_ID) seen = true;
     }
 
     if (!seen && selectedSlot) {
-      selectEl.appendChild(option(selectedSlot, selectedSlot + " (saved, not reported by OBS)", true, false));
+      selectEl.appendChild(option(selectedSlot, T("slotSaved", { slot: selectedSlot }), true, false));
     }
 
     setBanner($("slot-reason-banner"), currentReason, "err");
@@ -297,28 +300,29 @@
     statusEl.innerHTML = "";
     const connected = state.status && state.status.kind === "connected";
     if (!connected) {
-      statusEl.textContent = "Controller state is reported by Midi Fadester once OBS is connected.";
+      statusEl.textContent = T("ctrlOffline");
       statusEl.className = "status-banner status-info";
     } else {
       const p = state.profile || {};
       const d = state.device || {};
       const line = document.createElement("div");
-      line.textContent = "Profile: " + (p.displayName || p.slug || "unknown");
+      line.textContent = T("ctrlProfile", { name: p.displayName || p.slug || T("unknown") });
       line.appendChild(tierBadge(p.tier, p.tierLabel));
       statusEl.appendChild(line);
       const dev = document.createElement("div");
+      // The device name and error are Midi Fadester's own texts.
       if (d.connected) {
-        dev.textContent = "MIDI: " + (d.name || "device") + " connected";
+        dev.textContent = T("midiConnected", { device: d.name || T("midiDevice") });
         statusEl.className = "status-banner status-ok";
       } else {
         dev.textContent = d.error
-          ? "MIDI: " + d.error
-          : "MIDI: " + (d.name ? d.name + " not found. Plug it in, then reconnect in OBS." : "no device configured in Midi Fadester");
+          ? T("midiError", { error: d.error })
+          : d.name ? T("midiNotFound", { device: d.name }) : T("midiNone");
         statusEl.className = "status-banner status-warn";
       }
       statusEl.appendChild(dev);
       const sm = document.createElement("div");
-      sm.textContent = state.studioMode ? "Studio Mode on" : "Studio Mode off (T-bar slots unavailable)";
+      sm.textContent = T(state.studioMode ? "studioOn" : "studioOffTbar");
       statusEl.appendChild(sm);
     }
 
@@ -329,7 +333,7 @@
         (state.knownProfiles || []).map(function (kp) {
           return {
             value: kp.slug,
-            text: kp.displayName + " — " + kp.tierLabel + (kp.slug === active ? " (active)" : "")
+            text: T(kp.slug === active ? "profileOptionActive" : "profileOption", { name: kp.displayName, tier: kp.tierLabel })
           };
         }),
         profileDraft === null ? active : profileDraft,
@@ -354,9 +358,9 @@
       if (portEl && document.activeElement !== portEl) portEl.value = String(state.connection.port || 4455);
       if (passEl && !passwordDirty && document.activeElement !== passEl) {
         passEl.value = "";
-        passEl.placeholder = state.connection.passwordSet
-          ? "Saved for all Fadester controls (leave blank to keep)"
-          : "Leave blank if authentication is off";
+        passEl.placeholder = T(state.connection.passwordSet
+          ? "passwordPlaceholderSavedAll"
+          : "passwordPlaceholderAuthOff");
       }
     }
     const connEditor = $("conn-editor");
@@ -374,8 +378,8 @@
     }
     if (hintEl) {
       hintEl.textContent = state.lastErrorComment && state.status.kind === "connected"
-        ? "Last OBS error: " + state.lastErrorComment
-        : state.connection && state.connection.passwordSet ? "Password saved for all Fadester buttons and dials." : "";
+        ? T("lastObsError", { comment: state.lastErrorComment })
+        : state.connection && state.connection.passwordSet ? T("passwordSavedAll") : "";
     }
   }
 
@@ -393,29 +397,32 @@
     const slotId = currentSettings.slot || "crossfader";
     const connected = state.status && state.status.kind === "connected";
     if (slotId === ALL_FX_ID) {
-      setBanner(el, "All FX: cleans enabled filter bindings in either bank. Audio and layer controls stay unchanged.", "info");
+      setBanner(el, T("allFxSentence"), "info");
       if (editor) editor.style.display = "none";
       return;
     }
     if (editor) editor.style.display = "";
     if (!connected) {
-      setBanner(el, "Connect OBS to see and change what this slot does.", "info");
+      setBanner(el, T("assignConnect"), "info");
       return;
     }
     const slot = currentSlotObject();
     if (!slot) {
-      setBanner(el, "Slot '" + slotId + "' is not reported by Midi Fadester.", "err");
+      setBanner(el, T("slotNotReported", { slot: slotId }), "err");
       return;
     }
     const modeLabel = (state.targetModes || []).reduce(function (acc, m) {
       return m.id === slot.target_mode ? m.label : acc;
     }, slot.target_mode);
-    let text = (slot.name || slot.id) + ": " + modeLabel;
-    if (slot.label && slot.label !== slot.name) text += " — " + slot.label;
+    // Name, label, reason and display_value are Midi Fadester's texts, shown as they come.
+    const text = slot.label && slot.label !== slot.name
+      ? T("assignLineLabel", { slot: slot.name || slot.id, mode: modeLabel, label: slot.label })
+      : T("assignLine", { slot: slot.name || slot.id, mode: modeLabel });
     if (slot.available === false) {
-      setBanner(el, text + ". " + (slot.reason || "Unavailable."), slot.target_mode === "unassigned" ? "info" : "warn");
+      setBanner(el, slot.reason ? T("assignUnavailable", { line: text, reason: slot.reason }) : T("assignUnavailableNoReason", { line: text }),
+        slot.target_mode === "unassigned" ? "info" : "warn");
     } else {
-      setBanner(el, text + (slot.display_value ? " — now " + slot.display_value : ""), "ok");
+      setBanner(el, slot.display_value ? T("assignNow", { line: text, value: slot.display_value }) : text, "ok");
     }
   }
 
@@ -429,8 +436,8 @@
       return m.id !== "filter_param" || catalog || current === "filter_param";
     }).map(function (m) {
       let text = m.label;
-      if (m.id === "tbar" && !state.studioMode) text += " — needs Studio Mode";
-      if (m.id === "filter_param" && !catalog) text += " — needs Midi Fadester 0.4.0+";
+      if (m.id === "tbar" && !state.studioMode) text = T("modeNeedsStudio", { mode: text });
+      if (m.id === "filter_param" && !catalog) text = T("modeNeedsMf", { mode: text });
       return { value: m.id, text: text };
     });
     if (document.activeElement !== sel) {
@@ -512,15 +519,15 @@
     const curves = (state.curves || []).map(function (c) { return { value: c.id, text: c.label }; });
 
     if (typeof slot.enabled === "boolean") {
-      host.appendChild(fieldRow("af-enabled", "Enabled", makeCheckbox(slot.enabled, "keeps this slot's assignment when turned off")));
+      host.appendChild(fieldRow("af-enabled", T("enabled"), makeCheckbox(slot.enabled, T("enabledHint"))));
     }
     if (slot.cal_min !== undefined && slot.cal_max !== undefined) {
       const calibration = document.createElement("details");
       calibration.className = "editor";
       const summary = document.createElement("summary");
-      summary.textContent = "MIDI calibration";
+      summary.textContent = T("midiCalibration");
       calibration.appendChild(summary);
-      for (const pair of [["af-cal-min", "Minimum", "cal_min"], ["af-cal-max", "Maximum", "cal_max"]]) {
+      for (const pair of [["af-cal-min", T("minimum"), "cal_min"], ["af-cal-max", T("maximum"), "cal_max"]]) {
         const input = document.createElement("input");
         input.type = "number";
         input.min = "0";
@@ -535,9 +542,7 @@
       if (catalog) return;
       const p = document.createElement("p");
       p.className = "muted";
-      p.textContent = state.capabilities && state.capabilities.catalog
-        ? "Loading the OBS catalog… (press Refresh lists if this stays)"
-        : "Midi Fadester 0.4.0+ lists scenes, layers and sources here. Until then, type exact OBS names.";
+      p.textContent = T(state.capabilities && state.capabilities.catalog ? "catalogLoading" : "catalogNeedsMf");
       host.appendChild(p);
     }
 
@@ -546,13 +551,13 @@
         return makeSelect(
           (overviewCatalog.scenes || []).map(function (s) { return { value: s.name, text: s.name }; }),
           selected,
-          "Choose a scene"
+          T("chooseScene")
         );
       }
       const inp = document.createElement("input");
       inp.type = "text";
       inp.value = selected || "";
-      inp.placeholder = "Exact scene name";
+      inp.placeholder = T("exactScene");
       return inp;
     }
 
@@ -560,7 +565,7 @@
       if (catalog) {
         return makeSelect(
           sceneLayers(sceneName).map(function (l) {
-            return { value: l.name, text: l.name + (l.has_audio ? " (has audio)" : "") };
+            return { value: l.name, text: l.has_audio ? T("layerHasAudio", { layer: l.name }) : l.name };
           }),
           selected,
           placeholder
@@ -576,7 +581,7 @@
     if (mode === "unassigned") {
       const p = document.createElement("p");
       p.className = "muted";
-      p.textContent = "The slot will do nothing until it is set up again.";
+      p.textContent = T("unassignedNote");
       host.appendChild(p);
       return;
     }
@@ -584,9 +589,7 @@
     if (mode === "tbar") {
       const p = document.createElement("p");
       p.className = "muted";
-      p.textContent = state.studioMode
-        ? "Fades Program to Preview like OBS’s T-bar. Nothing to pick."
-        : "Studio Mode is off. Turn it on in OBS (View > Studio Mode) for this to work.";
+      p.textContent = T(state.studioMode ? "tbarOn" : "tbarOff");
       host.appendChild(p);
       return;
     }
@@ -602,20 +605,23 @@
         if (match) sceneName = match.name;
       }
       const sceneSel = sceneControl(sceneName);
-      host.appendChild(fieldRow("af-scene", "Scene", sceneSel));
-      const aSel = layerControl(sceneSel.value, slot.source_a || "", mode === "crossfade_ab" ? "Left layer" : "Layer");
-      host.appendChild(fieldRow("af-source-a", mode === "crossfade_ab" ? "Left" : "Layer", aSel));
+      host.appendChild(fieldRow("af-scene", T("sceneLabel"), sceneSel));
+      const aSel = layerControl(sceneSel.value, slot.source_a || "", T(mode === "crossfade_ab" ? "leftLayer" : "layer"));
+      host.appendChild(fieldRow("af-source-a", T(mode === "crossfade_ab" ? "left" : "layer"), aSel));
       let bSel = null;
       if (mode === "crossfade_ab") {
-        bSel = layerControl(sceneSel.value, slot.source_b || "", "Right layer");
-        host.appendChild(fieldRow("af-source-b", "Right", bSel));
-        host.appendChild(fieldRow("af-curve", "Feel", makeSelect(curves, slot.curve || "dip_free", "")));
+        bSel = layerControl(sceneSel.value, slot.source_b || "", T("rightLayer"));
+        host.appendChild(fieldRow("af-source-b", T("right"), bSel));
+        host.appendChild(fieldRow("af-curve", T("feel"), makeSelect(curves, slot.curve || "dip_free", "")));
       }
-      host.appendChild(fieldRow("af-afv", "Also fade audio", makeCheckbox(slot.afv, "when the layer has audio")));
+      host.appendChild(fieldRow("af-afv", T("alsoFadeAudio"), makeCheckbox(slot.afv, T("alsoFadeAudioHint"))));
+      const layerItems = function () {
+        return sceneLayers(sceneSel.value).map(function (l) { return { value: l.name, text: l.has_audio ? T("layerHasAudio", { layer: l.name }) : l.name }; });
+      };
       sceneSel.addEventListener("change", function () {
         if (!catalog) return;
-        fillSelect(aSel, sceneLayers(sceneSel.value).map(function (l) { return { value: l.name, text: l.name + (l.has_audio ? " (has audio)" : "") }; }), "", mode === "crossfade_ab" ? "Left layer" : "Layer");
-        if (bSel) fillSelect(bSel, sceneLayers(sceneSel.value).map(function (l) { return { value: l.name, text: l.name + (l.has_audio ? " (has audio)" : "") }; }), "", "Right layer");
+        fillSelect(aSel, layerItems(), "", T(mode === "crossfade_ab" ? "leftLayer" : "layer"));
+        if (bSel) fillSelect(bSel, layerItems(), "", T("rightLayer"));
       });
       return;
     }
@@ -626,21 +632,21 @@
       if (catalog) {
         ctrl = makeSelect(
           (overviewCatalog.audio_sources || []).map(function (a) {
-            return { value: a.name, text: a.name + (typeof a.db === "number" ? " (" + a.db.toFixed(1) + " dB)" : "") };
+            return { value: a.name, text: typeof a.db === "number" ? T("audioDb", { source: a.name, db: window.FadesterI18n.number(a.db, 1) }) : a.name };
           }),
           slot.source_a || "",
-          "Choose an audio source"
+          T("chooseAudioSource")
         );
       } else {
         ctrl = document.createElement("input");
         ctrl.type = "text";
         ctrl.value = slot.source_a || "";
-        ctrl.placeholder = "Exact audio source name";
+        ctrl.placeholder = T("exactAudioSource");
       }
-      host.appendChild(fieldRow("af-source-a", "Source", ctrl));
+      host.appendChild(fieldRow("af-source-a", T("source"), ctrl));
       const p = document.createElement("p");
       p.className = "muted";
-      p.textContent = "Follows OBS’s own mixer law (cubic).";
+      p.textContent = T("mixerLaw");
       host.appendChild(p);
       return;
     }
@@ -652,26 +658,29 @@
       }
       const hosts = (overviewCatalog.filter_hosts || []).filter(function (h) { return h.filter_count > 0; });
       const hostSel = makeSelect(
-        hosts.map(function (h) { return { value: h.source, text: h.source + (h.is_scene ? " (scene)" : "") + " — " + h.filter_count + " filter" + (h.filter_count === 1 ? "" : "s") }; }),
+        hosts.map(function (h) {
+          const name = h.is_scene ? T("filterHostScene", { source: h.source }) : h.source;
+          return { value: h.source, text: window.FadesterI18n.plural("filterHost", h.filter_count, { source: name }) };
+        }),
         slot.source_a || "",
-        "Choose a source or scene"
+        T("chooseSourceOrScene")
       );
-      host.appendChild(fieldRow("af-source-a", "Source", hostSel));
-      const filterSel = makeSelect([], slot.filter_name || "", "Choose a filter");
-      host.appendChild(fieldRow("af-filter", "Filter", filterSel));
-      const propSel = makeSelect([], slot.filter_prop || "", "Choose a setting");
-      host.appendChild(fieldRow("af-prop", "Setting", propSel));
+      host.appendChild(fieldRow("af-source-a", T("source"), hostSel));
+      const filterSel = makeSelect([], slot.filter_name || "", T("chooseFilter"));
+      host.appendChild(fieldRow("af-filter", T("filter"), filterSel));
+      const propSel = makeSelect([], slot.filter_prop || "", T("chooseSetting"));
+      host.appendChild(fieldRow("af-prop", T("setting"), propSel));
       const fromInp = document.createElement("input");
       fromInp.type = "number";
       fromInp.step = "any";
       fromInp.value = slot.from_val !== undefined ? String(slot.from_val) : "";
-      host.appendChild(fieldRow("af-from", "At 0 %", fromInp));
+      host.appendChild(fieldRow("af-from", T("at0"), fromInp));
       const toInp = document.createElement("input");
       toInp.type = "number";
       toInp.step = "any";
       toInp.value = slot.to_val !== undefined ? String(slot.to_val) : "";
-      host.appendChild(fieldRow("af-to", "At 100 %", toInp));
-      host.appendChild(fieldRow("af-bypass", "Bypass at 0 %", makeCheckbox(slot.bypass_at_zero !== false, "disables the filter when the fader is fully down")));
+      host.appendChild(fieldRow("af-to", T("at100"), toInp));
+      host.appendChild(fieldRow("af-bypass", T("bypassAt0"), makeCheckbox(slot.bypass_at_zero !== false, T("bypassHint"))));
       const rangeHint = document.createElement("p");
       rangeHint.className = "muted";
       rangeHint.id = "af-range-hint";
@@ -680,7 +689,7 @@
       fullRangeBtn.type = "button";
       fullRangeBtn.id = "af-full-range";
       fullRangeBtn.className = "btn secondary";
-      fullRangeBtn.textContent = "Use full range";
+      fullRangeBtn.textContent = T("useFullRange");
       fullRangeBtn.disabled = true;
       host.appendChild(fullRangeBtn);
       const catalogError = document.createElement("div");
@@ -698,9 +707,10 @@
       function fillProps(keepSelection) {
         const props = propsFor(hostSel.value, filterSel.value);
         const selected = keepSelection ? propSel.value || slot.filter_prop || "" : "";
+        // Property labels and suffixes are OBS's own texts.
         fillSelect(propSel, props.map(function (p) {
-          return { value: p.name, text: (p.label || p.name) + " (" + p.min + "–" + p.max + (p.suffix ? " " + p.suffix : "") + ")" };
-        }), selected, "Choose a setting");
+          return { value: p.name, text: T(p.suffix ? "propOptionSuffix" : "propOption", { label: p.label || p.name, min: p.min, max: p.max, suffix: p.suffix || "" }) };
+        }), selected, T("chooseSetting"));
         applyRangeHint();
       }
 
@@ -713,7 +723,7 @@
           return;
         }
         fullRangeBtn.disabled = false;
-        rangeHint.textContent = (p.label || p.name) + ": " + p.min + " to " + p.max + (p.suffix ? " " + p.suffix : "") + ". Blank bounds keep the existing range, or use defaults for a new binding.";
+        rangeHint.textContent = T(p.suffix ? "rangeHintSuffix" : "rangeHint", { label: p.label || p.name, min: p.min, max: p.max, suffix: p.suffix || "" });
         if (fromInp.value === "" && toInp.value === "") {
           fromInp.placeholder = String(p.min);
           toInp.placeholder = String(p.max);
@@ -735,8 +745,8 @@
         const catalogVersion = catalogGeneration;
         setBanner(catalogError, "", "info");
         if (!source) {
-          fillSelect(filterSel, [], "", "Choose a filter");
-          fillSelect(propSel, [], "", "Choose a setting");
+          fillSelect(filterSel, [], "", T("chooseFilter"));
+          fillSelect(propSel, [], "", T("chooseSetting"));
           return;
         }
         const render = function () {
@@ -745,8 +755,8 @@
           const filters = detail && Array.isArray(detail.filters) ? detail.filters : [];
           const selected = keepSelection ? filterSel.value || slot.filter_name || "" : "";
           fillSelect(filterSel, filters.filter(function (f) { return (f.properties || []).length > 0; }).map(function (f) {
-            return { value: f.name, text: f.name + (f.enabled ? "" : " (disabled)") };
-          }), selected, "Choose a filter");
+            return { value: f.name, text: f.enabled ? f.name : T("filterDisabled", { filter: f.name }) };
+          }), selected, T("chooseFilter"));
           fillProps(keepSelection);
         };
         if (sourceCatalogCache[source]) {
@@ -757,7 +767,7 @@
           if (generation !== editorGeneration || catalogVersion !== catalogGeneration || requestVersion !== sourceRequest || hostSel.value !== source) return;
           if (reply && reply.data) sourceCatalogCache[source] = reply.data;
           else {
-            setBanner(catalogError, (reply && reply.error) || "OBS did not return a filter list.", "err");
+            setBanner(catalogError, (reply && reply.error) || T("noFilterList"), "err");
             return;
           }
           render();
@@ -824,31 +834,31 @@
   }
 
   function validateFields(mode, patch) {
-    if (Object.keys(patch).length === 0) return "There are no changes to apply.";
+    if (Object.keys(patch).length === 0) return T("noChanges");
     if (Object.keys(patch).length === 1 && typeof patch.enabled === "boolean") return "";
     const fields = Object.assign({}, currentSlotObject() || {}, patch);
     for (const key of ["from_val", "to_val", "cal_min", "cal_max"]) {
-      if (fields[key] !== undefined && !Number.isFinite(fields[key])) return "Enter a finite number for every range or calibration bound.";
+      if (fields[key] !== undefined && !Number.isFinite(fields[key])) return T("finiteNumber");
     }
     for (const key of ["cal_min", "cal_max"]) {
-      if (fields[key] !== undefined && (!Number.isInteger(fields[key]) || fields[key] < 0)) return "Calibration bounds must be nonnegative whole numbers.";
+      if (fields[key] !== undefined && (!Number.isInteger(fields[key]) || fields[key] < 0)) return T("calibrationWhole");
     }
-    if (fields.cal_min !== undefined && fields.cal_max !== undefined && fields.cal_max <= fields.cal_min) return "Calibration maximum must be greater than minimum.";
+    if (fields.cal_min !== undefined && fields.cal_max !== undefined && fields.cal_max <= fields.cal_min) return T("calibrationOrder");
     if (mode === "crossfade_ab") {
-      if (!fields.scene) return "Choose a scene.";
-      if (!fields.source_a || !fields.source_b) return "Choose both layers.";
-      if (fields.source_a === fields.source_b) return "Left and Right must be different layers.";
+      if (!fields.scene) return T("validChooseScene");
+      if (!fields.source_a || !fields.source_b) return T("validChooseBoth");
+      if (fields.source_a === fields.source_b) return T("validLayersDiffer");
     }
     if (mode === "layer_opacity") {
-      if (!fields.scene) return "Choose a scene.";
-      if (!fields.source_a) return "Choose a layer.";
+      if (!fields.scene) return T("validChooseScene");
+      if (!fields.source_a) return T("validChooseLayer");
     }
-    if (mode === "audio_volume" && !fields.source_a) return "Choose an audio source.";
+    if (mode === "audio_volume" && !fields.source_a) return T("validChooseAudio");
     if (mode === "filter_param") {
-      if (!fields.source_a) return "Choose a source.";
-      if (!fields.filter_name) return "Choose a filter.";
-      if (!fields.filter_prop) return "Choose a setting.";
-      if (typeof fields.from_val === "number" && fields.from_val === fields.to_val) return "At 0 % and At 100 % must differ.";
+      if (!fields.source_a) return T("validChooseSource");
+      if (!fields.filter_name) return T("validChooseFilter");
+      if (!fields.filter_prop) return T("validChooseSetting");
+      if (typeof fields.from_val === "number" && fields.from_val === fields.to_val) return T("validRangeDiffer");
     }
     return "";
   }
@@ -915,7 +925,7 @@
     if (applyBtn) {
       applyBtn.addEventListener("click", function () {
         if (editorConflict) {
-          setBanner($("assign-result"), "This slot's assignment changed on another surface. Discard edits to load the current assignment before applying.", "err");
+          setBanner($("assign-result"), T("assignConflict"), "err");
           return;
         }
         const slotId = currentSettings.slot || "crossfader";
@@ -931,7 +941,7 @@
         applying = true;
         const sequence = ++applySequence;
         const revision = editRevision;
-        setBanner(resultEl, "Applying in OBS…", "info");
+        setBanner(resultEl, T("applying"), "info");
         request({ event: "setSlot", slot: slotId, fields: fields }).then(function (reply) {
           if (sequence !== applySequence || slotId !== (currentSettings.slot || "crossfader")) return;
           applying = false;
@@ -942,14 +952,17 @@
               editorDirty = false;
               setBanner($("assign-draft"), "", "info");
             }
-            const tail = (reply.available === false && reply.reason ? " " + reply.reason : "") +
-              (revision !== editRevision ? " Newer edits are still unsaved." : "");
             const modeLabel = ((lastState && lastState.targetModes) || []).reduce(function (acc, m) {
               return m.id === mode ? m.label : acc;
             }, mode);
-            setBanner(resultEl, "Applied: " + (reply.label || modeLabel) + "." + tail, reply.available === false ? "warn" : "ok");
+            // reply.label and reply.reason are Midi Fadester's texts; each sentence stands alone.
+            setBanner(resultEl, [
+              T("applied", { label: reply.label || modeLabel }),
+              reply.available === false && reply.reason ? reply.reason : "",
+              revision !== editRevision ? T("newerUnsaved") : ""
+            ].filter(Boolean).join(" "), reply.available === false ? "warn" : "ok");
           } else {
-            setBanner(resultEl, (reply && reply.error) || "OBS rejected the change.", "err");
+            setBanner(resultEl, (reply && reply.error) || T("obsRejected"), "err");
           }
         });
       });
@@ -965,20 +978,20 @@
       const name = sel.value;
       const resultEl = $("profile-result");
       if (!name) {
-        setBanner(resultEl, "Choose a profile first.", "err");
+        setBanner(resultEl, T("chooseProfileFirst"), "err");
         return;
       }
       loadBtn.disabled = true;
       profileLoading = true;
-      setBanner(resultEl, "Loading profile in Midi Fadester…", "info");
+      setBanner(resultEl, T("loadingProfile"), "info");
       request({ event: "loadProfile", name: name }).then(function (reply) {
         loadBtn.disabled = false;
         profileLoading = false;
         if (reply && reply.ok) {
           if (profileDraft === name) profileDraft = null;
-          setBanner(resultEl, "Loaded " + (reply.loaded || name) + ". Slot defaults were reset in Midi Fadester.", "ok");
+          setBanner(resultEl, T("profileLoaded", { name: reply.loaded || name }), "ok");
         } else {
-          setBanner(resultEl, (reply && reply.error) || "Midi Fadester rejected the profile.", "err");
+          setBanner(resultEl, (reply && reply.error) || T("profileRejected"), "err");
         }
       });
     });
@@ -1035,7 +1048,7 @@
       applySequence += 1;
       applying = false;
       if (editorDirty) {
-        setBanner($("assign-result"), "The OBS connection changed. Your edits are kept; review the refreshed source lists before applying.", "warn");
+        setBanner($("assign-result"), T("connChanged"), "warn");
       }
     }
     lastState = state;
@@ -1044,7 +1057,7 @@
       const bindingKeys = ["target_mode", "scene", "source_a", "source_b", "filter_name", "filter_prop"];
       if (!current || bindingKeys.some(function (key) { return current[key] !== editorBaseline[key]; })) {
         editorConflict = true;
-        setBanner($("assign-result"), "This slot's assignment changed on another surface. Discard edits to load the current assignment before applying.", "err");
+        setBanner($("assign-result"), T("assignConflict"), "err");
       }
     }
     const applyBtn = $("assign-apply");
@@ -1081,6 +1094,8 @@
       inInfo,
       inActionInfo
     ) {
+      // Stream Deck's language first, so every text below is drawn in it.
+      window.FadesterI18n.setLanguage(window.FadesterI18n.languageFromInfo(inInfo));
       uuid = inPropertyInspectorUUID;
       actionInfo = JSON.parse(inActionInfo || "{}");
       currentSettings = (actionInfo.payload && actionInfo.payload.settings) || {};

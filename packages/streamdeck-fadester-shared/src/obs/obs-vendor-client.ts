@@ -8,6 +8,8 @@ import {
   GlobalConnectionSettings,
   ScreenshotProvider
 } from "../types.js";
+import { LocalText, LocalizedError, ownText, verbatimText } from "../i18n.js";
+import { statusSentenceText, statusSignature } from "../status-text.js";
 
 export const OBS_WS_EVENT_SUB_SCENES = 1 << 2;
 export const OBS_WS_EVENT_SUB_INPUTS = 1 << 3;
@@ -25,15 +27,20 @@ export const OBS_WS_DEFAULT_SUBSCRIPTIONS =
   OBS_WS_EVENT_SUB_UI |
   OBS_WS_EVENT_SUB_VENDORS;
 
-export class ObsVendorError extends Error {
+/**
+ * A failed OBS or vendor request. A plain string is an OBS or Midi Fadester
+ * text and is shown verbatim; our own messages are a key with parameters.
+ * `comment` keeps the English (or verbatim) wording for logs and tests.
+ */
+export class ObsVendorError extends LocalizedError {
   public readonly code: number;
   public readonly comment: string;
 
-  public constructor(comment: string, code = -1) {
+  public constructor(comment: string | LocalText, code = -1) {
     super(comment);
     this.name = "ObsVendorError";
     this.code = code;
-    this.comment = comment;
+    this.comment = this.message;
   }
 }
 
@@ -81,21 +88,11 @@ export function computeObsWebSocketAuth(
 }
 
 export function makeUnreachableStatus(): ConnectionStatusInfo {
-  return {
-    kind: "obs_unreachable",
-    sentence:
-      "OBS is not running or the websocket is off (Tools > WebSocket Server Settings)",
-    cellReason: "OBS is not running or websocket is off"
-  };
+  return { kind: "obs_unreachable" };
 }
 
 export function makeWrongPasswordStatus(): ConnectionStatusInfo {
-  return {
-    kind: "wrong_password",
-    sentence:
-      "Wrong password. Check OBS Tools > WebSocket Server Settings > Show Connect Info.",
-    cellReason: "Wrong password"
-  };
+  return { kind: "wrong_password" };
 }
 
 export function makeMissingPluginStatus(
@@ -104,8 +101,7 @@ export function makeMissingPluginStatus(
 ): ConnectionStatusInfo {
   return {
     kind: "missing_plugin",
-    sentence: `${pluginDisplayName} is not installed in OBS`,
-    cellReason: `${pluginDisplayName} is not installed in OBS`,
+    pluginName: pluginDisplayName,
     linkUrl
   };
 }
@@ -255,7 +251,7 @@ export class ObsVendorClient<
     const imageData = typeof data.imageData === "string" ? data.imageData : "";
     if (!imageData) {
       throw new ObsVendorError(
-        `Empty screenshot returned for source '${sourceName}'.`,
+        ownText("errorEmptyScreenshot", { source: sourceName }),
         500
       );
     }
@@ -276,7 +272,7 @@ export class ObsVendorClient<
       });
     } catch (err) {
       const vendorErr = this.normalizeVendorError(err);
-      this.emit("vendorError", vendorErr.comment);
+      this.emit("vendorError", vendorErr.comment, vendorErr.text);
       if (resyncOnError && requestType !== "get_state" && this.identified) {
         void this.getState().catch(() => {});
       }
@@ -293,7 +289,7 @@ export class ObsVendorClient<
           ? innerData.comment
           : innerData.error;
       const vendorErr = this.createVendorError(comment, 400);
-      this.emit("vendorError", comment);
+      this.emit("vendorError", comment, vendorErr.text);
       if (resyncOnError && requestType !== "get_state" && this.identified) {
         void this.getState().catch(() => {});
       }
@@ -303,7 +299,7 @@ export class ObsVendorClient<
     return innerData as TResponse;
   }
 
-  protected createVendorError(comment: string, code = -1): ObsVendorError {
+  protected createVendorError(comment: string | LocalText, code = -1): ObsVendorError {
     return new ObsVendorError(comment, code);
   }
 
@@ -343,10 +339,7 @@ export class ObsVendorClient<
   }
 
   protected setStatus(next: ConnectionStatusInfo): void {
-    const changed =
-      this.status.kind !== next.kind ||
-      this.status.sentence !== next.sentence ||
-      this.status.cellReason !== next.cellReason;
+    const changed = statusSignature(this.status) !== statusSignature(next);
     this.status = next;
     if (changed) {
       this.emit("statusChanged", next);
@@ -380,7 +373,7 @@ export class ObsVendorClient<
       }
       this.ws = null;
       this.identified = false;
-      this.rejectAllPending("Disconnected from OBS.");
+      this.rejectAllPending(ownText("errorDisconnected"));
 
       if (this.stopped) {
         return;
@@ -507,11 +500,12 @@ export class ObsVendorClient<
         typeof state.api_version === "number" &&
         state.api_version > this.supportedApiVersion
       ) {
-        const mismatchSentence = `${this.pluginDisplayName} API version ${state.api_version} is newer than supported version ${this.supportedApiVersion}. Update ${this.surfaceDisplayName}.`;
         this.setStatus({
           kind: "version_mismatch",
-          sentence: mismatchSentence,
-          cellReason: `Update ${this.surfaceDisplayName}`,
+          pluginName: this.pluginDisplayName,
+          surfaceName: this.surfaceDisplayName,
+          apiVersion: state.api_version,
+          supportedApiVersion: this.supportedApiVersion,
           obsVersion,
           fadesterVersion: state.version
         });
@@ -524,13 +518,9 @@ export class ObsVendorClient<
         typeof state.build?.commit === "string" && state.build.commit.trim().length > 0
           ? state.build.commit.trim()
           : undefined;
-      const versionLabel = buildCommit
-        ? `${state.version} (${buildCommit})`
-        : state.version;
       this.setStatus({
         kind: "connected",
-        sentence: `Connected: OBS ${obsVersion}, ${this.pluginDisplayName} ${versionLabel}`,
-        cellReason: "",
+        pluginName: this.pluginDisplayName,
         obsVersion,
         fadesterVersion: state.version,
         ...(buildCommit ? { buildCommit } : {}),
@@ -625,10 +615,11 @@ export class ObsVendorClient<
     };
     if (status.result === false) {
       const code = typeof status.code === "number" ? status.code : 500;
-      const comment =
+      // OBS's own comment is shown as OBS wrote it; only our fallback is ours.
+      const comment: LocalText =
         typeof status.comment === "string" && status.comment.length > 0
-          ? status.comment
-          : `OBS request failed (code ${code}).`;
+          ? verbatimText(status.comment)
+          : ownText("errorRequestFailed", { code });
       entry.reject(this.createVendorError(comment, code));
       return;
     }
@@ -643,7 +634,7 @@ export class ObsVendorClient<
   ): Promise<Record<string, unknown>> {
     return new Promise<Record<string, unknown>>((resolve, reject) => {
       if (!this.ws || this.ws.readyState !== WebSocket.OPEN || !this.identified) {
-        reject(this.createVendorError(this.status.sentence, 500));
+        reject(this.createVendorError(statusSentenceText(this.status), 500));
         return;
       }
 
@@ -652,7 +643,7 @@ export class ObsVendorClient<
         this.pending.delete(requestId);
         reject(
           this.createVendorError(
-            `Request '${requestType}' timed out after ${this.requestTimeoutMs} ms. Check OBS responsiveness.`,
+            ownText("errorRequestTimeout", { request: requestType, ms: this.requestTimeoutMs }),
             504
           )
         );
@@ -703,7 +694,7 @@ export class ObsVendorClient<
     }
   }
 
-  private rejectAllPending(reason: string): void {
+  private rejectAllPending(reason: LocalText): void {
     for (const [, entry] of this.pending) {
       clearTimeout(entry.timer);
       entry.reject(this.createVendorError(reason, 500));
@@ -712,7 +703,7 @@ export class ObsVendorClient<
   }
 
   private cleanupSocket(): void {
-    this.rejectAllPending("Connection reset.");
+    this.rejectAllPending(ownText("errorConnectionReset"));
     this.identified = false;
     if (this.ws) {
       const s = this.ws;

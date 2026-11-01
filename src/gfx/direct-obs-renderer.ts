@@ -1,12 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import {
   escapeXml,
-  toSvgDataUri,
-  truncateLabel
+  toSvgDataUri
 } from "../../packages/streamdeck-fadester-shared/src/svg-renderer.js";
+import {
+  fitText,
+  fontFamilyFor,
+  splitTitle,
+  textFitAttributes,
+  textWidth
+} from "../../packages/streamdeck-fadester-shared/src/text-fit.js";
 import { PLAYLISTER_PALETTE as P } from "../../packages/streamdeck-fadester-shared/src/palette.js";
+import { t } from "../i18n/strings.js";
 
-export { toSvgDataUri };
+export { textFitAttributes, toSvgDataUri };
 
 export type DirectKeyIcon = "scene" | "next" | "previous" | "shuffle" | "cut" | "take"
   | "volume-up" | "volume-down" | "source-next" | "source-previous" | "show" | "hide"
@@ -15,6 +22,7 @@ export type DirectKeyIcon = "scene" | "next" | "previous" | "shuffle" | "cut" | 
 export interface DirectDialRenderInput {
   connected: boolean;
   reason: string;
+  /** The control's own caption; empty draws the default (OBS fader, or the scene mixer's hint). */
   label: string;
   value: number;
   configured: boolean;
@@ -37,18 +45,13 @@ export interface DirectKeyRenderInput {
   icon?: DirectKeyIcon;
 }
 
-function dialText(text: string, maxChars: number): string {
-  return escapeXml(truncateLabel(text, maxChars));
-}
+const LATIN = "Segoe UI,Arial,sans-serif";
 
-/** Bound unusually wide names without depending on an installed font engine.
- * A conservative glyph-width estimate leaves short names at natural width;
- * SVG's explicit text length contains long/wide names within their own field. */
-export function textFitAttributes(text: string, maxWidth: number, fontSize: number): string {
-  const upperWidth = Array.from(text).reduce((sum, char) => sum +
-    (/\s/.test(char) ? 0.4 : /[ilI!.,:;'|]/.test(char) ? 0.45 : /[mwMW@%]/.test(char) ? 1.2 :
-      /[A-Z]/.test(char) ? 1 : /[a-z0-9]/.test(char) ? 0.85 : 1.2), 0) * fontSize;
-  return upperWidth > maxWidth ? `textLength="${maxWidth}" lengthAdjust="spacingAndGlyphs"` : "";
+/** A text shortened by width (never by character count), squeezed into its
+ * box, and its font list (CJK fonts for CJK text): `font-family` and fit attributes, then the content. */
+export function boxText(raw: string, fontSize: number, maxWidth: number): { attrs: string; text: string } {
+  const text = fitText(raw, fontSize, maxWidth);
+  return { attrs: `font-family="${fontFamilyFor(text, LATIN)}" font-size="${fontSize}" ${textFitAttributes(text, maxWidth, fontSize)}`.trimEnd(), text: escapeXml(text) };
 }
 
 export function renderDirectDialSvg(input: DirectDialRenderInput): string {
@@ -62,26 +65,29 @@ export function renderDirectDialSvg(input: DirectDialRenderInput): string {
       : input.studioMode === false
         ? "#d6a84b"
         : P.accentPurple;
-  const title = input.configured ? input.label || "OBS fader" : "Choose OBS control";
+  const title = input.configured ? input.label || t("faderDefault") : t("dialChooseControl");
   const reason = !input.configured
-    ? "Open its inspector"
+    ? t("dialOpenInspector")
     : !input.connected
-      ? input.reason || "OBS not connected"
+      ? input.reason || t("obsNotConnected")
       : input.problem || (input.studioMode === false
-        ? "Studio Mode is off"
-        : `${Math.round(Math.max(0, Math.min(1, input.value)) * 100)} %`);
+        ? t("studioModeOff")
+        : t("percent", { n: Math.round(Math.max(0, Math.min(1, input.value)) * 100) }));
   const barWidth = Math.round(Math.max(0, Math.min(1, input.value)) * 150);
   const pressHint = input.configured && input.connected && !input.problem ? input.pressHint : "";
+  const titleText = boxText(title, 15, 176);
+  const reasonText = boxText(reason, pressHint ? 11 : 13, 176);
+  const hintText = pressHint ? boxText(pressHint, 10, 176) : undefined;
   return [
     '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100">',
     `<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${P.bgTop}"/><stop offset="100%" stop-color="${P.bgBottom}"/></linearGradient><linearGradient id="audio" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="${P.blueStart}"/><stop offset="100%" stop-color="${P.violetEnd}"/></linearGradient></defs>`,
     '<rect x="2" y="2" width="196" height="96" rx="11" fill="url(#bg)" stroke="' + border + '" stroke-width="3"/>',
-    `<text x="100" y="27" text-anchor="middle" fill="${P.whiteGlyph}" font-family="Segoe UI,Arial,sans-serif" font-size="15" font-weight="700" ${textFitAttributes(truncateLabel(title, 22), 176, 15)}>` + dialText(title, 22) + '</text>',
+    `<text x="100" y="27" text-anchor="middle" fill="${P.whiteGlyph}" ${titleText.attrs} font-weight="700">${titleText.text}</text>`,
     `<rect x="25" y="49" width="150" height="13" rx="7" fill="${P.trackBg}"/>`,
     '<rect x="25" y="49" width="' + barWidth + '" height="13" rx="7" fill="url(#audio)"/>',
     `<rect x="${20 + barWidth}" y="43" width="10" height="25" rx="4" fill="${P.accentYellow}" stroke="${P.bgTop}" stroke-width="3"/>`,
-    `<text x="100" y="${pressHint ? 80 : 86}" text-anchor="middle" fill="${P.mutedText}" font-family="Segoe UI,Arial,sans-serif" font-size="${pressHint ? 11 : 13}" font-weight="600" ${textFitAttributes(truncateLabel(reason, 28), 176, pressHint ? 11 : 13)}>` + dialText(reason, 28) + '</text>',
-    pressHint ? `<text x="100" y="94" text-anchor="middle" fill="${P.accentYellow}" font-family="Segoe UI,Arial,sans-serif" font-size="10" ${textFitAttributes(truncateLabel(pressHint, 31), 176, 10)}>${dialText(pressHint, 31)}</text>` : "",
+    `<text x="100" y="${pressHint ? 80 : 86}" text-anchor="middle" fill="${P.mutedText}" ${reasonText.attrs} font-weight="600">${reasonText.text}</text>`,
+    hintText ? `<text x="100" y="94" text-anchor="middle" fill="${P.accentYellow}" ${hintText.attrs}>${hintText.text}</text>` : "",
     '</svg>'
   ].join("");
 }
@@ -91,30 +97,35 @@ export function renderDirectDialSvg(input: DirectDialRenderInput): string {
  * conventional Preview/Program colors in the opposite screen order. */
 function renderSceneMixerSvg(input: DirectDialRenderInput): string {
   const value = Math.max(0, Math.min(1, input.value));
-  const program = input.programSceneName || "Live scene";
-  const preview = input.previewSceneName || "Choose Preview";
+  const program = input.programSceneName || t("mixerLiveScene");
+  const preview = input.previewSceneName || t("mixerChoosePreview");
   const sameScene = Boolean(input.programSceneName && input.programSceneName === input.previewSceneName);
   const unavailable = !input.connected || input.studioMode === false;
-  const reason = !input.connected ? input.reason || "OBS not connected" :
-    input.studioMode === false ? "Turn on OBS Studio Mode" :
-      sameScene ? "Choose a different Next scene" : "";
+  const reason = !input.connected ? input.reason || t("obsNotConnected") :
+    input.studioMode === false ? t("mixerTurnOnStudio") :
+      sameScene ? t("mixerChooseDifferent") : "";
   const moving = !unavailable && !sameScene && value > 0.001 && value < 0.999;
   const border = unavailable || moving ? P.orangeAccent : sameScene ? P.mutedText : P.accentPurple;
   const handleX = Math.max(14, Math.min(176, 14 + Math.round(172 * value) - 5));
-  const caption = reason || input.pressHint || (input.autoQueueNextScene ? "Turn to fade · auto-queues Next" :
-    input.label && input.label !== "Scene transition" ? input.label : "Press to take Next live");
+  const caption = reason || input.pressHint || (input.autoQueueNextScene ? t("mixerAutoQueue") :
+    input.label || t("mixerPressTake"));
+  const liveTag = boxText(t("mixerLive"), 10, 80);
+  const nextTag = boxText(t("mixerNext"), 10, 80);
+  const programText = boxText(program, 11, 80);
+  const previewText = boxText(preview, 11, 80);
+  const captionText = boxText(caption, 10, 176);
   return [
     '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100" data-cell="scene-mixer">',
     `<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${P.bgTop}"/><stop offset="100%" stop-color="${P.bgBottom}"/></linearGradient>`,
     `<linearGradient id="sceneMix" x1="14" y1="0" x2="186" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="${P.programRed}"/><stop offset="50%" stop-color="${P.blueStart}"/><stop offset="100%" stop-color="${P.previewGreen}"/></linearGradient></defs>`,
     `<rect x="2" y="2" width="196" height="96" rx="10" fill="url(#bg)" stroke="${border}" stroke-width="${moving ? 4 : 3}"/>`,
-    `<text x="12" y="17" fill="${P.programRed}" font-family="Segoe UI,Arial,sans-serif" font-size="10" font-weight="800">LIVE</text>`,
-    `<text x="188" y="17" text-anchor="end" fill="${P.previewGreen}" font-family="Segoe UI,Arial,sans-serif" font-size="10" font-weight="800">NEXT</text>`,
-    `<text x="12" y="37" fill="${P.whiteGlyph}" font-family="Segoe UI,Arial,sans-serif" font-size="11" font-weight="700" ${textFitAttributes(truncateLabel(program, 15), 80, 11)}>${dialText(program, 15)}</text>`,
-    `<text x="188" y="37" text-anchor="end" fill="${P.whiteGlyph}" font-family="Segoe UI,Arial,sans-serif" font-size="11" font-weight="700" ${textFitAttributes(truncateLabel(preview, 15), 80, 11)}>${dialText(preview, 15)}</text>`,
+    `<text x="12" y="17" fill="${P.programRed}" ${liveTag.attrs} font-weight="800">${liveTag.text}</text>`,
+    `<text x="188" y="17" text-anchor="end" fill="${P.previewGreen}" ${nextTag.attrs} font-weight="800">${nextTag.text}</text>`,
+    `<text x="12" y="37" fill="${P.whiteGlyph}" ${programText.attrs} font-weight="700">${programText.text}</text>`,
+    `<text x="188" y="37" text-anchor="end" fill="${P.whiteGlyph}" ${previewText.attrs} font-weight="700">${previewText.text}</text>`,
     `<rect x="14" y="50" width="172" height="23" rx="7" fill="url(#sceneMix)" opacity="${unavailable || sameScene ? 0.35 : 1}" stroke="${P.trackBorder}" stroke-width="3"/>`,
     !unavailable && !sameScene ? `<rect x="${handleX}" y="45" width="10" height="33" rx="4" fill="${P.orangeAccent}" stroke="${P.whiteGlyph}" stroke-width="3"/>` : "",
-    `<text x="100" y="91" text-anchor="middle" fill="${reason ? P.orangeAccent : P.mutedText}" font-family="Segoe UI,Arial,sans-serif" font-size="10" font-weight="600" ${textFitAttributes(truncateLabel(caption, 31), 176, 10)}>${dialText(caption, 31)}</text>`,
+    `<text x="100" y="91" text-anchor="middle" fill="${reason ? P.orangeAccent : P.mutedText}" ${captionText.attrs} font-weight="600">${captionText.text}</text>`,
     '</svg>'
   ].join("");
 }
@@ -126,16 +137,19 @@ export function renderDirectKeySvg(input: DirectKeyRenderInput): string {
     : unavailable
       ? "#df6d38"
       : P.accentPurple;
-  const title = input.configured ? input.title || "OBS" : "Choose OBS action";
+  const title = input.configured ? input.title || t("keyDefaultTitle") : t("keyChooseAction");
   const subtitle = !input.configured
-    ? "Open inspector"
+    ? t("keyOpenInspector")
     : !input.connected
-      ? input.reason || "OBS not connected"
-      : input.problem || input.subtitle || "Ready";
+      ? input.reason || t("obsNotConnected")
+      : input.problem || input.subtitle || t("keyReady");
   const icon = input.icon || "scene";
-  const titleLines = keyTitleLines(title);
-  const titleMarkup = titleLines.map((line, i) =>
-    `<text x="60" y="${titleLines.length > 1 ? 69 + i * 16 : 77}" text-anchor="middle" fill="${P.whiteGlyph}" font-family="Segoe UI,Arial,sans-serif" font-size="${line.length > 13 ? 12 : 14}" font-weight="700" ${textFitAttributes(line, 102, line.length > 13 ? 12 : 14)}>${escapeXml(line)}</text>`).join("");
+  const titleLayout = keyTitleLines(title);
+  const titleMarkup = titleLayout.lines.map((line, i) => {
+    const lineText = boxText(line, titleLayout.fontSize, 102);
+    return `<text x="60" y="${titleLayout.lines.length > 1 ? 69 + i * 16 : 77}" text-anchor="middle" fill="${P.whiteGlyph}" ${lineText.attrs} font-weight="700">${lineText.text}</text>`;
+  }).join("");
+  const subtitleText = boxText(subtitle, 9, 96);
   const glyph = !input.configured
     ? `<path d="M60 21v28M46 35h28"/>`
     : unavailable
@@ -149,18 +163,18 @@ export function renderDirectKeySvg(input: DirectKeyRenderInput): string {
     `<g fill="none" stroke="${unavailable && input.configured ? P.orangeAccent : P.accentYellow}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">${glyph}</g>`,
     titleMarkup,
     `<rect x="9" y="94" width="102" height="18" rx="5" fill="${P.trackBg}"/>`,
-    `<text x="60" y="107" text-anchor="middle" fill="${unavailable && input.configured ? P.orangeAccent : P.mutedText}" font-family="Segoe UI,Arial,sans-serif" font-size="9" font-weight="600" ${textFitAttributes(truncateLabel(subtitle, 22), 96, 9)}>${dialText(subtitle, 22)}</text>`,
+    `<text x="60" y="107" text-anchor="middle" fill="${unavailable && input.configured ? P.orangeAccent : P.mutedText}" ${subtitleText.attrs} font-weight="600">${subtitleText.text}</text>`,
     '</svg>'
   ].join("");
 }
 
-/** Two short lines preserve useful scene names at the size of a physical key. */
-function keyTitleLines(raw: string): string[] {
+/** One line at 14 px, else two lines at 12 px: measured, so a long German
+ * word or a CJK title wraps where it no longer fits, not at a character count. */
+export function keyTitleLines(raw: string): { lines: string[]; fontSize: number } {
   const title = raw.trim().replace(/\s+/g, " ");
-  if (title.length <= 15) return [title];
-  const space = title.lastIndexOf(" ", 15);
-  const split = space > 3 ? space : 15;
-  return [title.slice(0, split), truncateLabel(title.slice(split).trim(), 15)];
+  if (textWidth(title, 14) <= 102) return { lines: [title], fontSize: 14 };
+  if (textWidth(title, 12) <= 102) return { lines: [title], fontSize: 12 };
+  return { lines: splitTitle(title, 12, 102), fontSize: 12 };
 }
 
 function keyGlyph(icon: DirectKeyIcon): string {

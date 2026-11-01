@@ -1,12 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+import { StringKey, t } from "../i18n/strings.js";
 
 const MAIN_AUDIO_NAMES = ["music", "desktop audio", "desktop", "system audio"];
 const MICROPHONE_NAMES = ["mic/aux", "microphone", "mic"];
-
-/** Keep custom captions, but let shipped role captions follow their real input. */
-export function isAutomaticInputPresetLabel(target: string, label: string): boolean {
-  return automaticInputLabel(target) !== undefined && /^(music|desktop|audio|mic|aux)( down| up)?$/i.test(label.trim());
-}
 
 /** Upgrade only untouched audio placeholders in older bundled layouts, once. */
 export function migrateAutomaticInputSettings<T extends {
@@ -63,11 +59,26 @@ export function resolveAutomaticInputName(target: string, names: readonly string
   return names.includes(target) ? target : "";
 }
 
+/** A preset role's words by key: the role alone ("Microphone") and as a
+ * picker label ("Microphone (automatic)"). Explicit input names have none. */
+export function automaticInputRole(target: string): {
+  role: StringKey; label: StringKey; params?: { n: number };
+} | undefined {
+  if (target === "__audio_main__") return { role: "audioMain", label: "audioMainAutomatic" };
+  if (target === "__audio_mic__") return { role: "audioMic", label: "audioMicAutomatic" };
+  if (target === "__audio_aux__") return { role: "audioAux", label: "audioAuxAutomatic" };
+  const index = indexedAudioTarget(target);
+  return index !== undefined ? { role: "audioInput", label: "audioInputAutomatic", params: { n: index + 1 } } : undefined;
+}
+
 /** Human-readable label for a preset role; explicit input names keep their own label. */
 export function automaticInputLabel(target: string): string | undefined {
-  if (target === "__audio_main__") return "Main audio (automatic)";
-  if (target === "__audio_mic__") return "Microphone (automatic)";
-  if (target === "__audio_aux__") return "Aux audio (automatic)";
-  const index = indexedAudioTarget(target);
-  return index !== undefined ? `Audio input ${index + 1} (automatic)` : undefined;
+  const role = automaticInputRole(target);
+  return role ? t(role.label, role.params) : undefined;
+}
+
+/** The role alone, without "(automatic)": what a key or dial draws. */
+export function automaticInputRoleName(target: string): string | undefined {
+  const role = automaticInputRole(target);
+  return role ? t(role.role, role.params) : undefined;
 }

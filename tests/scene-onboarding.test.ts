@@ -2,6 +2,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
+import { inspectorPageScript } from "./helpers/inspector-scripts.js";
 import {
   migrateScenePresetSettings,
   ObsSceneTransitionKeyInstanceController
@@ -38,7 +39,7 @@ describe("Scene layout onboarding", () => {
     }]));
     let render!: (settings: Record<string, unknown>, save: (patch: Record<string, unknown>) => void, state: Record<string, unknown>) => void;
     const selected: Record<string, string> = {};
-    runInNewContext([...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((match) => match[1]).join("\n"), {
+    runInNewContext(inspectorPageScript(html), {
       document: { activeElement: null, getElementById: (id: string) => elements.get(id) },
       window: {
         initDirectObsPropertyInspector: (callback: typeof render) => { render = callback; },
@@ -77,7 +78,7 @@ describe("Scene layout onboarding", () => {
   it("shows the actual OBS scene name for an automatic numbered shortcut", async () => {
     const client = new DirectObsClient();
     vi.spyOn(client, "isConnected").mockReturnValue(true);
-    vi.spyOn(client, "getStatus").mockReturnValue({ kind: "connected", sentence: "Connected", cellReason: "" });
+    vi.spyOn(client, "getStatus").mockReturnValue({ kind: "connected" });
     vi.spyOn(client, "resolveSceneTarget").mockReturnValue("Camera closeup");
     vi.spyOn(client, "getCatalog").mockReturnValue({ ...client.getCatalog(), studioMode: true });
     const images: string[] = [];
@@ -96,7 +97,7 @@ describe("Scene layout onboarding", () => {
   it("previews the actual next destination while preserving a custom caption", async () => {
     const client = new DirectObsClient();
     vi.spyOn(client, "isConnected").mockReturnValue(true);
-    vi.spyOn(client, "getStatus").mockReturnValue({ kind: "connected", sentence: "Connected", cellReason: "" });
+    vi.spyOn(client, "getStatus").mockReturnValue({ kind: "connected" });
     vi.spyOn(client, "resolveSceneTarget").mockReturnValue("Ending slate");
     vi.spyOn(client, "getCatalog").mockReturnValue({ ...client.getCatalog(), studioMode: true });
     const images: string[] = [];

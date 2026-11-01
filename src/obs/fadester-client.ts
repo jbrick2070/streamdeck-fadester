@@ -36,6 +36,7 @@ import {
   makeUnreachableStatus,
   makeWrongPasswordStatus
 } from "../../packages/streamdeck-fadester-shared/src/obs/obs-vendor-client.js";
+import type { LocalText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
 
 export {
   FADESTER_VENDOR_NAME,
@@ -57,8 +58,9 @@ export function makeMissingPluginStatus(): ConnectionStatusInfo {
   );
 }
 
+/** A string is a Midi Fadester or OBS text (shown verbatim); our own messages pass a key. */
 export class FadesterVendorError extends ObsVendorError {
-  public constructor(comment: string, code = -1) {
+  public constructor(comment: string | LocalText, code = -1) {
     super(comment, code);
     this.name = "FadesterVendorError";
   }
@@ -150,7 +152,7 @@ export class FadesterClient extends ObsVendorClient<GetStateResponse> {
   }
 
   protected override createVendorError(
-    comment: string,
+    comment: string | LocalText,
     code = -1
   ): ObsVendorError {
     return new FadesterVendorError(comment, code);

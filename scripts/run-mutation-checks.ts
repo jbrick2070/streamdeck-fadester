@@ -30,8 +30,8 @@ const MUTATIONS: MutationCheck[] = [
     step: "All FX custom labels",
     description: "Ignore the All FX label override and verify the saved label remains covered",
     filePath: resolve(ROOT, "packages/streamdeck-fadester-shared/src/svg-renderer.ts"),
-    target: 'override || (activeCount > 0 ? "CLEAN FX" : "FX CLEAN")',
-    mutated: '(activeCount > 0 ? "CLEAN FX" : "FX CLEAN")',
+    target: 'override || (activeCount > 0 ? t("cleanFxActiveTitle") : t("cleanFxIdleTitle"))',
+    mutated: '(activeCount > 0 ? t("cleanFxActiveTitle") : t("cleanFxIdleTitle"))',
     testFile: "tests/svg-renderer.test.ts"
   },
   {
@@ -100,7 +100,7 @@ const MUTATIONS: MutationCheck[] = [
       "packages/streamdeck-fadester-shared/src/svg-renderer.ts"
     ),
     target:
-      'const unavailableReason =\n      slot.reason ||\n      (slot.target_mode === "unassigned"\n        ? "Unassigned, set in OBS"\n        : "Unavailable in OBS");',
+      'const unavailableReason =\n      slot.reason ||\n      (slot.target_mode === "unassigned"\n        ? t("cellUnassigned")\n        : t("cellUnavailableInObs"));',
     mutated: 'const unavailableReason = "Generic Error";',
     testFile: "tests/svg-renderer.test.ts"
   },
@@ -216,6 +216,79 @@ const MUTATIONS: MutationCheck[] = [
     target: "if (now - this.lastNudgeAt < minIntervalMs) {",
     mutated: "if (false) {",
     testFile: "tests/action-guards.test.ts"
+  },
+  {
+    id: "M-8.1a",
+    step: "Step 8.1 (Translations: lookup bypass)",
+    description:
+      "Return the English text without consulting the active language and verify i18n-strings.test.ts fails",
+    filePath: resolve(ROOT, "src/i18n/strings.ts"),
+    target: "return fillTemplate(lookupText(activeTable, key), params);",
+    mutated: "return fillTemplate(EN[key], params);",
+    testFile: "tests/i18n-strings.test.ts"
+  },
+  {
+    id: "M-8.1b",
+    step: "Step 8.1 (Translations: status changes by parameters)",
+    description:
+      "Compare only the status kind, so a version change no longer emits statusChanged, and verify i18n-strings.test.ts fails",
+    filePath: resolve(
+      ROOT,
+      "packages/streamdeck-fadester-shared/src/obs/obs-vendor-client.ts"
+    ),
+    target: "const changed = statusSignature(this.status) !== statusSignature(next);",
+    mutated: "const changed = this.status.kind !== next.kind;",
+    testFile: "tests/i18n-strings.test.ts"
+  },
+  {
+    id: "M-8.2a",
+    step: "Step 8.2 (Translations: stored English captions drawn translated)",
+    description:
+      "Draw every stored caption as typed, so a bundled profile's English caption reaches a German deck, and verify preset-captions.test.ts fails",
+    filePath: resolve(ROOT, "src/obs/preset-captions.ts"),
+    target: 'return caption && !isGeneratedCaption(action, settings, caption) ? caption : "";',
+    mutated: "return caption;",
+    testFile: "tests/preset-captions.test.ts"
+  },
+  {
+    id: "M-8.3a",
+    step: "Step 8.3 (Translations: CJK width)",
+    description:
+      "Count CJK, kana and Hangul at a Latin letter's width and verify deck-fit.test.ts fails",
+    filePath: resolve(ROOT, "packages/streamdeck-fadester-shared/src/text-fit.ts"),
+    target: "if (WIDE.test(ch)) return 1;",
+    mutated: "if (WIDE.test(ch)) return 0.6;",
+    testFile: "tests/deck-fit.test.ts"
+  },
+  {
+    id: "M-8.3b",
+    step: "Step 8.3 (Translations: shorten by width)",
+    description:
+      "Never shorten a text that is too wide for its box and verify deck-fit.test.ts fails",
+    filePath: resolve(ROOT, "packages/streamdeck-fadester-shared/src/text-fit.ts"),
+    target: "  if (fitsBox(text, fontSize, maxWidth)) return text;",
+    mutated: "  if (text.length > 0) return text;",
+    testFile: "tests/deck-fit.test.ts"
+  },
+  {
+    id: "M-8.4a",
+    step: "Step 8.4 (Translations: Stream Deck's language at start)",
+    description:
+      "Ignore Stream Deck's language and always start in English, and verify i18n-strings.test.ts fails",
+    filePath: resolve(ROOT, "src/i18n/load.ts"),
+    target: "  if (exact) return exact;",
+    mutated: '  if (exact) return "en";',
+    testFile: "tests/i18n-strings.test.ts"
+  },
+  {
+    id: "M-8.5a",
+    step: "Step 8.5 (Translations: inspectors follow the language)",
+    description:
+      "Keep the inspectors in English whatever the language, and verify inspector-i18n.test.ts fails",
+    filePath: resolve(ROOT, "com.jbrick2070.fadester-for-obs.sdPlugin/ui/i18n.js"),
+    target: "active = TABLES[language] || EN;",
+    mutated: "active = EN;",
+    testFile: "tests/inspector-i18n.test.ts"
   }
 ];
 
@@ -260,6 +333,15 @@ function main(): void {
       if (result.status === 0) {
         throw new Error(
           `[${m.id}] Mutation survived! Expected ${m.testFile} to fail, but it passed.`
+        );
+      }
+      // A mutation must be killed by a failing assertion, not by a file that
+      // no longer loads (a syntax or import error fails with no test failed).
+      // eslint-disable-next-line no-control-regex
+      const plainOutput = result.output.replace(/\x1b\[[0-9;]*m/g, "");
+      if (!/Tests\s+\d+ failed/.test(plainOutput)) {
+        throw new Error(
+          `[${m.id}] ${m.testFile} failed without a failing test:\n${result.output}`
         );
       }
       console.log(

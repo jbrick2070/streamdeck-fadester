@@ -7,3 +7,6 @@ export * from "./cell-rate-limiter.js";
 export * from "./thumbnail-fetcher.js";
 export * from "./surface-store.js";
 export * from "./obs/obs-vendor-client.js";
+export * from "./i18n.js";
+export * from "./status-text.js";
+export * from "./text-fit.js";

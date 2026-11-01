@@ -974,6 +974,22 @@ ships unbound.
    fresh read at a gesture start; *M-10.2d* `max_flash_rate_hz` writable; *M-10.2e* ownership ignored; *M-10.2f* no
    generation check; *M-10.2g* per-filter newest-wins drops the other setting; *M-10.2h* no sibling re-read;
    *M-10.2i* kind ignored (all on the controller, none on the fake).
+   *As built (2026-11-01):* `FilterController` (`watch`, `refresh`, `getState`, `nudge`, `glideTo`, `step`,
+   `dropStart`/`dropReturn`, `cancel`, `toggleEnabled`, `setPanicLatched`) with every rule above, tested in
+   `tests/filter-controller.test.ts` (13 tests). Found while building or in QA and taken: a reconnect keeps the status
+   "connected", so `statusChanged` is not enough; `DirectObsClient` now emits `connectionReset` (disconnect,
+   `stop()`, `reconnectNow()`) and `connectionReady` (every completed identify), which the controller (and 10.3's
+   latch) listen to. A refused gesture keeps its refusal for the idle time, so a fast turn on a driven setting sends no
+   reads per tick. A whole-number range moves at least one per write (a 10 % step under 1 rounded back and never
+   arrived); the gesture's wanted value is kept unrounded, so fine turns add up. A value OBS already has is not sent
+   again (a turn pinned at a rail). A read sent before a write keeps the written values when it lands after it. A
+   second drop while the first returns keeps the value saved first. A glide cancelled during its read settles as
+   cancelled, not an error. After a collection change the watched targets are re-read once the client has taken the
+   event. OBS's own error texts are kept (`errorLocalText`). Texts: the eight problem words (`filterMissing`,
+   `filterWrongKind`, `filterDenied`, `filterNeedsRange`, `filterOwnedModulator`, `filterOwnedFader`,
+   `filterNoValue`, `filterLatched`) in all eight files, fitted on the key line and the dial reason (German
+   "Vom Fader gesteuert"). Two more mutations: *M-10.2j* an Audio Modulator written as often as any filter; *M-10.2k*
+   no global cap (the per-filter 50 ms equals the global 50 ms spacing, so it has no mutation of its own).
 4. **Step 10.3 -- Visual Panic and the latch.** `src/control/visual-safety.ts` (shared by every key: the latch, set
    when Panic is sent and cleared by a Restore that OBS accepts, by a Panic or Restore answered 600, and on disconnect
    or reconnect); `src/actions/visual-panic-key.ts` (`com.jbrick2070.fadester-for-obs.visual-panic`, keys only,

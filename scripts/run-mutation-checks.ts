@@ -489,6 +489,116 @@ const MUTATIONS: MutationCheck[] = [
     target: 'const data = await this.sendObsRequest("GetSourceFilter", { sourceUuid, filterName });',
     mutated: 'const data = await this.sendObsRequest("GetSourceFilter", { sourceName: sourceUuid, filterName });',
     testFile: "tests/filter-requests.test.ts"
+  },
+  {
+    id: "M-10.2a",
+    step: "Step 10.2 (filter writes: the slew cap)",
+    description:
+      "Let one write move a setting any distance, and verify filter-controller.test.ts fails",
+    filePath: resolve(ROOT, "src/control/filter-controller.ts"),
+    target: "const limit = slewStep(range, this.slewFraction);",
+    mutated: "const limit = Number.POSITIVE_INFINITY;",
+    testFile: "tests/filter-controller.test.ts"
+  },
+  {
+    id: "M-10.2b",
+    step: "Step 10.2 (filter writes: one in flight per filter)",
+    description:
+      "Let a second write go out while one is in flight, and verify filter-controller.test.ts fails",
+    filePath: resolve(ROOT, "src/control/filter-controller.ts"),
+    target: "    if (record.inFlight) return;",
+    mutated: "    if (false) return;",
+    testFile: "tests/filter-controller.test.ts"
+  },
+  {
+    id: "M-10.2c",
+    step: "Step 10.2 (a gesture starts from a fresh read)",
+    description:
+      "Skip the gesture's fresh read and ride the cached value, and verify filter-controller.test.ts fails",
+    filePath: resolve(ROOT, "src/control/filter-controller.ts"),
+    target: "          await this.readFilter(record, generation);\n          await this.readOwnership(record, target.setting, generation);\n          this.requireReady(record, target, generation);\n          const value = record.values[target.setting] as number;\n          created.wanted",
+    mutated: "          await this.readOwnership(record, target.setting, generation);\n          this.requireReady(record, target, generation);\n          const value = record.values[target.setting] as number;\n          created.wanted",
+    testFile: "tests/filter-controller.test.ts"
+  },
+  {
+    id: "M-10.2d",
+    step: "Step 10.2 (the deck's deny list)",
+    description:
+      "Let max_flash_rate_hz be written from the deck, and verify filter-controller.test.ts fails",
+    filePath: resolve(ROOT, "src/obs/filter-ranges.ts"),
+    target: "\"preset_shader\", \"shader_file_path\", \"shader_text\", \"override_entire_effect\", \"max_flash_rate_hz\",",
+    mutated: "\"preset_shader\", \"shader_file_path\", \"shader_text\", \"override_entire_effect\",",
+    testFile: "tests/filter-controller.test.ts"
+  },
+  {
+    id: "M-10.2e",
+    step: "Step 10.2 (ownership refuses a driven setting)",
+    description:
+      "Ignore who else drives a setting, and verify filter-controller.test.ts fails",
+    filePath: resolve(ROOT, "src/control/filter-controller.ts"),
+    target: "    const owner = record.owners.get(target.setting);\n    if (owner) throw",
+    mutated: "    const owner = null;\n    if (owner) throw",
+    testFile: "tests/filter-controller.test.ts"
+  },
+  {
+    id: "M-10.2f",
+    step: "Step 10.2 (lifecycle generation)",
+    description:
+      "Keep the generation across a collection change or reconnect, and verify filter-controller.test.ts fails",
+    filePath: resolve(ROOT, "src/control/filter-controller.ts"),
+    target: "    this.generation++;",
+    mutated: "    this.generation += 0;",
+    testFile: "tests/filter-controller.test.ts"
+  },
+  {
+    id: "M-10.2g",
+    step: "Step 10.2 (merged per filter, not per setting)",
+    description:
+      "Let the newest value of one setting drop another setting's pending value, and verify filter-controller.test.ts fails",
+    filePath: resolve(ROOT, "src/control/filter-controller.ts"),
+    target: "    record.pending.set(setting, writableValue(value, range));",
+    mutated: "    record.pending.clear();\n    record.pending.set(setting, writableValue(value, range));",
+    testFile: "tests/filter-controller.test.ts"
+  },
+  {
+    id: "M-10.2h",
+    step: "Step 10.2 (sibling modulators re-read at every gesture)",
+    description:
+      "Skip the gesture's ownership re-read, and verify filter-controller.test.ts fails",
+    filePath: resolve(ROOT, "src/control/filter-controller.ts"),
+    target: "          await this.readOwnership(record, target.setting, generation);\n          this.requireReady(record, target, generation);\n          const value = record.values[target.setting] as number;\n          created.wanted",
+    mutated: "          this.requireReady(record, target, generation);\n          const value = record.values[target.setting] as number;\n          created.wanted",
+    testFile: "tests/filter-controller.test.ts"
+  },
+  {
+    id: "M-10.2i",
+    step: "Step 10.2 (filterKind in the identity)",
+    description:
+      "Accept a read of another filter kind, and verify filter-controller.test.ts fails",
+    filePath: resolve(ROOT, "src/control/filter-controller.ts"),
+    target: "    if (info.filterKind !== record.filterKind) {\n      record.read = \"wrong_kind\";",
+    mutated: "    if (false) {\n      record.read = \"wrong_kind\";",
+    testFile: "tests/filter-controller.test.ts"
+  },
+  {
+    id: "M-10.2j",
+    step: "Step 10.2 (an Audio Modulator is written at most five times a second)",
+    description:
+      "Write an Audio Modulator as often as any filter, and verify filter-controller.test.ts fails",
+    filePath: resolve(ROOT, "src/control/filter-controller.ts"),
+    target: "return record.filterKind === VS_MODULATOR_FILTER_KIND ? this.modulatorWriteIntervalMs : this.writeIntervalMs;",
+    mutated: "return this.writeIntervalMs;",
+    testFile: "tests/filter-controller.test.ts"
+  },
+  {
+    id: "M-10.2k",
+    step: "Step 10.2 (at most 20 writes a second over all filters)",
+    description:
+      "Drop the global write cap, and verify filter-controller.test.ts fails",
+    filePath: resolve(ROOT, "src/control/filter-controller.ts"),
+    target: "this.globalNextWriteAt = now + this.globalIntervalMs;",
+    mutated: "this.globalNextWriteAt = now;",
+    testFile: "tests/filter-controller.test.ts"
   }
 ];
 

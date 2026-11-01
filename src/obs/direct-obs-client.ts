@@ -350,6 +350,7 @@ export class DirectObsClient extends ObsVendorClient {
         this.mediaCapability = "unknown";
         this.filterDefaults.clear();
         this.invalidateMediaTargets();
+        this.emit("connectionReset");
       } else {
         // The first catalog is published before the status turns connected: polls start here.
         this.reconcileMediaTargets();
@@ -369,6 +370,7 @@ export class DirectObsClient extends ObsVendorClient {
     super.stop();
     // After the socket is gone, so the targets read as disconnected.
     this.invalidateMediaTargets();
+    this.emit("connectionReset");
   }
 
   public override reconnectNow(): void {
@@ -382,6 +384,8 @@ export class DirectObsClient extends ObsVendorClient {
     this.filterDefaults.clear();
     super.reconnectNow();
     this.invalidateMediaTargets();
+    // A reconnect keeps the status "connected" (no statusChanged): the filter controls and the panic latch learn it here.
+    this.emit("connectionReset");
   }
 
   public override getStatus(): ConnectionStatusInfo {
@@ -862,6 +866,8 @@ export class DirectObsClient extends ObsVendorClient {
         obsVersion
       });
       this.emitDirectState();
+      // Every completed (re)connection, also one whose status did not change.
+      this.emit("connectionReady");
     } catch {
       // The close handler owns reconnect and connection-error status.
     }

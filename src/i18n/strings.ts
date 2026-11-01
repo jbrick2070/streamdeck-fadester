@@ -40,6 +40,15 @@ const PLUGIN_EN = {
   errorMediaAmbiguous: "Playlister state is unclear; press Stop first.",
   // OBS Filter controls (PLAN.md 10)
   errorFilterChoose: "Choose a source and a filter first.",
+  // Why an OBS Filter control cannot write now (problem lines and press errors)
+  filterMissing: "Filter not found",
+  filterWrongKind: "Filter kind changed",
+  filterDenied: "Not writable here",
+  filterNeedsRange: "Set a range first",
+  filterOwnedModulator: "Driven by {filter}",
+  filterOwnedFader: "Driven by its fader",
+  filterNoValue: "No value in OBS yet",
+  filterLatched: "Restore first",
   // Playlister transport key (operation words are the titles; the state words the subtitle)
   plOpPrevious: "Previous",
   plOpNext: "Next",

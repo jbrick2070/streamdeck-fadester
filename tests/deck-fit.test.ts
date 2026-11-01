@@ -92,6 +92,10 @@ function drawnTexts(): Array<{ key: StringKey; params?: TextParams; boxes: Box[]
   for (const key of ["errorMediaChoose", "errorMediaMissing", "errorMediaUnsupported", "errorMediaBusy",
     "errorMediaPending", "errorMediaChanging", "errorMediaAmbiguous"] as const) add(key, [B.keySub]);
   add("errorMediaWrongKind", [B.keySub], { input: "Camera" });
+  // The OBS Filter controls' problem line, on keys and dials.
+  for (const key of ["filterMissing", "filterWrongKind", "filterDenied", "filterNeedsRange", "filterOwnedFader",
+    "filterNoValue", "filterLatched"] as const) add(key, [B.keySub, B.dialReason]);
+  add("filterOwnedModulator", [B.keySub, B.dialReason], { filter: "Pulse" });
   // Its operation words are titles; the state, pending and busy words its subtitle. The time is drawn
   // only in PLAYING and PAUSED, so a two-hour item with those two words is the longest sample.
   for (const key of ["plOpPrevious", "plOpNext", "plOpPlayPause", "plOpStop", "plOpRestart", "plOpStatus"] as const) add(key, [B.keyTitle]);

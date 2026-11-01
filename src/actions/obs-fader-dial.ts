@@ -27,7 +27,7 @@ import {
 } from "../gfx/direct-obs-renderer.js";
 import { computeDialDelta, normalizeStepPerTick } from "./dial-math.js";
 import { statusCellReason } from "../../packages/streamdeck-fadester-shared/src/status-text.js";
-import { StringKey, t, translate } from "../i18n/strings.js";
+import { StringKey, onLanguageChanged, t, translate } from "../i18n/strings.js";
 
 interface DialFeedbackSink {
   setFeedback(feedback: { canvas: string }): Promise<void>;
@@ -43,6 +43,8 @@ export class ObsFaderDialInstanceController {
   private settings: Required<ObsFaderDialSettings>;
   private readonly rateLimiter: CellRateLimiter<string>;
   private visible = false;
+  /** Unsubscribes this control from language changes (PLAN.md 11.1). */
+  private offLanguage: () => void = () => {};
   private lastRotateAt = 0;
 
   private readonly onStateChanged = (): void => this.renderNow();
@@ -65,6 +67,8 @@ export class ObsFaderDialInstanceController {
       this.settings = this.mergeSettings(settings);
     }
     this.visible = true;
+    this.offLanguage();
+    this.offLanguage = onLanguageChanged(() => this.renderNow());
     this.client.on("statusChanged", this.onStateChanged);
     this.client.on("directStateChanged", this.onStateChanged);
     this.renderNow();
@@ -72,6 +76,8 @@ export class ObsFaderDialInstanceController {
 
   public disappear(): void {
     this.visible = false;
+    this.offLanguage();
+    this.offLanguage = () => {};
     if (this.settings.autoQueueNextScene) this.client.cancelSceneCycle();
     this.rateLimiter.dispose();
     this.client.off("statusChanged", this.onStateChanged);
@@ -280,6 +286,8 @@ export class ObsFaderDialAction extends SingletonAction<ObsFaderDialSettings> {
     const dial = ev.action;
     const settings = migrateAutomaticInputSettings(ev.payload.settings);
     if (settings !== ev.payload.settings) void dial.setSettings(settings);
+    // Stream Deck can send willAppear twice for one context: the first controller stops first.
+    this.instances.get(dial.id)?.disappear();
     const controller = new ObsFaderDialInstanceController(
       this.client,
       {

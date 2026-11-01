@@ -23,7 +23,7 @@ import {
   toSvgDataUri
 } from "../gfx/direct-obs-renderer.js";
 import { statusCellReason } from "../../packages/streamdeck-fadester-shared/src/status-text.js";
-import { formatNumber, t, translate } from "../i18n/strings.js";
+import { formatNumber, onLanguageChanged, t, translate } from "../i18n/strings.js";
 
 interface KeyImageSink {
   setImage(image: string): Promise<void>;
@@ -33,6 +33,8 @@ interface KeyImageSink {
 export class ObsFadeKeyInstanceController {
   private settings: Required<ObsFadeKeySettings>;
   private visible = false;
+  /** Unsubscribes this control from language changes (PLAN.md 11.1). */
+  private offLanguage: () => void = () => {};
   private readonly rateLimiter: CellRateLimiter<string>;
   private readonly onStateChanged = (): void => this.renderNow();
 
@@ -53,6 +55,8 @@ export class ObsFadeKeyInstanceController {
       this.settings = this.mergeSettings(settings);
     }
     this.visible = true;
+    this.offLanguage();
+    this.offLanguage = onLanguageChanged(() => this.renderNow());
     this.client.on("statusChanged", this.onStateChanged);
     this.client.on("directStateChanged", this.onStateChanged);
     this.renderNow();
@@ -60,6 +64,8 @@ export class ObsFadeKeyInstanceController {
 
   public disappear(): void {
     this.visible = false;
+    this.offLanguage();
+    this.offLanguage = () => {};
     this.rateLimiter.dispose();
     this.client.off("statusChanged", this.onStateChanged);
     this.client.off("directStateChanged", this.onStateChanged);
@@ -148,6 +154,8 @@ export class ObsFadeKeyAction extends SingletonAction<ObsFadeKeySettings> {
     const key = ev.action;
     const settings = migrateAutomaticInputSettings(ev.payload.settings);
     if (settings !== ev.payload.settings) void key.setSettings(settings);
+    // Stream Deck can send willAppear twice for one context: the first controller stops first.
+    this.instances.get(key.id)?.disappear();
     const controller = new ObsFadeKeyInstanceController(
       this.client,
       {

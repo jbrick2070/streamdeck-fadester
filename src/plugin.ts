@@ -28,13 +28,24 @@ import {
   FadesterGlobalSettings
 } from "./types/settings.js";
 import { useStreamDeckLanguage } from "./i18n/load.js";
+import { LanguageChoiceController } from "./i18n/language-choice.js";
+import { GlobalSettingsStore, connectionSaver } from "./settings/global-store.js";
 
 // Stream Deck's language, read once before any control draws (PLAN.md 8.4; 8.7 checks a language change).
+// Automatic draws never wait; a fixed choice applies when the stored settings are read (PLAN.md 11.1).
+let appLanguage: unknown = "en";
 try {
-  useStreamDeckLanguage(streamDeck.info.application.language);
+  appLanguage = streamDeck.info.application.language;
+  useStreamDeckLanguage(appLanguage);
 } catch {
   useStreamDeckLanguage("en");
 }
+
+// Every global settings write goes through this one queue, so no save loses another's key (RL-1).
+const settingsStore = new GlobalSettingsStore({
+  getGlobalSettings: () => streamDeck.settings.getGlobalSettings<FadesterGlobalSettings>(),
+  setGlobalSettings: (settings) => streamDeck.settings.setGlobalSettings(settings)
+});
 
 const enhancedClient = new FadesterClient(DEFAULT_GLOBAL_SETTINGS);
 const store = new FadesterStore(enhancedClient);
@@ -44,14 +55,20 @@ const layers = new LayerController(directClient);
 const filters = new FilterController(directClient);
 const visualSafety = new VisualSafety(directClient, filters);
 
-async function persistSharedConnection(
-  settings: FadesterGlobalSettings
-): Promise<void> {
-  await streamDeck.settings.setGlobalSettings(settings);
-  // Keep an optional enhanced action in sync if the operator later adds one.
-  enhancedClient.updateSettings(settings);
-  directClient.updateSettings(settings);
-}
+// The Language setting (PLAN.md 11.1): a change redraws every visible control and refills the pages.
+const languageChoice = new LanguageChoiceController({
+  store: settingsStore,
+  appLanguage,
+  broadcast() {
+    bridge.broadcast();
+    directBridge.broadcast();
+  },
+  log: (message) => streamDeck.logger.warn(message)
+});
+
+// The pages' connection saves go through the store's queue; the enhanced client is kept in sync
+// too, should the operator later add an enhanced action.
+const persistSharedConnection = connectionSaver(settingsStore, [enhancedClient, directClient]);
 
 const bridge = new PropertyInspectorBridge(store, enhancedClient, {
   sendToPropertyInspector(payload) {
@@ -60,7 +77,8 @@ const bridge = new PropertyInspectorBridge(store, enhancedClient, {
     }
     void streamDeck.ui.sendToPropertyInspector(payload as JsonObject);
   },
-  persistGlobalSettings: persistSharedConnection
+  persistGlobalSettings: persistSharedConnection,
+  getLanguage: () => languageChoice.state()
 });
 
 const directBridge = new DirectObsPropertyInspectorBridge(directClient, {
@@ -71,6 +89,7 @@ const directBridge = new DirectObsPropertyInspectorBridge(directClient, {
     void streamDeck.ui.sendToPropertyInspector(payload as JsonObject);
   },
   persistGlobalSettings: persistSharedConnection,
+  getLanguage: () => languageChoice.state(),
   getDeviceType: () => streamDeck.ui.action?.device.type,
   async activateLayout(slug) {
     const device = streamDeck.ui.action?.device;
@@ -79,8 +98,10 @@ const directBridge = new DirectObsPropertyInspectorBridge(directClient, {
 }, layers);
 
 streamDeck.settings.onDidReceiveGlobalSettings<FadesterGlobalSettings>((ev) => {
+  settingsStore.replace(ev.settings);
   enhancedClient.updateSettings(ev.settings);
   directClient.updateSettings(ev.settings);
+  languageChoice.settingsReceived();
   bridge.broadcast();
   directBridge.broadcast();
 });
@@ -93,6 +114,9 @@ streamDeck.ui.onDidAppear(() => {
 streamDeck.ui.onSendToPlugin<JsonObject>((ev) => {
   void (async () => {
     const payload = ev.payload as PiIncomingMessage;
+    if (await languageChoice.handleMessage(payload)) {
+      return;
+    }
     if (await directBridge.handleMessage(payload)) {
       return;
     }
@@ -112,9 +136,9 @@ streamDeck.actions.registerAction(new ObsFilterControlAction(filters));
 streamDeck.actions.registerAction(new VisualPanicKeyAction(visualSafety, directClient));
 
 void streamDeck.connect().then(async () => {
-  const globalSettings =
-    await streamDeck.settings.getGlobalSettings<FadesterGlobalSettings>();
+  const globalSettings = await settingsStore.start();
   enhancedClient.updateSettings(globalSettings);
   directClient.updateSettings(globalSettings);
+  await languageChoice.start();
   directClient.start();
 });

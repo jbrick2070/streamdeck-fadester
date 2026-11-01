@@ -17,7 +17,7 @@ import {
 } from "../types/settings.js";
 import { CellRateLimiter } from "../gfx/cell-rate-limiter.js";
 import { renderAutoFadeKeySvg, toSvgDataUri } from "../gfx/svg-renderer.js";
-import { translate } from "../i18n/strings.js";
+import { onLanguageChanged, translate } from "../i18n/strings.js";
 import { shouldReleaseRail } from "./dial-math.js";
 
 export interface KeyImageSink {
@@ -31,6 +31,8 @@ export class AutoFadeKeyInstanceController {
   private settings: Required<AutoFadeKeySettings>;
   private readonly rateLimiter: CellRateLimiter<string>;
   private visible = false;
+  /** Unsubscribes this control from language changes (PLAN.md 11.1). */
+  private offLanguage: () => void = () => {};
 
   private readonly onStoreChanged = (): void => {
     this.renderNow();
@@ -61,6 +63,8 @@ export class AutoFadeKeyInstanceController {
       this.settings = this.mergeSettings(settings);
     }
     this.visible = true;
+    this.offLanguage();
+    this.offLanguage = onLanguageChanged(() => this.renderNow());
     this.store.on("changed", this.onStoreChanged);
     this.store.on("slotValueChanged", this.onSlotValueChanged);
     this.renderNow();
@@ -68,6 +72,8 @@ export class AutoFadeKeyInstanceController {
 
   public disappear(): void {
     this.visible = false;
+    this.offLanguage();
+    this.offLanguage = () => {};
     this.rateLimiter.dispose();
     this.store.off("changed", this.onStoreChanged);
     this.store.off("slotValueChanged", this.onSlotValueChanged);
@@ -189,6 +195,8 @@ export class AutoFadeKeyAction extends SingletonAction<AutoFadeKeySettings> {
     }
     this.store.getClient().ensureStarted();
     const keyAction = ev.action;
+    // Stream Deck can send willAppear twice for one context: the first controller stops first.
+    this.instances.get(keyAction.id)?.disappear();
     const ctrl = new AutoFadeKeyInstanceController(
       this.store,
       {

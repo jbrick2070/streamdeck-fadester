@@ -29,7 +29,7 @@ import { renderVisualPanicKeySvg, toSvgDataUri } from "../gfx/direct-obs-rendere
 import { DIAL_HOLD_THRESHOLD_MS } from "./dial-math.js";
 import { statusCellReason } from "../../packages/streamdeck-fadester-shared/src/status-text.js";
 import { LocalText, errorLocalText, ownText, wordText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
-import { translate } from "../i18n/strings.js";
+import { onLanguageChanged, translate } from "../i18n/strings.js";
 
 interface KeyImageSink {
   setImage(image: string): Promise<void>;
@@ -40,6 +40,8 @@ interface KeyImageSink {
 export class VisualPanicInstanceController {
   private settings: Required<VisualPanicSettings>;
   private visible = false;
+  /** Unsubscribes this control from language changes (PLAN.md 11.1). */
+  private offLanguage: () => void = () => {};
   private readonly rateLimiter: CellRateLimiter<string>;
   private holdTimer: ReturnType<typeof setTimeout> | null = null;
   /** This key's last failed send, cleared on the next press and when the latch changes. */
@@ -74,6 +76,8 @@ export class VisualPanicInstanceController {
     if (this.visible) this.disappear();
     if (settings) this.settings = this.mergeSettings(settings);
     this.visible = true;
+    this.offLanguage();
+    this.offLanguage = onLanguageChanged(() => this.renderNow());
     this.safety.on("changed", this.onChanged);
     this.safety.on("reset", this.onReset);
     this.client.on("statusChanged", this.onStatusChanged);
@@ -82,6 +86,8 @@ export class VisualPanicInstanceController {
 
   public disappear(): void {
     this.visible = false;
+    this.offLanguage();
+    this.offLanguage = () => {};
     this.cancelHold();
     this.lastSvg = "";
     this.rateLimiter.dispose();

@@ -26,7 +26,7 @@ import { CellRateLimiter } from "../gfx/cell-rate-limiter.js";
 import { DirectKeyIcon, renderDirectKeySvg, toSvgDataUri } from "../gfx/direct-obs-renderer.js";
 import { statusCellReason } from "../../packages/streamdeck-fadester-shared/src/status-text.js";
 import { LocalText, errorLocalText, ownText, wordText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
-import { StringKey, t, translate } from "../i18n/strings.js";
+import { StringKey, onLanguageChanged, t, translate } from "../i18n/strings.js";
 
 interface KeyImageSink {
   setImage(image: string): Promise<void>;
@@ -89,6 +89,8 @@ export function describeMediaState(state: MediaTargetState): string {
 export class PlaylisterTransportInstanceController {
   private settings: Required<PlaylisterTransportSettings>;
   private visible = false;
+  /** Unsubscribes this control from language changes (PLAN.md 11.1). */
+  private offLanguage: () => void = () => {};
   private readonly rateLimiter: CellRateLimiter<string>;
   private releaseWatch: () => void = () => {};
   /** This key's last failed press, cleared on the next press, a retarget or an observed state change. */
@@ -127,6 +129,8 @@ export class PlaylisterTransportInstanceController {
       this.settings = this.mergeSettings(settings);
     }
     this.visible = true;
+    this.offLanguage();
+    this.offLanguage = onLanguageChanged(() => this.renderNow());
     this.client.on("statusChanged", this.onStatusChanged);
     this.client.on("mediaStateChanged", this.onMediaStateChanged);
     this.acquireWatch();
@@ -135,6 +139,8 @@ export class PlaylisterTransportInstanceController {
 
   public disappear(): void {
     this.visible = false;
+    this.offLanguage();
+    this.offLanguage = () => {};
     this.settingsGeneration++;
     this.lastSvg = "";
     this.rateLimiter.dispose();

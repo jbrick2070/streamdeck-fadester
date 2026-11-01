@@ -32,7 +32,7 @@ import {
 } from "../gfx/direct-obs-renderer.js";
 import { LocalText, errorLocalText, ownText, wordText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
 import { statusCellReason } from "../../packages/streamdeck-fadester-shared/src/status-text.js";
-import { t, translate } from "../i18n/strings.js";
+import { onLanguageChanged, t, translate } from "../i18n/strings.js";
 import { customCaption } from "../obs/preset-captions.js";
 
 interface KeyImageSink {
@@ -81,6 +81,8 @@ export function migrateScenePresetSettings(
 export class ObsSceneTransitionKeyInstanceController {
   private settings: Required<ObsSceneTransitionKeySettings>;
   private visible = false;
+  /** Unsubscribes this control from language changes (PLAN.md 11.1). */
+  private offLanguage: () => void = () => {};
   private lastError: LocalText | null = null;
   private readonly rateLimiter: CellRateLimiter<string>;
   private readonly onStateChanged = (): void => {
@@ -105,6 +107,8 @@ export class ObsSceneTransitionKeyInstanceController {
       this.settings = this.mergeSettings(settings);
     }
     this.visible = true;
+    this.offLanguage();
+    this.offLanguage = onLanguageChanged(() => this.renderNow());
     this.client.on("statusChanged", this.onStateChanged);
     this.client.on("directStateChanged", this.onStateChanged);
     this.renderNow();
@@ -112,6 +116,8 @@ export class ObsSceneTransitionKeyInstanceController {
 
   public disappear(): void {
     this.visible = false;
+    this.offLanguage();
+    this.offLanguage = () => {};
     this.rateLimiter.dispose();
     this.client.off("statusChanged", this.onStateChanged);
     this.client.off("directStateChanged", this.onStateChanged);
@@ -236,6 +242,8 @@ export class ObsSceneTransitionKeyAction extends SingletonAction<ObsSceneTransit
     }
     const key = ev.action;
     const settings = migrateScenePresetSettings(ev.payload.settings);
+    // Stream Deck can send willAppear twice for one context: the first controller stops first.
+    this.instances.get(key.id)?.disappear();
     const controller = new ObsSceneTransitionKeyInstanceController(
       this.client,
       {

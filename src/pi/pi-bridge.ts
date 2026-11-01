@@ -14,7 +14,8 @@ import { FadesterClient, FadesterVendorError } from "../obs/fadester-client.js";
 import { FadesterStore } from "../state/fadester-store.js";
 import { errorText, ownText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
 import { statusCellReason, statusSentence } from "../../packages/streamdeck-fadester-shared/src/status-text.js";
-import { t, translate } from "../i18n/strings.js";
+import { currentLanguage, t, translate } from "../i18n/strings.js";
+import type { LanguageState } from "../i18n/language-choice.js";
 import {
   DEFAULT_GLOBAL_SETTINGS,
   FadesterGlobalSettings
@@ -55,6 +56,8 @@ export interface PiStatePayload {
   capabilities: { catalog: boolean; resetFx: boolean; fxSlots: boolean };
   slots: PiSlot[];
   lastErrorComment: string;
+  /** The Language setting and the language the deck draws in (PLAN.md 11.1). */
+  language: LanguageState;
 }
 
 export type PiSlot = Pick<
@@ -101,6 +104,8 @@ export interface PiTransport {
   sendToPropertyInspector(payload: Record<string, unknown>): void;
   /** Persists shared settings in Stream Deck. */
   persistGlobalSettings(settings: FadesterGlobalSettings): Promise<void>;
+  /** The Language setting and the language the deck draws in (PLAN.md 11.1). */
+  getLanguage?(): LanguageState;
 }
 
 const SET_SLOT_STRING_FIELDS = [
@@ -260,7 +265,8 @@ export class PropertyInspectorBridge {
         available: s.available,
         reason: s.reason
       })),
-      lastErrorComment: this.store.getLastErrorComment(translate)
+      lastErrorComment: this.store.getLastErrorComment(translate),
+      language: this.transport.getLanguage?.() ?? { choice: "auto", resolved: currentLanguage() }
     };
   }
 

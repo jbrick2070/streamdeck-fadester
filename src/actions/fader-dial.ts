@@ -22,7 +22,7 @@ import {
 import { CellRateLimiter } from "../gfx/cell-rate-limiter.js";
 import { ThumbnailFetcher } from "../gfx/thumbnail-fetcher.js";
 import { renderDialCellSvg, toSvgDataUri } from "../gfx/svg-renderer.js";
-import { t, translate } from "../i18n/strings.js";
+import { onLanguageChanged, t, translate } from "../i18n/strings.js";
 import {
   computeDialDelta,
   DIAL_HOLD_THRESHOLD_MS,
@@ -49,6 +49,8 @@ export class FaderDialInstanceController {
   private holdingForLongPress = false;
   private longPressFired = false;
   private visible = false;
+  /** Unsubscribes this control from language changes (PLAN.md 11.1). */
+  private offLanguage: () => void = () => {};
 
   private readonly onStoreChanged = (): void => {
     this.syncThumbnailsAndRender();
@@ -87,6 +89,8 @@ export class FaderDialInstanceController {
       this.settings = this.mergeSettings(settings);
     }
     this.visible = true;
+    this.offLanguage();
+    this.offLanguage = onLanguageChanged(() => this.renderNow());
     this.store.on("changed", this.onStoreChanged);
     this.store.on("scenesChanged", this.onStoreChanged);
     this.store.on("slotValueChanged", this.onSlotValueChanged);
@@ -95,6 +99,8 @@ export class FaderDialInstanceController {
 
   public disappear(): void {
     this.visible = false;
+    this.offLanguage();
+    this.offLanguage = () => {};
     this.clearHoldTimer();
     this.holdingForLongPress = false;
     this.thumbnailFetcher.stop();
@@ -386,6 +392,8 @@ export class FaderDialAction extends SingletonAction<FaderDialSettings> {
     }
     this.store.getClient().ensureStarted();
     const dialAction = ev.action;
+    // Stream Deck can send willAppear twice for one context: the first controller stops first.
+    this.instances.get(dialAction.id)?.disappear();
     const ctrl = new FaderDialInstanceController(
       this.store,
       {

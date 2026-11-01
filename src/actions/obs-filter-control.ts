@@ -26,7 +26,7 @@ import { DirectKeyIcon, renderDirectKeySvg, renderFilterDialSvg, toSvgDataUri } 
 import { computeDialDelta } from "./dial-math.js";
 import { statusCellReason } from "../../packages/streamdeck-fadester-shared/src/status-text.js";
 import { LocalText, errorLocalText, ownText, wordText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
-import { StringKey, formatNumber, t, translate } from "../i18n/strings.js";
+import { StringKey, formatNumber, onLanguageChanged, t, translate } from "../i18n/strings.js";
 
 interface FilterSink {
   render(svg: string): Promise<void>;
@@ -53,6 +53,8 @@ export function filterSettingName(kind: string, setting: string): string {
 export class ObsFilterInstanceController {
   private settings: NormalizedObsFilterSettings;
   private visible = false;
+  /** Unsubscribes this control from language changes (PLAN.md 11.1). */
+  private offLanguage: () => void = () => {};
   private releaseWatch: () => void = () => {};
   private readonly limiter: CellRateLimiter<string>;
   private lastError: LocalText | null = null;
@@ -87,6 +89,8 @@ export class ObsFilterInstanceController {
     if (this.visible) this.disappear();
     if (settings) this.settings = normalizeObsFilterSettings(settings);
     this.visible = true;
+    this.offLanguage();
+    this.offLanguage = onLanguageChanged(() => this.render());
     this.filters.on("changed", this.onChanged);
     this.filters.client.on("statusChanged", this.onStatusChanged);
     this.releaseWatch = this.filters.watch(this.target());
@@ -95,6 +99,8 @@ export class ObsFilterInstanceController {
 
   public disappear(): void {
     this.visible = false;
+    this.offLanguage();
+    this.offLanguage = () => {};
     // Glides finish their return when their page is hidden.
     this.finishDrop();
     this.releaseWatch();

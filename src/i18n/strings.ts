@@ -266,10 +266,31 @@ export type StringKey = keyof typeof EN;
 /** Stream Deck's languages (`supportedLanguages`, @elgato/streamdeck 3.0.3). */
 export const STREAM_DECK_LANGUAGES = ["en", "de", "es", "fr", "ja", "ko", "zh_CN", "zh_TW"] as const;
 
+/**
+ * The languages the plugin's own Language setting offers: Stream Deck's and
+ * Dutch, which the app cannot select (PLAN.md 11, R-LANG-1). A fixed choice
+ * must be one of these exactly.
+ */
+export const PLUGIN_LANGUAGES = [...STREAM_DECK_LANGUAGES, "nl"] as const;
+
+export type PluginLanguage = (typeof PLUGIN_LANGUAGES)[number];
+
 export type LanguageTable = Readonly<Record<string, unknown>>;
 
 let activeLanguage = "en";
 let activeTable: LanguageTable = {};
+const languageListeners = new Set<(language: string) => void>();
+
+/**
+ * Calls `listener` after each change of the active language's code (not when
+ * the same code is set again). Returns the unsubscribe.
+ */
+export function onLanguageChanged(listener: (language: string) => void): () => void {
+  languageListeners.add(listener);
+  return () => {
+    languageListeners.delete(listener);
+  };
+}
 
 /**
  * The text for a key in a table, or English: when the table has nothing, an
@@ -304,8 +325,18 @@ export function tCount(base: "errorSceneIndexUnavailable", count: number, params
  * null); a missing or invalid table leaves English in place.
  */
 export function setLanguage(language: string, table?: LanguageTable | null): void {
+  const previous = activeLanguage;
   activeLanguage = language || "en";
   activeTable = table && typeof table === "object" ? table : {};
+  // Only a changed code redraws the deck (an equal one re-sends nothing, PLAN.md 11.1).
+  if (activeLanguage === previous) return;
+  for (const listener of [...languageListeners]) {
+    try {
+      listener(activeLanguage);
+    } catch {
+      // One control's failed redraw does not stop the others.
+    }
+  }
 }
 
 export function currentLanguage(): string {

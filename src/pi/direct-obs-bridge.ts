@@ -3,9 +3,10 @@ import { DirectObsClient, DirectObsError } from "../obs/direct-obs-client.js";
 import { resolveAutomaticInputName } from "../obs/automatic-targets.js";
 import { LayerController, LayerSettings } from "../control/layer-controller.js";
 import { READY_LAYOUTS, readyLayoutName } from "../types/layouts.js";
-import { errorText, ownText, wordText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
+import { LocalText, errorLocalText, errorText, ownText, wordText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
 import { statusCellReason, statusSentence } from "../../packages/streamdeck-fadester-shared/src/status-text.js";
-import { translate } from "../i18n/strings.js";
+import { currentLanguage, translate } from "../i18n/strings.js";
+import type { LanguageState } from "../i18n/language-choice.js";
 import { findOwner, isDeniedForFilter, tableSettings } from "../obs/filter-ranges.js";
 import { filterSettingName } from "../actions/obs-filter-control.js";
 import {
@@ -45,11 +46,41 @@ export interface InspectorFilterCatalog {
   error: string;
 }
 
+/** A filter's settings as read: identities and values; the words are added at each broadcast (PLAN.md 11.1, RL-3). */
+export type InspectorFilterIdentity = Omit<InspectorFilter, "settings"> & {
+  settings: Array<Omit<InspectorFilterSetting, "label">>;
+};
+
+/** A filter list as the bridge keeps it: an error as a text to word, not words. */
+interface StoredFilterCatalog {
+  filters: InspectorFilterIdentity[];
+  error: LocalText | null;
+}
+
+/** Adds the deck's words for each setting, in the active language. */
+export function labelInspectorFilters(filters: readonly InspectorFilterIdentity[]): InspectorFilter[] {
+  return filters.map((filter) => ({
+    ...filter,
+    settings: filter.settings.map(({ setting, value, table, owner }) => ({
+      setting,
+      label: filterSettingName(filter.filterKind, setting),
+      value,
+      table,
+      ...(owner !== undefined ? { owner } : {})
+    }))
+  }));
+}
+
 /**
  * The filters on one source with the settings the deck may write: numbers only,
  * never a denied one, the range table's first (PLAN.md 10.5). Read by UUID.
  */
 export async function readInspectorFilters(client: DirectObsClient, sourceUuid: string): Promise<InspectorFilter[]> {
+  return labelInspectorFilters(await readInspectorFilterIdentities(client, sourceUuid));
+}
+
+/** The filters of `readInspectorFilters` without the words (what the bridge keeps). */
+export async function readInspectorFilterIdentities(client: DirectObsClient, sourceUuid: string): Promise<InspectorFilterIdentity[]> {
   const list = await client.getSourceFilterList(sourceUuid);
   const defaults: Record<string, Record<string, unknown>> = {};
   for (const kind of new Set(list.map((filter) => filter.filterKind))) {
@@ -66,11 +97,10 @@ export async function readInspectorFilters(client: DirectObsClient, sourceUuid: 
     const others = Object.keys(merged).filter((setting) => !table.includes(setting) && !isDeniedForFilter(filter.filterKind, setting, merged) &&
       typeof merged[setting] === "number" && Number.isFinite(merged[setting])).sort();
     // A shader with very many uniforms: the first 200 are offered (the table's always among them).
-    const settings = [...table, ...others].slice(0, 200).map((setting): InspectorFilterSetting => {
+    const settings = [...table, ...others].slice(0, 200).map((setting): Omit<InspectorFilterSetting, "label"> => {
       const owner = findOwner(list, defaults, { filterName: filter.filterName, setting });
       return {
         setting,
-        label: filterSettingName(filter.filterKind, setting),
         value: merged[setting] as number,
         table: table.includes(setting),
         ...(owner ? { owner: owner.kind === "modulator" ? owner.filterName : "" } : {})
@@ -85,6 +115,8 @@ export interface DirectPiTransport {
   persistGlobalSettings(settings: FadesterGlobalSettings): Promise<void>;
   getDeviceType?(): number | undefined;
   activateLayout?(slug: string): Promise<void>;
+  /** The Language setting and the language the deck draws in (PLAN.md 11.1). */
+  getLanguage?(): LanguageState;
 }
 
 /**
@@ -94,7 +126,7 @@ export interface DirectPiTransport {
 export class DirectObsPropertyInspectorBridge {
   private connectionQueue: Promise<void> = Promise.resolve();
   /** The filters of the sources an OBS Filter inspector asked for, by source UUID (the newest few). */
-  private readonly filterCatalogs = new Map<string, InspectorFilterCatalog>();
+  private readonly filterCatalogs = new Map<string, StoredFilterCatalog>();
   /**
    * Counts connection resets: the inspector asks for its filters again when it changes (a reconnect may keep
    * the status "connected"), and a list read across a reset is dropped.
@@ -140,12 +172,15 @@ export class DirectObsPropertyInspectorBridge {
       mediaCapability: this.client.getMediaCapability(),
       automaticInputs: Object.fromEntries(["__audio_main__", "__audio_mic__", "__audio_aux__", "__audio_input_2__"]
         .map((target) => [target, resolveAutomaticInputName(target, audioInputs)])),
-      filterCatalog: Object.fromEntries(this.filterCatalogs),
+      // Worded now, so a list read before a language change reads in the new language.
+      filterCatalog: Object.fromEntries([...this.filterCatalogs].map(([uuid, entry]): [string, InspectorFilterCatalog] =>
+        [uuid, { filters: labelInspectorFilters(entry.filters), error: wordText(entry.error, translate) }])),
       filterEpoch: this.filterEpoch,
       layerScenes: Object.fromEntries(Object.entries(this.layers?.getCatalog() ?? {}).map(([name, scene]) =>
         [name, { ...scene, error: wordText(scene.error, translate) }])),
       layouts: READY_LAYOUTS.filter((layout) => layout.deviceType === this.transport.getDeviceType?.())
-        .map((layout) => ({ ...layout, name: readyLayoutName(layout) }))
+        .map((layout) => ({ ...layout, name: readyLayoutName(layout) })),
+      language: this.transport.getLanguage?.() ?? { choice: "auto", resolved: currentLanguage() }
     });
   }
 
@@ -180,11 +215,11 @@ export class DirectObsPropertyInspectorBridge {
         const sourceUuid = typeof msg.sourceUuid === "string" ? msg.sourceUuid : "";
         const epoch = this.filterEpoch;
         if (sourceUuid) {
-          let entry: InspectorFilterCatalog;
+          let entry: StoredFilterCatalog;
           try {
-            entry = { filters: await readInspectorFilters(this.client, sourceUuid), error: "" };
+            entry = { filters: await readInspectorFilterIdentities(this.client, sourceUuid), error: null };
           } catch (error) {
-            entry = { filters: [], error: errorText(error, ownText("errorFilterChoose"), translate) };
+            entry = { filters: [], error: errorLocalText(error, ownText("errorFilterChoose")) };
           }
           // Read under a connection that has since been reset: stale, and the page asks again.
           if (epoch !== this.filterEpoch) {

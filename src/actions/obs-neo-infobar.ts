@@ -2,7 +2,7 @@
 import { action, SingletonAction, WillAppearEvent, WillDisappearEvent } from "@elgato/streamdeck";
 import { CellRateLimiter } from "../gfx/cell-rate-limiter.js";
 import { DirectObsClient, DirectObsCatalog } from "../obs/direct-obs-client.js";
-import { t } from "../i18n/strings.js";
+import { onLanguageChanged, t } from "../i18n/strings.js";
 
 export interface NeoInfobarFeedback {
   status: string;
@@ -33,6 +33,8 @@ interface InfobarSink {
 
 export class ObsNeoInfobarInstanceController {
   private visible = false;
+  /** Unsubscribes this control from language changes (PLAN.md 11.1). */
+  private offLanguage: () => void = () => {};
   private readonly limiter: CellRateLimiter<NeoInfobarFeedback>;
   private readonly onStateChanged = (): void => this.render();
 
@@ -43,6 +45,8 @@ export class ObsNeoInfobarInstanceController {
   public appear(): void {
     if (this.visible) return;
     this.visible = true;
+    this.offLanguage();
+    this.offLanguage = onLanguageChanged(() => this.render());
     this.client.on("statusChanged", this.onStateChanged);
     this.client.on("directStateChanged", this.onStateChanged);
     this.render();
@@ -50,6 +54,8 @@ export class ObsNeoInfobarInstanceController {
 
   public disappear(): void {
     this.visible = false;
+    this.offLanguage();
+    this.offLanguage = () => {};
     this.client.off("statusChanged", this.onStateChanged);
     this.client.off("directStateChanged", this.onStateChanged);
     this.limiter.dispose();

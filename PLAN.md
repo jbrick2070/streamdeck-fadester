@@ -1405,6 +1405,25 @@ and OBS page (D-L7), better Chinese alias handling in VJster's Automatic.
   10b; the hygiene test `tests/language-plan-docs.test.ts`. The plan's code facts spot-checked at `82f94c4`
   (`STREAM_DECK_LANGUAGES` at `strings.ts:267`, the last mutations M-10.9o and M-V-89, `UserTitleEnabled: false` on
   all 17 actions); no difference from the plan found. No mutation is listed for L.0.
+- *L.1 (2026-11-01):* `PLUGIN_LANGUAGES` and `onLanguageChanged` in `src/i18n/strings.ts` (`setLanguage` notifies
+  only on a changed code); `src/settings/global-store.ts`; `src/i18n/language-choice.ts`; `plugin.ts` as wiring
+  (`persistSharedConnection` saves through `patch(connectionChange(...))`, `onDidReceiveGlobalSettings` replaces the
+  store's snapshot and re-applies the stored choice); all ten actions subscribe in `appear()`, unsubscribe in
+  `disappear()` and stop an existing controller on a second willAppear; the direct bridge keeps filter identities and
+  `LocalText` errors and words them at each broadcast; both broadcasts carry `language`. Tests in
+  `tests/language-choice.test.ts` (shared case table `tests/helpers/language-choice-cases.ts`, fixture `nl` in a temp
+  folder); M-11.1a..g in `scripts/run-mutation-checks.ts`. Where the code led: `ready` is a promise that `start()`
+  resolves after its read (the read needs the connection, so it cannot be made at construction); a `setLanguageChoice`
+  with a value the pages do not offer saves nothing and only broadcasts, so the page shows what holds; without a
+  `getLanguage` the broadcasts say `{ choice: "auto", resolved: <current> }`. "`npm run validate` passes with `nl.json`
+  present" is checked by hand on a temp copy of the plugin folder with the fixture `nl.json` (the real file comes in
+  L.4), not as a vitest test.
+  After the step's QA: `ready` also resolves when Stream Deck sends the settings (`replace()`) and when the start-up
+  read has not answered after `START_READ_TIMEOUT_MS` (5 s), so a read that never answers cannot hold the saves; a
+  late answer replaces nothing the store wrote or was sent. The pages' connection saver is `connectionSaver()` in
+  `global-store.ts`, which `plugin.ts` uses for both bridges; a source test checks that `plugin.ts` writes global
+  settings only through the store's port. A connection save never removes a key (undefined keys are skipped; the
+  pages send all three). M-11.1h..k cover these.
 
 ### 11.6 Decisions (approved by the operator 2026-11-01, every one at its recommended default)
 

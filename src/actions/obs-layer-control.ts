@@ -10,7 +10,7 @@ import { CellRateLimiter } from "../gfx/cell-rate-limiter.js";
 import { PLAYLISTER_PALETTE as P } from "../../packages/streamdeck-fadester-shared/src/palette.js";
 import { LocalText, errorLocalText, ownText, wordText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
 import { statusCellReason } from "../../packages/streamdeck-fadester-shared/src/status-text.js";
-import { StringKey, t, translate } from "../i18n/strings.js";
+import { StringKey, onLanguageChanged, t, translate } from "../i18n/strings.js";
 import { customCaption } from "../obs/preset-captions.js";
 
 /** The key title of each operation, by key. */
@@ -30,6 +30,8 @@ export class ObsLayerInstanceController {
   private readonly limiter: CellRateLimiter<string>;
   private lastError: LocalText | null = null;
   private visible = false;
+  /** Unsubscribes this control from language changes (PLAN.md 11.1). */
+  private offLanguage: () => void = () => {};
   private readonly onChanged = (): void => {
     if (this.layers.client.isConnected() && !this.layers.getScene(this.settings).error) this.lastError = null;
     this.render();
@@ -47,6 +49,8 @@ export class ObsLayerInstanceController {
 
   public appear(): void {
     this.visible = true;
+    this.offLanguage();
+    this.offLanguage = onLanguageChanged(() => this.render());
     this.layers.on("changed", this.onChanged);
     this.layers.client.on("statusChanged", this.onChanged);
     this.layers.client.on("directStateChanged", this.onChanged);
@@ -56,6 +60,8 @@ export class ObsLayerInstanceController {
 
   public disappear(): void {
     this.visible = false;
+    this.offLanguage();
+    this.offLanguage = () => {};
     this.unwatch?.();
     this.layers.off("changed", this.onChanged);
     this.layers.client.off("statusChanged", this.onChanged);
@@ -174,6 +180,8 @@ export class ObsLayerControlAction extends SingletonAction<LayerSettings> {
     const control = ev.action;
     const dial = control.isDial();
     if (!dial && !control.isKey()) return;
+    // Stream Deck can send willAppear twice for one context: the first controller stops first.
+    this.instances.get(control.id)?.disappear();
     const controller = new ObsLayerInstanceController(this.layers, {
       render: (svg) => control.isDial() ? control.setFeedback({ canvas: toSvgDataUri(svg) }) :
         control.isKey() ? control.setImage(toSvgDataUri(svg)) : Promise.resolve(),

@@ -829,6 +829,117 @@ const MUTATIONS: MutationCheck[] = [
     target: 'const title = input.title || t(latched ? "vpPanicSent" : "vpPanic");',
     mutated: 'const title = input.title || (latched ? "PANIC SENT" : "PANIC");',
     testFile: "tests/visual-panic.test.ts"
+  },
+  {
+    id: "M-11.1a",
+    step: "Step L.1 (the Language choice on the deck)",
+    description:
+      "Resolve every choice as Automatic (the stored choice ignored), and verify language-choice.test.ts fails",
+    filePath: resolve(ROOT, "src/i18n/language-choice.ts"),
+    target: 'return choice === "auto" ? normalizeLanguage(appLanguage) : choice;',
+    mutated: "return normalizeLanguage(appLanguage);",
+    testFile: "tests/language-choice.test.ts"
+  },
+  {
+    id: "M-11.1b",
+    step: "Step L.1 (the Language choice on the deck)",
+    description:
+      "Tell no control of a language change (no redraw), and verify language-choice.test.ts fails",
+    filePath: resolve(ROOT, "src/i18n/strings.ts"),
+    target: "for (const listener of [...languageListeners]) {",
+    mutated: "for (const listener of [] as Array<(language: string) => void>) {",
+    testFile: "tests/language-choice.test.ts"
+  },
+  {
+    id: "M-11.1c",
+    step: "Step L.1 (the Language choice on the deck)",
+    description:
+      "Write a save's own keys alone (a connection save drops the language and the rest), and verify language-choice.test.ts fails",
+    filePath: resolve(ROOT, "src/settings/global-store.ts"),
+    target: "const next = { ...this.current, ...change };",
+    mutated: "const next = { ...change };",
+    testFile: "tests/language-choice.test.ts"
+  },
+  {
+    id: "M-11.1d",
+    step: "Step L.1 (the Language choice on the deck)",
+    description:
+      "Leave the known settings as they were after the store's own write, and verify language-choice.test.ts fails",
+    filePath: resolve(ROOT, "src/settings/global-store.ts"),
+    target: "      this.current = next;\n",
+    mutated: "",
+    testFile: "tests/language-choice.test.ts"
+  },
+  {
+    id: "M-11.1e",
+    step: "Step L.1 (the Language choice on the deck)",
+    description:
+      "Skip the stored choice at start-up, and verify language-choice.test.ts fails",
+    filePath: resolve(ROOT, "src/i18n/language-choice.ts"),
+    target: "    await this.options.store.ready;\n    this.applyStored(this.options.store.snapshot().language);",
+    mutated: "    await this.options.store.ready;",
+    testFile: "tests/language-choice.test.ts"
+  },
+  {
+    id: "M-11.1f",
+    step: "Step L.1 (the Language choice on the deck)",
+    description:
+      "Save a setLanguageChoice pick without applying it, and verify language-choice.test.ts fails",
+    filePath: resolve(ROOT, "src/i18n/language-choice.ts"),
+    target: "    this.apply(choice);\n    this.options.broadcast();",
+    mutated: "    this.options.broadcast();",
+    testFile: "tests/language-choice.test.ts"
+  },
+  {
+    id: "M-11.1g",
+    step: "Step L.1 (the Language choice on the deck)",
+    description:
+      "Tell the controls on every setLanguage, the same code too (Automatic redraws), and verify language-choice.test.ts fails",
+    filePath: resolve(ROOT, "src/i18n/strings.ts"),
+    target: "if (activeLanguage === previous) return;",
+    mutated: "if (false) return;",
+    testFile: "tests/language-choice.test.ts"
+  },
+  {
+    id: "M-11.1h",
+    step: "Step L.1 (the Language choice on the deck)",
+    description:
+      "Keep saves waiting for the start-up read when Stream Deck sends the settings itself, and verify language-choice.test.ts fails",
+    filePath: resolve(ROOT, "src/settings/global-store.ts"),
+    target: "    this.current = copyOf(settings);\n    // A whole settings object is known now: saves need not wait for the start-up read.\n    this.resolveReady();\n",
+    mutated: "    this.current = copyOf(settings);\n",
+    testFile: "tests/language-choice.test.ts"
+  },
+  {
+    id: "M-11.1i",
+    step: "Step L.1 (the Language choice on the deck)",
+    description:
+      "Let the start-up read hold the saves for good (no timeout), and verify language-choice.test.ts fails",
+    filePath: resolve(ROOT, "src/settings/global-store.ts"),
+    target: "await Promise.race([read, timedOut]);",
+    mutated: "await read;",
+    testFile: "tests/language-choice.test.ts"
+  },
+  {
+    id: "M-11.1j",
+    step: "Step L.1 (the Language choice on the deck)",
+    description:
+      "Let a late start-up read replace what the store wrote, and verify language-choice.test.ts fails",
+    filePath: resolve(ROOT, "src/settings/global-store.ts"),
+    target: "if (!this.replaced && !this.written) this.current = copyOf(stored);",
+    mutated: "if (!this.replaced) this.current = copyOf(stored);",
+    testFile: "tests/language-choice.test.ts"
+  },
+  {
+    id: "M-11.1k",
+    step: "Step L.1 (the Language choice on the deck)",
+    description:
+      "Save the pages' connections with a whole-object write in plugin.ts (the lost-key bug), and verify language-choice.test.ts fails",
+    filePath: resolve(ROOT, "src/plugin.ts"),
+    target: "const persistSharedConnection = connectionSaver(settingsStore, [enhancedClient, directClient]);",
+    mutated:
+      "const persistSharedConnection = async (settings: FadesterGlobalSettings): Promise<void> => {\n  await streamDeck.settings.setGlobalSettings(settings);\n  enhancedClient.updateSettings(settings);\n  directClient.updateSettings(settings);\n};",
+    testFile: "tests/language-choice.test.ts"
   }
 ];
 

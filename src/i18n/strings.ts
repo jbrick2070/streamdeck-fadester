@@ -38,6 +38,8 @@ const PLUGIN_EN = {
   errorMediaPending: "Play or pause is still pending.",
   errorMediaChanging: "Playlister is opening media; try again.",
   errorMediaAmbiguous: "Playlister state is unclear; press Stop first.",
+  // OBS Filter controls (PLAN.md 10)
+  errorFilterChoose: "Choose a source and a filter first.",
   // Playlister transport key (operation words are the titles; the state words the subtitle)
   plOpPrevious: "Previous",
   plOpNext: "Next",

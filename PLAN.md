@@ -928,6 +928,16 @@ ships unbound.
    answers 600 for a missing filter", "lists hotkeys it knows, records a trigger and answers 600 for an unknown name",
    "carries scene and group UUIDs in the catalog and drops them on a collection change". Mutations on the client:
    *M-10.1a* send `overlay: false`; *M-10.1b* address filters by `sourceName`.
+   *As built (2026-11-01):* the six requests are public methods of `DirectObsClient`; every filter request refuses an
+   empty source or filter name (`errorFilterChoose`, in all eight files) and a collection change before sending; a
+   failed defaults read is not cached. One `applySceneList` keeps `scenes` and `sceneDetails` in the same order
+   wherever a scene list arrives (the catalog, a scene press, the scene cycle, `SceneListChanged`; a scene the list
+   gives without a UUID keeps the known one). Groups: `GetGroupList` on every catalog refresh, then the scenes' item
+   lists in parallel only when a group exists, abandoned when a newer refresh starts. The fake answers an unknown
+   filter kind with 607 (InvalidFilterKind), reads a filter's state before its delay (a delayed reply is stale), logs
+   every filter request's payload (`filterRequestLog`) and every applied write with its time, counts writes in flight
+   per filter, and answers `GetSceneItemList` only while it holds a group (with none, a test's own handler answers,
+   as before; it is not in `availableRequests`).
 3. **Step 10.2 -- Filter controller.** `src/obs/filter-ranges.ts`: the range table (Shader Filter mix and reactivity
    0..100, Color Correction `opacity` 0..1, Audio Modulator `slot_N_amount_pct` only with an explicit range 0..100,
    -100..0 or -100..100), the deck's deny list (`preset_shader`, `shader_file_path`, `shader_text`,

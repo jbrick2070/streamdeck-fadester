@@ -273,6 +273,7 @@
     "layoutModeEither": "[모든 모드] {name}",
     "layoutModeStudio": "[스튜디오 모드] {name}",
     "layoutModeRegular": "[일반 모드] {name}",
+    "errorFilterChoose": "먼저 소스와 필터를 선택하세요.",
     "pi": {
       "scopeThisKey": "이 키",
       "scopeThisDial": "이 다이얼",

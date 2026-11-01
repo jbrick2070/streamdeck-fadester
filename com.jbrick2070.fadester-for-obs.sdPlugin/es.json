@@ -273,6 +273,7 @@
     "layoutModeEither": "[Cualquier modo] {name}",
     "layoutModeStudio": "[Modo Estudio] {name}",
     "layoutModeRegular": "[Modo normal] {name}",
+    "errorFilterChoose": "Elige primero una fuente y un filtro.",
     "pi": {
       "scopeThisKey": "esta tecla",
       "scopeThisDial": "este dial",

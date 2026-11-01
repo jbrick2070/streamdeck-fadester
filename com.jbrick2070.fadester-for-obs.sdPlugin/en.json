@@ -273,6 +273,7 @@
     "layoutModeEither": "[Either Mode] {name}",
     "layoutModeStudio": "[Studio Mode] {name}",
     "layoutModeRegular": "[Regular Mode] {name}",
+    "errorFilterChoose": "Choose a source and a filter first.",
     "pi": {
       "scopeThisKey": "this key",
       "scopeThisDial": "this dial",

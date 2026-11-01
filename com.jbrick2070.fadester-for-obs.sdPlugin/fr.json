@@ -273,6 +273,7 @@
     "layoutModeEither": "[Les deux modes] {name}",
     "layoutModeStudio": "[Mode studio] {name}",
     "layoutModeRegular": "[Mode normal] {name}",
+    "errorFilterChoose": "Choisissez d’abord une source et un filtre.",
     "pi": {
       "scopeThisKey": "cette touche",
       "scopeThisDial": "cette molette",

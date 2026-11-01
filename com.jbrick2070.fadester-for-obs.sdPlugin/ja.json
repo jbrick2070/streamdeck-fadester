@@ -273,6 +273,7 @@
     "layoutModeEither": "[どちらのモードでも] {name}",
     "layoutModeStudio": "[スタジオモード] {name}",
     "layoutModeRegular": "[通常モード] {name}",
+    "errorFilterChoose": "先にソースとフィルタを選んでください。",
     "pi": {
       "scopeThisKey": "このキー",
       "scopeThisDial": "このダイヤル",

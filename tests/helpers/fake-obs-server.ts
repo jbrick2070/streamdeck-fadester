@@ -27,6 +27,10 @@ export interface FakeObsServerOptions {
   /** Delays applied to `TriggerMediaInputAction` and `GetMediaInputStatus` for in-flight tests. */
   mediaActionDelayMs?: number;
   mediaStatusDelayMs?: number;
+  /** Delays applied to filter writes and reads, and to `TriggerHotkeyByName`. */
+  filterWriteDelayMs?: number;
+  filterReadDelayMs?: number;
+  hotkeyDelayMs?: number;
 }
 
 /** An OBS input as `GetInputList` reports it (obs-websocket 5.6.3). */
@@ -70,6 +74,70 @@ export interface FakeMediaInput {
   shuffleHistory: number;
 }
 
+/**
+ * A filter on a scene, group or input. `filterSettings` holds only the values
+ * set on it, as OBS reports them (`GetSourceFilter` leaves the defaults out).
+ */
+export interface FakeObsFilter {
+  filterName: string;
+  filterKind: string;
+  filterEnabled: boolean;
+  filterSettings: Record<string, unknown>;
+}
+
+/** A group in a scene: `GetGroupList` names it, the scene's item list carries its UUID. */
+export interface FakeObsGroup {
+  groupName: string;
+  groupUuid: string;
+  sceneName: string;
+}
+
+export const VS_SHADER_KIND = "visual_sidechain_shader_filter";
+export const VS_MODULATOR_KIND = "visual_sidechain_modulator_filter";
+export const COLOR_FILTER_KIND = "color_filter_v2";
+
+function modulatorDefaults(): Record<string, unknown> {
+  const defaults: Record<string, unknown> = {};
+  for (let n = 1; n <= 8; n++) {
+    Object.assign(defaults, {
+      [`slot_${n}_enabled`]: n === 1, [`slot_${n}_target_filter`]: "", [`slot_${n}_target_setting`]: "",
+      [`slot_${n}_seeded_target`]: "", [`slot_${n}_signal`]: 0, [`slot_${n}_custom_low_hz`]: 60,
+      [`slot_${n}_custom_high_hz`]: 120, [`slot_${n}_custom_mode`]: 1, [`slot_${n}_amount_pct`]: 100,
+      [`slot_${n}_depth_fader`]: -1, [`slot_${n}_min_value`]: 0, [`slot_${n}_max_value`]: 1,
+      [`slot_${n}_invert`]: false, [`slot_${n}_rate_divider`]: 1
+    });
+  }
+  return defaults;
+}
+
+/**
+ * Each kind's static defaults (`GetSourceFilterDefaultSettings`), as the
+ * filters' get_defaults callbacks set them: Visual Sidechain's Shader Filter
+ * (shader-filter.c; its uniforms take per-instance defaults, so none is here)
+ * and Audio Modulator (modulator-filter.c, slot 1 enabled), OBS's Color
+ * Correction (color-correction-filter.c, opacity a 0..1 float).
+ */
+export const FAKE_FILTER_DEFAULTS: Readonly<Record<string, Readonly<Record<string, unknown>>>> = {
+  [VS_SHADER_KIND]: {
+    preset_shader: "fft-spectral-aura.shader", shader_file_path: "", override_entire_effect: false,
+    custom_low_hz: 60, custom_high_hz: 150, custom_mode: 0, vs_effect_mix_pct: 100, vs_audio_reactivity_pct: 100,
+    mix_fader_slot: -1, reactivity_fader_slot: -1,
+    param_fader_1_target: "", param_fader_1_slot: -1, param_fader_1_min: 0, param_fader_1_max: 1, param_fader_1_seeded: "",
+    param_fader_2_target: "", param_fader_2_slot: -1, param_fader_2_min: 0, param_fader_2_max: 1, param_fader_2_seeded: ""
+  },
+  [VS_MODULATOR_KIND]: modulatorDefaults(),
+  [COLOR_FILTER_KIND]: {
+    gamma: 0, contrast: 0, brightness: 0, saturation: 0, hue_shift: 0, opacity: 1,
+    color_multiply: 0x00ffffff, color_add: 0
+  }
+};
+
+/** The frontend hotkeys the fake knows by name (Visual Sidechain's two among them). */
+export const FAKE_HOTKEY_NAMES = [
+  "OBSBasic.StartStreaming", "OBSBasic.StopStreaming", "OBSBasic.Transition",
+  "visual_sidechain_panic", "visual_sidechain_restore"
+];
+
 /** Every request type `handleObsRequest` answers; `GetVersion.availableRequests` by default. */
 const FAKE_REQUEST_TYPES = [
   "GetVersion", "GetStudioModeEnabled", "SetStudioModeEnabled", "GetSceneList", "GetInputList",
@@ -77,7 +145,9 @@ const FAKE_REQUEST_TYPES = [
   "SetSceneSceneTransitionOverride", "GetCurrentProgramScene", "GetCurrentPreviewScene", "GetInputVolume",
   "SetInputVolume", "SetTBarPosition", "SetCurrentPreviewScene", "SetCurrentProgramScene",
   "SetCurrentSceneTransition", "TriggerStudioModeTransition", "GetSourceScreenshot", "CallVendorRequest",
-  "GetMediaInputStatus", "TriggerMediaInputAction"
+  "GetMediaInputStatus", "TriggerMediaInputAction", "GetGroupList", "GetSourceFilterList",
+  "GetSourceFilter", "GetSourceFilterDefaultSettings", "SetSourceFilterSettings", "SetSourceFilterEnabled",
+  "GetHotkeyList", "TriggerHotkeyByName"
 ];
 
 interface FakeProfileMeta {
@@ -505,6 +575,28 @@ export class FakeObsServer {
   public mediaStatusRequests: Array<Record<string, unknown>> = [];
   /** Every `TriggerMediaInputAction` received, the ones `mediaFailNext` refused included. */
   public mediaActionAttempts = 0;
+  /** Filters by source UUID (scenes, groups and inputs), in OBS's order. */
+  public readonly sourceFilters = new Map<string, FakeObsFilter[]>();
+  /** Groups and the scene each sits in; with none the fake leaves GetSceneItemList to a test's own handler. */
+  public readonly groups: FakeObsGroup[] = [];
+  private readonly sceneUuids = new Map<string, string>();
+  public hotkeyNames: string[] = [...FAKE_HOTKEY_NAMES];
+  /** Every `TriggerHotkeyByName` answered with success, in order. */
+  public hotkeyTriggerLog: Array<{ hotkeyName: string; at: number }> = [];
+  /** Every `TriggerHotkeyByName` received, unknown names and refused ones included. */
+  public hotkeyTriggerAttempts = 0;
+  /** Fails the next `TriggerHotkeyByName` with this OBS comment (code 500), then clears itself. */
+  public hotkeyFailNext = "";
+  public hotkeyDelayMs: number;
+  public filterWriteDelayMs: number;
+  public filterReadDelayMs: number;
+  /** Every filter request's payload as received (reads and writes, by UUID or by name). */
+  public filterRequestLog: Array<{ requestType: string; requestData: Record<string, unknown> }> = [];
+  /** Every applied `SetSourceFilterSettings`, with the time it landed. */
+  public filterWriteLog: Array<{ at: number; sourceUuid: string; filterName: string; filterSettings: Record<string, unknown>; overlay: boolean }> = [];
+  /** The most `SetSourceFilterSettings` in flight at once for one filter. */
+  public maxFilterWritesInFlight = 0;
+  private readonly filterWritesInFlight = new Map<string, number>();
   public screenshotCallCount = 0;
   public activeScreenshotRequests = 0;
   public maxConcurrentScreenshots = 0;
@@ -529,6 +621,9 @@ export class FakeObsServer {
     this.availableRequests = opts?.availableRequests;
     this.mediaActionDelayMs = opts?.mediaActionDelayMs ?? 0;
     this.mediaStatusDelayMs = opts?.mediaStatusDelayMs ?? 0;
+    this.filterWriteDelayMs = opts?.filterWriteDelayMs ?? 0;
+    this.filterReadDelayMs = opts?.filterReadDelayMs ?? 0;
+    this.hotkeyDelayMs = opts?.hotkeyDelayMs ?? 0;
     this.slots = createDefaultSlots(
       this.studioMode,
       supportsFxApi(this.fadesterVersion)
@@ -640,6 +735,52 @@ export class FakeObsServer {
       ...created, inputSettings: {}, defaultInputSettings: {}
     });
     return { ...created };
+  }
+
+  /** A scene's stable UUID (by name, as the audio inputs'). */
+  public sceneUuidFor(sceneName: string): string {
+    let uuid = this.sceneUuids.get(sceneName);
+    if (!uuid) {
+      uuid = `5ce0e000-0000-4000-8000-${String(this.sceneUuids.size + 1).padStart(12, "0")}`;
+      this.sceneUuids.set(sceneName, uuid);
+    }
+    return uuid;
+  }
+
+  /** A group inside a scene (no event: OBS's SceneCreated for groups is not modelled). */
+  public addGroup(groupName: string, sceneName: string): FakeObsGroup {
+    const group = { groupName, groupUuid: `9a0b0000-0000-4000-8000-${String(this.groups.length + 1).padStart(12, "0")}`, sceneName };
+    this.groups.push(group);
+    return { ...group };
+  }
+
+  /** The UUID and name of a scene, group or input, by UUID or by name, as obs-websocket resolves a source. */
+  public findSource(locator: { sourceUuid?: unknown; sourceName?: unknown }): { sourceUuid: string; sourceName: string } | undefined {
+    const sources = [
+      ...this.inputList().map((input) => ({ sourceUuid: input.inputUuid, sourceName: input.inputName })),
+      ...this.sceneNames.map((sceneName) => ({ sourceUuid: this.sceneUuidFor(sceneName), sourceName: sceneName })),
+      ...this.groups.map((group) => ({ sourceUuid: group.groupUuid, sourceName: group.groupName }))
+    ];
+    if (typeof locator.sourceUuid === "string" && locator.sourceUuid) {
+      return sources.find((source) => source.sourceUuid === locator.sourceUuid);
+    }
+    return typeof locator.sourceName === "string" ? sources.find((source) => source.sourceName === locator.sourceName) : undefined;
+  }
+
+  /** Adds a filter to a source and returns the live record, so a test can change it as OBS would. */
+  public addFilter(sourceUuid: string, filter: { filterName: string; filterKind: string; filterEnabled?: boolean; filterSettings?: Record<string, unknown> }): FakeObsFilter {
+    const created: FakeObsFilter = {
+      filterName: filter.filterName, filterKind: filter.filterKind,
+      filterEnabled: filter.filterEnabled ?? true, filterSettings: { ...filter.filterSettings }
+    };
+    const list = this.sourceFilters.get(sourceUuid) ?? [];
+    list.push(created);
+    this.sourceFilters.set(sourceUuid, list);
+    return created;
+  }
+
+  public findFilter(sourceUuid: string, filterName: string): FakeObsFilter | undefined {
+    return this.sourceFilters.get(sourceUuid)?.find((filter) => filter.filterName === filterName);
   }
 
   /** A Playlister source (`obs_playlister_source`) with the given media model. */
@@ -1111,6 +1252,7 @@ export class FakeObsServer {
         currentPreviewSceneName: this.previewSceneName,
         scenes: this.sceneNames.map((sceneName, index) => ({
           sceneName,
+          sceneUuid: this.sceneUuidFor(sceneName),
           sceneIndex: this.sceneNames.length - index - 1
         })).reverse()
       });
@@ -1121,6 +1263,136 @@ export class FakeObsServer {
       this.sendResponse(ws, requestId, requestType, true, 100, "", {
         inputs: this.inputList()
       });
+      return;
+    }
+
+    if (requestType === "GetGroupList") {
+      // obs-websocket 5.6.3 lists group names only.
+      this.sendResponse(ws, requestId, requestType, true, 100, "", { groups: this.groups.map((group) => group.groupName) });
+      return;
+    }
+
+    if (requestType === "GetSceneItemList" && this.groups.length > 0) {
+      // Scene items are modelled for groups only; without a group a test's own handler answers (as before).
+      const sceneName = String(requestData.sceneName ?? "");
+      if (!this.sceneNames.includes(sceneName)) {
+        this.sendResponse(ws, requestId, requestType, false, 600, `No source was found by the name of \`${sceneName}\`.`);
+        return;
+      }
+      this.sendResponse(ws, requestId, requestType, true, 100, "", {
+        sceneItems: this.groups.filter((group) => group.sceneName === sceneName).map((group, index) => ({
+          sceneItemId: 900 + index, sceneItemIndex: index, sourceName: group.groupName, sourceUuid: group.groupUuid,
+          isGroup: true, sceneItemEnabled: true, sceneItemBlendMode: "OBS_BLEND_NORMAL"
+        }))
+      });
+      return;
+    }
+
+    if (["GetSourceFilterList", "GetSourceFilter", "SetSourceFilterSettings", "SetSourceFilterEnabled"].includes(requestType)) {
+      this.filterRequestLog.push({ requestType, requestData: JSON.parse(JSON.stringify(requestData)) as Record<string, unknown> });
+      const source = this.findSource(requestData);
+      if (!source) {
+        this.sendResponse(ws, requestId, requestType, false, 600, typeof requestData.sourceUuid === "string"
+          ? `No source was found by the UUID of \`${requestData.sourceUuid}\`.`
+          : `No source was found by the name of \`${String(requestData.sourceName ?? "")}\`.`);
+        return;
+      }
+      const filters = this.sourceFilters.get(source.sourceUuid) ?? [];
+      if (requestType === "GetSourceFilterList") {
+        // Read before the delay, as GetSourceFilter: a delayed reply is a stale one.
+        const reply = {
+          filters: filters.map((filter, filterIndex) => ({
+            filterEnabled: filter.filterEnabled, filterIndex, filterKind: filter.filterKind,
+            filterName: filter.filterName, filterSettings: JSON.parse(JSON.stringify(filter.filterSettings))
+          }))
+        };
+        if (this.filterReadDelayMs > 0) await new Promise((r) => setTimeout(r, this.filterReadDelayMs));
+        this.sendResponse(ws, requestId, requestType, true, 100, "", reply);
+        return;
+      }
+      const filterName = String(requestData.filterName ?? "");
+      const filterIndex = filters.findIndex((filter) => filter.filterName === filterName);
+      const filter = filters[filterIndex];
+      if (!filter) {
+        this.sendResponse(ws, requestId, requestType, false, 600, `No filter was found in the source \`${source.sourceName}\` with the name \`${filterName}\`.`);
+        return;
+      }
+      if (requestType === "GetSourceFilter") {
+        // The state is read before the delay, so a delayed reply is a stale one.
+        const reply = {
+          filterEnabled: filter.filterEnabled, filterIndex, filterKind: filter.filterKind,
+          filterSettings: JSON.parse(JSON.stringify(filter.filterSettings))
+        };
+        if (this.filterReadDelayMs > 0) await new Promise((r) => setTimeout(r, this.filterReadDelayMs));
+        this.sendResponse(ws, requestId, requestType, true, 100, "", reply);
+        return;
+      }
+      if (requestType === "SetSourceFilterEnabled") {
+        if (typeof requestData.filterEnabled !== "boolean") {
+          this.sendResponse(ws, requestId, requestType, false, 400, "The request field `filterEnabled` must be a boolean.");
+          return;
+        }
+        this.directCallLog.push({ requestType, requestData });
+        filter.filterEnabled = requestData.filterEnabled;
+        this.sendResponse(ws, requestId, requestType, true, 100, "", {});
+        return;
+      }
+      const patch = requestData.filterSettings;
+      if (!patch || typeof patch !== "object" || Array.isArray(patch)) {
+        this.sendResponse(ws, requestId, requestType, false, 400, "The request field `filterSettings` must be an object.");
+        return;
+      }
+      // obs-websocket's default is overlay: true; false replaces every set value (defaults return).
+      const overlay = requestData.overlay !== false;
+      const key = `${source.sourceUuid}\u0000${filterName}`;
+      const inFlight = (this.filterWritesInFlight.get(key) ?? 0) + 1;
+      this.filterWritesInFlight.set(key, inFlight);
+      this.maxFilterWritesInFlight = Math.max(this.maxFilterWritesInFlight, inFlight);
+      try {
+        if (this.filterWriteDelayMs > 0) await new Promise((r) => setTimeout(r, this.filterWriteDelayMs));
+      } finally {
+        this.filterWritesInFlight.set(key, (this.filterWritesInFlight.get(key) ?? 1) - 1);
+      }
+      filter.filterSettings = overlay ? { ...filter.filterSettings, ...(patch as Record<string, unknown>) } : { ...(patch as Record<string, unknown>) };
+      this.directCallLog.push({ requestType, requestData });
+      this.filterWriteLog.push({ at: Date.now(), sourceUuid: source.sourceUuid, filterName, filterSettings: { ...(patch as Record<string, unknown>) }, overlay });
+      this.sendResponse(ws, requestId, requestType, true, 100, "", {});
+      return;
+    }
+
+    if (requestType === "GetSourceFilterDefaultSettings") {
+      this.filterRequestLog.push({ requestType, requestData: { ...requestData } });
+      const defaults = FAKE_FILTER_DEFAULTS[String(requestData.filterKind ?? "")];
+      if (!defaults) {
+        // obs-websocket answers InvalidFilterKind (607) for a kind no loaded plugin registers.
+        this.sendResponse(ws, requestId, requestType, false, 607, "");
+        return;
+      }
+      this.sendResponse(ws, requestId, requestType, true, 100, "", { defaultFilterSettings: { ...defaults } });
+      return;
+    }
+
+    if (requestType === "GetHotkeyList") {
+      this.sendResponse(ws, requestId, requestType, true, 100, "", { hotkeys: [...this.hotkeyNames] });
+      return;
+    }
+
+    if (requestType === "TriggerHotkeyByName") {
+      this.hotkeyTriggerAttempts++;
+      const hotkeyName = String(requestData.hotkeyName ?? "");
+      if (this.hotkeyDelayMs > 0) await new Promise((r) => setTimeout(r, this.hotkeyDelayMs));
+      if (this.hotkeyFailNext) {
+        const comment = this.hotkeyFailNext;
+        this.hotkeyFailNext = "";
+        this.sendResponse(ws, requestId, requestType, false, 500, comment);
+        return;
+      }
+      if (!this.hotkeyNames.includes(hotkeyName)) {
+        this.sendResponse(ws, requestId, requestType, false, 600, "No hotkeys were found by that name.");
+        return;
+      }
+      this.hotkeyTriggerLog.push({ hotkeyName, at: Date.now() });
+      this.sendResponse(ws, requestId, requestType, true, 100, "", {});
       return;
     }
 

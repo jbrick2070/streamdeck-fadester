@@ -273,6 +273,7 @@
     "layoutModeEither": "[任一模式] {name}",
     "layoutModeStudio": "[工作室模式] {name}",
     "layoutModeRegular": "[常规模式] {name}",
+    "errorFilterChoose": "请先选择源和滤镜。",
     "pi": {
       "scopeThisKey": "此按键",
       "scopeThisDial": "此旋钮",

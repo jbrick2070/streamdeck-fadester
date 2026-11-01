@@ -469,6 +469,26 @@ const MUTATIONS: MutationCheck[] = [
     target: "const word = t(STATE_WORDS[state.mediaState]);",
     mutated: 'const word = String(STATE_WORDS[state.mediaState]).replace("mediaState", "");',
     testFile: "tests/playlister-transport.test.ts"
+  },
+  {
+    id: "M-10.1a",
+    step: "Step 10.1 (filter writes are overlays)",
+    description:
+      "Send SetSourceFilterSettings with overlay false (every other setting returns to its default), and verify filter-requests.test.ts fails",
+    filePath: resolve(ROOT, "src/obs/direct-obs-client.ts"),
+    target: 'await this.sendObsRequest("SetSourceFilterSettings", { sourceUuid, filterName, filterSettings: { ...filterSettings }, overlay: true });',
+    mutated: 'await this.sendObsRequest("SetSourceFilterSettings", { sourceUuid, filterName, filterSettings: { ...filterSettings }, overlay: false });',
+    testFile: "tests/filter-requests.test.ts"
+  },
+  {
+    id: "M-10.1b",
+    step: "Step 10.1 (filters are addressed by the source's UUID)",
+    description:
+      "Address GetSourceFilter by sourceName, and verify filter-requests.test.ts fails",
+    filePath: resolve(ROOT, "src/obs/direct-obs-client.ts"),
+    target: 'const data = await this.sendObsRequest("GetSourceFilter", { sourceUuid, filterName });',
+    mutated: 'const data = await this.sendObsRequest("GetSourceFilter", { sourceName: sourceUuid, filterName });',
+    testFile: "tests/filter-requests.test.ts"
   }
 ];
 

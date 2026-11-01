@@ -273,6 +273,7 @@
     "layoutModeEither": "[Beide Modi] {name}",
     "layoutModeStudio": "[Studio-Modus] {name}",
     "layoutModeRegular": "[Normaler Modus] {name}",
+    "errorFilterChoose": "Wählen Sie zuerst Quelle und Filter.",
     "pi": {
       "scopeThisKey": "diese Taste",
       "scopeThisDial": "dieser Drehregler",

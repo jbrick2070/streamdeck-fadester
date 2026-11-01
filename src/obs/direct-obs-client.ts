@@ -52,6 +52,56 @@ export interface DirectObsInputInfo {
   unversionedInputKind: string;
 }
 
+/** A scene as `GetSceneList` reports it; filters on a scene are addressed by `sceneUuid`. */
+export interface DirectObsSceneInfo {
+  sceneName: string;
+  sceneUuid: string;
+}
+
+/** A group: `GetGroupList` gives names only, the UUID comes from a scene's group item. */
+export interface DirectObsGroupInfo {
+  groupName: string;
+  groupUuid: string;
+}
+
+/** A filter as `GetSourceFilterList` and `GetSourceFilter` report it (obs-websocket 5.6.3). */
+export interface DirectObsFilterInfo {
+  filterName: string;
+  /** The versioned kind (`color_filter_v2`, `visual_sidechain_shader_filter`). */
+  filterKind: string;
+  filterEnabled: boolean;
+  filterIndex: number;
+  /** Only the values set on this filter: OBS leaves its defaults out. */
+  filterSettings: Record<string, unknown>;
+}
+
+function readSceneDetails(value: unknown): DirectObsSceneInfo[] {
+  if (!Array.isArray(value)) return [];
+  const entries = [...value].filter((entry) => entry && typeof entry === "object") as Array<Record<string, unknown>>;
+  if (entries.every((entry) => typeof entry.sceneIndex === "number" && Number.isFinite(entry.sceneIndex))) {
+    entries.sort((a, b) => (b.sceneIndex as number) - (a.sceneIndex as number));
+  }
+  return entries
+    .filter((entry) => typeof entry.sceneName === "string" && typeof entry.sceneUuid === "string" && entry.sceneUuid)
+    .map((entry) => ({ sceneName: entry.sceneName as string, sceneUuid: entry.sceneUuid as string }));
+}
+
+function readFilterInfo(value: unknown, filterName?: string): DirectObsFilterInfo | null {
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  const name = filterName ?? record.filterName;
+  if (typeof name !== "string" || !name || typeof record.filterKind !== "string") return null;
+  const settings = record.filterSettings;
+  return {
+    filterName: name,
+    filterKind: record.filterKind,
+    filterEnabled: record.filterEnabled !== false,
+    filterIndex: typeof record.filterIndex === "number" ? record.filterIndex : -1,
+    filterSettings: settings && typeof settings === "object" && !Array.isArray(settings)
+      ? { ...(settings as Record<string, unknown>) } : {}
+  };
+}
+
 /*
  * Playlister transport (PLAN.md 9, R-PLT-1..7): stock obs-websocket 5.6.3
  * media requests by inputUuid, with the wire strings pinned here.
@@ -175,6 +225,10 @@ function readInputDetails(value: unknown): DirectObsInputInfo[] {
 
 export interface DirectObsCatalog {
   scenes: string[];
+  /** The scenes with their UUIDs, in `scenes`' order (filters on a scene are addressed by UUID). */
+  sceneDetails: DirectObsSceneInfo[];
+  /** Groups whose UUID OBS gave; read only when OBS has a group. */
+  groupDetails: DirectObsGroupInfo[];
   inputs: string[];
   /** Every input with UUID and kind; `inputs` keeps the names for the audio paths. */
   inputDetails: DirectObsInputInfo[];
@@ -239,6 +293,8 @@ function clampUnit(value: number): number {
 export class DirectObsClient extends ObsVendorClient {
   private catalog: DirectObsCatalog = {
     scenes: [],
+    sceneDetails: [],
+    groupDetails: [],
     inputs: [],
     inputDetails: [],
     transitions: [],
@@ -269,6 +325,8 @@ export class DirectObsClient extends ObsVendorClient {
   private mediaSequence = 0;
   private readonly mediaTargets = new Map<string, MediaTarget>();
   private readonly mediaPauseWaitMs: number;
+  /** A filter kind's static defaults (`GetSourceFilterDefaultSettings`), per connection. */
+  private readonly filterDefaults = new Map<string, Promise<Record<string, unknown>>>();
 
   public constructor(
     initialSettings?: FadesterGlobalSettings,
@@ -290,6 +348,7 @@ export class DirectObsClient extends ObsVendorClient {
         this.cancelAllInputFades();
         this.cancelSceneCycle();
         this.mediaCapability = "unknown";
+        this.filterDefaults.clear();
         this.invalidateMediaTargets();
       } else {
         // The first catalog is published before the status turns connected: polls start here.
@@ -306,6 +365,7 @@ export class DirectObsClient extends ObsVendorClient {
     this.cancelAllInputFades();
     this.cancelSceneCycle();
     this.mediaCapability = "unknown";
+    this.filterDefaults.clear();
     super.stop();
     // After the socket is gone, so the targets read as disconnected.
     this.invalidateMediaTargets();
@@ -319,6 +379,7 @@ export class DirectObsClient extends ObsVendorClient {
     this.cancelAllInputFades();
     this.cancelSceneCycle();
     this.mediaCapability = "unknown";
+    this.filterDefaults.clear();
     super.reconnectNow();
     this.invalidateMediaTargets();
   }
@@ -331,6 +392,8 @@ export class DirectObsClient extends ObsVendorClient {
     return {
       ...this.catalog,
       scenes: [...this.catalog.scenes],
+      sceneDetails: this.catalog.sceneDetails.map((scene) => ({ ...scene })),
+      groupDetails: this.catalog.groupDetails.map((group) => ({ ...group })),
       inputs: [...this.catalog.inputs],
       inputDetails: this.catalog.inputDetails.map((input) => ({ ...input })),
       transitions: [...this.catalog.transitions],
@@ -363,6 +426,7 @@ export class DirectObsClient extends ObsVendorClient {
     }
     if (scenes.status === "fulfilled") {
       next.scenes = sceneNamesInDisplayOrder(scenes.value.scenes);
+      next.sceneDetails = readSceneDetails(scenes.value.scenes);
     }
     if (inputs.status === "fulfilled") {
       next.inputs = stringArray(inputs.value.inputs, "inputName");
@@ -398,6 +462,7 @@ export class DirectObsClient extends ObsVendorClient {
       }
     }
 
+    const groupsRead = this.readGroupDetails(next.scenes, generation);
     const volumeResponses = await Promise.all(
       next.inputs.map(async (inputName) => {
         try {
@@ -410,6 +475,8 @@ export class DirectObsClient extends ObsVendorClient {
         }
       })
     );
+    const groups = await groupsRead;
+    if (groups) next.groupDetails = groups;
     next.inputVolumes = {};
     for (const [inputName, volume] of volumeResponses) {
       if (volume !== undefined) {
@@ -422,7 +489,10 @@ export class DirectObsClient extends ObsVendorClient {
     if (generation !== this.catalogRefreshGeneration) return this.getCatalog();
     // Events received while requests were in flight are newer than the
     // corresponding snapshot; keep their values instead of rolling UI back.
-    if (revisions.scenes !== this.catalogEventRevisions.scenes) next.scenes = [...this.catalog.scenes];
+    if (revisions.scenes !== this.catalogEventRevisions.scenes) {
+      next.scenes = [...this.catalog.scenes];
+      next.sceneDetails = this.catalog.sceneDetails.map((scene) => ({ ...scene }));
+    }
     if (revisions.studio !== this.catalogEventRevisions.studio) next.studioMode = this.catalog.studioMode;
     if (revisions.program !== this.catalogEventRevisions.program) next.currentProgramScene = this.catalog.currentProgramScene;
     if (revisions.preview !== this.catalogEventRevisions.preview) next.currentPreviewScene = this.catalog.currentPreviewScene;
@@ -628,8 +698,8 @@ export class DirectObsClient extends ObsVendorClient {
           ![cycle.live, cycle.next].includes(this.catalog.currentPreviewScene)) return;
         const sceneList = await this.sendObsRequest("GetSceneList");
         if (cycle.token !== this.sceneCycleGeneration || !this.catalog.studioMode) return;
-        const scenes = sceneNamesInDisplayOrder(sceneList.scenes);
-        this.catalog.scenes = scenes;
+        this.applySceneList(sceneList.scenes);
+        const scenes = this.catalog.scenes;
         const index = scenes.indexOf(cycle.next);
         if (index < 0 || scenes.length < 2) return;
         const nextScene = scenes[(index + 1) % scenes.length];
@@ -676,7 +746,7 @@ export class DirectObsClient extends ObsVendorClient {
     // reorder that does not emit a scene-created/renamed event.
     const sceneList = await this.sendObsRequest("GetSceneList");
     this.requireControlGeneration(generation);
-    this.catalog.scenes = sceneNamesInDisplayOrder(sceneList.scenes);
+    this.applySceneList(sceneList.scenes);
     const sceneName = this.resolveSceneTarget(target, operation === "preview");
     if (!sceneName) {
       const index = sceneTargetIndex(target);
@@ -826,7 +896,7 @@ export class DirectObsClient extends ObsVendorClient {
       this.cancelAllInputFades();
       this.cancelSceneCycle();
       this.catalog = {
-        ...this.catalog, scenes: [], inputs: [], inputDetails: [], inputVolumes: {},
+        ...this.catalog, scenes: [], sceneDetails: [], groupDetails: [], inputs: [], inputDetails: [], inputVolumes: {},
         currentProgramScene: "", currentPreviewScene: "", tbarPosition: 0
       };
       // Stale UUIDs never pass the presence gate; polls resume with the next catalog after Changed.
@@ -859,7 +929,7 @@ export class DirectObsClient extends ObsVendorClient {
 
     if (eventType === "SceneListChanged") {
       this.catalogEventRevisions.scenes++;
-      this.catalog.scenes = sceneNamesInDisplayOrder(eventData.scenes);
+      this.applySceneList(eventData.scenes);
       this.emitDirectState();
       return;
     }
@@ -969,6 +1039,20 @@ export class DirectObsClient extends ObsVendorClient {
     return scenes[(currentIndex + offset + scenes.length) % scenes.length] ?? "";
   }
 
+  /**
+   * Takes a scene list (GetSceneList or SceneListChanged): the names in display order and their UUIDs in the
+   * same order; a scene the list gives without a UUID keeps the one already known.
+   */
+  private applySceneList(value: unknown): void {
+    const previous = this.catalog.sceneDetails;
+    this.catalog.scenes = sceneNamesInDisplayOrder(value);
+    const details = new Map(readSceneDetails(value).map((scene) => [scene.sceneName, scene.sceneUuid]));
+    this.catalog.sceneDetails = this.catalog.scenes.flatMap((sceneName) => {
+      const sceneUuid = details.get(sceneName) ?? previous.find((scene) => scene.sceneName === sceneName)?.sceneUuid;
+      return sceneUuid ? [{ sceneName, sceneUuid }] : [];
+    });
+  }
+
   private emitDirectState(): void {
     this.emit("directStateChanged", this.getCatalog());
   }
@@ -1018,6 +1102,103 @@ export class DirectObsClient extends ObsVendorClient {
 
   private cancelAllInputFades(): void {
     for (const inputName of this.inputFadeTokens.keys()) this.cancelInputFade(inputName);
+  }
+
+  /**
+   * Groups with their UUIDs: `GetGroupList` names them, and a group's UUID is
+   * read from a scene's group item, so the scenes are read only when OBS has a
+   * group (and only until every group is found). Null when OBS did not answer.
+   */
+  private async readGroupDetails(sceneNames: readonly string[], generation: number): Promise<DirectObsGroupInfo[] | null> {
+    let names: string[];
+    try {
+      names = stringArray((await this.sendObsRequest("GetGroupList")).groups, "groupName");
+    } catch {
+      return null;
+    }
+    // A newer refresh (or a disconnect, or a collection change) supersedes this one.
+    if (names.length === 0 || generation !== this.catalogRefreshGeneration) return [];
+    const found = new Map<string, string>();
+    await Promise.all(sceneNames.map(async (sceneName) => {
+      try {
+        const data = await this.sendObsRequest("GetSceneItemList", { sceneName });
+        for (const item of Array.isArray(data.sceneItems) ? data.sceneItems as Array<Record<string, unknown>> : []) {
+          if (item.isGroup === true && typeof item.sourceName === "string" && typeof item.sourceUuid === "string" &&
+            item.sourceUuid && names.includes(item.sourceName)) {
+            found.set(item.sourceName, item.sourceUuid);
+          }
+        }
+      } catch {
+        // A scene removed meanwhile; the next refresh reads it again.
+      }
+    }));
+    return names.filter((name) => found.has(name)).map((groupName) => ({ groupName, groupUuid: found.get(groupName)! }));
+  }
+
+  // ---- Filters and hotkeys (PLAN.md 10.1, R-RIG-2) -----------------------------------------------
+  // Every filter request addresses its source by UUID; the controller (src/control/filter-controller.ts)
+  // owns reading, ownership, pacing and the panic latch.
+
+  private requireFilterSource(sourceUuid: string, filterName?: string): void {
+    if (!sourceUuid || filterName === "") throw new DirectObsError(ownText("errorFilterChoose"), 400);
+    if (this.collectionChanging) throw new DirectObsError(ownText("errorControlChanged"), 400);
+  }
+
+  /** The filters on a scene, group or input, in OBS's order, each with the values set on it. */
+  public async getSourceFilterList(sourceUuid: string): Promise<DirectObsFilterInfo[]> {
+    this.requireFilterSource(sourceUuid);
+    const data = await this.sendObsRequest("GetSourceFilterList", { sourceUuid });
+    return (Array.isArray(data.filters) ? data.filters : [])
+      .map((entry) => readFilterInfo(entry))
+      .filter((entry): entry is DirectObsFilterInfo => entry !== null);
+  }
+
+  /** One filter; OBS answers 600 for a missing source or filter (renamed counts as missing). */
+  public async getSourceFilter(sourceUuid: string, filterName: string): Promise<DirectObsFilterInfo> {
+    this.requireFilterSource(sourceUuid, filterName);
+    const data = await this.sendObsRequest("GetSourceFilter", { sourceUuid, filterName });
+    const info = readFilterInfo(data, filterName);
+    if (!info) throw new DirectObsError(ownText("errorRequestFailed", { code: 500 }), 500);
+    return info;
+  }
+
+  /** A filter kind's static defaults, read once per connection (values OBS leaves out of a filter's settings). */
+  public getSourceFilterDefaultSettings(filterKind: string): Promise<Record<string, unknown>> {
+    if (!filterKind) return Promise.reject(new DirectObsError(ownText("errorFilterChoose"), 400));
+    let cached = this.filterDefaults.get(filterKind);
+    if (!cached) {
+      cached = this.sendObsRequest("GetSourceFilterDefaultSettings", { filterKind }).then((data) => {
+        const defaults = data.defaultFilterSettings;
+        return defaults && typeof defaults === "object" && !Array.isArray(defaults) ? { ...(defaults as Record<string, unknown>) } : {};
+      });
+      this.filterDefaults.set(filterKind, cached);
+      const entry = cached;
+      // A failed read is not kept.
+      void entry.catch(() => { if (this.filterDefaults.get(filterKind) === entry) this.filterDefaults.delete(filterKind); });
+    }
+    return cached.then((defaults) => ({ ...defaults }));
+  }
+
+  /** Writes values into a filter's settings; always `overlay: true`, so other settings keep their values. */
+  public async setSourceFilterSettings(sourceUuid: string, filterName: string,
+    filterSettings: Readonly<Record<string, number | boolean | string>>): Promise<void> {
+    this.requireFilterSource(sourceUuid, filterName);
+    await this.sendObsRequest("SetSourceFilterSettings", { sourceUuid, filterName, filterSettings: { ...filterSettings }, overlay: true });
+  }
+
+  public async setSourceFilterEnabled(sourceUuid: string, filterName: string, filterEnabled: boolean): Promise<void> {
+    this.requireFilterSource(sourceUuid, filterName);
+    await this.sendObsRequest("SetSourceFilterEnabled", { sourceUuid, filterName, filterEnabled });
+  }
+
+  /**
+   * Fires an OBS hotkey by its name, as a press (obs-websocket routes it through
+   * OBS's own callback, so OBS's focus does not matter). 600 means no hotkey of
+   * that name is registered: the plugin that owns it is not loaded.
+   */
+  public async triggerHotkeyByName(hotkeyName: string): Promise<void> {
+    if (!hotkeyName) throw new DirectObsError(ownText("errorRequestFailed", { code: 400 }), 400);
+    await this.sendObsRequest("TriggerHotkeyByName", { hotkeyName });
   }
 
   // ---- Playlister transport (PLAN.md 9.2) -------------------------------------------------------

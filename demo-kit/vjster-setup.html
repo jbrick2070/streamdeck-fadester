@@ -1,0 +1,44 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-2.0-or-later -->
+<!-- Suite Demo Kit: the setup card. The Speed Page browser source (1280x720) shows this
+     local file until its URL is the VJster address (plan D-3). Static: no script and
+     nothing loaded from anywhere, so it shows the same with or without Stream Deck. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Speed Page setup</title>
+<style>
+  html, body { margin: 0; width: 1280px; height: 720px; overflow: hidden; }
+  body { background: #121a2a; color: #f0f6ff; font: 28px/1.35 "Segoe UI", Arial, sans-serif; }
+  main { box-sizing: border-box; height: 720px; padding: 34px 56px; display: flex; flex-direction: column; }
+  h1 { margin: 0; font-size: 46px; font-weight: 600; }
+  .lead { margin: 6px 0 20px; color: #96d2eb; }
+  ol { margin: 0; padding: 0; list-style: none; counter-reset: step; }
+  li { counter-increment: step; position: relative; padding: 0 0 15px 62px; }
+  li::before { content: counter(step); position: absolute; left: 0; top: 0; width: 42px; height: 42px;
+    border-radius: 50%; background: #5ac8e6; color: #121a2a; font-weight: 700; text-align: center;
+    line-height: 42px; }
+  b { color: #fff; font-weight: 600; }
+  code { font: 26px Consolas, "Courier New", monospace; color: #ffd27a; }
+  .note { margin-top: auto; padding: 14px 18px; border-left: 6px solid #ffb347; background: #1c2740;
+    font-size: 23px; }
+  .credit { margin: 10px 0 0; font-size: 18px; color: #8ea2c0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Speed Page: set it up once</h1>
+  <p class="lead">VJster plays a YouTube video here and the deck sets its speed live, 0.25x to 2x.</p>
+  <ol>
+    <li>In Stream Deck, open any VJster action's settings. Under <b>OBS page</b>, tick <b>Keep the link on</b>.</li>
+    <li>Paste a YouTube link, for example <code>youtube.com/watch?v=aqz-KE-bpKQ</code> (Big Buck Bunny), then press <b>Copy address</b>.</li>
+    <li>In OBS, open the <b>Speed Page</b> source's Properties, untick <b>Local file</b>, paste the address as the <b>URL</b> and press OK.</li>
+    <li>Press the kit's VJster keys, or set a VJster action's <b>Control</b> to <b>OBS page</b>.</li>
+  </ol>
+  <p class="note">The address carries this computer's OBS page key: keep it out of screenshots and chat, and do not
+    share or export this scene collection after pasting it. If OBS shows an error page, start Stream Deck and
+    refresh the source.</p>
+  <p class="credit">Big Buck Bunny &copy; Blender Foundation, CC BY 3.0. Played from YouTube, not included in the kit.</p>
+</main>
+</body>
+</html>

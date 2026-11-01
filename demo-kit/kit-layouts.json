@@ -1,0 +1,91 @@
+{
+  "about": "The kit's two Stream Deck + layouts (plan section 4). 'fadester' is a preset in the shape of profiles/layouts.json, checked by validatePreset and built by buildProfile (scripts/profile-checks.ts); 'vjster' is a layout in the shape of scripts/vjster/build-profiles.ts, built by its profileFiles. Every binding is a fixed name or UUID from kit-ids.json: Playlister keys by inputUuid, filter controls by sourceUuid + filterName + filterKind (versioned_id), layer keys by scene name + item id with the source's uuid, scene keys by __scene_index_N__, the beat fader by inputName. Captions are shipped defaults (drawn translated) or exact OBS names (plan section 15 item 1). scripts/build-kit-profiles.ts checks this file against kit-ids.json and writes demo-kit/build/profiles/.",
+  "fadester": {
+    "slug": "suite-demo-kit-plus",
+    "name": "Suite Demo Kit +",
+    "description": "The Suite Demo Kit's Fadester keys, pre-bound to the kit's scene collection: Visual Sidechain looks, layers, Playlister at 100 % and 50 %, Visual Panic on the same key on every page. Next page sits bottom left.",
+    "obsMode": "regular",
+    "deviceType": 7,
+    "deviceModel": "20GBD9901",
+    "columns": 4,
+    "rows": 2,
+    "dials": 4,
+    "rig": { "panic": [3, 1], "nextPage": [0, 1] },
+    "pages": [
+      {
+        "name": "Visuals",
+        "accent": "magenta",
+        "actions": [
+          { "controller": "Keypad", "column": 0, "row": 0, "kind": "scene", "label": "Scene 2", "settings": { "sceneTarget": "__scene_index_1__", "operation": "cut" } },
+          { "controller": "Keypad", "column": 1, "row": 0, "kind": "filter", "label": "Look 1", "settings": { "sourceUuid": "776f244e-e982-4a71-a0ad-735d69bf5e2f", "sourceName": "Kit Motion", "filterName": "Look Prism", "filterKind": "visual_sidechain_shader_filter", "keyOperation": "toggle" } },
+          { "controller": "Keypad", "column": 2, "row": 0, "kind": "filter", "label": "Look 2", "settings": { "sourceUuid": "776f244e-e982-4a71-a0ad-735d69bf5e2f", "sourceName": "Kit Motion", "filterName": "Look Kaleido", "filterKind": "visual_sidechain_shader_filter", "keyOperation": "toggle" } },
+          { "controller": "Keypad", "column": 3, "row": 0, "kind": "filter", "label": "Look 3", "settings": { "sourceUuid": "776f244e-e982-4a71-a0ad-735d69bf5e2f", "sourceName": "Kit Motion", "filterName": "Look Pulse", "filterKind": "visual_sidechain_shader_filter", "keyOperation": "toggle" } },
+          { "controller": "Keypad", "column": 0, "row": 1, "kind": "page", "settings": {} },
+          { "controller": "Keypad", "column": 1, "row": 1, "kind": "scene", "label": "Scene 1", "settings": { "sceneTarget": "__scene_index_0__", "operation": "cut" } },
+          { "controller": "Keypad", "column": 2, "row": 1, "kind": "panic", "label": "Restore", "settings": { "operation": "restore" } },
+          { "controller": "Keypad", "column": 3, "row": 1, "kind": "panic", "label": "PANIC", "settings": { "operation": "panic" } },
+          { "controller": "Encoder", "column": 0, "row": 0, "kind": "fader", "label": "Kit Beat", "settings": { "target": "input_volume", "inputName": "Kit Beat", "stepPerTick": 0.02 } },
+          { "controller": "Encoder", "column": 1, "row": 0, "kind": "filter", "label": "Effect mix", "settings": { "sourceUuid": "776f244e-e982-4a71-a0ad-735d69bf5e2f", "sourceName": "Kit Motion", "filterName": "Look Prism", "filterKind": "visual_sidechain_shader_filter", "setting": "vs_effect_mix_pct", "dialPress": "drop_return" } },
+          { "controller": "Encoder", "column": 2, "row": 0, "kind": "filter", "label": "Reactivity", "settings": { "sourceUuid": "776f244e-e982-4a71-a0ad-735d69bf5e2f", "sourceName": "Kit Motion", "filterName": "Look Prism", "filterKind": "visual_sidechain_shader_filter", "setting": "vs_audio_reactivity_pct", "dialPress": "drop_return" } },
+          { "controller": "Encoder", "column": 3, "row": 0, "kind": "filter", "label": "Mix B", "settings": { "sourceUuid": "776f244e-e982-4a71-a0ad-735d69bf5e2f", "sourceName": "Kit Motion", "filterName": "Look Kaleido", "filterKind": "visual_sidechain_shader_filter", "setting": "vs_effect_mix_pct", "dialPress": "drop_return" } }
+        ]
+      },
+      {
+        "name": "Layers",
+        "accent": "teal",
+        "actions": [
+          { "controller": "Keypad", "column": 0, "row": 0, "kind": "scene", "label": "Scene 3", "settings": { "sceneTarget": "__scene_index_2__", "operation": "cut" } },
+          { "controller": "Keypad", "column": 1, "row": 0, "kind": "layer", "label": "Show / hide", "settings": { "scope": "fixed", "sceneName": "Kit Layers", "target": "fixed", "sceneItemId": 1, "sourceUuid": "f0bc3ad0-214a-4445-8808-9a7bc8717e0b", "sourceName": "Layer A", "operation": "show_hide" } },
+          { "controller": "Keypad", "column": 2, "row": 0, "kind": "layer", "label": "Show / hide", "settings": { "scope": "fixed", "sceneName": "Kit Layers", "target": "fixed", "sceneItemId": 2, "sourceUuid": "c9434b9f-9fa9-4302-b561-2eec3a1fe947", "sourceName": "Layer B", "operation": "show_hide" } },
+          { "controller": "Keypad", "column": 3, "row": 0, "kind": "filter", "label": "Still", "settings": { "sourceUuid": "776f244e-e982-4a71-a0ad-735d69bf5e2f", "sourceName": "Kit Motion", "filterName": "Look Prism", "filterKind": "visual_sidechain_shader_filter", "setting": "vs_audio_reactivity_pct", "keyOperation": "set", "value": 0, "durationMs": 2000 } },
+          { "controller": "Keypad", "column": 0, "row": 1, "kind": "page", "settings": {} },
+          { "controller": "Keypad", "column": 1, "row": 1, "kind": "scene", "label": "Scene 5", "settings": { "sceneTarget": "__scene_index_4__", "operation": "cut" } },
+          { "controller": "Keypad", "column": 2, "row": 1, "kind": "panic", "label": "Restore", "settings": { "operation": "restore" } },
+          { "controller": "Keypad", "column": 3, "row": 1, "kind": "panic", "label": "PANIC", "settings": { "operation": "panic" } },
+          { "controller": "Encoder", "column": 0, "row": 0, "kind": "filter", "label": "Layer A fade", "settings": { "sourceUuid": "f0bc3ad0-214a-4445-8808-9a7bc8717e0b", "sourceName": "Layer A", "filterName": "Layer Fade", "filterKind": "color_filter_v2", "setting": "opacity", "dialPress": "none" } },
+          { "controller": "Encoder", "column": 1, "row": 0, "kind": "filter", "label": "Layer B fade", "settings": { "sourceUuid": "c9434b9f-9fa9-4302-b561-2eec3a1fe947", "sourceName": "Layer B", "filterName": "Layer Fade", "filterKind": "color_filter_v2", "setting": "opacity", "dialPress": "none" } },
+          { "controller": "Encoder", "column": 2, "row": 0, "kind": "fader", "label": "Kit Beat", "settings": { "target": "input_volume", "inputName": "Kit Beat", "stepPerTick": 0.02 } },
+          { "controller": "Encoder", "column": 3, "row": 0, "kind": "filter", "label": "Mix C", "settings": { "sourceUuid": "776f244e-e982-4a71-a0ad-735d69bf5e2f", "sourceName": "Kit Motion", "filterName": "Look Pulse", "filterKind": "visual_sidechain_shader_filter", "setting": "vs_effect_mix_pct", "dialPress": "drop_return" } }
+        ]
+      },
+      {
+        "name": "Clips",
+        "accent": "brass",
+        "actions": [
+          { "controller": "Keypad", "column": 0, "row": 0, "kind": "scene", "label": "Scene 4", "settings": { "sceneTarget": "__scene_index_3__", "operation": "cut" } },
+          { "controller": "Keypad", "column": 1, "row": 0, "kind": "playlister", "label": "Previous", "settings": { "inputUuid": "7e4a69df-9d56-4d73-9dea-9673994305d0", "inputName": "Kit Clips", "operation": "previous" } },
+          { "controller": "Keypad", "column": 2, "row": 0, "kind": "playlister", "label": "Play / pause", "settings": { "inputUuid": "7e4a69df-9d56-4d73-9dea-9673994305d0", "inputName": "Kit Clips", "operation": "playpause" } },
+          { "controller": "Keypad", "column": 3, "row": 0, "kind": "playlister", "label": "Next", "settings": { "inputUuid": "7e4a69df-9d56-4d73-9dea-9673994305d0", "inputName": "Kit Clips", "operation": "next" } },
+          { "controller": "Keypad", "column": 0, "row": 1, "kind": "page", "settings": {} },
+          { "controller": "Keypad", "column": 1, "row": 1, "kind": "playlister", "label": "Restart", "settings": { "inputUuid": "ad976ab1-d3e3-4df7-a389-c99a8a428110", "inputName": "Kit Clips 50%", "operation": "restart" } },
+          { "controller": "Keypad", "column": 2, "row": 1, "kind": "playlister", "label": "Status", "settings": { "inputUuid": "7e4a69df-9d56-4d73-9dea-9673994305d0", "inputName": "Kit Clips", "operation": "status" } },
+          { "controller": "Keypad", "column": 3, "row": 1, "kind": "panic", "label": "PANIC", "settings": { "operation": "panic" } },
+          { "controller": "Encoder", "column": 0, "row": 0, "kind": "fader", "label": "Kit Beat", "settings": { "target": "input_volume", "inputName": "Kit Beat", "stepPerTick": 0.02 } },
+          { "controller": "Encoder", "column": 1, "row": 0, "kind": "filter", "label": "Effect mix", "settings": { "sourceUuid": "776f244e-e982-4a71-a0ad-735d69bf5e2f", "sourceName": "Kit Motion", "filterName": "Look Prism", "filterKind": "visual_sidechain_shader_filter", "setting": "vs_effect_mix_pct", "dialPress": "drop_return" } },
+          { "controller": "Encoder", "column": 2, "row": 0, "kind": "filter", "label": "Layer A fade", "settings": { "sourceUuid": "f0bc3ad0-214a-4445-8808-9a7bc8717e0b", "sourceName": "Layer A", "filterName": "Layer Fade", "filterKind": "color_filter_v2", "setting": "opacity", "dialPress": "none" } },
+          { "controller": "Encoder", "column": 3, "row": 0, "kind": "filter", "label": "Layer B fade", "settings": { "sourceUuid": "c9434b9f-9fa9-4302-b561-2eec3a1fe947", "sourceName": "Layer B", "filterName": "Layer Fade", "filterKind": "color_filter_v2", "setting": "opacity", "dialPress": "none" } }
+        ]
+      }
+    ]
+  },
+  "vjster": {
+    "file": "suite-demo-kit-speed-plus",
+    "name": "Suite Demo Kit Speed +",
+    "deviceType": 7,
+    "model": "20GBD9901",
+    "columns": 4,
+    "rows": 2,
+    "dials": 4,
+    "keys": [
+      { "kind": "speed-step", "at": [0, 0], "settings": { "direction": -1, "step": 0.25, "extended": false, "target": "obs" } },
+      { "kind": "speed-preset", "at": [1, 0], "settings": { "rate": 1, "extended": false, "hold": true, "target": "obs" } },
+      { "kind": "speed-step", "at": [2, 0], "settings": { "direction": 1, "step": 0.25, "extended": false, "target": "obs" } },
+      { "kind": "transport", "at": [3, 0], "settings": { "target": "obs" } },
+      { "kind": "speed-preset", "at": [0, 1], "settings": { "rate": 0.5, "extended": false, "hold": true, "target": "obs" } },
+      { "kind": "speed-preset", "at": [1, 1], "settings": { "rate": 2, "extended": false, "hold": true, "target": "obs" } }
+    ],
+    "encoders": [
+      { "kind": "speed", "at": [0, 0], "settings": { "label": "SPEED", "step": 0.25, "fineStep": 0.05, "extended": false, "hold": true, "target": "obs" } }
+    ]
+  }
+}

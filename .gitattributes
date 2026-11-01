@@ -1,0 +1,3 @@
+# The kit template is checked byte for byte (no CR) by demo-kit/test_kit_collection.py,
+# so git must check it out with LF on every machine, whatever core.autocrlf says.
+demo-kit/kit-template.json text eol=lf

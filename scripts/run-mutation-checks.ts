@@ -1016,6 +1016,1296 @@ const MUTATIONS: MutationCheck[] = [
     target: "  return PLUGIN_LANGUAGES.filter((language) => existsSync(languageFilePath(language)));",
     mutated: "  return STREAM_DECK_LANGUAGES.filter((language) => existsSync(languageFilePath(language)));",
     testFile: "tests/i18n-strings.test.ts"
+  },
+  {
+    id: "M-K1.1",
+    step: "Demo kit step 1 (stock originals are checked by SHA-1)",
+    description:
+      "Skip the SHA-1 comparison and verify the changed-file test fails",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "if actual_sha1 != row[\"sha1\"]:",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K1.2",
+    step: "Demo kit step 1 (stock originals are checked by size)",
+    description:
+      "Skip the size comparison and verify the other-size test fails",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "if actual_bytes != row[\"bytes\"]:",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K1.3",
+    step: "Demo kit step 1 (a missing original is named)",
+    description:
+      "Skip the missing-file check and verify the missing-file test fails",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "if not path.is_file():\n            problems.append(f\"{path.name}: file missing\")",
+    mutated: "if False:\n            problems.append(f\"{path.name}: file missing\")",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K1.4",
+    step: "Demo kit step 1 (the stock check runs before any media is written)",
+    description:
+      "Make the media folder before the stock check and verify a refused build has written nothing",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "rows = verify_stock(stock_dir, clips)  # before anything is written\n    media = out / \"media\"\n    media.mkdir(parents=True, exist_ok=True)",
+    mutated: "media = out / \"media\"\n    media.mkdir(parents=True, exist_ok=True)\n    rows = verify_stock(stock_dir, clips)  # before anything is written",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K1.5",
+    step: "Demo kit step 1 (the sprint stays inside 0-8.9 s)",
+    description:
+      "Start the sprint at 1.0 s so its 8 s run past 8.9 s and verify the cut-limit test fails",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "\"start\": 0.9, \"limit\": 8.9",
+    mutated: "\"start\": 1.0, \"limit\": 8.9",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K1.6",
+    step: "Demo kit step 1 (three clips ship, the marathon is a spare)",
+    description:
+      "Ship the spare marathon and verify the shipped list is three clips",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "\"start\": 4.0, \"limit\": 25.667, \"shipped\": False",
+    mutated: "\"start\": 4.0, \"limit\": 25.667, \"shipped\": True",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K1.7",
+    step: "Demo kit step 1 (the stock excerpts' own audio is removed (D-6))",
+    description:
+      "Keep the clip's audio and verify the cut command test fails",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "\"-frames:v\", str(CLIP_FRAMES), \"-an\", \"-sn\", \"-dn\",",
+    mutated: "\"-frames:v\", str(CLIP_FRAMES), \"-sn\", \"-dn\",",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K1.8",
+    step: "Demo kit step 1 (the encoders run single-threaded so builds repeat byte for byte)",
+    description:
+      "Drop -threads 1 from x264 and verify the cut command test fails",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "\"-c:v\", \"libx264\", \"-threads\", \"1\",",
+    mutated: "\"-c:v\", \"libx264\",",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K1.9",
+    step: "Demo kit step 1 (the loops have an 8 s period)",
+    description:
+      "Make the loop period one frame longer and verify the seam test fails",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "return TAU * frame / COUNT",
+    mutated: "return TAU * frame / (COUNT + 1)",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K1.10",
+    step: "Demo kit step 1 (a loop with a seam jump is refused)",
+    description:
+      "Check only the endpoint, not the seam step, and verify the jump test fails",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "if endpoint > .01 or not .8 <= ratio <= 1.25:",
+    mutated: "if endpoint > .01:",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K1.11",
+    step: "Demo kit step 1 (the beat loops seamlessly)",
+    description:
+      "Drop the tails instead of folding them onto the start and verify the seamless-beat test fails",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "loop[:len(tail)] += tail",
+    mutated: "loop[:0] += tail[:0]",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K1.12",
+    step: "Demo kit step 1 (the media manifest holds no absolute paths)",
+    description:
+      "Accept an absolute path and verify the manifest test fails",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "raise ValueError(f\"absolute path in manifest entry {entry['path']}\")",
+    mutated: "pass",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K1.13",
+    step: "Demo kit step 1 (a failing stock cut reports ffmpeg's own message)",
+    description:
+      "Throw away ffmpeg's stderr when a cut fails and verify the failing-cut test fails",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "result = subprocess.run(cut_command(source, start, output), capture_output=True)\n    if result.returncode:\n        raise RuntimeError(f\"ffmpeg failed for {output.name}: {result.stderr.decode(errors='replace')}\")",
+    mutated: "result = subprocess.run(cut_command(source, start, output), capture_output=True)\n    if result.returncode:\n        raise RuntimeError(f\"ffmpeg failed for {output.name}\")",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K1.14",
+    step: "Demo kit step 1 (each video output is checked to be 1280x720)",
+    description:
+      "Skip the size check and verify the wrong-size check test fails",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "if (v.get(\"width\"), v.get(\"height\")) != (W, H):",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K1.15",
+    step: "Demo kit step 1 (each video output is checked to be 240 frames)",
+    description:
+      "Skip the frame-count check and verify the short-clip check test fails",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "if str(v.get(\"nb_read_frames\")) != str(COUNT):",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K1.16",
+    step: "Demo kit step 1 (the stock entries carry their shipped flag)",
+    description:
+      "Mark every stock excerpt as shipped and verify the manifest test sees the spare shipped",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "\"kind\": \"stock\", \"shipped\": clip[\"shipped\"],",
+    mutated: "\"kind\": \"stock\", \"shipped\": True,",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K1.17",
+    step: "Demo kit step 1 (files an earlier run left in media/ are named)",
+    description:
+      "Name no stray files and verify the stray-files test fails",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "if p.is_file() and f\"media/{p.name}\" not in listed)",
+    mutated: "if False)",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K2.1",
+    step: "Demo kit step 2 (collection UUIDs are v4-format)",
+    description:
+      "Leave the version nibble unset and verify the UUID tests fail",
+    filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
+    target: "raw[6] = (raw[6] & 0x0F) | 0x40",
+    mutated: "raw[6] = raw[6]",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.2",
+    step: "Demo kit step 2 (kit-ids.json UUIDs follow the rule)",
+    description:
+      "Skip the UUID rule check and verify the problems test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
+    target: "if uuid != kit_uuid(seed):",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.3",
+    step: "Demo kit step 2 (Kit Beat writes monitoring_enabled)",
+    description:
+      "Write monitoring_enabled false and verify the beat and template tests fail",
+    filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
+    target: "\"monitoring_enabled\": monitoring_type != 0}",
+    mutated: "\"monitoring_enabled\": False}",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.4",
+    step: "Demo kit step 2 (Playlister resume state is dropped)",
+    description:
+      "Keep the resume keys and verify the normalise tests fail",
+    filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
+    target: "source.get(\"settings\", {}).pop(key, None)",
+    mutated: "pass",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.5",
+    step: "Demo kit step 2 (no round-trip path survives normalise)",
+    description:
+      "Accept the round-trip folder inside a string and verify the refusal test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
+    target: "if root_l in flat.lower():",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.6",
+    step: "Demo kit step 2 (the round-trip diff names changed values)",
+    description:
+      "Report no changed value and verify the diff tests fail",
+    filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
+    target: "if not _same(d, s):",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.7",
+    step: "Demo kit step 2 (booleans are not numbers in the diff)",
+    description:
+      "Compare booleans by value and verify the boolean test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
+    target: "return a is b",
+    mutated: "return a == b",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.8",
+    step: "Demo kit step 2 (the template keeps the kit's source UUIDs)",
+    description:
+      "Skip the template UUID check and verify the UUID test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
+    target: "if saved.get(\"uuid\") != entry[\"uuid\"]:",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.9",
+    step: "Demo kit step 2 (the template has no absolute path)",
+    description:
+      "Skip the absolute-path check and verify the path tests fail",
+    filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
+    target: "if ABSOLUTE.search(text) and not text.startswith((\"http://\", \"https://\")):",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.10",
+    step: "Demo kit step 2 (scene items point at their own source)",
+    description:
+      "Skip the item UUID check and verify the item test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
+    target: "if item.get(\"source_uuid\") != by_name.get(item.get(\"name\"), {}).get(\"uuid\"):",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.11",
+    step: "Demo kit step 2 (the 50 % copy has one row)",
+    description:
+      "Give Kit Clips 50% all three rows and verify the Playlister and template tests fail",
+    filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
+    target: "\"Kit Clips 50%\": {\"playlist\": _playlist(\"hurdles\"),",
+    mutated: "\"Kit Clips 50%\": {\"playlist\": _playlist(\"hurdles\", \"sprint\", \"train\"),",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.12",
+    step: "Demo kit step 2 (the template is written as UTF-8 text)",
+    description:
+      "Escape non-ASCII and verify the dump and committed-template tests fail",
+    filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
+    target: "json.dumps(data, indent=4, ensure_ascii=False)",
+    mutated: "json.dumps(data, indent=4, ensure_ascii=True)",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.13",
+    step: "Demo kit step 2 (the OBS lock is created exclusively)",
+    description:
+      "Open the lock without O_EXCL and verify the existing-lock test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_obs.py"),
+    target: "os.O_CREAT | os.O_EXCL | os.O_WRONLY",
+    mutated: "os.O_CREAT | os.O_WRONLY",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.14",
+    step: "Demo kit step 2 (tasklist is checked before the lock)",
+    description:
+      "Skip the obs64 check before the lock and verify the running-OBS test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_obs.py"),
+    target: "    if pids():\n        raise LockBusy(\"an obs64 is running\")",
+    mutated: "    if False:\n        raise LockBusy(\"an obs64 is running\")",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.15",
+    step: "Demo kit step 2 (only our own lock is deleted)",
+    description:
+      "Delete a lock that holds another token and verify the other-lock test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_obs.py"),
+    target: "if lock.read_text(encoding=\"utf-8\").strip() != token:",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.16",
+    step: "Demo kit step 2 (a copied OBS tree must match its source)",
+    description:
+      "Skip the hash comparison and verify the differing-copy test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_obs.py"),
+    target: "if want != got:",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.17",
+    step: "Demo kit step 2 (config OBS rewrote is kept)",
+    description:
+      "Always rewrite config and verify the second-run test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_obs.py"),
+    target: "if not path.exists():\n        path.parent.mkdir(parents=True, exist_ok=True)",
+    mutated: "if True:\n        path.parent.mkdir(parents=True, exist_ok=True)",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.18",
+    step: "Demo kit step 2 (an earlier scene file is kept aside, never replaced)",
+    description:
+      "Always use the first run number and verify the keep-aside test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_obs.py"),
+    target: "while path.with_name(f\"{path.name}.run{n}\").exists():",
+    mutated: "while False:",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.19",
+    step: "Demo kit step 2 (the template proves both plugins loaded)",
+    description:
+      "Skip the plugin-written keys check and verify the plugin test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
+    target: "            if lacking:\n",
+    mutated: "            if False:\n",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.20",
+    step: "Demo kit step 2 (every kit-ids.json filter has its settings)",
+    description:
+      "Skip the FILTERS coverage check and verify the coverage test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
+    target: "if seed not in FILTERS:",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.21",
+    step: "Demo kit step 2 (every scene item has its layout)",
+    description:
+      "Skip the LAYOUT coverage check and verify the coverage test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
+    target: "if item[\"source\"] not in layout:",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.22",
+    step: "Demo kit step 2 (a file: URL is an absolute path)",
+    description:
+      "Drop the file: alternative and verify the file-URL test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
+    target: "|(?i:file:/)\")",
+    mutated: "\")",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.23",
+    step: "Demo kit step 2 (the OBS log must show both plugins loaded)",
+    description:
+      "Skip the loaded-line check and verify the missing-plugin log test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_obs.py"),
+    target: "if not any(f\"[{name}{LOADED_LINE}\" in line for line in lines)]",
+    mutated: "if False]",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.24",
+    step: "Demo kit step 2 (the lock is released when OBS fails)",
+    description:
+      "Never release the lock in the round-trip and verify the release test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_obs.py"),
+    target: "\"released\": release_lock(lock, token)",
+    mutated: "\"released\": False",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.25",
+    step: "Demo kit step 2 (an OBS that ignores WM_CLOSE is killed and logged)",
+    description:
+      "Skip the taskkill and verify the no-exit test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_obs.py"),
+    target: "subprocess.run([\"taskkill\", \"/PID\", str(proc.pid), \"/T\", \"/F\"], capture_output=True)",
+    mutated: "pass",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.26",
+    step: "Demo kit step 2 (placed media must match the media manifest)",
+    description:
+      "Skip the manifest sha1 check and verify the manifest test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_obs.py"),
+    target: "if hashlib.sha1(source.read_bytes()).hexdigest() != entry[\"sha1\"]:",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.27",
+    step: "Demo kit step 2 (a differing placed file is never overwritten)",
+    description:
+      "Overwrite a differing target and verify the differing-target test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_obs.py"),
+    target: "if not target.exists():\n            shutil.copy2(source, target)\n        elif sha256_of(target) != sha256_of(source):",
+    mutated: "if True:\n            shutil.copy2(source, target)\n        elif False:",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K3.1",
+    step: "Demo kit step 3 (CREDITS.md must give each clip's source page)",
+    description:
+      "Drop the page from the CREDITS.md check and verify the missing-page test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_docs.py"),
+    target: "\"licence\": f\"Licence: {s['license']}, {s['license_url']}\", \"page\": s[\"page\"],",
+    mutated: "\"licence\": f\"Licence: {s['license']}, {s['license_url']}\",",
+    testFile: "tests/demo-kit-docs.test.ts"
+  },
+  {
+    id: "M-K3.2",
+    step: "Demo kit step 3 (a credit counts only in its own clip's section)",
+    description:
+      "Search the whole file instead of the clip's section and verify the other-section test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_docs.py"),
+    target: "    return text[start:] if end < 0 else text[start:end]",
+    mutated: "    return text",
+    testFile: "tests/demo-kit-docs.test.ts"
+  },
+  {
+    id: "M-K3.3",
+    step: "Demo kit step 3 (every shipped clip is credited on screen)",
+    description:
+      "Make the on-screen check pass every line and verify the on-screen tests fail",
+    filePath: resolve(ROOT, "demo-kit/kit_docs.py"),
+    target: "        if entry not in line:",
+    mutated: "        if False:",
+    testFile: "tests/demo-kit-docs.test.ts"
+  },
+  {
+    id: "M-K3.4",
+    step: "Demo kit step 3 (the setup card runs nothing)",
+    description:
+      "Let <script> through the card check and verify the loads-or-runs test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_docs.py"),
+    target: "r\"<script|<link",
+    mutated: "r\"<link",
+    testFile: "tests/demo-kit-docs.test.ts"
+  },
+  {
+    id: "M-K3.5",
+    step: "Demo kit step 3 (the do-not-rename names are in the box itself)",
+    description:
+      "Look for the names anywhere in the README and verify the box test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_docs.py"),
+    target: "        if f\"`{name}`\" not in box:",
+    mutated: "        if f\"`{name}`\" not in readme:",
+    testFile: "tests/demo-kit-docs.test.ts"
+  },
+  {
+    id: "M-K3.6",
+    step: "Demo kit step 3 (Playlister speed is said to restart the clip)",
+    description:
+      "Drop 'restarts the clip' from the speed-text check and verify the speed-text test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_docs.py"),
+    target: "\"Playlister speed is a setting (Properties > Speed)\", \"restarts the clip\",",
+    mutated: "\"Playlister speed is a setting (Properties > Speed)\",",
+    testFile: "tests/demo-kit-docs.test.ts"
+  },
+  {
+    id: "M-K3.7",
+    step: "Demo kit step 3 (no text promises more than 2x)",
+    description:
+      "Drop the past-2x check and verify the no-live-factor test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_docs.py"),
+    target: "        if re.search(r\"\\b(4x|3x)\\b\", text):",
+    mutated: "        if False:",
+    testFile: "tests/demo-kit-docs.test.ts"
+  },
+  {
+    id: "M-K3.8",
+    step: "Demo kit step 3 (CREDITS.md states the changes made)",
+    description:
+      "Leave the Changes line out of CREDITS.md and verify the credit-field test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_docs.py"),
+    target: "            f\"- Changes: {clip['changes']}\",\n",
+    mutated: "",
+    testFile: "tests/demo-kit-docs.test.ts"
+  },
+  {
+    id: "M-K3.9",
+    step: "Demo kit step 3 (the credits step refuses a clip missing on screen)",
+    description:
+      "Skip the on-screen check in write_credits and verify the credits-step test fails",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "    problems += kd.on_screen_problems(kc.TEXTS[\"Kit Credits\"], clips)\n",
+    mutated: "",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K3.10",
+    step: "Demo kit step 3 (the committed CREDITS.md follows the stock list)",
+    description:
+      "Credit every excerpt from second 0 and verify the committed-credits test fails",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "\"sha1\": row[\"sha1\"], \"bytes\": row[\"bytes\"], \"start\": clip[\"start\"],",
+    mutated: "\"sha1\": row[\"sha1\"], \"bytes\": row[\"bytes\"], \"start\": 0,",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K3.11",
+    step: "Demo kit step 3 (the on-screen credits name every shipped clip)",
+    description:
+      "Drop the train clip from the Kit Credits text and verify the on-screen test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
+    target: "\\u201cT3 Train Crossing \"\n                    \"Cooks River\\u201d by Unyxium, CC BY 4.0 \\u00b7 ",
+    mutated: "",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K3.12",
+    step: "Demo kit step 3 (the round-trip loads the real setup card)",
+    description:
+      "Keep a differing earlier card and verify the real-card test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_obs.py"),
+    target: "        if card.exists() and card.read_bytes() != setup_card.read_bytes():\n            keep_aside(card)\n",
+    mutated: "",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K3.13",
+    step: "Demo kit step 3 (the README says each of its required phrases)",
+    description:
+      "Check no required README phrase and verify the 260-characters test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_docs.py"),
+    target: "for words in README_MUSTS if words not in readme]",
+    mutated: "for words in [] if words not in readme]",
+    testFile: "tests/demo-kit-docs.test.ts"
+  },
+  {
+    id: "M-K3.14",
+    step: "Demo kit step 3 (the README names every scene)",
+    description:
+      "Drop the scene check from the README check and verify the every-scene test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_docs.py"),
+    target: "        if scene[\"name\"] not in readme:",
+    mutated: "        if False:",
+    testFile: "tests/demo-kit-docs.test.ts"
+  },
+  {
+    id: "M-K3.15",
+    step: "Demo kit step 3 (the setup card gives every step)",
+    description:
+      "Drop the step-phrase check from the card check and verify the missing-step test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_docs.py"),
+    target: "        if words not in html:",
+    mutated: "        if False:",
+    testFile: "tests/demo-kit-docs.test.ts"
+  },
+  {
+    id: "M-K3.16",
+    step: "Demo kit step 3 (the setup card is laid out at 1280x720)",
+    description:
+      "Drop the canvas check from the card check and verify the canvas test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_docs.py"),
+    target: "    if \"width: 1280px; height: 720px\" not in html:",
+    mutated: "    if False:",
+    testFile: "tests/demo-kit-docs.test.ts"
+  },
+  {
+    id: "M-K3.17",
+    step: "Demo kit step 3 (the setup card declares UTF-8)",
+    description:
+      "Drop the charset check from the card check and verify the charset test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_docs.py"),
+    target: "    if '<meta charset=\"utf-8\">' not in html:",
+    mutated: "    if False:",
+    testFile: "tests/demo-kit-docs.test.ts"
+  },
+  {
+    id: "M-K3.18",
+    step: "Demo kit step 3 (the 100 % note says the transport keys drive it)",
+    description:
+      "Accept a bare '100 %' note and verify the transport-keys test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_docs.py"),
+    target: "\"Speed Note 100\": [\"100 %\", \"Previous, Play / pause and Next\"],",
+    mutated: "\"Speed Note 100\": [\"100 %\"],",
+    testFile: "tests/demo-kit-docs.test.ts"
+  },
+  {
+    id: "M-K4.1",
+    step: "Demo kit step 4 (a Playlister key binds only a kit Playlister)",
+    description:
+      "Accept any kit source as a Playlister and verify the not-a-Playlister test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "if (!source || source.id !== \"obs_playlister_source\") {",
+    mutated: "if (!source) {",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.2",
+    step: "Demo kit step 4 (a Playlister key's inspector name matches its uuid)",
+    description:
+      "Drop the inputName check and verify the name test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "} else if (s.inputName !== source.name) {",
+    mutated: "} else if (false) {",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.3",
+    step: "Demo kit step 4 (a filter control's kind matches the kit filter)",
+    description:
+      "Drop the filterKind check and verify the kind test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "} else if (s.filterKind !== filter.versioned_id) {",
+    mutated: "} else if (false) {",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.4",
+    step: "Demo kit step 4 (a filter control rides a table setting)",
+    description:
+      "Drop the setting check and verify the setting test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "if (!toggle && !isTableSetting(text(s.filterKind), text(s.setting))) {",
+    mutated: "if (false) {",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.5",
+    step: "Demo kit step 4 (a layer key's item is the source it names)",
+    description:
+      "Drop the item-to-source check and verify the layer test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "} else if (s.sourceUuid !== source.uuid || s.sourceName !== source.name) {",
+    mutated: "} else if (false) {",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.6",
+    step: "Demo kit step 4 (a scene key stays within the kit's scenes)",
+    description:
+      "Drop the scene-count bound and verify the scene test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "if (!index || Number(index[1]) >= ids.scenes.length) {",
+    mutated: "if (!index) {",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.7",
+    step: "Demo kit step 4 (captions are shipped or the control's own name)",
+    description:
+      "Accept every caption and verify the caption test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "if (!isGeneratedCaption(action, context, entry.label) && !own.filter(Boolean).includes(entry.label)) {",
+    mutated: "if (false) {",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.8",
+    step: "Demo kit step 4 (a caption may only name the control's own target)",
+    description:
+      "Accept any kit name as a caption and verify the other-target test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "!own.filter(Boolean).includes(entry.label)",
+    mutated: "![...byName.keys(), ...ids.sources.flatMap((x) => (x.filters ?? []).map((f) => f.name))].includes(entry.label)",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.9",
+    step: "Demo kit step 4 (the VJster page drives the OBS page)",
+    description:
+      "Drop the target check and verify the VJster target test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "if (slot.settings?.target !== \"obs\") problems.push",
+    mutated: "if (false) problems.push",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.10",
+    step: "Demo kit step 4 (the build runs validatePreset)",
+    description:
+      "Skip validatePreset in the kit build and verify the refusal test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "  validatePreset(layouts.fadester, manifest);\n",
+    mutated: "",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.11",
+    step: "Demo kit step 4 (the kit is regular mode (D-5))",
+    description:
+      "Drop the regular-mode check and verify the studio-mode test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "if (preset.obsMode !== \"regular\") problems.push",
+    mutated: "if (false) problems.push",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.12",
+    step: "Demo kit step 4 (the files are named as the README promises)",
+    description:
+      "Name the Fadester file by its slug and verify the file-name test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "{ file: names[0]!, bytes: zip(fadester.files) }",
+    mutated: "{ file: \"suite-demo-kit-plus.streamDeckProfile\", bytes: zip(fadester.files) }",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.13",
+    step: "Demo kit step 4 (Restart acts on the 50 % copy)",
+    description:
+      "Bind Restart to Kit Clips and verify the binding test fails",
+    filePath: resolve(ROOT, "demo-kit/kit-layouts.json"),
+    target: "\"inputUuid\": \"ad976ab1-d3e3-4df7-a389-c99a8a428110\", \"inputName\": \"Kit Clips 50%\", \"operation\": \"restart\"",
+    mutated: "\"inputUuid\": \"7e4a69df-9d56-4d73-9dea-9673994305d0\", \"inputName\": \"Kit Clips\", \"operation\": \"restart\"",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.14",
+    step: "Demo kit step 4 (Visuals' scene key cuts to the Visuals scene)",
+    description:
+      "Point the Visuals page's scene key at scene index 2 and verify the scene test fails",
+    filePath: resolve(ROOT, "demo-kit/kit-layouts.json"),
+    target: "\"label\": \"Scene 2\", \"settings\": { \"sceneTarget\": \"__scene_index_1__\", \"operation\": \"cut\" }",
+    mutated: "\"label\": \"Scene 3\", \"settings\": { \"sceneTarget\": \"__scene_index_2__\", \"operation\": \"cut\" }",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.15",
+    step: "Demo kit step 4 (the VJster page's transport drives the OBS page)",
+    description:
+      "Set Play / pause to the browser and verify the VJster test fails",
+    filePath: resolve(ROOT, "demo-kit/kit-layouts.json"),
+    target: "{ \"kind\": \"transport\", \"at\": [3, 0], \"settings\": { \"target\": \"obs\" } }",
+    mutated: "{ \"kind\": \"transport\", \"at\": [3, 0], \"settings\": { \"target\": \"browser\" } }",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.16",
+    step: "Demo kit step 4 (a scene key is captioned for its own scene)",
+    description:
+      "Drop the scene-caption check and verify the caption test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "} else if (entry.label !== `Scene ${Number(index[1]) + 1}`) {",
+    mutated: "} else if (false) {",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.17",
+    step: "Demo kit step 4 (a filter control's inspector name matches its uuid)",
+    description:
+      "Drop the filter sourceName check and verify the name test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "} else if (s.sourceName !== source.name) {",
+    mutated: "} else if (false) {",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.18",
+    step: "Demo kit step 4 (a fader rides only kit media)",
+    description:
+      "Accept any kit source as a fader target and verify the not-media test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "if (!source || source.id !== \"ffmpeg_source\") {",
+    mutated: "if (!source) {",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.19",
+    step: "Demo kit step 4 (a layer key has a fixed scene)",
+    description:
+      "Drop the scope half of the fixed check and verify the scope test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "if (s.scope !== \"fixed\" || s.target !== \"fixed\") {",
+    mutated: "if (s.target !== \"fixed\") {",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.20",
+    step: "Demo kit step 4 (a layer key has a fixed source)",
+    description:
+      "Drop the target half of the fixed check and verify the target test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "if (s.scope !== \"fixed\" || s.target !== \"fixed\") {",
+    mutated: "if (s.scope !== \"fixed\") {",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.21",
+    step: "Demo kit step 4 (the build names exactly two profiles)",
+    description:
+      "Drop the two-names check and verify the one-name test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "if (names.length !== 2) throw",
+    mutated: "if (false) throw",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.22",
+    step: "Demo kit step 4 (a kit_docs.py without PROFILE_FILES is refused by name)",
+    description:
+      "Drop the missing-line check and verify the PROFILE_FILES test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "if (!line) throw new Error(\"kit_docs.py has no PROFILE_FILES line\");",
+    mutated: "if (false) throw new Error(\"kit_docs.py has no PROFILE_FILES line\");",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.23",
+    step: "Demo kit step 4 (the VJster profile name has no OBS or YouTube)",
+    description:
+      "Drop the name check and verify the VJster name test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "if (/\\b(OBS|YouTube)\\b/i.test(layout.name)) problems.push",
+    mutated: "if (false) problems.push",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K5.1",
+    step: "Demo kit step 5 (the import keeps a path that leaves the folder)",
+    description:
+      "Drop the prefix check and verify the leaving-path test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "    if not absolute.startswith(root):\n        return path",
+    mutated: "    if False:\n        return path",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.2",
+    step: "Demo kit step 5 (the import needs a separator after the folder)",
+    description:
+      "Drop the separator check and verify the drive-root and sibling tests fail",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "if absolute[len(root):len(root) + 1] != \"\\\\\":",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.3",
+    step: "Demo kit step 5 (the import keeps a path past MAX_PATH)",
+    description:
+      "Lift the MAX_PATH limit on the input and verify the long-path test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "    if len(path.encode(\"utf-16-le\")) // 2 >= MAX_PATH:\n        return None",
+    mutated: "    if False:\n        return None",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.4",
+    step: "Demo kit step 5 (the import translates arrays too)",
+    description:
+      "Skip arrays and verify the playlist-row tests fail",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "        return [translate_paths(v, root_dir) for v in value]",
+    mutated: "        return value",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.5",
+    step: "Demo kit step 5 (the import keeps the dialog's name)",
+    description:
+      "Always name the collection OBS Studio Import and verify the name test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "out[\"name\"] = name or data[\"name\"] or \"OBS Studio Import\"",
+    mutated: "out[\"name\"] = \"OBS Studio Import\"",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.6",
+    step: "Demo kit step 5 (a live path must be inside the unzip folder)",
+    description:
+      "Drop the inside check and verify the wrong-path test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "        elif not inside(path, kit_dir):",
+    mutated: "        elif False:",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.7",
+    step: "Demo kit step 5 (a live path must exist)",
+    description:
+      "Drop the exists check and verify the wrong-path test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "        elif not os.path.isfile(path):",
+    mutated: "        elif False:",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.8",
+    step: "Demo kit step 5 (Playlister rows are live paths)",
+    description:
+      "Skip playlist rows and verify the path tests fail",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "for row in settings.get(\"playlist\") or []:",
+    mutated: "for row in []:",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.9",
+    step: "Demo kit step 5 (a filter key needs its kind)",
+    description:
+      "Drop the filter kind check and verify the filter-key test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "if response.get(\"filterKind\") != s.get(\"filterKind\"):",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.10",
+    step: "Demo kit step 5 (a scene key needs its position's scene)",
+    description:
+      "Take the kit's scene as the live one and verify the scene-position test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "got = order[index][\"sceneName\"] if index < len(order) else None",
+    mutated: "got = want",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.11",
+    step: "Demo kit step 5 (scene positions follow the Scenes dock)",
+    description:
+      "Sort scenes bottom first and verify the scene-order test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "key=lambda s: -s[\"sceneIndex\"]",
+    mutated: "key=lambda s: s[\"sceneIndex\"]",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.12",
+    step: "Demo kit step 5 (a layer key needs its item to be its source)",
+    description:
+      "Drop the item source check and verify the layer-key test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "if response is not None and response.get(\"sourceUuid\") != s.get(\"sourceUuid\"):",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.13",
+    step: "Demo kit step 5 (a Playlister key needs a Playlister)",
+    description:
+      "Drop the Playlister kind check and verify the Playlister-key test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "if response is not None and response.get(\"inputKind\") != PLAYLISTER_KIND:",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.14",
+    step: "Demo kit step 5 (a Panic key needs both hotkeys)",
+    description:
+      "Drop the hotkey check and verify the Panic-key test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "            if missing:",
+    mutated: "            if False:",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.15",
+    step: "Demo kit step 5 (an unknown action fails)",
+    description:
+      "Accept unknown actions and verify the unknown-action test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "return [f\"{where}: an action this check does not know\"]",
+    mutated: "return []",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.16",
+    step: "Demo kit step 5 (VJster keys target the Speed Page)",
+    description:
+      "Drop the VJster target check and verify its test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "if s.get(\"target\") != \"obs\":",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.17",
+    step: "Demo kit step 5 (an older plugin fails)",
+    description:
+      "Drop the minimum version check and verify the version test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "elif version_tuple(got) < version_tuple(want[\"min_version\"]):",
+    mutated: "elif False:",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.18",
+    step: "Demo kit step 5 (versions compare as numbers)",
+    description:
+      "Compare versions as text and verify the 0.10.0 test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "return tuple(int(p) for p in version.split(\".\") if p.isdigit())",
+    mutated: "return tuple(version.split(\".\"))",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.19",
+    step: "Demo kit step 5 (a key absent before Panic is at its default after Restore)",
+    description:
+      "Ignore defaults and verify the Restore test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "was = before.get(key, defaults.get(key))",
+    mutated: "was = before.get(key)",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.20",
+    step: "Demo kit step 5 (shader uniform defaults are numbers)",
+    description:
+      "Keep the uniform defaults as text and verify the shader test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "out[name] = value == \"true\" if value in (\"true\", \"false\") else float(value)",
+    mutated: "out[name] = value",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.21",
+    step: "Demo kit step 5 (the zip's media must be the manifest's)",
+    description:
+      "Drop the manifest SHA-1 check and verify the refusal test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_package.py"),
+    target: "elif hashlib.sha1(source.read_bytes()).hexdigest() != entry[\"sha1\"]:",
+    mutated: "elif False:",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.22",
+    step: "Demo kit step 5 (the zip's text files have LF line ends)",
+    description:
+      "Pack text files as they are and verify the LF test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_package.py"),
+    target: "return data.replace(b\"\\r\\n\", b\"\\n\") if name.endswith(TEXT_SUFFIXES) else data",
+    mutated: "return data",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.23",
+    step: "Demo kit step 5 (the zip's entries are sorted)",
+    description:
+      "Leave the entries unsorted and verify the zip test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_package.py"),
+    target: "    return sorted(entries)",
+    mutated: "    return entries",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.24",
+    step: "Demo kit step 5 (an earlier zip that differs is kept)",
+    description:
+      "Overwrite nothing and verify the changed-zip test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_package.py"),
+    target: "    if target.exists() and target.read_bytes() != data:\n        keep_aside(target)\n",
+    mutated: "",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.25",
+    step: "Demo kit step 5 (the zip holds CREDITS.md)",
+    description:
+      "Leave CREDITS.md out and verify the README-table test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_package.py"),
+    target: "DOCS = [\"README.md\", \"CREDITS.md\", kc.SETUP_CARD]",
+    mutated: "DOCS = [\"README.md\", kc.SETUP_CARD]",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.26",
+    step: "Demo kit step 5 (the check never overwrites an unzipped file)",
+    description:
+      "Drop the differing-file refusal and verify the unzip test fails",
+    filePath: resolve(ROOT, "demo-kit/check-kit.py"),
+    target: "                if target.read_bytes() != data:",
+    mutated: "                if False:",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.27",
+    step: "Demo kit step 5 (the check's websocket config is its own)",
+    description:
+      "Drop the port check and verify the config test fails",
+    filePath: resolve(ROOT, "demo-kit/check-kit.py"),
+    target: "if not config.get(\"server_enabled\") or config.get(\"server_port\") != port:",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.28",
+    step: "Demo kit step 5 (a failing row is recorded)",
+    description:
+      "Swallow a row's exception and verify the results test fails",
+    filePath: resolve(ROOT, "demo-kit/check-kit.py"),
+    target: "self.add(row, False, f\"{type(exc).__name__}: {exc}\")",
+    mutated: "pass",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.29",
+    step: "Demo kit step 5 (the page key never reaches the results)",
+    description:
+      "Keep the token and verify the redaction test fails",
+    filePath: resolve(ROOT, "demo-kit/check-kit.py"),
+    target: "re.sub(r\"#token=[0-9a-f]+\", \"#token=<not kept>\", line[\"address\"])",
+    mutated: "line[\"address\"]",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.30",
+    step: "Demo kit step 5 (the saved collection's name is not compared)",
+    description:
+      "Compare the GUI's name and verify the saved test fails",
+    filePath: resolve(ROOT, "demo-kit/check-kit.py"),
+    target: "    normalised[\"name\"] = ids[\"collection\"]",
+    mutated: "    pass",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.31",
+    step: "Demo kit step 5 (the speed run places each action's kind)",
+    description:
+      "Make every action a speed dial and verify the layout test fails",
+    filePath: resolve(ROOT, "scripts/kit-speed-run.ts"),
+    target: "    action: `${UUID}.${c.kind}`,",
+    mutated: "    action: `${UUID}.speed`,",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.32",
+    step: "Demo kit step 5 (a filter key's setting must exist)",
+    description:
+      "Drop the setting check and verify the filter-key test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "                if setting not in known:",
+    mutated: "                if False:",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.33",
+    step: "Demo kit step 5 (a plugin that did not load fails)",
+    description:
+      "Skip a plugin with no version line and verify the version test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "        if got is None:\n            problems.append(",
+    mutated: "        if got is None:\n            continue\n            problems.append(",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.34",
+    step: "Demo kit step 5 (obs-websocket's authentication string)",
+    description:
+      "Hash the challenge before the secret and verify the protocol example fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "(secret + challenge)",
+    mutated: "(challenge + secret)",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.35",
+    step: "Demo kit step 5 (the zip's top level counts a folder once)",
+    description:
+      "List every entry as top level and verify the README-table test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "n.split(\"/\", 1)[0] + \"/\" if \"/\" in n else n for n in names",
+    mutated: "n for n in names",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.36",
+    step: "Demo kit step 5 (Restore allows a float rounding)",
+    description:
+      "Drop the 1e-6 tolerance and verify the Restore test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "and abs(was - now) < 1e-6",
+    mutated: "and False",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.37",
+    step: "Demo kit step 5 (int and bool uniforms have defaults too)",
+    description:
+      "Read float uniforms only and verify the shader test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "(?:float|int|bool)",
+    mutated: "(?:float)",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.38",
+    step: "Demo kit step 5 (a uniform's annotations span lines)",
+    description:
+      "Drop DOTALL and verify the shader test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "re.MULTILINE | re.DOTALL)",
+    mutated: "re.MULTILINE)",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.39",
+    step: "Demo kit step 5 (unzip keeps every file inside the kit folder)",
+    description:
+      "Drop the containment check and verify the leaving-name test fails",
+    filePath: resolve(ROOT, "demo-kit/check-kit.py"),
+    target: "            if not target.is_relative_to(root) or target == root:",
+    mutated: "            if False:",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.40",
+    step: "Demo kit step 5 (compare-import writes nothing into the unzip folder)",
+    description:
+      "Write the results into the unzip folder and verify the compare-import test fails",
+    filePath: resolve(ROOT, "demo-kit/check-kit.py"),
+    target: "out = Results(args.out.resolve() if args.out else None)",
+    mutated: "out = Results(args.out.resolve() if args.out else args.kit_dir.resolve() / \"compare-import.jsonl\")",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.41",
+    step: "Demo kit step 5 (a failed plugins row stops the later rows)",
+    description:
+      "Never block and verify the plugins-gate test fails",
+    filePath: resolve(ROOT, "demo-kit/check-kit.py"),
+    target: "                blocked = True",
+    mutated: "                pass",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.42",
+    step: "Demo kit step 5 (an input muted already stays muted)",
+    description:
+      "Mute and unmute whatever the input's state and verify the mute test fails",
+    filePath: resolve(ROOT, "demo-kit/check-kit.py"),
+    target: "        if self.obs.req(\"GetInputMute\", uuid)[\"inputMuted\"]:\n            return",
+    mutated: "        if False:\n            return",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.43",
+    step: "Demo kit step 5 (one failing undo does not skip the others)",
+    description:
+      "Stop at the first failing undo and verify the put-back test fails",
+    filePath: resolve(ROOT, "demo-kit/check-kit.py"),
+    target: "failed.append(f\"{step[0]} {step[1]}: {type(exc).__name__}: {exc}\")",
+    mutated: "raise",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.44",
+    step: "Demo kit step 5 (a failure after Panic still sends Restore)",
+    description:
+      "Drop the Restore in the finally and verify the Panic test fails",
+    filePath: resolve(ROOT, "demo-kit/check-kit.py"),
+    target: "            if not restore_sent:",
+    mutated: "            if False:",
+    testFile: "tests/demo-kit-check.test.ts"
   }
 ];
 

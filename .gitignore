@@ -11,3 +11,5 @@ MIDI-FADESTER-PROPOSAL.md
 vjster-extension/bin/
 com.jbrick2070.vjster.sdPlugin/bin/
 com.jbrick2070.vjster.sdPlugin/logs/
+demo-kit/build/
+__pycache__/

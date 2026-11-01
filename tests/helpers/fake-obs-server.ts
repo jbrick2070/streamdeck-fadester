@@ -496,8 +496,13 @@ export class FakeObsServer {
     requestType: string;
     requestData?: Record<string, unknown>;
   }> = [];
-  /** Every `GetMediaInputStatus` read, kept apart from `directCallLog` (tests compare that log whole). */
+  /**
+   * Every `GetMediaInputStatus` answered for a known input, kept apart from `directCallLog` (tests compare
+   * that log whole); the payloads as received, refused ones included, are in `mediaStatusRequests`.
+   */
   public mediaStatusLog: Array<{ inputUuid: string; mediaState: string }> = [];
+  /** The `requestData` of every `GetMediaInputStatus` as received, reads by name and of unknown inputs included. */
+  public mediaStatusRequests: Array<Record<string, unknown>> = [];
   /** Every `TriggerMediaInputAction` received, the ones `mediaFailNext` refused included. */
   public mediaActionAttempts = 0;
   public screenshotCallCount = 0;
@@ -1038,6 +1043,8 @@ export class FakeObsServer {
     }
 
     if (requestType === "GetMediaInputStatus" || requestType === "TriggerMediaInputAction") {
+      // The payload before any lookup: OBS would also accept a read by name, the client must not send one.
+      if (requestType === "GetMediaInputStatus") this.mediaStatusRequests.push({ ...requestData });
       const inputUuid = typeof requestData.inputUuid === "string" ? requestData.inputUuid : "";
       const input = inputUuid ? this.findInput(inputUuid)
         : this.inputList().find((candidate) => candidate.inputName === String(requestData.inputName ?? ""));

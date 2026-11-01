@@ -428,6 +428,7 @@ export class DirectObsClient extends ObsVendorClient {
     if (revisions.preview !== this.catalogEventRevisions.preview) next.currentPreviewScene = this.catalog.currentPreviewScene;
     if (revisions.transition !== this.catalogEventRevisions.transition) next.currentTransition = this.catalog.currentTransition;
     // An InputRemoved or rename applied meanwhile is newer than this listing: never resurrect the input.
+    // (Insurance: both events also start a refresh that supersedes this one, so no path reaches it today.)
     if (revisions.inputs !== this.catalogEventRevisions.inputs) {
       next.inputDetails = this.catalog.inputDetails.map((input) => ({ ...input }));
     }
@@ -1245,12 +1246,18 @@ export class DirectObsClient extends ObsVendorClient {
 
   private async readMediaStatus(target: MediaTarget, generation: number): Promise<MediaStatusReply> {
     if (generation !== this.mediaGeneration) throw new DirectObsError(ownText("errorControlChanged"), 400);
+    // InputRemoved bumps no generation: a target that left OBS (or cannot be driven now) is never read.
+    const availability = this.mediaAvailability(target.uuid);
+    if (availability !== "ok") throw this.mediaAvailabilityError(availability, target.uuid);
     const sequence = ++this.mediaSequence;
     target.statusInFlight = true;
     try {
       const data = await this.sendObsRequest("GetMediaInputStatus", { inputUuid: target.uuid });
       const reply = parseMediaStatus(data);
+      // A reply that lands after the target left OBS is dropped.
+      if (this.mediaAvailability(target.uuid) !== "ok") return reply;
       // A late reply of an old generation, or one older than what was applied, never touches state.
+      // (Reads of one target are serialized, so the sequence half is insurance no path reaches.)
       if (generation === this.mediaGeneration && sequence > target.lastAppliedSequence) {
         target.lastAppliedSequence = sequence;
         this.applyMediaStatus(target, reply);
@@ -1344,7 +1351,8 @@ export class DirectObsClient extends ObsVendorClient {
       try {
         reply = await this.freshMediaRead(target);
       } catch (error) {
-        if (generation !== this.mediaGeneration) return "cancelled";
+        // Invalidated, or the input left before its read went out: nothing was sent.
+        if (generation !== this.mediaGeneration || this.mediaAvailability(target.uuid) !== "ok") return "cancelled";
         throw error;
       }
       // The read took time: the input may have left meanwhile (InputRemoved bumps no generation).

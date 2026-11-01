@@ -98,6 +98,10 @@ describe("fake OBS server: identity, capabilities and media", () => {
       .toEqual({ mediaState: "OBS_MEDIA_STATE_NONE", mediaDuration: null, mediaCursor: null });
     await expect(direct.sendObsRequest("GetMediaInputStatus", { inputUuid: "no-such-input" }))
       .rejects.toMatchObject({ code: 600 });
+    // As OBS, the fake also answers a read by name; every payload is logged raw before the lookup.
+    expect((await direct.sendObsRequest("GetMediaInputStatus", { inputName: "Reel" })).mediaState).toBe("OBS_MEDIA_STATE_NONE");
+    expect(server!.mediaStatusRequests.slice(-3)).toEqual([{ inputUuid: desktop.inputUuid }, { inputUuid: "no-such-input" }, { inputName: "Reel" }]);
+    expect(server!.mediaStatusRequests).toHaveLength(FAKE_MEDIA_STATES.length + 4);
     await expect(direct.sendObsRequest("TriggerMediaInputAction", { inputUuid: "no-such-input", mediaAction: "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_STOP" }))
       .rejects.toMatchObject({ code: 600 });
     await expect(direct.sendObsRequest("TriggerMediaInputAction", { inputUuid: reel.inputUuid, mediaAction: "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_FOO" }))

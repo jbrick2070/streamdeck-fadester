@@ -2,15 +2,19 @@
 /**
  * Automated part of the Playlister transport acceptance (PLAN.md 9.7): starts
  * the portable OBS 33 (Playlister 0.5.0 installed), connects with the direct
- * client, finds or creates an obs_playlister_source, exercises Play/pause,
- * Stop, Restart, Next and Previous through the client, logs the observed
- * states, removes what it created and closes OBS cleanly. The by-eye part
- * (Program output, the OBS log) stays with the operator.
+ * client, always creates its own uniquely named obs_playlister_source (it
+ * never reuses or drives another source), exercises Play/pause, Stop,
+ * Restart, Next and Previous on that one through the client, logs the
+ * observed states, removes it and closes OBS cleanly. The by-eye part
+ * (Program output, the OBS log) stays with the operator. The obs-websocket
+ * password is read from OBS's own config into memory and never written or
+ * logged.
  *
  * Run: node --import tsx tests/playlister-live-check.ts
  * It refuses to run while another obs64 is up.
  */
 import { execFileSync, spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { connect as netConnect } from "node:net";
@@ -19,7 +23,8 @@ import { DirectObsClient, MediaOperation, MediaTargetState, PLAYLISTER_INPUT_KIN
 const OBS_ROOT = "C:\\Users\\jeffr\\OBS-Studio-33-Portable";
 const OBS_BIN = join(OBS_ROOT, "bin", "64bit");
 const CLIPS = "C:\\Users\\jeffr\\Documents\\ComfyUI\\output\\otr\\obs";
-const INPUT_NAME = "Fadester live check";
+// A fresh name per run, so the check can never collide with (or drive) a source someone made.
+const INPUT_NAME = `Fadester live check ${randomUUID().slice(0, 8)}`;
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 const log = (line: string): void => console.log(`${new Date().toISOString().slice(11, 23)} ${line}`);
@@ -56,6 +61,7 @@ async function main(): Promise<void> {
   const obs = spawn(join(OBS_BIN, "obs64.exe"), ["--portable", "--disable-updater", "--multi"], { cwd: OBS_BIN, stdio: "ignore" });
   const client = new DirectObsClient({ host: "127.0.0.1", port: config.server_port, password: config.server_password });
   let created = "";
+  let createSent = false;
   const findings: string[] = [];
   try {
     await waitForPort(config.server_port, 60000);
@@ -68,24 +74,27 @@ async function main(): Promise<void> {
     log(`connected; media capability ${client.getMediaCapability()}`);
     findings.push(`capability ${client.getMediaCapability()}`);
 
-    let uuid = client.getCatalog().inputDetails.find((input) => input.unversionedInputKind === PLAYLISTER_INPUT_KIND)?.inputUuid ?? "";
-    if (!uuid) {
-      // The first catalog can precede OBS's scene load; a scene name is needed to create into.
-      for (let tries = 0; !client.getCatalog().currentProgramScene && tries < 40; tries++) {
-        await sleep(250);
-        await client.refreshCatalog();
-      }
-      const sceneName = client.getCatalog().currentProgramScene;
-      if (!sceneName) throw new Error("OBS reported no Program scene to create the source in");
-      log(`no Playlister source: creating "${INPUT_NAME}" in scene "${sceneName}" with ${clips.join(", ")}`);
-      const reply = await client.sendObsRequest("CreateInput", {
-        sceneName, inputName: INPUT_NAME, inputKind: PLAYLISTER_INPUT_KIND,
-        inputSettings: { playlist: clips.map((clip) => ({ value: join(CLIPS, clip) })), loop: true }, sceneItemEnabled: true
-      });
-      created = String(reply.inputUuid ?? "");
+    // Always a source of its own: an existing Playlister is never reused or sent a command.
+    // The first catalog can precede OBS's scene load; a scene name is needed to create into.
+    for (let tries = 0; !client.getCatalog().currentProgramScene && tries < 40; tries++) {
+      await sleep(250);
       await client.refreshCatalog();
-      uuid = created;
     }
+    const sceneName = client.getCatalog().currentProgramScene;
+    if (!sceneName) throw new Error("OBS reported no Program scene to create the source in");
+    if (client.getCatalog().inputDetails.some((input) => input.inputName === INPUT_NAME)) {
+      throw new Error(`ABORT: an input named "${INPUT_NAME}" already exists; this check only drives a source it created.`);
+    }
+    log(`creating "${INPUT_NAME}" in scene "${sceneName}" with ${clips.join(", ")}`);
+    createSent = true;
+    const reply = await client.sendObsRequest("CreateInput", {
+      sceneName, inputName: INPUT_NAME, inputKind: PLAYLISTER_INPUT_KIND,
+      inputSettings: { playlist: clips.map((clip) => ({ value: join(CLIPS, clip) })), loop: true }, sceneItemEnabled: true
+    });
+    created = typeof reply.inputUuid === "string" ? reply.inputUuid : "";
+    if (!created) throw new Error("CreateInput answered without an inputUuid");
+    await client.refreshCatalog();
+    const uuid = created;
     const name = client.mediaInputName(uuid);
     log(`target ${name} (${uuid}) availability ${client.mediaAvailability(uuid)}`);
 
@@ -122,9 +131,10 @@ async function main(): Promise<void> {
     log("findings:");
     for (const finding of findings) log(`  ${finding}`);
   } finally {
-    if (created) {
+    if (createSent) {
+      // By its UUID; by its run-unique name only when CreateInput gave no UUID back.
       try {
-        await client.sendObsRequest("RemoveInput", { inputUuid: created });
+        await client.sendObsRequest("RemoveInput", created ? { inputUuid: created } : { inputName: INPUT_NAME });
         log("removed the created source");
       } catch (error) {
         log(`could not remove the created source: ${(error as Error).message}`);

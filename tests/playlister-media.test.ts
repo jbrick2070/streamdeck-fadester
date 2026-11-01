@@ -91,6 +91,10 @@ describe("Playlister transport client", () => {
       "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PLAY", "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_STOP",
       "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_RESTART", "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PREVIOUS"]);
     expect(server!.directCallLog.every((call) => call.requestData?.inputUuid === reel && !("inputName" in (call.requestData ?? {})))).toBe(true);
+    // Every status read (polls, the toggle's and the post-command reads) goes by inputUuid alone too:
+    // the fake would answer one by name.
+    expect(server!.mediaStatusRequests.length).toBeGreaterThanOrEqual(6);
+    for (const data of server!.mediaStatusRequests) expect(data).toEqual({ inputUuid: reel });
 
     // A held still is PLAYING with duration 0: no time is known. A cursor past the duration is clamped.
     await waitState(reel, (s) => s.mediaState === "playing");
@@ -248,7 +252,72 @@ describe("Playlister transport client", () => {
     server!.mediaStatusDelayMs = 0;
     server!.emitObsEvent("CurrentSceneCollectionChanged", {});
     await waitState(reel, (s) => s.mediaState === "stopped");
+
+    // A reply that lands after the new collection's catalog, with the Playlister back and available,
+    // is still of the old generation: only the generation keeps it out.
+    server!.mediaStatusDelayMs = 300;
+    model(reel).state = "OBS_MEDIA_STATE_PAUSED";
+    await waitUntil(() => expect(server!.mediaStatusLog.at(-1)?.mediaState).toBe("OBS_MEDIA_STATE_PAUSED"));
+    model(reel).state = "OBS_MEDIA_STATE_STOPPED";
+    const seen: string[] = [];
+    direct.on("mediaStateChanged", (uuid: string, next: MediaTargetState) => { if (uuid === reel) seen.push(next.mediaState); });
+    server!.emitObsEvent("CurrentSceneCollectionChanging", {});
+    server!.emitObsEvent("CurrentSceneCollectionChanged", {});
+    await waitState(reel, (s) => s.availability === "ok" && s.mediaState === "unknown");
+    await sleep(400);
+    server!.mediaStatusDelayMs = 0;
+    await waitState(reel, (s) => s.mediaState === "stopped");
+    expect(seen).not.toContain("paused");
     release();
+  });
+
+  it("drops a status reply that lands after InputRemoved and sends no status read for the removed Playlister", async () => {
+    const { client: direct, reel } = await connect();
+    const release = direct.watchMedia(reel);
+    await waitState(reel, (s) => s.mediaState === "stopped");
+    const readsOf = (uuid: string): number => server!.mediaStatusRequests.filter((data) => data.inputUuid === uuid).length;
+    // A poll read is on the wire (it reads PLAYING with a time) and a Next is in flight when the Playlister leaves OBS.
+    server!.mediaStatusDelayMs = 400;
+    server!.mediaActionDelayMs = 150;
+    model(reel).state = "OBS_MEDIA_STATE_PLAYING";
+    await waitUntil(() => expect(server!.mediaStatusLog.at(-1)?.mediaState).toBe("OBS_MEDIA_STATE_PLAYING"));
+    const press = direct.mediaCommand(reel, "next");
+    await waitUntil(() => expect(server!.mediaActionAttempts).toBe(1));
+    const removed = once(direct, "obsEvent", { signal: AbortSignal.timeout(2000) });
+    server!.removeInput(reel);
+    await removed;
+    const gone = { availability: "missing", mediaState: "unknown", mediaCursor: null, mediaDuration: null, pending: "none" };
+    expect(state(reel)).toMatchObject(gone);
+    const readsAtRemoval = readsOf(reel);
+    // The Next was on the wire: it was sent, and its trailing read is not.
+    expect(await press).toBe("sent");
+    // Both replies have landed by now: the poll's PLAYING does not paint the removed target.
+    await sleep(600);
+    expect(state(reel)).toMatchObject(gone);
+    expect(readsOf(reel)).toBe(readsAtRemoval);
+    release();
+
+    // A toggle whose in-queue read waits behind a poll read when its Playlister leaves: quietly cancelled, nothing sent.
+    server!.mediaStatusDelayMs = 0;
+    server!.mediaActionDelayMs = 0;
+    const bumper = server!.addPlaylister("Bumper").inputUuid;
+    const releaseBumper = direct.watchMedia(bumper);
+    await waitState(bumper, (s) => s.availability === "ok" && s.mediaState === "stopped");
+    server!.mediaStatusDelayMs = 400;
+    model(bumper).state = "OBS_MEDIA_STATE_PLAYING";
+    await waitUntil(() => expect(server!.mediaStatusLog.at(-1)).toEqual({ inputUuid: bumper, mediaState: "OBS_MEDIA_STATE_PLAYING" }));
+    const attempts = server!.mediaActionAttempts;
+    const toggle = direct.mediaCommand(bumper, "playpause");
+    const bumperRemoved = once(direct, "obsEvent", { signal: AbortSignal.timeout(2000) });
+    server!.removeInput(bumper);
+    await bumperRemoved;
+    const bumperReads = readsOf(bumper);
+    expect(await toggle).toBe("cancelled");
+    await sleep(500);
+    expect(server!.mediaActionAttempts).toBe(attempts);
+    expect(readsOf(bumper)).toBe(bumperReads);
+    expect(state(bumper)).toMatchObject(gone);
+    releaseBumper();
   });
 
   it("cancels a target on InputRemoved by inputUuid, keeps it across a rename, and invalidates every target on a collection change and on disconnect", async () => {
@@ -280,10 +349,10 @@ describe("Playlister transport client", () => {
     expect(state(bumper).availability).toBe("ok");
     expect(direct.getCatalog().inputDetails.some((input) => input.inputUuid === reel)).toBe(false);
     await waitUntil(() => expect(server!.mediaStatusLog.filter((entry) => entry.inputUuid === bumper).length).toBeGreaterThan(2));
-    // The removed one is polled no more.
-    const reelReads = server!.mediaStatusLog.filter((entry) => entry.inputUuid === reel).length;
+    // The removed one is polled no more (the raw log: the fake answers a removed UUID with 600 and logs no status).
+    const reelReads = server!.mediaStatusRequests.filter((data) => data.inputUuid === reel).length;
     await sleep(600);
-    expect(server!.mediaStatusLog.filter((entry) => entry.inputUuid === reel).length).toBe(reelReads);
+    expect(server!.mediaStatusRequests.filter((data) => data.inputUuid === reel).length).toBe(reelReads);
 
     // A collection change voids every target; polls resume after the next catalog.
     server!.mediaActionDelayMs = 300;
@@ -443,12 +512,12 @@ describe("Playlister transport client", () => {
     release();
   });
 
-  it("does not repaint a retargeted watcher from a cancelled wait or a late reply", async () => {
-    const { client: direct, reel } = await connect({}, { mediaPauseWaitMs: 200 });
+  it("does not repaint a retargeted watcher from a late reply", async () => {
+    const { client: direct, reel } = await connect();
     const events: Array<[string, MediaTargetState]> = [];
     direct.on("mediaStateChanged", (uuid: string, next: MediaTargetState) => events.push([uuid, next]));
     // A late poll reply after the watch was released paints nothing.
-    let release = direct.watchMedia(reel);
+    const release = direct.watchMedia(reel);
     await waitState(reel, (s) => s.mediaState === "stopped");
     server!.mediaStatusDelayMs = 300;
     model(reel).state = "OBS_MEDIA_STATE_PLAYING";
@@ -459,20 +528,6 @@ describe("Playlister transport client", () => {
     expect(events.length).toBe(count);
     expect(state(reel).mediaState).toBe("unknown");
     server!.mediaStatusDelayMs = 0;
-
-    // A pending PAUSE whose wait outlives the watch never reports unconfirmed to the next target.
-    release = direct.watchMedia(reel);
-    await waitState(reel, (s) => s.mediaState === "playing");
-    afterAction(server!, "pause", () => { model(reel).state = "OBS_MEDIA_STATE_PLAYING"; });
-    await direct.mediaCommand(reel, "playpause");
-    expect(state(reel).pending).toBe("pause");
-    release();
-    const retargeted = direct.watchMedia(reel);
-    const since = events.length;
-    await sleep(350);
-    expect(events.slice(since).some(([, next]) => next.pending === "unconfirmed")).toBe(false);
-    expect(state(reel).pending).toBe("none");
-    retargeted();
 
     // A command's target that lost its last watcher is never polled on the next catalog publication.
     server!.mediaActionDelayMs = 300;

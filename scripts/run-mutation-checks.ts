@@ -371,6 +371,66 @@ const MUTATIONS: MutationCheck[] = [
     testFile: "tests/playlister-media.test.ts"
   },
   {
+    id: "M-9.2g",
+    step: "Step 9.2 (Playlister transport: status reads by inputUuid)",
+    description:
+      "Send the status read by inputName instead of inputUuid (the fake answers both), and verify playlister-media.test.ts fails",
+    filePath: resolve(ROOT, "src/obs/direct-obs-client.ts"),
+    target: 'const data = await this.sendObsRequest("GetMediaInputStatus", { inputUuid: target.uuid });',
+    mutated: 'const data = await this.sendObsRequest("GetMediaInputStatus", { inputName: this.mediaInputName(target.uuid) });',
+    testFile: "tests/playlister-media.test.ts"
+  },
+  {
+    id: "M-9.2h",
+    step: "Step 9.2 (Playlister transport: no status read for a removed Playlister)",
+    description:
+      "Send a status read whatever the target's availability, so a command's trailing read reaches a removed UUID, and verify playlister-media.test.ts fails",
+    filePath: resolve(ROOT, "src/obs/direct-obs-client.ts"),
+    target: '    if (availability !== "ok") throw this.mediaAvailabilityError(availability, target.uuid);',
+    mutated: "    if (false) throw this.mediaAvailabilityError(availability, target.uuid);",
+    testFile: "tests/playlister-media.test.ts"
+  },
+  {
+    id: "M-9.2i",
+    step: "Step 9.2 (Playlister transport: a reply after InputRemoved is dropped)",
+    description:
+      "Apply a status reply that lands after the Playlister left OBS, and verify playlister-media.test.ts fails",
+    filePath: resolve(ROOT, "src/obs/direct-obs-client.ts"),
+    target: 'if (this.mediaAvailability(target.uuid) !== "ok") return reply;',
+    mutated: "if (false) return reply;",
+    testFile: "tests/playlister-media.test.ts"
+  },
+  {
+    id: "M-9.2j",
+    step: "Step 9.2 (Playlister transport: the pending-PAUSE NONE exemption)",
+    description:
+      "Let NONE settle a pending PAUSE inside the window after a load of ours, and verify playlister-media.test.ts fails",
+    filePath: resolve(ROOT, "src/obs/direct-obs-client.ts"),
+    target: '(reply.state === "none" && Date.now() - target.loadSentAt > MEDIA_LOAD_WINDOW_MS)',
+    mutated: 'reply.state === "none"',
+    testFile: "tests/playlister-media.test.ts"
+  },
+  {
+    id: "M-9.2k",
+    step: "Step 9.2 (Playlister transport: a load opens the transient-NONE window)",
+    description:
+      "Record no load time for Next, Previous, Restart or Play, so the transient NONE after a load settles a pending PAUSE, and verify playlister-media.test.ts fails",
+    filePath: resolve(ROOT, "src/obs/direct-obs-client.ts"),
+    target: 'if (action !== "pause" && action !== "stop") target.loadSentAt = Date.now();',
+    mutated: "if (false) target.loadSentAt = Date.now();",
+    testFile: "tests/playlister-media.test.ts"
+  },
+  {
+    id: "M-9.2l",
+    step: "Step 9.2 (Playlister transport: a toggle refused by a removal is cancelled)",
+    description:
+      "Reject a toggle whose in-queue read was refused because its Playlister left OBS, instead of cancelling it quietly, and verify playlister-media.test.ts fails",
+    filePath: resolve(ROOT, "src/obs/direct-obs-client.ts"),
+    target: '        // Invalidated, or the input left before its read went out: nothing was sent.\n        if (generation !== this.mediaGeneration || this.mediaAvailability(target.uuid) !== "ok") return "cancelled";',
+    mutated: '        // Invalidated, or the input left before its read went out: nothing was sent.\n        if (generation !== this.mediaGeneration) return "cancelled";',
+    testFile: "tests/playlister-media.test.ts"
+  },
+  {
     id: "M-9.3a",
     step: "Step 9.3 (Playlister transport key: nothing sent when unbound)",
     description:

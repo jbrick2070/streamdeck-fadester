@@ -601,9 +601,9 @@ and `TriggerMediaInputAction` take `inputUuid`; `mediaDuration` and `mediaCursor
    (`freshMediaRead`): a poll tick that finds a read in flight skips, a post-command read or the toggle's in-queue
    read is queued behind the in-flight one and sent fresh, and reads queued before one is sent share it; so the
    sequence guard (one global `mediaSequence`) can never be hit and M-9.2c mutates the generation half instead (a
-   late reply after a collection change). The toggle's intent is taken at the press by the queue (a second
-   `playpause` is rejected while one is queued or a PLAY/PAUSE intent is pending), its direction by a fresh read
-   inside the queue; each executed command gets a stamp, explicit commands clear pending and set a barrier (never
+   late reply after a collection change; since the final QA of 9.7, one that lands after the new catalog). The
+   toggle's intent is taken at the press by the queue (a second `playpause` is rejected while one is queued or a
+   PLAY/PAUSE intent is pending), its direction by a fresh read inside the queue; each executed command gets a stamp, explicit commands clear pending and set a barrier (never
    reachable under the serial queue, kept as cheap insurance). PLAY is released when the trailing read's attempt
    settles; PAUSE waits `mediaPauseWaitMs` (20 s; a client option so tests use 400 ms) for an observed PAUSED,
    STOPPED, ENDED or ERROR, or NONE outside the 15 s window after a load of ours (`loadSentAt`); then `unconfirmed`,
@@ -749,8 +749,9 @@ and `TriggerMediaInputAction` take `inputUuid`; `mediaDuration` and `mediaCursor
    *Automated part (2026-11-01):* `tests/playlister-live-check.ts` (run by hand: `node --import tsx
    tests/playlister-live-check.ts`; never inside vitest) starts the portable OBS 33 at
    `C:\Users\jeffr\OBS-Studio-33-Portable` (`--portable --disable-updater --multi`, refusing to run while another
-   obs64 is up), connects with `DirectObsClient` using the password from obs-websocket's `config.json`, finds an
-   `obs_playlister_source` or creates "Fadester live check" in the Program scene with two local clips from
+   obs64 is up), connects with `DirectObsClient` using the password from obs-websocket's `config.json` (in memory
+   only), creates its own Playlister "Fadester live check" (since the final QA with a random suffix per run, never
+   reusing or driving another source) in the Program scene with two local clips from
    `C:\Users\jeffr\Documents\ComfyUI\output\otr\obs`, watches it, presses Play/pause three times, Stop, Restart, Next,
    Previous, Stop through `mediaCommand`, logs every observed state, removes what it created and closes OBS through
    its main window. Result on the first run (OBS 33.0.0, obs-websocket 5.6.3 reported `availableRequests` with the
@@ -764,6 +765,27 @@ and `TriggerMediaInputAction` take `inputUuid`; `mediaDuration` and `mediaCursor
    `config\obs-studio\logs\2026-11-01 02-45-53.txt`). The by-eye part (Program output, loop and shuffle ends, the
    empty list and a hidden source, the restart_behavior modes, rename, delete, OBS restart, live queue edits, keys on
    two sources) stays with the operator.
+   *Final QA fixes (2026-11-01, one commit):* the fake logs every `GetMediaInputStatus` payload as received
+   (`mediaStatusRequests`, reads by name and of unknown UUIDs included; pinned in `fake-obs-server.test.ts`), and the
+   first 9.2 test asserts every status read is `{ inputUuid }` alone (*M-9.2g*: read by `inputName`, which the fake
+   would answer). `readMediaStatus` sends no read unless the target's availability is `ok` and drops a reply that
+   lands when it is not, because `InputRemoved` bumps no generation (before, a command in flight at the removal sent
+   its trailing read to the removed UUID and an in-flight poll reply painted it); a toggle whose in-queue read is
+   refused that way resolves `cancelled`, never an error. New test "drops a status reply that lands after InputRemoved
+   and sends no status read for the removed Playlister" (*M-9.2h* the send gate, *M-9.2i* the reply gate, *M-9.2l*
+   the toggle's quiet cancellation); the InputRemoved test counts the raw log too (the fake answers a removed UUID
+   with 600 and logs no status). With the reply gate a late reply during a collection
+   change is dropped by availability as well, so "applies no older status reply..." gained a reply that lands after
+   the new collection's catalog, with the Playlister back, where only the generation keeps it out (M-9.2c). *M-9.2j*
+   lets NONE settle a pending PAUSE inside the window after a load of ours and *M-9.2k* records no load time; the
+   toggle test kills both. The inputs revision guard in `refreshCatalog` and the sequence guard in `readMediaStatus`
+   are kept as belt-and-braces that no current path reaches (every inputs-revision bump is followed by a refresh that
+   supersedes the ones in flight; reads of one target are serialized), and say so in comments. The retarget test's
+   cancelled-wait block was dropped, and its name is now "does not repaint a retargeted watcher from a late reply":
+   the release clears the wait and a released target emits nothing, so no single change could make that block fail.
+   README's Direct OBS actions table has a Playlister Transport row. The live check always creates its own uniquely
+   named source, refuses a name already in OBS, drives only that source and removes it (by its UUID, or by its
+   run-unique name if `CreateInput` gave none).
 
 Where the reviewed design and today's code disagree (found while drafting, 2026-11-01): `InputRemoved` is matched by
 `inputName` only (`direct-obs-client.ts:672-674`), the design needs `inputUuid`; `GetVersion.availableRequests` is
@@ -806,7 +828,10 @@ taken, and binding for the steps above where they differ.**
 - *Test plumbing:* `server.inputNames` stays as a compatible accessor (nine test sites assign it); the German render
   test for the six captions is named in 9.5 and `preset-captions.test.ts` gets a `playlister` branch;
   `manifest-hygiene` counts six non-optional actions of eight; the deck-fit sample is "120:00/120:00" (a two-hour
-  item), and times above 99:59 are drawn as "h:mm:ss"; `SupportedInMultiActions` is false, as for the other actions.
+  item), and times above 99:59 are drawn as "h:mm:ss"; `SupportedInMultiActions` is false (Scene & Transition and OBS
+  Fade are true), because a press inside a Multi Action arrives without a `willAppear`, so the action has no controller
+  to send it through. (Those two look up their controller the same way; whether their Multi Action press reaches
+  one is a question for the hardware check, not changed here.)
 - *Simpler:* one global monotonic sequence plus the generation (no per-UUID counters); `mediaStateChanged` carries
   `availability`, so the key subscribes to `statusChanged` and `mediaStateChanged` only.
 - *Confirmed as designed:* per-UUID bound and Stop purge; `InputRemoved` by UUID; capabilities before the first

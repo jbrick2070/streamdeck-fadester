@@ -85,6 +85,10 @@
     if (!mount || mount.dataset.ready === "true") return;
     mount.dataset.ready = "true";
     mount.innerHTML = [
+      // The page accent of this control (PLAN.md 10.4); the Neo Info Bar has none.
+      '<div class="row" id="direct-accent-row"><label for="direct-accent" data-i18n="accentLabel">Accent</label><select id="direct-accent">',
+      '<option value="default" data-i18n="accentDefault">Fadester violet</option><option value="brass" data-i18n="accentBrass">Brass</option>',
+      '<option value="teal" data-i18n="accentTeal">Teal</option><option value="magenta" data-i18n="accentMagenta">Magenta</option></select></div>',
       '<h3><span data-i18n="connHeading">OBS connection</span> <span class="scope" data-i18n="scopeAllControls">all Fadester controls</span></h3>',
       '<div id="direct-conn-status" class="status-banner status-err" data-i18n="connWaiting">Waiting for OBS…</div>',
       '<p class="muted" id="direct-conn-hint" data-i18n="connHintOnce">Connect once for every Fadester button and dial.</p>',
@@ -223,11 +227,21 @@
     updateStudioSetup();
   }
 
+  function updateAccent() {
+    const row = $("direct-accent-row");
+    const accent = $("direct-accent");
+    if (row) row.style.display = actionInfo.action === "com.jbrick2070.fadester-for-obs.obs-neo-infobar" ? "none" : "";
+    if (!accent) return;
+    if (document.activeElement !== accent) accent.value = currentSettings.accent || "default";
+    accent.onchange = function () { save({ accent: accent.value }); };
+  }
+
   function refreshControls() {
     if (typeof bindControls === "function") {
       bindControls(currentSettings, save, currentState);
     }
     updateStudioSetup();
+    updateAccent();
   }
 
   window.directObsFillSelect = fillSelect;
@@ -253,6 +267,10 @@
       scope: settings.scope || "auto",
       sceneName: settings.sceneName || ""
     });
+  };
+  /** The filters on one source (OBS Filter inspector); the answer arrives in the next directObsState. */
+  window.directObsRefreshFilters = function (sourceUuid) {
+    if (sourceUuid) sendToPlugin({ event: "directFilterCatalog", sourceUuid: sourceUuid });
   };
   window.directObsSelectLayer = function (sceneName, sceneItemId) {
     sendToPlugin({ event: "directSelectLayer", sceneName: sceneName, sceneItemId: sceneItemId });

@@ -1050,6 +1050,24 @@ ships unbound.
    hidden or marked), the explicit range off the table, "Use current", banners; `ui/visual-panic.html`; an Accent row
    on every direct inspector. Tests: only numeric, writable settings and a required range; saves UUID, filter name and
    kind, never resolves by name. Mutation: *M-10.5a* a denied setting listed.
+   *As built (2026-11-01):* the bridge answers `directFilterCatalog` (the page's `directObsRefreshFilters(uuid)`) with
+   `readInspectorFilters`: `GetSourceFilterList` by UUID, each kind's defaults merged, per filter its numeric
+   settings the deck may write (the table's first, then the rest by name, at most 200; never a denied one), each with
+   the deck's word for it, its value and who drives it; the newest eight sources ride in every `directObsState` as
+   `filterCatalog`, emptied on `connectionReset`. `ui/obs-filter.html`: the source list is every scene, group and
+   input by UUID ("Scene: …", "Group: …", "Source: …"; a bound source that is gone keeps a row with its stored name);
+   the filter list names each filter with its kind (Visual Sidechain's and OBS's own names for the three known ones);
+   the setting list marks a driven setting "(driven by …)" and an off-table one "(set a range)"; a dial shows its
+   press (drop and return, on/off, nothing), a key its job (on/off, set over a time with "Use current", step up or
+   down by a percent); the modulator amount offers 0 to 100, -100 to 0, -100 to 100; any other off-table setting
+   needs From, To and an optional Whole numbers. A source, filter or setting change never carries a range over, a
+   source or filter change clears what no longer applies, and a bundled caption is released when the job changes.
+   One banner, the most pressing first (choose a source; source missing; OBS's error; choose a filter; filter
+   missing; kind changed; choose a setting; driven; choose or type a range). The page asks for a source's filters
+   once, again after the connection drops or on Refresh. `ui/visual-panic.html`: Panic or Restore, the label, two
+   notes. Every direct inspector (not the Neo Info Bar) gains an Accent row in the shared sections. 51 inspector
+   texts in all eight files (`fx*`, `vp*`, `accent*`). Tests: `tests/obs-filter-inspector.test.ts` (the bridge
+   against the fake, the page in the vm harness as a dial and as a key).
 7. **Step 10.6 -- Profiles.** The builder's checks move into `scripts/profile-checks.ts` (tests import it; the
    builder still writes on run); presets may hold `pages: [{ name, accent, actions }]` (single `actions` stays); kinds
    `filter`, `panic` and `page`; page keys in the review's exact format (`Plugin: { Name: "Pages", UUID:

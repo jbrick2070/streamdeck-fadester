@@ -8,13 +8,41 @@
 </head>
 <body>
   <h3><span data-i18n="vpHeading">Visual Panic</span> <span class="scope" data-i18n="scopeThisKey">this key</span></h3>
+  <p class="muted" data-i18n="vpIntro">Sends Visual Sidechain's own Panic or Restore through OBS's hotkeys; OBS does not need to be in front.</p>
+  <div class="row">
+    <label for="vp-operation" data-i18n="whenPressed">When pressed</label>
+    <select id="vp-operation">
+      <option value="panic" data-i18n="vpOptPanic">Panic (instant)</option>
+      <option value="restore" data-i18n="vpOptRestore">Restore (hold 0.8 s)</option>
+    </select>
+  </div>
+  <p class="muted" data-i18n="vpNote">Every Panic press is sent. Panic keys show PANIC SENT until a Restore is accepted or OBS reconnects; meanwhile no Visual Sidechain filter is written from the deck. A Restore with no Panic before it changes nothing.</p>
+  <div class="row">
+    <label for="vp-label" data-i18n="label">Label</label>
+    <input id="vp-label" type="text" maxlength="14" placeholder="Automatic (leave blank)" data-i18n-placeholder="placeholderAutomaticBlank" />
+  </div>
   <div id="direct-shared-sections"></div>
   <script src="i18n.js"></script>
   <script src="preset-captions.js"></script>
   <script src="direct-pi.js"></script>
   <script>
-    // The Panic or Restore choice lands in step 10.5 (PLAN.md); the shared connection sections already work.
-    window.initDirectObsPropertyInspector(function () {});
+    window.initDirectObsPropertyInspector(function (settings, save) {
+      const operation = document.getElementById("vp-operation");
+      const label = document.getElementById("vp-label");
+      const selected = settings.operation === "restore" ? "restore" : "panic";
+      // A bundled profile's caption is a default: shown empty here, released when the job changes.
+      const generatedLabel = function () {
+        return window.FadesterPresetCaptions.isGenerated("panic", { operation: selected, labelOverride: settings.labelOverride });
+      };
+      if (operation && document.activeElement !== operation) operation.value = selected;
+      if (label && document.activeElement !== label) label.value = generatedLabel() ? "" : settings.labelOverride || "";
+      if (operation) operation.onchange = function () {
+        const update = { operation: operation.value };
+        if (operation.value !== selected && generatedLabel()) update.labelOverride = "";
+        save(update);
+      };
+      if (label) label.onchange = function () { save({ labelOverride: label.value.trim() }); };
+    });
   </script>
 </body>
 </html>

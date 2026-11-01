@@ -8,13 +8,266 @@
 </head>
 <body>
   <h3><span data-i18n="fxHeading">OBS filter</span> <span class="scope" data-i18n="scopeThisControl">this control</span></h3>
+  <p class="muted" data-i18n="fxIntro">Rides one filter setting on a dial, or turns a filter on and off, sets or steps a value from a key. Choose the source and its filter by name; the control follows the source through renames.</p>
+  <div id="fx-status" class="status-banner status-info" style="display:none;"></div>
+  <div class="row">
+    <label for="fx-source" data-i18n="fxSource">Source</label>
+    <select id="fx-source"></select>
+    <button id="fx-refresh" class="btn secondary" type="button" data-i18n="refresh">Refresh</button>
+  </div>
+  <div class="row">
+    <label for="fx-filter" data-i18n="fxFilter">Filter</label>
+    <select id="fx-filter"></select>
+  </div>
+  <div class="row" id="fx-operation-row">
+    <label for="fx-operation" data-i18n="whenPressed">When pressed</label>
+    <select id="fx-operation">
+      <option value="toggle" data-i18n="fxOpToggle">Turn the filter on or off</option>
+      <option value="set" data-i18n="fxOpSet">Set a value over a time</option>
+      <option value="step_up" data-i18n="fxOpStepUp">Step up</option>
+      <option value="step_down" data-i18n="fxOpStepDown">Step down</option>
+    </select>
+  </div>
+  <div class="row" id="fx-press-row">
+    <label for="fx-press" data-i18n="fxDialPress">Press</label>
+    <select id="fx-press">
+      <option value="drop_return" data-i18n="fxPressDrop">Drop while held, then return</option>
+      <option value="toggle" data-i18n="fxPressToggle">Turn the filter on or off</option>
+      <option value="none" data-i18n="fxPressNone">Nothing</option>
+    </select>
+  </div>
+  <div class="row" id="fx-setting-row">
+    <label for="fx-setting" data-i18n="fxSetting">Setting</label>
+    <select id="fx-setting"></select>
+  </div>
+  <div class="row" id="fx-preset-row">
+    <label for="fx-range-preset" data-i18n="fxRange">Range</label>
+    <select id="fx-range-preset">
+      <option value="0:100" data-i18n="fxRangePositive">0 to 100</option>
+      <option value="-100:0" data-i18n="fxRangeNegative">-100 to 0 (ducking)</option>
+      <option value="-100:100" data-i18n="fxRangeBipolar">-100 to 100</option>
+    </select>
+  </div>
+  <div id="fx-custom-range">
+    <div class="row">
+      <label for="fx-range-min" data-i18n="fxRangeMin">From</label>
+      <input id="fx-range-min" type="number" step="any" />
+    </div>
+    <div class="row">
+      <label for="fx-range-max" data-i18n="fxRangeMax">To</label>
+      <input id="fx-range-max" type="number" step="any" />
+    </div>
+    <div class="row">
+      <label></label>
+      <label class="check"><input id="fx-integer" type="checkbox" /> <span data-i18n="fxInteger">Whole numbers</span></label>
+    </div>
+  </div>
+  <div class="row" id="fx-value-row">
+    <label for="fx-value" data-i18n="fxValue">Value</label>
+    <input id="fx-value" type="number" step="any" />
+    <button id="fx-use-current" class="btn secondary" type="button" data-i18n="fxUseCurrent">Use current</button>
+  </div>
+  <div class="row" id="fx-duration-row">
+    <label for="fx-duration" data-i18n="fxDuration">Over (ms)</label>
+    <input id="fx-duration" type="number" min="0" max="20000" step="50" />
+  </div>
+  <div class="row" id="fx-step-row">
+    <label for="fx-step" data-i18n="fxStep">Step (%)</label>
+    <input id="fx-step" type="number" min="1" max="50" step="1" />
+  </div>
+  <p class="muted" data-i18n="fxNote">A write moves at most a tenth of the range, never a setting an Audio Modulator or a fader drives, and nothing of a Visual Sidechain filter while Panic is latched.</p>
+  <div class="row">
+    <label for="fx-label" data-i18n="label">Label</label>
+    <input id="fx-label" type="text" maxlength="14" placeholder="Automatic (leave blank)" data-i18n-placeholder="placeholderAutomaticBlank" />
+  </div>
   <div id="direct-shared-sections"></div>
   <script src="i18n.js"></script>
   <script src="preset-captions.js"></script>
   <script src="direct-pi.js"></script>
   <script>
-    // The source, filter and setting pickers land in step 10.5 (PLAN.md); the shared connection sections already work.
-    window.initDirectObsPropertyInspector(function () {});
+    (function () {
+      const KINDS = {
+        visual_sidechain_shader_filter: "fxKindShader",
+        visual_sidechain_modulator_filter: "fxKindModulator",
+        color_filter_v2: "fxKindColor"
+      };
+      // The source whose filters were asked for last; asked again only on Refresh or a new source.
+      let requested = "";
+      window.initDirectObsPropertyInspector(function (settings, save, state) {
+        const T = window.FadesterI18n.t;
+        const $ = function (id) { return document.getElementById(id); };
+        const dial = window.directObsController === "Encoder";
+        const catalog = state && state.catalog ? state.catalog : {};
+        const connected = Boolean(state && state.status && state.status.kind === "connected");
+        const text = function (key) { return typeof settings[key] === "string" ? settings[key] : ""; };
+        const sourceUuid = text("sourceUuid");
+        const filterName = text("filterName");
+        const filterKind = text("filterKind");
+        const setting = text("setting");
+        const operation = text("keyOperation") || "toggle";
+        const press = text("dialPress") || "drop_return";
+        const usesSetting = dial || operation !== "toggle";
+        // A dropped connection empties the plugin's filter lists: ask again once it is back.
+        if (!connected) requested = "";
+        const show = function (id, visible) { const element = $(id); if (element) element.style.display = visible ? "" : "none"; };
+        const number = function (value) { return typeof value === "number" && isFinite(value) ? value : undefined; };
+        // A bundled profile's caption is a default: shown empty here, released when the control's job changes.
+        const generatedLabel = function () {
+          return window.FadesterPresetCaptions.isGenerated("filter", {
+            control: dial ? "dial" : "key", keyOperation: operation, setting: setting, labelOverride: settings.labelOverride
+          });
+        };
+        const saveReleasing = function (update) {
+          if (generatedLabel()) update.labelOverride = "";
+          save(update);
+        };
+
+        // Sources: scenes, groups and inputs, by UUID; the names are shown, never used to resolve (R-RIG-1).
+        const sources = [];
+        (catalog.sceneDetails || []).forEach(function (scene) { sources.push({ value: scene.sceneUuid, name: scene.sceneName, text: T("fxSourceScene", { name: scene.sceneName }) }); });
+        (catalog.groupDetails || []).forEach(function (group) { sources.push({ value: group.groupUuid, name: group.groupName, text: T("fxSourceGroup", { name: group.groupName }) }); });
+        (catalog.inputDetails || []).forEach(function (input) { sources.push({ value: input.inputUuid, name: input.inputName, text: T("fxSourceInput", { name: input.inputName }) }); });
+        const boundSource = sources.find(function (source) { return source.value === sourceUuid; });
+        const sourceItems = sources.map(function (source) { return { value: source.value, text: source.text }; });
+        const sourceHint = text("sourceName");
+        if (sourceUuid && !boundSource) sourceItems.push({ value: sourceUuid, text: T("notInObsNow", { value: sourceHint || T("fxUnknownSource") }) });
+        window.directObsFillSelect($("fx-source"), sourceItems, sourceUuid, T("fxChooseSource"));
+
+        // The chosen source's filters, read by the plugin by UUID.
+        const catalogs = state && state.filterCatalog ? state.filterCatalog : {};
+        const filterCatalog = catalogs[sourceUuid];
+        if (sourceUuid && connected && boundSource && !filterCatalog && requested !== sourceUuid) {
+          requested = sourceUuid;
+          window.directObsRefreshFilters(sourceUuid);
+        }
+        const filters = filterCatalog ? filterCatalog.filters : [];
+        const boundFilter = filters.find(function (filter) { return filter.filterName === filterName; });
+        const filterItems = filters.map(function (filter) {
+          return { value: filter.filterName, text: T("fxFilterItem", { name: filter.filterName, kind: KINDS[filter.filterKind] ? T(KINDS[filter.filterKind]) : filter.filterKind }) };
+        });
+        if (filterName && !boundFilter) filterItems.push({ value: filterName, text: T("notInObsNow", { value: filterName }) });
+        window.directObsFillSelect($("fx-filter"), filterItems, filterName, T("fxChooseFilter"));
+
+        // Settings: the range table's first, numbers only, never one the deck does not write; a driven one is marked.
+        const filterSettings = boundFilter ? boundFilter.settings : [];
+        const current = filterSettings.find(function (entry) { return entry.setting === setting; });
+        const settingItems = filterSettings.map(function (entry) {
+          return {
+            value: entry.setting,
+            text: entry.owner !== undefined ? T("fxSettingDriven", { setting: entry.label, filter: entry.owner || T("fxOwnFader") })
+              : entry.table ? entry.label : T("fxSettingOther", { setting: entry.label })
+          };
+        });
+        if (setting && !current) settingItems.push({ value: setting, text: T("notInObsNow", { value: setting }) });
+        window.directObsFillSelect($("fx-setting"), settingItems, setting, T("fxChooseSetting"));
+
+        const modAmount = filterKind === "visual_sidechain_modulator_filter" && /^slot_[1-8]_amount_pct$/.test(setting);
+        const ownRange = Boolean(current && current.table && !modAmount);
+        const needsRange = usesSetting && Boolean(setting) && !ownRange && (Boolean(current) || modAmount);
+        const rangeMin = number(settings.rangeMin);
+        const rangeMax = number(settings.rangeMax);
+        const presetRange = ["0:100", "-100:0", "-100:100"].indexOf(rangeMin + ":" + rangeMax) !== -1;
+        // A range typed for one setting never carries over to another.
+        const noRange = { rangeMin: undefined, rangeMax: undefined, integer: undefined };
+        show("fx-operation-row", !dial);
+        show("fx-press-row", dial);
+        show("fx-setting-row", usesSetting);
+        show("fx-preset-row", usesSetting && modAmount);
+        show("fx-custom-range", needsRange && !modAmount);
+        show("fx-value-row", !dial && operation === "set");
+        show("fx-duration-row", !dial && operation === "set");
+        show("fx-step-row", !dial && (operation === "step_up" || operation === "step_down"));
+
+        const set = function (id, value) { const element = $(id); if (element && document.activeElement !== element) element.value = value; };
+        set("fx-operation", operation);
+        set("fx-press", press);
+        // The modulator amount takes one of three ranges; anything else shows no choice until one is made.
+        set("fx-range-preset", presetRange ? rangeMin + ":" + rangeMax : "");
+        set("fx-range-min", rangeMin !== undefined ? String(rangeMin) : "");
+        set("fx-range-max", rangeMax !== undefined ? String(rangeMax) : "");
+        set("fx-value", String(number(settings.value) !== undefined ? settings.value : 0));
+        set("fx-duration", String(number(settings.durationMs) !== undefined ? settings.durationMs : 1000));
+        set("fx-step", String(number(settings.stepPct) !== undefined ? settings.stepPct : 10));
+        set("fx-label", generatedLabel() ? "" : settings.labelOverride || "");
+        const integer = $("fx-integer");
+        if (integer) integer.checked = settings.integer === true;
+        const useCurrent = $("fx-use-current");
+        if (useCurrent) useCurrent.disabled = !current;
+
+        // One banner, the most pressing first.
+        const banner = $("fx-status");
+        let message = "";
+        let kind = "status-info";
+        if (!sourceUuid) message = T("fxBannerChooseSource");
+        else if (connected && !boundSource) { message = T("fxBannerSourceMissing"); kind = "status-warn"; }
+        else if (filterCatalog && filterCatalog.error) { message = filterCatalog.error; kind = "status-err"; }
+        else if (!filterName) message = T("fxBannerChooseFilter");
+        else if (filterCatalog && !boundFilter) { message = T("fxBannerFilterMissing"); kind = "status-warn"; }
+        else if (boundFilter && filterKind && boundFilter.filterKind !== filterKind) { message = T("fxBannerKind"); kind = "status-warn"; }
+        else if (usesSetting && !setting) message = T("fxBannerChooseSetting");
+        else if (usesSetting && current && current.owner !== undefined) { message = T("fxBannerDriven", { filter: current.owner || T("fxOwnFader") }); kind = "status-warn"; }
+        else if (needsRange && modAmount && !presetRange) message = T("fxBannerRangeChoose");
+        else if (needsRange && !(rangeMin !== undefined && rangeMax !== undefined && rangeMin < rangeMax)) message = T("fxBannerRange");
+        if (banner) {
+          banner.textContent = message;
+          banner.className = "status-banner " + kind;
+          banner.style.display = message ? "block" : "none";
+        }
+
+        const source = $("fx-source");
+        if (source) source.onchange = function () {
+          const chosen = sources.find(function (entry) { return entry.value === source.value; });
+          requested = "";
+          saveReleasing(Object.assign({ sourceUuid: source.value, sourceName: chosen ? chosen.name : "", filterName: "", filterKind: "", setting: "" }, noRange));
+        };
+        const filter = $("fx-filter");
+        if (filter) filter.onchange = function () {
+          const chosen = filters.find(function (entry) { return entry.filterName === filter.value; });
+          const update = { filterName: filter.value, filterKind: chosen ? chosen.filterKind : "" };
+          // A setting the new filter does not have is not kept.
+          if (!chosen || !chosen.settings.some(function (entry) { return entry.setting === setting; })) Object.assign(update, { setting: "" }, noRange);
+          saveReleasing(update);
+        };
+        const settingSelect = $("fx-setting");
+        if (settingSelect) settingSelect.onchange = function () {
+          const chosen = filterSettings.find(function (entry) { return entry.setting === settingSelect.value; });
+          const update = { setting: settingSelect.value };
+          const amount = filterKind === "visual_sidechain_modulator_filter" && /^slot_[1-8]_amount_pct$/.test(settingSelect.value);
+          if (amount) Object.assign(update, { rangeMin: 0, rangeMax: 100, integer: undefined });
+          else Object.assign(update, noRange);
+          saveReleasing(update);
+        };
+        const preset = $("fx-range-preset");
+        if (preset) preset.onchange = function () {
+          const parts = preset.value.split(":").map(Number);
+          save({ rangeMin: parts[0], rangeMax: parts[1] });
+        };
+        const min = $("fx-range-min");
+        if (min) min.onchange = function () { save({ rangeMin: min.value === "" ? undefined : Number(min.value) }); };
+        const max = $("fx-range-max");
+        if (max) max.onchange = function () { save({ rangeMax: max.value === "" ? undefined : Number(max.value) }); };
+        if (integer) integer.onchange = function () { save({ integer: integer.checked }); };
+        const operationSelect = $("fx-operation");
+        if (operationSelect) operationSelect.onchange = function () { saveReleasing({ keyOperation: operationSelect.value }); };
+        const pressSelect = $("fx-press");
+        if (pressSelect) pressSelect.onchange = function () { save({ dialPress: pressSelect.value }); };
+        const value = $("fx-value");
+        const typed = function (element) { return element.value === "" ? undefined : Number(element.value); };
+        if (value) value.onchange = function () { save({ value: typed(value) }); };
+        if (useCurrent) useCurrent.onclick = function () { if (current) save({ value: current.value }); };
+        const duration = $("fx-duration");
+        if (duration) duration.onchange = function () { save({ durationMs: typed(duration) }); };
+        const step = $("fx-step");
+        if (step) step.onchange = function () { save({ stepPct: typed(step) }); };
+        const label = $("fx-label");
+        if (label) label.onchange = function () { save({ labelOverride: label.value.trim() }); };
+        const refresh = $("fx-refresh");
+        if (refresh) refresh.onclick = function () {
+          window.directObsRefresh();
+          if (sourceUuid) window.directObsRefreshFilters(sourceUuid);
+        };
+      });
+    })();
   </script>
 </body>
 </html>

@@ -649,6 +649,16 @@ const MUTATIONS: MutationCheck[] = [
     target: "  default: P.accentPurple,",
     mutated: '  default: "#F5B841",',
     testFile: "tests/obs-filter-control.test.ts"
+  },
+  {
+    id: "M-10.5a",
+    step: "Step 10.5 (the inspector never lists a setting the deck does not write)",
+    description:
+      "List denied settings (max_flash_rate_hz, thresholds, colours, fader slots) in the inspector, and verify obs-filter-inspector.test.ts fails",
+    filePath: resolve(ROOT, "src/pi/direct-obs-bridge.ts"),
+    target: "!table.includes(setting) && !isDeniedSetting(setting) &&",
+    mutated: "!table.includes(setting) &&",
+    testFile: "tests/obs-filter-inspector.test.ts"
   }
 ];
 

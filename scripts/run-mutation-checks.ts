@@ -269,6 +269,16 @@ const MUTATIONS: MutationCheck[] = [
     target: "  if (fitsBox(text, fontSize, maxWidth)) return text;",
     mutated: "  if (text.length > 0) return text;",
     testFile: "tests/deck-fit.test.ts"
+  },
+  {
+    id: "M-8.4a",
+    step: "Step 8.4 (Translations: Stream Deck's language at start)",
+    description:
+      "Ignore Stream Deck's language and always start in English, and verify i18n-strings.test.ts fails",
+    filePath: resolve(ROOT, "src/i18n/load.ts"),
+    target: "  if (exact) return exact;",
+    mutated: '  if (exact) return "en";',
+    testFile: "tests/i18n-strings.test.ts"
   }
 ];
 

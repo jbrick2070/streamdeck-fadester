@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import { afterEach, describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   EN,
   StringKey,
@@ -16,9 +18,11 @@ import { ObsVendorClient } from "../packages/streamdeck-fadester-shared/src/obs/
 import { ConnectionStatusInfo } from "../packages/streamdeck-fadester-shared/src/types.js";
 import { renderAutoFadeKeySvg, renderDialCellSvg } from "../packages/streamdeck-fadester-shared/src/svg-renderer.js";
 import { DirectObsError } from "../src/obs/direct-obs-client.js";
+import { normalizeLanguage, readLanguageTable, useStreamDeckLanguage } from "../src/i18n/load.js";
 import { buildNeoInfobarFeedback } from "../src/actions/obs-neo-infobar.js";
 import { renderDirectDialSvg, renderDirectKeySvg } from "../src/gfx/direct-obs-renderer.js";
 import {
+  PLUGIN_DIR,
   REQUIRED_LANGUAGES,
   deckTable,
   languageFilePath,
@@ -55,6 +59,34 @@ describe("language files (R-I18N-5)", () => {
     }
   });
 
+  it.each(presentLanguages())("%s.json has the plugin and every action's Stream Deck texts, in the manifest's shape", (language) => {
+    const manifest = JSON.parse(readFileSync(join(PLUGIN_DIR, "manifest.json"), "utf8")) as {
+      Name: string; Description: string; Category: string;
+      Actions: Array<{ UUID: string; Name: string; Tooltip: string; Encoder?: { TriggerDescription?: Record<string, string> } }>;
+    };
+    const file = readLanguageFile(language);
+    // R-ID-1: the product name is not translated.
+    expect(file.Name).toBe("Fadester for OBS");
+    expect(file.Category).toBe("Fadester for OBS");
+    expect(typeof file.Description === "string" && file.Description.trim()).toBeTruthy();
+    const uuids = Object.keys(file).filter((key) => !["Name", "Description", "Category", "Localization"].includes(key));
+    expect(uuids.sort()).toEqual(manifest.Actions.map((action) => action.UUID).sort());
+    for (const action of manifest.Actions) {
+      const entry = file[action.UUID] as { Name?: string; Tooltip?: string; Encoder?: { TriggerDescription?: Record<string, string> } };
+      expect(entry.Name?.trim(), `${language} ${action.UUID} Name`).toBeTruthy();
+      expect(entry.Tooltip?.trim(), `${language} ${action.UUID} Tooltip`).toBeTruthy();
+      expect(Object.keys(entry.Encoder?.TriggerDescription ?? {}).sort(), `${language} ${action.UUID} triggers`)
+        .toEqual(Object.keys(action.Encoder?.TriggerDescription ?? {}).sort());
+      for (const text of Object.values(entry.Encoder?.TriggerDescription ?? {})) expect(text.trim()).not.toBe("");
+      if (language === "en") {
+        expect(entry.Name).toBe(action.Name);
+        expect(entry.Tooltip).toBe(action.Tooltip);
+        expect(entry.Encoder?.TriggerDescription ?? {}).toEqual(action.Encoder?.TriggerDescription ?? {});
+      }
+    }
+    if (language === "en") expect(file.Description).toBe(manifest.Description);
+  });
+
   it("en.json holds the built-in English table exactly", () => {
     expect(deckTable("en")).toEqual({ ...EN });
   });
@@ -73,6 +105,36 @@ describe("lookup and fallback", () => {
     expect(lookupText({ sceneRoleIndex: "Szene {count}" }, "sceneRoleIndex")).toBe("Scene {n}");
     expect(lookupText({ sceneRoleIndex: 7 }, "sceneRoleIndex")).toBe("Scene {n}");
     expect(lookupText({ sceneRoleIndex: "Szene {n}" }, "sceneRoleIndex")).toBe("Szene {n}");
+  });
+
+  it("takes Stream Deck's language and its file at start, English when it has none", () => {
+    expect(normalizeLanguage("de")).toBe("de");
+    expect(normalizeLanguage("zh_TW")).toBe("zh_TW");
+    expect(normalizeLanguage("zh-CN")).toBe("zh_CN");
+    expect(normalizeLanguage("de_AT")).toBe("de");
+    expect(normalizeLanguage("pt_BR")).toBe("en");
+    expect(normalizeLanguage(undefined)).toBe("en");
+    expect(useStreamDeckLanguage("de", PLUGIN_DIR)).toBe("de");
+    expect(t("keyReady")).toBe("Bereit");
+    expect(readLanguageTable("de", PLUGIN_DIR)).not.toHaveProperty("pi");
+    // A language Stream Deck offers but whose file is absent from this folder shows English.
+    expect(useStreamDeckLanguage("de", join(PLUGIN_DIR, "ui"))).toBe("de");
+    expect(t("keyReady")).toBe("Ready");
+    expect(readLanguageTable("manifest", PLUGIN_DIR)).toBeNull();
+
+    expect(normalizeLanguage("zh-Hant-HK")).toBe("zh_TW");
+    expect(normalizeLanguage("zh")).toBe("zh_CN");
+    // A broken file, or a Localization that is not an object, leaves English in place.
+    const broken = mkdtempSync(join(tmpdir(), "fadester-i18n-"));
+    try {
+      writeFileSync(join(broken, "de.json"), "{ not json");
+      writeFileSync(join(broken, "fr.json"), JSON.stringify({ Localization: ["Prêt"] }));
+      expect(useStreamDeckLanguage("de", broken)).toBe("de");
+      expect(t("keyReady")).toBe("Ready");
+      expect(readLanguageTable("fr", broken)).toBeNull();
+    } finally {
+      rmSync(broken, { recursive: true, force: true });
+    }
   });
 
   it("an unknown language or a missing file shows English", () => {

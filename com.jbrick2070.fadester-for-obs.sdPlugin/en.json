@@ -1,4 +1,55 @@
 {
+  "Name": "Fadester for OBS",
+  "Description": "Direct OBS source browsing, show/hide, scenes, transitions, mixer fades, and optional creative layer controls. Midi Fadester integration is optional.",
+  "Category": "Fadester for OBS",
+  "com.jbrick2070.fadester-for-obs.obs-neo-infobar": {
+    "Name": "OBS Scene Info Bar",
+    "Tooltip": "Display OBS connection, live scene, and Studio Mode preview on the Stream Deck Neo Info Bar."
+  },
+  "com.jbrick2070.fadester-for-obs.layer-control": {
+    "Name": "Source & Layer",
+    "Tooltip": "Browse existing scene sources and show or hide the deck-selected source. Creative controls add blend modes and optional layer reordering.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "Browse sources, blend modes, or explicitly enabled layer order",
+        "Push": "Show/hide source, or reset blend to Normal",
+        "Touch": "Show/hide source, or reset blend to Normal"
+      }
+    }
+  },
+  "com.jbrick2070.fadester-for-obs.obs-fader": {
+    "Name": "OBS Fader",
+    "Tooltip": "Adjust an audio source, or blend the Live scene into Next with the colorful scene mixer.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "Adjust audio volume, or blend Live into Next",
+        "Push": "Run the press action chosen in settings"
+      }
+    }
+  },
+  "com.jbrick2070.fadester-for-obs.scene-transition": {
+    "Name": "Scene & Transition",
+    "Tooltip": "Select next or previous OBS scene, cut, preview, or run a chosen transition."
+  },
+  "com.jbrick2070.fadester-for-obs.obs-fade": {
+    "Name": "OBS Fade",
+    "Tooltip": "Directly fade an OBS mixer input up or down without changing scene-transition settings."
+  },
+  "com.jbrick2070.fadester-for-obs.fader": {
+    "Name": "Midi Fadester Fader (optional)",
+    "Tooltip": "Optional enhanced control for an existing Midi Fadester slot.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "Nudge fader",
+        "Push": "Run press action (hold 0.8 s for hold action)",
+        "Touch": "Tap to jump or snap to side"
+      }
+    }
+  },
+  "com.jbrick2070.fadester-for-obs.auto-fade": {
+    "Name": "Midi Fadester Auto-fade (optional)",
+    "Tooltip": "Optional enhanced fade for an existing Midi Fadester slot."
+  },
   "Localization": {
     "statusUnreachable": "OBS is not running or the websocket is off (Tools > WebSocket Server Settings)",
     "statusUnreachableShort": "OBS is not running or websocket is off",

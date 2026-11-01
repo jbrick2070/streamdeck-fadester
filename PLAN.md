@@ -406,6 +406,16 @@ step's diff before its build; one commit per step; one push at the end.
    object holding the strings table (and `Localization.pi` for the inspectors). The plugin takes the language from
    `streamDeck.info.application.language` at start and uses its own `t()` over the tables (the SDK's translate has no
    placeholders and returns the bare key when the files are not in the working folder, as in tests).
+   *As built (2026-11-01):* `en.json` and `de.json` now hold `Name`, `Description`, `Category`, every action UUID's
+   `Name` and `Tooltip`, and `Encoder.TriggerDescription` (Rotate, Push, Touch) where the manifest has one, as
+   VJster's files do; `Name` and `Category` stay "Fadester for OBS" (R-ID-1) and the English file repeats the
+   manifest's texts (a test compares them). `src/i18n/load.ts` maps Stream Deck's language to one it offers
+   (`zh-CN` to `zh_CN`, `de_AT` to `de`, anything else to English), reads that file's `Localization` (without the
+   inspectors' `pi`) from the plugin folder, and English stands when the file is missing or broken; `plugin.ts`
+   calls it once with `streamDeck.info.application.language` before any action draws. Whether Stream Deck
+   reloads the plugin on a language change is left to the device check (8.7). Tests check every present file's
+   shape against `manifest.json` (no missing or extra UUIDs, the same trigger names) and the loader; es, fr, ja,
+   ko, zh_CN and zh_TW are not written yet (step 8.6). M-8.4a (start always in English) is new.
 5. **Step 8.5 -- Property inspectors.** All seven pages read `JSON.parse(inInfo).application.language` before their
    first render, set `<html lang>`, and fill texts from the plugin's `<lang>.json` `Localization.pi` (the same pattern
    as VJster; if the vm-based inspector tests cannot load JSON, a generated `ui/i18n.js` checked against the

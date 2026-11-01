@@ -1,4 +1,55 @@
 {
+  "Name": "Fadester for OBS",
+  "Description": "Direkte OBS-Steuerung: Quellen durchgehen, zeigen und verbergen, Szenen, Übergänge, Mixer-Fades und optionale kreative Ebenensteuerung. Die Anbindung an Midi Fadester ist optional.",
+  "Category": "Fadester for OBS",
+  "com.jbrick2070.fadester-for-obs.obs-neo-infobar": {
+    "Name": "OBS-Szenen-Infoleiste",
+    "Tooltip": "Zeigt die OBS-Verbindung, die Live-Szene und die Vorschau im Studio-Modus auf der Infoleiste des Stream Deck Neo."
+  },
+  "com.jbrick2070.fadester-for-obs.layer-control": {
+    "Name": "Quelle & Ebene",
+    "Tooltip": "Vorhandene Szenenquellen durchgehen und die am Deck gewählte Quelle zeigen oder verbergen. Kreative Steuerungen ergänzen Überblendmodi und das Umordnen der Ebenen, wenn Sie es erlauben.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "Quellen, Überblendmodi oder (wenn erlaubt) die Ebenenreihenfolge durchgehen",
+        "Push": "Quelle zeigen/verbergen oder Überblendmodus auf Normal setzen",
+        "Touch": "Quelle zeigen/verbergen oder Überblendmodus auf Normal setzen"
+      }
+    }
+  },
+  "com.jbrick2070.fadester-for-obs.obs-fader": {
+    "Name": "OBS-Fader",
+    "Tooltip": "Eine Audioquelle regeln oder die Live-Szene mit dem farbigen Szenenmischer in die nächste Szene überblenden.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "Lautstärke regeln oder Live in Nächste überblenden",
+        "Push": "Die in den Einstellungen gewählte Aktion beim Drücken ausführen"
+      }
+    }
+  },
+  "com.jbrick2070.fadester-for-obs.scene-transition": {
+    "Name": "Szene & Übergang",
+    "Tooltip": "Nächste oder vorherige OBS-Szene wählen, schneiden, in die Vorschau legen oder einen gewählten Übergang ausführen."
+  },
+  "com.jbrick2070.fadester-for-obs.obs-fade": {
+    "Name": "OBS-Fade",
+    "Tooltip": "Einen Eingang des OBS-Audiomixers direkt hoch- oder herunterblenden, ohne die Einstellungen des Szenenübergangs zu ändern."
+  },
+  "com.jbrick2070.fadester-for-obs.fader": {
+    "Name": "Midi Fadester Fader (optional)",
+    "Tooltip": "Optionale erweiterte Steuerung für einen vorhandenen Slot von Midi Fadester.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "Fader schrittweise bewegen",
+        "Push": "Aktion beim Drücken ausführen (0,8 s halten für die Aktion beim Halten)",
+        "Touch": "Tippen, um zu springen oder an eine Seite zu rasten"
+      }
+    }
+  },
+  "com.jbrick2070.fadester-for-obs.auto-fade": {
+    "Name": "Midi Fadester Auto-Fade (optional)",
+    "Tooltip": "Optionaler erweiterter Fade für einen vorhandenen Slot von Midi Fadester."
+  },
   "Localization": {
     "statusUnreachable": "OBS läuft nicht oder der WebSocket ist aus (Werkzeuge > WebSocket-Servereinstellungen)",
     "statusUnreachableShort": "OBS läuft nicht oder WebSocket ist aus",
@@ -34,8 +85,8 @@
     "cleanFxActiveCount": "{n} AKTIV",
     "cleanFxAllZero": "ALLE 0 %",
     "errorNoVolume": "OBS hat für '{input}' keine Lautstärke geliefert.",
-    "errorRoleUnavailable": "{role} ist nicht verfügbar. Wählen Sie im Inspektor einen OBS-Mixer-Eingang.",
-    "errorChooseInput": "Wählen Sie zuerst einen vorhandenen OBS-Mixer-Eingang.",
+    "errorRoleUnavailable": "{role} ist nicht verfügbar. Wählen Sie im Inspektor einen Audiomixer-Eingang.",
+    "errorChooseInput": "Wählen Sie zuerst einen vorhandenen Audiomixer-Eingang.",
     "errorConnectBeforeStudio": "Verbinden Sie OBS, bevor Sie ein Studio-Layout vorbereiten.",
     "errorStudioNotEnabled": "Der Studio-Modus von OBS konnte nicht aktiviert werden.",
     "errorTbarNeedsStudio": "Die Szenen-T-Bar benötigt den Studio-Modus von OBS.",

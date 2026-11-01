@@ -600,7 +600,23 @@
       "profileLoaded": "{name} cargado. Se restablecieron los valores predeterminados de los slots en Midi Fadester.",
       "profileRejected": "Midi Fadester rechazó el perfil.",
       "connChanged": "La conexión con OBS cambió. Tus cambios se conservan; revisa las listas de fuentes actualizadas antes de aplicar.",
-      "plHeading": "Transporte de Playlister"
+      "plHeading": "Transporte de Playlister",
+      "plIntro": "Controla una fuente Playlister mediante los controles multimedia de OBS. Elígela por nombre; la tecla la sigue aunque cambie de nombre.",
+      "plSource": "Playlister",
+      "plOptPrevious": "Elemento anterior",
+      "plOptNext": "Elemento siguiente",
+      "plOptPlayPause": "Reproducir / pausar",
+      "plOptStop": "Detener",
+      "plOptRestart": "Reiniciar",
+      "plOptStatus": "Solo estado",
+      "plChooseSource": "Elige un Playlister",
+      "plUnknownSource": "Playlister desconocido",
+      "plBannerChoose": "Elige una fuente Playlister para controlarla.",
+      "plBannerNone": "No hay ninguna fuente Playlister en OBS. Primero añade una fuente de este tipo a una escena.",
+      "plBannerMissing": "El Playlister elegido no está en OBS ahora. Vuelve cuando la fuente exista de nuevo, o elige otro.",
+      "plBannerWrongKind": "La fuente elegida no es un Playlister. Elige una fuente Playlister.",
+      "plBannerUnsupported": "Este OBS WebSocket no ofrece las solicitudes multimedia (GetMediaInputStatus, TriggerMediaInputAction). Actualiza OBS.",
+      "plNote": "Solo estado muestra el estado. Reproducir / pausar alterna según el estado observado. Detener descarta primero las pulsaciones no enviadas del Playlister. No se envía nada mientras el Playlister no esté disponible."
     }
   }
 }

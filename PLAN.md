@@ -680,6 +680,17 @@ and `TriggerMediaInputAction` take `inputUuid`; `mediaDuration` and `mediaCursor
    (`tests/playlister-inspector.test.ts`, vm after `tests/direct-inspector-feedback.test.ts`): "lists only Playlister
    sources by UUID with names for display, saves operation and inputUuid, and shows each banner";
    `tests/inspector-i18n.test.ts` covers the page automatically. Mutation: *M-9.4a* list every input kind.
+   *As built (2026-11-01):* `ui/playlister-transport-key.html` (the minimal page of 9.3 completed): the Playlister
+   picker from `catalog.inputDetails` by `unversionedInputKind` with the versioned `inputKind` as fallback, option
+   value the UUID and text the name; the page adds its own row for a bound UUID outside the list, so `fillSelect`'s
+   raw-UUID "not in OBS now" row never shows: the live name when the input exists but is not a Playlister, else the
+   stored `inputName` hint (or "Unknown Playlister") with "not in OBS now". Banners in this order: unsupported
+   (`state.mediaCapability`, red), choose or "no Playlister in OBS" (info), wrong kind, missing (yellow; missing only
+   while connected). A source change saves `inputUuid` and `inputName`; a generated caption is cleared on a retarget
+   or an operation change (reachable from 9.5, when the shipped captions exist). The label placeholder is the
+   existing "Automatic (leave blank)"; "When pressed", "Label" and "Refresh" reuse existing keys. Sixteen inspector
+   keys landed in all eight files; `tests/playlister-inspector.test.ts` runs the page in the vm harness, with a null
+   state first (as the runtime calls it before OBS answers).
 5. **Step 9.5 -- Starter profile.** `profiles/layouts.json`: `plus-playlister-transport`, "Fadester — Playlister
    Transport + (Either Mode)", deviceType 7, kind `playlister`; keys row 0 Previous, Next, Play / pause, Stop; row 1
    Restart, Status, two empty; no dials. `scripts/build-profiles.ts:14-50` gains the `playlister` kind;

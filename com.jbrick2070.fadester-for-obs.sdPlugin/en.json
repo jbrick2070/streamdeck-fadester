@@ -600,7 +600,23 @@
       "profileLoaded": "Loaded {name}. Slot defaults were reset in Midi Fadester.",
       "profileRejected": "Midi Fadester rejected the profile.",
       "connChanged": "The OBS connection changed. Your edits are kept; review the refreshed source lists before applying.",
-      "plHeading": "Playlister transport"
+      "plHeading": "Playlister transport",
+      "plIntro": "Drives one Playlister source through OBS’s own media controls. Choose it by name; the key follows it through renames.",
+      "plSource": "Playlister",
+      "plOptPrevious": "Previous item",
+      "plOptNext": "Next item",
+      "plOptPlayPause": "Play / pause",
+      "plOptStop": "Stop",
+      "plOptRestart": "Restart",
+      "plOptStatus": "Status only",
+      "plChooseSource": "Choose a Playlister",
+      "plUnknownSource": "Unknown Playlister",
+      "plBannerChoose": "Choose a Playlister source to control.",
+      "plBannerNone": "No Playlister source in OBS. Add one to a scene first.",
+      "plBannerMissing": "The chosen Playlister is not in OBS now. It returns when the source exists again, or choose another.",
+      "plBannerWrongKind": "The chosen source is not a Playlister. Choose a Playlister source.",
+      "plBannerUnsupported": "This OBS WebSocket does not offer the media requests (GetMediaInputStatus, TriggerMediaInputAction). Update OBS.",
+      "plNote": "Status only shows the state. Play / pause toggles from the observed state. Stop first drops the Playlister’s unsent presses. Nothing is sent while the Playlister is unavailable."
     }
   }
 }

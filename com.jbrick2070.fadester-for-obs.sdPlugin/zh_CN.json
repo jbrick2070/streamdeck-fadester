@@ -600,7 +600,23 @@
       "profileLoaded": "已加载 {name}。Midi Fadester 中的槽位默认值已重置。",
       "profileRejected": "Midi Fadester 拒绝了此配置文件。",
       "connChanged": "OBS 连接已更改。你的更改已保留；应用前请检查刷新后的源列表。",
-      "plHeading": "Playlister 播放控制"
+      "plHeading": "Playlister 播放控制",
+      "plIntro": "通过 OBS 自带的媒体控制驱动一个 Playlister 源。按名称选择；重命名后按键仍会跟随。",
+      "plSource": "Playlister",
+      "plOptPrevious": "上一项",
+      "plOptNext": "下一项",
+      "plOptPlayPause": "播放 / 暂停",
+      "plOptStop": "停止",
+      "plOptRestart": "重新播放",
+      "plOptStatus": "仅状态",
+      "plChooseSource": "选择 Playlister",
+      "plUnknownSource": "未知的 Playlister",
+      "plBannerChoose": "请选择要控制的 Playlister 源。",
+      "plBannerNone": "OBS 中没有 Playlister 源。请先将其添加到场景。",
+      "plBannerMissing": "所选的 Playlister 当前不在 OBS 中。源再次存在时会恢复，或另选一个。",
+      "plBannerWrongKind": "所选源不是 Playlister。请选择 Playlister 源。",
+      "plBannerUnsupported": "此 OBS WebSocket 不提供媒体请求（GetMediaInputStatus、TriggerMediaInputAction）。请更新 OBS。",
+      "plNote": "“仅状态”只显示状态。“播放 / 暂停”根据观测到的状态切换。“停止”会先丢弃该 Playlister 尚未发送的按键。Playlister 不可用时不会发送任何内容。"
     }
   }
 }

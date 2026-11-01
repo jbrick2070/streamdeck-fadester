@@ -8,13 +8,90 @@
 </head>
 <body>
   <h3><span data-i18n="plHeading">Playlister transport</span> <span class="scope" data-i18n="scopeThisKey">this key</span></h3>
+  <p class="muted" data-i18n="plIntro">Drives one Playlister source through OBS’s own media controls. Choose it by name; the key follows it through renames.</p>
+  <div id="playlister-status" class="status-banner status-info" style="display:none;"></div>
+  <div class="row">
+    <label for="playlister-source" data-i18n="plSource">Playlister</label>
+    <select id="playlister-source"></select>
+    <button id="playlister-refresh" class="btn secondary" type="button" data-i18n="refresh">Refresh</button>
+  </div>
+  <div class="row">
+    <label for="playlister-operation" data-i18n="whenPressed">When pressed</label>
+    <select id="playlister-operation">
+      <option value="previous" data-i18n="plOptPrevious">Previous item</option>
+      <option value="next" data-i18n="plOptNext">Next item</option>
+      <option value="playpause" data-i18n="plOptPlayPause">Play / pause</option>
+      <option value="stop" data-i18n="plOptStop">Stop</option>
+      <option value="restart" data-i18n="plOptRestart">Restart</option>
+      <option value="status" data-i18n="plOptStatus">Status only</option>
+    </select>
+  </div>
+  <p class="muted" data-i18n="plNote">Status only shows the state. Play / pause toggles from the observed state. Stop first drops the Playlister’s unsent presses. Nothing is sent while the Playlister is unavailable.</p>
+  <div class="row">
+    <label for="playlister-label" data-i18n="label">Label</label>
+    <input id="playlister-label" type="text" maxlength="14" placeholder="Automatic (leave blank)" data-i18n-placeholder="placeholderAutomaticBlank" />
+  </div>
   <div id="direct-shared-sections"></div>
   <script src="i18n.js"></script>
   <script src="preset-captions.js"></script>
   <script src="direct-pi.js"></script>
   <script>
-    // The pickers and banners land in step 9.4 (PLAN.md); the shared connection sections already work.
-    window.initDirectObsPropertyInspector(function () {});
+    window.initDirectObsPropertyInspector(function (settings, save, state) {
+      const T = window.FadesterI18n.t;
+      const source = document.getElementById("playlister-source");
+      const operation = document.getElementById("playlister-operation");
+      const label = document.getElementById("playlister-label");
+      const banner = document.getElementById("playlister-status");
+      const catalog = state && state.catalog ? state.catalog : {};
+      const connected = Boolean(state && state.status && state.status.kind === "connected");
+      const selectedUuid = typeof settings.inputUuid === "string" ? settings.inputUuid : "";
+      const selectedOperation = settings.operation || "playpause";
+      // A bundled profile's caption is a default: shown empty here, released on retarget.
+      const generatedLabel = function () {
+        return window.FadesterPresetCaptions.isGenerated("playlister", { operation: selectedOperation, labelOverride: settings.labelOverride });
+      };
+      // Playlister sources only, bound by UUID; the name is shown, never used to resolve (R-PLT-1).
+      const playlisters = (catalog.inputDetails || []).filter(function (input) {
+        return (input.unversionedInputKind || String(input.inputKind || "").replace(/_v\d+$/, "")) === "obs_playlister_source";
+      });
+      const items = playlisters.map(function (input) { return { value: input.inputUuid, text: input.inputName }; });
+      const bound = (catalog.inputDetails || []).find(function (input) { return input.inputUuid === selectedUuid; });
+      const listed = playlisters.some(function (input) { return input.inputUuid === selectedUuid; });
+      const wrongKind = Boolean(bound) && !listed;
+      const missing = Boolean(selectedUuid) && connected && !bound;
+      // A bound source outside the list keeps a row: its live name, or the stored name hint (never the UUID).
+      if (selectedUuid && !listed) {
+        items.push({ value: selectedUuid, text: bound ? bound.inputName : T("notInObsNow", { value: settings.inputName || T("plUnknownSource") }) });
+      }
+      window.directObsFillSelect(source, items, selectedUuid, T("plChooseSource"));
+      if (operation && document.activeElement !== operation) operation.value = selectedOperation;
+      if (label && document.activeElement !== label) label.value = generatedLabel() ? "" : settings.labelOverride || "";
+      if (banner) {
+        let text = "";
+        let kind = "status-info";
+        if (connected && state.mediaCapability === "unsupported") { text = T("plBannerUnsupported"); kind = "status-err"; }
+        else if (!selectedUuid) text = T(connected && playlisters.length === 0 ? "plBannerNone" : "plBannerChoose");
+        else if (wrongKind) { text = T("plBannerWrongKind"); kind = "status-warn"; }
+        else if (missing) { text = T("plBannerMissing"); kind = "status-warn"; }
+        banner.textContent = text;
+        banner.className = "status-banner " + kind;
+        banner.style.display = text ? "block" : "none";
+      }
+      if (source) source.onchange = function () {
+        const chosen = playlisters.find(function (input) { return input.inputUuid === source.value; });
+        const update = { inputUuid: source.value, inputName: chosen ? chosen.inputName : "" };
+        if (source.value !== selectedUuid && generatedLabel()) update.labelOverride = "";
+        save(update);
+      };
+      if (operation) operation.onchange = function () {
+        const update = { operation: operation.value };
+        if (operation.value !== selectedOperation && generatedLabel()) update.labelOverride = "";
+        save(update);
+      };
+      if (label) label.onchange = function () { save({ labelOverride: label.value.trim() }); };
+      const refresh = document.getElementById("playlister-refresh");
+      if (refresh) refresh.onclick = function () { window.directObsRefresh(); };
+    });
   </script>
 </body>
 </html>

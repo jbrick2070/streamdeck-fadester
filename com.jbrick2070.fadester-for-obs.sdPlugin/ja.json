@@ -600,7 +600,23 @@
       "profileLoaded": "{name} を読み込みました。Midi Fadester のスロットの既定値がリセットされました。",
       "profileRejected": "Midi Fadester がプロファイルを拒否しました。",
       "connChanged": "OBS の接続が変わりました。編集内容は保持されています。適用する前に、更新されたソースのリストを確認してください。",
-      "plHeading": "Playlister トランスポート"
+      "plHeading": "Playlister トランスポート",
+      "plIntro": "OBS のメディアコントロールで 1 つの Playlister ソースを操作します。名前で選択してください。名前を変更してもキーは追従します。",
+      "plSource": "Playlister",
+      "plOptPrevious": "前の項目",
+      "plOptNext": "次の項目",
+      "plOptPlayPause": "再生 / 一時停止",
+      "plOptStop": "停止",
+      "plOptRestart": "最初から再生",
+      "plOptStatus": "状態のみ",
+      "plChooseSource": "Playlister を選択",
+      "plUnknownSource": "不明な Playlister",
+      "plBannerChoose": "操作する Playlister ソースを選択してください。",
+      "plBannerNone": "OBS に Playlister ソースがありません。先にシーンへ追加してください。",
+      "plBannerMissing": "選択した Playlister は現在 OBS にありません。ソースが再び存在すれば戻ります。別のものを選ぶこともできます。",
+      "plBannerWrongKind": "選択したソースは Playlister ではありません。Playlister ソースを選択してください。",
+      "plBannerUnsupported": "この OBS WebSocket にはメディア要求（GetMediaInputStatus、TriggerMediaInputAction）がありません。OBS を更新してください。",
+      "plNote": "「状態のみ」は状態を表示するだけです。「再生 / 一時停止」は観測した状態から切り替えます。「停止」はまずその Playlister の未送信の操作を破棄します。Playlister が利用できない間は何も送信しません。"
     }
   }
 }

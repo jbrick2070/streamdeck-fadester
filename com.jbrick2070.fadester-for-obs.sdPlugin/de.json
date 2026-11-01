@@ -600,7 +600,23 @@
       "profileLoaded": "{name} geladen. Die Slot-Vorgaben wurden in Midi Fadester zurückgesetzt.",
       "profileRejected": "Midi Fadester hat das Profil abgelehnt.",
       "connChanged": "Die OBS-Verbindung hat sich geändert. Ihre Änderungen bleiben erhalten; prüfen Sie die aktualisierten Quellenlisten, bevor Sie übernehmen.",
-      "plHeading": "Playlister-Transport"
+      "plHeading": "Playlister-Transport",
+      "plIntro": "Steuert eine Playlister-Quelle über die Mediensteuerung von OBS. Wählen Sie sie nach Namen; die Taste folgt ihr auch nach einer Umbenennung.",
+      "plSource": "Playlister",
+      "plOptPrevious": "Vorheriges Element",
+      "plOptNext": "Nächstes Element",
+      "plOptPlayPause": "Wiedergabe / Pause",
+      "plOptStop": "Stopp",
+      "plOptRestart": "Neu starten",
+      "plOptStatus": "Nur Status",
+      "plChooseSource": "Playlister wählen",
+      "plUnknownSource": "Unbekannter Playlister",
+      "plBannerChoose": "Wählen Sie eine Playlister-Quelle, die gesteuert werden soll.",
+      "plBannerNone": "Keine Playlister-Quelle in OBS. Fügen Sie zuerst eine zu einer Szene hinzu.",
+      "plBannerMissing": "Der gewählte Playlister ist derzeit nicht in OBS. Er kehrt zurück, sobald die Quelle wieder existiert, oder wählen Sie einen anderen.",
+      "plBannerWrongKind": "Die gewählte Quelle ist kein Playlister. Wählen Sie eine Playlister-Quelle.",
+      "plBannerUnsupported": "Dieser OBS WebSocket bietet die Medienanfragen (GetMediaInputStatus, TriggerMediaInputAction) nicht. Aktualisieren Sie OBS.",
+      "plNote": "Nur Status zeigt den Zustand an. Wiedergabe / Pause schaltet ausgehend vom beobachteten Zustand um. Stopp verwirft zuerst die noch nicht gesendeten Befehle für diesen Playlister. Solange der Playlister nicht verfügbar ist, wird nichts gesendet."
     }
   }
 }

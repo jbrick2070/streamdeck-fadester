@@ -600,7 +600,23 @@
       "profileLoaded": "{name} chargé. Les valeurs par défaut des slots ont été réinitialisées dans Midi Fadester.",
       "profileRejected": "Midi Fadester a refusé le profil.",
       "connChanged": "La connexion à OBS a changé. Vos modifications sont conservées ; vérifiez les listes de sources actualisées avant d’appliquer.",
-      "plHeading": "Transport Playlister"
+      "plHeading": "Transport Playlister",
+      "plIntro": "Pilote une source Playlister par les contrôles multimédia d’OBS. Choisissez-la par son nom ; la touche la suit après un renommage.",
+      "plSource": "Playlister",
+      "plOptPrevious": "Élément précédent",
+      "plOptNext": "Élément suivant",
+      "plOptPlayPause": "Lecture / pause",
+      "plOptStop": "Arrêter",
+      "plOptRestart": "Redémarrer",
+      "plOptStatus": "État seulement",
+      "plChooseSource": "Choisissez un Playlister",
+      "plUnknownSource": "Playlister inconnu",
+      "plBannerChoose": "Choisissez une source Playlister à piloter.",
+      "plBannerNone": "Aucune source Playlister dans OBS. Ajoutez-en d’abord une à une scène.",
+      "plBannerMissing": "Le Playlister choisi n’est pas dans OBS actuellement. Il revient dès que la source existe à nouveau, ou choisissez-en un autre.",
+      "plBannerWrongKind": "La source choisie n’est pas un Playlister. Choisissez une source Playlister.",
+      "plBannerUnsupported": "Cet OBS WebSocket n’offre pas les requêtes multimédia (GetMediaInputStatus, TriggerMediaInputAction). Mettez OBS à jour.",
+      "plNote": "État seulement affiche l’état. Lecture / pause bascule selon l’état observé. Arrêter écarte d’abord les appuis non envoyés du Playlister. Rien n’est envoyé tant que le Playlister est indisponible."
     }
   }
 }

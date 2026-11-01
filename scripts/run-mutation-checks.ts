@@ -389,6 +389,16 @@ const MUTATIONS: MutationCheck[] = [
     target: "const word = t(STATE_WORDS[state.mediaState]);",
     mutated: 'const word = t("mediaStatePlaying");',
     testFile: "tests/playlister-transport.test.ts"
+  },
+  {
+    id: "M-9.4a",
+    step: "Step 9.4 (Playlister transport inspector: Playlister sources only)",
+    description:
+      "List every input kind in the Playlister picker, and verify playlister-inspector.test.ts fails",
+    filePath: resolve(ROOT, "com.jbrick2070.fadester-for-obs.sdPlugin/ui/playlister-transport-key.html"),
+    target: 'return (input.unversionedInputKind || String(input.inputKind || "").replace(/_v\\d+$/, "")) === "obs_playlister_source";',
+    mutated: "return true;",
+    testFile: "tests/playlister-inspector.test.ts"
   }
 ];
 

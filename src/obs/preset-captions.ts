@@ -57,14 +57,14 @@ export const PRESET_CAPTIONS: Readonly<Record<CaptionAction, Readonly<Record<str
     blend: { shipped: ["Blend mode"], legacy: [] },
     order: { shipped: ["Layer order"], legacy: [] }
   },
-  // The Playlister starter (PLAN.md 9.5) stores these; the key draws the translated operation word.
+  // The Playlister starter stores these; the key draws the translated operation word.
   playlister: {
-    previous: { shipped: [], legacy: [] },
-    next: { shipped: [], legacy: [] },
-    playpause: { shipped: [], legacy: [] },
-    stop: { shipped: [], legacy: [] },
-    restart: { shipped: [], legacy: [] },
-    status: { shipped: [], legacy: [] }
+    previous: { shipped: ["Previous"], legacy: [] },
+    next: { shipped: ["Next"], legacy: [] },
+    playpause: { shipped: ["Play / pause"], legacy: [] },
+    stop: { shipped: ["Stop"], legacy: [] },
+    restart: { shipped: ["Restart"], legacy: [] },
+    status: { shipped: ["Status"], legacy: [] }
   }
 };
 

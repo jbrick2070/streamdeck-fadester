@@ -700,6 +700,14 @@ and `TriggerMediaInputAction` take `inputUuid`; `mediaDuration` and `mediaCursor
    (`tests/preset-captions.test.ts:47` moves from 38 to 44) and `ui/preset-captions.js` is regenerated. `DECK-LAYOUTS.md`,
    `profiles/README.md` and README's layouts paragraph say twelve. Test: `preset-captions.test.ts` renders the six
    unbound keys on a German deck without an English caption.
+   *As built (2026-11-01):* as planned; the layout title in `READY_LAYOUTS` is the short "Playlister Transport +"
+   (the picker prepends the mode). The six shipped captions are "Previous", "Next", "Play / pause", "Stop",
+   "Restart", "Status" (all within the 14-character label limit); the German render test asserts the German
+   operation word in the SVG `<title>` and "Playlister wählen" as subtitle, and "Status", the one caption whose
+   German word is the same, is expected to appear (an explicit list, not a lookup). A starter-shape test pins the
+   six unbound Keypad entries and their cells; `preset-caption-update.test.ts` checks that an operation or source
+   change releases a shipped caption through the real page. R-I18N-2's caption count reads 44 now. `npm run build`
+   added only the new archive; the eleven existing profiles are byte-identical (deterministic IDs).
 6. **Step 9.6 -- Texts.** `src/i18n/strings.ts`: the operation words, the state words (`mediaStateNone` "Empty"
    through `mediaStateError`, `mediaStateUnknown`), `mediaTime` "{state} {cursor}/{duration}", `mediaPendingPlay`,
    `mediaPendingPause`, `mediaUnconfirmed` "Sent; state unconfirmed", `mediaBusy`, `plChoose`, and the errors

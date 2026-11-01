@@ -19,12 +19,15 @@ import { ObsLayerInstanceController } from "../src/actions/obs-layer-control.js"
 import { ObsFaderDialInstanceController } from "../src/actions/obs-fader-dial.js";
 import { ObsFadeKeyInstanceController } from "../src/actions/obs-fade-key.js";
 import { ObsSceneTransitionKeyInstanceController } from "../src/actions/obs-scene-transition-key.js";
+import { PlaylisterTransportInstanceController } from "../src/actions/playlister-transport-key.js";
 import { FakeObsServer } from "./helpers/fake-obs-server.js";
 import { PLUGIN_DIR, deckTable } from "./helpers/languages.js";
 
 type Assignment = {
-  kind: "layer" | "scene" | "fader" | "fade";
+  kind: "layer" | "scene" | "fader" | "fade" | "playlister";
   controller: "Keypad" | "Encoder";
+  column: number;
+  row: number;
   label: string;
   settings: Record<string, string | number | boolean>;
 };
@@ -44,7 +47,7 @@ function inspectorCaptions(): { isGenerated(action: string, settings: object, ca
 }
 
 describe("bundled profile captions (R-I18N-2)", () => {
-  it("lists exactly the 38 captions profiles/layouts.json stores, per action", () => {
+  it("lists exactly the 44 captions profiles/layouts.json stores, per action", () => {
     const stored = new Map<CaptionAction, Set<string>>();
     for (const entry of assignments) {
       const action = actionOf(entry);
@@ -56,7 +59,7 @@ describe("bundled profile captions (R-I18N-2)", () => {
       expect([...shipped].sort(), action).toEqual([...(stored.get(action) ?? [])].sort());
       total += shipped.size;
     }
-    expect(total).toBe(38);
+    expect(total).toBe(44);
   });
 
   it.each(assignments.map((entry) => [entry.label, actionOf(entry), entry] as const))(
@@ -64,6 +67,16 @@ describe("bundled profile captions (R-I18N-2)", () => {
       expect(isGeneratedCaption(action, entry.settings, entry.label)).toBe(true);
       expect(inspectorCaptions().isGenerated(action, entry.settings, entry.label)).toBe(true);
     });
+
+  it("ships the Playlister starter with six unbound keys, two free keys and no dial (R-PLT-7)", () => {
+    const starter = presets.find((preset) => preset.slug === "plus-playlister-transport")!;
+    expect(starter.actions.map((entry) => [entry.controller, entry.settings.operation, entry.settings.inputUuid])).toEqual([
+      ["Keypad", "previous", ""], ["Keypad", "next", ""], ["Keypad", "playpause", ""],
+      ["Keypad", "stop", ""], ["Keypad", "restart", ""], ["Keypad", "status", ""]
+    ]);
+    expect(starter.actions.every((entry) => entry.kind === "playlister")).toBe(true);
+    expect(starter.actions.map((entry) => `${entry.column},${entry.row}`)).toEqual(["0,0", "1,0", "2,0", "3,0", "0,1", "1,1"]);
+  });
 
   it("matches in context only, so the same words elsewhere stay the operator's", () => {
     expect(isGeneratedCaption("scene", { sceneTarget: "__next_scene__" }, "Prev scene")).toBe(false);
@@ -75,6 +88,10 @@ describe("bundled profile captions (R-I18N-2)", () => {
     expect(isGeneratedCaption("fader", { target: "tbar" }, "Scene transition")).toBe(true);
     expect(isGeneratedCaption("layerKey", { operation: "show_hide" }, "Next source")).toBe(false);
     expect(customCaption("layerKey", { operation: "show_hide", labelOverride: " My cue " })).toBe("My cue");
+    expect(isGeneratedCaption("playlister", { operation: "next" }, "Next")).toBe(true);
+    expect(isGeneratedCaption("playlister", { operation: "stop" }, "Next")).toBe(false);
+    expect(isGeneratedCaption("playlister", {}, "play / pause")).toBe(true);
+    expect(customCaption("playlister", { operation: "status", labelOverride: "Reel" })).toBe("Reel");
   });
 
   it("the inspectors' copy is current and agrees with the plugin on every caption in every context", () => {
@@ -89,7 +106,9 @@ describe("bundled profile captions (R-I18N-2)", () => {
       ["fader", { target: "input_volume", inputName: "__audio_input_3__" }], ["fader", { target: "input_volume", inputName: "Mic/Aux" }],
       ["fade", { inputName: "__audio_mic__" }], ["fade", { inputName: "Desktop Audio" }],
       ...Object.keys(PRESET_CAPTIONS.layerKey).map((operation) => ["layerKey", { operation }] as [CaptionAction, Record<string, string>]),
-      ...Object.keys(PRESET_CAPTIONS.layerDial).map((dialMode) => ["layerDial", { dialMode }] as [CaptionAction, Record<string, string>])
+      ...Object.keys(PRESET_CAPTIONS.layerDial).map((dialMode) => ["layerDial", { dialMode }] as [CaptionAction, Record<string, string>]),
+      ...Object.keys(PRESET_CAPTIONS.playlister).map((operation) => ["playlister", { operation }] as [CaptionAction, Record<string, string>]),
+      ["playlister", {}]
     ];
     for (const [action, settings] of contexts) {
       for (const caption of captions) {
@@ -130,6 +149,11 @@ describe("a German deck shows no stored English caption", () => {
 
   const distinct = [...new Map(assignments.map((entry) =>
     [JSON.stringify([entry.kind, entry.controller, entry.label, entry.settings]), entry])).values()];
+  // Captions whose German word is the same word: the key draws the translation, which reads like the stored English.
+  const SAME_IN_GERMAN = new Set(["Status"]);
+  const germanOperationWords: Record<string, string> = {
+    previous: "Zurück", next: "Weiter", playpause: "Wiedergabe / Pause", stop: "Stopp", restart: "Neu starten", status: "Status"
+  };
 
   it.each(distinct.map((entry) => [entry.label, entry.kind, entry.controller, entry] as const))(
     "%s (%s %s)", (label, kind, controller, entry) => {
@@ -141,13 +165,21 @@ describe("a German deck shows no stored English caption", () => {
       if (kind === "scene") control = new ObsSceneTransitionKeyInstanceController(client, { setImage: sink, showAlert: alert }, settings);
       else if (kind === "fade") control = new ObsFadeKeyInstanceController(client, { setImage: sink, showAlert: alert }, settings);
       else if (kind === "fader") control = new ObsFaderDialInstanceController(client, { setFeedback: (feedback) => sink(feedback.canvas), showAlert: alert }, settings);
+      // The Playlister keys ship unbound: the translated operation word is their title.
+      else if (kind === "playlister") control = new PlaylisterTransportInstanceController(client, { setImage: sink, showAlert: alert }, settings);
       else control = new ObsLayerInstanceController(layers, { render: (svg) => { image = svg; return Promise.resolve(); }, showAlert: alert },
         controller === "Encoder", settings as LayerSettings);
       control.appear();
       control.disappear();
       expect(image).toContain("<svg");
       // Layer dials never draw a caption, so for them this only proves nothing English slips in.
-      expect(image, image).not.toContain(`>${escapeXml(label)}<`);
+      if (SAME_IN_GERMAN.has(label)) expect(image).toContain(`>${escapeXml(label)}<`);
+      else expect(image, image).not.toContain(`>${escapeXml(label)}<`);
+      if (kind === "playlister") {
+        // The unbound key's title is the German operation word (in the SVG <title>, as a long one wraps), its subtitle the German hint.
+        expect(image).toContain(`<title>${escapeXml(germanOperationWords[String(entry.settings.operation)])} — `);
+        expect(image).toContain(">Playlister wählen<");
+      }
     });
 
   it.each([
@@ -155,7 +187,8 @@ describe("a German deck shows no stored English caption", () => {
     ["fade", { inputName: "__audio_mic__", to: 1, durationMs: 500 }],
     ["fader", { target: "input_volume", inputName: "__audio_main__" }],
     ["fader", { target: "tbar" }],
-    ["layer", { operation: "show_hide" }]
+    ["layer", { operation: "show_hide" }],
+    ["playlister", { inputUuid: "", operation: "next" }]
   ] as const)("draws a caption the operator typed on a %s control, the same way the check above looks for", (kind, base) => {
     const settings: Record<string, string | number> = { ...base, labelOverride: "Kamera an" };
     let image = "";
@@ -164,7 +197,8 @@ describe("a German deck shows no stored English caption", () => {
     const control = kind === "scene" ? new ObsSceneTransitionKeyInstanceController(client, { setImage: sink, showAlert: alert }, settings)
       : kind === "fade" ? new ObsFadeKeyInstanceController(client, { setImage: sink, showAlert: alert }, settings)
         : kind === "fader" ? new ObsFaderDialInstanceController(client, { setFeedback: (feedback) => sink(feedback.canvas), showAlert: alert }, settings)
-          : new ObsLayerInstanceController(layers, { render: (svg) => { image = svg; return Promise.resolve(); }, showAlert: alert }, false, settings);
+          : kind === "playlister" ? new PlaylisterTransportInstanceController(client, { setImage: sink, showAlert: alert }, settings)
+            : new ObsLayerInstanceController(layers, { render: (svg) => { image = svg; return Promise.resolve(); }, showAlert: alert }, false, settings);
     control.appear();
     control.disappear();
     expect(image).toContain(">Kamera an<");

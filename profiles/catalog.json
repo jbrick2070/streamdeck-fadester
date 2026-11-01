@@ -130,5 +130,17 @@
     "keysAvailable": 15,
     "dialsUsed": 0,
     "dialsAvailable": 0
+  },
+  {
+    "slug": "plus-playlister-transport",
+    "name": "Fadester — Playlister Transport + (Either Mode)",
+    "description": "Studio or regular mode: six keys driving one Playlister source (previous, next, play / pause, stop, restart, status). Choose the source in each key's inspector; two keys and all four dials stay free.",
+    "obsMode": "either",
+    "deviceType": 7,
+    "file": "profiles/plus-playlister-transport-v1.streamDeckProfile",
+    "keysUsed": 6,
+    "keysAvailable": 8,
+    "dialsUsed": 0,
+    "dialsAvailable": 4
   }
 ]

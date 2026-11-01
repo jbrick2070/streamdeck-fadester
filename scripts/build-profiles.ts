@@ -15,7 +15,7 @@ type PresetAction = {
   controller: "Keypad" | "Encoder";
   column: number;
   row: number;
-  kind: "layer" | "scene" | "fader" | "fade";
+  kind: "layer" | "scene" | "fader" | "fade" | "playlister";
   label: string;
   settings: Record<string, string | number | boolean>;
 };
@@ -46,7 +46,8 @@ const actionIds: Record<PresetAction["kind"], string> = {
   layer: `${manifest.UUID}.layer-control`,
   scene: `${manifest.UUID}.scene-transition`,
   fader: `${manifest.UUID}.obs-fader`,
-  fade: `${manifest.UUID}.obs-fade`
+  fade: `${manifest.UUID}.obs-fade`,
+  playlister: `${manifest.UUID}.playlister-transport`
 };
 
 function stableUuid(slug: string, seed: string): string {

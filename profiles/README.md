@@ -1,6 +1,6 @@
 # Ready-made Fadester layouts
 
-The plugin includes eleven importable layouts for a Stream Deck +, a 15-key Stream Deck, and a Stream Deck Mini. They require Stream Deck 7.1 or later and use Fadester's direct OBS actions. Every profile name includes **Studio Mode**, **Regular Mode**, or **Either Mode**. Each profile is editable and has its own name. The current starter revision opens as an updated profile while older profiles and their customizations remain available.
+The plugin includes twelve importable layouts for a Stream Deck +, a 15-key Stream Deck, and a Stream Deck Mini. They require Stream Deck 7.1 or later and use Fadester's direct OBS actions. Every profile name includes **Studio Mode**, **Regular Mode**, or **Either Mode**. Each profile is editable and has its own name. The current starter revision opens as an updated profile while older profiles and their customizations remain available.
 
 ## Choose a starting layout
 
@@ -19,6 +19,7 @@ For one OBS scene with many sources, start with **Source Desk**. Its source-sele
 | [Scene Desk 15 Keys — Studio](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-scene-desk-v2.streamDeckProfile) | **Studio** | 15-key Stream Deck | 13 keys | Previous/next/random Preview scenes, Cut and Transition, Scene 1–4, and audio fade pairs. |
 | [Scene Desk + — Regular](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-scene-regular-v3.streamDeckProfile) | **Regular** | Stream Deck + | 8 keys / 3 dials | Transition directly to previous/next/random scenes or Scene 1–3; mixer dials. |
 | [Scene Desk 15 Keys — Regular](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-scene-regular-v2.streamDeckProfile) | **Regular** | 15-key Stream Deck | 13 keys | Direct and random transitions, previous/next Cut keys, Scene 1–4, and audio fade pairs. |
+| [Playlister Transport +](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-playlister-transport-v1.streamDeckProfile) | **Either** | Stream Deck + | 6 keys / 0 dials | Previous, next, play / pause, stop, restart and status for one Playlister source; choose the source in each key's inspector. |
 
 **Creative Layer Lab** deliberately enables the reorder setting for its layer-up/down controls. Its blend dial/buttons alter an OBS layer's blend mode; that is a creative compositing choice, not a transition between scenes. Keep a Source Desk profile for the everyday fixed-order workflow.
 
@@ -30,7 +31,8 @@ In any direct Fadester action's inspector, expand **Ready-made layouts**, choose
 2. Open one Fadester action and connect it to OBS in its shared connection panel.
 3. Try the automatic audio controls. Music/Desktop/Audio use the main audio role, Mic uses a microphone role, and Aux uses another available input. You can override any control with a specific OBS mixer input; set both keys of a fade pair to the same input. If a suitable input is unavailable, choose one in the inspector.
 4. Try **Previous**, **Next**, and **Random** in any Scene Desk layout immediately; they use your existing OBS scene list without configuring one key per scene. Numbered shortcuts also refer to the top-to-bottom list positions: the Studio Plus layout has Scene 1, the Regular Plus layout has Scene 1–3, and the 15-key layouts have Scene 1–4. Cut/Transition controls are already configured too.
-5. Put your preferred existing actions on the empty keys or dials.
+5. The Playlister Transport keys start unbound: open each key's inspector and choose the Playlister source by name (the key keeps following it after a rename).
+6. Put your preferred existing actions on the empty keys or dials.
 
 Source Desk follows Preview while Studio Mode is on and Program while regular mode is active. The action inspector can pin it to Program or a specific scene. OBS scene-item changes apply to that scene wherever it is used, including Preview and Program if both refer to the same scene.
 

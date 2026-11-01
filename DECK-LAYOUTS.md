@@ -2,7 +2,7 @@
 
 Start with **Source Desk (Either Mode)** when you use one OBS scene containing many sources. For complete scene changes, choose **Scene Desk (Studio Mode)** or **Scene Desk (Regular Mode)** to match OBS. The separate **Creative Layer Lab (Either Mode)** adds blend and order controls for experimentation.
 
-These are real `.streamDeckProfile` downloads, ready to import as editable profiles. The [complete profile library](profiles/README.md) includes eleven layouts for Stream Deck +, 15-key Stream Deck, and Stream Deck Mini. Every profile name clearly labels its OBS mode. Opening the current starter for the first time creates its updated named profile; later opens return to that editable profile. Older profiles and their customizations remain available.
+These are real `.streamDeckProfile` downloads, ready to import as editable profiles. The [complete profile library](profiles/README.md) includes twelve layouts for Stream Deck +, 15-key Stream Deck, and Stream Deck Mini. Every profile name clearly labels its OBS mode. Opening the current starter for the first time creates its updated named profile; later opens return to that editable profile. Older profiles and their customizations remain available.
 
 ## Source Desk + — Either Mode
 
@@ -57,6 +57,18 @@ The [Stream Deck + Scene Desk — Regular Mode](com.jbrick2070.fadester-for-obs.
 The 15-key regular profile also provides **Cut previous** and **Cut next** keys for immediate scene changes. The Plus layout provides **Scene 1–3** shortcuts; the 15-key layout provides **Scene 1–4**.
 
 Scene navigation follows the OBS scene list from top to bottom and updates when that list changes. You can browse ten or more scenes with the same Previous/Next/Random keys; a separate key for every scene is optional. Random avoids the live Program scene when another scene is available. In Studio layouts it also avoids the current Preview scene when another non-live candidate exists. Numbered shortcuts track their list positions; select a named scene in the action inspector if you prefer a shortcut to stay pinned. A numbered shortcut beyond the end of the list has no scene to select.
+
+## Playlister Transport + — Either Mode
+
+[Import Playlister Transport +](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-playlister-transport-v1.streamDeckProfile). Six keys drive one [Playlister](https://github.com/jbrick2070/obs-playlister) source through OBS's own media controls; each key's inspector chooses the source by name, and the key follows it through renames (the binding is the source's UUID).
+
+| Column 1 | Column 2 | Column 3 | Column 4 |
+|---|---|---|---|
+| Previous | Next | Play / pause | Stop |
+| Restart | Status | Free | Free |
+| **Dial:** Free | **Dial:** Free | **Dial:** Free | **Dial:** Free |
+
+The keys show what OBS reports: the observed state (Playing, Paused, Stopped, Ended, Empty) with the position and duration while playing or paused, "Play sent" or "Pause sent" while a toggle waits for confirmation, and Busy when four presses are queued. Play / pause decides from a fresh reading of the state, Stop first drops presses not yet sent, and nothing is sent while the source is missing, not a Playlister, or OBS is unreachable. Status only watches.
 
 ## Mode and setup notes
 

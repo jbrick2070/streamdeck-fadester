@@ -62,6 +62,15 @@ describe("preset captions when an operator changes targets", () => {
     key.disappear();
   });
 
+  it("releases a shipped Playlister caption when its operation or source changes", () => {
+    expect(change("playlister-transport-key.html", "playlister-operation", { inputUuid: "", operation: "next", labelOverride: "Next" }, "stop"))
+      .toEqual({ operation: "stop", labelOverride: "" });
+    expect(change("playlister-transport-key.html", "playlister-source", { inputUuid: "", operation: "stop", labelOverride: "Stop" }, "uuid-reel"))
+      .toEqual({ inputUuid: "uuid-reel", inputName: "", labelOverride: "" });
+    expect(change("playlister-transport-key.html", "playlister-operation", { inputUuid: "", operation: "next", labelOverride: "Reel" }, "stop"))
+      .toEqual({ operation: "stop" });
+  });
+
   it("releases outdated dial role captions when changing audio or dial mode", () => {
     expect(change("obs-fader-dial.html", "obs-fader-input", { target: "input_volume", inputName: "__audio_main__", labelOverride: "Music" }, "Mic/Aux"))
       .toEqual({ inputName: "Mic/Aux", labelOverride: "" });

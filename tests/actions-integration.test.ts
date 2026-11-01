@@ -5,6 +5,7 @@ import { FadesterStore } from "../src/state/fadester-store.js";
 import { FaderDialInstanceController } from "../src/actions/fader-dial.js";
 import { AutoFadeKeyInstanceController } from "../src/actions/auto-fade-key.js";
 import { FakeObsServer } from "./helpers/fake-obs-server.js";
+import { svgText } from "./helpers/svg-text.js";
 
 function decodeSvgUri(uri: string): string {
   const prefix = "data:image/svg+xml;utf8,";
@@ -192,7 +193,7 @@ describe("Step 1.4 — End-to-End Fader Dial & Auto-fade Key Integration", () =>
     expect(dialCanvasHistory.at(-1)).toContain("Not used. Click to set up.");
     expect(dialCanvasHistory.at(-1)).not.toContain('data-cell="tbar"');
     expect(keyImageHistory.at(-1)).toContain('data-key="status"');
-    expect(keyImageHistory.at(-1)).toContain("Not used. Click to set up.");
+    expect(svgText(keyImageHistory.at(-1) ?? "")).toContain("Not used. Click to set up.");
     expect(keyImageHistory.at(-1)).not.toContain(">100%<");
 
     // A profile reset restores the T-bar but deliberately clears master assignment.
@@ -200,7 +201,7 @@ describe("Step 1.4 — End-to-End Fader Dial & Auto-fade Key Integration", () =>
     await new Promise((r) => setTimeout(r, 40));
     expect(dialCanvasHistory.at(-1)).toContain('data-cell="tbar"');
     expect(store.getSlot("master")).toMatchObject({ target_mode: "unassigned", enabled: true });
-    expect(keyImageHistory.at(-1)).toContain("Not used. Click to set up.");
+    expect(svgText(keyImageHistory.at(-1) ?? "")).toContain("Not used. Click to set up.");
 
     dialCtrl.disappear();
     keyCtrl.disappear();
@@ -293,7 +294,7 @@ describe("Step 1.4 — End-to-End Fader Dial & Auto-fade Key Integration", () =>
       { slot: "__all_fx__", to: 0, durationMs: 0 },
       16
     );
-    expect(allFxCtrl.renderSvgString()).toContain(
+    expect(svgText(allFxCtrl.renderSvgString())).toContain(
       "Update Midi Fadester to 0.4.0"
     );
   });

@@ -4,8 +4,8 @@ import {
   SingletonAction, TouchTapEvent, WillAppearEvent, WillDisappearEvent
 } from "@elgato/streamdeck";
 import { BLEND_MODES, LayerController, LayerOperation, LayerSettings, matchesLayerIdentity, normalizeLayerSettings } from "../control/layer-controller.js";
-import { escapeXml, toSvgDataUri, truncateLabel } from "../gfx/svg-renderer.js";
-import { renderDirectKeySvg, textFitAttributes } from "../gfx/direct-obs-renderer.js";
+import { toSvgDataUri } from "../gfx/svg-renderer.js";
+import { boxText, renderDirectKeySvg } from "../gfx/direct-obs-renderer.js";
 import { CellRateLimiter } from "../gfx/cell-rate-limiter.js";
 import { PLAYLISTER_PALETTE as P } from "../../packages/streamdeck-fadester-shared/src/palette.js";
 import { LocalText, errorLocalText, ownText, wordText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
@@ -146,18 +146,19 @@ export class ObsLayerInstanceController {
       !connected ? "layerFooterConnect" : !state.sceneName ? "layerFooterChooseScene" : !loaded ? "layerFooterWaiting" :
         !state.layers.length ? "layerFooterAddSources" : this.settings.dialMode === "select_layer" ? "layerFooterBrowse" :
           this.settings.target === "fixed" ? "layerFooterChooseSource" : "layerFooterSelectOnDeck");
-    const header = truncateLabel(state.sceneName ? t("layerHeader", { role: sceneRole, scene: state.sceneName }) : t("layerHeaderNone"), 30);
-    const sourceText = truncateLabel(name, 22);
-    const statusText = truncateLabel(reason || (layer ? modeLabel : missingSource), 27);
-    const footerText = truncateLabel(footer, 30);
+    // Each row is fitted to the dial's 176 px by width (R-I18N-4).
+    const header = boxText(state.sceneName ? t("layerHeader", { role: sceneRole, scene: state.sceneName }) : t("layerHeaderNone"), 11, 176);
+    const sourceText = boxText(name, 16, 176);
+    const statusText = boxText(reason || (layer ? modeLabel : missingSource), 13, 176);
+    const footerText = boxText(footer, 10, 176);
     this.limiter.push([
       '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100">',
       `<defs><linearGradient id="layerBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${P.bgTop}"/><stop offset="100%" stop-color="${P.bgBottom}"/></linearGradient></defs>`,
       `<rect x="2" y="2" width="196" height="96" rx="11" fill="url(#layerBg)" stroke="${reason || !layer ? P.accentYellow : P.accentPurple}" stroke-width="3"/>`,
-      `<text x="100" y="22" text-anchor="middle" fill="${live ? P.programRed : preview ? P.previewGreen : P.accentPurple}" font-family="Segoe UI,Arial,sans-serif" font-size="11" ${textFitAttributes(header, 176, 11)}>${escapeXml(header)}</text>`,
-      `<text x="100" y="47" text-anchor="middle" fill="${P.whiteGlyph}" font-family="Segoe UI,Arial,sans-serif" font-size="16" font-weight="700" ${textFitAttributes(sourceText, 176, 16)}>${escapeXml(sourceText)}</text>`,
-      `<text x="100" y="69" text-anchor="middle" fill="${reason || !layer ? P.accentYellow : P.mutedText}" font-family="Segoe UI,Arial,sans-serif" font-size="13" ${textFitAttributes(statusText, 176, 13)}>${escapeXml(statusText)}</text>`,
-      `<text x="100" y="89" text-anchor="middle" fill="${P.accentYellow}" font-family="Segoe UI,Arial,sans-serif" font-size="10" ${textFitAttributes(footerText, 176, 10)}>${escapeXml(footerText)}</text>`,
+      `<text x="100" y="22" text-anchor="middle" fill="${live ? P.programRed : preview ? P.previewGreen : P.accentPurple}" ${header.attrs}>${header.text}</text>`,
+      `<text x="100" y="47" text-anchor="middle" fill="${P.whiteGlyph}" ${sourceText.attrs} font-weight="700">${sourceText.text}</text>`,
+      `<text x="100" y="69" text-anchor="middle" fill="${reason || !layer ? P.accentYellow : P.mutedText}" ${statusText.attrs}>${statusText.text}</text>`,
+      `<text x="100" y="89" text-anchor="middle" fill="${P.accentYellow}" ${footerText.attrs}>${footerText.text}</text>`,
       '</svg>'
     ].join(""));
   }

@@ -7,6 +7,7 @@ import {
 import { PLAYLISTER_PALETTE } from "../src/gfx/palette.js";
 import { ConnectionStatusInfo, FadesterSlot } from "../src/types/contract.js";
 import { renderDirectDialSvg, renderDirectKeySvg } from "../src/gfx/direct-obs-renderer.js";
+import { svgText } from "./helpers/svg-text.js";
 
 const CONNECTED_STATUS: ConnectionStatusInfo = {
   kind: "connected",
@@ -352,7 +353,7 @@ describe("Step 1.3 — Playlister Runtime SVG Renderer (Dial Cells & Keys)", () 
       to: 1,
       durationMs: 1000
     });
-    expect(keySvg).toContain("Not used. Click to set up.");
+    expect(svgText(keySvg)).toContain("Not used. Click to set up.");
     expect(keySvg).not.toContain("Unassigned, set in OBS");
     expect(keySvg).not.toContain("72%");
     assertSvgRules(keySvg);
@@ -487,7 +488,7 @@ describe("Step 1.3 — Playlister Runtime SVG Renderer (Dial Cells & Keys)", () 
       durationMs: 0
     });
     expect(legacyAllFxSvg).toContain('data-key="status"');
-    expect(legacyAllFxSvg).toContain("Update Midi Fadester to 0.4.0");
+    expect(svgText(legacyAllFxSvg)).toContain("Update Midi Fadester to 0.4.0");
     assertSvgRules(legacyAllFxSvg);
   });
 });

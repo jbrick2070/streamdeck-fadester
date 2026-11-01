@@ -249,6 +249,26 @@ const MUTATIONS: MutationCheck[] = [
     target: 'return caption && !isGeneratedCaption(action, settings, caption) ? caption : "";',
     mutated: "return caption;",
     testFile: "tests/preset-captions.test.ts"
+  },
+  {
+    id: "M-8.3a",
+    step: "Step 8.3 (Translations: CJK width)",
+    description:
+      "Count CJK, kana and Hangul at a Latin letter's width and verify deck-fit.test.ts fails",
+    filePath: resolve(ROOT, "packages/streamdeck-fadester-shared/src/text-fit.ts"),
+    target: "if (WIDE.test(ch)) return 1;",
+    mutated: "if (WIDE.test(ch)) return 0.6;",
+    testFile: "tests/deck-fit.test.ts"
+  },
+  {
+    id: "M-8.3b",
+    step: "Step 8.3 (Translations: shorten by width)",
+    description:
+      "Never shorten a text that is too wide for its box and verify deck-fit.test.ts fails",
+    filePath: resolve(ROOT, "packages/streamdeck-fadester-shared/src/text-fit.ts"),
+    target: "  if (fitsBox(text, fontSize, maxWidth)) return text;",
+    mutated: "  if (text.length > 0) return text;",
+    testFile: "tests/deck-fit.test.ts"
   }
 ];
 

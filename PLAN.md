@@ -379,6 +379,28 @@ step's diff before its build; one commit per step; one push at the end.
 3. **Step 8.3 -- Width.** `textFitAttributes` and the fit checks measure CJK, kana, Hangul and accented capitals at
    their real widths; the three Midi Fadester status texts and the 120 px key status line that are never shrunk today
    get the same fit. A test renders every deck string of every language present and checks its box.
+   *As built (2026-10-31):* `packages/streamdeck-fadester-shared/src/text-fit.ts` holds the estimate (`textEm`:
+   CJK, kana and Hangul 1 em, combining marks 0, capitals of any script 0.74, narrow letters and punctuation 0.36,
+   m/w/@/%/…/— 0.95, others 0.6; a little above Segoe UI Bold), `fitsBox` (fits when squeezed no further than
+   `MIN_SQUEEZE` 0.8), `fitText` (shortens by width with "…", never by a count of characters), the moved
+   `textFitAttributes`, `splitTitle` (two lines at a space; CJK also between characters; one long Latin word stays
+   whole) and `fontFamilyFor` (VJster's CJK font lists, by script). The old estimate (capitals 1 em, every
+   non-ASCII character 1.2 em) is gone, so English is squeezed less often than before, and `truncateLabel` is
+   removed. Every text on the direct key and dial, the scene mixer (LIVE/NEXT too), the layer dial and the Midi
+   Fadester cells is fitted to its box and gets its font list; the direct key title wraps by width (14 px, else
+   12 px, else two lines), the Midi Fadester key title too (14 px, else two lines at 13, 11 or 10 px); the dial
+   status title and reason, the hold badge (now 112 to 188 px wide), the T-bar scene names (16, 14 or 12 px in
+   66 px each) and percent, the readouts (the label gets what the readout leaves) and the Clean FX lines were not
+   fitted before and are now; the key status reason (often Midi Fadester's own sentence) gets two lines. Tests
+   that looked for a wrapped reason read the drawn words through `tests/helpers/svg-text.ts`.
+   `tests/deck-fit.test.ts` lists every deck key with the boxes it is drawn in (composites with their parts, an
+   Info Bar line as native text that must fit 220 px unsqueezed) or as not drawn on the deck, and for every
+   language present requires each text to fit wherever the English fits; status and error sentences that do not
+   fit a 9 px key line even in English are shortened there by design, and may be at most half again as wide as
+   the English. `textFitAttributes` still sets `textLength` whenever the estimate exceeds the box, as before (a
+   text a little narrower in reality is then stretched slightly; overflow was judged worse). German deck texts were shortened to fit
+   (for example "Von OBS getrennt.", "{role} fehlt", and OBS's "Negativ multiplizieren" as "Negativ mult." in the
+   9 px key line). M-8.3a (CJK at Latin width) and M-8.3b (no shortening) are new.
 4. **Step 8.4 -- Stream Deck files.** `en.json` plus de, es, fr, ja, ko, zh_CN, zh_TW at the plugin root: Name,
    Description, Category, the seven action UUIDs' Name, Tooltip and Encoder TriggerDescription, and a `Localization`
    object holding the strings table (and `Localization.pi` for the inspectors). The plugin takes the language from

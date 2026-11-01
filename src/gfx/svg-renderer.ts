@@ -4,7 +4,6 @@ export {
   type DialCellRenderInput,
   type KeyCellRenderInput,
   escapeXml,
-  truncateLabel,
   toSvgDataUri,
   renderDialCellSvg,
   renderAutoFadeKeySvg

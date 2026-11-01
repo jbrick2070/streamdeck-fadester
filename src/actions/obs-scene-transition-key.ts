@@ -14,6 +14,7 @@ import {
   DIRECT_SCENE_RANDOM,
   DirectObsClient,
   OBS_TRANSITION_CURRENT,
+  OBS_TRANSITION_CUT,
   automaticSceneTargetLabel,
   sceneTargetIndex
 } from "../obs/direct-obs-client.js";
@@ -28,6 +29,9 @@ import {
   renderDirectKeySvg,
   toSvgDataUri
 } from "../gfx/direct-obs-renderer.js";
+import { LocalText, errorLocalText, ownText, wordText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
+import { statusCellReason } from "../../packages/streamdeck-fadester-shared/src/status-text.js";
+import { t, translate } from "../i18n/strings.js";
 
 interface KeyImageSink {
   setImage(image: string): Promise<void>;
@@ -42,15 +46,15 @@ function normalizeOperation(raw: unknown): ObsSceneOperation {
 
 function targetLabel(target: string): string {
   if (target === DIRECT_SCENE_CURRENT_PREVIEW) {
-    return "Take Preview";
+    return t("sceneTargetTakePreview");
   }
   if (target === DIRECT_SCENE_NEXT) {
-    return "Next scene";
+    return t("sceneTargetNext");
   }
   if (target === DIRECT_SCENE_PREVIOUS) {
-    return "Previous scene";
+    return t("sceneTargetPrevious");
   }
-  if (target === DIRECT_SCENE_RANDOM) return "Random scene";
+  if (target === DIRECT_SCENE_RANDOM) return t("sceneTargetRandom");
   const automatic = automaticSceneTargetLabel(target);
   if (automatic) return automatic;
   return target;
@@ -75,10 +79,10 @@ export function migrateScenePresetSettings(
 export class ObsSceneTransitionKeyInstanceController {
   private settings: Required<ObsSceneTransitionKeySettings>;
   private visible = false;
-  private lastError = "";
+  private lastError: LocalText | null = null;
   private readonly rateLimiter: CellRateLimiter<string>;
   private readonly onStateChanged = (): void => {
-    this.lastError = "";
+    this.lastError = null;
     this.renderNow();
   };
 
@@ -113,7 +117,7 @@ export class ObsSceneTransitionKeyInstanceController {
 
   public updateSettings(settings: ObsSceneTransitionKeySettings): void {
     this.settings = this.mergeSettings(settings);
-    this.lastError = "";
+    this.lastError = null;
     this.renderNow();
   }
 
@@ -133,9 +137,9 @@ export class ObsSceneTransitionKeyInstanceController {
         this.settings.operation,
         this.settings.transitionName
       );
-      this.lastError = "";
+      this.lastError = null;
     } catch (error) {
-      this.lastError = error instanceof Error ? error.message : "OBS scene control failed.";
+      this.lastError = errorLocalText(error, ownText("sceneControlFailed"));
       await this.sink.showAlert();
     }
     this.renderNow();
@@ -155,32 +159,33 @@ export class ObsSceneTransitionKeyInstanceController {
       || target === DIRECT_SCENE_CURRENT_PREVIEW && ["Cut preview", "Transition"].includes(this.settings.labelOverride)
       || target === DIRECT_SCENE_RANDOM && this.settings.labelOverride === "Random";
     let resolved = "";
-    let reason = this.lastError || this.client.getStatus().cellReason;
+    let reason = wordText(this.lastError, translate) || statusCellReason(this.client.getStatus(), translate);
     const needsStudio = this.settings.operation === "preview" || target === DIRECT_SCENE_CURRENT_PREVIEW;
     if (this.client.isConnected()) {
-      if (needsStudio && !catalog.studioMode) reason = "Enable Studio Mode";
+      if (needsStudio && !catalog.studioMode) reason = t("sceneEnableStudio");
       else if (target !== DIRECT_SCENE_RANDOM) {
         try { resolved = this.client.resolveSceneTarget(target, this.settings.operation === "preview"); }
-        catch (error) { reason = error instanceof Error ? error.message : "Scene unavailable"; }
-        if (configured && !resolved && !reason) reason = "Scene unavailable";
+        catch (error) { reason = wordText(errorLocalText(error, ownText("sceneUnavailable")), translate); }
+        if (configured && !resolved && !reason) reason = t("sceneUnavailable");
       }
     }
     const title = this.settings.labelOverride && !(isAutomatic && generatedLabel) && !generatedRoleLabel
       ? this.settings.labelOverride
-      : resolved || targetLabel(target) || "Scene";
+      : resolved || targetLabel(target) || t("sceneTitleFallback");
+    // A chosen OBS transition keeps its OBS name; only our own words are translated.
     const operation = this.settings.operation === "preview"
-      ? "Preview"
-      : this.settings.operation === "cut"
-        ? "Cut"
-        : this.settings.transitionName === OBS_TRANSITION_CURRENT
-          ? "Transition"
-          : this.settings.transitionName || "Transition";
-    const role = isAutomatic ? `Scene ${sceneTargetIndex(target)! + 1}`
-      : target === DIRECT_SCENE_NEXT ? "Next"
-        : target === DIRECT_SCENE_PREVIOUS ? "Previous"
-          : target === DIRECT_SCENE_RANDOM ? "Random"
-            : target === DIRECT_SCENE_CURRENT_PREVIEW ? "Take" : "";
-    const subtitle = role ? `${role} · ${operation}` : operation;
+      ? t("sceneOpPreview")
+      : this.settings.operation === "cut" || this.settings.transitionName === OBS_TRANSITION_CUT
+        ? t("sceneOpCut")
+        : this.settings.transitionName === OBS_TRANSITION_CURRENT || !this.settings.transitionName
+          ? t("sceneOpTransition")
+          : this.settings.transitionName;
+    const role = isAutomatic ? t("sceneRoleIndex", { n: sceneTargetIndex(target)! + 1 })
+      : target === DIRECT_SCENE_NEXT ? t("sceneRoleNext")
+        : target === DIRECT_SCENE_PREVIOUS ? t("sceneRolePrevious")
+          : target === DIRECT_SCENE_RANDOM ? t("sceneRoleRandom")
+            : target === DIRECT_SCENE_CURRENT_PREVIEW ? t("sceneRoleTake") : "";
+    const subtitle = role ? t("sceneSubtitle", { role, operation }) : operation;
     this.rateLimiter.push(
       renderDirectKeySvg({
         connected: this.client.isConnected() && !reason,

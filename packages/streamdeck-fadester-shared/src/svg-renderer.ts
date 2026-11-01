@@ -2,6 +2,8 @@
 import { ConnectionStatusInfo, SurfaceSlotBase } from "./types.js";
 import { PLAYLISTER_PALETTE, getSourcePairGradientColors } from "./palette.js";
 import { isResetFxEligible } from "./fx-policy.js";
+import { Translate, englishShared } from "./i18n.js";
+import { statusCellReason, statusSentence } from "./status-text.js";
 
 export interface DialCellRenderInput<
   TSlot extends SurfaceSlotBase = SurfaceSlotBase
@@ -20,6 +22,8 @@ export interface DialCellRenderInput<
   labelOverride?: string;
   /** "percent" forces a 0..100 % readout; "auto" prefers display_value. */
   readoutStyle?: "auto" | "percent";
+  /** The plugin's translator; English when omitted. */
+  t?: Translate;
 }
 
 export interface KeyCellRenderInput<
@@ -33,6 +37,8 @@ export interface KeyCellRenderInput<
   durationMs: number;
   labelOverride?: string;
   readoutStyle?: "auto" | "percent";
+  /** The plugin's translator; English when omitted. */
+  t?: Translate;
 }
 
 export function escapeXml(raw: string): string {
@@ -59,8 +65,8 @@ type CompactKeyTitle = {
 };
 
 /** Keep target names readable on a 120px Stream Deck key. */
-function compactKeyTitle(raw: string): CompactKeyTitle {
-  const title = truncateLabel(raw || "Auto-fade", 24);
+function compactKeyTitle(raw: string, t: Translate): CompactKeyTitle {
+  const title = truncateLabel(raw || t("cellAutoFadeTitle"), 24);
   if (title.length <= 12) {
     return { firstLine: title, fontSize: 14 };
   }
@@ -113,10 +119,11 @@ export function toSvgDataUri(svg: string): string {
 function renderDialStatusSvg(
   title: string,
   reason: string,
-  borderColor: string
+  borderColor: string,
+  t: Translate
 ): string {
-  const safeTitle = escapeXml(truncateLabel(title || "Fadester", 18));
-  const safeReason = escapeXml(truncateLabel(reason || "Unavailable", 26));
+  const safeTitle = escapeXml(truncateLabel(title || t("cellFadesterTitle"), 18));
+  const safeReason = escapeXml(truncateLabel(reason || t("cellUnavailable"), 26));
   const P = PLAYLISTER_PALETTE;
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100">`,
@@ -147,9 +154,9 @@ function renderTakeoverArrow(
   return "";
 }
 
-function renderHoldOverlay(label = "HOLD 3s FADE"): string {
+function renderHoldOverlay(label: string | undefined, t: Translate): string {
   const P = PLAYLISTER_PALETTE;
-  const safeLabel = escapeXml(truncateLabel(label || "HOLD 3s FADE", 15));
+  const safeLabel = escapeXml(truncateLabel(label || t("cellHoldFade"), 15));
   const boxW = safeLabel.length > 12 ? 128 : 112;
   const boxX = Math.round((200 - boxW) / 2);
   return [
@@ -171,15 +178,17 @@ export function renderDialCellSvg<TSlot extends SurfaceSlotBase>(
   input: DialCellRenderInput<TSlot>
 ): string {
   const P = PLAYLISTER_PALETTE;
+  const t = input.t ?? englishShared;
   const override = (input.labelOverride ?? "").trim();
-  const fallbackTitle = override || input.slot?.name || input.slotId || "Fader";
+  const fallbackTitle = override || input.slot?.name || input.slotId || t("cellFaderTitle");
 
   // 1. Disconnected / error state -> never blank
   if (input.status.kind !== "connected") {
     return renderDialStatusSvg(
       fallbackTitle,
-      input.status.cellReason || input.status.sentence,
-      P.orangeAccent
+      statusCellReason(input.status, t) || statusSentence(input.status, t),
+      P.orangeAccent,
+      t
     );
   }
 
@@ -188,8 +197,9 @@ export function renderDialCellSvg<TSlot extends SurfaceSlotBase>(
   if (!slot) {
     return renderDialStatusSvg(
       fallbackTitle,
-      `Slot '${input.slotId}' not found`,
-      P.orangeAccent
+      t("cellSlotNotFound", { slot: input.slotId }),
+      P.orangeAccent,
+      t
     );
   }
 
@@ -198,12 +208,13 @@ export function renderDialCellSvg<TSlot extends SurfaceSlotBase>(
     const unavailableReason =
       slot.reason ||
       (slot.target_mode === "unassigned"
-        ? "Unassigned, set in OBS"
-        : "Unavailable in OBS");
+        ? t("cellUnassigned")
+        : t("cellUnavailableInObs"));
     return renderDialStatusSvg(
       slot.name || slot.id,
       unavailableReason,
-      P.orangeAccent
+      P.orangeAccent,
+      t
     );
   }
 
@@ -211,26 +222,27 @@ export function renderDialCellSvg<TSlot extends SurfaceSlotBase>(
   if (slot.target_mode === "unassigned") {
     return renderDialStatusSvg(
       slot.name || slot.id,
-      "Unassigned, set in OBS",
-      P.trackBorder
+      t("cellUnassigned"),
+      P.trackBorder,
+      t
     );
   }
 
   const clamped = Math.max(0, Math.min(1, slot.value));
   const pct = Math.round(clamped * 100);
-  const pctText = `${pct}%`;
+  const pctText = t("percent", { n: pct });
   const holdMarkup = input.holdingForLongPress
-    ? renderHoldOverlay(input.holdLabel)
+    ? renderHoldOverlay(input.holdLabel, t)
     : "";
   const parkedMarkup = renderParkedIndicator(slot.parked);
 
   // 5. Studio Mode T-bar cell (GRAPHICS-NOTES.md #3)
   if (slot.target_mode === "tbar") {
     const prevName = escapeXml(
-      truncateLabel(input.previewSceneName || "Preview", 10)
+      truncateLabel(input.previewSceneName || t("cellPreview"), 10)
     );
     const progName = escapeXml(
-      truncateLabel(input.programSceneName || "Program", 10)
+      truncateLabel(input.programSceneName || t("cellProgram"), 10)
     );
     const inTransition = clamped > 0.001 && clamped < 0.999;
     const borderStroke = inTransition ? P.orangeAccent : P.trackBorder;
@@ -376,10 +388,10 @@ export function renderDialCellSvg<TSlot extends SurfaceSlotBase>(
   ].join("");
 }
 
-function renderKeyStatusSvg(title: string, reason: string): string {
+function renderKeyStatusSvg(title: string, reason: string, t: Translate): string {
   const P = PLAYLISTER_PALETTE;
-  const titleLayout = compactKeyTitle(title);
-  const safeReason = escapeXml(truncateLabel(reason || "Unavailable", 40));
+  const titleLayout = compactKeyTitle(title, t);
+  const safeReason = escapeXml(truncateLabel(reason || t("cellUnavailable"), 40));
   const reasonY = titleLayout.secondLine ? 86 : 78;
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" data-key="status">`,
@@ -400,15 +412,17 @@ export function renderAutoFadeKeySvg<TSlot extends SurfaceSlotBase>(
   input: KeyCellRenderInput<TSlot>
 ): string {
   const P = PLAYLISTER_PALETTE;
+  const t = input.t ?? englishShared;
   const isAllFx = input.slotId === "__all_fx__";
   const override = (input.labelOverride ?? "").trim();
   const fallbackTitle =
-    override || (isAllFx ? "Clean FX" : input.slot?.name || input.slotId || "Auto-fade");
+    override || (isAllFx ? t("cleanFxTitle") : input.slot?.name || input.slotId || t("cellAutoFadeTitle"));
 
   if (input.status.kind !== "connected") {
     return renderKeyStatusSvg(
       fallbackTitle,
-      input.status.cellReason || input.status.sentence
+      statusCellReason(input.status, t) || statusSentence(input.status, t),
+      t
     );
   }
 
@@ -416,16 +430,16 @@ export function renderAutoFadeKeySvg<TSlot extends SurfaceSlotBase>(
     const slotList = input.slots ?? [];
     const hasFxSupport = slotList.some((s) => s.kind === "fx");
     if (!hasFxSupport) {
-      return renderKeyStatusSvg("Clean FX", "Update Midi Fadester to 0.4.0");
+      return renderKeyStatusSvg(t("cleanFxTitle"), t("cleanFxNeedsUpdate"), t);
     }
 
     const eligible = slotList.filter(isResetFxEligible);
     const activeCount = eligible.filter((s) => s.value > 0.005).length;
     const borderColor = activeCount > 0 ? P.orangeAccent : P.previewGreen;
     const line1 = escapeXml(
-      truncateLabel(override || (activeCount > 0 ? "CLEAN FX" : "FX CLEAN"), 10)
+      truncateLabel(override || (activeCount > 0 ? t("cleanFxActiveTitle") : t("cleanFxIdleTitle")), 10)
     );
-    const line2 = activeCount > 0 ? `${activeCount} ACTIVE` : "ALL 0%";
+    const line2 = escapeXml(activeCount > 0 ? t("cleanFxActiveCount", { n: activeCount }) : t("cleanFxAllZero"));
 
     return [
       `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" data-key="clean-fx" data-active-fx="${activeCount}">`,
@@ -444,28 +458,29 @@ export function renderAutoFadeKeySvg<TSlot extends SurfaceSlotBase>(
 
   const slot = input.slot;
   if (!slot) {
-    return renderKeyStatusSvg(fallbackTitle, "Slot missing");
+    return renderKeyStatusSvg(fallbackTitle, t("cellSlotMissing"), t);
   }
   if (!slot.available) {
     const unavailableReason =
       slot.reason ||
       (slot.target_mode === "unassigned"
-        ? "Unassigned, set in OBS"
-        : "Unavailable");
-    return renderKeyStatusSvg(slot.name || slot.id, unavailableReason);
+        ? t("cellUnassigned")
+        : t("cellUnavailable"));
+    return renderKeyStatusSvg(slot.name || slot.id, unavailableReason, t);
   }
   if (slot.target_mode === "unassigned") {
-    return renderKeyStatusSvg(slot.name || slot.id, "Unassigned, set in OBS");
+    return renderKeyStatusSvg(slot.name || slot.id, t("cellUnassigned"), t);
   }
 
   const clamped = Math.max(0, Math.min(1, slot.value));
   const pct = Math.round(clamped * 100);
-  const pctText = `${pct}%`;
+  const pctText = t("percent", { n: pct });
   const isFxSlot = slot.target_mode === "filter_param" || slot.kind === "fx";
   const gradStart = isFxSlot ? P.fxCyanStart : P.blueStart;
   const gradEnd = isFxSlot ? P.fxAmberEnd : P.violetEnd;
   const titleLayout = compactKeyTitle(
-    override || slot.label || slot.name || slot.id
+    override || slot.label || slot.name || slot.id,
+    t
   );
   const readoutText = escapeXml(
     truncateLabel(

@@ -1,0 +1,172 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+import { afterEach, describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import {
+  EN,
+  StringKey,
+  STREAM_DECK_LANGUAGES,
+  lookupText,
+  setLanguage,
+  t,
+  translate
+} from "../src/i18n/strings.js";
+import { templatePlaceholders, wordText } from "../packages/streamdeck-fadester-shared/src/i18n.js";
+import { statusCellReason, statusSentence } from "../packages/streamdeck-fadester-shared/src/status-text.js";
+import { ObsVendorClient } from "../packages/streamdeck-fadester-shared/src/obs/obs-vendor-client.js";
+import { ConnectionStatusInfo } from "../packages/streamdeck-fadester-shared/src/types.js";
+import { renderAutoFadeKeySvg, renderDialCellSvg } from "../packages/streamdeck-fadester-shared/src/svg-renderer.js";
+import { DirectObsError } from "../src/obs/direct-obs-client.js";
+import { buildNeoInfobarFeedback } from "../src/actions/obs-neo-infobar.js";
+import { renderDirectDialSvg, renderDirectKeySvg } from "../src/gfx/direct-obs-renderer.js";
+import {
+  REQUIRED_LANGUAGES,
+  deckTable,
+  languageFilePath,
+  presentLanguages,
+  readLanguageFile
+} from "./helpers/languages.js";
+
+const KEYS = Object.keys(EN) as StringKey[];
+
+function useLanguage(language: string): void {
+  setLanguage(language, language === "en" ? null : deckTable(language));
+}
+
+afterEach(() => setLanguage("en", null));
+
+describe("language files (R-I18N-5)", () => {
+  it("ships every required language, and only Stream Deck's languages", () => {
+    const present = presentLanguages();
+    for (const language of REQUIRED_LANGUAGES) expect(present, language).toContain(language);
+    for (const language of present) expect(STREAM_DECK_LANGUAGES).toContain(language);
+  });
+
+  it.each(presentLanguages())("%s.json is UTF-8 JSON without a BOM and has every deck key with English's placeholders", (language) => {
+    const bytes = readFileSync(languageFilePath(language));
+    expect(bytes.subarray(0, 3).equals(Buffer.from([0xef, 0xbb, 0xbf])), "BOM").toBe(false);
+    expect(new TextDecoder("utf-8", { fatal: true }).decode(bytes).length).toBeGreaterThan(0);
+    const table = deckTable(language);
+    expect(Object.keys(table).sort()).toEqual([...KEYS].sort());
+    for (const key of KEYS) {
+      const value = table[key];
+      expect(typeof value, `${language}.${key}`).toBe("string");
+      expect((value as string).trim(), `${language}.${key}`).not.toBe("");
+      expect(templatePlaceholders(value as string), `${language}.${key}`).toEqual(templatePlaceholders(EN[key]));
+    }
+  });
+
+  it("en.json holds the built-in English table exactly", () => {
+    expect(deckTable("en")).toEqual({ ...EN });
+  });
+
+  it("keys have no dots (the SDK reads dots as paths)", () => {
+    for (const key of KEYS) expect(key).not.toContain(".");
+  });
+});
+
+describe("lookup and fallback", () => {
+  it("falls back to English for a missing, empty, key-echo or placeholder-broken text", () => {
+    expect(lookupText({}, "sceneRoleIndex")).toBe("Scene {n}");
+    expect(lookupText({ sceneRoleIndex: "" }, "sceneRoleIndex")).toBe("Scene {n}");
+    expect(lookupText({ sceneRoleIndex: "sceneRoleIndex" }, "sceneRoleIndex")).toBe("Scene {n}");
+    expect(lookupText({ sceneRoleIndex: "Szene" }, "sceneRoleIndex")).toBe("Scene {n}");
+    expect(lookupText({ sceneRoleIndex: "Szene {count}" }, "sceneRoleIndex")).toBe("Scene {n}");
+    expect(lookupText({ sceneRoleIndex: 7 }, "sceneRoleIndex")).toBe("Scene {n}");
+    expect(lookupText({ sceneRoleIndex: "Szene {n}" }, "sceneRoleIndex")).toBe("Szene {n}");
+  });
+
+  it("an unknown language or a missing file shows English", () => {
+    setLanguage("xx", null);
+    expect(t("keyReady")).toBe("Ready");
+    expect(t("sceneRoleIndex", { n: 2 })).toBe("Scene 2");
+  });
+
+  it("fills placeholders by name, never by position", () => {
+    setLanguage("xx", { layerPosition: "{state}: {i} von {n}" });
+    expect(t("layerPosition", { i: 2, n: 5, state: "Sichtbar" })).toBe("Sichtbar: 2 von 5");
+  });
+});
+
+describe("German on the deck", () => {
+  it("draws the Info Bar, keys and dials from the German table", () => {
+    useLanguage("de");
+    const catalog = {
+      scenes: [], inputs: [], transitions: [], studioMode: false, currentProgramScene: "Opening",
+      currentPreviewScene: "", currentTransition: "", inputVolumes: {}, tbarPosition: 0
+    };
+    expect(buildNeoInfobarFeedback(true, catalog)).toEqual({
+      status: "OBS verbunden", live: "LIVE  Opening", preview: "VORSCHAU  Studio-Modus aus"
+    });
+    const key = renderDirectKeySvg({ connected: true, reason: "", title: "", configured: false });
+    expect(key).toContain("OBS-Aktion wählen");
+    expect(key).toContain("Inspektor öffnen");
+    const dial = renderDirectDialSvg({ connected: true, reason: "", label: "Mic", value: 0.4, configured: true });
+    expect(dial).toContain("40 %");
+    const mixer = renderDirectDialSvg({
+      connected: true, reason: "", label: "", value: 0.5, configured: true, target: "tbar",
+      studioMode: true, programSceneName: "A", previewSceneName: "B"
+    });
+    expect(mixer).toContain("NÄCHSTE");
+    expect(mixer).toContain("Drücken: Nächste live schalten");
+    expect(mixer).not.toContain("Press to take Next live");
+  });
+
+  it("words the Midi Fadester cells through the injected translator", () => {
+    useLanguage("de");
+    const offline = renderDialCellSvg({ status: { kind: "wrong_password" }, slotId: "crossfader", t: translate });
+    expect(offline).toContain("Falsches Passwort");
+    const missing = renderAutoFadeKeySvg({
+      status: { kind: "connected", fadesterVersion: "0.4.0" }, slotId: "fader_9", to: 1, durationMs: 1000, t: translate
+    });
+    expect(missing).toContain("Slot fehlt");
+    // Without a translator the shared package stays English.
+    expect(renderDialCellSvg({ status: { kind: "wrong_password" }, slotId: "crossfader" })).toContain("Wrong password");
+  });
+
+  it("words statuses from their kind and parameters at render time", () => {
+    const status: ConnectionStatusInfo = {
+      kind: "connected", obsVersion: "33.0.0", pluginName: "Midi Fadester", fadesterVersion: "0.4.0", buildCommit: "abc1234"
+    };
+    expect(statusSentence(status)).toBe("Connected: OBS 33.0.0, Midi Fadester 0.4.0 (abc1234)");
+    useLanguage("de");
+    expect(statusSentence(status, translate)).toBe("Verbunden: OBS 33.0.0, Midi Fadester 0.4.0 (abc1234)");
+    expect(statusCellReason({ kind: "obs_unreachable" }, translate)).toBe("OBS läuft nicht oder WebSocket ist aus");
+    expect(statusCellReason(status, translate)).toBe("");
+  });
+});
+
+describe("own and foreign texts (R-I18N-2)", () => {
+  it("translates our own errors and keeps an OBS comment verbatim, even when it reads like ours", () => {
+    useLanguage("de");
+    const own = new DirectObsError({ key: "errorChooseScene" }, 400);
+    expect(own.message).toBe("Choose an existing OBS scene first.");
+    expect(wordText(own.text, translate)).toBe("Wählen Sie zuerst eine vorhandene OBS-Szene.");
+    const foreign = new DirectObsError("Choose an existing OBS scene first.", 400);
+    expect(wordText(foreign.text, translate)).toBe("Choose an existing OBS scene first.");
+  });
+
+  it("emits statusChanged when a status parameter changes, not only its kind", () => {
+    class Probe extends ObsVendorClient {
+      public push(status: ConnectionStatusInfo): void { this.setStatus(status); }
+    }
+    const probe = new Probe();
+    const seen: ConnectionStatusInfo[] = [];
+    probe.on("statusChanged", (status: ConnectionStatusInfo) => seen.push(status));
+    probe.push({ kind: "connected", obsVersion: "33.0.0", pluginName: "Midi Fadester", fadesterVersion: "0.4.0" });
+    probe.push({ kind: "connected", obsVersion: "33.0.0", pluginName: "Midi Fadester", fadesterVersion: "0.4.0" });
+    probe.push({ kind: "connected", obsVersion: "33.0.0", pluginName: "Midi Fadester", fadesterVersion: "0.4.1" });
+    expect(seen.map((status) => status.fadesterVersion)).toEqual(["0.4.0", "0.4.1"]);
+  });
+
+  it("the German table never repeats an English text where the words differ in German", () => {
+    const de = readLanguageFile("de").Localization;
+    // Kept terms (R-I18N-3) and placeholders-only templates may equal English.
+    const kept = new Set(["Fadester", "Fader", "OBS", "LIVE", "Normal", "Linear", "—"]);
+    for (const key of KEYS) {
+      const english = EN[key];
+      const stripped = english.replace(/\{[A-Za-z0-9_]+\}/g, "").replace(/[\s·:/()%,.—'-]/g, "");
+      if (!stripped || kept.has(stripped)) continue;
+      expect(de[key], key).not.toBe(english);
+    }
+  });
+});

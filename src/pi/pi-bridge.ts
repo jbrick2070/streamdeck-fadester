@@ -12,6 +12,9 @@ import {
 } from "../types/contract.js";
 import { FadesterClient, FadesterVendorError } from "../obs/fadester-client.js";
 import { FadesterStore } from "../state/fadester-store.js";
+import { errorText, ownText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
+import { statusCellReason, statusSentence } from "../../packages/streamdeck-fadester-shared/src/status-text.js";
+import { t, translate } from "../i18n/strings.js";
 import {
   DEFAULT_GLOBAL_SETTINGS,
   FadesterGlobalSettings
@@ -184,12 +187,14 @@ export class PropertyInspectorBridge {
     const slots = this.store.getSlots();
     const catalog = supportsCatalogApi(status.fadesterVersion, slots);
     const tier = this.store.getProfileTier();
+    const tierLabel = (id: string): string => PROFILE_TIER_LABELS[id] ? t(PROFILE_TIER_LABELS[id]) : id;
     return {
       event: "fadesterState",
+      // Worded here, in the plugin's language; the inspectors compare only `kind`.
       status: {
         kind: status.kind,
-        sentence: status.sentence,
-        cellReason: status.cellReason,
+        sentence: statusSentence(status, translate),
+        cellReason: statusCellReason(status, translate),
         linkUrl: status.linkUrl ?? "",
         obsVersion: status.obsVersion ?? "",
         fadesterVersion: status.fadesterVersion ?? "",
@@ -203,9 +208,10 @@ export class PropertyInspectorBridge {
       studioMode: this.store.isStudioMode(),
       profile: {
         slug: this.store.getProfile(),
-        displayName: this.store.getProfileDisplayName(),
+        // The generic profile is ours to name; the controller profiles keep their product names.
+        displayName: this.store.getProfile() === "generic" ? t("profileGeneric") : this.store.getProfileDisplayName(),
         tier,
-        tierLabel: PROFILE_TIER_LABELS[tier] ?? tier
+        tierLabel: tierLabel(tier)
       },
       device: {
         name: device.name,
@@ -214,16 +220,16 @@ export class PropertyInspectorBridge {
       },
       knownProfiles: CONTROLLER_PROFILE_META.map((p) => ({
         slug: p.slug,
-        displayName: p.displayName,
+        displayName: p.slug === "generic" ? t("profileGeneric") : p.displayName,
         tier: p.tier,
-        tierLabel: PROFILE_TIER_LABELS[p.tier] ?? p.tier
+        tierLabel: tierLabel(p.tier)
       })),
       targetModes: (Object.keys(TARGET_MODE_LABELS) as TargetMode[]).map(
-        (id) => ({ id, label: TARGET_MODE_LABELS[id] })
+        (id) => ({ id, label: t(TARGET_MODE_LABELS[id]) })
       ),
       curves: (Object.keys(CURVE_LABELS) as CurveType[]).map((id) => ({
         id,
-        label: CURVE_LABELS[id]
+        label: t(CURVE_LABELS[id])
       })),
       capabilities: {
         catalog,
@@ -254,7 +260,7 @@ export class PropertyInspectorBridge {
         available: s.available,
         reason: s.reason
       })),
-      lastErrorComment: this.store.getLastErrorComment()
+      lastErrorComment: this.store.getLastErrorComment(translate)
     };
   }
 
@@ -338,7 +344,7 @@ export class PropertyInspectorBridge {
       source
     };
     if (!this.client.isConnected()) {
-      reply.error = this.store.getStatus().sentence;
+      reply.error = statusSentence(this.store.getStatus(), translate);
       this.transport.sendToPropertyInspector(reply);
       return;
     }
@@ -361,13 +367,13 @@ export class PropertyInspectorBridge {
     };
     if (!slot) {
       reply.ok = false;
-      reply.error = "Choose a slot first.";
+      reply.error = t("piChooseSlot");
       this.transport.sendToPropertyInspector(reply);
       return;
     }
     if (!this.client.isConnected()) {
       reply.ok = false;
-      reply.error = this.store.getStatus().sentence;
+      reply.error = statusSentence(this.store.getStatus(), translate);
       this.transport.sendToPropertyInspector(reply);
       return;
     }
@@ -375,9 +381,7 @@ export class PropertyInspectorBridge {
       const request = sanitizeSetSlotFields(slot, msg.fields);
       const updated = await this.client.setSlot(request);
       if (typeof request.enabled === "boolean" && updated.enabled !== request.enabled) {
-        throw new Error(
-          "Midi Fadester did not apply the enabled state. Update Midi Fadester to a build that supports slot enable controls."
-        );
+        throw new FadesterVendorError(ownText("piEnabledNotApplied"));
       }
       reply.ok = true;
       reply.enabled = updated.enabled;
@@ -400,7 +404,7 @@ export class PropertyInspectorBridge {
     };
     if (!this.client.isConnected()) {
       reply.ok = false;
-      reply.error = this.store.getStatus().sentence;
+      reply.error = statusSentence(this.store.getStatus(), translate);
       this.transport.sendToPropertyInspector(reply);
       return;
     }
@@ -416,14 +420,9 @@ export class PropertyInspectorBridge {
     this.transport.sendToPropertyInspector(reply);
   }
 
+  /** A Midi Fadester or OBS comment verbatim; our own messages in the plugin's language. */
   private errorSentence(err: unknown): string {
-    if (err instanceof FadesterVendorError) {
-      return err.comment;
-    }
-    if (err instanceof Error) {
-      return err.message;
-    }
-    return String(err);
+    return errorText(err, { verbatim: String(err) }, translate);
   }
 
   private queueConnection(run: () => Promise<void>): Promise<void> {

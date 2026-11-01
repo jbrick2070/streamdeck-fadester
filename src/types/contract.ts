@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+import type { StringKey } from "../i18n/strings.js";
 
 export const FADESTER_VENDOR_NAME = "midi-fadester" as const;
 export const FADESTER_API_VERSION = 1 as const;
@@ -46,10 +47,11 @@ export const CONTROLLER_PROFILE_META: readonly ControllerProfileMeta[] = [
   { slug: "generic", displayName: "Generic MIDI (Custom)", tier: "custom" }
 ];
 
-export const PROFILE_TIER_LABELS: Record<string, string> = {
-  verified: "Verified on hardware",
-  beta: "Beta, untested on hardware",
-  custom: "Custom"
+/** Tier words by key; the bridge words them in the plugin's language. */
+export const PROFILE_TIER_LABELS: Record<string, StringKey> = {
+  verified: "tierVerified",
+  beta: "tierBeta",
+  custom: "tierCustom"
 };
 
 export interface FadesterBuildInfo {
@@ -301,34 +303,37 @@ export type ConnectionStateKind =
   | "missing_plugin"
   | "version_mismatch";
 
+/** Data only; worded by `statusSentence` / `statusCellReason` (status-text.ts). */
 export interface ConnectionStatusInfo {
   kind: ConnectionStateKind;
-  sentence: string;
-  cellReason: string;
   obsVersion?: string;
   fadesterVersion?: string;
   buildCommit?: string;
   profile?: ControllerProfileSlug;
   profileTier?: ProfileTier;
   linkUrl?: string;
+  pluginName?: string;
+  surfaceName?: string;
+  apiVersion?: number;
+  supportedApiVersion?: number;
 }
 
-/** Operator-facing words for `target_mode`, per MIDI-FADESTER-UI.md. */
-export const TARGET_MODE_LABELS: Record<TargetMode, string> = {
-  unassigned: "Not used",
-  tbar: "Switch scenes (T-bar)",
-  crossfade_ab: "Mix two layers",
-  layer_opacity: "Show or hide a layer",
-  audio_volume: "Volume",
-  filter_param: "Filter setting (FX)"
+/** Operator-facing words for `target_mode`, per MIDI-FADESTER-UI.md, by key. */
+export const TARGET_MODE_LABELS: Record<TargetMode, StringKey> = {
+  unassigned: "modeUnassigned",
+  tbar: "modeTbar",
+  crossfade_ab: "modeCrossfade",
+  layer_opacity: "modeLayerOpacity",
+  audio_volume: "modeAudioVolume",
+  filter_param: "modeFilterParam"
 };
 
-export const CURVE_LABELS: Record<CurveType, string> = {
-  dip_free: "Dip-free (picture never darkens)",
-  full_center: "Full center",
-  equal_power: "Equal power",
-  linear: "Linear",
-  cut: "Cut"
+export const CURVE_LABELS: Record<CurveType, StringKey> = {
+  dip_free: "curveDipFree",
+  full_center: "curveFullCenter",
+  equal_power: "curveEqualPower",
+  linear: "curveLinear",
+  cut: "curveCut"
 };
 
 /** Parses "0.4.0" style versions; returns [major, minor] or null. */

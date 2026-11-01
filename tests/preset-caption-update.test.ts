@@ -49,7 +49,7 @@ describe("preset captions when an operator changes targets", () => {
     const update = change("obs-fade-key.html", "obs-fade-input", previous, "Desktop Audio");
     const client = new DirectObsClient();
     vi.spyOn(client, "isConnected").mockReturnValue(true);
-    vi.spyOn(client, "getStatus").mockReturnValue({ kind: "connected", sentence: "Connected", cellReason: "" });
+    vi.spyOn(client, "getStatus").mockReturnValue({ kind: "connected" });
     vi.spyOn(client, "resolveInputName").mockImplementation((name) => name);
     let image = "";
     const key = new ObsFadeKeyInstanceController(client, {

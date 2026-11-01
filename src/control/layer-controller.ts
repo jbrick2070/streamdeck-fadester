@@ -1,18 +1,21 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import { EventEmitter } from "node:events";
 import { DirectObsClient, DirectObsError } from "../obs/direct-obs-client.js";
+import { LocalText, errorLocalText, ownText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
+import { StringKey } from "../i18n/strings.js";
 
-export const BLEND_MODES = [
-  { id: "OBS_BLEND_NORMAL", label: "Normal" },
-  { id: "OBS_BLEND_ADDITIVE", label: "Additive" },
-  { id: "OBS_BLEND_SUBTRACT", label: "Subtract" },
-  { id: "OBS_BLEND_SCREEN", label: "Screen" },
-  { id: "OBS_BLEND_MULTIPLY", label: "Multiply" },
-  { id: "OBS_BLEND_LIGHTEN", label: "Lighten" },
-  { id: "OBS_BLEND_DARKEN", label: "Darken" }
-] as const;
+/** OBS's blend modes; `label` is the key of OBS's own term for each. */
+export const BLEND_MODES: readonly { readonly id: string; readonly label: StringKey }[] = [
+  { id: "OBS_BLEND_NORMAL", label: "blendNormal" },
+  { id: "OBS_BLEND_ADDITIVE", label: "blendAdditive" },
+  { id: "OBS_BLEND_SUBTRACT", label: "blendSubtract" },
+  { id: "OBS_BLEND_SCREEN", label: "blendScreen" },
+  { id: "OBS_BLEND_MULTIPLY", label: "blendMultiply" },
+  { id: "OBS_BLEND_LIGHTEN", label: "blendLighten" },
+  { id: "OBS_BLEND_DARKEN", label: "blendDarken" }
+];
 
-function normalizeBlendMode(value: unknown): typeof BLEND_MODES[number]["id"] {
+function normalizeBlendMode(value: unknown): string {
   const mode = typeof value === "number" && Number.isInteger(value)
     ? BLEND_MODES[value]
     : BLEND_MODES.find((entry) => entry.id === value);
@@ -49,7 +52,8 @@ export interface LayerSceneState {
   sceneName: string;
   layers: ObsLayer[];
   selectedId: number;
-  error: string;
+  /** Why the sources could not be read: an OBS comment verbatim, ours by key. */
+  error: LocalText | null;
 }
 
 export function normalizeLayerSettings(raw: LayerSettings = {}): Required<LayerSettings> {
@@ -143,7 +147,7 @@ export class LayerController extends EventEmitter {
     const sceneName = this.resolveScene(raw);
     const value = this.scenes.get(sceneName);
     return value ? { ...value, layers: value.layers.map((layer) => ({ ...layer })) } :
-      { sceneName, layers: [], selectedId: -1, error: "" };
+      { sceneName, layers: [], selectedId: -1, error: null };
   }
 
   public getCatalog(): Record<string, LayerSceneState> {
@@ -174,17 +178,17 @@ export class LayerController extends EventEmitter {
 
   public async selectLayer(sceneName: string, sceneItemId: number): Promise<void> {
     if (!this.client.isConnected() || !Number.isInteger(sceneItemId)) {
-      throw new DirectObsError("Connect OBS and choose a source.");
+      throw new DirectObsError(ownText("layerErrorConnectAndChoose"));
     }
-    if (this.collectionChanging) throw new DirectObsError("OBS scene collection is changing. Try again.");
+    if (this.collectionChanging) throw new DirectObsError(ownText("layerErrorCollectionChanging"));
     const generation = this.generation;
     await this.enqueue(sceneName, async () => {
-      if (generation !== this.generation) throw new DirectObsError("OBS connection changed. Choose the source again.");
+      if (generation !== this.generation) throw new DirectObsError(ownText("layerErrorConnectionChanged"));
       const scene = await this.refreshScene(sceneName);
-      if (generation !== this.generation || this.collectionChanging) throw new DirectObsError("OBS connection or scene collection changed. Try again.");
+      if (generation !== this.generation || this.collectionChanging) throw new DirectObsError(ownText("layerErrorChanged"));
       const selected = scene.layers.find((layer) => layer.sceneItemId === sceneItemId);
       if (!selected) {
-        throw new DirectObsError("The selected source is no longer in this scene.");
+        throw new DirectObsError(ownText("layerErrorSourceGone"));
       }
       scene.selectedId = sceneItemId;
       this.selections.set(sceneName, { sceneItemId, manual: true, sourceUuid: selected.sourceUuid, sourceName: selected.sourceName });
@@ -197,21 +201,21 @@ export class LayerController extends EventEmitter {
     const settings = normalizeLayerSettings(raw);
     const sceneName = this.resolveScene(settings);
     const generation = this.generation;
-    if (!this.client.isConnected()) throw new DirectObsError("OBS is not connected.");
-    if (this.collectionChanging) throw new DirectObsError("OBS scene collection is changing. Try again.");
-    if (!sceneName) throw new DirectObsError("Choose an OBS scene first.");
+    if (!this.client.isConnected()) throw new DirectObsError(ownText("layerErrorNotConnected"));
+    if (this.collectionChanging) throw new DirectObsError(ownText("layerErrorCollectionChanging"));
+    if (!sceneName) throw new DirectObsError(ownText("layerErrorChooseScene"));
     if (settings.target === "fixed" && settings.scope !== "fixed" &&
       operation !== "select_next" && operation !== "select_previous") {
-      throw new DirectObsError("A fixed source must be bound to a specific scene. Choose the scene again.");
+      throw new DirectObsError(ownText("layerErrorFixedNeedsScene"));
     }
     if ((operation === "move_up" || operation === "move_down") && !settings.allowReorder) {
-      throw new DirectObsError("Enable layer reordering for this creative control first.");
+      throw new DirectObsError(ownText("layerErrorEnableReorder"));
     }
     await this.enqueue(sceneName, async () => {
-      if (generation !== this.generation || this.collectionChanging) throw new DirectObsError("OBS connection or scene collection changed. Try again.");
+      if (generation !== this.generation || this.collectionChanging) throw new DirectObsError(ownText("layerErrorChanged"));
       const scene = await this.refreshScene(sceneName);
-      if (generation !== this.generation || this.collectionChanging) throw new DirectObsError("OBS connection or scene collection changed. Try again.");
-      if (scene.layers.length === 0) throw new DirectObsError("This scene has no sources to control.");
+      if (generation !== this.generation || this.collectionChanging) throw new DirectObsError(ownText("layerErrorChanged"));
+      if (scene.layers.length === 0) throw new DirectObsError(ownText("layerErrorNoSources"));
       if (operation === "select_next" || operation === "select_previous") {
         const current = scene.layers.findIndex((layer) => layer.sceneItemId === scene.selectedId);
         const offset = (operation === "select_next" ? 1 : -1) * Math.max(1, Math.abs(Math.trunc(steps)));
@@ -226,7 +230,7 @@ export class LayerController extends EventEmitter {
       const id = settings.target === "fixed" ? settings.sceneItemId : scene.selectedId;
       const layer = scene.layers.find((item) => item.sceneItemId === id &&
         (settings.target !== "fixed" || matchesLayerIdentity(item, settings)));
-      if (!layer) throw new DirectObsError("The selected source is no longer in this scene. Choose it again.");
+      if (!layer) throw new DirectObsError(ownText("layerErrorSourceGoneChoose"));
       const locator = { sceneName, sceneItemId: id };
       if (operation === "show_hide") {
         await this.client.sendObsRequest("SetSceneItemEnabled", { ...locator, sceneItemEnabled: !layer.enabled });
@@ -254,13 +258,13 @@ export class LayerController extends EventEmitter {
     const request = (async () => {
       try {
         const data = await this.client.sendObsRequest("GetSceneItemList", { sceneName });
-        if (generation !== this.generation) throw new DirectObsError("OBS connection or scene collection changed. Try again.");
+        if (generation !== this.generation) throw new DirectObsError(ownText("layerErrorChanged"));
         const raw = Array.isArray(data.sceneItems) ? data.sceneItems : [];
         const layers: ObsLayer[] = raw.filter((item) => item && typeof item === "object").map((item) => {
           const entry = item as Record<string, unknown>;
           return {
             sceneItemId: Number(entry.sceneItemId), sceneItemIndex: Number(entry.sceneItemIndex),
-            sourceName: String(entry.sourceName ?? "Source"), enabled: entry.sceneItemEnabled === true,
+            sourceName: typeof entry.sourceName === "string" ? entry.sourceName : "", enabled: entry.sceneItemEnabled === true,
             sourceUuid: typeof entry.sourceUuid === "string" ? entry.sourceUuid : "",
             blendMode: normalizeBlendMode(entry.sceneItemBlendMode),
             isGroup: entry.isGroup === true
@@ -273,7 +277,7 @@ export class LayerController extends EventEmitter {
           (!selection.manual || matchesLayerIdentity(layer, selection)));
         const selectedId = selected?.sceneItemId ?? (selection?.manual ? -1 : layers[0]?.sceneItemId ?? -1);
         if (!selection?.manual) this.selections.set(sceneName, { sceneItemId: selectedId, manual: false });
-        const scene = { sceneName, layers, selectedId, error: "" };
+        const scene: LayerSceneState = { sceneName, layers, selectedId, error: null };
         if (JSON.stringify(previous) !== JSON.stringify(scene)) {
           this.scenes.set(sceneName, scene);
           this.emit("changed");
@@ -281,8 +285,8 @@ export class LayerController extends EventEmitter {
         return scene;
       } catch (error) {
         if (generation !== this.generation) throw error;
-        const scene = { sceneName, layers: [], selectedId: -1,
-          error: error instanceof Error ? error.message : "Could not load OBS sources." };
+        const scene: LayerSceneState = { sceneName, layers: [], selectedId: -1,
+          error: errorLocalText(error, ownText("layerErrorLoad")) };
         this.scenes.set(sceneName, scene);
         this.emit("changed");
         throw error;

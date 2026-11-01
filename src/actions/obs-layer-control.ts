@@ -8,11 +8,15 @@ import { escapeXml, toSvgDataUri, truncateLabel } from "../gfx/svg-renderer.js";
 import { renderDirectKeySvg, textFitAttributes } from "../gfx/direct-obs-renderer.js";
 import { CellRateLimiter } from "../gfx/cell-rate-limiter.js";
 import { PLAYLISTER_PALETTE as P } from "../../packages/streamdeck-fadester-shared/src/palette.js";
+import { LocalText, errorLocalText, ownText, wordText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
+import { statusCellReason } from "../../packages/streamdeck-fadester-shared/src/status-text.js";
+import { StringKey, t, translate } from "../i18n/strings.js";
 
-export const LAYER_OPERATION_LABELS: Record<LayerOperation, string> = {
-  select_next: "Next source", select_previous: "Previous source", move_up: "Layer up",
-  move_down: "Layer down", show_hide: "Show / hide", blend_next: "Next blend",
-  blend_previous: "Previous blend", blend_normal: "Normal blend"
+/** The key title of each operation, by key. */
+export const LAYER_OPERATION_LABELS: Record<LayerOperation, StringKey> = {
+  select_next: "layerOpNextSource", select_previous: "layerOpPreviousSource", move_up: "layerOpUp",
+  move_down: "layerOpDown", show_hide: "layerOpShowHide", blend_next: "layerOpNextBlend",
+  blend_previous: "layerOpPreviousBlend", blend_normal: "layerOpNormalBlend"
 };
 interface LayerSink {
   render(svg: string): Promise<void>;
@@ -23,10 +27,10 @@ export class ObsLayerInstanceController {
   private settings: Required<LayerSettings>;
   private unwatch: (() => void) | undefined;
   private readonly limiter: CellRateLimiter<string>;
-  private lastError = "";
+  private lastError: LocalText | null = null;
   private visible = false;
   private readonly onChanged = (): void => {
-    if (this.layers.client.isConnected() && !this.layers.getScene(this.settings).error) this.lastError = "";
+    if (this.layers.client.isConnected() && !this.layers.getScene(this.settings).error) this.lastError = null;
     this.render();
   };
 
@@ -61,7 +65,7 @@ export class ObsLayerInstanceController {
   public updateSettings(settings: LayerSettings): void {
     this.unwatch?.();
     this.settings = normalizeLayerSettings(settings);
-    this.lastError = "";
+    this.lastError = null;
     if (this.visible) this.unwatch = this.layers.watch(this.settings);
     this.render();
   }
@@ -84,9 +88,9 @@ export class ObsLayerInstanceController {
     try {
       await this.layers.perform(this.dial && this.settings.dialMode === "select_layer"
         ? { ...this.settings, target: "selected" } : this.settings, operation, steps);
-      this.lastError = "";
+      this.lastError = null;
     } catch (error) {
-      this.lastError = error instanceof Error ? error.message : "OBS control failed.";
+      this.lastError = errorLocalText(error, ownText("layerControlFailed"));
       if (!this.layers.client.isConnected()) this.layers.client.nudgeReconnect();
       await this.sink.showAlert();
     }
@@ -101,15 +105,17 @@ export class ObsLayerInstanceController {
       ? this.settings.sceneItemId : state.selectedId;
     const layer = state.layers.find((entry) => entry.sceneItemId === id &&
       (!fixedTarget || matchesLayerIdentity(entry, this.settings)));
-    const reason = this.lastError || state.error || this.layers.client.getStatus().cellReason;
+    const reason = wordText(this.lastError ?? state.error, translate) ||
+      statusCellReason(this.layers.client.getStatus(), translate);
     const connected = this.layers.client.isConnected();
     const loaded = Boolean(this.layers.getCatalog()[state.sceneName]);
-    const missingSource = !connected ? "Connect OBS" : !state.sceneName ? "Choose a scene" :
-      !loaded ? "Loading sources…" : fixedTarget && this.settings.sceneItemId >= 0 && !layer ? "Fixed source unavailable" :
-        state.layers.length ? "Choose a source" : "No sources in scene";
-    const name = layer?.sourceName || missingSource;
-    const blend = BLEND_MODES.find((entry) => entry.id === layer?.blendMode)?.label || "Normal";
-    const operationLabel = LAYER_OPERATION_LABELS[this.settings.operation];
+    const missingSource = t(!connected ? "layerConnectObs" : !state.sceneName ? "layerChooseScene" :
+      !loaded ? "layerLoading" : fixedTarget && this.settings.sceneItemId >= 0 && !layer ? "layerFixedUnavailable" :
+        state.layers.length ? "layerChooseSource" : "layerNoSources");
+    const name = layer ? layer.sourceName || t("sourceFallback") : missingSource;
+    const blend = t(BLEND_MODES.find((entry) => entry.id === layer?.blendMode)?.label ?? "blendNormal");
+    const operationLabel = t(LAYER_OPERATION_LABELS[this.settings.operation]);
+    const shownState = t(layer?.enabled ? "layerShown" : "layerHidden");
     if (!this.dial) {
       const operation = this.settings.operation;
       const icon = operation === "select_next" ? "source-next" : operation === "select_previous" ? "source-previous" :
@@ -121,24 +127,24 @@ export class ObsLayerInstanceController {
         reason,
         icon,
         title: this.settings.labelOverride || operationLabel,
-        subtitle: layer ? `${operation.startsWith("blend_") ? blend : layer.enabled ? "Shown" : "Hidden"} · ${name}` : missingSource,
+        subtitle: layer ? t("layerKeySubtitle", { state: operation.startsWith("blend_") ? blend : shownState, source: name }) : missingSource,
         ...(!layer && connected ? { problem: missingSource } : {})
       }));
       return;
     }
     const index = state.layers.findIndex((entry) => entry.sceneItemId === id);
-    const modeLabel = this.settings.dialMode === "blend" ? `Blend: ${blend}` :
-      this.settings.dialMode === "order" ? (this.settings.allowReorder ? "Turn: reorder layers" : "Reorder is disabled") :
-        `${index + 1} / ${state.layers.length} · ${layer?.enabled ? "Shown" : "Hidden"}`;
+    const modeLabel = this.settings.dialMode === "blend" ? t("layerBlendMode", { mode: blend }) :
+      this.settings.dialMode === "order" ? t(this.settings.allowReorder ? "layerTurnReorder" : "layerReorderDisabled") :
+        t("layerPosition", { i: index + 1, n: state.layers.length, state: shownState });
     const catalog = this.layers.client.getCatalog();
     const live = state.sceneName === catalog.currentProgramScene;
     const preview = catalog.studioMode && state.sceneName === catalog.currentPreviewScene;
-    const sceneRole = live ? "LIVE" : preview ? "PREVIEW" : "SCENE";
-    const footer = layer ? this.settings.dialMode === "blend" ? "Press: Normal blend" : "Press: show / hide" :
-      !connected ? "Connect OBS to control" : !state.sceneName ? "Choose scene in inspector" : !loaded ? "Waiting for OBS sources" :
-        !state.layers.length ? "Add sources in OBS" : this.settings.dialMode === "select_layer" ? "Turn to browse sources" :
-          this.settings.target === "fixed" ? "Choose source in inspector" : "Select a source on the deck";
-    const header = truncateLabel(state.sceneName ? `${sceneRole}: ${state.sceneName}` : "OBS SOURCES", 30);
+    const sceneRole = t(live ? "layerRoleLive" : preview ? "layerRolePreview" : "layerRoleScene");
+    const footer = t(layer ? this.settings.dialMode === "blend" ? "pressNormalBlend" : "pressShowHide" :
+      !connected ? "layerFooterConnect" : !state.sceneName ? "layerFooterChooseScene" : !loaded ? "layerFooterWaiting" :
+        !state.layers.length ? "layerFooterAddSources" : this.settings.dialMode === "select_layer" ? "layerFooterBrowse" :
+          this.settings.target === "fixed" ? "layerFooterChooseSource" : "layerFooterSelectOnDeck");
+    const header = truncateLabel(state.sceneName ? t("layerHeader", { role: sceneRole, scene: state.sceneName }) : t("layerHeaderNone"), 30);
     const sourceText = truncateLabel(name, 22);
     const statusText = truncateLabel(reason || (layer ? modeLabel : missingSource), 27);
     const footerText = truncateLabel(footer, 30);

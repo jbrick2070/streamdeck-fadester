@@ -2,6 +2,7 @@
 import { action, SingletonAction, WillAppearEvent, WillDisappearEvent } from "@elgato/streamdeck";
 import { CellRateLimiter } from "../gfx/cell-rate-limiter.js";
 import { DirectObsClient, DirectObsCatalog } from "../obs/direct-obs-client.js";
+import { t } from "../i18n/strings.js";
 
 export interface NeoInfobarFeedback {
   status: string;
@@ -11,12 +12,18 @@ export interface NeoInfobarFeedback {
 
 export function buildNeoInfobarFeedback(connected: boolean, catalog: DirectObsCatalog): NeoInfobarFeedback {
   if (!connected) {
-    return { status: "OBS disconnected", live: "LIVE  —", preview: "PREVIEW  —" };
+    return {
+      status: t("infobarDisconnected"),
+      live: t("infobarLive", { scene: t("infobarNoScene") }),
+      preview: t("infobarPreview", { scene: t("infobarNoScene") })
+    };
   }
   return {
-    status: "OBS connected",
-    live: `LIVE  ${catalog.currentProgramScene || "Unavailable"}`,
-    preview: `PREVIEW  ${catalog.studioMode ? catalog.currentPreviewScene || "Unavailable" : "Studio Mode off"}`
+    status: t("infobarConnected"),
+    live: t("infobarLive", { scene: catalog.currentProgramScene || t("infobarUnavailable") }),
+    preview: t("infobarPreview", {
+      scene: catalog.studioMode ? catalog.currentPreviewScene || t("infobarUnavailable") : t("infobarStudioOff")
+    })
   };
 }
 

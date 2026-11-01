@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-import { DirectObsClient } from "../obs/direct-obs-client.js";
+import { DirectObsClient, DirectObsError } from "../obs/direct-obs-client.js";
 import { resolveAutomaticInputName } from "../obs/automatic-targets.js";
 import { LayerController, LayerSettings } from "../control/layer-controller.js";
-import { READY_LAYOUTS } from "../types/layouts.js";
+import { READY_LAYOUTS, readyLayoutName } from "../types/layouts.js";
+import { errorText, ownText, wordText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
+import { statusCellReason, statusSentence } from "../../packages/streamdeck-fadester-shared/src/status-text.js";
+import { translate } from "../i18n/strings.js";
 import {
   DEFAULT_GLOBAL_SETTINGS,
   FadesterGlobalSettings
@@ -46,10 +49,11 @@ export class DirectObsPropertyInspectorBridge {
     const audioInputs = Object.keys(catalog.inputVolumes);
     this.transport.sendToPropertyInspector({
       event: "directObsState",
+      // Worded here, in the plugin's language; the inspectors compare only `kind`.
       status: {
         kind: status.kind,
-        sentence: status.sentence,
-        cellReason: status.cellReason,
+        sentence: statusSentence(status, translate),
+        cellReason: statusCellReason(status, translate),
         obsVersion: status.obsVersion ?? ""
       },
       connection: {
@@ -60,8 +64,10 @@ export class DirectObsPropertyInspectorBridge {
       catalog,
       automaticInputs: Object.fromEntries(["__audio_main__", "__audio_mic__", "__audio_aux__", "__audio_input_2__"]
         .map((target) => [target, resolveAutomaticInputName(target, audioInputs)])),
-      layerScenes: this.layers?.getCatalog() ?? {},
+      layerScenes: Object.fromEntries(Object.entries(this.layers?.getCatalog() ?? {}).map(([name, scene]) =>
+        [name, { ...scene, error: wordText(scene.error, translate) }])),
       layouts: READY_LAYOUTS.filter((layout) => layout.deviceType === this.transport.getDeviceType?.())
+        .map((layout) => ({ ...layout, name: readyLayoutName(layout) }))
     });
   }
 
@@ -107,7 +113,7 @@ export class DirectObsPropertyInspectorBridge {
             if (layout.obsMode === "studio") {
               if (msg.prepareStudio === true) await this.client.prepareStudioLayout();
               else if (!this.client.getCatalog().studioMode) {
-                throw new Error("Use Enable Studio Mode & open layout to prepare this desk.");
+                throw new DirectObsError(ownText("setupErrorStudio"), 400);
               }
             }
             await this.transport.activateLayout(layout.slug);
@@ -135,7 +141,7 @@ export class DirectObsPropertyInspectorBridge {
   private sendSetupError(error: unknown): void {
     this.transport.sendToPropertyInspector({
       event: "directSetupResult", ok: false,
-      error: error instanceof Error ? error.message : "Could not prepare this OBS layout."
+      error: errorText(error, ownText("setupErrorFallback"), translate)
     });
   }
 

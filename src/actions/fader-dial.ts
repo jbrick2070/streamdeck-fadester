@@ -22,6 +22,7 @@ import {
 import { CellRateLimiter } from "../gfx/cell-rate-limiter.js";
 import { ThumbnailFetcher } from "../gfx/thumbnail-fetcher.js";
 import { renderDialCellSvg, toSvgDataUri } from "../gfx/svg-renderer.js";
+import { t, translate } from "../i18n/strings.js";
 import {
   computeDialDelta,
   DIAL_HOLD_THRESHOLD_MS,
@@ -238,12 +239,12 @@ export class FaderDialInstanceController {
   public renderSvgString(): string {
     const slot = this.store.getSlot(this.settings.slot);
     const thumbs = this.thumbnailFetcher.getLatest();
-    const holdLabel =
+    const holdLabel = t(
       this.settings.longPressAction === "clean_all_fx"
-        ? "HOLD CLEAN FX"
+        ? "holdCleanFx"
         : this.settings.longPressAction === "finish_tbar"
-          ? "HOLD FINISH"
-          : "HOLD 3s FADE";
+          ? "holdFinish"
+          : "cellHoldFade");
     return renderDialCellSvg({
       status: this.store.getStatus(),
       slot,
@@ -256,7 +257,8 @@ export class FaderDialInstanceController {
       holdingForLongPress: this.holdingForLongPress,
       holdLabel,
       labelOverride: this.settings.labelOverride,
-      readoutStyle: this.settings.readoutStyle
+      readoutStyle: this.settings.readoutStyle,
+      t: translate
     });
   }
 

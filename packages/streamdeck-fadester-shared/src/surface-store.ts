@@ -10,6 +10,7 @@ import {
   SurfaceStatePayload
 } from "./types.js";
 import { makeUnreachableStatus } from "./obs/obs-vendor-client.js";
+import { LocalText, Translate, englishShared, verbatimText, wordText } from "./i18n.js";
 
 export interface SurfaceEventClient extends EventEmitter {
   getStatus(): ConnectionStatusInfo;
@@ -30,9 +31,10 @@ export class SurfaceStore<
   private device: TDevice;
   private slotList: TSlot[] = [];
   protected readonly slotMap = new Map<string, TSlot>();
-  private previewSceneName = "Preview";
-  private programSceneName = "Program";
-  private lastErrorComment = "";
+  // Empty until OBS names them; the renderer words an empty name (R-I18N-2).
+  private previewSceneName = "";
+  private programSceneName = "";
+  private lastErrorText: LocalText | null = null;
 
   public constructor(client: TClient, initialDevice?: TDevice) {
     super();
@@ -105,8 +107,8 @@ export class SurfaceStore<
       this.emit("scenesChanged");
     });
 
-    client.on("vendorError", (comment: string) => {
-      this.lastErrorComment = comment;
+    client.on("vendorError", (comment: string, text?: LocalText) => {
+      this.lastErrorText = text ?? verbatimText(comment);
       this.emit("vendorError", comment);
     });
   }
@@ -159,7 +161,8 @@ export class SurfaceStore<
     return this.programSceneName;
   }
 
-  public getLastErrorComment(): string {
-    return this.lastErrorComment;
+  /** The last request error, worded now: an OBS or Midi Fadester comment verbatim, ours translated. */
+  public getLastErrorComment(t: Translate = englishShared): string {
+    return wordText(this.lastErrorText, t);
   }
 }

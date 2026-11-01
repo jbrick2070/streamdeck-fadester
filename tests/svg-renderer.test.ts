@@ -10,8 +10,9 @@ import { renderDirectDialSvg, renderDirectKeySvg } from "../src/gfx/direct-obs-r
 
 const CONNECTED_STATUS: ConnectionStatusInfo = {
   kind: "connected",
-  sentence: "Connected: OBS 33.0.0, Midi Fadester 0.1.0",
-  cellReason: ""
+  obsVersion: "33.0.0",
+  pluginName: "Midi Fadester",
+  fadesterVersion: "0.1.0"
 };
 
 function assertMinStrokeWidth(svg: string, minPx = 3): void {
@@ -34,7 +35,7 @@ describe("Step 1.3 — Playlister Runtime SVG Renderer (Dial Cells & Keys)", () 
   it("shows the native scene mixer's Live/Next endpoints with semantic colors and scene names", () => {
     const svg = renderDirectDialSvg({
       connected: true, reason: "", configured: true, target: "tbar", studioMode: true,
-      label: "Scene transition", value: 0.56,
+      label: "", value: 0.56,
       programSceneName: "Camera & Mic", previewSceneName: "Next <Cam>"
     });
     expect(svg).toContain('data-cell="scene-mixer"');
@@ -54,7 +55,7 @@ describe("Step 1.3 — Playlister Runtime SVG Renderer (Dial Cells & Keys)", () 
       label: "Desktop Audio", value: 0.4, pressHint: "Press: next blend"
     };
     const ready = renderDirectDialSvg(input);
-    expect(ready).toContain("40 %");
+    expect(ready).toContain("40%");
     expect(ready).toContain("Press: next blend");
     const offline = renderDirectDialSvg({ ...input, connected: false, reason: "Wrong password" });
     expect(offline).toContain("Wrong password");
@@ -74,7 +75,7 @@ describe("Step 1.3 — Playlister Runtime SVG Renderer (Dial Cells & Keys)", () 
   it("makes a same-scene or disabled Studio Mode mixer actionable instead of showing a working fader", () => {
     const input = {
       connected: true, reason: "", configured: true, target: "tbar" as const, studioMode: true,
-      label: "Scene transition", value: 0.56,
+      label: "", value: 0.56,
       programSceneName: "Scene", previewSceneName: "Scene"
     };
     expect(renderDirectDialSvg(input)).toContain("Choose a different Next scene");
@@ -253,10 +254,7 @@ describe("Step 1.3 — Playlister Runtime SVG Renderer (Dial Cells & Keys)", () 
 
     const disconnectedSvg = renderDialCellSvg({
       status: {
-        kind: "wrong_password",
-        sentence:
-          "Wrong password. Check OBS Tools > WebSocket Server Settings > Show Connect Info.",
-        cellReason: "Wrong password"
+        kind: "wrong_password"
       },
       slotId: "crossfader"
     });
@@ -306,9 +304,7 @@ describe("Step 1.3 — Playlister Runtime SVG Renderer (Dial Cells & Keys)", () 
 
     const disconnectedSvg = renderAutoFadeKeySvg({
       status: {
-        kind: "obs_unreachable",
-        sentence: "OBS is not running or the websocket is off (Tools > WebSocket Server Settings)",
-        cellReason: "OBS is not running or websocket is off"
+        kind: "obs_unreachable"
       },
       slot: crossfaderSlot,
       slotId: "crossfader",

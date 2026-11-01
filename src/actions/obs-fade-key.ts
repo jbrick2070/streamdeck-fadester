@@ -8,7 +8,7 @@ import {
   WillDisappearEvent
 } from "@elgato/streamdeck";
 import { DirectObsClient } from "../obs/direct-obs-client.js";
-import { automaticInputLabel, isAutomaticInputPresetLabel, migrateAutomaticInputSettings } from "../obs/automatic-targets.js";
+import { automaticInputRoleName, isAutomaticInputPresetLabel, migrateAutomaticInputSettings } from "../obs/automatic-targets.js";
 import {
   DEFAULT_OBS_FADE_KEY_SETTINGS,
   ObsFadeKeySettings,
@@ -20,6 +20,8 @@ import {
   renderDirectKeySvg,
   toSvgDataUri
 } from "../gfx/direct-obs-renderer.js";
+import { statusCellReason } from "../../packages/streamdeck-fadester-shared/src/status-text.js";
+import { formatNumber, t, translate } from "../i18n/strings.js";
 
 interface KeyImageSink {
   setImage(image: string): Promise<void>;
@@ -91,21 +93,24 @@ export class ObsFadeKeyInstanceController {
     }
     const configured = Boolean(this.settings.inputName);
     const inputName = this.client.resolveInputName(this.settings.inputName);
-    const role = automaticInputLabel(this.settings.inputName)?.replace(" (automatic)", "");
+    const role = automaticInputRoleName(this.settings.inputName);
     const customLabel = isAutomaticInputPresetLabel(this.settings.inputName, this.settings.labelOverride) ? "" : this.settings.labelOverride;
-    const title = customLabel || inputName || role || this.settings.inputName || "OBS Fade";
-    const subtitle = configured
-      ? `${this.settings.to === 1 ? "Up" : "Down"} ${this.settings.durationMs === 0 ? "now" : `${this.settings.durationMs / 1000}s`}`
-      : "Open inspector";
+    const title = customLabel || inputName || role || this.settings.inputName || t("fadeTitle");
+    const up = this.settings.to === 1;
+    const subtitle = !configured
+      ? t("keyOpenInspector")
+      : this.settings.durationMs === 0
+        ? t(up ? "fadeUpNow" : "fadeDownNow")
+        : t(up ? "fadeUpSeconds" : "fadeDownSeconds", { s: formatNumber(this.settings.durationMs / 1000, 3) });
     this.rateLimiter.push(
       renderDirectKeySvg({
         connected: this.client.isConnected(),
-        reason: this.client.getStatus().cellReason,
+        reason: statusCellReason(this.client.getStatus(), translate),
         title,
         subtitle,
         icon: this.settings.to === 1 ? "volume-up" : "volume-down",
         configured,
-        ...(!inputName && configured ? { problem: role ? `${role} unavailable` : "Audio input unavailable" } : {})
+        ...(!inputName && configured ? { problem: role ? t("roleUnavailable", { role }) : t("audioInputUnavailable") } : {})
       })
     );
   }

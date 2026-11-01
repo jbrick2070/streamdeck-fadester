@@ -6,7 +6,9 @@
  */
 import { FadesterGlobalSettings } from "../types/settings.js";
 import { ConnectionStatusInfo } from "../../packages/streamdeck-fadester-shared/src/types.js";
-import { automaticInputLabel, resolveAutomaticInputName } from "./automatic-targets.js";
+import { automaticInputRole, resolveAutomaticInputName } from "./automatic-targets.js";
+import { LocalText, ownText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
+import { t } from "../i18n/strings.js";
 import {
   ObsVendorClient,
   ObsVendorClientOptions,
@@ -29,7 +31,7 @@ export function sceneTargetIndex(target: string): number | undefined {
 
 export function automaticSceneTargetLabel(target: string): string | undefined {
   const index = sceneTargetIndex(target);
-  return index !== undefined ? `Scene ${index + 1} (automatic)` : undefined;
+  return index !== undefined ? t("sceneAutomatic", { n: index + 1 }) : undefined;
 }
 
 /** OBS exposes scenes bottom-first; users expect the order of the Scenes dock. */
@@ -60,8 +62,9 @@ export type DirectObsClientOptions = Pick<
   "baseReconnectMs" | "maxReconnectMs" | "requestTimeoutMs"
 >;
 
+/** A string is an OBS text (shown verbatim); our own messages pass a key (`ownText`). */
 export class DirectObsError extends ObsVendorError {
-  public constructor(comment: string, code = -1) {
+  public constructor(comment: string | LocalText, code = -1) {
     super(comment, code);
     this.name = "DirectObsError";
   }
@@ -293,7 +296,7 @@ export class DirectObsClient extends ObsVendorClient {
     this.requireControlGeneration(generation);
     const volume = readVolume(data);
     if (volume === undefined) {
-      throw new DirectObsError(`OBS did not return a volume for '${name}'.`, 500);
+      throw new DirectObsError(ownText("errorNoVolume", { input: name }), 500);
     }
     this.catalog.inputVolumes[name] = volume;
     this.emitDirectState();
@@ -371,10 +374,10 @@ export class DirectObsClient extends ObsVendorClient {
   private requireInputName(target: string): string {
     const name = this.resolveInputName(target);
     if (name) return name;
-    const role = automaticInputLabel(target);
+    const role = automaticInputRole(target);
     throw new DirectObsError(role
-      ? `${role.replace(" (automatic)", "")} is unavailable. Choose an OBS mixer input in the inspector.`
-      : "Choose an existing OBS mixer input first.", 400);
+      ? ownText("errorRoleUnavailable", { role: t(role.role, role.params) })
+      : ownText("errorChooseInput"), 400);
   }
 
   /** An explicit setup step, requested from the layout picker. Never takes a scene live. */
@@ -382,12 +385,12 @@ export class DirectObsClient extends ObsVendorClient {
     const generation = this.controlGeneration;
     const task = this.sceneQueue.catch(() => {}).then(async () => {
       this.requireControlGeneration(generation);
-      if (!this.isConnected()) throw new DirectObsError("Connect to OBS before preparing a Studio layout.", 400);
+      if (!this.isConnected()) throw new DirectObsError(ownText("errorConnectBeforeStudio"), 400);
       await this.sendObsRequest("SetStudioModeEnabled", { studioModeEnabled: true });
       this.requireControlGeneration(generation);
       await this.refreshCatalog();
       this.requireControlGeneration(generation);
-      if (!this.catalog.studioMode) throw new DirectObsError("OBS Studio Mode could not be enabled.", 400);
+      if (!this.catalog.studioMode) throw new DirectObsError(ownText("errorStudioNotEnabled"), 400);
       if (!this.catalog.currentPreviewScene || this.catalog.currentPreviewScene === this.catalog.currentProgramScene) {
         const scenes = this.catalog.scenes;
         const index = scenes.indexOf(this.catalog.currentProgramScene);
@@ -412,7 +415,7 @@ export class DirectObsClient extends ObsVendorClient {
   private async writeTbarPosition(value: number, release: boolean, queueNextScene = false, generation = this.controlGeneration): Promise<number> {
     this.requireControlGeneration(generation);
     if (!this.catalog.studioMode) {
-      throw new DirectObsError("Scene T-bar needs OBS Studio Mode.", 400);
+      throw new DirectObsError(ownText("errorTbarNeedsStudio"), 400);
     }
     const position = clampUnit(value);
     const shouldRelease = release || (queueNextScene && position >= 1);
@@ -518,14 +521,15 @@ export class DirectObsClient extends ObsVendorClient {
     const sceneName = this.resolveSceneTarget(target, operation === "preview");
     if (!sceneName) {
       const index = sceneTargetIndex(target);
+      const count = this.catalog.scenes.length;
       throw new DirectObsError(index !== undefined
-        ? `Scene ${index + 1} is unavailable; OBS has ${this.catalog.scenes.length} scenes.`
-        : "Choose an existing OBS scene first.", 400);
+        ? ownText(count === 1 ? "errorSceneIndexUnavailableOne" : "errorSceneIndexUnavailableMany", { n: index + 1, count })
+        : ownText("errorChooseScene"), 400);
     }
 
     if (operation === "preview") {
       if (!this.catalog.studioMode) {
-        throw new DirectObsError("Preview selection needs OBS Studio Mode.", 400);
+        throw new DirectObsError(ownText("errorPreviewNeedsStudio"), 400);
       }
       await this.sendObsRequest("SetCurrentPreviewScene", { sceneName });
       this.requireControlGeneration(generation);
@@ -534,7 +538,7 @@ export class DirectObsClient extends ObsVendorClient {
       const isCut = operation === "cut" || transitionName === OBS_TRANSITION_CUT;
       const chosenTransition = isCut ? this.cutTransitionName : transitionName;
       if (isCut && !chosenTransition) {
-        throw new DirectObsError("OBS did not provide its Cut transition. Refresh the OBS lists.", 400);
+        throw new DirectObsError(ownText("errorNoCutTransition"), 400);
       }
       const switchScene = async (): Promise<void> => {
         // This native request performs a transition in both normal and Studio
@@ -601,7 +605,7 @@ export class DirectObsClient extends ObsVendorClient {
     }
   }
 
-  protected override createVendorError(comment: string, code = -1): ObsVendorError {
+  protected override createVendorError(comment: string | LocalText, code = -1): ObsVendorError {
     return new DirectObsError(comment, code);
   }
 
@@ -622,8 +626,6 @@ export class DirectObsClient extends ObsVendorClient {
       this.haltedReason = "none";
       this.setStatus({
         kind: "connected",
-        sentence: `Connected: OBS ${obsVersion}`,
-        cellReason: "",
         obsVersion
       });
       this.emitDirectState();
@@ -758,7 +760,7 @@ export class DirectObsClient extends ObsVendorClient {
     }
     if (target === DIRECT_SCENE_CURRENT_PREVIEW) {
       if (!this.catalog.studioMode) {
-        throw new DirectObsError("Current Preview needs OBS Studio Mode. Choose a fixed scene, Next scene, or Previous scene in regular mode.", 400);
+        throw new DirectObsError(ownText("errorCurrentPreviewNeedsStudio"), 400);
       }
       return this.catalog.currentPreviewScene;
     }
@@ -802,7 +804,7 @@ export class DirectObsClient extends ObsVendorClient {
 
   private requireControlGeneration(generation: number): void {
     if (this.collectionChanging || generation !== this.controlGeneration) {
-      throw new DirectObsError("OBS connection or scene collection changed. Try the control again.", 400);
+      throw new DirectObsError(ownText("errorControlChanged"), 400);
     }
   }
 

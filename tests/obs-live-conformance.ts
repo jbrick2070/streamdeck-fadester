@@ -6,6 +6,7 @@ import { FadesterClient } from "../src/obs/fadester-client.js";
 import { FadesterStore } from "../src/state/fadester-store.js";
 import { renderDialCellSvg } from "../src/gfx/svg-renderer.js";
 import { FaderChangedEvent } from "../src/types/contract.js";
+import { statusSentence } from "../packages/streamdeck-fadester-shared/src/status-text.js";
 
 const OBS_ROOT = "C:\\Users\\jeffr\\OBS-Studio-33-Portable-StreamDeckFadester";
 const OBS_BIN_DIR = `${OBS_ROOT}\\bin\\64bit`;
@@ -190,14 +191,14 @@ async function runLiveConformance(): Promise<void> {
     badClient.stop();
 
     console.log(`  status.kind      = ${wrongPwStatus.kind}`);
-    console.log(`  status.sentence  = "${wrongPwStatus.sentence}"`);
+    console.log(`  status sentence  = "${statusSentence(wrongPwStatus)}"`);
     console.log(`  connectAttempts  = ${badAttempts} (after 250 ms wait with 50 ms base backoff)`);
 
     if (
-      wrongPwStatus.sentence !==
+      statusSentence(wrongPwStatus) !==
       "Wrong password. Check OBS Tools > WebSocket Server Settings > Show Connect Info."
     ) {
-      throw new Error(`Unexpected wrong-password sentence: ${wrongPwStatus.sentence}`);
+      throw new Error(`Unexpected wrong-password sentence: ${statusSentence(wrongPwStatus)}`);
     }
     if (badAttempts !== 1) {
       throw new Error(`Expected retries to stop at 1 attempt on 4009, got ${badAttempts}`);
@@ -235,14 +236,14 @@ async function runLiveConformance(): Promise<void> {
     );
 
     const state = await client.getState();
-    console.log(`  status.sentence  = "${connectedStatus.sentence}"`);
+    console.log(`  status sentence  = "${statusSentence(connectedStatus)}"`);
     console.log(
       `  get_state        = version=${state.version}, commit=${state.build?.commit ?? ""}, api_version=${state.api_version}, profile=${state.profile}, profile_tier=${state.profile_tier}, studio_mode=${state.studio_mode}, slots=${state.slots.length}`
     );
     console.log(`  device           = ${JSON.stringify(state.device)}`);
 
-    if (!connectedStatus.sentence.startsWith("Connected: OBS 33.")) {
-      throw new Error(`Unexpected connected sentence: ${connectedStatus.sentence}`);
+    if (!statusSentence(connectedStatus).startsWith("Connected: OBS 33.")) {
+      throw new Error(`Unexpected connected sentence: ${statusSentence(connectedStatus)}`);
     }
     if (state.version !== "0.3.0") {
       throw new Error(`Expected Midi Fadester 0.3.0, got ${state.version}`);
@@ -451,7 +452,7 @@ async function runLiveConformance(): Promise<void> {
     await closePortableObs(obsProc);
     obsProc = null;
     const unreachableStatus = await disconnectedPromise;
-    console.log(`  on OBS exit      = "${unreachableStatus.sentence}"`);
+    console.log(`  on OBS exit      = "${statusSentence(unreachableStatus)}"`);
 
     assertNoObsRunning();
 
@@ -475,7 +476,7 @@ async function runLiveConformance(): Promise<void> {
     console.log("  Relaunching isolated portable OBS 33...");
     obsProc = launchPortableObs();
     const reconnectedStatus = await reconnectedPromise;
-    console.log(`  on OBS restart   = "${reconnectedStatus.sentence}"`);
+    console.log(`  on OBS restart   = "${statusSentence(reconnectedStatus)}"`);
     console.log(`  store slot count = ${store.getSlots().length}`);
     console.log(
       "[STEP 8 PASS] Client automatically reconnected and re-synced state after OBS restart."

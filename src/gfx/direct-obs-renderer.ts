@@ -5,6 +5,7 @@ import {
   truncateLabel
 } from "../../packages/streamdeck-fadester-shared/src/svg-renderer.js";
 import { PLAYLISTER_PALETTE as P } from "../../packages/streamdeck-fadester-shared/src/palette.js";
+import { t } from "../i18n/strings.js";
 
 export { toSvgDataUri };
 
@@ -15,6 +16,7 @@ export type DirectKeyIcon = "scene" | "next" | "previous" | "shuffle" | "cut" | 
 export interface DirectDialRenderInput {
   connected: boolean;
   reason: string;
+  /** The control's own caption; empty draws the default (OBS fader, or the scene mixer's hint). */
   label: string;
   value: number;
   configured: boolean;
@@ -62,14 +64,14 @@ export function renderDirectDialSvg(input: DirectDialRenderInput): string {
       : input.studioMode === false
         ? "#d6a84b"
         : P.accentPurple;
-  const title = input.configured ? input.label || "OBS fader" : "Choose OBS control";
+  const title = input.configured ? input.label || t("faderDefault") : t("dialChooseControl");
   const reason = !input.configured
-    ? "Open its inspector"
+    ? t("dialOpenInspector")
     : !input.connected
-      ? input.reason || "OBS not connected"
+      ? input.reason || t("obsNotConnected")
       : input.problem || (input.studioMode === false
-        ? "Studio Mode is off"
-        : `${Math.round(Math.max(0, Math.min(1, input.value)) * 100)} %`);
+        ? t("studioModeOff")
+        : t("percent", { n: Math.round(Math.max(0, Math.min(1, input.value)) * 100) }));
   const barWidth = Math.round(Math.max(0, Math.min(1, input.value)) * 150);
   const pressHint = input.configured && input.connected && !input.problem ? input.pressHint : "";
   return [
@@ -91,25 +93,25 @@ export function renderDirectDialSvg(input: DirectDialRenderInput): string {
  * conventional Preview/Program colors in the opposite screen order. */
 function renderSceneMixerSvg(input: DirectDialRenderInput): string {
   const value = Math.max(0, Math.min(1, input.value));
-  const program = input.programSceneName || "Live scene";
-  const preview = input.previewSceneName || "Choose Preview";
+  const program = input.programSceneName || t("mixerLiveScene");
+  const preview = input.previewSceneName || t("mixerChoosePreview");
   const sameScene = Boolean(input.programSceneName && input.programSceneName === input.previewSceneName);
   const unavailable = !input.connected || input.studioMode === false;
-  const reason = !input.connected ? input.reason || "OBS not connected" :
-    input.studioMode === false ? "Turn on OBS Studio Mode" :
-      sameScene ? "Choose a different Next scene" : "";
+  const reason = !input.connected ? input.reason || t("obsNotConnected") :
+    input.studioMode === false ? t("mixerTurnOnStudio") :
+      sameScene ? t("mixerChooseDifferent") : "";
   const moving = !unavailable && !sameScene && value > 0.001 && value < 0.999;
   const border = unavailable || moving ? P.orangeAccent : sameScene ? P.mutedText : P.accentPurple;
   const handleX = Math.max(14, Math.min(176, 14 + Math.round(172 * value) - 5));
-  const caption = reason || input.pressHint || (input.autoQueueNextScene ? "Turn to fade · auto-queues Next" :
-    input.label && input.label !== "Scene transition" ? input.label : "Press to take Next live");
+  const caption = reason || input.pressHint || (input.autoQueueNextScene ? t("mixerAutoQueue") :
+    input.label || t("mixerPressTake"));
   return [
     '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100" data-cell="scene-mixer">',
     `<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${P.bgTop}"/><stop offset="100%" stop-color="${P.bgBottom}"/></linearGradient>`,
     `<linearGradient id="sceneMix" x1="14" y1="0" x2="186" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="${P.programRed}"/><stop offset="50%" stop-color="${P.blueStart}"/><stop offset="100%" stop-color="${P.previewGreen}"/></linearGradient></defs>`,
     `<rect x="2" y="2" width="196" height="96" rx="10" fill="url(#bg)" stroke="${border}" stroke-width="${moving ? 4 : 3}"/>`,
-    `<text x="12" y="17" fill="${P.programRed}" font-family="Segoe UI,Arial,sans-serif" font-size="10" font-weight="800">LIVE</text>`,
-    `<text x="188" y="17" text-anchor="end" fill="${P.previewGreen}" font-family="Segoe UI,Arial,sans-serif" font-size="10" font-weight="800">NEXT</text>`,
+    `<text x="12" y="17" fill="${P.programRed}" font-family="Segoe UI,Arial,sans-serif" font-size="10" font-weight="800">${escapeXml(t("mixerLive"))}</text>`,
+    `<text x="188" y="17" text-anchor="end" fill="${P.previewGreen}" font-family="Segoe UI,Arial,sans-serif" font-size="10" font-weight="800">${escapeXml(t("mixerNext"))}</text>`,
     `<text x="12" y="37" fill="${P.whiteGlyph}" font-family="Segoe UI,Arial,sans-serif" font-size="11" font-weight="700" ${textFitAttributes(truncateLabel(program, 15), 80, 11)}>${dialText(program, 15)}</text>`,
     `<text x="188" y="37" text-anchor="end" fill="${P.whiteGlyph}" font-family="Segoe UI,Arial,sans-serif" font-size="11" font-weight="700" ${textFitAttributes(truncateLabel(preview, 15), 80, 11)}>${dialText(preview, 15)}</text>`,
     `<rect x="14" y="50" width="172" height="23" rx="7" fill="url(#sceneMix)" opacity="${unavailable || sameScene ? 0.35 : 1}" stroke="${P.trackBorder}" stroke-width="3"/>`,
@@ -126,12 +128,12 @@ export function renderDirectKeySvg(input: DirectKeyRenderInput): string {
     : unavailable
       ? "#df6d38"
       : P.accentPurple;
-  const title = input.configured ? input.title || "OBS" : "Choose OBS action";
+  const title = input.configured ? input.title || t("keyDefaultTitle") : t("keyChooseAction");
   const subtitle = !input.configured
-    ? "Open inspector"
+    ? t("keyOpenInspector")
     : !input.connected
-      ? input.reason || "OBS not connected"
-      : input.problem || input.subtitle || "Ready";
+      ? input.reason || t("obsNotConnected")
+      : input.problem || input.subtitle || t("keyReady");
   const icon = input.icon || "scene";
   const titleLines = keyTitleLines(title);
   const titleMarkup = titleLines.map((line, i) =>

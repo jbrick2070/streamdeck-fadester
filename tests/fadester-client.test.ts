@@ -4,6 +4,7 @@ import { FadesterClient } from "../src/obs/fadester-client.js";
 import { FadesterStore } from "../src/state/fadester-store.js";
 import { FakeObsServer } from "./helpers/fake-obs-server.js";
 import { MIDI_FADESTER_RELEASE_URL } from "../src/types/contract.js";
+import { statusSentence } from "../packages/streamdeck-fadester-shared/src/status-text.js";
 
 function waitForEvent<T>(
   emitter: { once(ev: string, fn: (arg: T) => void): unknown },
@@ -50,7 +51,7 @@ describe("Step 1.2 — FadesterClient & FadesterStore against FakeObsServer", ()
 
     await new Promise((r) => setTimeout(r, 40));
     expect(store.getStatus().kind).toBe("connected");
-    expect(store.getStatus().sentence).toBe(
+    expect(statusSentence(store.getStatus())).toBe(
       "Connected: OBS 33.0.0, Midi Fadester 0.1.0"
     );
     expect(store.getSlots().length).toBeGreaterThanOrEqual(5);
@@ -87,7 +88,7 @@ describe("Step 1.2 — FadesterClient & FadesterStore against FakeObsServer", ()
     await statusPromise;
 
     expect(client.getStatus().kind).toBe("wrong_password");
-    expect(client.getStatus().sentence).toBe(
+    expect(statusSentence(client.getStatus())).toBe(
       "Wrong password. Check OBS Tools > WebSocket Server Settings > Show Connect Info."
     );
 
@@ -109,7 +110,7 @@ describe("Step 1.2 — FadesterClient & FadesterStore against FakeObsServer", ()
     await statusPromise;
 
     expect(client.getStatus().kind).toBe("missing_plugin");
-    expect(client.getStatus().sentence).toBe(
+    expect(statusSentence(client.getStatus())).toBe(
       "Midi Fadester is not installed in OBS"
     );
     expect(client.getStatus().linkUrl).toBe(MIDI_FADESTER_RELEASE_URL);
@@ -127,7 +128,7 @@ describe("Step 1.2 — FadesterClient & FadesterStore against FakeObsServer", ()
     client.start();
     await new Promise((r) => setTimeout(r, 50));
     expect(client.getStatus().kind).toBe("obs_unreachable");
-    expect(client.getStatus().sentence).toBe(
+    expect(statusSentence(client.getStatus())).toBe(
       "OBS is not running or the websocket is off (Tools > WebSocket Server Settings)"
     );
 
@@ -304,7 +305,7 @@ describe("Step 1.2 — FadesterClient & FadesterStore against FakeObsServer", ()
     await connectedPromise;
     await new Promise((r) => setTimeout(r, 30));
 
-    expect(store.getStatus().sentence).toBe(
+    expect(statusSentence(store.getStatus())).toBe(
       "Connected: OBS 33.0.0, Midi Fadester 0.3.0 (642d6b7)"
     );
     expect(store.getProfile()).toBe("apc40mk2");

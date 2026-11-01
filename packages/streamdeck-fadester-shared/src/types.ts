@@ -14,16 +14,22 @@ export interface SurfaceBuildInfo {
   built_at: string;
 }
 
+/** A connection state as data: its kind and parameters. Its words are made
+ * when it is shown (`statusSentence` and `statusCellReason`, status-text.ts). */
 export interface ConnectionStatusInfo {
   kind: ConnectionStateKind;
-  sentence: string;
-  cellReason: string;
   obsVersion?: string;
   fadesterVersion?: string;
   buildCommit?: string;
   profile?: string;
   profileTier?: SurfaceProfileTier;
   linkUrl?: string;
+  /** The vendor plugin's display name (missing_plugin, version_mismatch, connected). */
+  pluginName?: string;
+  /** This surface's display name (version_mismatch). */
+  surfaceName?: string;
+  apiVersion?: number;
+  supportedApiVersion?: number;
 }
 
 export interface GlobalConnectionSettings {

@@ -17,6 +17,7 @@ import {
 } from "../types/settings.js";
 import { CellRateLimiter } from "../gfx/cell-rate-limiter.js";
 import { renderAutoFadeKeySvg, toSvgDataUri } from "../gfx/svg-renderer.js";
+import { translate } from "../i18n/strings.js";
 import { shouldReleaseRail } from "./dial-math.js";
 
 export interface KeyImageSink {
@@ -135,7 +136,8 @@ export class AutoFadeKeyInstanceController {
       to: this.settings.to,
       durationMs: this.settings.durationMs,
       labelOverride: this.settings.labelOverride,
-      readoutStyle: this.settings.readoutStyle
+      readoutStyle: this.settings.readoutStyle,
+      t: translate
     });
   }
 

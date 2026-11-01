@@ -328,6 +328,29 @@ step's diff before its build; one commit per step; one push at the end.
    `label !== "Scene transition"` test (`direct-obs-renderer.ts:105`) becomes a default-label flag. The mutation
    entries that quote changed lines (M-3.2 "CLEAN FX", M-1.3b "Unassigned, set in OBS", and any other) are updated in
    the same step; the tests keep asserting English.
+   *As built (2026-10-31, worktree `fadester-i18n`):* `src/i18n/strings.ts` holds `EN` (the shared package's
+   `SHARED_EN` plus the plugin's words), `t()`, `translate()` (the same, typed for the shared package),
+   `lookupText()` (English for a missing, empty, key-echo or placeholder-changed text, as VJster), `setLanguage()`,
+   `formatNumber()` (Intl, "1,5" in German). `packages/streamdeck-fadester-shared/src/i18n.ts` has `LocalText`
+   (`{ key, params }` for our words, `{ verbatim }` for OBS and Midi Fadester texts), `wordText()`, and
+   `LocalizedError`, which `ObsVendorError`, `DirectObsError` and `FadesterVendorError` extend: a string argument is
+   foreign and shown verbatim, our own messages pass `ownText(key, params)`; `message`/`comment` keep the English
+   wording, so logs and the `toThrow("...")` tests read English. `ConnectionStatusInfo` lost `sentence` and
+   `cellReason`; it carries `pluginName`, `surfaceName`, `apiVersion`, `supportedApiVersion`, and
+   `status-text.ts` words it (`statusSentence`, `statusCellReason`); `setStatus` diffs `statusSignature` (kind
+   plus the parameters the words use, no more). The shared renderers take `t` in their input (English when
+   omitted); `SurfaceStore` starts with empty Preview/Program names and keeps the last error as `LocalText`.
+   Decisions: the T-bar's default label is now empty (a stored "Scene transition" is treated as generated), so the
+   `!== "Scene transition"` test is gone; "40 %" and "40%" are one `percent` template (English "{n}%", German
+   "{n} %"), the one visible English change; the fade key's seconds use `formatNumber`; `READY_LAYOUTS` carry the
+   profile `title` (kept as named, R-I18N-1) and the picker shows it after a translated mode tag; the "OBS"
+   version fallback stays (a kept term); "Could not queue the next scene." is not shown anywhere and stays.
+   `en.json` and `de.json` exist from this step with `Localization` only (the deck table; 8.4 adds the
+   manifest texts); `tests/helpers/languages.ts` holds `REQUIRED_LANGUAGES` (en, de; extend there) and takes
+   every other list from the files present; `tests/i18n-strings.test.ts` checks keys, placeholders, BOM, the
+   fallbacks, German renders, own-versus-foreign errors and status diffing. Mutations M-3.2 and M-1.3b follow the
+   new lines; M-8.1a (lookup bypass) and M-8.1b (status diff by kind only) are new; the runner now requires a
+   failing test, not just a non-zero exit.
 2. **Step 8.2 -- Stored English captions shown translated.** `src/obs/preset-captions.ts` lists the 38 captions the
    bundled profiles store (English, compare-only) with each one's role; the scene, fader, fade and layer controllers
    treat a matching caption as generated and draw the translated role (extending today's scene and audio rule to the

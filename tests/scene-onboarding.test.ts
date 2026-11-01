@@ -77,7 +77,7 @@ describe("Scene layout onboarding", () => {
   it("shows the actual OBS scene name for an automatic numbered shortcut", async () => {
     const client = new DirectObsClient();
     vi.spyOn(client, "isConnected").mockReturnValue(true);
-    vi.spyOn(client, "getStatus").mockReturnValue({ kind: "connected", sentence: "Connected", cellReason: "" });
+    vi.spyOn(client, "getStatus").mockReturnValue({ kind: "connected" });
     vi.spyOn(client, "resolveSceneTarget").mockReturnValue("Camera closeup");
     vi.spyOn(client, "getCatalog").mockReturnValue({ ...client.getCatalog(), studioMode: true });
     const images: string[] = [];
@@ -96,7 +96,7 @@ describe("Scene layout onboarding", () => {
   it("previews the actual next destination while preserving a custom caption", async () => {
     const client = new DirectObsClient();
     vi.spyOn(client, "isConnected").mockReturnValue(true);
-    vi.spyOn(client, "getStatus").mockReturnValue({ kind: "connected", sentence: "Connected", cellReason: "" });
+    vi.spyOn(client, "getStatus").mockReturnValue({ kind: "connected" });
     vi.spyOn(client, "resolveSceneTarget").mockReturnValue("Ending slate");
     vi.spyOn(client, "getCatalog").mockReturnValue({ ...client.getCatalog(), studioMode: true });
     const images: string[] = [];

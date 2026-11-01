@@ -105,6 +105,8 @@ python demo-kit/build-kit.py roundtrip --obs <fresh folder>   # the collection, 
 python demo-kit/build-kit.py check-collection
 python demo-kit/build-kit.py credits        # CREDITS.md from the stock list
 node --import tsx scripts/build-kit-profiles.ts   # the two profiles, into demo-kit/build/profiles
+python demo-kit/build-kit.py zip --out <folder>     # Suite-Demo-Kit-1.0.zip from all of the above
+python demo-kit/check-kit.py run --zip <zip> --dir <new folder>   # the install-check (TESTING.md)
 ```
 
 `kit-ids.json` holds every name and fixed id the profiles bind to; `kit-template.json` is the

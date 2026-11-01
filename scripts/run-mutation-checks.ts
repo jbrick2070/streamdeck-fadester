@@ -1679,6 +1679,446 @@ const MUTATIONS: MutationCheck[] = [
     target: "if (/\\b(OBS|YouTube)\\b/i.test(layout.name)) problems.push",
     mutated: "if (false) problems.push",
     testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K5.1",
+    step: "Demo kit step 5 (the import keeps a path that leaves the folder)",
+    description:
+      "Drop the prefix check and verify the leaving-path test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "    if not absolute.startswith(root):\n        return path",
+    mutated: "    if False:\n        return path",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.2",
+    step: "Demo kit step 5 (the import needs a separator after the folder)",
+    description:
+      "Drop the separator check and verify the drive-root and sibling tests fail",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "if absolute[len(root):len(root) + 1] != \"\\\\\":",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.3",
+    step: "Demo kit step 5 (the import keeps a path past MAX_PATH)",
+    description:
+      "Lift the MAX_PATH limit on the input and verify the long-path test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "    if len(path.encode(\"utf-16-le\")) // 2 >= MAX_PATH:\n        return None",
+    mutated: "    if False:\n        return None",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.4",
+    step: "Demo kit step 5 (the import translates arrays too)",
+    description:
+      "Skip arrays and verify the playlist-row tests fail",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "        return [translate_paths(v, root_dir) for v in value]",
+    mutated: "        return value",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.5",
+    step: "Demo kit step 5 (the import keeps the dialog's name)",
+    description:
+      "Always name the collection OBS Studio Import and verify the name test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "out[\"name\"] = name or data[\"name\"] or \"OBS Studio Import\"",
+    mutated: "out[\"name\"] = \"OBS Studio Import\"",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.6",
+    step: "Demo kit step 5 (a live path must be inside the unzip folder)",
+    description:
+      "Drop the inside check and verify the wrong-path test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "        elif not inside(path, kit_dir):",
+    mutated: "        elif False:",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.7",
+    step: "Demo kit step 5 (a live path must exist)",
+    description:
+      "Drop the exists check and verify the wrong-path test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "        elif not os.path.isfile(path):",
+    mutated: "        elif False:",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.8",
+    step: "Demo kit step 5 (Playlister rows are live paths)",
+    description:
+      "Skip playlist rows and verify the path tests fail",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "for row in settings.get(\"playlist\") or []:",
+    mutated: "for row in []:",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.9",
+    step: "Demo kit step 5 (a filter key needs its kind)",
+    description:
+      "Drop the filter kind check and verify the filter-key test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "if response.get(\"filterKind\") != s.get(\"filterKind\"):",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.10",
+    step: "Demo kit step 5 (a scene key needs its position's scene)",
+    description:
+      "Take the kit's scene as the live one and verify the scene-position test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "got = order[index][\"sceneName\"] if index < len(order) else None",
+    mutated: "got = want",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.11",
+    step: "Demo kit step 5 (scene positions follow the Scenes dock)",
+    description:
+      "Sort scenes bottom first and verify the scene-order test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "key=lambda s: -s[\"sceneIndex\"]",
+    mutated: "key=lambda s: s[\"sceneIndex\"]",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.12",
+    step: "Demo kit step 5 (a layer key needs its item to be its source)",
+    description:
+      "Drop the item source check and verify the layer-key test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "if response is not None and response.get(\"sourceUuid\") != s.get(\"sourceUuid\"):",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.13",
+    step: "Demo kit step 5 (a Playlister key needs a Playlister)",
+    description:
+      "Drop the Playlister kind check and verify the Playlister-key test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "if response is not None and response.get(\"inputKind\") != PLAYLISTER_KIND:",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.14",
+    step: "Demo kit step 5 (a Panic key needs both hotkeys)",
+    description:
+      "Drop the hotkey check and verify the Panic-key test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "            if missing:",
+    mutated: "            if False:",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.15",
+    step: "Demo kit step 5 (an unknown action fails)",
+    description:
+      "Accept unknown actions and verify the unknown-action test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "return [f\"{where}: an action this check does not know\"]",
+    mutated: "return []",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.16",
+    step: "Demo kit step 5 (VJster keys target the Speed Page)",
+    description:
+      "Drop the VJster target check and verify its test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "if s.get(\"target\") != \"obs\":",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.17",
+    step: "Demo kit step 5 (an older plugin fails)",
+    description:
+      "Drop the minimum version check and verify the version test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "elif version_tuple(got) < version_tuple(want[\"min_version\"]):",
+    mutated: "elif False:",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.18",
+    step: "Demo kit step 5 (versions compare as numbers)",
+    description:
+      "Compare versions as text and verify the 0.10.0 test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "return tuple(int(p) for p in version.split(\".\") if p.isdigit())",
+    mutated: "return tuple(version.split(\".\"))",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.19",
+    step: "Demo kit step 5 (a key absent before Panic is at its default after Restore)",
+    description:
+      "Ignore defaults and verify the Restore test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "was = before.get(key, defaults.get(key))",
+    mutated: "was = before.get(key)",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.20",
+    step: "Demo kit step 5 (shader uniform defaults are numbers)",
+    description:
+      "Keep the uniform defaults as text and verify the shader test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "out[name] = value == \"true\" if value in (\"true\", \"false\") else float(value)",
+    mutated: "out[name] = value",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.21",
+    step: "Demo kit step 5 (the zip's media must be the manifest's)",
+    description:
+      "Drop the manifest SHA-1 check and verify the refusal test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_package.py"),
+    target: "elif hashlib.sha1(source.read_bytes()).hexdigest() != entry[\"sha1\"]:",
+    mutated: "elif False:",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.22",
+    step: "Demo kit step 5 (the zip's text files have LF line ends)",
+    description:
+      "Pack text files as they are and verify the LF test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_package.py"),
+    target: "return data.replace(b\"\\r\\n\", b\"\\n\") if name.endswith(TEXT_SUFFIXES) else data",
+    mutated: "return data",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.23",
+    step: "Demo kit step 5 (the zip's entries are sorted)",
+    description:
+      "Leave the entries unsorted and verify the zip test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_package.py"),
+    target: "    return sorted(entries)",
+    mutated: "    return entries",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.24",
+    step: "Demo kit step 5 (an earlier zip that differs is kept)",
+    description:
+      "Overwrite nothing and verify the changed-zip test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_package.py"),
+    target: "    if target.exists() and target.read_bytes() != data:\n        keep_aside(target)\n",
+    mutated: "",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.25",
+    step: "Demo kit step 5 (the zip holds CREDITS.md)",
+    description:
+      "Leave CREDITS.md out and verify the README-table test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_package.py"),
+    target: "DOCS = [\"README.md\", \"CREDITS.md\", kc.SETUP_CARD]",
+    mutated: "DOCS = [\"README.md\", kc.SETUP_CARD]",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.26",
+    step: "Demo kit step 5 (the check never overwrites an unzipped file)",
+    description:
+      "Drop the differing-file refusal and verify the unzip test fails",
+    filePath: resolve(ROOT, "demo-kit/check-kit.py"),
+    target: "                if target.read_bytes() != data:",
+    mutated: "                if False:",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.27",
+    step: "Demo kit step 5 (the check's websocket config is its own)",
+    description:
+      "Drop the port check and verify the config test fails",
+    filePath: resolve(ROOT, "demo-kit/check-kit.py"),
+    target: "if not config.get(\"server_enabled\") or config.get(\"server_port\") != port:",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.28",
+    step: "Demo kit step 5 (a failing row is recorded)",
+    description:
+      "Swallow a row's exception and verify the results test fails",
+    filePath: resolve(ROOT, "demo-kit/check-kit.py"),
+    target: "self.add(row, False, f\"{type(exc).__name__}: {exc}\")",
+    mutated: "pass",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.29",
+    step: "Demo kit step 5 (the page key never reaches the results)",
+    description:
+      "Keep the token and verify the redaction test fails",
+    filePath: resolve(ROOT, "demo-kit/check-kit.py"),
+    target: "re.sub(r\"#token=[0-9a-f]+\", \"#token=<not kept>\", line[\"address\"])",
+    mutated: "line[\"address\"]",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.30",
+    step: "Demo kit step 5 (the saved collection's name is not compared)",
+    description:
+      "Compare the GUI's name and verify the saved test fails",
+    filePath: resolve(ROOT, "demo-kit/check-kit.py"),
+    target: "    normalised[\"name\"] = ids[\"collection\"]",
+    mutated: "    pass",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.31",
+    step: "Demo kit step 5 (the speed run places each action's kind)",
+    description:
+      "Make every action a speed dial and verify the layout test fails",
+    filePath: resolve(ROOT, "scripts/kit-speed-run.ts"),
+    target: "    action: `${UUID}.${c.kind}`,",
+    mutated: "    action: `${UUID}.speed`,",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.32",
+    step: "Demo kit step 5 (a filter key's setting must exist)",
+    description:
+      "Drop the setting check and verify the filter-key test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "                if setting not in known:",
+    mutated: "                if False:",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.33",
+    step: "Demo kit step 5 (a plugin that did not load fails)",
+    description:
+      "Skip a plugin with no version line and verify the version test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "        if got is None:\n            problems.append(",
+    mutated: "        if got is None:\n            continue\n            problems.append(",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.34",
+    step: "Demo kit step 5 (obs-websocket's authentication string)",
+    description:
+      "Hash the challenge before the secret and verify the protocol example fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "(secret + challenge)",
+    mutated: "(challenge + secret)",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.35",
+    step: "Demo kit step 5 (the zip's top level counts a folder once)",
+    description:
+      "List every entry as top level and verify the README-table test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "n.split(\"/\", 1)[0] + \"/\" if \"/\" in n else n for n in names",
+    mutated: "n for n in names",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.36",
+    step: "Demo kit step 5 (Restore allows a float rounding)",
+    description:
+      "Drop the 1e-6 tolerance and verify the Restore test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "and abs(was - now) < 1e-6",
+    mutated: "and False",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.37",
+    step: "Demo kit step 5 (int and bool uniforms have defaults too)",
+    description:
+      "Read float uniforms only and verify the shader test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "(?:float|int|bool)",
+    mutated: "(?:float)",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.38",
+    step: "Demo kit step 5 (a uniform's annotations span lines)",
+    description:
+      "Drop DOTALL and verify the shader test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_check.py"),
+    target: "re.MULTILINE | re.DOTALL)",
+    mutated: "re.MULTILINE)",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.39",
+    step: "Demo kit step 5 (unzip keeps every file inside the kit folder)",
+    description:
+      "Drop the containment check and verify the leaving-name test fails",
+    filePath: resolve(ROOT, "demo-kit/check-kit.py"),
+    target: "            if not target.is_relative_to(root) or target == root:",
+    mutated: "            if False:",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.40",
+    step: "Demo kit step 5 (compare-import writes nothing into the unzip folder)",
+    description:
+      "Write the results into the unzip folder and verify the compare-import test fails",
+    filePath: resolve(ROOT, "demo-kit/check-kit.py"),
+    target: "out = Results(args.out.resolve() if args.out else None)",
+    mutated: "out = Results(args.out.resolve() if args.out else args.kit_dir.resolve() / \"compare-import.jsonl\")",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.41",
+    step: "Demo kit step 5 (a failed plugins row stops the later rows)",
+    description:
+      "Never block and verify the plugins-gate test fails",
+    filePath: resolve(ROOT, "demo-kit/check-kit.py"),
+    target: "                blocked = True",
+    mutated: "                pass",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.42",
+    step: "Demo kit step 5 (an input muted already stays muted)",
+    description:
+      "Mute and unmute whatever the input's state and verify the mute test fails",
+    filePath: resolve(ROOT, "demo-kit/check-kit.py"),
+    target: "        if self.obs.req(\"GetInputMute\", uuid)[\"inputMuted\"]:\n            return",
+    mutated: "        if False:\n            return",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.43",
+    step: "Demo kit step 5 (one failing undo does not skip the others)",
+    description:
+      "Stop at the first failing undo and verify the put-back test fails",
+    filePath: resolve(ROOT, "demo-kit/check-kit.py"),
+    target: "failed.append(f\"{step[0]} {step[1]}: {type(exc).__name__}: {exc}\")",
+    mutated: "raise",
+    testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-K5.44",
+    step: "Demo kit step 5 (a failure after Panic still sends Restore)",
+    description:
+      "Drop the Restore in the finally and verify the Panic test fails",
+    filePath: resolve(ROOT, "demo-kit/check-kit.py"),
+    target: "            if not restore_sent:",
+    mutated: "            if False:",
+    testFile: "tests/demo-kit-check.test.ts"
   }
 ];
 

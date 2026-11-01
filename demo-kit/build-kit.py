@@ -20,6 +20,10 @@ Step 3: CREDITS.md (kit_docs.py), from stock-credits.json after the same check o
 
     python demo-kit/build-kit.py credits [--stock <folder>]
 
+Step 5: the zip that ships (kit_package.py), and the install-check (check-kit.py).
+
+    python demo-kit/build-kit.py zip --out <folder>
+
 What it makes, all 1280x720, 30 fps where it is video:
 
 - kit-motion.mp4, layer-a.mp4, layer-b.mp4: 8 s seamless loops (240 frames) we draw
@@ -82,6 +86,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import kit_collection as kc  # noqa: E402
 import kit_docs as kd  # noqa: E402
 import kit_obs  # noqa: E402
+import kit_package  # noqa: E402
 
 KIT_DIR = Path(__file__).resolve().parent
 DEFAULT_OUT = KIT_DIR / "build"
@@ -654,7 +659,20 @@ def main(argv: list[str] | None = None) -> int:
     trip.add_argument("--core", type=Path, default=kit_obs.DEFAULT_CORE, help="official OBS 33 portable tree")
     trip.add_argument("--lock", type=Path, default=kit_obs.DEFAULT_LOCK)
     trip.add_argument("--template", type=Path, default=kc.TEMPLATE_PATH)
+    pack = sub.add_parser("zip", help="pack the kit zip from the template, the manifest's media, the docs and "
+                                      "the built profiles")
+    pack.add_argument("--out", type=Path, required=True, help="the folder the zip and kit-zip.json go to")
+    pack.add_argument("--build", type=Path, default=DEFAULT_OUT, help="the build folder holding media/ and profiles/")
     args = parser.parse_args(argv)
+    if args.step == "zip":
+        try:
+            listing = kit_package.build_zip(args.out.resolve(), build=args.build.resolve())
+        except RuntimeError as exc:
+            print(f"build-kit: {exc}", file=sys.stderr)
+            return 2
+        print(f"{listing['zip']}: {len(listing['files'])} files, {listing['size'] / 1e6:.1f} MB, "
+              f"sha256 {listing['sha256']}, in {args.out.resolve()}")
+        return 0
     if args.step == "check-collection":
         return check_collection(args.template)
     if args.step == "credits":

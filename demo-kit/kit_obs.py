@@ -13,7 +13,7 @@ with first run off and the updater off, and a profile "Kit" with a 1920x1080 can
 canvas is the profile's, not the collection's, plan 2.1). Midi Fadester is not installed
 (plan D-8: no slots before the reel).
 
-run_obs(): the OBS lock first (no obs64 in tasklist, then C:\\Users\\jeffr\\obs-run.lock created
+run_obs() and start_obs(): the OBS lock first (no obs64 in tasklist, then C:\\Users\\jeffr\\obs-run.lock created
 exclusively; it waits while another agent holds it), then only this portable's obs64 with
 --portable --disable-updater --multi --disable-shutdown-check, closed through WM_CLOSE to
 its main window; taskkill only if it has not exited after the close wait, and then logged.
@@ -217,6 +217,17 @@ def run_obs(obs: Path, collection: str, events: list, settle_s: float = 8, start
     """Start this portable's OBS on a collection, let it settle, close it; returns its log.
 
     The caller holds the OBS lock. events gets one dict per step (start, close, kill)."""
+    proc, log = start_obs(obs, collection, events, start_s, close_s)
+    time.sleep(settle_s)
+    stop_obs(proc, events, close_s)
+    return log
+
+
+def start_obs(obs: Path, collection: str, events: list, start_s: float = 180,
+              close_s: float = 120) -> tuple[subprocess.Popen, Path]:
+    """Start this portable's OBS on a collection and wait until it has started (its log says so
+    and its main window is up); returns the process and its log. The caller holds the OBS lock
+    and closes it with stop_obs."""
     exe = obs / "bin" / "64bit" / "obs64.exe"
     before = newest_log(obs)
     args = [str(exe), *OBS_FLAGS, "--profile", PROFILE, "--collection", collection]
@@ -235,9 +246,7 @@ def run_obs(obs: Path, collection: str, events: list, settle_s: float = 8, start
     else:
         stop_obs(proc, events, close_s)
         raise RuntimeError(f"OBS did not finish starting in {start_s} s")
-    time.sleep(settle_s)
-    stop_obs(proc, events, close_s)
-    return log
+    return proc, log
 
 
 def stop_obs(proc: subprocess.Popen, events: list, close_s: float) -> None:

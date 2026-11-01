@@ -2,7 +2,7 @@
   "kit": "Suite Demo Kit",
   "version": "1.0",
   "collection": "Suite Demo Kit",
-  "about": "The single source of truth for the kit's names, kinds and fixed UUIDs (plan section 5). The Stream Deck profiles bind to these: scenes by __scene_index_N__ (their position here), Playlister keys by source uuid, filter keys by source uuid + filter name + filter kind (versioned_id), layer keys by scene name + item id. uuid = sha256('suite-demo-kit:' + seed)[:16] with the RFC 4122 version 4 and variant bits; the seed is the name, or '<source>/<filter>' for a filter. demo-kit/kit_collection.py checks this file against that rule.",
+  "about": "The single source of truth for the kit's names, kinds and fixed UUIDs (plan section 5). The Stream Deck profiles bind to these: scenes by __scene_index_N__ (their position here), Playlister keys by source uuid, filter keys by source uuid + filter name + filter kind (versioned_id), layer keys by scene name + item id. uuid = sha256('suite-demo-kit:' + seed)[:16] with the RFC 4122 version 4 and variant bits; the seed is the name, or '<source>/<filter>' for a filter. demo-kit/kit_collection.py checks this file against that rule. 'plugins': the minimum version of each OBS plugin; check-kit.py reads the version each one logs when it loads ('[<name>] plugin loaded successfully (version X)') and fails an older one. built_from is informational (the assembly.json of a check holds the plugin files' SHA-256).",
   "do_not_rename": [
     "Kit Beat",
     "Look Prism",
@@ -10,6 +10,16 @@
     "Look Pulse",
     "Layer Fade"
   ],
+  "plugins": {
+    "obs-playlister": {
+      "min_version": "0.5.0",
+      "built_from": "obs-playlister 96cf87c (after tag 0.5.0; it reports version 0.5.0)"
+    },
+    "visual-sidechain": {
+      "min_version": "0.6.0",
+      "built_from": "visual-sidechain 236bbab (code), 752d38a (data); Panic and Restore need the commits after 0.5.1"
+    }
+  },
   "scenes": [
     {
       "index": 0,

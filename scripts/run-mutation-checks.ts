@@ -1449,6 +1449,236 @@ const MUTATIONS: MutationCheck[] = [
     target: "\"Speed Note 100\": [\"100 %\", \"Previous, Play / pause and Next\"],",
     mutated: "\"Speed Note 100\": [\"100 %\"],",
     testFile: "tests/demo-kit-docs.test.ts"
+  },
+  {
+    id: "M-K4.1",
+    step: "Demo kit step 4 (a Playlister key binds only a kit Playlister)",
+    description:
+      "Accept any kit source as a Playlister and verify the not-a-Playlister test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "if (!source || source.id !== \"obs_playlister_source\") {",
+    mutated: "if (!source) {",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.2",
+    step: "Demo kit step 4 (a Playlister key's inspector name matches its uuid)",
+    description:
+      "Drop the inputName check and verify the name test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "} else if (s.inputName !== source.name) {",
+    mutated: "} else if (false) {",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.3",
+    step: "Demo kit step 4 (a filter control's kind matches the kit filter)",
+    description:
+      "Drop the filterKind check and verify the kind test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "} else if (s.filterKind !== filter.versioned_id) {",
+    mutated: "} else if (false) {",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.4",
+    step: "Demo kit step 4 (a filter control rides a table setting)",
+    description:
+      "Drop the setting check and verify the setting test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "if (!toggle && !isTableSetting(text(s.filterKind), text(s.setting))) {",
+    mutated: "if (false) {",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.5",
+    step: "Demo kit step 4 (a layer key's item is the source it names)",
+    description:
+      "Drop the item-to-source check and verify the layer test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "} else if (s.sourceUuid !== source.uuid || s.sourceName !== source.name) {",
+    mutated: "} else if (false) {",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.6",
+    step: "Demo kit step 4 (a scene key stays within the kit's scenes)",
+    description:
+      "Drop the scene-count bound and verify the scene test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "if (!index || Number(index[1]) >= ids.scenes.length) {",
+    mutated: "if (!index) {",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.7",
+    step: "Demo kit step 4 (captions are shipped or the control's own name)",
+    description:
+      "Accept every caption and verify the caption test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "if (!isGeneratedCaption(action, context, entry.label) && !own.filter(Boolean).includes(entry.label)) {",
+    mutated: "if (false) {",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.8",
+    step: "Demo kit step 4 (a caption may only name the control's own target)",
+    description:
+      "Accept any kit name as a caption and verify the other-target test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "!own.filter(Boolean).includes(entry.label)",
+    mutated: "![...byName.keys(), ...ids.sources.flatMap((x) => (x.filters ?? []).map((f) => f.name))].includes(entry.label)",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.9",
+    step: "Demo kit step 4 (the VJster page drives the OBS page)",
+    description:
+      "Drop the target check and verify the VJster target test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "if (slot.settings?.target !== \"obs\") problems.push",
+    mutated: "if (false) problems.push",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.10",
+    step: "Demo kit step 4 (the build runs validatePreset)",
+    description:
+      "Skip validatePreset in the kit build and verify the refusal test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "  validatePreset(layouts.fadester, manifest);\n",
+    mutated: "",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.11",
+    step: "Demo kit step 4 (the kit is regular mode (D-5))",
+    description:
+      "Drop the regular-mode check and verify the studio-mode test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "if (preset.obsMode !== \"regular\") problems.push",
+    mutated: "if (false) problems.push",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.12",
+    step: "Demo kit step 4 (the files are named as the README promises)",
+    description:
+      "Name the Fadester file by its slug and verify the file-name test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "{ file: names[0]!, bytes: zip(fadester.files) }",
+    mutated: "{ file: \"suite-demo-kit-plus.streamDeckProfile\", bytes: zip(fadester.files) }",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.13",
+    step: "Demo kit step 4 (Restart acts on the 50 % copy)",
+    description:
+      "Bind Restart to Kit Clips and verify the binding test fails",
+    filePath: resolve(ROOT, "demo-kit/kit-layouts.json"),
+    target: "\"inputUuid\": \"ad976ab1-d3e3-4df7-a389-c99a8a428110\", \"inputName\": \"Kit Clips 50%\", \"operation\": \"restart\"",
+    mutated: "\"inputUuid\": \"7e4a69df-9d56-4d73-9dea-9673994305d0\", \"inputName\": \"Kit Clips\", \"operation\": \"restart\"",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.14",
+    step: "Demo kit step 4 (Visuals' scene key cuts to the Visuals scene)",
+    description:
+      "Point the Visuals page's scene key at scene index 2 and verify the scene test fails",
+    filePath: resolve(ROOT, "demo-kit/kit-layouts.json"),
+    target: "\"label\": \"Scene 2\", \"settings\": { \"sceneTarget\": \"__scene_index_1__\", \"operation\": \"cut\" }",
+    mutated: "\"label\": \"Scene 3\", \"settings\": { \"sceneTarget\": \"__scene_index_2__\", \"operation\": \"cut\" }",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.15",
+    step: "Demo kit step 4 (the VJster page's transport drives the OBS page)",
+    description:
+      "Set Play / pause to the browser and verify the VJster test fails",
+    filePath: resolve(ROOT, "demo-kit/kit-layouts.json"),
+    target: "{ \"kind\": \"transport\", \"at\": [3, 0], \"settings\": { \"target\": \"obs\" } }",
+    mutated: "{ \"kind\": \"transport\", \"at\": [3, 0], \"settings\": { \"target\": \"browser\" } }",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.16",
+    step: "Demo kit step 4 (a scene key is captioned for its own scene)",
+    description:
+      "Drop the scene-caption check and verify the caption test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "} else if (entry.label !== `Scene ${Number(index[1]) + 1}`) {",
+    mutated: "} else if (false) {",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.17",
+    step: "Demo kit step 4 (a filter control's inspector name matches its uuid)",
+    description:
+      "Drop the filter sourceName check and verify the name test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "} else if (s.sourceName !== source.name) {",
+    mutated: "} else if (false) {",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.18",
+    step: "Demo kit step 4 (a fader rides only kit media)",
+    description:
+      "Accept any kit source as a fader target and verify the not-media test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "if (!source || source.id !== \"ffmpeg_source\") {",
+    mutated: "if (!source) {",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.19",
+    step: "Demo kit step 4 (a layer key has a fixed scene)",
+    description:
+      "Drop the scope half of the fixed check and verify the scope test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "if (s.scope !== \"fixed\" || s.target !== \"fixed\") {",
+    mutated: "if (s.target !== \"fixed\") {",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.20",
+    step: "Demo kit step 4 (a layer key has a fixed source)",
+    description:
+      "Drop the target half of the fixed check and verify the target test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "if (s.scope !== \"fixed\" || s.target !== \"fixed\") {",
+    mutated: "if (s.scope !== \"fixed\") {",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.21",
+    step: "Demo kit step 4 (the build names exactly two profiles)",
+    description:
+      "Drop the two-names check and verify the one-name test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "if (names.length !== 2) throw",
+    mutated: "if (false) throw",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.22",
+    step: "Demo kit step 4 (a kit_docs.py without PROFILE_FILES is refused by name)",
+    description:
+      "Drop the missing-line check and verify the PROFILE_FILES test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "if (!line) throw new Error(\"kit_docs.py has no PROFILE_FILES line\");",
+    mutated: "if (false) throw new Error(\"kit_docs.py has no PROFILE_FILES line\");",
+    testFile: "tests/demo-kit-profiles.test.ts"
+  },
+  {
+    id: "M-K4.23",
+    step: "Demo kit step 4 (the VJster profile name has no OBS or YouTube)",
+    description:
+      "Drop the name check and verify the VJster name test fails",
+    filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
+    target: "if (/\\b(OBS|YouTube)\\b/i.test(layout.name)) problems.push",
+    mutated: "if (false) problems.push",
+    testFile: "tests/demo-kit-profiles.test.ts"
   }
 ];
 

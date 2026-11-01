@@ -104,7 +104,8 @@ python demo-kit/build-kit.py media          # the media, into demo-kit/build/med
 python demo-kit/build-kit.py roundtrip --obs <fresh folder>   # the collection, through a portable OBS 33
 python demo-kit/build-kit.py check-collection
 python demo-kit/build-kit.py credits        # CREDITS.md from the stock list
+node --import tsx scripts/build-kit-profiles.ts   # the two profiles, into demo-kit/build/profiles
 ```
 
 `kit-ids.json` holds every name and fixed id the profiles bind to; `kit-template.json` is the
-collection that ships as `Suite Demo Kit.json`.
+collection that ships as `Suite Demo Kit.json`; `kit-layouts.json` holds the two profiles' keys.

@@ -1,6 +1,8 @@
 # Fadester for OBS
 
-**Fadester for OBS 0.7.6** makes a Stream Deck or Stream Deck + a simple, direct control surface for normal OBS Studio. It connects to OBS’s built-in WebSocket server on port `4455`; you do **not** need an APC40, a MIDI controller, or Midi Fadester to use the main actions.
+**Fadester for OBS 0.7.7** makes a Stream Deck or Stream Deck + a simple, direct control surface for normal OBS Studio. It connects to OBS’s built-in WebSocket server on port `4455`; you do **not** need an APC40, a MIDI controller, or Midi Fadester to use the main actions.
+
+The plugin requires Stream Deck software 7.6 or later on Windows 10 or later. Stream Deck Neo users can add a read-only Info Bar display for OBS connection and scene status; its regular keys can also use the plugin's key actions.
 
 The default look uses deep black backgrounds, punchy purple controls, and bright yellow accents. Distinct action symbols make scene navigation, source controls, and audio fades easier to tell apart; the scene mixer keeps red Live and green Next labels.
 
@@ -20,6 +22,7 @@ The first setup is intentionally small:
 | **OBS Fader** | Adjust an audio source, or **Blend Live into Next scene**. The scene mixer keeps the original colorful track and orange handle, with LIVE/NEXT scene names. Press to take Next live. | Stream Deck + for a dial; scene blending needs two different scenes in OBS Studio Mode. |
 | **Scene & Transition** | Select a fixed scene, **Next scene**, **Previous scene**, or **Current Preview**; Cut or use a chosen transition. | Cut/Transition work in both modes. Preview selection and Current Preview need Studio Mode. |
 | **OBS Fade** | Fade one OBS mixer input up or down over a chosen time, or instantly. A later volume move cancels that input’s running fade. | Any Stream Deck key. |
+| **OBS Scene Info Bar** | Display OBS connection status, the live scene, and the preview scene in Studio Mode (outside Studio Mode it says so). | Stream Deck Neo Info Bar; display only. |
 
 Source selection is shared across Fadester controls for each scene and lasts until the plugin restarts or the scene collection changes. To save an assignment across restarts, choose a non-browsing Source & Layer action and select **A fixed source** for that action. A fixed action keeps its own assignment; it does not pin the shared selection used by a fader's press. Browsing selects a control target; Show/hide changes its visibility and keeps your stack order. A visible source may still be covered by an opaque layer above it. The list handles top-level sources and treats groups as one layer.
 
@@ -49,7 +52,7 @@ That integration is separate from the normal direct OBS controls:
 
 ## Connection and safety
 
-Set up the OBS connection once for all Fadester keys, dials, and layouts. After setup the inspector says **Password saved for all Fadester buttons and dials**; host, port, and password stay under **Edit shared connection**. **Save for all controls & test** updates that shared connection. A saved password is never echoed back to the browser Property Inspector. Other plugins manage their own connection settings separately.
+Set up the OBS connection once for all Fadester keys, dials, layouts, and the Neo Info Bar. After setup the inspector says **Password saved for all Fadester buttons and dials**; host, port, and password stay under **Edit shared connection**. **Save for all controls & test** updates that shared connection. A saved password is never echoed back to the browser Property Inspector. Other plugins manage their own connection settings separately.
 
 When OBS is unavailable, an action alerts and performs at most one reconnect nudge every two seconds. Wrong-password status tells you exactly where to correct it in OBS without exposing the password.
 

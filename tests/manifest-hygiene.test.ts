@@ -29,7 +29,7 @@ function walkFiles(dir: string): string[] {
 }
 
 describe("Step 1.1 — Manifest, Layout, Icons & Repository Hygiene", () => {
-  it("validates manifest.json targets SDK 3, Node 24, Stream Deck 7.1, and direct plus optional actions", () => {
+  it("validates manifest.json targets SDK 3, Node 24, Stream Deck 7.6, and direct plus optional actions", () => {
     const manifestPath = join(PLUGIN_DIR, "manifest.json");
     const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as Record<
       string,
@@ -46,18 +46,23 @@ describe("Step 1.1 — Manifest, Layout, Icons & Repository Hygiene", () => {
     expect(manifest.SDKVersion).toBe(3);
     expect((manifest.Nodejs as { Version: string }).Version).toBe("24");
     expect((manifest.Software as { MinimumVersion: string }).MinimumVersion).toBe(
-      "7.1"
+      "7.6"
     );
 
     const actions = manifest.Actions as Array<Record<string, unknown>>;
     expect(Array.isArray(actions)).toBe(true);
-    expect(actions).toHaveLength(6);
+    expect(actions).toHaveLength(7);
     const byId = (id: string) => actions.find((entry) => entry.UUID === `com.jbrick2070.fadester-for-obs.${id}`)!;
     expect(actions.slice(0, 4).every((entry) => !String(entry.Name).includes("optional"))).toBe(true);
     expect(byId("fader").Controllers).toEqual(["Encoder"]);
     const encoderLayoutRel = (byId("fader").Encoder as { layout: string }).layout;
     expect(encoderLayoutRel).toBe("layouts/fader-cell.json");
     expect(statSync(join(PLUGIN_DIR, encoderLayoutRel)).size).toBeGreaterThan(0);
+    for (const entry of actions.filter((action) => (action.Controllers as string[]).includes("Encoder"))) {
+      const layout = (entry.Encoder as { layout: string }).layout;
+      expect(layout, `Encoder layout for ${entry.Name}`).toBe("layouts/fader-cell.json");
+      expect(statSync(join(PLUGIN_DIR, layout)).size).toBeGreaterThan(0);
+    }
     expect(
       statSync(join(PLUGIN_DIR, String(byId("fader").PropertyInspectorPath))).size
     ).toBeGreaterThan(0);
@@ -88,10 +93,37 @@ describe("Step 1.1 — Manifest, Layout, Icons & Repository Hygiene", () => {
       Controllers: ["Keypad", "Encoder"],
       PropertyInspectorPath: "ui/obs-layer-control.html"
     });
+    expect(byId("obs-neo-infobar")).toMatchObject({
+      Controllers: ["Neo"],
+      PropertyInspectorPath: "ui/obs-neo-infobar.html"
+    });
+    expect(statSync(join(PLUGIN_DIR, "ui/obs-neo-infobar.html")).size).toBeGreaterThan(0);
     for (const direct of actions.slice(2)) {
       expect(
         statSync(join(PLUGIN_DIR, String(direct.PropertyInspectorPath))).size
       ).toBeGreaterThan(0);
+    }
+  });
+
+  it("defines all feedback fields within the Neo Info Bar bounds", () => {
+    const layout = JSON.parse(readFileSync(join(PLUGIN_DIR, "layouts", "obs-neo-infobar.json"), "utf8")) as {
+      controller: string;
+      items: Array<{ key: string; type: string; rect: number[] }>;
+    };
+    expect(layout.controller).toBe("Neo");
+    for (const key of ["live", "preview", "status"]) {
+      expect(layout.items.filter((item) => item.key === key)).toEqual([
+        expect.objectContaining({ type: "text" })
+      ]);
+    }
+    for (const item of layout.items) {
+      const [x, y, width, height] = item.rect;
+      expect(x).toBeGreaterThanOrEqual(0);
+      expect(y).toBeGreaterThanOrEqual(0);
+      expect(width).toBeGreaterThan(0);
+      expect(height).toBeGreaterThan(0);
+      expect(x + width).toBeLessThanOrEqual(232);
+      expect(y + height).toBeLessThanOrEqual(50);
     }
   });
 

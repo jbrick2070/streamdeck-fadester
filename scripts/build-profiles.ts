@@ -9,7 +9,7 @@ import { profilePathForSlug, profileRevisionForSlug } from "../src/types/layouts
  * Builds self-contained, importable profiles from our reviewable preset list.
  * It never reads or writes the user's Stream Deck ProfilesV3 directory.
  * Profile structure is based on the locally shipped Stream Deck templates and
- * the V3 manifests produced by Stream Deck 7.1+, our plugin's minimum version.
+ * the V3 manifests produced by Stream Deck 7.1+ (our plugin's minimum is 7.6 since 0.7.7).
  */
 type PresetAction = {
   controller: "Keypad" | "Encoder";

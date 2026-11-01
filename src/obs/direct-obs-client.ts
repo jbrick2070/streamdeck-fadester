@@ -716,7 +716,14 @@ export class DirectObsClient extends ObsVendorClient {
       this.catalogEventRevisions.studio++;
       this.catalog.studioMode = eventData.studioModeEnabled === true;
       if (!this.catalog.studioMode) this.cancelSceneCycle();
+      else {
+        // A previous Preview value may be stale after Studio Mode was off.
+        // Clear it until OBS supplies the current value again.
+        this.catalogEventRevisions.preview++;
+        this.catalog.currentPreviewScene = "";
+      }
       this.emitDirectState();
+      if (this.catalog.studioMode) void this.refreshCatalog();
       return;
     }
 

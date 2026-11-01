@@ -6,17 +6,18 @@ Checked against Elgato's official documentation on 28 October 2026. The current 
 
 | Component | Install location/runtime | Role |
 |---|---|---|
-| Midi Fadester | OBS Studio 33 on Windows x64 | Owns slots, MIDI control, filter bindings and the vendor API. Required by Fadester for OBS. |
-| Fadester for OBS | Stream Deck 7.1+ | Provides dial/key controls and configuration. Updates independently of the OBS plugins. |
+| Midi Fadester | OBS Studio 33 on Windows x64 | Optional integration that owns slots, MIDI control, filter bindings and the vendor API. |
+| Fadester for OBS | Stream Deck 7.6+ | Provides dial/key controls, a Neo Info Bar display, and configuration. Updates independently of the OBS plugins. |
 | Visual Sidechain | OBS Studio 33 on Windows x64 | Optional audio modulation and shader effects; can consume Midi's 18 slots or expose numeric filter settings for Midi to control. |
 
-Use one coordinated setup guide and a tested compatibility matrix. An optional combined OBS installer could later offer Midi and Visual Sidechain as separate choices, but each plugin should keep independent versions, uninstall behavior and downloads. Do not bundle OBS binaries into the Stream Deck plugin. Keep the two OBS components optional for users who need only one. For Stream Deck users, clearly disclose that Midi is required and Visual Sidechain is optional.
+Use one coordinated setup guide and a tested compatibility matrix. An optional combined OBS installer could later offer Midi and Visual Sidechain as separate choices, but each plugin should keep independent versions, uninstall behavior and downloads. Do not bundle OBS binaries into the Stream Deck plugin. Keep the two OBS components optional for users who need only one. For Stream Deck users, clearly disclose that Midi Fadester is optional for the main OBS controls and required for its two optional actions; Visual Sidechain is optional.
 
 Retain the existing plugin/action UUIDs. Use a new package version when publishing an update; do not change identities to distribute a revised implementation. Keep development packages off Marketplace until the operator signs off on real hardware behavior.
 
 ## Operator acceptance before submission
 
 - Test on the actual Stream Deck +: rotation, fine/coarse steps, short press, hold, touch rails, and immediate/timed keys. Specifically confirm that zero aborts a partial T-bar throw and Finish commits it.
+- Test the Neo Info Bar on a real Stream Deck Neo, including scene changes, Studio Mode changes, disconnection, and reconnection. Confirm the display stays readable with long scene names.
 - Confirm Clean FX resets enabled filters in either bank, leaves audio/opacity/A/B controls unchanged, and handles missing/re-added filters. Check custom All FX labels and mapped units.
 - Configure a slot entirely in the inspector; test partial ranges, full-range reset, enabled state, calibration, save/reopen, rapid source changes and catalog failures. Pending edits must stay intact.
 - Exercise wrong password, disconnected OBS, reconnect and Midi 0.3 compatibility. Confirm the exact required OBS/Stream Deck versions and Windows support in the listing.
@@ -32,7 +33,7 @@ Review the plugin metadata, names, icons, feedback and inspector behavior. Actio
 
 Prepare the package, name/description, release notes, support/setup links, a 1920×960 PNG thumbnail, and three gallery items using the required image/video formats. Register/sign in to Maker Console, choose **Create product → Stream Deck plugin**, upload, complete the listing, and submit for Elgato review. Choose the product name and monetization deliberately because those are not freely editable in Maker Console. No account, agreement, upload or submission is performed by this integration task. [Official submission guide](https://docs.elgato.com/maker-console/submitting-products/).
 
-Use screenshots from the final approved UI and real hardware, not the fake-server harness as evidence of device verification. Keep a public setup/troubleshooting page explaining how to install Midi, enable OBS websocket, connect, and optionally add Visual Sidechain. Publish only after the operator has approved the hardware pass and Elgato has completed its review.
+Use screenshots from the final approved UI and real hardware, not the fake-server harness as evidence of device verification. Keep a public setup/troubleshooting page explaining how to enable OBS WebSocket and connect, and how to install optional Midi Fadester and Visual Sidechain integrations. Publish only after the operator has approved the hardware pass and Elgato has completed its review.
 
 ## Public introduction after final acceptance
 

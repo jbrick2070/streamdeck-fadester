@@ -613,7 +613,7 @@
       "plUnknownSource": "Unknown Playlister",
       "plBannerChoose": "Choose a Playlister source to control.",
       "plBannerNone": "No Playlister source in OBS. Add one to a scene first.",
-      "plBannerMissing": "The chosen Playlister is not in OBS now. It returns when the source exists again, or choose another.",
+      "plBannerMissing": "The chosen Playlister is not in OBS now: it was removed, or it is in another scene collection. Choose a Playlister.",
       "plBannerWrongKind": "The chosen source is not a Playlister. Choose a Playlister source.",
       "plBannerUnsupported": "This OBS WebSocket does not offer the media requests (GetMediaInputStatus, TriggerMediaInputAction). Update OBS.",
       "plNote": "Status only shows the state. Play / pause toggles from the observed state. Stop first drops the Playlister’s unsent presses. Nothing is sent while the Playlister is unavailable."

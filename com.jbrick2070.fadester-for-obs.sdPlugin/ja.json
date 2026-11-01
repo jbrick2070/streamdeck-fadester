@@ -37,7 +37,7 @@
   },
   "com.jbrick2070.fadester-for-obs.playlister-transport": {
     "Name": "Playlister トランスポート",
-    "Tooltip": "OBS のメディアコントロールで 1 つの Playlister ソースを前へ・次へ・再生/一時停止・停止・最初から再生、または状態を表示します。"
+    "Tooltip": "OBS のメディアコントロールで 1 つの Playlister ソースを操作（前へ・次へ・再生/一時停止・停止・最初から再生）するか、状態を表示します。"
   },
   "com.jbrick2070.fadester-for-obs.fader": {
     "Name": "Midi Fadester フェーダー (オプション)",
@@ -104,9 +104,9 @@
     "errorMediaChoose": "Playlister を選択",
     "errorMediaMissing": "選択した Playlister は現在 OBS にありません。",
     "errorMediaWrongKind": "「{input}」は Playlister ソースではありません。",
-    "errorMediaUnsupported": "この OBS WebSocket にはメディア操作がありません。OBS を更新してください。",
-    "errorMediaBusy": "Playlister は処理中です。待機中の操作をお待ちください。",
-    "errorMediaPending": "再生または一時停止がまだ保留中です。",
+    "errorMediaUnsupported": "OBS WebSocket がメディア操作に未対応です。OBS を更新してください。",
+    "errorMediaBusy": "Playlister は処理中です。待機中の操作が完了するまでお待ちください。",
+    "errorMediaPending": "再生 / 一時停止を処理中です。",
     "errorMediaChanging": "Playlister は読み込み中です。もう一度お試しください。",
     "errorMediaAmbiguous": "Playlister の状態が不明です。先に停止を押してください。",
     "plOpPrevious": "前へ",
@@ -115,8 +115,8 @@
     "plOpStop": "停止",
     "plOpRestart": "最初から再生",
     "plOpStatus": "状態",
-    "plMissing": "Playlister がありません",
-    "plWrongKind": "Playlister ではありません",
+    "plMissing": "Playlister なし",
+    "plWrongKind": "Playlister 以外",
     "plUnsupported": "OBS を更新",
     "mediaStateNone": "空",
     "mediaStatePlaying": "再生中",
@@ -130,7 +130,7 @@
     "mediaTime": "{state} {cursor}/{duration}",
     "mediaPendingPlay": "再生を送信",
     "mediaPendingPause": "一時停止を送信",
-    "mediaUnconfirmed": "送信済み・状態未確認",
+    "mediaUnconfirmed": "送信済・未確認",
     "mediaBusy": "処理中",
     "layerErrorConnectAndChoose": "OBS に接続してソースを選んでください。",
     "layerErrorCollectionChanging": "シーンコレクション変更中。再試行してください。",
@@ -613,10 +613,10 @@
       "plUnknownSource": "不明な Playlister",
       "plBannerChoose": "操作する Playlister ソースを選択してください。",
       "plBannerNone": "OBS に Playlister ソースがありません。先にシーンへ追加してください。",
-      "plBannerMissing": "選択した Playlister は現在 OBS にありません。ソースが再び存在すれば戻ります。別のものを選ぶこともできます。",
+      "plBannerMissing": "選択した Playlister は現在 OBS にありません。削除されたか、別のシーンコレクションにあります。Playlister を選び直してください。",
       "plBannerWrongKind": "選択したソースは Playlister ではありません。Playlister ソースを選択してください。",
-      "plBannerUnsupported": "この OBS WebSocket にはメディア要求（GetMediaInputStatus、TriggerMediaInputAction）がありません。OBS を更新してください。",
-      "plNote": "「状態のみ」は状態を表示するだけです。「再生 / 一時停止」は観測した状態から切り替えます。「停止」はまずその Playlister の未送信の操作を破棄します。Playlister が利用できない間は何も送信しません。"
+      "plBannerUnsupported": "この OBS WebSocket はメディアリクエスト（GetMediaInputStatus、TriggerMediaInputAction）に対応していません。OBS を更新してください。",
+      "plNote": "「状態のみ」は状態を表示するだけです。「再生 / 一時停止」は観測された状態をもとに切り替えます。「停止」はまずその Playlister の未送信の操作を破棄します。Playlister が利用できない間は何も送信しません。"
     }
   }
 }

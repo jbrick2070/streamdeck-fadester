@@ -613,10 +613,10 @@
       "plUnknownSource": "Unbekannter Playlister",
       "plBannerChoose": "Wählen Sie eine Playlister-Quelle, die gesteuert werden soll.",
       "plBannerNone": "Keine Playlister-Quelle in OBS. Fügen Sie zuerst eine zu einer Szene hinzu.",
-      "plBannerMissing": "Der gewählte Playlister ist derzeit nicht in OBS. Er kehrt zurück, sobald die Quelle wieder existiert, oder wählen Sie einen anderen.",
+      "plBannerMissing": "Der gewählte Playlister ist derzeit nicht in OBS: Er wurde entfernt oder gehört zu einer anderen Szenensammlung. Wählen Sie einen Playlister.",
       "plBannerWrongKind": "Die gewählte Quelle ist kein Playlister. Wählen Sie eine Playlister-Quelle.",
-      "plBannerUnsupported": "Dieser OBS WebSocket bietet die Medienanfragen (GetMediaInputStatus, TriggerMediaInputAction) nicht. Aktualisieren Sie OBS.",
-      "plNote": "Nur Status zeigt den Zustand an. Wiedergabe / Pause schaltet ausgehend vom beobachteten Zustand um. Stopp verwirft zuerst die noch nicht gesendeten Befehle für diesen Playlister. Solange der Playlister nicht verfügbar ist, wird nichts gesendet."
+      "plBannerUnsupported": "Dieser OBS WebSocket bietet die Medienanfragen (GetMediaInputStatus, TriggerMediaInputAction) nicht an. Aktualisieren Sie OBS.",
+      "plNote": "„Nur Status“ zeigt lediglich den Zustand an. „Wiedergabe / Pause“ schaltet ausgehend vom beobachteten Zustand um. „Stopp“ verwirft zuerst die noch nicht gesendeten Befehle für diesen Playlister. Solange der Playlister nicht verfügbar ist, wird nichts gesendet."
     }
   }
 }

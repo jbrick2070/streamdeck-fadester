@@ -105,7 +105,7 @@
     "errorMediaMissing": "所选的 Playlister 当前不在 OBS 中。",
     "errorMediaWrongKind": "“{input}”不是 Playlister 源。",
     "errorMediaUnsupported": "此 OBS WebSocket 没有媒体控制。请更新 OBS。",
-    "errorMediaBusy": "Playlister 正忙，请等待排队的按键。",
+    "errorMediaBusy": "Playlister 正忙，请等待排队的按键操作完成。",
     "errorMediaPending": "播放或暂停仍在等待中。",
     "errorMediaChanging": "Playlister 正在打开媒体，请重试。",
     "errorMediaAmbiguous": "Playlister 状态不明，请先按停止。",
@@ -130,7 +130,7 @@
     "mediaTime": "{state} {cursor}/{duration}",
     "mediaPendingPlay": "已发送播放",
     "mediaPendingPause": "已发送暂停",
-    "mediaUnconfirmed": "已发送，状态未确认",
+    "mediaUnconfirmed": "已发送，未确认",
     "mediaBusy": "忙碌",
     "layerErrorConnectAndChoose": "请连接 OBS 并选择源。",
     "layerErrorCollectionChanging": "OBS 场景集合正在更改。请重试。",
@@ -612,11 +612,11 @@
       "plChooseSource": "选择 Playlister",
       "plUnknownSource": "未知的 Playlister",
       "plBannerChoose": "请选择要控制的 Playlister 源。",
-      "plBannerNone": "OBS 中没有 Playlister 源。请先将其添加到场景。",
-      "plBannerMissing": "所选的 Playlister 当前不在 OBS 中。源再次存在时会恢复，或另选一个。",
+      "plBannerNone": "OBS 中没有 Playlister 源。请先在场景中添加一个。",
+      "plBannerMissing": "所选的 Playlister 当前不在 OBS 中：它已被删除，或位于另一个场景集合中。请重新选择 Playlister。",
       "plBannerWrongKind": "所选源不是 Playlister。请选择 Playlister 源。",
       "plBannerUnsupported": "此 OBS WebSocket 不提供媒体请求（GetMediaInputStatus、TriggerMediaInputAction）。请更新 OBS。",
-      "plNote": "“仅状态”只显示状态。“播放 / 暂停”根据观测到的状态切换。“停止”会先丢弃该 Playlister 尚未发送的按键。Playlister 不可用时不会发送任何内容。"
+      "plNote": "“仅状态”只显示状态。“播放 / 暂停”根据观测到的状态切换。“停止”会先丢弃该 Playlister 尚未发送的按键操作。Playlister 不可用时不会发送任何内容。"
     }
   }
 }

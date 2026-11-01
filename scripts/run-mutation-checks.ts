@@ -399,6 +399,16 @@ const MUTATIONS: MutationCheck[] = [
     target: 'return (input.unversionedInputKind || String(input.inputKind || "").replace(/_v\\d+$/, "")) === "obs_playlister_source";',
     mutated: "return true;",
     testFile: "tests/playlister-inspector.test.ts"
+  },
+  {
+    id: "M-9.6a",
+    step: "Step 9.6 (Playlister transport texts: the state word follows the language)",
+    description:
+      "Draw the English state word whatever the language (the key name without its prefix), and verify playlister-transport.test.ts fails on the German deck",
+    filePath: resolve(ROOT, "src/actions/playlister-transport-key.ts"),
+    target: "const word = t(STATE_WORDS[state.mediaState]);",
+    mutated: 'const word = String(STATE_WORDS[state.mediaState]).replace("mediaState", "");',
+    testFile: "tests/playlister-transport.test.ts"
   }
 ];
 

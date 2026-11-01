@@ -107,7 +107,7 @@
     "errorMediaUnsupported": "この OBS WebSocket にはメディア操作がありません。OBS を更新してください。",
     "errorMediaBusy": "Playlister は処理中です。待機中の操作をお待ちください。",
     "errorMediaPending": "再生または一時停止がまだ保留中です。",
-    "errorMediaChanging": "Playlister は読み込み中です。再試行を。",
+    "errorMediaChanging": "Playlister は読み込み中です。もう一度お試しください。",
     "errorMediaAmbiguous": "Playlister の状態が不明です。先に停止を押してください。",
     "plOpPrevious": "前へ",
     "plOpNext": "次へ",

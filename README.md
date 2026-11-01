@@ -63,7 +63,8 @@ Chinese and Traditional Chinese (the languages Stream Deck offers). OBS's own wo
 Scene, Source, Transition) follow OBS's translation for that language, so the deck matches OBS. Your scene, source
 and filter names, and the texts Midi Fadester sends, are shown as they are. The translations were drafted by an AI
 model (Claude) and reviewed by a second one (Gemini), whose corrections were taken; no native speaker has checked them
-yet. If something reads wrong, please open an issue or a pull request: the files are
+yet; the texts of the Playlister Transport key are the newest drafts and still await that second review. If
+something reads wrong, please open an issue or a pull request: the files are
 `com.jbrick2070.fadester-for-obs.sdPlugin/<language>.json`, with `en.json` as the English source. (VJster's languages
 are described in `docs/vjster/INSTALL.md`.)
 

@@ -718,6 +718,24 @@ and `TriggerMediaInputAction` take `inputUuid`; `mediaDuration` and `mediaCursor
    `tests/deck-fit.test.ts` lists the new key title and subtitle (longest sample: Buffering with 59:59/59:59) so every
    language fits the 96 px subtitle; `tests/i18n-strings.test.ts:65-84` covers the new UUID. Mutation: *M-9.6a* draw
    the English state word regardless of language.
+   *As built (2026-11-01):* the texts themselves landed with the steps that use them (9.2 errors, 9.3 deck words and
+   the action's Name and Tooltip, 9.4 the inspector), because the completeness tests check all eight files at every
+   commit; this step is the polish: `errorMediaChanging` (ja) and `errorMediaBusy` (fr) reworded, the deck-fit samples
+   of 9.3 confirmed (the time is drawn only in PLAYING and PAUSED, so "Playing 2:00:00/2:00:00" and
+   "Paused 2:00:00/2:00:00" are the longest, and every language fits the 96 px subtitle), `ui/i18n.js` unchanged
+   (deck words only), M-9.6a added (it draws the key name without its prefix, English in effect, and the German render in
+   `tests/playlister-transport.test.ts` kills it; M-9.3b shares the line and is killed by the English "Stopped"),
+   README's Languages paragraph says the Playlister texts still await the second review. The 48 new keys for that
+   review: deck `errorMediaChoose`, `errorMediaMissing`, `errorMediaWrongKind`, `errorMediaUnsupported`,
+   `errorMediaBusy`, `errorMediaPending`, `errorMediaChanging`, `errorMediaAmbiguous`, `plOpPrevious`, `plOpNext`,
+   `plOpPlayPause`, `plOpStop`, `plOpRestart`, `plOpStatus`, `plMissing`, `plWrongKind`, `plUnsupported`,
+   `mediaStateNone` to `mediaStateUnknown` (nine), `mediaTime`, `mediaPendingPlay`, `mediaPendingPause`,
+   `mediaUnconfirmed`, `mediaBusy`; inspector `pi.plHeading`, `plIntro`, `plSource`, `plOptPrevious`, `plOptNext`,
+   `plOptPlayPause`, `plOptStop`, `plOptRestart`, `plOptStatus`, `plChooseSource`, `plUnknownSource`,
+   `plBannerChoose`, `plBannerNone`, `plBannerMissing`, `plBannerWrongKind`, `plBannerUnsupported`, `plNote`; and
+   the action `com.jbrick2070.fadester-for-obs.playlister-transport` Name and Tooltip. Reviewer notes: German
+   "Läuft" and Spanish "En curso" for Playing are width choices; Japanese "最初から再生" for Restart departs from
+   OBS's "再開" on purpose; "Status" is the same word in German.
 7. **Step 9.7 -- Acceptance.** Full suite, `npm run test:mutation` (M-9.1a..M-9.6a killed), `npm run validate`,
    `npm run build`, package. Real-OBS run, by the operator, in the portable OBS 33 with Playlister 0.5.0
    (`C:\Users\jeffr\OBS-Studio-33-Portable\plugins\obs-playlister\obs-playlister.dll`; the conformance runner's own

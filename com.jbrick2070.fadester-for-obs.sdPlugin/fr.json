@@ -105,7 +105,7 @@
     "errorMediaMissing": "Le Playlister choisi n’est pas dans OBS actuellement.",
     "errorMediaWrongKind": "« {input} » n’est pas une source Playlister.",
     "errorMediaUnsupported": "OBS WebSocket n’offre pas le contrôle des médias ici. Mettez OBS à jour.",
-    "errorMediaBusy": "Playlister est occupé ; attendez les pressions en file.",
+    "errorMediaBusy": "Playlister est occupé ; patientez, des appuis sont en attente.",
     "errorMediaPending": "Lecture ou pause encore en attente.",
     "errorMediaChanging": "Playlister ouvre un média ; réessayez.",
     "errorMediaAmbiguous": "L’état de Playlister est incertain ; appuyez d’abord sur Arrêter.",

@@ -358,5 +358,12 @@ class BuildMedia(unittest.TestCase):
             self.assertEqual(kit.stray_files(out, manifest), [])
 
 
+class CollectionFiles(unittest.TestCase):
+    def test_the_collection_points_at_exactly_what_the_media_step_ships(self):
+        made = {f"media/{n}" for n in [*kit.LOOPS, "kit-beat.ogg", "kit-title.png"]}
+        made |= {f"media/{c['out']}" for c in kit.STOCK_CLIPS if c["shipped"]}
+        self.assertEqual(set(kit.kc.MEDIA_FILES), made)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)

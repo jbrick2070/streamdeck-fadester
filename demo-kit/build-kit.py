@@ -2,9 +2,19 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 """Suite Demo Kit builder.
 
-Step 1 (this file today): the kit's media, written into a build folder.
+Step 1: the kit's media, written into a build folder.
 
     python demo-kit/build-kit.py media [--out demo-kit/build] [--stock <folder>] [--with-spare]
+
+Step 2: the scene collection (kit_collection.py, kit_obs.py; see their docstrings).
+
+    python demo-kit/build-kit.py roundtrip --obs <fresh portable folder> [--out demo-kit/build]
+    python demo-kit/build-kit.py check-collection
+
+roundtrip writes the draft collection from kit-ids.json, loads it in a fresh portable OBS 33
+assembled read-only in --obs (under the OBS lock), lets OBS save it, and writes the result
+with ./ paths as kit-template.json; the diff and OBS's log go to <out>/roundtrip/.
+check-collection checks the committed kit-ids.json and kit-template.json without OBS.
 
 What it makes, all 1280x720, 30 fps where it is video:
 
@@ -63,6 +73,10 @@ from pathlib import Path
 import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont, __version__ as PIL_VERSION
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import kit_collection as kc  # noqa: E402
+import kit_obs  # noqa: E402
 
 KIT_DIR = Path(__file__).resolve().parent
 DEFAULT_OUT = KIT_DIR / "build"
@@ -577,6 +591,18 @@ def stray_files(out: Path, manifest: dict) -> list[str]:
                   if p.is_file() and f"media/{p.name}" not in listed)
 
 
+def check_collection(template_path: Path) -> int:
+    ids = kc.load_ids()
+    problems = kc.ids_problems(ids)
+    template = json.loads(template_path.read_text(encoding="utf-8"))
+    problems += kc.check_template(template, ids)
+    for line in problems:
+        print(f"build-kit: {line}", file=sys.stderr)
+    if not problems:
+        print(f"{template_path.name}: {len(template['sources'])} sources, fixed UUIDs, ./ paths: ok")
+    return 1 if problems else 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Build the Suite Demo Kit.")
     sub = parser.add_subparsers(dest="step", required=True)
@@ -584,7 +610,24 @@ def main(argv: list[str] | None = None) -> int:
     media.add_argument("--out", type=Path, default=DEFAULT_OUT)
     media.add_argument("--stock", type=Path, default=DEFAULT_STOCK)
     media.add_argument("--with-spare", action="store_true", help="also cut the spare marathon clip")
+    check = sub.add_parser("check-collection", help="check kit-ids.json and kit-template.json")
+    check.add_argument("--template", type=Path, default=kc.TEMPLATE_PATH)
+    trip = sub.add_parser("roundtrip", help="load the draft collection in a fresh portable OBS 33, save it, "
+                                            "and write kit-template.json")
+    trip.add_argument("--obs", type=Path, required=True, help="the fresh portable's folder (made if absent)")
+    trip.add_argument("--out", type=Path, default=DEFAULT_OUT, help="the build folder holding media/")
+    trip.add_argument("--core", type=Path, default=kit_obs.DEFAULT_CORE, help="official OBS 33 portable tree")
+    trip.add_argument("--lock", type=Path, default=kit_obs.DEFAULT_LOCK)
+    trip.add_argument("--template", type=Path, default=kc.TEMPLATE_PATH)
     args = parser.parse_args(argv)
+    if args.step == "check-collection":
+        return check_collection(args.template)
+    if args.step == "roundtrip":
+        report = kit_obs.roundtrip(args.obs.resolve(), args.out.resolve(), args.template,
+                                   lock=args.lock, core=args.core, setup_card=KIT_DIR / kc.SETUP_CARD)
+        print(f"round-trip: {len(report['added'])} keys added by OBS, none of the draft's values changed; "
+              f"wrote {args.template}")
+        return check_collection(args.template)
     cv2.setNumThreads(1)
     try:
         manifest = build_media(args.out, args.stock, args.with_spare)

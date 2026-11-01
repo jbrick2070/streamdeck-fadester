@@ -999,6 +999,276 @@ const MUTATIONS: MutationCheck[] = [
     target: "if p.is_file() and f\"media/{p.name}\" not in listed)",
     mutated: "if False)",
     testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K2.1",
+    step: "Demo kit step 2 (collection UUIDs are v4-format)",
+    description:
+      "Leave the version nibble unset and verify the UUID tests fail",
+    filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
+    target: "raw[6] = (raw[6] & 0x0F) | 0x40",
+    mutated: "raw[6] = raw[6]",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.2",
+    step: "Demo kit step 2 (kit-ids.json UUIDs follow the rule)",
+    description:
+      "Skip the UUID rule check and verify the problems test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
+    target: "if uuid != kit_uuid(seed):",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.3",
+    step: "Demo kit step 2 (Kit Beat writes monitoring_enabled)",
+    description:
+      "Write monitoring_enabled false and verify the beat and template tests fail",
+    filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
+    target: "\"monitoring_enabled\": monitoring_type != 0}",
+    mutated: "\"monitoring_enabled\": False}",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.4",
+    step: "Demo kit step 2 (Playlister resume state is dropped)",
+    description:
+      "Keep the resume keys and verify the normalise tests fail",
+    filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
+    target: "source.get(\"settings\", {}).pop(key, None)",
+    mutated: "pass",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.5",
+    step: "Demo kit step 2 (no round-trip path survives normalise)",
+    description:
+      "Accept the round-trip folder inside a string and verify the refusal test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
+    target: "if root_l in flat.lower():",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.6",
+    step: "Demo kit step 2 (the round-trip diff names changed values)",
+    description:
+      "Report no changed value and verify the diff tests fail",
+    filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
+    target: "if not _same(d, s):",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.7",
+    step: "Demo kit step 2 (booleans are not numbers in the diff)",
+    description:
+      "Compare booleans by value and verify the boolean test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
+    target: "return a is b",
+    mutated: "return a == b",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.8",
+    step: "Demo kit step 2 (the template keeps the kit's source UUIDs)",
+    description:
+      "Skip the template UUID check and verify the UUID test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
+    target: "if saved.get(\"uuid\") != entry[\"uuid\"]:",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.9",
+    step: "Demo kit step 2 (the template has no absolute path)",
+    description:
+      "Skip the absolute-path check and verify the path tests fail",
+    filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
+    target: "if ABSOLUTE.search(text) and not text.startswith((\"http://\", \"https://\")):",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.10",
+    step: "Demo kit step 2 (scene items point at their own source)",
+    description:
+      "Skip the item UUID check and verify the item test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
+    target: "if item.get(\"source_uuid\") != by_name.get(item.get(\"name\"), {}).get(\"uuid\"):",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.11",
+    step: "Demo kit step 2 (the 50 % copy has one row)",
+    description:
+      "Give Kit Clips 50% all three rows and verify the Playlister and template tests fail",
+    filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
+    target: "\"Kit Clips 50%\": {\"playlist\": _playlist(\"hurdles\"),",
+    mutated: "\"Kit Clips 50%\": {\"playlist\": _playlist(\"hurdles\", \"sprint\", \"train\"),",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.12",
+    step: "Demo kit step 2 (the template is written as UTF-8 text)",
+    description:
+      "Escape non-ASCII and verify the dump and committed-template tests fail",
+    filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
+    target: "json.dumps(data, indent=4, ensure_ascii=False)",
+    mutated: "json.dumps(data, indent=4, ensure_ascii=True)",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.13",
+    step: "Demo kit step 2 (the OBS lock is created exclusively)",
+    description:
+      "Open the lock without O_EXCL and verify the existing-lock test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_obs.py"),
+    target: "os.O_CREAT | os.O_EXCL | os.O_WRONLY",
+    mutated: "os.O_CREAT | os.O_WRONLY",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.14",
+    step: "Demo kit step 2 (tasklist is checked before the lock)",
+    description:
+      "Skip the obs64 check before the lock and verify the running-OBS test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_obs.py"),
+    target: "    if pids():\n        raise LockBusy(\"an obs64 is running\")",
+    mutated: "    if False:\n        raise LockBusy(\"an obs64 is running\")",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.15",
+    step: "Demo kit step 2 (only our own lock is deleted)",
+    description:
+      "Delete a lock that holds another token and verify the other-lock test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_obs.py"),
+    target: "if lock.read_text(encoding=\"utf-8\").strip() != token:",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.16",
+    step: "Demo kit step 2 (a copied OBS tree must match its source)",
+    description:
+      "Skip the hash comparison and verify the differing-copy test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_obs.py"),
+    target: "if want != got:",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.17",
+    step: "Demo kit step 2 (config OBS rewrote is kept)",
+    description:
+      "Always rewrite config and verify the second-run test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_obs.py"),
+    target: "if not path.exists():\n        path.parent.mkdir(parents=True, exist_ok=True)",
+    mutated: "if True:\n        path.parent.mkdir(parents=True, exist_ok=True)",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.18",
+    step: "Demo kit step 2 (an earlier scene file is kept aside, never replaced)",
+    description:
+      "Always use the first run number and verify the keep-aside test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_obs.py"),
+    target: "while path.with_name(f\"{path.name}.run{n}\").exists():",
+    mutated: "while False:",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.19",
+    step: "Demo kit step 2 (the template proves both plugins loaded)",
+    description:
+      "Skip the plugin-written keys check and verify the plugin test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
+    target: "            if lacking:\n",
+    mutated: "            if False:\n",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.20",
+    step: "Demo kit step 2 (every kit-ids.json filter has its settings)",
+    description:
+      "Skip the FILTERS coverage check and verify the coverage test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
+    target: "if seed not in FILTERS:",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.21",
+    step: "Demo kit step 2 (every scene item has its layout)",
+    description:
+      "Skip the LAYOUT coverage check and verify the coverage test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
+    target: "if item[\"source\"] not in layout:",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.22",
+    step: "Demo kit step 2 (a file: URL is an absolute path)",
+    description:
+      "Drop the file: alternative and verify the file-URL test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
+    target: "|(?i:file:/)\")",
+    mutated: "\")",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.23",
+    step: "Demo kit step 2 (the OBS log must show both plugins loaded)",
+    description:
+      "Skip the loaded-line check and verify the missing-plugin log test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_obs.py"),
+    target: "if not any(f\"[{name}{LOADED_LINE}\" in line for line in lines)]",
+    mutated: "if False]",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.24",
+    step: "Demo kit step 2 (the lock is released when OBS fails)",
+    description:
+      "Never release the lock in the round-trip and verify the release test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_obs.py"),
+    target: "\"released\": release_lock(lock, token)",
+    mutated: "\"released\": False",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.25",
+    step: "Demo kit step 2 (an OBS that ignores WM_CLOSE is killed and logged)",
+    description:
+      "Skip the taskkill and verify the no-exit test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_obs.py"),
+    target: "subprocess.run([\"taskkill\", \"/PID\", str(proc.pid), \"/T\", \"/F\"], capture_output=True)",
+    mutated: "pass",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.26",
+    step: "Demo kit step 2 (placed media must match the media manifest)",
+    description:
+      "Skip the manifest sha1 check and verify the manifest test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_obs.py"),
+    target: "if hashlib.sha1(source.read_bytes()).hexdigest() != entry[\"sha1\"]:",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-collection.test.ts"
+  },
+  {
+    id: "M-K2.27",
+    step: "Demo kit step 2 (a differing placed file is never overwritten)",
+    description:
+      "Overwrite a differing target and verify the differing-target test fails",
+    filePath: resolve(ROOT, "demo-kit/kit_obs.py"),
+    target: "if not target.exists():\n            shutil.copy2(source, target)\n        elif sha256_of(target) != sha256_of(source):",
+    mutated: "if True:\n            shutil.copy2(source, target)\n        elif False:",
+    testFile: "tests/demo-kit-collection.test.ts"
   }
 ];
 

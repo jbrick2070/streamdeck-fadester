@@ -1,0 +1,264 @@
+{
+  "kit": "Suite Demo Kit",
+  "version": "1.0",
+  "collection": "Suite Demo Kit",
+  "about": "The single source of truth for the kit's names, kinds and fixed UUIDs (plan section 5). The Stream Deck profiles bind to these: scenes by __scene_index_N__ (their position here), Playlister keys by source uuid, filter keys by source uuid + filter name + filter kind (versioned_id), layer keys by scene name + item id. uuid = sha256('suite-demo-kit:' + seed)[:16] with the RFC 4122 version 4 and variant bits; the seed is the name, or '<source>/<filter>' for a filter. demo-kit/kit_collection.py checks this file against that rule.",
+  "do_not_rename": [
+    "Kit Beat",
+    "Look Prism",
+    "Look Kaleido",
+    "Look Pulse",
+    "Layer Fade"
+  ],
+  "scenes": [
+    {
+      "index": 0,
+      "name": "Kit Welcome",
+      "uuid": "4064b7fc-0303-447b-9944-5417dbc62f42",
+      "items": [
+        {
+          "id": 1,
+          "source": "Kit Background"
+        },
+        {
+          "id": 2,
+          "source": "Kit Title"
+        },
+        {
+          "id": 3,
+          "source": "Kit Note"
+        },
+        {
+          "id": 4,
+          "source": "Kit Credits"
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "name": "Kit Visuals",
+      "uuid": "e692031a-1bb1-4a33-b238-4461b4045676",
+      "items": [
+        {
+          "id": 1,
+          "source": "Kit Motion"
+        },
+        {
+          "id": 2,
+          "source": "Kit Beat"
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "name": "Kit Layers",
+      "uuid": "4d5ec48b-49d9-4ca6-8adf-4cc9ce4f1f10",
+      "items": [
+        {
+          "id": 1,
+          "source": "Layer A"
+        },
+        {
+          "id": 2,
+          "source": "Layer B"
+        },
+        {
+          "id": 3,
+          "source": "Kit Beat"
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "name": "Kit Playlister",
+      "uuid": "dd2635df-92b6-4caa-8853-207cd0c9a712",
+      "items": [
+        {
+          "id": 1,
+          "source": "Kit Background"
+        },
+        {
+          "id": 2,
+          "source": "Kit Clips"
+        },
+        {
+          "id": 3,
+          "source": "Kit Clips 50%"
+        },
+        {
+          "id": 4,
+          "source": "Speed Note 100"
+        },
+        {
+          "id": 5,
+          "source": "Speed Note 50"
+        },
+        {
+          "id": 6,
+          "source": "Kit Credits"
+        },
+        {
+          "id": 7,
+          "source": "Kit Beat"
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "name": "Kit Speed Page",
+      "uuid": "0f79d9d5-b12a-4613-aeed-bc25b1c31764",
+      "items": [
+        {
+          "id": 1,
+          "source": "Kit Background"
+        },
+        {
+          "id": 2,
+          "source": "Speed Page"
+        },
+        {
+          "id": 3,
+          "source": "Speed Page Note"
+        },
+        {
+          "id": 4,
+          "source": "Kit Beat"
+        }
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "name": "Kit Background",
+      "id": "color_source",
+      "versioned_id": "color_source_v3",
+      "uuid": "6405dde9-797d-4d19-a4cb-a0899d153649"
+    },
+    {
+      "name": "Kit Title",
+      "id": "image_source",
+      "versioned_id": "image_source",
+      "uuid": "04e52e1a-cfb8-459a-8f87-ece3ca275016"
+    },
+    {
+      "name": "Kit Note",
+      "id": "text_gdiplus",
+      "versioned_id": "text_gdiplus_v3",
+      "uuid": "3bc7e651-0eeb-4bd4-a383-2ebd6779944d"
+    },
+    {
+      "name": "Kit Credits",
+      "id": "text_gdiplus",
+      "versioned_id": "text_gdiplus_v3",
+      "uuid": "c3d72877-c128-41fc-85ce-13ca0ce610eb"
+    },
+    {
+      "name": "Speed Note 100",
+      "id": "text_gdiplus",
+      "versioned_id": "text_gdiplus_v3",
+      "uuid": "f1468ccc-ed21-4865-b62d-77487b8b3aeb"
+    },
+    {
+      "name": "Speed Note 50",
+      "id": "text_gdiplus",
+      "versioned_id": "text_gdiplus_v3",
+      "uuid": "4b8b03cd-d547-4c7a-bdbe-df9e8b6660aa"
+    },
+    {
+      "name": "Speed Page Note",
+      "id": "text_gdiplus",
+      "versioned_id": "text_gdiplus_v3",
+      "uuid": "f53f2968-3cea-41cf-a86d-86dc19c2e07f"
+    },
+    {
+      "name": "Kit Beat",
+      "id": "ffmpeg_source",
+      "versioned_id": "ffmpeg_source",
+      "uuid": "6ed88754-daa9-4ab6-8c8f-75813d5bcfac"
+    },
+    {
+      "name": "Kit Motion",
+      "id": "ffmpeg_source",
+      "versioned_id": "ffmpeg_source",
+      "uuid": "776f244e-e982-4a71-a0ad-735d69bf5e2f",
+      "filters": [
+        {
+          "name": "Color Correction",
+          "id": "color_filter",
+          "versioned_id": "color_filter_v2",
+          "uuid": "87fb4947-2648-4ee8-b420-bbc134629f0d"
+        },
+        {
+          "name": "Look Prism",
+          "id": "visual_sidechain_shader_filter",
+          "versioned_id": "visual_sidechain_shader_filter",
+          "uuid": "bc52508d-5c49-43b6-a46a-99367fc71b82"
+        },
+        {
+          "name": "Look Kaleido",
+          "id": "visual_sidechain_shader_filter",
+          "versioned_id": "visual_sidechain_shader_filter",
+          "uuid": "d42dc652-007e-47c6-915d-fee6fafb558f"
+        },
+        {
+          "name": "Look Pulse",
+          "id": "visual_sidechain_shader_filter",
+          "versioned_id": "visual_sidechain_shader_filter",
+          "uuid": "010f9954-66ad-4a39-a6f1-d811d666c1fd"
+        },
+        {
+          "name": "Audio Modulator",
+          "id": "visual_sidechain_modulator_filter",
+          "versioned_id": "visual_sidechain_modulator_filter",
+          "uuid": "2699bb78-2531-43c2-8ec7-dcc476fdec2f"
+        }
+      ]
+    },
+    {
+      "name": "Layer A",
+      "id": "ffmpeg_source",
+      "versioned_id": "ffmpeg_source",
+      "uuid": "f0bc3ad0-214a-4445-8808-9a7bc8717e0b",
+      "filters": [
+        {
+          "name": "Layer Fade",
+          "id": "color_filter",
+          "versioned_id": "color_filter_v2",
+          "uuid": "01d52e83-bac8-462a-a89e-eeb226b685d7"
+        }
+      ]
+    },
+    {
+      "name": "Layer B",
+      "id": "ffmpeg_source",
+      "versioned_id": "ffmpeg_source",
+      "uuid": "c9434b9f-9fa9-4302-b561-2eec3a1fe947",
+      "filters": [
+        {
+          "name": "Layer Fade",
+          "id": "color_filter",
+          "versioned_id": "color_filter_v2",
+          "uuid": "f1c29b71-7282-4d5a-8936-e00967c1ffaf"
+        }
+      ]
+    },
+    {
+      "name": "Kit Clips",
+      "id": "obs_playlister_source",
+      "versioned_id": "obs_playlister_source",
+      "uuid": "7e4a69df-9d56-4d73-9dea-9673994305d0"
+    },
+    {
+      "name": "Kit Clips 50%",
+      "id": "obs_playlister_source",
+      "versioned_id": "obs_playlister_source",
+      "uuid": "ad976ab1-d3e3-4df7-a389-c99a8a428110"
+    },
+    {
+      "name": "Speed Page",
+      "id": "browser_source",
+      "versioned_id": "browser_source",
+      "uuid": "e302dc27-200f-4edf-a900-25efc5008c36"
+    }
+  ]
+}

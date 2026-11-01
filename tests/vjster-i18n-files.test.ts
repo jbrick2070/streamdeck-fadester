@@ -9,7 +9,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { EN, placeholders } from "../src/vjster/plugin/strings.js";
-import { deckLanguageFiles, localization, PLUGIN_DIR, REQUIRED } from "./vjster-languages.js";
+import { deckLanguageFiles, localization, LOCALIZATION_ONLY, PLUGIN_DIR, REQUIRED } from "./vjster-languages.js";
 
 /** Every text in a file by its path (`Localization.pi.port`), `_comment` entries left out. */
 function texts(value: unknown, path = ""): Map<string, unknown> {
@@ -24,13 +24,6 @@ function texts(value: unknown, path = ""): Map<string, unknown> {
 }
 
 const files = deckLanguageFiles();
-
-/**
- * The Language section's page texts (docs/vjster/PLAN.md 9, step L.3) are in
- * English only until step L.4 writes them in every language; this list must be
- * emptied then (the test below fails as soon as a language has one of them).
- */
-const PENDING_UNTIL_L4 = ["languageHeading", "languageBadge", "languageAuto", "languageNote"].map((k) => `Localization\u0000pi\u0000${k}`);
 const en = files.find((f) => f.lang === "en");
 const manifest = JSON.parse(readFileSync(join(PLUGIN_DIR, "manifest.json"), "utf8")) as {
   Name: string;
@@ -62,9 +55,9 @@ describe("Stream Deck language files (R-I18N-5)", () => {
       expect(Buffer.from(f.bytes.toString("utf8"), "utf8").equals(f.bytes)).toBe(true);
       const mine = texts(f.json);
       const english = texts(en!.json);
-      const pending = f.lang === "en" ? [] : PENDING_UNTIL_L4;
-      for (const path of pending) expect(mine.has(path), `${f.lang}: ${path.split("\u0000").join(".")} arrived: drop it from PENDING_UNTIL_L4`).toBe(false);
-      expect([...mine.keys()].sort()).toEqual([...english.keys()].filter((p) => !pending.includes(p)).sort());
+      // A language the Stream Deck app does not read has the Localization texts only (D-L4).
+      const wanted = [...english.keys()].filter((p) => !LOCALIZATION_ONLY.includes(f.lang) || p.startsWith("Localization\u0000"));
+      expect([...mine.keys()].sort()).toEqual(wanted.sort());
       for (const [path, text] of mine) {
         const label = `${f.lang}: ${path.split("\u0000").join(".")}`;
         expect(typeof text, label).toBe("string");
@@ -79,8 +72,11 @@ describe("Stream Deck language files (R-I18N-5)", () => {
         const entry = f.json[a.UUID] as { Name?: string } | undefined;
         expect(String(entry?.Name ?? "").toLowerCase(), `${f.lang} ${a.UUID}`).not.toMatch(/obs|youtube|google/);
       }
-      expect(f.json.Name).toBe("VJster");
-      expect(f.json.Category).toBe("VJster");
+      if (LOCALIZATION_ONLY.includes(f.lang)) expect(Object.keys(f.json)).toEqual(["Localization"]);
+      else {
+        expect(f.json.Name).toBe("VJster");
+        expect(f.json.Category).toBe("VJster");
+      }
       for (const path of texts(localization(f)).keys()) expect(path).not.toContain(".");
     });
   }

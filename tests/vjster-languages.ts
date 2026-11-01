@@ -17,17 +17,24 @@ export const PLUGIN_DIR = join(ROOT, "com.jbrick2070.vjster.sdPlugin");
  * `vjster-page/src/page-text.ts`.
  */
 export const REQUIRED = {
-  deck: ["en", "de", "es", "fr", "ja", "ko", "zh_CN", "zh_TW"],
+  deck: ["en", "de", "es", "fr", "ja", "ko", "zh_CN", "zh_TW", "nl"],
   chrome: ["en", "de", "es", "fr", "ja", "ko", "pt_BR", "ru", "tr", "zh_CN", "zh_TW"],
   page: ["en", "de", "es", "fr", "ja", "ko", "pt_BR", "ru", "tr", "zh_CN", "zh_TW"]
 } as const;
 
 /** The languages each part will have once all are written (R-I18N-3); not checked, only listed. */
 export const PLANNED = {
-  deck: ["en", "de", "es", "fr", "ja", "ko", "zh_CN", "zh_TW"],
+  deck: ["en", "de", "es", "fr", "ja", "ko", "zh_CN", "zh_TW", "nl"],
   chrome: ["en", "de", "es", "fr", "ja", "ko", "pt_BR", "ru", "tr", "zh_CN", "zh_TW"],
   page: ["en", "de", "es", "fr", "ja", "ko", "pt_BR", "ru", "tr", "zh_CN", "zh_TW"]
 } as const;
+
+/**
+ * Deck languages the Stream Deck app does not read: their file has `Localization` only (deck words and page texts),
+ * because the app shows its own action list and plugin texts (PLAN.md 11.2, D-L4). Dutch gets its manifest texts in
+ * step L.7.
+ */
+export const LOCALIZATION_ONLY: readonly string[] = ["nl"];
 
 /** A Stream Deck language file name: `de.json`, `zh_CN.json`. */
 const DECK_FILE = /^([a-z]{2})(_[A-Z]{2})?\.json$/;

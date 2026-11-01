@@ -73,11 +73,12 @@ describe("the Language section (R-LANG-1, R-LANG-6)", () => {
     expect(page.byId("save-global").textContent).toBe("Verbindung speichern");
   });
 
-  it("takes Dutch as the page language, English until it has a Dutch table", () => {
+  it("takes Dutch as the page language, from nl.json's page table", () => {
     const page = loadPage("de", "pin");
     page.toPage({ event: "language", choice: "nl", resolved: "nl" });
     expect(page.root.getAttribute("lang")).toBe("nl");
-    expect(page.byId("save-global").textContent).toBe(tables.nl ? tables.nl.pi.saveLink : "Save link settings");
+    expect(tables.nl?.pi.saveLink).toBe("Verbinding opslaan");
+    expect(page.byId("save-global").textContent).toBe("Verbinding opslaan");
   });
 
   it("ignores a resolved language that is not one of the nine", () => {

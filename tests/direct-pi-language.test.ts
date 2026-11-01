@@ -16,6 +16,7 @@ const MEMORY_KEY = "fadester:resolvedLanguage";
 const ENDONYMS = ["English", "Deutsch", "Español", "Français", "日本語", "한국어", "简体中文", "繁體中文", "Nederlands"];
 const en = readLanguageFile("en").Localization.pi as Record<string, string>;
 const de = readLanguageFile("de").Localization.pi as Record<string, string>;
+const nl = readLanguageFile("nl").Localization.pi as Record<string, string>;
 
 class FakeSocket {
   public static readonly OPEN = 1;
@@ -88,12 +89,12 @@ function state(language: { choice: unknown; resolved: unknown } | undefined, ext
 }
 
 /**
- * Every English page text still shown that German has its own word for: the
- * elements' own text, placeholders and labels. Values with placeholders never
- * match, so this covers whole texts only.
+ * Every English page text still shown that the target language (German unless
+ * named) has its own word for: the elements' own text, placeholders and labels.
+ * Values with placeholders never match, so this covers whole texts only.
  */
-function englishLeft(document: MiniDocument): string[] {
-  const english = new Set(Object.keys(en).filter((key) => de[key] && de[key] !== en[key]).map((key) => en[key]));
+function englishLeft(document: MiniDocument, target: Record<string, string> = de): string[] {
+  const english = new Set(Object.keys(en).filter((key) => target[key] && target[key] !== en[key]).map((key) => en[key]));
   const shown: string[] = [];
   for (const element of document.documentElement.descendants()) {
     if (element.tag === "script" || element.tag === "style") continue;
@@ -132,7 +133,9 @@ describe("the direct pages' Language section (R-LANG-1, R-LANG-6)", () => {
   it("the endonyms are never translated", () => {
     const h = openPage("obs-fade-key.html");
     h.receive(state({ choice: "de", resolved: "de" }));
-    expect(h.byId("direct-language").options.map((option) => option.textContent)).toEqual([de.languageAuto ?? en.languageAuto, ...ENDONYMS]);
+    // Since step L.4 German has its own Automatic text.
+    expect(de.languageAuto).toBe("Automatisch (Sprache von Stream Deck)");
+    expect(h.byId("direct-language").options.map((option) => option.textContent)).toEqual([de.languageAuto, ...ENDONYMS]);
   });
 });
 
@@ -200,13 +203,27 @@ describe("a Language change (R-LANG-4)", () => {
     expect(h.byId("direct-conn-hint").textContent).toBe(de.connHintSaved);
   });
 
-  it("refills into a language without a page table in English, with its own <html lang>", () => {
+  it.each(DIRECT_PAGES)("%s refills every text, static and drawn, into Dutch (step L.4)", (page) => {
+    const h = openPage(page);
+    h.receive(state({ choice: "auto", resolved: "en" }));
+    expect(englishLeft(h.document, nl).length).toBeGreaterThan(0);
+    h.receive(state({ choice: "nl", resolved: "nl" }));
+    expect(englishLeft(h.document, nl)).toEqual([]);
+    expect(h.byId("direct-conn-summary").textContent).toBe(nl.connEdit);
+    expect(h.byId("direct-conn-hint").textContent).toBe(nl.connHintSaved);
+  });
+
+  it("refills into Dutch from nl.json's page table, with its own <html lang>", () => {
     const h = openPage("obs-fade-key.html", { appLanguage: "de" });
     h.receive(state({ choice: "nl", resolved: "nl" }));
     expect(h.i18n.language()).toBe("nl");
     expect(h.document.documentElement.lang).toBe("nl");
-    expect(headings(h.document)).toContain(`${en.connHeading} ${en.scopeAllControls}`);
+    expect(headings(h.document)).toContain(`${nl.connHeading} ${nl.scopeAllControls}`);
+    expect(headings(h.document)).toContain(`${nl.languageHeading} ${nl.scopeAllControls}`);
+    expect(h.byId("direct-language-note").textContent).toBe(nl.languageNote);
     expect(h.byId("direct-language").value).toBe("nl");
+    // The select's Automatic is worded, the nine endonyms are not.
+    expect(h.byId("direct-language").options.map((option) => option.textContent)).toEqual([nl.languageAuto, ...ENDONYMS]);
   });
 
   it("keeps a result banner when the language stays the same", () => {

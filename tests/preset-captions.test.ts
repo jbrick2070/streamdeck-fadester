@@ -136,7 +136,21 @@ describe("bundled profile captions (R-I18N-2)", () => {
   });
 });
 
-describe("a German deck shows no stored English caption", () => {
+// Each translated deck draws its own words for the shipped captions: German, and Dutch since step L.4 (PLAN.md 11.3).
+// `same` lists the captions whose word is the same in that language (the key draws the translation, which reads like
+// the stored English); `operations` the unbound Playlister keys' titles and `choose` their hint.
+const CAPTION_LANGUAGES = [
+  {
+    name: "German", language: "de", same: ["Status"], choose: "Playlister wählen",
+    operations: { previous: "Zurück", next: "Weiter", playpause: "Wiedergabe / Pause", stop: "Stopp", restart: "Neu starten", status: "Status" }
+  },
+  {
+    name: "Dutch", language: "nl", same: ["Status"], choose: "Kies een Playlister",
+    operations: { previous: "Vorige", next: "Volgende", playpause: "Afspelen / pauzeren", stop: "Stoppen", restart: "Herstarten", status: "Status" }
+  }
+] as const;
+
+describe.each(CAPTION_LANGUAGES)("a $name deck shows no stored English caption", ({ language, same, choose, operations }) => {
   let server: FakeObsServer;
   let client: DirectObsClient;
   let layers: LayerController;
@@ -159,7 +173,7 @@ describe("a German deck shows no stored English caption", () => {
     layers = new LayerController(client);
     filters = new FilterController(client);
     safety = new VisualSafety(client, filters);
-    setLanguage("de", deckTable("de"));
+    setLanguage(language, deckTable(language));
   });
 
   afterAll(async () => {
@@ -170,11 +184,8 @@ describe("a German deck shows no stored English caption", () => {
 
   const distinct = [...new Map(assignments.map((entry) =>
     [JSON.stringify([entry.kind, entry.controller, entry.label, entry.settings]), entry])).values()];
-  // Captions whose German word is the same word: the key draws the translation, which reads like the stored English.
-  const SAME_IN_GERMAN = new Set(["Status"]);
-  const germanOperationWords: Record<string, string> = {
-    previous: "Zurück", next: "Weiter", playpause: "Wiedergabe / Pause", stop: "Stopp", restart: "Neu starten", status: "Status"
-  };
+  const sameWord = new Set<string>(same);
+  const operationWords: Record<string, string> = operations;
 
   it.each(distinct.map((entry) => [entry.label, entry.kind, entry.controller, entry] as const))(
     "%s (%s %s)", (label, kind, controller, entry) => {
@@ -188,7 +199,7 @@ describe("a German deck shows no stored English caption", () => {
       else if (kind === "fader") control = new ObsFaderDialInstanceController(client, { setFeedback: (feedback) => sink(feedback.canvas), showAlert: alert }, settings);
       // The Playlister keys ship unbound: the translated operation word is their title.
       else if (kind === "playlister") control = new PlaylisterTransportInstanceController(client, { setImage: sink, showAlert: alert }, settings);
-      // The rig's filter controls ship unbound; Panic and Restore draw their German words.
+      // The rig's filter controls ship unbound; Panic and Restore draw their translated words.
       else if (kind === "filter") control = new ObsFilterInstanceController(filters, { render: (svg) => { image = svg; return Promise.resolve(); }, showAlert: alert },
         controller === "Encoder", settings);
       else if (kind === "panic") control = new VisualPanicInstanceController(safety, client, { setImage: sink, showAlert: alert, showOk: alert }, settings);
@@ -198,12 +209,12 @@ describe("a German deck shows no stored English caption", () => {
       control.disappear();
       expect(image).toContain("<svg");
       // Layer dials never draw a caption, so for them this only proves nothing English slips in.
-      if (SAME_IN_GERMAN.has(label)) expect(image).toContain(`>${escapeXml(label)}<`);
+      if (sameWord.has(label)) expect(image).toContain(`>${escapeXml(label)}<`);
       else expect(image, image).not.toContain(`>${escapeXml(label)}<`);
       if (kind === "playlister") {
-        // The unbound key's title is the German operation word (in the SVG <title>, as a long one wraps), its subtitle the German hint.
-        expect(image).toContain(`<title>${escapeXml(germanOperationWords[String(entry.settings.operation)])} — `);
-        expect(image).toContain(">Playlister wählen<");
+        // The unbound key's title is the operation word (in the SVG <title>, as a long one wraps), its subtitle the hint.
+        expect(image).toContain(`<title>${escapeXml(operationWords[String(entry.settings.operation)])} — `);
+        expect(image).toContain(`>${escapeXml(choose)}<`);
       }
     });
 

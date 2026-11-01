@@ -116,7 +116,11 @@
       "copied": "Kopiert",
       "keepOn": "Verbindung aktiv halten",
       "keepOnNote": "OBS lädt die Seite nur beim Start oder wenn die Quelle aktualisiert wird, deshalb bleibt die Verbindung aktiv, solange Stream Deck läuft. Diese Option aktiviert sich automatisch, sobald sich zum ersten Mal eine OBS-Seite verbindet.",
-      "obsNote": "In OBS eine Browser-Quelle hinzufügen, Lokale Datei abwählen und diese Adresse als URL einfügen. Dann bei einer Aktion unter Steuerung OBS-Seite oder Beide wählen. Die Adresse enthält den OBS-Seiten-Schlüssel dieses Computers: nicht in Screenshots oder Chats zeigen."
+      "obsNote": "In OBS eine Browser-Quelle hinzufügen, Lokale Datei abwählen und diese Adresse als URL einfügen. Dann bei einer Aktion unter Steuerung OBS-Seite oder Beide wählen. Die Adresse enthält den OBS-Seiten-Schlüssel dieses Computers: nicht in Screenshots oder Chats zeigen.",
+      "languageHeading": "Sprache",
+      "languageBadge": "alle VJster-Steuerungen",
+      "languageAuto": "Automatisch (Sprache von Stream Deck)",
+      "languageNote": "Gilt für alle VJster-Steuerungen. Die Menüs, die Aktionsliste, die Tooltips und die Drehregler-Hinweise von Stream Deck selbst bleiben in der Sprache von Stream Deck."
     }
   }
 }

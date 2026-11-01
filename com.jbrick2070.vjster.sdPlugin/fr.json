@@ -116,7 +116,11 @@
       "copied": "Copiée",
       "keepOn": "Garder la liaison active",
       "keepOnNote": "OBS ne charge la page qu'au démarrage ou quand la source est actualisée ; la liaison reste donc active tant que Stream Deck tourne. Cette option s'active d'elle-même la première fois qu'une page OBS se connecte.",
-      "obsNote": "Dans OBS, ajoutez une source Navigateur, décochez Fichier local et collez cette adresse comme URL. Puis, dans une action, réglez Piloter sur Page OBS ou Les deux. L'adresse contient la clé de page OBS de cet ordinateur : ne la montrez ni dans des captures d'écran ni dans des chats."
+      "obsNote": "Dans OBS, ajoutez une source Navigateur, décochez Fichier local et collez cette adresse comme URL. Puis, dans une action, réglez Piloter sur Page OBS ou Les deux. L'adresse contient la clé de page OBS de cet ordinateur : ne la montrez ni dans des captures d'écran ni dans des chats.",
+      "languageHeading": "Langue",
+      "languageBadge": "tous les contrôles VJster",
+      "languageAuto": "Automatique (langue de Stream Deck)",
+      "languageNote": "S’applique à tous les contrôles VJster. Les menus, la liste des actions, les info-bulles et les indications des molettes de Stream Deck lui-même restent dans la langue de Stream Deck."
     }
   }
 }

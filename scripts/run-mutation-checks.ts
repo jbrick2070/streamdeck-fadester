@@ -1006,6 +1006,16 @@ const MUTATIONS: MutationCheck[] = [
     target: "          updateLanguage(currentState.language);\n          updateConnection(currentState);\n          refreshControls();",
     mutated: "          updateLanguage(currentState.language);\n          updateConnection(currentState);",
     testFile: "tests/direct-pi-language.test.ts"
+  },
+  {
+    id: "M-11.4a",
+    step: "Step L.4 (Dutch strings)",
+    description:
+      "Take the present languages from Stream Deck's eight again (nl.json no longer checked), and verify i18n-strings.test.ts fails",
+    filePath: resolve(ROOT, "tests/helpers/languages.ts"),
+    target: "  return PLUGIN_LANGUAGES.filter((language) => existsSync(languageFilePath(language)));",
+    mutated: "  return STREAM_DECK_LANGUAGES.filter((language) => existsSync(languageFilePath(language)));",
+    testFile: "tests/i18n-strings.test.ts"
   }
 ];
 

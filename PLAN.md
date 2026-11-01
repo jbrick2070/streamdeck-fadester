@@ -1460,6 +1460,36 @@ and OBS page (D-L7), better Chinese alias handling in VJster's Automatic.
   changed in place and every instance redrawn; the stored choice applied at connect and on every settings event; the
   plugin's saves run one at a time and every write keeps the port, the extension allow list and the language it
   omits, so a language change can never write an empty allow list; M-V-90..94 plus M-V-94a..f.
+- *L.4 (2026-11-01):* `nl.json` in both plugin folders, `Localization` only (deck and `pi`; manifest texts in L.7,
+  D-L4), every key present (Fadester 254 deck and 406 page keys, VJster 24 deck and 50 page keys plus its
+  `_comment`); the Language section's texts (`languageHeading`, `languageAuto`, `languageNote`, VJster's
+  `languageBadge` too) in all nine languages, so both `PENDING_UNTIL_L4` lists are gone; both `ui/i18n.js`
+  regenerated. **Provenance (Fadester's Dutch):** drafted by Claude Opus 5.5 from OBS 33's own Dutch terms
+  (`nl-NL.ini` of OBS, obs-transitions, obs-websocket, Visual Sidechain and obs-playlister) and reviewed by Gemini 4
+  Argon against English for meaning, OBS terms, tone and length; not yet checked by a native speaker. Terms: Studiomodus,
+  Voorbeeld/VOORBEELD, Programma, Scène, Bron, Laag, Overgang, Audiomixer, informal "je"; "Cut" kept on the switcher
+  keys, while `errorNoCutTransition` names OBS's own Dutch name of the built-in transition, "Knippen (Cut)"; blend
+  modes short on keys ("Vermenigv.", "Lichter", "Donkerder"); "Tools > WebSocket Server Instellingen" and "Toon
+  verbindingsinformatie" as OBS's Dutch menus say. The fit test shortened three key subtitles in the draft
+  (`errorDisconnected`, `vpNotLoaded`, `sceneControlFailed`). The review's eleven corrections were all taken (none broke
+  a rule): `fxDuration` "Duur (ms)", OBS's "Overgang overschrijven" in `sceneHint`, passive "gestuurd" in `fxNote`,
+  "wijzigt" for "writes" in `fxBannerDriven` and `vpNote`, "opdrachten" in `plNote`, the button's own wording in
+  `setupErrorStudio` and `pressSceneHintCombined`, VJster's `noObsPage` "versie"; and in the new note texts each
+  plugin's own word for an action (Fadester's Korean 동작, VJster's Simplified Chinese 操作). Tests:
+  `presentLanguages()` filters `PLUGIN_LANGUAGES` and `REQUIRED_LANGUAGES` has `nl`, so every language test (keys,
+  placeholders, BOM, fit, page currency) runs for Dutch; the manifest-shape test runs over `appReadLanguages()` (the
+  present languages Stream Deck reads) until L.7, and a new test checks `nl.json` holds `Localization` only and that
+  the deck reads it; VJster's `REQUIRED.deck` and `PLANNED.deck` add `nl`, its file test takes `LOCALIZATION_ONLY`
+  (`nl`) into account; the caption test runs for German and Dutch ("a Dutch deck shows no stored English caption");
+  every direct page refills into Dutch with no English text left that Dutch translates. M-11.4a as planned. Where the
+  code led: VJster's file test compared every text of the file, the manifest's included, so `nl.json` without manifest
+  texts needed the `LOCALIZATION_ONLY` list; the L.2 test "refills into a language without a page table" now refills
+  into Dutch from its own table, since every one of the nine has a table; VJster's Automatic (exact code when its
+  file exists) would now give Dutch for an app language `nl`, which Stream Deck cannot report, while Fadester's gives
+  English; `npm run validate` and `streamdeck validate` pass with the real `nl.json` in both folders (the L.1 hand
+  check, now on the real file). For L.7: the manifest-shape test goes back to `presentLanguages()` (drop the
+  `appReadLanguages()` filter), the "nl.json holds Localization only" test becomes a manifest-texts check, and VJster's
+  `LOCALIZATION_ONLY` list empties.
 
 ### 11.6 Decisions (approved by the operator 2026-11-01, every one at its recommended default)
 

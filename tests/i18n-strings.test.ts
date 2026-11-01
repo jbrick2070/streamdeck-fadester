@@ -6,6 +6,7 @@ import { join } from "node:path";
 import {
   EN,
   StringKey,
+  PLUGIN_LANGUAGES,
   STREAM_DECK_LANGUAGES,
   formatNumber,
   localeTag,
@@ -26,6 +27,7 @@ import { renderDirectDialSvg, renderDirectKeySvg } from "../src/gfx/direct-obs-r
 import {
   PLUGIN_DIR,
   REQUIRED_LANGUAGES,
+  appReadLanguages,
   deckTable,
   languageFilePath,
   presentLanguages,
@@ -41,10 +43,13 @@ function useLanguage(language: string): void {
 afterEach(() => setLanguage("en", null));
 
 describe("language files (R-I18N-5)", () => {
-  it("ships every required language, and only Stream Deck's languages", () => {
+  it("ships every required language, and only the plugin's nine languages", () => {
     const present = presentLanguages();
     for (const language of REQUIRED_LANGUAGES) expect(present, language).toContain(language);
-    for (const language of present) expect(STREAM_DECK_LANGUAGES).toContain(language);
+    for (const language of present) expect(PLUGIN_LANGUAGES).toContain(language);
+    // Dutch is one of them, though Stream Deck cannot select it (PLAN.md 11.1).
+    expect(present).toContain("nl");
+    expect(STREAM_DECK_LANGUAGES).not.toContain("nl");
   });
 
   it.each(presentLanguages())("%s.json is UTF-8 JSON without a BOM and has every deck key with English's placeholders", (language) => {
@@ -61,7 +66,7 @@ describe("language files (R-I18N-5)", () => {
     }
   });
 
-  it.each(presentLanguages())("%s.json has the plugin and every action's Stream Deck texts, in the manifest's shape", (language) => {
+  it.each(appReadLanguages())("%s.json has the plugin and every action's Stream Deck texts, in the manifest's shape", (language) => {
     const manifest = JSON.parse(readFileSync(join(PLUGIN_DIR, "manifest.json"), "utf8")) as {
       Name: string; Description: string; Category: string;
       Actions: Array<{ UUID: string; Name: string; Tooltip: string; Encoder?: { TriggerDescription?: Record<string, string> } }>;
@@ -87,6 +92,14 @@ describe("language files (R-I18N-5)", () => {
       }
     }
     if (language === "en") expect(file.Description).toBe(manifest.Description);
+  });
+
+  it("nl.json holds Localization only, its manifest texts come in step L.7 (D-L4), and the plugin reads it", () => {
+    expect(Object.keys(readLanguageFile("nl"))).toEqual(["Localization"]);
+    setLanguage("nl", readLanguageTable("nl", PLUGIN_DIR));
+    expect(t("keyReady")).toBe("Gereed");
+    expect(t("sceneOpCut")).toBe("Cut");
+    expect(t("infobarPreview", { scene: "Camera" })).toBe("VOORBEELD  Camera");
   });
 
   it("en.json holds the built-in English table exactly", () => {

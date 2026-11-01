@@ -116,7 +116,11 @@
       "copied": "已复制",
       "keepOn": "保持连接开启",
       "keepOnNote": "OBS 只在启动或刷新来源时加载页面，因此在 Stream Deck 运行期间连接会一直开启。首次有 OBS 页面连接时会自动开启。",
-      "obsNote": "在 OBS 中添加一个浏览器来源，取消勾选“本地文件”，并将此地址粘贴为其 URL。然后将某个操作的“控制对象”设为“OBS 页面”或“两者”。此地址包含这台电脑的 OBS 页面密钥：请勿在截图或聊天中展示。"
+      "obsNote": "在 OBS 中添加一个浏览器来源，取消勾选“本地文件”，并将此地址粘贴为其 URL。然后将某个操作的“控制对象”设为“OBS 页面”或“两者”。此地址包含这台电脑的 OBS 页面密钥：请勿在截图或聊天中展示。",
+      "languageHeading": "语言",
+      "languageBadge": "所有 VJster 控制",
+      "languageAuto": "自动（Stream Deck 的语言）",
+      "languageNote": "适用于所有 VJster 控制。Stream Deck 自身的菜单、操作列表、工具提示和旋钮提示仍使用 Stream Deck 的语言。"
     }
   }
 }

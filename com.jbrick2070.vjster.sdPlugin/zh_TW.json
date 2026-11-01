@@ -116,7 +116,11 @@
       "copied": "已複製",
       "keepOn": "保持連線開啟",
       "keepOnNote": "OBS 只在啟動或重新整理來源時載入頁面，因此在 Stream Deck 執行期間連線會一直開啟。此選項會在第一次有 OBS 頁面連線時自動開啟。",
-      "obsNote": "在 OBS 中新增「瀏覽器」來源，取消勾選「本機檔案」，並將此位址貼到「URL」欄位。接著將動作的「控制對象」設為「OBS 頁面」或「兩者」。此位址包含這台電腦的 OBS 頁面金鑰：請勿在螢幕截圖或聊天中顯示。"
+      "obsNote": "在 OBS 中新增「瀏覽器」來源，取消勾選「本機檔案」，並將此位址貼到「URL」欄位。接著將動作的「控制對象」設為「OBS 頁面」或「兩者」。此位址包含這台電腦的 OBS 頁面金鑰：請勿在螢幕截圖或聊天中顯示。",
+      "languageHeading": "語言",
+      "languageBadge": "所有 VJster 控制",
+      "languageAuto": "自動（Stream Deck 的語言）",
+      "languageNote": "適用於所有 VJster 控制。Stream Deck 本身的選單、動作清單、工具提示和旋鈕提示仍使用 Stream Deck 的語言。"
     }
   }
 }

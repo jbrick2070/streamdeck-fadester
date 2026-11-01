@@ -542,3 +542,11 @@ a stored non-empty list still stands, and a clear from the page reaches the plug
 list that is a string of junk is left as stored: the plugin reads it as ids that match nothing and fails closed.
 Mutations: M-V-94d now targets the port line, M-V-94f the extension box; new *M-V-94g* (typing a port writes the
 allow list), *M-V-94h* (the saver guard dropped) and *M-V-94i* (a status overwrites the focused port box).
+*L.4 (2026-11-01):* `nl.json` (`Localization` only, its provenance in `Localization._comment`: drafted by Claude
+Opus 5.5, reviewed by Gemini 4 Argon, not yet by a native speaker), with every deck and page key, and the Language
+section's four page texts in every language, so `PENDING_UNTIL_L4` is gone. Deck words: TEMPO, FX-TEMPO, KWALITEIT,
+FIJN, VASTGEZET, VASTZETTEN, SPEELT, PAUZE, VAST, RECLAME, POORT BEZET; the fit test passes. `REQUIRED.deck` and
+`PLANNED.deck` add `nl`; `LOCALIZATION_ONLY` (`tests/vjster-languages.ts`) lets the file test expect no manifest
+texts in `nl.json` until L.7. The end-to-end Dutch case and the page's Dutch case now expect the Dutch words
+("VASTZETTEN", "Verbinding opslaan"). With `nl.json` present, Automatic would give Dutch for an app language `nl`
+(the rule is the exact code when its file exists); Stream Deck cannot report `nl`, so nothing changes in practice. In L.7, `LOCALIZATION_ONLY` empties when the Dutch manifest texts land.

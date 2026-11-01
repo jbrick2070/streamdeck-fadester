@@ -87,9 +87,11 @@ describe("VJster plugin end to end, in another language", () => {
     expect(sim.globalWrites).toEqual([]);
   }, 30_000);
 
-  it("draws Dutch for a stored nl, without any write (English where nl.json has no text yet)", async () => {
+  it("draws Dutch for a stored nl, without any write", async () => {
     const sim = await run("de", sims, { language: "nl", obsToken: TOKEN });
     const dutch = deckStrings("nl", (l) => readLocalization(l, PLUGIN_DIR));
+    // nl.json is there since step L.4: the words are Dutch, not the English fallback.
+    expect([dutch.pinTab, dutch.speed]).toEqual(["VASTZETTEN", "TEMPO"]);
     await until(() => words(sim.svg("key-1-1")).includes(dutch.pinTab));
     expect(words(sim.svg("dial-0"))).toContain(dutch.speed);
     sim.pageAppeared("key-1-1");

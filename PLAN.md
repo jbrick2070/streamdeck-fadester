@@ -746,6 +746,24 @@ and `TriggerMediaInputAction` take `inputUuid`; `mediaDuration` and `mediaCursor
    restart_behavior modes; a rename (key keeps working), a delete (key says missing at once), OBS restart (keys
    recover after reconnect); live queue edits while playing; two keys on one source and six on two. Findings are
    recorded under this step before the push.
+   *Automated part (2026-11-01):* `tests/playlister-live-check.ts` (run by hand: `node --import tsx
+   tests/playlister-live-check.ts`; never inside vitest) starts the portable OBS 33 at
+   `C:\Users\jeffr\OBS-Studio-33-Portable` (`--portable --disable-updater --multi`, refusing to run while another
+   obs64 is up), connects with `DirectObsClient` using the password from obs-websocket's `config.json`, finds an
+   `obs_playlister_source` or creates "Fadester live check" in the Program scene with two local clips from
+   `C:\Users\jeffr\Documents\ComfyUI\output\otr\obs`, watches it, presses Play/pause three times, Stop, Restart, Next,
+   Previous, Stop through `mediaCommand`, logs every observed state, removes what it created and closes OBS through
+   its main window. Result on the first run (OBS 33.0.0, obs-websocket 5.6.3 reported `availableRequests` with the
+   three media requests, Playlister 0.5.0): capability `ok`; the new source loaded and played on its own (NONE, then
+   PLAYING 200/122560); Play/pause from PLAYING sent PAUSE, the intent was pending for one poll and PAUSED was
+   observed 500 ms later; from PAUSED it sent PLAY, the post-command read still saw PAUSED and released the mark (as
+   designed), PLAYING followed within 550 ms; Stop gave STOPPED with no time; Restart gave PLAYING from 440 ms; Next
+   gave one poll of PLAYING with no duration (the child reloading, duration 0 read as unknown) and then the second
+   clip (480/77400); Previous returned to the first clip (0/122560); a final Stop gave STOPPED. Every outcome was
+   `sent`, nothing was refused, no late reply landed, and OBS closed cleanly (log
+   `config\obs-studio\logs\2026-11-01 02-45-53.txt`). The by-eye part (Program output, loop and shuffle ends, the
+   empty list and a hidden source, the restart_behavior modes, rename, delete, OBS restart, live queue edits, keys on
+   two sources) stays with the operator.
 
 Where the reviewed design and today's code disagree (found while drafting, 2026-11-01): `InputRemoved` is matched by
 `inputName` only (`direct-obs-client.ts:672-674`), the design needs `inputUuid`; `GetVersion.availableRequests` is

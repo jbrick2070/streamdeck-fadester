@@ -142,5 +142,41 @@
     "keysAvailable": 8,
     "dialsUsed": 0,
     "dialsAvailable": 4
+  },
+  {
+    "slug": "plus-vj-rig",
+    "name": "Fadester — VJ Rig + (Studio Mode)",
+    "description": "Studio Mode VJ rig in four pages (Perform, Layers, Visuals, Scenes): scenes and the T-bar, Playlister clips, layers and blends, Visual Sidechain looks, mix and reactivity on the dials, and Visual Panic on the same key on every page. Next page sits bottom left. Choose each filter and Playlister in its inspector.",
+    "obsMode": "studio",
+    "deviceType": 7,
+    "file": "profiles/plus-vj-rig-v1.streamDeckProfile",
+    "pages": [
+      "Perform",
+      "Layers",
+      "Visuals",
+      "Scenes"
+    ],
+    "keysUsed": 8,
+    "keysAvailable": 8,
+    "dialsUsed": 4,
+    "dialsAvailable": 4
+  },
+  {
+    "slug": "buttons-vj-rig",
+    "name": "Fadester — VJ Rig 15 Keys (Studio Mode)",
+    "description": "Studio Mode VJ rig in four pages (Perform, Layers, Visuals, Scenes) for the 15-key deck: scenes, Playlister clips, layer fades, Visual Sidechain looks, mix and reactivity, with Restore and Panic on the same two keys on every page and Next page bottom left. Choose each filter and Playlister in its inspector.",
+    "obsMode": "studio",
+    "deviceType": 0,
+    "file": "profiles/buttons-vj-rig-v1.streamDeckProfile",
+    "pages": [
+      "Perform",
+      "Layers",
+      "Visuals",
+      "Scenes"
+    ],
+    "keysUsed": 15,
+    "keysAvailable": 15,
+    "dialsUsed": 0,
+    "dialsAvailable": 0
   }
 ]

@@ -86,7 +86,8 @@ describe("OBS Filter control", () => {
   it("toggles from a fresh read of the filter's state and draws ON or OFF", async () => {
     const { server, filters, sceneUuid, aura } = await setup();
     const key = control(filters, false, { sourceUuid: sceneUuid, filterName: "Aura", filterKind: VS_SHADER_KIND, keyOperation: "toggle", labelOverride: "Look 1" });
-    await key.waitImage((svg) => svg.includes(">Look 1<") && svg.includes(">ON<") && svg.includes('data-icon="look-on"'));
+    // "Look 1" is the rig's shipped caption, so the key draws the filter's own name.
+    await key.waitImage((svg) => svg.includes(">Aura<") && !svg.includes("Look 1") && svg.includes(">ON<") && svg.includes('data-icon="look-on"'));
     // Turned off in OBS behind the deck's back: the press reads first, so it turns the filter on.
     aura.filterEnabled = false;
     await key.controller.keyDown();

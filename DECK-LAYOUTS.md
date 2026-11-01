@@ -2,7 +2,7 @@
 
 Start with **Source Desk (Either Mode)** when you use one OBS scene containing many sources. For complete scene changes, choose **Scene Desk (Studio Mode)** or **Scene Desk (Regular Mode)** to match OBS. The separate **Creative Layer Lab (Either Mode)** adds blend and order controls for experimentation.
 
-These are real `.streamDeckProfile` downloads, ready to import as editable profiles. The [complete profile library](profiles/README.md) includes twelve layouts for Stream Deck +, 15-key Stream Deck, and Stream Deck Mini. Every profile name clearly labels its OBS mode. Opening the current starter for the first time creates its updated named profile; later opens return to that editable profile. Older profiles and their customizations remain available.
+These are real `.streamDeckProfile` downloads, ready to import as editable profiles. The [complete profile library](profiles/README.md) includes fourteen layouts for Stream Deck +, 15-key Stream Deck, and Stream Deck Mini. Every profile name clearly labels its OBS mode. Opening the current starter for the first time creates its updated named profile; later opens return to that editable profile. Older profiles and their customizations remain available.
 
 ## Source Desk + — Either Mode
 
@@ -69,6 +69,23 @@ Scene navigation follows the OBS scene list from top to bottom and updates when 
 | **Dial:** Free | **Dial:** Free | **Dial:** Free | **Dial:** Free |
 
 The keys show what OBS reports: the observed state (Playing, Paused, Stopped, Ended, Empty) with the position and duration while playing or paused, "Play sent" or "Pause sent" while a toggle waits for confirmation, and Busy when four presses are queued. Play / pause decides from a fresh reading of the state, Stop first drops presses not yet sent, and nothing is sent while the source is missing, not a Playlister, or OBS is unreachable. Status only watches.
+
+## VJ Rig — Studio Mode
+
+[Import VJ Rig +](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-vj-rig-v1.streamDeckProfile) or [VJ Rig 15 Keys](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-vj-rig-v1.streamDeckProfile). Four pages, each in its own accent: **Perform** (brass), **Layers** (teal), **Visuals** (magenta), **Scenes** (violet). Elgato's own Next page key sits bottom left and the red **PANIC** key bottom right on every page; no Cut or Transition key is ever next to Panic. Panic sends [Visual Sidechain](https://github.com/jbrick2070/visual-sidechain)'s own Panic through OBS's hotkeys at once; **Restore** needs a 0.8 s hold. Panic keys then read **PANIC SENT** until a Restore is accepted, and no Visual Sidechain filter is written from the deck meanwhile. Every filter and Playlister control ships unbound: choose the source and its filter (or the Playlister) once in its inspector.
+
+Stream Deck +, one row per page (keys top row / bottom row; dials):
+
+| Page | Keys | Dials |
+|---|---|---|
+| Perform | Transition, Prev scene, Next scene, Random scene / Next page, Play / pause, Next clip, PANIC | Scene blend (T-bar), Effect mix, Reactivity, Music |
+| Layers | Prev layer, Next layer, Show / hide, Normal blend / Next page, Prev blend, Next blend, PANIC | Select layer, Blend mode, Layer A fade, Layer B fade |
+| Visuals | Look 1, Look 2, Look 3, Restore / Next page, Still, Full react, PANIC | Mix B, React B, Mix C, React C |
+| Scenes | Transition, Scene 1, Scene 2, Scene 3 / Next page, Cut preview, Scene 4, PANIC | Scene blend, Music, Aux, Mic |
+
+15 keys (three rows each): Perform — Prev scene, Next scene, Random scene, Cut preview, Transition / Mix drop, Mix full, React −, React +, Restore / Next page, Prev clip, Play / pause, Next clip, PANIC. Layers — Prev layer, Next layer, Show / hide, Prev blend, Next blend / A fade out, A fade in, B fade out, B fade in, Restore / Next page, Music down, Music up, Normal blend, PANIC. Visuals — Look 1 to Look 5 / Still, Full react, React −, React +, Restore / Next page, Mix −, Mix +, Mix drop, PANIC. Scenes — Scene 1 to Scene 5 / Cut preview, Scene 6, Scene 7, Scene 8, Restore / Next page, Transition, Prev scene, Next scene, PANIC.
+
+The effect dials ride a Visual Sidechain Shader Filter's Effect mix or Reactivity; pressing one drops it while held and returns it on release. Look keys turn a filter on and off. The layer fades ride a **Color Correction** filter's opacity, so add one to each layer source you want to fade. Every write moves at most a tenth of the range at a time and is refused when an Audio Modulator or a fader already drives the setting.
 
 ## Mode and setup notes
 

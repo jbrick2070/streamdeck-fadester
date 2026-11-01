@@ -82,5 +82,19 @@
     "Readonly": false,
     "AutoInstall": false,
     "DontAutoSwitchWhenInstalled": true
+  },
+  {
+    "Name": "profiles/plus-vj-rig-v1",
+    "DeviceType": 7,
+    "Readonly": false,
+    "AutoInstall": false,
+    "DontAutoSwitchWhenInstalled": true
+  },
+  {
+    "Name": "profiles/buttons-vj-rig-v1",
+    "DeviceType": 0,
+    "Readonly": false,
+    "AutoInstall": false,
+    "DontAutoSwitchWhenInstalled": true
   }
 ]

@@ -659,6 +659,26 @@ const MUTATIONS: MutationCheck[] = [
     target: "!table.includes(setting) && !isDeniedSetting(setting) &&",
     mutated: "!table.includes(setting) &&",
     testFile: "tests/obs-filter-inspector.test.ts"
+  },
+  {
+    id: "M-10.6a",
+    step: "Step 10.6 (Panic on its key on every page)",
+    description:
+      "Let a rig page without Panic pass the build's check, and verify vj-rig-profiles.test.ts fails",
+    filePath: resolve(ROOT, "scripts/profile-checks.ts"),
+    target: 'if (!panic || panic.kind !== "panic" || (panic.settings.operation ?? "panic") !== "panic") {',
+    mutated: "if (false) {",
+    testFile: "tests/vj-rig-profiles.test.ts"
+  },
+  {
+    id: "M-10.6b",
+    step: "Step 10.6 (the multi-page writer)",
+    description:
+      "Write only a preset's first page, and verify vj-rig-profiles.test.ts fails",
+    filePath: resolve(ROOT, "scripts/profile-checks.ts"),
+    target: "  const pages = presetPages(preset);\n  const multi = pages.length > 1;",
+    mutated: "  const pages = presetPages(preset).slice(0, 1);\n  const multi = pages.length > 1;",
+    testFile: "tests/vj-rig-profiles.test.ts"
   }
 ];
 

@@ -1,6 +1,6 @@
 # Ready-made Fadester layouts
 
-The plugin includes twelve importable layouts for a Stream Deck +, a 15-key Stream Deck, and a Stream Deck Mini. They require Stream Deck 7.1 or later and use Fadester's direct OBS actions. Every profile name includes **Studio Mode**, **Regular Mode**, or **Either Mode**. Each profile is editable and has its own name. The current starter revision opens as an updated profile while older profiles and their customizations remain available.
+The plugin includes fourteen importable layouts for a Stream Deck +, a 15-key Stream Deck, and a Stream Deck Mini. They require Stream Deck 7.1 or later and use Fadester's direct OBS actions. Every profile name includes **Studio Mode**, **Regular Mode**, or **Either Mode**. Each profile is editable and has its own name. The current starter revision opens as an updated profile while older profiles and their customizations remain available.
 
 ## Choose a starting layout
 
@@ -20,6 +20,8 @@ For one OBS scene with many sources, start with **Source Desk**. Its source-sele
 | [Scene Desk + — Regular](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-scene-regular-v3.streamDeckProfile) | **Regular** | Stream Deck + | 8 keys / 3 dials | Transition directly to previous/next/random scenes or Scene 1–3; mixer dials. |
 | [Scene Desk 15 Keys — Regular](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-scene-regular-v2.streamDeckProfile) | **Regular** | 15-key Stream Deck | 13 keys | Direct and random transitions, previous/next Cut keys, Scene 1–4, and audio fade pairs. |
 | [Playlister Transport +](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-playlister-transport-v1.streamDeckProfile) | **Either** | Stream Deck + | 6 keys / 0 dials | Previous, next, play / pause, stop, restart and status for one Playlister source; choose the source in each key's inspector. |
+| [VJ Rig +](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-vj-rig-v1.streamDeckProfile) | **Studio** | Stream Deck + | 4 pages of 8 keys / 4 dials | Perform, Layers, Visuals and Scenes pages: scenes and the T-bar, Playlister clips, layers and blends, Visual Sidechain looks and their mix and reactivity, Visual Panic bottom right on every page, Next page bottom left. Choose each filter and Playlister in its inspector. |
+| [VJ Rig 15 Keys](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-vj-rig-v1.streamDeckProfile) | **Studio** | 15-key Stream Deck | 4 pages of 15 keys | The same four pages through buttons, with Restore and Panic on the same two keys on every page. |
 
 **Creative Layer Lab** deliberately enables the reorder setting for its layer-up/down controls. Its blend dial/buttons alter an OBS layer's blend mode; that is a creative compositing choice, not a transition between scenes. Keep a Source Desk profile for the everyday fixed-order workflow.
 

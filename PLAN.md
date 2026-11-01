@@ -1065,7 +1065,7 @@ ships unbound.
    One banner, the most pressing first (choose a source; source missing; OBS's error; choose a filter; filter
    missing; kind changed; choose a setting; driven; choose or type a range). The page asks for a source's filters
    once, again after the connection drops or on Refresh. `ui/visual-panic.html`: Panic or Restore, the label, two
-   notes. Every direct inspector (not the Neo Info Bar) gains an Accent row in the shared sections. 51 inspector
+   notes. Every direct inspector (not the Neo Info Bar) gains an Accent row in the shared sections. 56 inspector
    texts in all eight files (`fx*`, `vp*`, `accent*`). Tests: `tests/obs-filter-inspector.test.ts` (the bridge
    against the fake, the page in the vm harness as a dial and as a key).
 7. **Step 10.6 -- Profiles.** The builder's checks move into `scripts/profile-checks.ts` (tests import it; the
@@ -1082,6 +1082,22 @@ ships unbound.
    manifest hygiene and preset readiness read pages (blend operations allowed in the rig; a binding may repeat across
    pages, and within a page only on unbound filter and Playlister controls). Mutations: *M-10.6a* a page without Panic passes the check;
    *M-10.6b* the single-page writer.
+   *As built (2026-11-01):* `scripts/profile-checks.ts` holds the preset types, `presetPages`, `stableUuid`, the ZIP
+   writer, `changesProgram` (a Scene & Transition key whose operation is Cut or Transition, absent counting as
+   Transition), `checkRigRules` (a preset's `rig: { panic, nextPage }` keys on every page), `validatePreset` and a pure
+   `buildProfile`; `scripts/build-profiles.ts` only reads, builds and writes. The twelve existing archives rebuild byte
+   for byte (page 1 keeps the single page's seeds; page n > 1 seeds `page:n`). Page manifests are named Perform,
+   Layers, Visuals, Scenes; the root's `Pages` lists the four and `Current` is the first; each Fadester control on a
+   page carries the page's `accent` (Scenes keeps the default, so none); the catalog lists the pages and counts the
+   busiest page. Captions: 33 new ones (the rig's 25 filter captions, PANIC and Restore, Scene 5 to 8, Prev clip and
+   Next clip), 77 in all; the filter's caption context names the control (the profile does not store it; the deck and
+   the inspector add it). `READY_LAYOUTS`: "VJ Rig +" and "VJ Rig · 15 keys" (Studio Mode), revision 1. Docs: fourteen
+   layouts, the rig's pages in DECK-LAYOUTS.md and profiles/README.md. Tests: `tests/vj-rig-profiles.test.ts` (7);
+   manifest hygiene checks bindings per page and allows blend keys (never reorder) in the rig; preset readiness walks
+   every page (the second T-bar dial moves on from the first); the German caption render covers the rig's filter and
+   Panic controls. The page-key profile shape passes `streamdeck validate` and the tests, so the per-page fallback
+   profiles were not needed; whether Stream Deck 7.6 imports it, wraps from page 4 to 1, opens page 1 after
+   `switchToProfile` and swaps the dials by swipe stays with the device check.
 8. **Step 10.7 -- Texts.** Polish of the eight files, the fit samples ("PANIC SENT", "Restore first", the longest
    filter and setting names), `ui/i18n.js` and `ui/preset-captions.js` regenerated, the list of new keys for the
    Gemini review. Mutation: *M-10.7a* the English Panic word on a German deck.

@@ -15,12 +15,12 @@ import {
 import { FakeObsServer } from "./helpers/fake-obs-server.js";
 
 type Assignment = {
-  kind: "layer" | "scene" | "fader" | "fade";
+  kind: "layer" | "scene" | "fader" | "fade" | "playlister" | "filter" | "panic" | "page";
   controller: "Keypad" | "Encoder";
-  label: string;
+  label?: string;
   settings: Record<string, string | boolean | number>;
 };
-type Preset = { slug: string; obsMode: "either" | "studio" | "regular"; actions: Assignment[] };
+type Preset = { slug: string; obsMode: "either" | "studio" | "regular"; actions?: Assignment[]; pages?: Array<{ actions: Assignment[] }> };
 const presets = JSON.parse(readFileSync(new URL("../profiles/layouts.json", import.meta.url), "utf8")) as Preset[];
 const sceneNames = ["Opening", "Wide camera", "Close camera", "Slides", "Browser",
   "Demonstration", "Questions", "Break", "Credits", "Closing"];
@@ -171,8 +171,9 @@ describe("ready-made presets operate an existing OBS collection", () => {
     const alerts = vi.fn(async () => {});
     vi.spyOn(Math, "random").mockReturnValue(0.9);
 
-    for (const entry of preset.actions) {
-      const settings: Assignment["settings"] = { ...entry.settings, labelOverride: entry.label };
+    // A rig's pages, in order; filter, panic and page keys have their own tests (vj-rig-profiles, obs-filter-control).
+    for (const entry of preset.pages ? preset.pages.flatMap((page) => page.actions) : preset.actions ?? []) {
+      const settings: Assignment["settings"] = { ...entry.settings, labelOverride: entry.label ?? "" };
       if (entry.kind === "layer") {
         const layerSettings = settings as LayerSettings;
         const sceneName = layers.resolveScene(layerSettings);
@@ -215,10 +216,12 @@ describe("ready-made presets operate an existing OBS collection", () => {
         } else {
           expect(settings.target).toBe("tbar");
           await direct.prepareStudioLayout();
+          // A rig has a T-bar dial on two pages: each turn moves it on from where the last left it.
+          const before = obs.directTbarPosition;
           const controller = new ObsFaderDialInstanceController(direct,
             { setFeedback: async () => {}, showAlert: alerts }, settings as ObsFaderDialSettings);
           await controller.handleRotate(1, 1000);
-          expect(obs.directTbarPosition, entry.label).toBeCloseTo(Number(settings.stepPerTick), 6);
+          expect(obs.directTbarPosition, entry.label).toBeCloseTo(before + Number(settings.stepPerTick), 6);
           controller.disappear();
         }
         expect(alerts, entry.label).not.toHaveBeenCalled();

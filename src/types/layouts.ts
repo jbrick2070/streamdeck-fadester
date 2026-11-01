@@ -9,7 +9,9 @@ const READY_LAYOUT_REVISIONS: Readonly<Record<string, number>> = {
   "plus-source-desk": 3,
   "buttons-source-desk": 4,
   "plus-scene-regular": 3,
-  "plus-playlister-transport": 1
+  "plus-playlister-transport": 1,
+  "plus-vj-rig": 1,
+  "buttons-vj-rig": 1
 };
 
 export function profileRevisionForSlug(slug: string): number {
@@ -35,7 +37,9 @@ export const READY_LAYOUTS = [
   { slug: "buttons-scene-desk", title: "Scene Desk · 15 keys", deviceType: 0, obsMode: "studio" },
   { slug: "plus-scene-regular", title: "Scene Desk +", deviceType: 7, obsMode: "regular" },
   { slug: "buttons-scene-regular", title: "Scene Desk · 15 keys", deviceType: 0, obsMode: "regular" },
-  { slug: "plus-playlister-transport", title: "Playlister Transport +", deviceType: 7, obsMode: "either" }
+  { slug: "plus-playlister-transport", title: "Playlister Transport +", deviceType: 7, obsMode: "either" },
+  { slug: "plus-vj-rig", title: "VJ Rig +", deviceType: 7, obsMode: "studio" },
+  { slug: "buttons-vj-rig", title: "VJ Rig · 15 keys", deviceType: 0, obsMode: "studio" }
 ] as const;
 
 const LAYOUT_MODE_KEYS = { either: "layoutModeEither", studio: "layoutModeStudio", regular: "layoutModeRegular" } as const;

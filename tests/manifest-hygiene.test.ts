@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { profilePathForSlug, READY_LAYOUTS } from "../src/types/layouts.js";
+import { Preset, presetPages } from "../scripts/profile-checks.js";
 
 const ROOT = process.cwd();
 const PLUGIN_DIR = join(ROOT, "com.jbrick2070.fadester-for-obs.sdPlugin");
@@ -161,7 +162,7 @@ describe("Step 1.1 — Manifest, Layout, Icons & Repository Hygiene", () => {
 
   it("bundles compatible editable layouts only on request and keeps ordinary source desks in fixed order", () => {
     const manifest = JSON.parse(readFileSync(join(PLUGIN_DIR, "manifest.json"), "utf8"));
-    const layouts = JSON.parse(readFileSync(join(ROOT, "profiles/layouts.json"), "utf8"));
+    const layouts = JSON.parse(readFileSync(join(ROOT, "profiles/layouts.json"), "utf8")) as Preset[];
     expect(manifest.Profiles).toHaveLength(layouts.length);
     expect(manifest.Profiles.map((profile: { Name: string }) => profile.Name).sort())
       .toEqual(READY_LAYOUTS.map((layout) => profilePathForSlug(layout.slug)).sort());
@@ -170,18 +171,30 @@ describe("Step 1.1 — Manifest, Layout, Icons & Repository Hygiene", () => {
       expect(statSync(join(PLUGIN_DIR, profile.Name + ".streamDeckProfile")).size).toBeGreaterThan(100);
     }
     for (const layout of layouts) {
-      const bindings = new Set<string>();
-      for (const entry of layout.actions) {
-        const binding = JSON.stringify([
-          entry.controller, entry.kind,
-          Object.entries(entry.settings).sort(([left], [right]) => left.localeCompare(right))
-        ]);
-        expect(bindings.has(binding), `${layout.slug}: repeated binding for ${entry.label}`).toBe(false);
-        bindings.add(binding);
-        if (!layout.slug.includes("creative")) {
-          expect(entry.settings.allowReorder).not.toBe(true);
-          expect(["move_up", "move_down", "blend_next", "blend_previous", "blend_normal"])
-            .not.toContain(entry.settings.operation);
+      // A rig repeats Panic, Restore and Next page on purpose, page after page: bindings are unique per page.
+      for (const page of presetPages(layout)) {
+        const bindings = new Set<string>();
+        for (const entry of page.actions) {
+          const binding = JSON.stringify([
+            entry.controller, entry.kind,
+            Object.entries(entry.settings).sort(([left], [right]) => left.localeCompare(right))
+          ]);
+          // Unbound filter and Playlister controls are placeholders told apart by their captions (Look 1, Look 2).
+          const placeholder = (entry.kind === "filter" && entry.settings.sourceUuid === "") ||
+            (entry.kind === "playlister" && entry.settings.inputUuid === "");
+          expect(bindings.has(binding) && !placeholder, `${layout.slug} / ${page.name}: repeated binding for ${entry.label}`).toBe(false);
+          bindings.add(binding);
+          // Layer order and blend modes belong to the creative labs and the VJ rig only.
+          if (!layout.slug.includes("creative") && !layout.slug.includes("vj-rig")) {
+            expect(entry.settings.allowReorder).not.toBe(true);
+            expect(["move_up", "move_down", "blend_next", "blend_previous", "blend_normal"])
+              .not.toContain(entry.settings.operation);
+          }
+          // The rig allows blend changes, never layer reordering.
+          if (layout.slug.includes("vj-rig")) {
+            expect(entry.settings.allowReorder).not.toBe(true);
+            expect(["move_up", "move_down"]).not.toContain(entry.settings.operation);
+          }
         }
       }
     }

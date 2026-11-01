@@ -26,7 +26,12 @@ export const PRESET_CAPTIONS: Readonly<Record<CaptionAction, Readonly<Record<str
     __scene_index_0__: { shipped: ["Scene 1"], legacy: ["Scene A", "Scene1", "SceneA"] },
     __scene_index_1__: { shipped: ["Scene 2"], legacy: ["Scene B", "Scene2", "SceneB"] },
     __scene_index_2__: { shipped: ["Scene 3"], legacy: ["Scene C", "Scene3", "SceneC"] },
-    __scene_index_3__: { shipped: ["Scene 4"], legacy: ["Scene D", "Scene4", "SceneD"] }
+    __scene_index_3__: { shipped: ["Scene 4"], legacy: ["Scene D", "Scene4", "SceneD"] },
+    // The 15-key VJ rig's Scenes page.
+    __scene_index_4__: { shipped: ["Scene 5"], legacy: [] },
+    __scene_index_5__: { shipped: ["Scene 6"], legacy: [] },
+    __scene_index_6__: { shipped: ["Scene 7"], legacy: [] },
+    __scene_index_7__: { shipped: ["Scene 8"], legacy: [] }
   },
   fader: {
     tbar: { shipped: ["Scene blend"], legacy: ["Scene transition"] },
@@ -59,8 +64,8 @@ export const PRESET_CAPTIONS: Readonly<Record<CaptionAction, Readonly<Record<str
   },
   // The Playlister starter stores these; the key draws the translated operation word.
   playlister: {
-    previous: { shipped: ["Previous"], legacy: [] },
-    next: { shipped: ["Next"], legacy: [] },
+    previous: { shipped: ["Previous", "Prev clip"], legacy: [] },
+    next: { shipped: ["Next", "Next clip"], legacy: [] },
     playpause: { shipped: ["Play / pause"], legacy: [] },
     stop: { shipped: ["Stop"], legacy: [] },
     restart: { shipped: ["Restart"], legacy: [] },
@@ -68,11 +73,24 @@ export const PRESET_CAPTIONS: Readonly<Record<CaptionAction, Readonly<Record<str
   },
   // The VJ rig's Visual Panic keys (shipped with the rig profiles, PLAN.md 10.6).
   panic: {
-    panic: { shipped: [], legacy: [] },
-    restore: { shipped: [], legacy: [] }
+    panic: { shipped: ["PANIC"], legacy: [] },
+    restore: { shipped: ["Restore"], legacy: [] }
   },
-  // The VJ rig's OBS Filter controls, by control, operation and setting (shipped with the rig profiles, 10.6).
-  filter: {}
+  // The VJ rig's OBS Filter controls, by control, operation and setting: the dial draws the setting's name,
+  // an on/off key the filter's name, a set or step key the setting and its target.
+  filter: {
+    "dial:vs_effect_mix_pct": { shipped: ["Effect mix", "Mix B", "Mix C"], legacy: [] },
+    "dial:vs_audio_reactivity_pct": { shipped: ["Reactivity", "React B", "React C"], legacy: [] },
+    "dial:opacity": { shipped: ["Layer A fade", "Layer B fade"], legacy: [] },
+    "toggle:": { shipped: ["Look 1", "Look 2", "Look 3", "Look 4", "Look 5"], legacy: [] },
+    "set:vs_audio_reactivity_pct": { shipped: ["Still", "Full react"], legacy: [] },
+    "set:vs_effect_mix_pct": { shipped: ["Mix drop", "Mix full"], legacy: [] },
+    "set:opacity": { shipped: ["A fade out", "A fade in", "B fade out", "B fade in"], legacy: [] },
+    "step_down:vs_audio_reactivity_pct": { shipped: ["React −"], legacy: [] },
+    "step_up:vs_audio_reactivity_pct": { shipped: ["React +"], legacy: [] },
+    "step_down:vs_effect_mix_pct": { shipped: ["Mix −"], legacy: [] },
+    "step_up:vs_effect_mix_pct": { shipped: ["Mix +"], legacy: [] }
+  }
 };
 
 const AUTOMATIC_INPUT = /^__audio_(main|mic|aux|input_\d+)__$/;

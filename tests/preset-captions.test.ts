@@ -20,20 +20,29 @@ import { ObsFaderDialInstanceController } from "../src/actions/obs-fader-dial.js
 import { ObsFadeKeyInstanceController } from "../src/actions/obs-fade-key.js";
 import { ObsSceneTransitionKeyInstanceController } from "../src/actions/obs-scene-transition-key.js";
 import { PlaylisterTransportInstanceController } from "../src/actions/playlister-transport-key.js";
+import { ObsFilterInstanceController } from "../src/actions/obs-filter-control.js";
+import { VisualPanicInstanceController } from "../src/actions/visual-panic-key.js";
+import { FilterController } from "../src/control/filter-controller.js";
+import { VisualSafety } from "../src/control/visual-safety.js";
 import { FakeObsServer } from "./helpers/fake-obs-server.js";
 import { PLUGIN_DIR, deckTable } from "./helpers/languages.js";
 
 type Assignment = {
-  kind: "layer" | "scene" | "fader" | "fade" | "playlister";
+  kind: "layer" | "scene" | "fader" | "fade" | "playlister" | "filter" | "panic";
   controller: "Keypad" | "Encoder";
   column: number;
   row: number;
   label: string;
   settings: Record<string, string | number | boolean>;
 };
+type Stored = Omit<Assignment, "kind" | "label"> & { kind: Assignment["kind"] | "page"; label?: string };
 const presets = JSON.parse(readFileSync(new URL("../profiles/layouts.json", import.meta.url), "utf8")) as
-  Array<{ slug: string; actions: Assignment[] }>;
-const assignments = presets.flatMap((preset) => preset.actions);
+  Array<{ slug: string; actions?: Assignment[]; pages?: Array<{ actions: Stored[] }> }>;
+// Every captioned control of every page; Elgato's page keys carry no caption.
+const assignments = presets.flatMap((preset) => preset.pages ? preset.pages.flatMap((page) => page.actions) : preset.actions ?? [])
+  .filter((entry): entry is Assignment => entry.kind !== "page")
+  // A filter control's caption context names the control it sits on (the inspector passes the same).
+  .map((entry) => entry.kind === "filter" ? { ...entry, settings: { ...entry.settings, control: entry.controller === "Encoder" ? "dial" : "key" } } : entry);
 
 function actionOf(entry: Assignment): CaptionAction {
   return entry.kind === "layer" ? entry.controller === "Encoder" ? "layerDial" : "layerKey" : entry.kind;
@@ -47,7 +56,7 @@ function inspectorCaptions(): { isGenerated(action: string, settings: object, ca
 }
 
 describe("bundled profile captions (R-I18N-2)", () => {
-  it("lists exactly the 44 captions profiles/layouts.json stores, per action", () => {
+  it("lists exactly the 77 captions profiles/layouts.json stores, per action", () => {
     const stored = new Map<CaptionAction, Set<string>>();
     for (const entry of assignments) {
       const action = actionOf(entry);
@@ -59,7 +68,7 @@ describe("bundled profile captions (R-I18N-2)", () => {
       expect([...shipped].sort(), action).toEqual([...(stored.get(action) ?? [])].sort());
       total += shipped.size;
     }
-    expect(total).toBe(44);
+    expect(total).toBe(77);
   });
 
   it.each(assignments.map((entry) => [entry.label, actionOf(entry), entry] as const))(
@@ -69,7 +78,7 @@ describe("bundled profile captions (R-I18N-2)", () => {
     });
 
   it("ships the Playlister starter with six unbound keys, two free keys and no dial (R-PLT-7)", () => {
-    const starter = presets.find((preset) => preset.slug === "plus-playlister-transport")!;
+    const starter = presets.find((preset) => preset.slug === "plus-playlister-transport") as { actions: Assignment[] };
     expect(starter.actions.map((entry) => [entry.controller, entry.settings.operation, entry.settings.inputUuid])).toEqual([
       ["Keypad", "previous", ""], ["Keypad", "next", ""], ["Keypad", "playpause", ""],
       ["Keypad", "stop", ""], ["Keypad", "restart", ""], ["Keypad", "status", ""]
@@ -108,7 +117,15 @@ describe("bundled profile captions (R-I18N-2)", () => {
       ...Object.keys(PRESET_CAPTIONS.layerKey).map((operation) => ["layerKey", { operation }] as [CaptionAction, Record<string, string>]),
       ...Object.keys(PRESET_CAPTIONS.layerDial).map((dialMode) => ["layerDial", { dialMode }] as [CaptionAction, Record<string, string>]),
       ...Object.keys(PRESET_CAPTIONS.playlister).map((operation) => ["playlister", { operation }] as [CaptionAction, Record<string, string>]),
-      ["playlister", {}]
+      ["playlister", {}],
+      ...Object.keys(PRESET_CAPTIONS.panic).map((operation) => ["panic", { operation }] as [CaptionAction, Record<string, string>]),
+      ["panic", {}],
+      ...Object.keys(PRESET_CAPTIONS.filter).map((context) => {
+        const [operation, setting] = context.split(":");
+        return ["filter", operation === "dial" ? { control: "dial", setting } : { control: "key", keyOperation: operation, setting }] as
+          [CaptionAction, Record<string, string>];
+      }),
+      ["filter", { control: "key" }], ["filter", { control: "dial", setting: "custom_low_hz" }]
     ];
     for (const [action, settings] of contexts) {
       for (const caption of captions) {
@@ -123,6 +140,8 @@ describe("a German deck shows no stored English caption", () => {
   let server: FakeObsServer;
   let client: DirectObsClient;
   let layers: LayerController;
+  let filters: FilterController;
+  let safety: VisualSafety;
 
   beforeAll(async () => {
     server = new FakeObsServer({ studioMode: true, missingPlugin: true });
@@ -138,6 +157,8 @@ describe("a German deck shows no stored English caption", () => {
     await ready;
     await client.refreshCatalog();
     layers = new LayerController(client);
+    filters = new FilterController(client);
+    safety = new VisualSafety(client, filters);
     setLanguage("de", deckTable("de"));
   });
 
@@ -167,6 +188,10 @@ describe("a German deck shows no stored English caption", () => {
       else if (kind === "fader") control = new ObsFaderDialInstanceController(client, { setFeedback: (feedback) => sink(feedback.canvas), showAlert: alert }, settings);
       // The Playlister keys ship unbound: the translated operation word is their title.
       else if (kind === "playlister") control = new PlaylisterTransportInstanceController(client, { setImage: sink, showAlert: alert }, settings);
+      // The rig's filter controls ship unbound; Panic and Restore draw their German words.
+      else if (kind === "filter") control = new ObsFilterInstanceController(filters, { render: (svg) => { image = svg; return Promise.resolve(); }, showAlert: alert },
+        controller === "Encoder", settings);
+      else if (kind === "panic") control = new VisualPanicInstanceController(safety, client, { setImage: sink, showAlert: alert, showOk: alert }, settings);
       else control = new ObsLayerInstanceController(layers, { render: (svg) => { image = svg; return Promise.resolve(); }, showAlert: alert },
         controller === "Encoder", settings as LayerSettings);
       control.appear();

@@ -550,3 +550,10 @@ FIJN, VASTGEZET, VASTZETTEN, SPEELT, PAUZE, VAST, RECLAME, POORT BEZET; the fit 
 texts in `nl.json` until L.7. The end-to-end Dutch case and the page's Dutch case now expect the Dutch words
 ("VASTZETTEN", "Verbinding opslaan"). With `nl.json` present, Automatic would give Dutch for an app language `nl`
 (the rule is the exact code when its file exists); Stream Deck cannot report `nl`, so nothing changes in practice. In L.7, `LOCALIZATION_ONLY` empties when the Dutch manifest texts land.
+*L.5 (2026-11-01, the automated part):* `deck-sim.ts` with the built bundle (`start(false)`), app `en`, stored `nl`
+and then `ja`, the stand-in extension connected: all twelve key and strip images saved per phase (stored language,
+the page's pick of `auto`, the language again, a restart with what was saved); every image changed with `auto`, came
+back the same, and the restart kept it with no write; each pick was one save keeping port, allow list and token. The
+settings page in `nl` and `ja` was captured only above its OBS section (the section shows the page key). Images and
+`LOG.md`: `C:\midi-fadester\docs\demo-reel\production\v2\captures\deck-lang\`. The operator's device check:
+TESTING.md section 6, with the root `TESTING.md` section 1. Not done: the device check.

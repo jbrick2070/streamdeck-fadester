@@ -236,3 +236,31 @@ ja, ko, zh_CN and zh_TW in turn, as 5.1. Expected: the glyphs render (no
 boxes or question marks) in the font of that language and fit their boxes
 on a 72 px key. Until this has been run, R-I18N-4 holds only for the width
 estimate of `src/vjster/plugin/display.ts`.
+
+## 6. Language choice (PLAN.md section 9, step L.5)
+
+Run with the root `TESTING.md` section 1 (same builds, same order); the Stream Deck app stays in English. The
+simulator run of this flow (images, how made):
+`C:\midi-fadester\docs\demo-reel\production\v2\captures\deck-lang\LOG.md`.
+
+6.1 **Nederlands.** With the VJster Live + profile on the Stream Deck +, Chrome open on a YouTube watch page and
+the extension connected, open a VJster action's settings, find **Taal / Language** ("all VJster controls") and
+pick **Nederlands**. Expected: the page changes to Dutch in place (DEZE ACTIE, TAAL, VJSTER-VERBINDING,
+"Verbinding opslaan"), a label or port typed and not yet saved stays; every VJster key and strip redraws at
+once: TEMPO, FIJN, KWALITEIT, FX-TEMPO, WEB, AUTO, SPEELT or PAUZE, VASTZETTEN (VASTGEZET once pinned); the
+rate keys keep "0.1x" and "0.5x" with a point. Every word fits its key or strip on the hardware. Stream Deck's own action
+list, tooltips and dial hints stay English; the OBS page and the Chrome extension stay in their own language
+(D-L7), and the OBS page address keeps `hl=en`.
+
+6.2 **Status words.** Close Chrome. Expected: EXTENSIE UIT on the strips. During a YouTube ad (if one comes):
+RECLAME SPEELT, which is one of the two Dutch judgement calls; say if it reads badly.
+
+6.3 **The choice is kept over a restart.** Quit the Stream Deck app and start it again (root 1.5). Expected:
+VJster's keys and strips come back in Dutch with no settings page opened; the Language select shows
+Nederlands; the link still works on the same port with the same extension allow list.
+
+6.4 **Back to Automatic.** Pick **Automatic (Stream Deck's language)**. Expected: everything back to English at
+once; the port and the "only this extension" id are unchanged (open the page again to see them).
+
+6.5 **日本語 on an English app.** As 6.1 with 日本語: 速度, 微調整, 画質, FX 速度, 再生中, タブ固定, 自動. Expected:
+the glyphs render in a Japanese font and fit (closes 5.2 for Japanese). Then Automatic again.

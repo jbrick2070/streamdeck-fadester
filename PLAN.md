@@ -1490,6 +1490,23 @@ and OBS page (D-L7), better Chinese alias handling in VJster's Automatic.
   check, now on the real file). For L.7: the manifest-shape test goes back to `presentLanguages()` (drop the
   `appReadLanguages()` filter), the "nl.json holds Localization only" test becomes a manifest-texts check, and VJster's
   `LOCALIZATION_ONLY` list empties.
+- *L.5 (2026-11-01, the automated part; the device check is the operator's):* both plugins built in the worktree
+  at b20bd27 (L.4, the parent of this L.5 commit, which changed docs only) and packed for the device check
+  (`com.jbrick2070.fadester-for-obs.streamDeckPlugin`, 0.7.7.0, and
+  `com.jbrick2070.vjster.streamDeckPlugin`, 0.1.0.0, versions unchanged until after the check, D-L10), from copies of
+  the plugin folders without their `logs`; not installed. The simulator evidence goes beyond the plan's VJster-only
+  run: both shipped bundles under a pretend Stream Deck with the app in English and the plugin's own setting stored as
+  `nl`, then `ja`; a page's pick of Automatic, then of the language again, then a restart with what the plugin saved.
+  Every key and dial changed with Automatic, the language came back the same, the restart kept it, and each pick was
+  one save with the other keys kept. Fadester's controls were answered by `tests/helpers/fake-obs-server.ts` (no OBS
+  started), VJster's by `scripts/vjster/deck-sim.ts` and its stand-in extension. The settings pages (Fadester's eight
+  direct pages, VJster's page above its OBS section) were rendered headless in `nl` and `ja`, answered by the running
+  plugin. Images, sheets and how they were made: `C:\midi-fadester\docs\demo-reel\production\v2\captures\deck-lang\`
+  (`LOG.md`); the script is `production\v2\deck\deck-lang.mts` there, outside this repository, so D-L8 (no frames
+  script in the repository for the reel) stands. Where the code led: the repository had no root `TESTING.md` (only
+  `docs/vjster/TESTING.md`), so the operator's device check is a new root `TESTING.md` section 1, with VJster's items
+  in `docs/vjster/TESTING.md` section 6. Seen on the way: the deck shows "Houd 0,8 s vast" with a decimal comma (the
+  Fable review's `localeTag("nl")` point, by eye only, no test yet). Not done: the device check itself, then the reel.
 
 ### 11.6 Decisions (approved by the operator 2026-11-01, every one at its recommended default)
 

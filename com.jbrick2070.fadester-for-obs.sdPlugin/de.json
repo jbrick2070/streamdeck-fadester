@@ -41,7 +41,7 @@
   },
   "com.jbrick2070.fadester-for-obs.obs-filter": {
     "Name": "OBS-Filter",
-    "Tooltip": "Eine Filtereinstellung am Drehregler führen oder per Taste einen Filter ein- und ausschalten, einen Wert setzen oder schrittweise ändern. Bereiche, sanfte Übergänge und Besitzprüfungen machen es sicher.",
+    "Tooltip": "Eine Filtereinstellung am Drehregler führen oder per Taste einen Filter ein- und ausschalten, einen Wert setzen oder schrittweise ändern. Bereiche, sanfte Übergänge und Prüfungen auf fremde Steuerung machen es sicher.",
     "Encoder": {
       "TriggerDescription": {
         "Rotate": "Filtereinstellung führen",
@@ -50,7 +50,7 @@
     }
   },
   "com.jbrick2070.fadester-for-obs.visual-panic": {
-    "Name": "Visual-Panik",
+    "Name": "Visuelle Panik",
     "Tooltip": "Panik (sofort) und Wiederherstellen (0,8 s halten) von Visual Sidechain, gesendet über die eigenen Hotkeys von OBS. Panik-Tasten zeigen PANIK GESENDET bis zum Wiederherstellen."
   },
   "com.jbrick2070.fadester-for-obs.fader": {
@@ -667,7 +667,7 @@
       "plBannerUnsupported": "Dieser OBS WebSocket bietet die Medienanfragen (GetMediaInputStatus, TriggerMediaInputAction) nicht an. Aktualisieren Sie OBS.",
       "plNote": "„Nur Status“ zeigt lediglich den Zustand an. „Wiedergabe / Pause“ schaltet ausgehend vom beobachteten Zustand um. „Stopp“ verwirft zuerst die noch nicht gesendeten Befehle für diesen Playlister. Solange der Playlister nicht verfügbar ist, wird nichts gesendet.",
       "fxHeading": "OBS-Filter",
-      "vpHeading": "Visual-Panik",
+      "vpHeading": "Visuelle Panik",
       "fxIntro": "Führt eine Filtereinstellung am Drehregler oder schaltet per Taste einen Filter ein und aus, setzt einen Wert oder ändert ihn schrittweise. Wählen Sie Quelle und Filter nach Namen; die Steuerung folgt der Quelle auch nach dem Umbenennen.",
       "fxSource": "Quelle",
       "fxFilter": "Filter",

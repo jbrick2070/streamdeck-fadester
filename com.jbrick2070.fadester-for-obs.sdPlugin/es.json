@@ -41,7 +41,7 @@
   },
   "com.jbrick2070.fadester-for-obs.obs-filter": {
     "Name": "Filtro de OBS",
-    "Tooltip": "Lleva un ajuste de filtro con un dial, o activa y desactiva un filtro, fija un valor o súbelo por pasos con una tecla. Rangos, transiciones suaves y comprobaciones de propiedad lo hacen seguro.",
+    "Tooltip": "Lleva un ajuste de filtro con un dial, o activa y desactiva un filtro, fija un valor o cámbialo por pasos con una tecla. Rangos, transiciones suaves y comprobaciones de propiedad lo hacen seguro.",
     "Encoder": {
       "TriggerDescription": {
         "Rotate": "Llevar el ajuste del filtro",
@@ -668,7 +668,7 @@
       "plNote": "Solo estado muestra el estado. Reproducir / pausar alterna según el estado observado. Detener descarta primero las pulsaciones no enviadas del Playlister. No se envía nada mientras el Playlister no esté disponible.",
       "fxHeading": "Filtro de OBS",
       "vpHeading": "Pánico visual",
-      "fxIntro": "Lleva un ajuste de filtro con un dial, o con una tecla activa y desactiva un filtro, fija un valor o lo cambia por pasos. Elige la fuente y su filtro por nombre; el control sigue a la fuente aunque cambie de nombre.",
+      "fxIntro": "Lleva un ajuste de filtro con un dial, o, desde una tecla, activa y desactiva un filtro, fija un valor o lo cambia por pasos. Elige la fuente y su filtro por nombre; el control sigue a la fuente aunque cambie de nombre.",
       "fxSource": "Fuente",
       "fxFilter": "Filtro",
       "fxSetting": "Ajuste",

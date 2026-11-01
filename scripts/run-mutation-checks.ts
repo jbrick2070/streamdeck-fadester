@@ -679,6 +679,16 @@ const MUTATIONS: MutationCheck[] = [
     target: "  const pages = presetPages(preset);\n  const multi = pages.length > 1;",
     mutated: "  const pages = presetPages(preset).slice(0, 1);\n  const multi = pages.length > 1;",
     testFile: "tests/vj-rig-profiles.test.ts"
+  },
+  {
+    id: "M-10.7a",
+    step: "Step 10.7 (the Panic words follow the deck's language)",
+    description:
+      "Draw the English Panic words whatever the language, and verify visual-panic.test.ts fails on the German deck",
+    filePath: resolve(ROOT, "src/gfx/direct-obs-renderer.ts"),
+    target: 'const title = input.title || t(latched ? "vpPanicSent" : "vpPanic");',
+    mutated: 'const title = input.title || (latched ? "PANIC SENT" : "PANIC");',
+    testFile: "tests/visual-panic.test.ts"
   }
 ];
 

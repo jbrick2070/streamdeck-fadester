@@ -98,7 +98,8 @@ function drawnTexts(): Array<{ key: StringKey; params?: TextParams; boxes: Box[]
   for (const key of ["filterMissing", "filterWrongKind", "filterDenied", "filterNeedsRange", "filterOwnedFader",
     "filterNoValue", "filterLatched"] as const) add(key, [B.keySub, B.dialReason]);
   add("filterOwnedModulator", [B.keySub, B.dialReason], { filter: "Pulse" });
-  // The Visual Panic keys: titles, hints and the not-loaded problem line.
+  // The Visual Panic keys: titles, hints and the not-loaded problem line. The fit samples of PLAN.md 10.7 are
+  // "PANIC SENT" (a key title), "Restore first" (filterLatched, above) and the longest setting name (Mod 8 amount).
   for (const key of ["vpPanic", "vpPanicSent", "vpRestore"] as const) add(key, [B.keyTitle]);
   for (const key of ["vpPanicHint", "vpLatchedHint", "vpHolding", "vpNotLoaded"] as const) add(key, [B.keySub]);
   add("vpHoldSeconds", [B.keySub], { s: "0,8" });

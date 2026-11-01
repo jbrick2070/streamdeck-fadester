@@ -41,7 +41,7 @@
   },
   "com.jbrick2070.fadester-for-obs.obs-filter": {
     "Name": "Filtre OBS",
-    "Tooltip": "Piloter un réglage de filtre au bouton rotatif, ou activer et désactiver un filtre, régler une valeur ou la faire varier par pas avec une touche. Plages, transitions douces et contrôles de propriété le rendent sûr.",
+    "Tooltip": "Piloter un réglage de filtre au bouton rotatif, ou activer et désactiver un filtre, régler une valeur ou la faire varier par pas avec une touche. Plages, transitions douces et contrôles de pilotage le rendent sûr.",
     "Encoder": {
       "TriggerDescription": {
         "Rotate": "Piloter le réglage du filtre",
@@ -668,7 +668,7 @@
       "plNote": "« État seulement » n’affiche que l’état. « Lecture / pause » bascule selon l’état observé. « Arrêter » annule d’abord les appuis non envoyés du Playlister. Rien n’est envoyé tant que le Playlister est indisponible.",
       "fxHeading": "Filtre OBS",
       "vpHeading": "Panique visuelle",
-      "fxIntro": "Pilote un réglage de filtre au bouton rotatif, ou avec une touche active et désactive un filtre, règle une valeur ou la fait varier par pas. Choisissez la source et son filtre par leur nom ; le contrôle suit la source même renommée.",
+      "fxIntro": "Pilote un réglage de filtre au bouton rotatif, ou, depuis une touche, active et désactive un filtre, règle une valeur ou la fait varier par pas. Choisissez la source et son filtre par leur nom ; le contrôle suit la source même renommée.",
       "fxSource": "Source",
       "fxFilter": "Filtre",
       "fxSetting": "Réglage",

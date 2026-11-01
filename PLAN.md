@@ -1101,6 +1101,33 @@ ships unbound.
 8. **Step 10.7 -- Texts.** Polish of the eight files, the fit samples ("PANIC SENT", "Restore first", the longest
    filter and setting names), `ui/i18n.js` and `ui/preset-captions.js` regenerated, the list of new keys for the
    Gemini review. Mutation: *M-10.7a* the English Panic word on a German deck.
+   *As built (2026-11-01):* as for Playlister, the texts landed with the steps that draw them (the completeness tests
+   check all eight files at every commit); this step is the polish. The fit samples are in `tests/deck-fit.test.ts`
+   ("PANIC SENT" as a key title, "Restore first" on the key line and the dial reason, "Mod 8 amount" as the longest
+   setting name on a key title and the dial head, a step key's "{setting} up" with every setting name, "To 100 % in
+   2 s"); every language fits wherever English fits. README's actions table gains OBS Filter and Visual Panic, and its
+   Languages paragraph says the VJ rig's texts await the second review. M-10.7a draws "PANIC"/"PANIC SENT" whatever the
+   language; the German Panic test kills it. For the Gemini 4 Argon review, the new keys (de, es, fr, ja, ko, zh_CN,
+   zh_TW): 35 deck keys `errorFilterChoose`, `filterMissing`, `filterWrongKind`, `filterDenied`, `filterNeedsRange`,
+   `filterOwnedModulator`, `filterOwnedFader`, `filterNoValue`, `filterLatched`, `vpPanic`, `vpPanicSent`,
+   `vpPanicHint`, `vpLatchedHint`, `vpRestore`, `vpHoldSeconds`, `vpHolding`, `vpNotLoaded`, `filterChoose`,
+   `filterReading`, `filterOn`, `filterOff`, `filterOpLook`, `filterOpSet`, `filterOpStepUp`, `filterOpStepDown`,
+   `filterSetTo`, `filterSettingEffectMix`, `filterSettingReactivity`, `filterSettingOpacity`,
+   `filterSettingModAmount`, `filterSettingNone`, `filterPressDrop`, `filterPressToggle`, `filterGlideCancelled`,
+   `filterChooseSetting`; 58 inspector keys `pi.fxHeading`, `vpHeading`, `fxIntro`, `fxSource`, `fxFilter`,
+   `fxSetting`, `fxChooseSource`, `fxChooseFilter`, `fxChooseSetting`, `fxUnknownSource`, `fxSourceScene`,
+   `fxSourceGroup`, `fxSourceInput`, `fxFilterItem`, `fxKindShader`, `fxKindModulator`, `fxKindColor`,
+   `fxSettingOther`, `fxSettingDriven`, `fxOwnFader`, `fxOpToggle`, `fxOpSet`, `fxOpStepUp`, `fxOpStepDown`,
+   `fxDialPress`, `fxPressDrop`, `fxPressToggle`, `fxPressNone`, `fxRange`, `fxRangePositive`, `fxRangeNegative`,
+   `fxRangeBipolar`, `fxRangeMin`, `fxRangeMax`, `fxInteger`, `fxValue`, `fxUseCurrent`, `fxDuration`, `fxStep`,
+   `fxNote`, `fxBannerChooseSource`, `fxBannerSourceMissing`, `fxBannerChooseFilter`, `fxBannerFilterMissing`,
+   `fxBannerKind`, `fxBannerChooseSetting`, `fxBannerDriven`, `fxBannerRange`, `fxBannerRangeChoose`, `vpIntro`,
+   `vpOptPanic`, `vpOptRestore`, `vpNote`, `accentLabel`, `accentDefault`, `accentBrass`, `accentTeal`,
+   `accentMagenta`; and the Name and Tooltip of `…obs-filter` (with its Rotate and Push) and `…visual-panic`.
+   Reviewer notes: Panic and Restore follow Visual Sidechain's own locale (ko and zh "긴급 정지", "紧急停止"); Effect
+   mix, Reactivity and the modulation amount follow Visual Sidechain, Opacity and Color Correction follow OBS (ko
+   "투명도" is OBS's word); German "Vom Fader gesteuert" and "Visual Sidechain fehlt" are width choices; the English
+   "Visual Sidechain missing" replaced the plan's "not loaded", which does not fit the 96 px key line.
 9. **Step 10.8 -- Live check (automated part).** `tests/vj-rig-live-check.ts`, run by hand beside
    `tests/playlister-live-check.ts`: against the portable OBS 33.0.1 with Visual Sidechain, it creates its own color
    source and Shader Filter (uniquely named), rides `vs_effect_mix_pct` through the controller and reads it back,

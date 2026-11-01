@@ -23,6 +23,8 @@ The first setup is intentionally small:
 | **Scene & Transition** | Select a fixed scene, **Next scene**, **Previous scene**, or **Current Preview**; Cut or use a chosen transition. | Cut/Transition work in both modes. Preview selection and Current Preview need Studio Mode. |
 | **OBS Fade** | Fade one OBS mixer input up or down over a chosen time, or instantly. A later volume move cancels that input’s running fade. | Any Stream Deck key. |
 | **Playlister Transport** | **Previous**, **Next**, **Play/Pause**, **Stop**, **Restart**, or **Status** for one chosen Playlister source. The key shows the state OBS observes for that source (and its time while playing or paused), not just that a press was sent. | Any Stream Deck key; Playlister 0.5.0 or later in OBS. |
+| **OBS Filter** | Ride one filter setting on a dial (a Visual Sidechain Shader Filter's Effect mix or Reactivity, a Color Correction's opacity, or any numeric setting you give a range), its press dropping the value while held; or turn a filter on and off, set a value over a time, or step it from a key. Writes are paced and never touch a setting an Audio Modulator or a fader drives. | Any Stream Deck key or Stream Deck + dial. |
+| **Visual Panic** | Visual Sidechain's own **Panic** (instant) and **Restore** (hold 0.8 s), sent through OBS's hotkeys. Panic keys read PANIC SENT until a Restore is accepted; meanwhile no Visual Sidechain filter is written from the deck. | Any Stream Deck key; Visual Sidechain in OBS. |
 | **OBS Scene Info Bar** | Display OBS connection status, the live scene, and the preview scene in Studio Mode (outside Studio Mode it says so). | Stream Deck Neo Info Bar; display only. |
 
 Source selection is shared across Fadester controls for each scene and lasts until the plugin restarts or the scene collection changes. To save an assignment across restarts, choose a non-browsing Source & Layer action and select **A fixed source** for that action. A fixed action keeps its own assignment; it does not pin the shared selection used by a fader's press. Browsing selects a control target; Show/hide changes its visibility and keeps your stack order. A visible source may still be covered by an opaque layer above it. The list handles top-level sources and treats groups as one layer.
@@ -64,7 +66,7 @@ Chinese and Traditional Chinese (the languages Stream Deck offers). OBS's own wo
 Scene, Source, Transition) follow OBS's translation for that language, so the deck matches OBS. Your scene, source
 and filter names, and the texts Midi Fadester sends, are shown as they are. The translations were drafted by an AI
 model (Claude) and reviewed by a second one (Gemini), whose corrections were taken; no native speaker has checked them
-yet; the texts of the Playlister Transport key are the newest drafts and still await that second review. If
+yet; the texts of the VJ rig (OBS Filter, Visual Panic, the accents) are the newest drafts and still await that second review. If
 something reads wrong, please open an issue or a pull request: the files are
 `com.jbrick2070.fadester-for-obs.sdPlugin/<language>.json`, with `en.json` as the English source. (VJster's languages
 are described in `docs/vjster/INSTALL.md`.)

@@ -41,7 +41,7 @@
   },
   "com.jbrick2070.fadester-for-obs.obs-filter": {
     "Name": "OBS フィルタ",
-    "Tooltip": "ダイヤルでフィルタの設定を操作、またはキーでフィルタのオン/オフ、値の設定、段階的な変更を行います。範囲、ゆるやかな変化、所有者の確認で安全に動作します。",
+    "Tooltip": "ダイヤルでフィルタの設定を操作、またはキーでフィルタのオン/オフ、値の設定、段階的な変更を行います。範囲、ゆるやかな変化、他の制御元の確認で安全に動作します。",
     "Encoder": {
       "TriggerDescription": {
         "Rotate": "フィルタの設定を操作",
@@ -289,7 +289,7 @@
     "layoutModeRegular": "[通常モード] {name}",
     "errorFilterChoose": "先にソースとフィルタを選んでください。",
     "filterMissing": "フィルタが見つかりません",
-    "filterWrongKind": "フィルタの種類が変更",
+    "filterWrongKind": "フィルタの種類が変化",
     "filterDenied": "ここでは変更不可",
     "filterNeedsRange": "先に範囲を設定",
     "filterOwnedModulator": "{filter} が制御中",

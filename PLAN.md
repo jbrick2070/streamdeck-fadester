@@ -861,3 +861,177 @@ and PAUSED); M-9.6a has a test asserting a non-English state word; the inspector
 Nits taken: `lastError` lives in the key controller (cleared on retarget and on the next press), not in the shared
 state; `plChoose` and `errorMediaChoose` are one key; the layout title is "Playlister Transport +"; `mediaCapability`
 joins the bridge broadcast in 9.2.
+
+---
+
+## 10. VJ rig (`R-RIG-1..8`; requested by the operator 2026-11-01)
+
+Goal, in the operator's words: "cool jazzy new layouts that give a full control rig for VJing", with Visual Sidechain
+parameters on the Stream Deck. The plan and its first review round are in
+`C:\Users\jeffr\Documents\obs-playlister\docs\vj-rig-plan.md` (the "Review round 1" block there is binding where it
+differs from that file's earlier sections; it is folded into the text below). Two new actions, **OBS Filter** (dial and
+keys) and **Visual Panic** (Panic and Restore keys), an optional `accent` setting on the direct actions, and a profile
+builder that writes several pages with Elgato's page keys, for two Studio Mode rig profiles: four pages on the Stream
+Deck + and four on the 15-key deck. Stock obs-websocket 5.6.3 requests only; Visual Sidechain
+(`C:\visual-sidechain`) is not changed. Only Fadester's files change (not VJster's, not `package.json`). Each step ends
+with `npx vitest run`, `npx tsc --noEmit`, `npm run build`, `npm run validate` and `npm run test:mutation`, all green;
+a Sonnet QA pass over the step's diff before its build; one commit per step; SPDX headers on every new file; no push
+(the operator pushes). Every new text lands in all eight language files in the step that draws it.
+
+Visual Sidechain facts relied on: the hotkeys `visual_sidechain_panic` and `visual_sidechain_restore`
+(`src/plugin-main.c`, registered with `obs_hotkey_register_frontend`, acting on the press); Restore writes back only
+what Panic saved (commits ab26bc2, 236bbab), so a Restore without a Panic changes nothing and the deck may offer it
+freely; the Shader Filter (`visual_sidechain_shader_filter`) has `vs_effect_mix_pct` and `vs_audio_reactivity_pct`
+(0..100, static defaults 100) and two Parameter Faders (`param_fader_1|2_target`, `_slot`, -1 when unbound); the
+Audio Modulator (`visual_sidechain_modulator_filter`) has eight slots `slot_N_enabled` (slot 1 defaults true),
+`slot_N_target_filter`, `slot_N_target_setting`, `slot_N_amount_pct` (-100..100); OBS's Color Correction
+`color_filter_v2` has `opacity` 0..1 (float). Shader uniforms take per-instance defaults, so an untouched uniform
+cannot be read over the WebSocket.
+
+**The rig.** Black base, white text, one accent per page (PERFORM brass `#F5B841`, LAYERS teal `#2DD4BF`, VISUALS
+magenta `#E879F9`, SCENES Fadester violet, today's default). Solid red fill is Panic only; "PANIC SENT" is a white key
+with red text. Panic sits on the same key on every page, Next page bottom-left; nothing that changes Program (a Scene &
+Transition key with operation Cut or Transition; the T-bar's take is a dial) on any of the eight keys around Panic. FX = OBS Filter, VP = Visual Panic, PG = Elgato Next page, S =
+Scene & Transition, L = Source & Layer, F = OBS Fader, A = OBS Fade, P = Playlister Transport; every FX and P control
+ships unbound.
+
+- *Stream Deck + "Fadester — VJ Rig + (Studio Mode)"*, Panic (3,1), Next page (0,1).
+  PERFORM: keys S Transition, Prev scene, Next scene, Random scene / PG, P Play / pause, P Next clip, VP PANIC; dials
+  F Scene blend (T-bar), FX Effect mix and FX Reactivity (Shader Filter A, press drop-and-return), F Music.
+  LAYERS: L Prev layer, Next layer, Show / hide, Normal blend / PG, Prev blend, Next blend, PANIC; dials L Select
+  layer, L Blend mode, FX Layer A fade, FX Layer B fade (Color Correction `opacity`).
+  VISUALS: FX Look 1, Look 2, Look 3 (toggle), VP Restore (hold) / PG, FX Still (reactivity to 0 over 2 s), FX Full
+  react (to 100 over 2 s), PANIC; dials FX Mix B, React B (a second Shader Filter), Mix C, React C (a third),
+  drop-and-return. The layer fades need a Color Correction filter on each layer source (layer opacity without Midi
+  Fadester).
+  SCENES: S Transition, Scene 1, Scene 2, Scene 3 / PG, S Cut preview, Scene 4, PANIC; dials F Scene blend, Music,
+  Aux, Mic.
+- *15 keys "Fadester — VJ Rig 15 Keys (Studio Mode)"*, Panic (4,2), Restore (4,1), Next page (0,2).
+  PERFORM: Prev scene, Next scene, Random scene, Cut preview, Transition / FX Mix drop, Mix full (effect mix to 0 or
+  100 over 1 s), React −, React + (step 10 %), Restore / PG, P Prev clip, Play / pause, Next clip, PANIC.
+  LAYERS: Prev layer, Next layer, Show / hide, Prev blend, Next blend / FX A fade out, A fade in, B fade out, B fade in
+  (opacity over 2 s), Restore / PG, A Music down, Music up, Normal blend, PANIC.
+  VISUALS: FX Look 1..5 / Still, Full react, React −, React +, Restore / PG, Mix −, Mix +, Mix drop, PANIC.
+  SCENES: Scene 1..5 / Cut preview, Scene 6, 7, 8, Restore / PG, Transition, Prev scene, Next scene, PANIC.
+
+1. **Step 10.0 -- This section and REQUIREMENTS 9d.** Docs only.
+2. **Step 10.1 -- Client prerequisites and the fake.** `DirectObsClient`: `getSourceFilterList(sourceUuid)`,
+   `getSourceFilter(sourceUuid, filterName)`, `getSourceFilterDefaultSettings(filterKind)` (cached per kind, emptied on
+   every disconnect), `setSourceFilterSettings(sourceUuid, filterName, patch)` (always `overlay: true`),
+   `setSourceFilterEnabled(...)`, `triggerHotkeyByName(name)`; every filter request by `sourceUuid`; the catalog gains
+   `sceneDetails` (`sceneName`, `sceneUuid`, display order) and `groupDetails` (`GetGroupList`, UUIDs from the scenes'
+   `GetSceneItemList` group items, read only when OBS has a group); a collection change empties both. Fake: filters per
+   source UUID (scenes, groups and inputs) with kind, enabled flag, index and the settings OBS would report (only changed
+   values), overlay merge (`overlay: false` replaces), 600 for an unknown source or filter, static defaults per kind
+   (the Shader Filter, the Audio Modulator with slot 1 enabled, Color Correction), `TriggerHotkeyByName` logged with 600
+   for an unknown name, `GetGroupList`, scene UUIDs. Tests: "reads filters by sourceUuid, merges an overlay patch and
+   answers 600 for a missing filter", "lists hotkeys it knows, records a trigger and answers 600 for an unknown name",
+   "carries scene and group UUIDs in the catalog and drops them on a collection change". Mutations on the client:
+   *M-10.1a* send `overlay: false`; *M-10.1b* address filters by `sourceName`.
+3. **Step 10.2 -- Filter controller.** `src/obs/filter-ranges.ts`: the range table (Shader Filter mix and reactivity
+   0..100, Color Correction `opacity` 0..1, Audio Modulator `slot_N_amount_pct` only with an explicit range 0..100,
+   -100..0 or -100..100), the deck's deny list (`preset_shader`, `shader_file_path`, `shader_text`,
+   `override_entire_effect`, colour, list, mode, signal, fader-slot, target and enable settings, `max_flash_rate_hz`,
+   `*_threshold`, `*rate_divider`; not `custom_low_hz`/`custom_high_hz`), and an explicit `min < max` range for any
+   other numeric setting; the rest value is the range's value nearest 0. `src/control/filter-controller.ts`:
+   - *Identity:* `sourceUuid` + `filterName` + `filterKind`; a read of another kind is refused ("wrong kind"); 600 is
+     "missing", never another filter.
+   - *Reads:* `GetSourceFilter` merged over the kind's defaults, on appear, on a press, at a gesture start and 1.5 s
+     after the last write; no polling, no Filters subscription.
+   - *Ownership, at every gesture start and before every glide:* `GetSourceFilterList` on the source; a setting is
+     owned when any sibling Audio Modulator slot names it in `slot_N_target_filter`/`_setting` (defaults merged, so
+     slot 1 is enabled by default), also when that modulator filter or that slot is disabled (re-enabling it would fight
+     the deck and overwrite its baseline), or when the Shader Filter's own Parameter Fader binds it
+     (`param_fader_N_target`, `param_fader_N_slot` not -1). Owned settings are never written ("Driven by …").
+   - *Writes:* pending values merge per `(sourceUuid, filterName)` into one `overlay: true` patch; one write in flight
+     per filter, the newest values win; at least 50 ms apart per filter (200 ms for an Audio Modulator, whose every
+     update re-reads its targets' properties); at most 20 writes a second over all filters; each write moves a setting
+     by at most 10 % of its range (a full sweep takes 0.5 s) and a 50 ms drain carries the rest of a fast flick;
+     integer settings are rounded.
+   - *Gestures:* a turn after 1 s without one starts a gesture: the fresh read and the ownership check come first,
+     ticks meanwhile accumulate and land on the fresh value. A turn cancels a glide on the same setting.
+   - *Glides* (set, drop-and-return) run at 20 Hz under the slew cap, cancelled per `(sourceUuid, filterName,
+     setting)`; a drop-and-return returns even when its control is hidden.
+   - *Lifecycle:* disconnect, reconnect and a scene collection change bump a generation that cancels glides, queued
+     values and replies in flight.
+   - *Latch:* while Visual Panic is latched, no setting or enabled state of a Visual Sidechain filter (a kind starting
+     `visual_sidechain_`) is written and their glides stop ("Restore first"); other filters are unaffected.
+   Tests: range and slew bound; two settings on one filter both land; one write in flight and the last value lands;
+   fresh read at a gesture start; a sibling modulator enabled between gestures is seen and refused; slot 1 found through
+   defaults; a Parameter Fader binding refused; a filter of another kind refused; denied settings never written; the
+   bipolar drop goes to 0; cancel on disconnect and on a collection change; refusal and stopped glides while latched;
+   Enabled blocked while latched. Mutations: *M-10.2a* no slew cap; *M-10.2b* a second write in flight; *M-10.2c* no
+   fresh read at a gesture start; *M-10.2d* `max_flash_rate_hz` writable; *M-10.2e* ownership ignored; *M-10.2f* no
+   generation check; *M-10.2g* per-filter newest-wins drops the other setting; *M-10.2h* no sibling re-read;
+   *M-10.2i* kind ignored (all on the controller, none on the fake).
+4. **Step 10.3 -- Visual Panic and the latch.** `src/control/visual-safety.ts` (shared by every key: the latch, set
+   when Panic is sent and cleared by a Restore that OBS accepts, by a Panic or Restore answered 600, and on disconnect
+   or reconnect); `src/actions/visual-panic-key.ts` (`com.jbrick2070.fadester-for-obs.visual-panic`, keys only,
+   `operation: panic | restore`): Panic sends `TriggerHotkeyByName` `visual_sidechain_panic` on key down, every press,
+   with no debounce and no `GetHotkeyList` pre-check; Restore sends `visual_sidechain_restore` only after an 800 ms
+   hold, drawing a hold ring meanwhile; 600 shows "Visual Sidechain not loaded". Its manifest entry and registration
+   land in 10.4 with the filter action's. Tests: one request per press and a
+   retry after a failed send; Restore needs the hold; a missing hotkey says so; the latch until Restore, cleared on
+   reconnect. Mutations: *M-10.3a* Restore on a short press; *M-10.3b* the latch kept across a reconnect; *M-10.3c* a
+   Panic debounce.
+5. **Step 10.4 -- OBS Filter action.** `src/actions/obs-filter-control.ts` (`…obs-filter`, Keypad and Encoder):
+   dial turn rides the setting (relative), press none, drop-and-return (down drops to the rest value, up returns) or
+   toggle; a touch tap does nothing; keys toggle-enabled, set (glide to a value over a time) or step up/down. Its own
+   dial cell (sine wave over the bar, big value, filter and setting small) and key glyphs (Look lens with rays, filled
+   when on; Still flat line; Full react tall wave; step waves). The optional `accent` (default, brass, teal, magenta)
+   on the direct renderers and the scene, fader, fade, layer, Playlister and new actions; the default draws today's
+   SVG byte for byte. Manifest entries before the two optional actions (ten actions), registration. Tests: a tap sends
+   nothing; drop-and-return glides and returns; toggle reads fresh; draws the value or the problem, never blank; the
+   default accent renders identical SVG. Mutations: *M-10.4a* toggle from the cached state; *M-10.4b* the default
+   accent draws brass.
+6. **Step 10.5 -- Inspectors.** `ui/obs-filter.html`: source (scenes, groups and inputs, by UUID), filter (with its
+   kind, read through the plugin), setting (the table first, numeric settings only, deny list and owned settings
+   hidden or marked), the explicit range off the table, "Use current", banners; `ui/visual-panic.html`; an Accent row
+   on every direct inspector. Tests: only numeric, writable settings and a required range; saves UUID, filter name and
+   kind, never resolves by name. Mutation: *M-10.5a* a denied setting listed.
+7. **Step 10.6 -- Profiles.** The builder's checks move into `scripts/profile-checks.ts` (tests import it; the
+   builder still writes on run); presets may hold `pages: [{ name, accent, actions }]` (single `actions` stays); kinds
+   `filter`, `panic` and `page`; page keys in the review's exact format (`Plugin: { Name: "Pages", UUID:
+   "com.elgato.streamdeck.page", Version: "1.0" }`, `UUID: "com.elgato.streamdeck.page.next"`, `Settings: {}`,
+   `States: [{}]`, no Fadester manifest lookup, no `labelOverride`; the shape of Elgato's page plugin manifest on
+   this PC, `vj-rig-plan.md` review round 1); the root `Pages` lists every page; `keysUsed` and `dialsUsed` count
+   the busiest page; the build fails unless Panic sits on its key on every page, Next page on its key, and no Scene &
+   Transition key with operation Cut or Transition is among the eight keys around Panic.
+   `plus-vj-rig` and `buttons-vj-rig` in `layouts.json`, `READY_LAYOUTS`, manifest `Profiles`; captions for the
+   filter and panic keys, Scenes 5-8 and the Playlister clips; docs counts. Tests: Panic and Next page fixed on every
+   page; nothing Program-changing beside Panic; four pages, byte-stable rebuild; German render of every rig caption;
+   manifest hygiene and preset readiness read pages (blend operations allowed in the rig; a binding may repeat across
+   pages, and within a page only on unbound filter and Playlister controls). Mutations: *M-10.6a* a page without Panic passes the check;
+   *M-10.6b* the single-page writer.
+8. **Step 10.7 -- Texts.** Polish of the eight files, the fit samples ("PANIC SENT", "Restore first", the longest
+   filter and setting names), `ui/i18n.js` and `ui/preset-captions.js` regenerated, the list of new keys for the
+   Gemini review. Mutation: *M-10.7a* the English Panic word on a German deck.
+9. **Step 10.8 -- Live check (automated part).** `tests/vj-rig-live-check.ts`, run by hand beside
+   `tests/playlister-live-check.ts`: against the portable OBS 33.0.1 with Visual Sidechain, it creates its own color
+   source and Shader Filter (uniquely named), rides `vs_effect_mix_pct` through the controller and reads it back,
+   toggles the filter, triggers Panic and Restore by `TriggerHotkeyByName` and checks the OBS log lines, then removes
+   what it made; OBS is started only when no obs64 runs and closed cleanly; the operator's sources are never touched.
+   Device checks stay with the operator: import, page wrap 4 to 1, page 1 after `switchToProfile`, touch-strip swipe
+   and dial swap, `willAppear` on page return, legibility at arm's length, Panic and Restore watched on Program output.
+
+**Decisions taken overnight (the operator may overrule any).**
+- Studio Mode only; plain page names (Perform, Layers, Visuals, Scenes); Midi Fadester and VJster speed stay out.
+- Cut by the review: the "Param" dial, the "Mod amount" dial and the 15-key "Mod −/+" keys. In their places: SD+
+  VISUALS dials 3 and 4 ride a third Shader Filter (Mix C, React C); the 15-key VISUALS keys are React − and React +.
+- Re-placed so nothing Program-changing touches Panic: SD+ PERFORM and SCENES put Transition at (0,0) and SCENES' Cut
+  preview at (1,1); the 15-key SCENES page puts Cut preview at (0,1) and Transition at (1,2).
+- Page keys carry no title (`States: [{}]`): Elgato's own icon is language-neutral, a title would stay English.
+- On the Stream Deck + every key is in use, so Restore lives on VISUALS only ("Restore first" sends the operator
+  there); the 15-key deck has it on every page.
+- Accent values: default (today's violet), brass, teal, magenta. Red is not offered: it means Panic and Cut.
+- The latch is set when Panic is sent; a Panic or Restore answered 600 (Visual Sidechain not loaded) clears it, since
+  nothing panicked; a timeout keeps it. Restore fires at 800 ms while held (as the dial hold, D-3), not on release.
+- Drop-and-return is momentary (dial down drops, dial up returns); a hidden control still returns; a turn cancels
+  the return; a retarget cancels it and the dial says so. The slew cap applies to glides, so a full drop takes 0.5 s.
+- Audio Modulator amounts may be ridden with an explicit range at 5 writes a second; the rig binds none.
+- Midi Fadester's mix and reactivity fader slots on a Shader Filter scale the value rather than drive it, so they are
+  not ownership and are not warned about in this delivery (a deliberate change from the plan's "warn when Midi
+  Fadester binds the same setting").
+- Off the table, a setting needs an explicit range and may be marked whole numbers; group UUIDs come from the
+  scenes' item lists (`GetGroupList` names only), read only when a group exists.
+- Neither new action is supported in Multi Actions (as Playlister Transport).

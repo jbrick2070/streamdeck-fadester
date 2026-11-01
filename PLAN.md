@@ -1455,6 +1455,11 @@ and OBS page (D-L7), better Chinese alias handling in VJster's Automatic.
   in `tests/i18n-strings.test.ts` (`localeTag()` is `nl` and `formatNumber(1.5)` is `1,5` on the deck). Left for
   L.4: the endonym test's Automatic text falls back to English while `languageAuto` has no German, so L.4, when it
   empties `PENDING_UNTIL_L4`, asserts `de.languageAuto` there directly.
+- *L.3 (2026-11-01):* VJster's own loader, the choice and its settings page; the details and where the code led are
+  in `docs/vjster/PLAN.md` 9 (As built). In short: deck words from VJster's own `<lang>.json` reader with one table
+  changed in place and every instance redrawn; the stored choice applied at connect and on every settings event; the
+  plugin's saves run one at a time and every write keeps the port, the extension allow list and the language it
+  omits, so a language change can never write an empty allow list; M-V-90..94 plus M-V-94a..f.
 
 ### 11.6 Decisions (approved by the operator 2026-11-01, every one at its recommended default)
 

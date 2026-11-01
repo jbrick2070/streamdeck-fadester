@@ -653,10 +653,10 @@ export const MUTATIONS: readonly Mutation[] = [
   {
     id: "M-V-77",
     rule: "a settings write that drops the OBS token gets it back",
-    file: "src/vjster/plugin/standalone.ts",
-    from: "    if (incoming.obsToken === null) repaired.obsToken = current.obsToken ?? newObsToken();",
-    to: "    void newObsToken;",
-    tests: ["tests/vjster-page-e2e.test.ts"]
+    file: "src/vjster/plugin/global-sync.ts",
+    from: "  if (globalSettings(written).obsToken === null) {",
+    to: "  if (false) {",
+    tests: ["tests/vjster-page-e2e.test.ts", "tests/vjster-language.test.ts"]
   },
   {
     id: "M-V-78",
@@ -677,10 +677,10 @@ export const MUTATIONS: readonly Mutation[] = [
   {
     id: "M-V-80",
     rule: "a stale settings page's write keeps the keep-the-link-on choice",
-    file: "src/vjster/plugin/standalone.ts",
-    from: "    if (!(\"obsAlwaysOn\" in ev.settings) && current.obsAlwaysOn !== null) repaired.obsAlwaysOn = current.obsAlwaysOn;",
-    to: "    void current;",
-    tests: ["tests/vjster-page-e2e.test.ts"]
+    file: "src/vjster/plugin/global-sync.ts",
+    from: "  if (!(\"obsAlwaysOn\" in written) && current.obsAlwaysOn !== null) out.obsAlwaysOn = current.obsAlwaysOn;",
+    to: "  void current;",
+    tests: ["tests/vjster-page-e2e.test.ts", "tests/vjster-language.test.ts"]
   },
   {
     id: "M-V-81",
@@ -753,6 +753,118 @@ export const MUTATIONS: readonly Mutation[] = [
     from: "  const lang = pageLanguage(params.hl ?? env.language);",
     to: "  const lang = pageLanguage(env.language);",
     tests: ["tests/vjster-page-i18n.test.ts"]
+  },
+  {
+    id: "M-V-90",
+    rule: "the deck words come from VJster's own loader, not the SDK's translator bound to Stream Deck's language (PLAN.md 9)",
+    file: "src/vjster/plugin/standalone.ts",
+    from: "  streamDeck.actions.registerAction(new a(hub, deck.strings, deck));",
+    to: "  streamDeck.actions.registerAction(new a(hub, Object.fromEntries(Object.keys(deck.strings).map((k) => [k, streamDeck.i18n.translate(k)])) as typeof deck.strings, deck));",
+    tests: ["tests/vjster-plugin-e2e-language.test.ts"]
+  },
+  {
+    id: "M-V-91",
+    rule: "a language change redraws every instance of every action (R-LANG-4)",
+    file: "src/vjster/plugin/actions.ts",
+    from: "    language?.onChange(() => this.redrawAll());",
+    to: "    void language;",
+    tests: ["tests/vjster-language.test.ts", "tests/vjster-plugin-e2e-language.test.ts"]
+  },
+  {
+    id: "M-V-92",
+    rule: "the settings page follows the plugin's language answer (R-LANG-4)",
+    file: "com.jbrick2070.vjster.sdPlugin/ui/vjster.js",
+    from: "      if (m.event === \"sendToPropertyInspector\" && m.payload && m.payload.event === \"language\") showLanguage(m.payload);",
+    to: "      if (false) showLanguage(m.payload);",
+    tests: ["tests/vjster-pi-language.test.ts"]
+  },
+  {
+    id: "M-V-93",
+    rule: "the stored language is applied at connect (R-LANG-1)",
+    file: "src/vjster/plugin/standalone.ts",
+    from: "  let settings = globalSettings(stored);",
+    to: "  let settings: GlobalSettings = { ...globalSettings(stored), language: \"auto\", languageRaw: undefined };",
+    tests: ["tests/vjster-plugin-e2e-language.test.ts"]
+  },
+  {
+    id: "M-V-94",
+    rule: "a write that omits the extension allow list keeps it (R-LANG-8)",
+    file: "src/vjster/plugin/global-sync.ts",
+    from: "  if (!(\"extensionIds\" in written) && current.extensionIds.length > 0) out.extensionIds = [...current.extensionIds];",
+    to: "  void current.extensionIds;",
+    tests: ["tests/vjster-language.test.ts", "tests/vjster-pi-language.test.ts", "tests/vjster-plugin-e2e-language.test.ts"]
+  },
+  {
+    id: "M-V-94a",
+    rule: "the plugin's own saves run one at a time, so racing saves keep both changes (R-LANG-8)",
+    file: "src/vjster/plugin/global-sync.ts",
+    from: "    const next = this.queue.then(run, run);",
+    to: "    const next = run();",
+    tests: ["tests/vjster-language.test.ts"]
+  },
+  {
+    id: "M-V-94b",
+    rule: "a write that omits the language keeps it (R-LANG-8)",
+    file: "src/vjster/plugin/global-sync.ts",
+    from: "  if (!(\"language\" in written) && current.languageRaw !== undefined) out.language = current.languageRaw as JsonObject[string];",
+    to: "  void current.languageRaw;",
+    tests: ["tests/vjster-language.test.ts", "tests/vjster-pi-language.test.ts"]
+  },
+  {
+    id: "M-V-94c",
+    rule: "the settings page never writes the language through its own copy (R-LANG-8)",
+    file: "com.jbrick2070.vjster.sdPlugin/ui/vjster.js",
+    from: "      if (k !== \"language\") copy[k] = global[k];",
+    to: "      copy[k] = global[k];",
+    tests: ["tests/vjster-pi-language.test.ts"]
+  },
+  {
+    id: "M-V-94d",
+    rule: "Save link writes no port from a port box the plugin never filled and nobody typed in (R-LANG-8)",
+    file: "com.jbrick2070.vjster.sdPlugin/ui/vjster.js",
+    from: "    if (linkShown.port || linkEdited.port) global.port = ",
+    to: "    if (true) global.port = ",
+    tests: ["tests/vjster-pi-language.test.ts"]
+  },
+  {
+    id: "M-V-94e",
+    rule: "the settings page shows English for a blank, key-echo or placeholder-changed text (R-LANG-5)",
+    file: "com.jbrick2070.vjster.sdPlugin/ui/vjster.js",
+    from: "    if (mine !== null && mine.trim() !== \"\" && mine !== key && (english === null || placeholdersOf(mine) === placeholdersOf(english))) return mine;",
+    to: "    if (mine !== null && mine !== \"\") return mine;",
+    tests: ["tests/vjster-pi-language.test.ts"]
+  },
+  {
+    id: "M-V-94f",
+    rule: "a status report leaves typed extension ids alone (R-LANG-4)",
+    file: "com.jbrick2070.vjster.sdPlugin/ui/vjster.js",
+    from: "    if (!editingLink(\"ext\")) {",
+    to: "    if (true) {",
+    tests: ["tests/vjster-pi-language.test.ts"]
+  },
+  {
+    id: "M-V-94g",
+    rule: "Save link writes no allow list when only the port box was typed in, each box counting on its own (R-LANG-8)",
+    file: "com.jbrick2070.vjster.sdPlugin/ui/vjster.js",
+    from: "    if (linkShown.ext || linkEdited.ext) global.extensionIds = ids;",
+    to: "    if (linkShown.ext || linkEdited.ext || linkEdited.port) global.extensionIds = ids;",
+    tests: ["tests/vjster-pi-language.test.ts"]
+  },
+  {
+    id: "M-V-94h",
+    rule: "a plugin save not about the allow list never stores an empty one while the plugin knows ids (R-LANG-8)",
+    file: "src/vjster/plugin/global-sync.ts",
+    from: "      if (!(\"extensionIds\" in change) && current.extensionIds.length > 0 && globalSettings(stored).extensionIds.length === 0) {",
+    to: "      if (false) {",
+    tests: ["tests/vjster-language.test.ts"]
+  },
+  {
+    id: "M-V-94i",
+    rule: "a status report leaves the port box alone while the operator is in it (R-LANG-4)",
+    file: "com.jbrick2070.vjster.sdPlugin/ui/vjster.js",
+    from: "    if (!editingLink(\"port\")) {",
+    to: "    if (true) {",
+    tests: ["tests/vjster-pi-language.test.ts"]
   }
 ];
 

@@ -3,8 +3,9 @@
 // Deck's property inspector: it shows the fields of the action it was opened
 // for, saves them with setSettings, and shows the link status the plugin
 // reports. No library, nothing loaded from the internet (R-ID-5). Its texts
-// come from i18n.js, loaded before it, in Stream Deck's language (PLAN.md 8.4);
-// a text that starts with "@" in the tables below is such a key.
+// come from i18n.js, loaded before it, in Stream Deck's language (PLAN.md 8.4)
+// until the plugin says which language VJster is in (the Language choice,
+// PLAN.md 9); a text that starts with "@" in the tables below is such a key.
 /* global WebSocket, document, window */
 (function () {
   "use strict";
@@ -74,7 +75,9 @@
   };
 
   var STRINGS = window.VJSTER_PI_STRINGS || {};
-  /** The language the texts are in: Stream Deck's, its base language, or English. */
+  /** The Language choice's languages: Stream Deck's eight and Dutch, as the plugin stores and resolves them. */
+  var PLUGIN_LANGUAGES = ["en", "de", "es", "fr", "ja", "ko", "zh_CN", "zh_TW", "nl"];
+  /** The language the texts are in: Stream Deck's, its base language, or English; then the one the plugin resolved. */
   var lang = "en";
 
   function pickLanguage(wanted) {
@@ -85,13 +88,26 @@
     return "en";
   }
 
+  function entry(language, part, key) {
+    var table = Object.prototype.hasOwnProperty.call(STRINGS, language) ? STRINGS[language][part] : null;
+    return table && Object.prototype.hasOwnProperty.call(table, key) && typeof table[key] === "string" ? table[key] : null;
+  }
+
+  /** The {placeholders} of a text, sorted, as one string. */
+  function placeholdersOf(text) {
+    return (text.match(/\{[A-Za-z0-9_]+\}/g) || []).sort().join();
+  }
+
+  /**
+   * A text in the page's language; English where that one is missing, blank,
+   * echoes its key or has other placeholders than English's, as the deck does
+   * (R-LANG-5); the key itself only when English has nothing either.
+   */
   function lookup(part, key) {
-    var chain = [lang, "en"];
-    for (var i = 0; i < chain.length; i++) {
-      var table = Object.prototype.hasOwnProperty.call(STRINGS, chain[i]) ? STRINGS[chain[i]][part] : null;
-      if (table && Object.prototype.hasOwnProperty.call(table, key) && typeof table[key] === "string" && table[key] !== "") return table[key];
-    }
-    return key;
+    var english = entry("en", part, key);
+    var mine = entry(lang, part, key);
+    if (mine !== null && mine.trim() !== "" && mine !== key && (english === null || placeholdersOf(mine) === placeholdersOf(english))) return mine;
+    return english !== null && english !== "" ? english : key;
   }
 
   /** A settings page text with its {placeholders} filled; values are put in as given. */
@@ -120,6 +136,14 @@
   var settings = {};
   var global = {};
   var kind = "";
+  /** Re-words the action fields in place after a language change, keeping what is typed in them (R-LANG-4). */
+  var relabels = [];
+  /** The last link status, so its words can follow a language change. */
+  var lastStatus = null;
+  /** Per link box ("port", "ext"): it holds typed, unsaved text, so a status message leaves it alone. */
+  var linkEdited = { port: false, ext: false };
+  /** Per link box: it shows what the plugin uses (a status message filled it). */
+  var linkShown = { port: false, ext: false };
 
   function send(message) {
     if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(message));
@@ -145,26 +169,58 @@
     return input.value;
   }
 
+  /** A node whose text comes from `wording`, worded again after a language change. */
+  function worded(node, wording) {
+    node.textContent = wording();
+    relabels.push(function () {
+      node.textContent = wording();
+    });
+    return node;
+  }
+
+  /** The default strip label shown as a placeholder: the deck word, in the deck's language. */
+  function labelPlaceholder(field) {
+    var word = field[3] === "speed" && settings.extended === true ? "fxSpeed" : field[3];
+    var placeholder = lookup("deck", word);
+    return placeholder === word ? "" : placeholder;
+  }
+
   function render() {
     var box = document.getElementById("fields");
     box.textContent = "";
+    relabels = [];
     var fields = FIELDS[kind] || [];
     if (fields.length === 0) {
-      box.appendChild(el("p", { class: "note" }, kind === "pin" ? t("pinNote") : ""));
+      box.appendChild(
+        worded(el("p", { class: "note" }), function () {
+          return kind === "pin" ? t("pinNote") : "";
+        })
+      );
       return;
     }
-    box.appendChild(el("h2", {}, t("thisAction")));
+    box.appendChild(
+      worded(el("h2", {}), function () {
+        return t("thisAction");
+      })
+    );
     fields.forEach(function (field) {
       var key = field[0];
       var row = el("label", { class: "row" });
-      row.appendChild(el("span", {}, t(field[1])));
+      row.appendChild(
+        worded(el("span", {}), function () {
+          return t(field[1]);
+        })
+      );
       var input;
       var current = settings[key];
       if (field[2] === "select") {
         input = el("select", {});
         field[3].forEach(function (opt) {
-          var o = el("option", { value: opt[0] }, shown(opt[1]));
-          input.appendChild(o);
+          input.appendChild(
+            worded(el("option", { value: opt[0] }), function () {
+              return shown(opt[1]);
+            })
+          );
         });
         input.value = current === undefined ? field[4] : String(current);
       } else if (field[2] === "check") {
@@ -175,10 +231,12 @@
         input.value = current === undefined ? String(field[3]) : String(current);
       } else {
         // The default label is the placeholder, in the deck's language, never the value (R-I18N-2).
-        var word = field[3] === "speed" && settings.extended === true ? "fxSpeed" : field[3];
-        var placeholder = lookup("deck", word);
-        input = el("input", { type: "text", maxlength: "16", placeholder: placeholder === word ? "" : placeholder });
+        input = el("input", { type: "text", maxlength: "16", placeholder: labelPlaceholder(field) });
         input.value = current === undefined ? "" : String(current);
+        var text = input;
+        relabels.push(function () {
+          text.setAttribute("placeholder", labelPlaceholder(field));
+        });
       }
       input.addEventListener("change", function () {
         var value = readValue(field, input);
@@ -191,7 +249,8 @@
     });
   }
 
-  function showStatus(s) {
+  /** The link status and OBS status in the page's language; nothing else is touched. */
+  function wordStatus(s) {
     var box = document.getElementById("status");
     var words = {
       connected: t("statusConnected"),
@@ -205,8 +264,6 @@
       box.textContent = allBad ? t("noValidId") : t(s.badIds === 1 ? "badIdOne" : "badIdMany", { n: s.badIds });
       box.className = "status bad";
     }
-    document.getElementById("port").value = String(s.port);
-    document.getElementById("ext").value = (s.extensionIds || []).join(", ");
     var obs = document.getElementById("obs-status");
     if (!s.obsPage) {
       obs.textContent = t("noObsPage");
@@ -215,6 +272,25 @@
       obs.textContent = s.obs === "connected" ? t("obsConnected") : t("obsWaiting");
       obs.className = "status " + (s.obs === "connected" ? "ok" : "bad");
     }
+  }
+
+  /** True while the operator is in this link box or has typed there since the last save. */
+  function editingLink(id) {
+    var focused = document.activeElement;
+    return linkEdited[id] || (focused !== undefined && focused !== null && focused.id === id);
+  }
+
+  function showStatus(s) {
+    lastStatus = s;
+    wordStatus(s);
+    if (!editingLink("port")) {
+      document.getElementById("port").value = String(s.port);
+      linkShown.port = true;
+    }
+    if (!editingLink("ext")) {
+      document.getElementById("ext").value = (s.extensionIds || []).join(", ");
+      linkShown.ext = true;
+    }
     // A port change changes the address: ask again for what was pasted, or show the placeholder.
     var pasted = document.getElementById("obs-video").value;
     if (pasted) send({ event: "sendToPlugin", action: PREFIX + kind, context: context, payload: { event: "obs-address", input: pasted } });
@@ -222,10 +298,53 @@
     document.getElementById("obs-always").checked = s.obsAlwaysOn === true;
   }
 
+  /**
+   * Writes the page's copy of the plugin-wide settings, without `language`: only the plugin saves the
+   * Language choice, so a copy older than the last pick cannot undo it; what this copy omits, the plugin
+   * keeps (R-LANG-8).
+   */
+  function writeGlobal() {
+    var copy = {};
+    Object.keys(global).forEach(function (k) {
+      if (k !== "language") copy[k] = global[k];
+    });
+    send({ event: "setGlobalSettings", context: context, payload: copy });
+  }
+
   document.getElementById("obs-always").addEventListener("change", function (event) {
     global.obsAlwaysOn = event.target.checked;
-    send({ event: "setGlobalSettings", context: context, payload: global });
+    writeGlobal();
   });
+
+  ["port", "ext"].forEach(function (id) {
+    document.getElementById(id).addEventListener("input", function () {
+      linkEdited[id] = true;
+    });
+  });
+
+  // A pick asks the plugin to save and apply it; the page changes when the plugin answers.
+  document.getElementById("language").addEventListener("change", function (event) {
+    send({ event: "sendToPlugin", action: PREFIX + kind, context: context, payload: { event: "setLanguage", choice: event.target.value } });
+  });
+
+  /**
+   * The plugin's answer: the choice and the language VJster draws in. The select follows the choice;
+   * another language re-words the page in place: fixed texts, the action fields (typed values kept), the
+   * statuses from the last report, then asks for the status again (R-LANG-4).
+   */
+  function showLanguage(m) {
+    var picker = document.getElementById("language");
+    picker.value = PLUGIN_LANGUAGES.indexOf(m.choice) !== -1 ? m.choice : "auto";
+    picker.disabled = false;
+    if (typeof m.resolved !== "string" || PLUGIN_LANGUAGES.indexOf(m.resolved) === -1 || m.resolved === lang) return;
+    lang = m.resolved;
+    translatePage();
+    relabels.forEach(function (relabel) {
+      relabel();
+    });
+    if (lastStatus) wordStatus(lastStatus);
+    send({ event: "sendToPlugin", action: PREFIX + kind, context: context, payload: { event: "status" } });
+  }
 
   function showAddress(m) {
     var field = document.getElementById("obs-address");
@@ -263,9 +382,13 @@
       .filter(function (id) {
         return id.length > 0;
       });
-    global.port = port >= 1024 && port <= 65535 ? port : 48150;
-    global.extensionIds = ids;
-    send({ event: "setGlobalSettings", context: context, payload: global });
+    // A box the plugin never filled and nobody typed in is empty, not a port or an empty allow list: leave
+    // it out then, and the plugin keeps what it has (R-LANG-8). Each box counts on its own, so typing a port
+    // into a box that was focused before the first report writes no allow list.
+    if (linkShown.port || linkEdited.port) global.port = port >= 1024 && port <= 65535 ? port : 48150;
+    if (linkShown.ext || linkEdited.ext) global.extensionIds = ids;
+    linkEdited = { port: false, ext: false };
+    writeGlobal();
     window.setTimeout(function () {
       send({ event: "sendToPlugin", action: PREFIX + kind, context: context, payload: { event: "status" } });
     }, 400);
@@ -310,6 +433,7 @@
         settings = m.payload.settings || {};
         render();
       }
+      if (m.event === "sendToPropertyInspector" && m.payload && m.payload.event === "language") showLanguage(m.payload);
       if (m.event === "sendToPropertyInspector" && m.payload && m.payload.event === "status") showStatus(m.payload);
       if (m.event === "sendToPropertyInspector" && m.payload && m.payload.event === "obs-address") showAddress(m.payload);
     };

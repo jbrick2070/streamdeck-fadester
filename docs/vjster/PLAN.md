@@ -503,3 +503,42 @@ as AUTO, VAST, RECLAME, FX-TEMPO, VASTGEZET, PAUZE, guided by `de.json`. The rat
    (D-L10).
 
 **As built.** *L.0 (2026-11-01):* this section and REQUIREMENTS 10b.
+*L.3 (2026-11-01):* `src/vjster/plugin/language.ts` (`PLUGIN_LANGUAGES`, `normalizeChoice`, `appMapping`,
+`resolveLanguage`, `readLocalization`, `deckStrings`, and `DeckLanguage`, which owns the one `strings` table, replaces
+its fields in place and tells listeners only when the resolved language changes); `standalone.ts` builds the deck words
+from it (no `streamDeck.i18n.translate`), applies the stored `language` in `apply()` (so at connect and on every
+settings event), handles `{ event: "setLanguage", choice }` and answers `{ event: "language", choice, resolved }`
+(also before every `status`); `GlobalSettings` gains `language` and `languageRaw`; the actions take the `DeckLanguage`
+as an optional third argument and redraw every instance on a change. New `src/vjster/plugin/global-sync.ts`:
+`keepOmitted` (port, `extensionIds` when the plugin has any, `language` as stored, `obsAlwaysOn`, the token),
+`repairPageWrite` (the page-write repair, moved out of `standalone.ts`) and `GlobalSaver` (the plugin's own saves).
+The page: a Language section after the action's fields, the select disabled until the first answer, in-place
+re-labelling, the status cache, the lookup fallback; `deck-sim.ts` echoes the request id and records
+`globalWrites`. Tests: `tests/vjster-language.test.ts`, `tests/vjster-pi-language.test.ts` (on the stand-in DOM, moved
+from `tests/vjster-pi.test.ts` to `tests/helpers/vjster-pi-dom.ts`), three new cases in
+`tests/vjster-plugin-e2e-language.test.ts`. Mutations M-V-90..94 as planned, plus *M-V-94a* (saves not one at a
+time), *M-V-94b* (the repair drops the language), *M-V-94c* (the page writes `language` from its copy), *M-V-94d*
+(Save link writes boxes the plugin never filled), *M-V-94e* (the page takes a malformed text), *M-V-94f* (a status
+overwrites typed link boxes); M-V-77 and M-V-80 now flip the same rules in `global-sync.ts`.
+Where the code led: `saveGlobal` read and wrote with no queue, so a keep-on auto-save and a language save could each
+merge into the same read and the second write drop the first's change; the plugin's saves now run one at a time
+(`GlobalSaver`), and a read that fails or does not answer in 5 s stands in as `{}`, which `keepOmitted` fills from what
+the plugin applies, so a language change can never write an empty allow list where one is stored or known. A page
+write that omitted `port` used to reset the link to the default port; the repair keeps it now. The page used to write
+`port` and an empty `extensionIds` from boxes no status had filled yet (Save link before the first report); it now
+leaves both out unless a report filled the boxes or the operator typed there, and a status no longer overwrites typed
+link boxes at any time (the plan asked this only across a switch). The page strips `language` from every write of its
+copy, rather than only never setting it, so a copy read before a pick cannot undo it. The page asks again only for
+`status`, whose handler already asks for the address when one was pasted. Until L.4 the four new page keys
+(`languageHeading`, `languageBadge`, `languageAuto`, `languageNote`) are English only, listed in `PENDING_UNTIL_L4` in
+`tests/vjster-i18n-files.test.ts` (which fails once a language has one); the page now has 50 keys, not 46. With no
+`nl.json` yet, the end-to-end Dutch case expects whatever `nl.json` gives (English today), so it holds after L.4
+unchanged.
+Review fixes (QA, 2026-11-01): the page tracks the port box and the extension box each on its own, so a port typed
+into a box that was focused before the first report writes no allow list (it used to write `extensionIds: []`, which
+the plugin takes as a deliberate clear); a status fills whichever box is not being edited. A plugin save that is not
+about the allow list no longer stores a read's empty or id-less list while the plugin knows ids (`GlobalSaver.save`);
+a stored non-empty list still stands, and a clear from the page reaches the plugin first, so it is kept. A stored
+list that is a string of junk is left as stored: the plugin reads it as ids that match nothing and fails closed.
+Mutations: M-V-94d now targets the port line, M-V-94f the extension box; new *M-V-94g* (typing a port writes the
+allow list), *M-V-94h* (the saver guard dropped) and *M-V-94i* (a status overwrites the focused port box).

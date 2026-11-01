@@ -9,12 +9,13 @@ import streamDeck from "@elgato/streamdeck";
 import type { JsonObject } from "@elgato/utils";
 import { DEFAULT_LINK_PORT } from "../shared/protocol.js";
 import { PinAction, QualityDialAction, QualityPresetAction, SpeedDialAction, SpeedPresetAction, SpeedStepAction, TransportAction } from "./actions.js";
+import { GlobalSaver, repairPageWrite } from "./global-sync.js";
 import { Hub } from "./hub.js";
+import { DeckLanguage, normalizeChoice } from "./language.js";
 import { newObsToken } from "./link-server.js";
 import { ObsKeepAlive } from "./obs-keepalive.js";
 import { loadObsPage, obsPageAddress, videoIdFrom } from "./obs-page.js";
 import { globalSettings, type GlobalSettings } from "./settings.js";
-import { stringsFrom } from "./strings.js";
 
 // R-BEH-5: only reasons are logged, never a URL, a title or a message body.
 const log = { info: (m: string) => streamDeck.logger.info(m), warn: (m: string) => streamDeck.logger.warn(m) };
@@ -26,6 +27,12 @@ const pages = loadObsPage(process.env.VJSTER_PAGE_DIR || join(dirname(fileURLToP
 let startupDone = false;
 let current: GlobalSettings = globalSettings({});
 const hub = new Hub({ port: DEFAULT_LINK_PORT, log, pages });
+
+// The deck words (R-I18N-1, R-LANG-1..5): VJster reads its own <lang>.json files from the plugin folder (Stream Deck
+// starts the plugin there), in Stream Deck's language until the stored Language choice is applied at connect. The
+// SDK's translator is not used: it stays on Stream Deck's language. actions.ts never reads the registration info, so
+// the unit tests can import it.
+const deck = new DeckLanguage({ appLanguage: streamDeck.info.application.language, dir: process.cwd(), log: log.warn });
 
 // No server until the stored settings are applied, so it never runs on the default port or without the
 // extension pin; if Stream Deck never answers, the defaults apply after 5 s.
@@ -39,16 +46,23 @@ hub.holdUntil(
 
 async function apply(settings: GlobalSettings): Promise<void> {
   current = settings;
+  // A changed language redraws every key and dial (the actions listen to deck) and re-words an open settings page.
+  if (deck.apply(settings.languageRaw)) sendLanguage();
   await hub.reconfigure({ port: settings.port, allowedExtensionIds: settings.extensionIds, obsToken: settings.obsToken, log, pages });
   keepAlive.set(settings.obsAlwaysOn);
 }
 
+/** The plugin's own saves: one at a time, each merged into a fresh read, never losing a key (R-LANG-8). */
+const saver = new GlobalSaver({
+  read: () => streamDeck.settings.getGlobalSettings<JsonObject>(),
+  write: (settings) => streamDeck.settings.setGlobalSettings(settings),
+  current: () => current,
+  apply
+});
+
 /** Merge into the stored plugin-wide settings, save, and apply. */
-async function saveGlobal(change: JsonObject): Promise<void> {
-  const stored = await streamDeck.settings.getGlobalSettings<JsonObject>();
-  const merged = { ...stored, ...change };
-  await streamDeck.settings.setGlobalSettings(merged);
-  await apply(globalSettings(merged));
+function saveGlobal(change: JsonObject): Promise<void> {
+  return saver.save(change);
 }
 
 // The first OBS page to connect turns "keep the link on for OBS" on, so OBS finds its page after a restart.
@@ -66,13 +80,12 @@ function obsAddress(input: unknown): { address: string; found: boolean } {
 streamDeck.settings.onDidReceiveGlobalSettings<JsonObject>((ev) => {
   const incoming = globalSettings(ev.settings);
   if (startupDone) {
-    // A write from a settings page whose copy is older than the plugin's own changes must not lose
-    // them: keep the OBS token (the page's address carries it; make one if it was never there) and
-    // the keep-the-link-on choice, and write them back.
-    const repaired: JsonObject = { ...ev.settings };
-    if (incoming.obsToken === null) repaired.obsToken = current.obsToken ?? newObsToken();
-    if (!("obsAlwaysOn" in ev.settings) && current.obsAlwaysOn !== null) repaired.obsAlwaysOn = current.obsAlwaysOn;
-    if (Object.keys(repaired).length !== Object.keys(ev.settings).length || repaired.obsToken !== ev.settings.obsToken) {
+    // A write from a settings page whose copy is older than the plugin's own changes, or that was made
+    // before the page had the settings at all, must not lose them: keep the OBS token (the page's address
+    // carries it; make one if it was never there), the keep-the-link-on choice, the port, the extension
+    // allow list and the language, and write them back (global-sync.ts, R-LANG-8).
+    const { settings: repaired, changed } = repairPageWrite(ev.settings, current, newObsToken);
+    if (changed) {
       void streamDeck.settings.setGlobalSettings(repaired).catch(() => undefined);
       void apply(globalSettings(repaired));
       return;
@@ -81,8 +94,31 @@ streamDeck.settings.onDidReceiveGlobalSettings<JsonObject>((ev) => {
   void apply(incoming);
 });
 
-/** The link's status for the settings page. */
+/** The Language choice and the language the deck draws in, for the settings page (PLAN.md 9, design 4). */
+function sendLanguage(): void {
+  void streamDeck.ui.sendToPropertyInspector({ event: "language", choice: deck.choice, resolved: deck.resolved });
+}
+
+/**
+ * The settings page picked a language: save it with the plugin's own merge (never through the page's copy), apply,
+ * and answer. A value the page does not offer changes nothing; the answer tells the page what holds.
+ */
+async function setLanguageChoice(raw: unknown): Promise<void> {
+  const { choice, unknown } = normalizeChoice(raw);
+  if (!unknown && raw !== undefined) {
+    try {
+      await saveGlobal({ language: choice });
+    } catch {
+      log.warn("language choice not saved");
+      await apply({ ...current, language: choice, languageRaw: choice });
+    }
+  }
+  sendLanguage();
+}
+
+/** The link's status for the settings page, after the language its words are in. */
 function sendStatus(): void {
+  sendLanguage();
   const browser = hub.view("browser");
   const obs = hub.view("obs");
   void streamDeck.ui.sendToPropertyInspector({
@@ -106,17 +142,14 @@ streamDeck.ui.onDidAppear(() => sendStatus());
 streamDeck.ui.onSendToPlugin<JsonObject>((ev) => {
   const message = ev.payload;
   if (message.event === "status") sendStatus();
+  if (message.event === "setLanguage") void setLanguageChoice(message.choice);
   if (message.event === "obs-address") {
     void streamDeck.ui.sendToPropertyInspector({ event: "obs-address", ...obsAddress(message.input) });
   }
 });
 
-// The deck words in Stream Deck's language, from the plugin's <lang>.json files (R-I18N-1). Read here, in the plugin
-// process, where Stream Deck's registration info exists; actions.ts never reads it, so the unit tests can import it.
-const strings = stringsFrom((key) => streamDeck.i18n.translate(key));
-
 for (const a of [SpeedDialAction, QualityDialAction, SpeedPresetAction, SpeedStepAction, QualityPresetAction, PinAction, TransportAction]) {
-  streamDeck.actions.registerAction(new a(hub, strings));
+  streamDeck.actions.registerAction(new a(hub, deck.strings, deck));
 }
 
 void streamDeck.connect().then(async () => {
@@ -127,6 +160,7 @@ void streamDeck.connect().then(async () => {
     settings = { ...settings, obsToken: newObsToken() };
     await streamDeck.settings.setGlobalSettings({ ...stored, obsToken: settings.obsToken });
   }
+  // apply() applies the stored Language choice too, so a fixed language is drawn from the start (R-LANG-1).
   await apply(settings);
   // Only now, with the stored settings and the OBS token applied, may the server start.
   startupDone = true;

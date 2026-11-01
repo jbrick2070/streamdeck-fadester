@@ -9,6 +9,28 @@
   <body>
     <section id="fields"></section>
 
+    <!-- One Language for all of VJster, kept by the plugin (docs/vjster/PLAN.md 9); the page only asks for a change. -->
+    <!-- The nine languages are named in their own words and never translated. -->
+    <section class="global">
+      <h2><span data-i18n="languageHeading">Language</span> <span class="scope" data-i18n="languageBadge">all VJster controls</span></h2>
+      <label class="row">
+        <span data-i18n="languageHeading">Language</span>
+        <select id="language" disabled>
+          <option value="auto" data-i18n="languageAuto">Automatic (Stream Deck's language)</option>
+          <option value="en" lang="en">English</option>
+          <option value="de" lang="de">Deutsch</option>
+          <option value="es" lang="es">Español</option>
+          <option value="fr" lang="fr">Français</option>
+          <option value="ja" lang="ja">日本語</option>
+          <option value="ko" lang="ko">한국어</option>
+          <option value="zh_CN" lang="zh-CN">简体中文</option>
+          <option value="zh_TW" lang="zh-TW">繁體中文</option>
+          <option value="nl" lang="nl">Nederlands</option>
+        </select>
+      </label>
+      <p class="note" data-i18n="languageNote">Applies to all VJster controls. Stream Deck's own menus, action list, tooltips and dial hints stay in Stream Deck's language.</p>
+    </section>
+
     <section class="global">
       <h2 data-i18n="linkTitle">VJster link</h2>
       <div id="status" class="status" data-i18n="checking">Checking...</div>

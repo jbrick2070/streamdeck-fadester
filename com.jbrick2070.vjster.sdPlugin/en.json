@@ -116,7 +116,11 @@
       "copied": "Copied",
       "keepOn": "Keep the link on",
       "keepOnNote": "OBS loads the page only when it starts or when the source is refreshed, so the link stays on while Stream Deck runs. This turns on by itself the first time an OBS page connects.",
-      "obsNote": "In OBS, add a Browser source, untick Local file, and paste this address as its URL. Then set an action's Control to OBS page or Both. The address carries this computer's OBS page key: keep it out of screenshots and chat."
+      "obsNote": "In OBS, add a Browser source, untick Local file, and paste this address as its URL. Then set an action's Control to OBS page or Both. The address carries this computer's OBS page key: keep it out of screenshots and chat.",
+      "languageHeading": "Language",
+      "languageBadge": "all VJster controls",
+      "languageAuto": "Automatic (Stream Deck's language)",
+      "languageNote": "Applies to all VJster controls. Stream Deck's own menus, action list, tooltips and dial hints stay in Stream Deck's language."
     }
   }
 }

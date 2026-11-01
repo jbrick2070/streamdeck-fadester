@@ -45,6 +45,11 @@ export const UUID_PREFIX = "com.jbrick2070.vjster";
 /** At most one draw per action per this many ms, the last always (a fast spin would otherwise draw on every tick and reply). */
 export const DRAW_MS = 100;
 
+/** Tells the actions the deck's language changed; language.ts's DeckLanguage is one. */
+export interface LanguageEvents {
+  onChange(listener: () => void): () => void;
+}
+
 /** The shared parts every action needs. */
 interface Rendered {
   render(): void;
@@ -58,10 +63,18 @@ abstract class VjsterAction<C extends Rendered> extends SingletonAction<JsonObje
 
   constructor(
     protected readonly hub: Hub,
-    /** The deck words in Stream Deck's language; standalone.ts builds them (strings.ts). */
-    protected readonly strings: Strings = EN
+    /** The deck words; standalone.ts hands in DeckLanguage's one table, whose fields change in place (language.ts). */
+    protected readonly strings: Strings = EN,
+    /** When the language changes, every instance of this action is drawn again (R-LANG-4). */
+    language?: LanguageEvents
   ) {
     super();
+    language?.onChange(() => this.redrawAll());
+  }
+
+  /** Draws every instance again, in the words now in force. */
+  protected redrawAll(): void {
+    for (const entry of this.instances.values()) entry.controller.render();
   }
 
   protected abstract make(sink: Sink, settings: JsonObject): C;

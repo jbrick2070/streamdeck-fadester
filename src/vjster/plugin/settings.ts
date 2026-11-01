@@ -7,6 +7,7 @@
 import { DEFAULT_LINK_PORT } from "../shared/protocol.js";
 import { AUTO, isLevelId } from "../shared/quality.js";
 import { ALLOWED_STEPS, DEFAULT_FINE_STEP, DEFAULT_STEP, EXTENDED_RANGE, rangeBounds, snapRate, type RateStep } from "../shared/speed.js";
+import { normalizeChoice, type LanguageChoice } from "./language.js";
 
 export type TargetChoice = "browser" | "obs" | "both";
 
@@ -103,6 +104,10 @@ export interface GlobalSettings {
   readonly obsToken: string | null;
   /** Keep the link running while the plugin runs, so OBS can load its page at any time (obs-keepalive.ts); null until chosen. */
   readonly obsAlwaysOn: boolean | null;
+  /** The Language choice (R-LANG-1): "auto" when absent or not one of the nine. */
+  readonly language: LanguageChoice;
+  /** The stored `language` value as it was, kept until the next pick (R-LANG-5); undefined when absent. */
+  readonly languageRaw: unknown;
 }
 
 export function globalSettings(raw: unknown): GlobalSettings {
@@ -116,5 +121,12 @@ export function globalSettings(raw: unknown): GlobalSettings {
     .filter((id) => id.length > 0 && id.length <= 64)
     .slice(0, 16);
   const token = typeof r.obsToken === "string" && /^[0-9a-f]{32}$/.test(r.obsToken) ? r.obsToken : null;
-  return { port, extensionIds: [...new Set(ids)], obsToken: token, obsAlwaysOn: r.obsAlwaysOn === true ? true : r.obsAlwaysOn === false ? false : null };
+  return {
+    port,
+    extensionIds: [...new Set(ids)],
+    obsToken: token,
+    obsAlwaysOn: r.obsAlwaysOn === true ? true : r.obsAlwaysOn === false ? false : null,
+    language: normalizeChoice(r.language).choice,
+    languageRaw: r.language
+  };
 }

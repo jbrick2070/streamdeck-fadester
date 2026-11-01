@@ -24,6 +24,13 @@ function texts(value: unknown, path = ""): Map<string, unknown> {
 }
 
 const files = deckLanguageFiles();
+
+/**
+ * The Language section's page texts (docs/vjster/PLAN.md 9, step L.3) are in
+ * English only until step L.4 writes them in every language; this list must be
+ * emptied then (the test below fails as soon as a language has one of them).
+ */
+const PENDING_UNTIL_L4 = ["languageHeading", "languageBadge", "languageAuto", "languageNote"].map((k) => `Localization\u0000pi\u0000${k}`);
 const en = files.find((f) => f.lang === "en");
 const manifest = JSON.parse(readFileSync(join(PLUGIN_DIR, "manifest.json"), "utf8")) as {
   Name: string;
@@ -55,7 +62,9 @@ describe("Stream Deck language files (R-I18N-5)", () => {
       expect(Buffer.from(f.bytes.toString("utf8"), "utf8").equals(f.bytes)).toBe(true);
       const mine = texts(f.json);
       const english = texts(en!.json);
-      expect([...mine.keys()].sort()).toEqual([...english.keys()].sort());
+      const pending = f.lang === "en" ? [] : PENDING_UNTIL_L4;
+      for (const path of pending) expect(mine.has(path), `${f.lang}: ${path.split("\u0000").join(".")} arrived: drop it from PENDING_UNTIL_L4`).toBe(false);
+      expect([...mine.keys()].sort()).toEqual([...english.keys()].filter((p) => !pending.includes(p)).sort());
       for (const [path, text] of mine) {
         const label = `${f.lang}: ${path.split("\u0000").join(".")}`;
         expect(typeof text, label).toBe("string");

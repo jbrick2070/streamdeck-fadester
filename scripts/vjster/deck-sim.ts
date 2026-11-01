@@ -79,6 +79,8 @@ export class DeckSim {
   readonly images = new Map<string, string>();
   readonly alerts: string[] = [];
   readonly globalSettings: Record<string, unknown> = {};
+  /** Every setGlobalSettings the plugin sent, in order. */
+  readonly globalWrites: Record<string, unknown>[] = [];
   readonly placed: Placed[] = [];
   /** What the plugin sent to the settings page (sendToPropertyInspector payloads). */
   readonly toPage: Record<string, unknown>[] = [];
@@ -128,13 +130,16 @@ export class DeckSim {
     ]);
   }
 
-  private fromPlugin(m: { event: string; context?: string; payload?: Record<string, unknown> }): void {
+  private fromPlugin(m: { event: string; id?: string; context?: string; payload?: Record<string, unknown> }): void {
     if (m.event === "setFeedback" && m.context && typeof m.payload?.canvas === "string") this.images.set(m.context, m.payload.canvas);
     else if (m.event === "setImage" && m.context && typeof m.payload?.image === "string") this.images.set(m.context, m.payload.image);
     else if (m.event === "showAlert" && m.context) this.alerts.push(m.context);
     else if (m.event === "sendToPropertyInspector" && m.payload) this.toPage.push(m.payload);
-    else if (m.event === "getGlobalSettings") this.toPlugin({ event: "didReceiveGlobalSettings", payload: { settings: { ...this.globalSettings } } });
+    // Like Stream Deck: the answer carries the request's id, so the SDK hands it to that read only and not to
+    // onDidReceiveGlobalSettings (docs/vjster/PLAN.md 9, design 7).
+    else if (m.event === "getGlobalSettings") this.toPlugin({ event: "didReceiveGlobalSettings", id: m.id, payload: { settings: { ...this.globalSettings } } });
     else if (m.event === "setGlobalSettings" && m.payload) {
+      this.globalWrites.push({ ...m.payload });
       // Like Stream Deck: the plugin's write replaces what is stored, and only a settings page hears of it.
       for (const k of Object.keys(this.globalSettings)) delete this.globalSettings[k];
       Object.assign(this.globalSettings, m.payload);

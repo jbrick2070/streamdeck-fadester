@@ -201,12 +201,14 @@ describe("settings (D-7, R-LNK-1)", () => {
   });
 
   it("reads plugin-wide settings safely", () => {
-    expect(globalSettings({})).toEqual({ port: 48150, extensionIds: [], obsToken: null, obsAlwaysOn: null });
+    expect(globalSettings({})).toEqual({ port: 48150, extensionIds: [], obsToken: null, obsAlwaysOn: null, language: "auto", languageRaw: undefined });
     expect(globalSettings({ port: 80, extensionIds: "abcdefghijklmnopabcdefghijklmnop, bad", obsToken: "XYZ" })).toEqual({
       port: 48150,
       extensionIds: ["abcdefghijklmnopabcdefghijklmnop", "bad"],
       obsToken: null,
-      obsAlwaysOn: null
+      obsAlwaysOn: null,
+      language: "auto",
+      languageRaw: undefined
     });
     expect(globalSettings({ obsAlwaysOn: true }).obsAlwaysOn).toBe(true);
     expect(globalSettings({ obsAlwaysOn: false }).obsAlwaysOn).toBe(false);

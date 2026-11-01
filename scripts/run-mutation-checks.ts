@@ -829,6 +829,176 @@ const MUTATIONS: MutationCheck[] = [
     target: 'const title = input.title || t(latched ? "vpPanicSent" : "vpPanic");',
     mutated: 'const title = input.title || (latched ? "PANIC SENT" : "PANIC");',
     testFile: "tests/visual-panic.test.ts"
+  },
+  {
+    id: "M-K1.1",
+    step: "Demo kit step 1 (stock originals are checked by SHA-1)",
+    description:
+      "Skip the SHA-1 comparison and verify the changed-file test fails",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "if actual_sha1 != row[\"sha1\"]:",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K1.2",
+    step: "Demo kit step 1 (stock originals are checked by size)",
+    description:
+      "Skip the size comparison and verify the other-size test fails",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "if actual_bytes != row[\"bytes\"]:",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K1.3",
+    step: "Demo kit step 1 (a missing original is named)",
+    description:
+      "Skip the missing-file check and verify the missing-file test fails",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "if not path.is_file():\n            problems.append(f\"{path.name}: file missing\")",
+    mutated: "if False:\n            problems.append(f\"{path.name}: file missing\")",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K1.4",
+    step: "Demo kit step 1 (the stock check runs before any media is written)",
+    description:
+      "Make the media folder before the stock check and verify a refused build has written nothing",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "rows = verify_stock(stock_dir, clips)  # before anything is written\n    media = out / \"media\"\n    media.mkdir(parents=True, exist_ok=True)",
+    mutated: "media = out / \"media\"\n    media.mkdir(parents=True, exist_ok=True)\n    rows = verify_stock(stock_dir, clips)  # before anything is written",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K1.5",
+    step: "Demo kit step 1 (the sprint stays inside 0-8.9 s)",
+    description:
+      "Start the sprint at 1.0 s so its 8 s run past 8.9 s and verify the cut-limit test fails",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "\"start\": 0.9, \"limit\": 8.9",
+    mutated: "\"start\": 1.0, \"limit\": 8.9",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K1.6",
+    step: "Demo kit step 1 (three clips ship, the marathon is a spare)",
+    description:
+      "Ship the spare marathon and verify the shipped list is three clips",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "\"start\": 4.0, \"limit\": 25.667, \"shipped\": False",
+    mutated: "\"start\": 4.0, \"limit\": 25.667, \"shipped\": True",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K1.7",
+    step: "Demo kit step 1 (the stock excerpts' own audio is removed (D-6))",
+    description:
+      "Keep the clip's audio and verify the cut command test fails",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "\"-frames:v\", str(CLIP_FRAMES), \"-an\", \"-sn\", \"-dn\",",
+    mutated: "\"-frames:v\", str(CLIP_FRAMES), \"-sn\", \"-dn\",",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K1.8",
+    step: "Demo kit step 1 (the encoders run single-threaded so builds repeat byte for byte)",
+    description:
+      "Drop -threads 1 from x264 and verify the cut command test fails",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "\"-c:v\", \"libx264\", \"-threads\", \"1\",",
+    mutated: "\"-c:v\", \"libx264\",",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K1.9",
+    step: "Demo kit step 1 (the loops have an 8 s period)",
+    description:
+      "Make the loop period one frame longer and verify the seam test fails",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "return TAU * frame / COUNT",
+    mutated: "return TAU * frame / (COUNT + 1)",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K1.10",
+    step: "Demo kit step 1 (a loop with a seam jump is refused)",
+    description:
+      "Check only the endpoint, not the seam step, and verify the jump test fails",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "if endpoint > .01 or not .8 <= ratio <= 1.25:",
+    mutated: "if endpoint > .01:",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K1.11",
+    step: "Demo kit step 1 (the beat loops seamlessly)",
+    description:
+      "Drop the tails instead of folding them onto the start and verify the seamless-beat test fails",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "loop[:len(tail)] += tail",
+    mutated: "loop[:0] += tail[:0]",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K1.12",
+    step: "Demo kit step 1 (the media manifest holds no absolute paths)",
+    description:
+      "Accept an absolute path and verify the manifest test fails",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "raise ValueError(f\"absolute path in manifest entry {entry['path']}\")",
+    mutated: "pass",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K1.13",
+    step: "Demo kit step 1 (a failing stock cut reports ffmpeg's own message)",
+    description:
+      "Throw away ffmpeg's stderr when a cut fails and verify the failing-cut test fails",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "result = subprocess.run(cut_command(source, start, output), capture_output=True)\n    if result.returncode:\n        raise RuntimeError(f\"ffmpeg failed for {output.name}: {result.stderr.decode(errors='replace')}\")",
+    mutated: "result = subprocess.run(cut_command(source, start, output), capture_output=True)\n    if result.returncode:\n        raise RuntimeError(f\"ffmpeg failed for {output.name}\")",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K1.14",
+    step: "Demo kit step 1 (each video output is checked to be 1280x720)",
+    description:
+      "Skip the size check and verify the wrong-size check test fails",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "if (v.get(\"width\"), v.get(\"height\")) != (W, H):",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K1.15",
+    step: "Demo kit step 1 (each video output is checked to be 240 frames)",
+    description:
+      "Skip the frame-count check and verify the short-clip check test fails",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "if str(v.get(\"nb_read_frames\")) != str(COUNT):",
+    mutated: "if False:",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K1.16",
+    step: "Demo kit step 1 (the stock entries carry their shipped flag)",
+    description:
+      "Mark every stock excerpt as shipped and verify the manifest test sees the spare shipped",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "\"kind\": \"stock\", \"shipped\": clip[\"shipped\"],",
+    mutated: "\"kind\": \"stock\", \"shipped\": True,",
+    testFile: "tests/demo-kit-media.test.ts"
+  },
+  {
+    id: "M-K1.17",
+    step: "Demo kit step 1 (files an earlier run left in media/ are named)",
+    description:
+      "Name no stray files and verify the stray-files test fails",
+    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
+    target: "if p.is_file() and f\"media/{p.name}\" not in listed)",
+    mutated: "if False)",
+    testFile: "tests/demo-kit-media.test.ts"
   }
 ];
 

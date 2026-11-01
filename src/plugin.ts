@@ -12,6 +12,7 @@ import { ObsSceneTransitionKeyAction } from "./actions/obs-scene-transition-key.
 import { LayerController } from "./control/layer-controller.js";
 import { ObsLayerControlAction } from "./actions/obs-layer-control.js";
 import { ObsNeoInfobarAction } from "./actions/obs-neo-infobar.js";
+import { PlaylisterTransportKeyAction } from "./actions/playlister-transport-key.js";
 import {
   PiIncomingMessage,
   PropertyInspectorBridge
@@ -99,6 +100,7 @@ streamDeck.actions.registerAction(new ObsFadeKeyAction(directClient));
 streamDeck.actions.registerAction(new ObsSceneTransitionKeyAction(directClient));
 streamDeck.actions.registerAction(new ObsLayerControlAction(layers));
 streamDeck.actions.registerAction(new ObsNeoInfobarAction(directClient));
+streamDeck.actions.registerAction(new PlaylisterTransportKeyAction(directClient));
 
 void streamDeck.connect().then(async () => {
   const globalSettings =

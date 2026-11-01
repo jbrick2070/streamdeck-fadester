@@ -35,6 +35,10 @@
     "Name": "OBS Fade",
     "Tooltip": "Directly fade an OBS mixer input up or down without changing scene-transition settings."
   },
+  "com.jbrick2070.fadester-for-obs.playlister-transport": {
+    "Name": "Playlister Transport",
+    "Tooltip": "Previous, next, play/pause, stop, restart or status of one Playlister source through OBS's media controls."
+  },
   "com.jbrick2070.fadester-for-obs.fader": {
     "Name": "Midi Fadester Fader (optional)",
     "Tooltip": "Optional enhanced control for an existing Midi Fadester slot.",
@@ -105,6 +109,29 @@
     "errorMediaPending": "Play or pause is still pending.",
     "errorMediaChanging": "Playlister is opening media; try again.",
     "errorMediaAmbiguous": "Playlister state is unclear; press Stop first.",
+    "plOpPrevious": "Previous",
+    "plOpNext": "Next",
+    "plOpPlayPause": "Play / pause",
+    "plOpStop": "Stop",
+    "plOpRestart": "Restart",
+    "plOpStatus": "Status",
+    "plMissing": "Playlister missing",
+    "plWrongKind": "Not a Playlister",
+    "plUnsupported": "Update OBS",
+    "mediaStateNone": "Empty",
+    "mediaStatePlaying": "Playing",
+    "mediaStateOpening": "Opening",
+    "mediaStateBuffering": "Buffering",
+    "mediaStatePaused": "Paused",
+    "mediaStateStopped": "Stopped",
+    "mediaStateEnded": "Ended",
+    "mediaStateError": "Error",
+    "mediaStateUnknown": "Unknown",
+    "mediaTime": "{state} {cursor}/{duration}",
+    "mediaPendingPlay": "Play sent",
+    "mediaPendingPause": "Pause sent",
+    "mediaUnconfirmed": "Sent, unconfirmed",
+    "mediaBusy": "Busy",
     "layerErrorConnectAndChoose": "Connect OBS and choose a source.",
     "layerErrorCollectionChanging": "OBS scene collection is changing. Try again.",
     "layerErrorConnectionChanged": "OBS connection changed. Choose the source again.",
@@ -572,7 +599,8 @@
       "loadingProfile": "Loading profile in Midi Fadester…",
       "profileLoaded": "Loaded {name}. Slot defaults were reset in Midi Fadester.",
       "profileRejected": "Midi Fadester rejected the profile.",
-      "connChanged": "The OBS connection changed. Your edits are kept; review the refreshed source lists before applying."
+      "connChanged": "The OBS connection changed. Your edits are kept; review the refreshed source lists before applying.",
+      "plHeading": "Playlister transport"
     }
   }
 }

@@ -35,6 +35,10 @@
     "Name": "OBS 淡入淡出",
     "Tooltip": "直接將 OBS 音效混音器的輸入淡入或淡出，不變更場景轉場特效設定。"
   },
+  "com.jbrick2070.fadester-for-obs.playlister-transport": {
+    "Name": "Playlister 播放控制",
+    "Tooltip": "透過 OBS 的媒體控制對一個 Playlister 來源執行上一個、下一個、播放/暫停、停止、重新播放或顯示狀態。"
+  },
   "com.jbrick2070.fadester-for-obs.fader": {
     "Name": "Midi Fadester 推桿（選用）",
     "Tooltip": "用於既有 Midi Fadester 插槽的選用進階控制。",
@@ -105,6 +109,29 @@
     "errorMediaPending": "播放或暫停仍在等待中。",
     "errorMediaChanging": "Playlister 正在開啟媒體，請重試。",
     "errorMediaAmbiguous": "Playlister 狀態不明，請先按停止。",
+    "plOpPrevious": "上一個",
+    "plOpNext": "下一個",
+    "plOpPlayPause": "播放 / 暫停",
+    "plOpStop": "停止",
+    "plOpRestart": "重新播放",
+    "plOpStatus": "狀態",
+    "plMissing": "Playlister 不存在",
+    "plWrongKind": "不是 Playlister",
+    "plUnsupported": "請更新 OBS",
+    "mediaStateNone": "空",
+    "mediaStatePlaying": "播放中",
+    "mediaStateOpening": "開啟中",
+    "mediaStateBuffering": "緩衝中",
+    "mediaStatePaused": "已暫停",
+    "mediaStateStopped": "已停止",
+    "mediaStateEnded": "已結束",
+    "mediaStateError": "錯誤",
+    "mediaStateUnknown": "未知",
+    "mediaTime": "{state} {cursor}/{duration}",
+    "mediaPendingPlay": "已送出播放",
+    "mediaPendingPause": "已送出暫停",
+    "mediaUnconfirmed": "已送出，狀態未確認",
+    "mediaBusy": "忙碌",
     "layerErrorConnectAndChoose": "請連線 OBS 並選擇來源。",
     "layerErrorCollectionChanging": "OBS 場景群組正在變更。請再試一次。",
     "layerErrorConnectionChanged": "OBS 連線已變更。請重新選擇來源。",
@@ -572,7 +599,8 @@
       "loadingProfile": "正在 Midi Fadester 中載入設定檔…",
       "profileLoaded": "已載入 {name}。Midi Fadester 中的插槽預設值已重設。",
       "profileRejected": "Midi Fadester 拒絕了此設定檔。",
-      "connChanged": "OBS 連線已變更。你的變更已保留；套用前請檢查重新整理後的來源清單。"
+      "connChanged": "OBS 連線已變更。你的變更已保留；套用前請檢查重新整理後的來源清單。",
+      "plHeading": "Playlister 播放控制"
     }
   }
 }

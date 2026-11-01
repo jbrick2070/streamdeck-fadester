@@ -35,6 +35,10 @@
     "Name": "OBS 淡入淡出",
     "Tooltip": "直接将 OBS 混音器的输入淡入或淡出，不改变场景转场动画设置。"
   },
+  "com.jbrick2070.fadester-for-obs.playlister-transport": {
+    "Name": "Playlister 播放控制",
+    "Tooltip": "通过 OBS 的媒体控制对一个 Playlister 源执行上一项、下一项、播放/暂停、停止、重新播放或显示状态。"
+  },
   "com.jbrick2070.fadester-for-obs.fader": {
     "Name": "Midi Fadester 推子（可选）",
     "Tooltip": "用于现有 Midi Fadester 槽位的可选增强控制。",
@@ -99,12 +103,35 @@
     "errorControlChanged": "OBS 连接或场景集合已更改。请重新操作该控制。",
     "errorMediaChoose": "选择 Playlister",
     "errorMediaMissing": "所选的 Playlister 当前不在 OBS 中。",
-    "errorMediaWrongKind": "“{input}”不是 Playlister 来源。",
+    "errorMediaWrongKind": "“{input}”不是 Playlister 源。",
     "errorMediaUnsupported": "此 OBS WebSocket 没有媒体控制。请更新 OBS。",
     "errorMediaBusy": "Playlister 正忙，请等待排队的按键。",
     "errorMediaPending": "播放或暂停仍在等待中。",
     "errorMediaChanging": "Playlister 正在打开媒体，请重试。",
     "errorMediaAmbiguous": "Playlister 状态不明，请先按停止。",
+    "plOpPrevious": "上一项",
+    "plOpNext": "下一项",
+    "plOpPlayPause": "播放 / 暂停",
+    "plOpStop": "停止",
+    "plOpRestart": "重新播放",
+    "plOpStatus": "状态",
+    "plMissing": "Playlister 不存在",
+    "plWrongKind": "不是 Playlister",
+    "plUnsupported": "请更新 OBS",
+    "mediaStateNone": "空",
+    "mediaStatePlaying": "播放中",
+    "mediaStateOpening": "正在打开",
+    "mediaStateBuffering": "缓冲中",
+    "mediaStatePaused": "已暂停",
+    "mediaStateStopped": "已停止",
+    "mediaStateEnded": "已结束",
+    "mediaStateError": "错误",
+    "mediaStateUnknown": "未知",
+    "mediaTime": "{state} {cursor}/{duration}",
+    "mediaPendingPlay": "已发送播放",
+    "mediaPendingPause": "已发送暂停",
+    "mediaUnconfirmed": "已发送，状态未确认",
+    "mediaBusy": "忙碌",
     "layerErrorConnectAndChoose": "请连接 OBS 并选择源。",
     "layerErrorCollectionChanging": "OBS 场景集合正在更改。请重试。",
     "layerErrorConnectionChanged": "OBS 连接已更改。请重新选择源。",
@@ -572,7 +599,8 @@
       "loadingProfile": "正在 Midi Fadester 中加载配置文件…",
       "profileLoaded": "已加载 {name}。Midi Fadester 中的槽位默认值已重置。",
       "profileRejected": "Midi Fadester 拒绝了此配置文件。",
-      "connChanged": "OBS 连接已更改。你的更改已保留；应用前请检查刷新后的源列表。"
+      "connChanged": "OBS 连接已更改。你的更改已保留；应用前请检查刷新后的源列表。",
+      "plHeading": "Playlister 播放控制"
     }
   }
 }

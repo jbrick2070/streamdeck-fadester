@@ -646,6 +646,30 @@ and `TriggerMediaInputAction` take `inputUuid`; `mediaDuration` and `mediaCursor
    nothing, another press sends one request, and overflow shows busy without a request"; "acquires and releases its
    watch on appear, retarget and disappear". Mutations: *M-9.3a* send the RPC when unbound; *M-9.3b* draw a fixed
    "Playing" instead of the observed state.
+   *As built (2026-11-01):* `src/actions/playlister-transport-key.ts` holds `PlaylisterTransportInstanceController`,
+   `describeMediaState()` (busy when four are queued, else the pending word, else the state word with
+   `m:ss/m:ss` when cursor and duration are known) and `formatMediaClock()` (h:mm:ss from 100 minutes). The key
+   subscribes to `statusChanged` and `mediaStateChanged` only; its watch is acquired on appear and on a retarget
+   while visible, released on disappear (idempotent) and before a retarget; a second appear releases the first.
+   `lastError` is the key's own (set by a refused or failed press, cleared on the next press, a retarget and an
+   observed state-word change); the settings generation moves only on a retarget and on disappear, so a label or
+   operation edit keeps a press's outcome. `handleKeyDown` awaits `mediaCommand` (the SDK does not serialize
+   `onKeyDown`, and the queue is bounded); a purged press resolves `cancelled` and shows nothing. An identical SVG
+   is not re-sent (the cursor moves every poll, the clock once a second). The unbound key draws its operation word
+   with "Choose a Playlister" through the renderer's new `unboundSubtitle` (no other action passes it), and
+   `errorMediaChoose` is that word. `src/types/settings.ts` has `PlaylisterTransportSettings` with
+   `normalizePlaylisterOperation`; `preset-captions.ts` has the `playlister` action keyed by operation with empty
+   shipped lists until 9.5 (and `generate-ui-i18n.ts` its context). The manifest entry sits after "OBS Fade" with
+   `SupportedInMultiActions: false` (review round 1); `manifest-hygiene` counts eight, the first six non-optional.
+   The 23 deck words, the heading `pi.plHeading` and the action's Name and Tooltip landed in all eight files with
+   this step (the completeness tests demand it), and `ui/playlister-transport-key.html` is a minimal page with the
+   shared sections until 9.4. Text choices for the Gemini review: `mediaStatePlaying` is "Läuft" (de) and "En curso"
+   (es) because "Wiedergabe 2:00:00/2:00:00" and "Reproduciendo 2:00:00/2:00:00" overflow the 96 px subtitle;
+   `plOpRestart` in Japanese is "最初から再生" rather than OBS's "再開" (which reads as resume, next to a Play key);
+   `mediaStateOpening` ja "読み込み中"; ja/ko Paused are "一時停止"/"일시정지" so a long item fits; zh_CN says "源"
+   as the file does and both Chinese files name the action "Playlister 播放控制"; `mediaUnconfirmed` is "Sent,
+   unconfirmed" (the design's "request sent; state unconfirmed" does not fit in German). "Status" equals English in
+   German and joins the kept words of `i18n-strings.test.ts`.
 4. **Step 9.4 -- Inspector.** `ui/playlister-transport-key.html` after `ui/obs-fade-key.html`: a Playlister picker
    filled from `state.catalog.inputDetails` where `unversionedInputKind === "obs_playlister_source"`, option value the
    UUID, text the name (display only), `fillSelect`'s "not in OBS now" row for a bound UUID that is gone; an operation

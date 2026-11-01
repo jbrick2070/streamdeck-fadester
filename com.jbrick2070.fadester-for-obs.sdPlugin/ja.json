@@ -35,6 +35,10 @@
     "Name": "OBS フェード",
     "Tooltip": "シーントランジションの設定を変えずに、OBS の音声ミキサーの入力を直接フェードアップ/ダウンします。"
   },
+  "com.jbrick2070.fadester-for-obs.playlister-transport": {
+    "Name": "Playlister トランスポート",
+    "Tooltip": "OBS のメディアコントロールで 1 つの Playlister ソースを前へ・次へ・再生/一時停止・停止・最初から再生、または状態を表示します。"
+  },
   "com.jbrick2070.fadester-for-obs.fader": {
     "Name": "Midi Fadester フェーダー (オプション)",
     "Tooltip": "既存の Midi Fadester スロット用のオプションの拡張操作です。",
@@ -105,6 +109,29 @@
     "errorMediaPending": "再生または一時停止がまだ保留中です。",
     "errorMediaChanging": "Playlister は読み込み中です。再試行を。",
     "errorMediaAmbiguous": "Playlister の状態が不明です。先に停止を押してください。",
+    "plOpPrevious": "前へ",
+    "plOpNext": "次へ",
+    "plOpPlayPause": "再生 / 一時停止",
+    "plOpStop": "停止",
+    "plOpRestart": "最初から再生",
+    "plOpStatus": "状態",
+    "plMissing": "Playlister がありません",
+    "plWrongKind": "Playlister ではありません",
+    "plUnsupported": "OBS を更新",
+    "mediaStateNone": "空",
+    "mediaStatePlaying": "再生中",
+    "mediaStateOpening": "読み込み中",
+    "mediaStateBuffering": "バッファ中",
+    "mediaStatePaused": "一時停止",
+    "mediaStateStopped": "停止中",
+    "mediaStateEnded": "終了",
+    "mediaStateError": "エラー",
+    "mediaStateUnknown": "不明",
+    "mediaTime": "{state} {cursor}/{duration}",
+    "mediaPendingPlay": "再生を送信",
+    "mediaPendingPause": "一時停止を送信",
+    "mediaUnconfirmed": "送信済み・状態未確認",
+    "mediaBusy": "処理中",
     "layerErrorConnectAndChoose": "OBS に接続してソースを選んでください。",
     "layerErrorCollectionChanging": "シーンコレクション変更中。再試行してください。",
     "layerErrorConnectionChanged": "OBS の接続が変わりました。ソースを選び直してください。",
@@ -572,7 +599,8 @@
       "loadingProfile": "Midi Fadester でプロファイルを読み込んでいます…",
       "profileLoaded": "{name} を読み込みました。Midi Fadester のスロットの既定値がリセットされました。",
       "profileRejected": "Midi Fadester がプロファイルを拒否しました。",
-      "connChanged": "OBS の接続が変わりました。編集内容は保持されています。適用する前に、更新されたソースのリストを確認してください。"
+      "connChanged": "OBS の接続が変わりました。編集内容は保持されています。適用する前に、更新されたソースのリストを確認してください。",
+      "plHeading": "Playlister トランスポート"
     }
   }
 }

@@ -330,7 +330,8 @@
       "loadingProfile": "Loading profile in Midi Fadester…",
       "profileLoaded": "Loaded {name}. Slot defaults were reset in Midi Fadester.",
       "profileRejected": "Midi Fadester rejected the profile.",
-      "connChanged": "The OBS connection changed. Your edits are kept; review the refreshed source lists before applying."
+      "connChanged": "The OBS connection changed. Your edits are kept; review the refreshed source lists before applying.",
+      "plHeading": "Playlister transport"
     },
     "de": {
       "scopeThisKey": "diese Taste",
@@ -658,7 +659,8 @@
       "loadingProfile": "Profil wird in Midi Fadester geladen …",
       "profileLoaded": "{name} geladen. Die Slot-Vorgaben wurden in Midi Fadester zurückgesetzt.",
       "profileRejected": "Midi Fadester hat das Profil abgelehnt.",
-      "connChanged": "Die OBS-Verbindung hat sich geändert. Ihre Änderungen bleiben erhalten; prüfen Sie die aktualisierten Quellenlisten, bevor Sie übernehmen."
+      "connChanged": "Die OBS-Verbindung hat sich geändert. Ihre Änderungen bleiben erhalten; prüfen Sie die aktualisierten Quellenlisten, bevor Sie übernehmen.",
+      "plHeading": "Playlister-Transport"
     },
     "es": {
       "scopeThisKey": "esta tecla",
@@ -986,7 +988,8 @@
       "loadingProfile": "Cargando el perfil en Midi Fadester…",
       "profileLoaded": "{name} cargado. Se restablecieron los valores predeterminados de los slots en Midi Fadester.",
       "profileRejected": "Midi Fadester rechazó el perfil.",
-      "connChanged": "La conexión con OBS cambió. Tus cambios se conservan; revisa las listas de fuentes actualizadas antes de aplicar."
+      "connChanged": "La conexión con OBS cambió. Tus cambios se conservan; revisa las listas de fuentes actualizadas antes de aplicar.",
+      "plHeading": "Transporte de Playlister"
     },
     "fr": {
       "scopeThisKey": "cette touche",
@@ -1314,7 +1317,8 @@
       "loadingProfile": "Chargement du profil dans Midi Fadester…",
       "profileLoaded": "{name} chargé. Les valeurs par défaut des slots ont été réinitialisées dans Midi Fadester.",
       "profileRejected": "Midi Fadester a refusé le profil.",
-      "connChanged": "La connexion à OBS a changé. Vos modifications sont conservées ; vérifiez les listes de sources actualisées avant d’appliquer."
+      "connChanged": "La connexion à OBS a changé. Vos modifications sont conservées ; vérifiez les listes de sources actualisées avant d’appliquer.",
+      "plHeading": "Transport Playlister"
     },
     "ja": {
       "scopeThisKey": "このキー",
@@ -1642,7 +1646,8 @@
       "loadingProfile": "Midi Fadester でプロファイルを読み込んでいます…",
       "profileLoaded": "{name} を読み込みました。Midi Fadester のスロットの既定値がリセットされました。",
       "profileRejected": "Midi Fadester がプロファイルを拒否しました。",
-      "connChanged": "OBS の接続が変わりました。編集内容は保持されています。適用する前に、更新されたソースのリストを確認してください。"
+      "connChanged": "OBS の接続が変わりました。編集内容は保持されています。適用する前に、更新されたソースのリストを確認してください。",
+      "plHeading": "Playlister トランスポート"
     },
     "ko": {
       "scopeThisKey": "이 키",
@@ -1970,7 +1975,8 @@
       "loadingProfile": "Midi Fadester에서 프로필 불러오는 중…",
       "profileLoaded": "{name}을(를) 불러왔습니다. Midi Fadester의 슬롯 기본값이 재설정되었습니다.",
       "profileRejected": "Midi Fadester가 프로필을 거부했습니다.",
-      "connChanged": "OBS 연결이 바뀌었습니다. 편집 내용은 유지됩니다. 적용하기 전에 새로 고친 소스 목록을 확인하세요."
+      "connChanged": "OBS 연결이 바뀌었습니다. 편집 내용은 유지됩니다. 적용하기 전에 새로 고친 소스 목록을 확인하세요.",
+      "plHeading": "Playlister 트랜스포트"
     },
     "zh_CN": {
       "scopeThisKey": "此按键",
@@ -2298,7 +2304,8 @@
       "loadingProfile": "正在 Midi Fadester 中加载配置文件…",
       "profileLoaded": "已加载 {name}。Midi Fadester 中的槽位默认值已重置。",
       "profileRejected": "Midi Fadester 拒绝了此配置文件。",
-      "connChanged": "OBS 连接已更改。你的更改已保留；应用前请检查刷新后的源列表。"
+      "connChanged": "OBS 连接已更改。你的更改已保留；应用前请检查刷新后的源列表。",
+      "plHeading": "Playlister 播放控制"
     },
     "zh_TW": {
       "scopeThisKey": "此按鍵",
@@ -2626,7 +2633,8 @@
       "loadingProfile": "正在 Midi Fadester 中載入設定檔…",
       "profileLoaded": "已載入 {name}。Midi Fadester 中的插槽預設值已重設。",
       "profileRejected": "Midi Fadester 拒絕了此設定檔。",
-      "connChanged": "OBS 連線已變更。你的變更已保留；套用前請檢查重新整理後的來源清單。"
+      "connChanged": "OBS 連線已變更。你的變更已保留；套用前請檢查重新整理後的來源清單。",
+      "plHeading": "Playlister 播放控制"
     }
   };
   var LANGUAGES = ["en", "de", "es", "fr", "ja", "ko", "zh_CN", "zh_TW"];

@@ -11,7 +11,7 @@
  * (scripts/generate-ui-i18n.ts; a test keeps it current).
  */
 
-export type CaptionAction = "scene" | "fader" | "fade" | "layerKey" | "layerDial";
+export type CaptionAction = "scene" | "fader" | "fade" | "layerKey" | "layerDial" | "playlister";
 
 /** Captions per action and context, lower case; `shipped` are the ones in profiles/layouts.json. */
 export const PRESET_CAPTIONS: Readonly<Record<CaptionAction, Readonly<Record<string, {
@@ -56,6 +56,15 @@ export const PRESET_CAPTIONS: Readonly<Record<CaptionAction, Readonly<Record<str
     select_layer: { shipped: ["Select source", "Select layer"], legacy: [] },
     blend: { shipped: ["Blend mode"], legacy: [] },
     order: { shipped: ["Layer order"], legacy: [] }
+  },
+  // The Playlister starter (PLAN.md 9.5) stores these; the key draws the translated operation word.
+  playlister: {
+    previous: { shipped: [], legacy: [] },
+    next: { shipped: [], legacy: [] },
+    playpause: { shipped: [], legacy: [] },
+    stop: { shipped: [], legacy: [] },
+    restart: { shipped: [], legacy: [] },
+    status: { shipped: [], legacy: [] }
   }
 };
 
@@ -76,6 +85,8 @@ export function captionContext(action: CaptionAction, settings: Readonly<Record<
       return text("operation") || "select_next";
     case "layerDial":
       return text("dialMode") || "select_layer";
+    case "playlister":
+      return text("operation") || "playpause";
   }
 }
 

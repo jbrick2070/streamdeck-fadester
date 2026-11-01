@@ -205,6 +205,23 @@
       ]
     },
     {
+      "Name": "Playlister Transport",
+      "UUID": "com.jbrick2070.fadester-for-obs.playlister-transport",
+      "Icon": "imgs/actions/playlister-transport/icon",
+      "Tooltip": "Previous, next, play/pause, stop, restart or status of one Playlister source through OBS's media controls.",
+      "PropertyInspectorPath": "ui/playlister-transport-key.html",
+      "Controllers": [
+        "Keypad"
+      ],
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": false,
+      "States": [
+        {
+          "Image": "imgs/actions/playlister-transport/key"
+        }
+      ]
+    },
+    {
       "Name": "Midi Fadester Fader (optional)",
       "UUID": "com.jbrick2070.fadester-for-obs.fader",
       "Icon": "imgs/actions/fader/icon",

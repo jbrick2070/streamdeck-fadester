@@ -369,6 +369,26 @@ const MUTATIONS: MutationCheck[] = [
     target: 'const removedUuid = typeof eventData.inputUuid === "string" ? eventData.inputUuid : "";',
     mutated: 'const removedUuid = this.catalog.inputDetails.find((input) => input.inputName === eventData.inputName)?.inputUuid ?? "";',
     testFile: "tests/playlister-media.test.ts"
+  },
+  {
+    id: "M-9.3a",
+    step: "Step 9.3 (Playlister transport key: nothing sent when unbound)",
+    description:
+      "Let an unbound key reach the client's command, and verify playlister-transport.test.ts fails",
+    filePath: resolve(ROOT, "src/actions/playlister-transport-key.ts"),
+    target: "    if (!this.settings.inputUuid) {\n      await this.sink.showAlert();\n      return;\n    }",
+    mutated: "    if (false) {\n      await this.sink.showAlert();\n      return;\n    }",
+    testFile: "tests/playlister-transport.test.ts"
+  },
+  {
+    id: "M-9.3b",
+    step: "Step 9.3 (Playlister transport key: the observed state word)",
+    description:
+      "Draw a fixed Playing instead of the observed state, and verify playlister-transport.test.ts fails",
+    filePath: resolve(ROOT, "src/actions/playlister-transport-key.ts"),
+    target: "const word = t(STATE_WORDS[state.mediaState]);",
+    mutated: 'const word = t("mediaStatePlaying");',
+    testFile: "tests/playlister-transport.test.ts"
   }
 ];
 

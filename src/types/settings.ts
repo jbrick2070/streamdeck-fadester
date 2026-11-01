@@ -153,6 +153,33 @@ export const DEFAULT_OBS_SCENE_TRANSITION_KEY_SETTINGS: Required<ObsSceneTransit
   labelOverride: ""
 };
 
+/** The six Playlister transport operations; `status` only shows the state (R-PLT-1). */
+export type PlaylisterOperation = "previous" | "next" | "playpause" | "stop" | "restart" | "status";
+
+export const PLAYLISTER_OPERATIONS: readonly PlaylisterOperation[] = ["previous", "next", "playpause", "stop", "restart", "status"];
+
+export interface PlaylisterTransportSettings {
+  [key: string]: string | number | boolean | undefined;
+  /** The OBS input's UUID; the only thing that resolves the target. */
+  inputUuid?: string;
+  operation?: PlaylisterOperation;
+  /** The source's name when it was chosen, shown in the inspector only. */
+  inputName?: string;
+  labelOverride?: string;
+}
+
+export const DEFAULT_PLAYLISTER_TRANSPORT_SETTINGS: Required<PlaylisterTransportSettings> = {
+  inputUuid: "",
+  operation: "playpause",
+  inputName: "",
+  labelOverride: ""
+};
+
+export function normalizePlaylisterOperation(raw: unknown): PlaylisterOperation {
+  return (PLAYLISTER_OPERATIONS as readonly unknown[]).includes(raw)
+    ? raw as PlaylisterOperation : DEFAULT_PLAYLISTER_TRANSPORT_SETTINGS.operation;
+}
+
 export function normalizeDurationMs(raw: unknown, fallback = 1000): number {
   const rounded = Math.round(Number(raw ?? fallback));
   if (!Number.isFinite(rounded)) {

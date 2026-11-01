@@ -35,6 +35,10 @@
     "Name": "Fundido de OBS",
     "Tooltip": "Haz un fundido directo de subida o bajada en una entrada del mezclador de audio de OBS sin cambiar los ajustes de transición de escena."
   },
+  "com.jbrick2070.fadester-for-obs.playlister-transport": {
+    "Name": "Transporte de Playlister",
+    "Tooltip": "Anterior, siguiente, reproducir/pausar, detener, reiniciar o estado de una fuente Playlister mediante los controles multimedia de OBS."
+  },
   "com.jbrick2070.fadester-for-obs.fader": {
     "Name": "Fader de Midi Fadester (opcional)",
     "Tooltip": "Control avanzado opcional para un slot existente de Midi Fadester.",
@@ -105,6 +109,29 @@
     "errorMediaPending": "Reproducir o pausar sigue pendiente.",
     "errorMediaChanging": "Playlister está abriendo medios; inténtalo de nuevo.",
     "errorMediaAmbiguous": "El estado de Playlister no está claro; pulsa Detener primero.",
+    "plOpPrevious": "Anterior",
+    "plOpNext": "Siguiente",
+    "plOpPlayPause": "Reproducir / pausar",
+    "plOpStop": "Detener",
+    "plOpRestart": "Reiniciar",
+    "plOpStatus": "Estado",
+    "plMissing": "Falta el Playlister",
+    "plWrongKind": "No es un Playlister",
+    "plUnsupported": "Actualiza OBS",
+    "mediaStateNone": "Vacío",
+    "mediaStatePlaying": "En curso",
+    "mediaStateOpening": "Abriendo",
+    "mediaStateBuffering": "Cargando",
+    "mediaStatePaused": "En pausa",
+    "mediaStateStopped": "Detenido",
+    "mediaStateEnded": "Finalizado",
+    "mediaStateError": "Error",
+    "mediaStateUnknown": "Desconocido",
+    "mediaTime": "{state} {cursor}/{duration}",
+    "mediaPendingPlay": "Reproducción enviada",
+    "mediaPendingPause": "Pausa enviada",
+    "mediaUnconfirmed": "Enviado, sin confirmar",
+    "mediaBusy": "Ocupado",
     "layerErrorConnectAndChoose": "Conecta OBS y elige una fuente.",
     "layerErrorCollectionChanging": "OBS está cambiando de colección. Reintenta.",
     "layerErrorConnectionChanged": "La conexión con OBS cambió. Vuelve a elegir la fuente.",
@@ -572,7 +599,8 @@
       "loadingProfile": "Cargando el perfil en Midi Fadester…",
       "profileLoaded": "{name} cargado. Se restablecieron los valores predeterminados de los slots en Midi Fadester.",
       "profileRejected": "Midi Fadester rechazó el perfil.",
-      "connChanged": "La conexión con OBS cambió. Tus cambios se conservan; revisa las listas de fuentes actualizadas antes de aplicar."
+      "connChanged": "La conexión con OBS cambió. Tus cambios se conservan; revisa las listas de fuentes actualizadas antes de aplicar.",
+      "plHeading": "Transporte de Playlister"
     }
   }
 }

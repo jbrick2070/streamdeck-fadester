@@ -92,6 +92,15 @@ function drawnTexts(): Array<{ key: StringKey; params?: TextParams; boxes: Box[]
   for (const key of ["errorMediaChoose", "errorMediaMissing", "errorMediaUnsupported", "errorMediaBusy",
     "errorMediaPending", "errorMediaChanging", "errorMediaAmbiguous"] as const) add(key, [B.keySub]);
   add("errorMediaWrongKind", [B.keySub], { input: "Camera" });
+  // Its operation words are titles; the state, pending and busy words its subtitle. The time is drawn
+  // only in PLAYING and PAUSED, so a two-hour item with those two words is the longest sample.
+  for (const key of ["plOpPrevious", "plOpNext", "plOpPlayPause", "plOpStop", "plOpRestart", "plOpStatus"] as const) add(key, [B.keyTitle]);
+  for (const key of ["plMissing", "plWrongKind", "plUnsupported", "mediaPendingPlay", "mediaPendingPause",
+    "mediaUnconfirmed", "mediaBusy"] as const) add(key, [B.keySub]);
+  for (const key of (Object.keys(EN) as StringKey[]).filter((name) => name.startsWith("mediaState"))) add(key, [B.keySub]);
+  for (const key of ["mediaStatePlaying", "mediaStatePaused"] as const) {
+    add("mediaTime", [B.keySub], { state: t(key), cursor: "2:00:00", duration: "2:00:00" });
+  }
   add("errorRoleUnavailable", [B.keySub], { role: t("audioMic") });
   for (const key of ["errorSceneIndexUnavailableOne", "errorSceneIndexUnavailableMany"] as const) add(key, [B.keySub], { n: 4, count: 3 });
   for (const key of (Object.keys(EN) as StringKey[]).filter((name) => name.startsWith("layerError"))) add(key, [B.keySub, B.layerStatus]);

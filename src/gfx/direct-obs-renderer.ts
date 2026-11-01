@@ -17,7 +17,8 @@ export { textFitAttributes, toSvgDataUri };
 
 export type DirectKeyIcon = "scene" | "next" | "previous" | "shuffle" | "cut" | "take"
   | "volume-up" | "volume-down" | "source-next" | "source-previous" | "show" | "hide"
-  | "layer-up" | "layer-down" | "blend" | "reset";
+  | "layer-up" | "layer-down" | "blend" | "reset"
+  | "media-previous" | "media-next" | "play-pause" | "stop" | "restart" | "status";
 
 export interface DirectDialRenderInput {
   connected: boolean;
@@ -43,6 +44,8 @@ export interface DirectKeyRenderInput {
   configured: boolean;
   problem?: string;
   icon?: DirectKeyIcon;
+  /** An unconfigured key that still names itself: its title is kept and this replaces "Open inspector". */
+  unboundSubtitle?: string;
 }
 
 const LATIN = "Segoe UI,Arial,sans-serif";
@@ -137,9 +140,11 @@ export function renderDirectKeySvg(input: DirectKeyRenderInput): string {
     : unavailable
       ? "#df6d38"
       : P.accentPurple;
-  const title = input.configured ? input.title || t("keyDefaultTitle") : t("keyChooseAction");
+  const title = input.configured
+    ? input.title || t("keyDefaultTitle")
+    : input.unboundSubtitle ? input.title || t("keyChooseAction") : t("keyChooseAction");
   const subtitle = !input.configured
-    ? t("keyOpenInspector")
+    ? input.unboundSubtitle || t("keyOpenInspector")
     : !input.connected
       ? input.reason || t("obsNotConnected")
       : input.problem || input.subtitle || t("keyReady");
@@ -198,6 +203,12 @@ function keyGlyph(icon: DirectKeyIcon): string {
     case "layer-down": return '<path d="M42 20h36M42 26h36M60 32v19m-9-9 9 9 9-9"/>';
     case "blend": return `<circle cx="52" cy="35" r="14" fill="${P.accentPurple}" stroke="${P.accentPurple}"/><circle cx="68" cy="35" r="14"/>`;
     case "reset": return '<path d="M46 28a16 16 0 1 1 0 16M44 19v12h12"/>';
+    case "media-previous": return '<path d="M47 24v22"/><path d="M73 24v22L55 35Z"/>';
+    case "media-next": return '<path d="M47 24v22l18-11Z"/><path d="M73 24v22"/>';
+    case "play-pause": return '<path d="m43 24 17 11-17 11Z"/><path d="M68 24v22m9-22v22"/>';
+    case "stop": return '<rect x="48" y="23" width="24" height="24" rx="4"/>';
+    case "restart": return '<path d="M73 38a13 13 0 1 1-3.8-11.2"/><path d="M74 21v9h-9"/>';
+    case "status": return '<circle cx="60" cy="35" r="12"/><path d="M60 28v7l5 3"/>';
     default: return '<rect x="40" y="21" width="40" height="28" rx="4"/><path d="m54 28 12 7-12 7Z"/>';
   }
 }

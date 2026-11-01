@@ -47,6 +47,7 @@ export function presetCaptionsScript(): string {
     "    if (action === \"fade\") return AUTOMATIC_INPUT.test(text(settings, \"inputName\")) ? \"automaticInput\" : \"\";",
     "    if (action === \"layerKey\") return text(settings, \"operation\") || \"select_next\";",
     "    if (action === \"layerDial\") return text(settings, \"dialMode\") || \"select_layer\";",
+    "    if (action === \"playlister\") return text(settings, \"operation\") || \"playpause\";",
     "    return \"\";",
     "  }",
     "  function isGenerated(action, settings, caption) {",

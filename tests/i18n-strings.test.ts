@@ -223,7 +223,7 @@ describe("own and foreign texts (R-I18N-2)", () => {
   it("the German table never repeats an English text where the words differ in German", () => {
     const de = readLanguageFile("de").Localization;
     // Kept terms (R-I18N-3) and placeholders-only templates may equal English.
-    const kept = new Set(["Fadester", "Fader", "OBS", "LIVE", "Normal", "Linear", "—"]);
+    const kept = new Set(["Fadester", "Fader", "OBS", "LIVE", "Normal", "Linear", "Status", "—"]);
     for (const key of KEYS) {
       const english = EN[key];
       const stripped = english.replace(/\{[A-Za-z0-9_]+\}/g, "").replace(/[\s·:/()%,.—'-]/g, "");

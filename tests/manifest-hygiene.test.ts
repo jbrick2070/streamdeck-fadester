@@ -51,9 +51,20 @@ describe("Step 1.1 — Manifest, Layout, Icons & Repository Hygiene", () => {
 
     const actions = manifest.Actions as Array<Record<string, unknown>>;
     expect(Array.isArray(actions)).toBe(true);
-    expect(actions).toHaveLength(7);
+    expect(actions).toHaveLength(8);
     const byId = (id: string) => actions.find((entry) => entry.UUID === `com.jbrick2070.fadester-for-obs.${id}`)!;
-    expect(actions.slice(0, 4).every((entry) => !String(entry.Name).includes("optional"))).toBe(true);
+    expect(actions.slice(0, 6).every((entry) => !String(entry.Name).includes("optional"))).toBe(true);
+    expect(actions.slice(6).every((entry) => String(entry.Name).includes("optional"))).toBe(true);
+    expect(byId("playlister-transport")).toMatchObject({
+      Controllers: ["Keypad"],
+      SupportedInMultiActions: false,
+      PropertyInspectorPath: "ui/playlister-transport-key.html",
+      Icon: "imgs/actions/playlister-transport/icon",
+      States: [{ Image: "imgs/actions/playlister-transport/key" }]
+    });
+    for (const icon of ["icon", "key"]) {
+      expect(statSync(join(PLUGIN_DIR, "imgs", "actions", "playlister-transport", `${icon}.svg`)).size).toBeGreaterThan(64);
+    }
     expect(byId("fader").Controllers).toEqual(["Encoder"]);
     const encoderLayoutRel = (byId("fader").Encoder as { layout: string }).layout;
     expect(encoderLayoutRel).toBe("layouts/fader-cell.json");

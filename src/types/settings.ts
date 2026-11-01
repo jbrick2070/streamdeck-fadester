@@ -21,6 +21,19 @@ export type ReadoutStyle = "auto" | "percent";
 
 export const MAX_LABEL_OVERRIDE_CHARS = 14 as const;
 
+/**
+ * One accent per rig page for borders, glyphs and dial bars (PLAN.md 10.4,
+ * R-RIG-8); `default` draws today's Fadester violet, byte for byte. Red is not
+ * offered: a solid red key means Panic, a red outline Cut.
+ */
+export type AccentName = "default" | "brass" | "teal" | "magenta";
+
+export const ACCENT_NAMES: readonly AccentName[] = ["default", "brass", "teal", "magenta"];
+
+export function normalizeAccent(raw: unknown): AccentName {
+  return (ACCENT_NAMES as readonly unknown[]).includes(raw) ? raw as AccentName : "default";
+}
+
 export type DialPressAction =
   | "snap_0_100"
   | "clean_0"
@@ -107,6 +120,7 @@ export interface ObsFaderDialSettings {
   labelOverride?: string;
   autoQueueNextScene?: boolean;
   pressAction?: ObsFaderPressAction;
+  accent?: AccentName;
 }
 
 export const DEFAULT_OBS_FADER_DIAL_SETTINGS: Required<ObsFaderDialSettings> = {
@@ -116,7 +130,8 @@ export const DEFAULT_OBS_FADER_DIAL_SETTINGS: Required<ObsFaderDialSettings> = {
   acceleration: true,
   labelOverride: "",
   autoQueueNextScene: false,
-  pressAction: "finish_transition"
+  pressAction: "finish_transition",
+  accent: "default"
 };
 
 export interface ObsFadeKeySettings {
@@ -125,13 +140,15 @@ export interface ObsFadeKeySettings {
   to?: 0 | 1;
   durationMs?: number;
   labelOverride?: string;
+  accent?: AccentName;
 }
 
 export const DEFAULT_OBS_FADE_KEY_SETTINGS: Required<ObsFadeKeySettings> = {
   inputName: "__audio_main__",
   to: 1,
   durationMs: 1000,
-  labelOverride: ""
+  labelOverride: "",
+  accent: "default"
 };
 
 export type ObsSceneOperation = "preview" | "cut" | "transition";
@@ -144,13 +161,15 @@ export interface ObsSceneTransitionKeySettings {
   /** __current_transition__, __cut__, or an OBS transition name. */
   transitionName?: string;
   labelOverride?: string;
+  accent?: AccentName;
 }
 
 export const DEFAULT_OBS_SCENE_TRANSITION_KEY_SETTINGS: Required<ObsSceneTransitionKeySettings> = {
   sceneTarget: "__next_scene__",
   operation: "transition",
   transitionName: "__current_transition__",
-  labelOverride: ""
+  labelOverride: "",
+  accent: "default"
 };
 
 /** The six Playlister transport operations; `status` only shows the state (R-PLT-1). */
@@ -166,13 +185,15 @@ export interface PlaylisterTransportSettings {
   /** The source's name when it was chosen, shown in the inspector only. */
   inputName?: string;
   labelOverride?: string;
+  accent?: AccentName;
 }
 
 export const DEFAULT_PLAYLISTER_TRANSPORT_SETTINGS: Required<PlaylisterTransportSettings> = {
   inputUuid: "",
   operation: "playpause",
   inputName: "",
-  labelOverride: ""
+  labelOverride: "",
+  accent: "default"
 };
 
 export function normalizePlaylisterOperation(raw: unknown): PlaylisterOperation {
@@ -187,15 +208,111 @@ export interface VisualPanicSettings {
   [key: string]: string | number | boolean | undefined;
   operation?: VisualPanicOperation;
   labelOverride?: string;
+  /** Restore's accent; Panic is always red. */
+  accent?: AccentName;
 }
 
 export const DEFAULT_VISUAL_PANIC_SETTINGS: Required<VisualPanicSettings> = {
   operation: "panic",
-  labelOverride: ""
+  labelOverride: "",
+  accent: "default"
 };
 
 export function normalizeVisualPanicOperation(raw: unknown): VisualPanicOperation {
   return raw === "restore" ? "restore" : "panic";
+}
+
+/** What an OBS Filter dial's press does (PLAN.md 10.4): nothing, drop-and-return, or the filter on/off. */
+export type ObsFilterDialPress = "none" | "drop_return" | "toggle";
+/** What an OBS Filter key does: the filter on/off, a value over a time, or a step. */
+export type ObsFilterKeyOperation = "toggle" | "set" | "step_up" | "step_down";
+
+export interface ObsFilterSettings {
+  [key: string]: string | number | boolean | undefined;
+  /** The scene's, group's or input's UUID: the only thing that resolves the source. */
+  sourceUuid?: string;
+  /** The source's name when chosen, shown in the inspector only. */
+  sourceName?: string;
+  filterName?: string;
+  /** The filter's versioned kind when chosen; a filter of another kind is refused. */
+  filterKind?: string;
+  setting?: string;
+  /** An explicit range, needed off the range table (and for an Audio Modulator amount). */
+  rangeMin?: number;
+  rangeMax?: number;
+  integer?: boolean;
+  dialPress?: ObsFilterDialPress;
+  keyOperation?: ObsFilterKeyOperation;
+  /** A set key's target, in the setting's own units (0..100 for a mix, 0..1 for opacity). */
+  value?: number;
+  durationMs?: number;
+  /** A step key's step, in percent of the range. */
+  stepPct?: number;
+  labelOverride?: string;
+  accent?: AccentName;
+}
+
+/** Settings as a control uses them; the explicit range stays absent when not typed. */
+export interface NormalizedObsFilterSettings {
+  sourceUuid: string;
+  sourceName: string;
+  filterName: string;
+  filterKind: string;
+  setting: string;
+  rangeMin: number | undefined;
+  rangeMax: number | undefined;
+  integer: boolean;
+  dialPress: ObsFilterDialPress;
+  keyOperation: ObsFilterKeyOperation;
+  value: number;
+  durationMs: number;
+  stepPct: number;
+  labelOverride: string;
+  accent: AccentName;
+}
+
+export const DEFAULT_OBS_FILTER_SETTINGS: NormalizedObsFilterSettings = {
+  sourceUuid: "",
+  sourceName: "",
+  filterName: "",
+  filterKind: "",
+  setting: "",
+  rangeMin: undefined,
+  rangeMax: undefined,
+  integer: false,
+  dialPress: "drop_return",
+  keyOperation: "toggle",
+  value: 0,
+  durationMs: 1000,
+  stepPct: 10,
+  labelOverride: "",
+  accent: "default"
+};
+
+export function normalizeObsFilterSettings(raw?: ObsFilterSettings): NormalizedObsFilterSettings {
+  const d = DEFAULT_OBS_FILTER_SETTINGS;
+  const text = (value: unknown): string => typeof value === "string" ? value.trim() : "";
+  const number = (value: unknown): number | undefined => typeof value === "number" && Number.isFinite(value) ? value : undefined;
+  const stepPct = number(raw?.stepPct);
+  return {
+    sourceUuid: text(raw?.sourceUuid),
+    sourceName: text(raw?.sourceName),
+    // OBS filter names are kept exactly (a filter may be named with spaces).
+    filterName: typeof raw?.filterName === "string" ? raw.filterName : d.filterName,
+    filterKind: text(raw?.filterKind),
+    setting: text(raw?.setting),
+    rangeMin: number(raw?.rangeMin),
+    rangeMax: number(raw?.rangeMax),
+    integer: raw?.integer === true,
+    dialPress: raw?.dialPress === "none" || raw?.dialPress === "toggle" ? raw.dialPress : d.dialPress,
+    keyOperation: raw?.keyOperation === "set" || raw?.keyOperation === "step_up" || raw?.keyOperation === "step_down"
+      ? raw.keyOperation : d.keyOperation,
+    value: number(raw?.value) ?? d.value,
+    durationMs: raw?.durationMs === undefined ? d.durationMs : normalizeDurationMs(raw.durationMs, d.durationMs),
+    stepPct: stepPct === undefined ? d.stepPct : Math.max(1, Math.min(50, stepPct)),
+    labelOverride: normalizeLabelOverride(raw?.labelOverride),
+    accent: normalizeAccent(raw?.accent)
+  };
 }
 
 export function normalizeDurationMs(raw: unknown, fallback = 1000): number {

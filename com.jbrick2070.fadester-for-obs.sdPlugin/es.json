@@ -39,6 +39,20 @@
     "Name": "Transporte de Playlister",
     "Tooltip": "Anterior, siguiente, reproducir/pausar, detener, reiniciar o estado de una fuente Playlister mediante los controles multimedia de OBS."
   },
+  "com.jbrick2070.fadester-for-obs.obs-filter": {
+    "Name": "Filtro de OBS",
+    "Tooltip": "Lleva un ajuste de filtro con un dial, o activa y desactiva un filtro, fija un valor o súbelo por pasos con una tecla. Rangos, transiciones suaves y comprobaciones de propiedad lo hacen seguro.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "Llevar el ajuste del filtro",
+        "Push": "Bajar y volver, o activar y desactivar el filtro"
+      }
+    }
+  },
+  "com.jbrick2070.fadester-for-obs.visual-panic": {
+    "Name": "Pánico visual",
+    "Tooltip": "Pánico (al instante) y Restaurar (mantén 0,8 s) de Visual Sidechain, enviados con los atajos propios de OBS. Las teclas de pánico muestran PÁNICO ENVIADO hasta Restaurar."
+  },
   "com.jbrick2070.fadester-for-obs.fader": {
     "Name": "Fader de Midi Fadester (opcional)",
     "Tooltip": "Control avanzado opcional para un slot existente de Midi Fadester.",
@@ -290,6 +304,24 @@
     "vpHoldSeconds": "Mantén {s} s",
     "vpHolding": "Sigue pulsando",
     "vpNotLoaded": "Falta Visual Sidechain",
+    "filterChoose": "Elige un filtro",
+    "filterReading": "Leyendo OBS…",
+    "filterOn": "ACTIVO",
+    "filterOff": "INACTIVO",
+    "filterOpLook": "Filtro on/off",
+    "filterOpSet": "Fijar valor",
+    "filterOpStepUp": "Subir {setting}",
+    "filterOpStepDown": "Bajar {setting}",
+    "filterSetTo": "A {value} en {s} s",
+    "filterSettingEffectMix": "Mezcla del efecto",
+    "filterSettingReactivity": "Reactividad",
+    "filterSettingOpacity": "Opacidad",
+    "filterSettingModAmount": "Cantidad mod {n}",
+    "filterSettingNone": "Sin ajuste",
+    "filterPressDrop": "Pulsar: bajar y volver",
+    "filterPressToggle": "Pulsar: filtro on/off",
+    "filterGlideCancelled": "Fundido cancelado",
+    "filterChooseSetting": "Elige un ajuste",
     "pi": {
       "scopeThisKey": "esta tecla",
       "scopeThisDial": "este dial",
@@ -633,7 +665,9 @@
       "plBannerMissing": "El Playlister elegido no está en OBS ahora: se ha eliminado o está en otra colección de escenas. Elige un Playlister.",
       "plBannerWrongKind": "La fuente elegida no es un Playlister. Elige una fuente Playlister.",
       "plBannerUnsupported": "Este OBS WebSocket no ofrece las solicitudes multimedia (GetMediaInputStatus, TriggerMediaInputAction). Actualiza OBS.",
-      "plNote": "Solo estado muestra el estado. Reproducir / pausar alterna según el estado observado. Detener descarta primero las pulsaciones no enviadas del Playlister. No se envía nada mientras el Playlister no esté disponible."
+      "plNote": "Solo estado muestra el estado. Reproducir / pausar alterna según el estado observado. Detener descarta primero las pulsaciones no enviadas del Playlister. No se envía nada mientras el Playlister no esté disponible.",
+      "fxHeading": "Filtro de OBS",
+      "vpHeading": "Pánico visual"
     }
   }
 }

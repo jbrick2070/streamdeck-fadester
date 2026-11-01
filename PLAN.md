@@ -1023,6 +1023,28 @@ ships unbound.
    nothing; drop-and-return glides and returns; toggle reads fresh; draws the value or the problem, never blank; the
    default accent renders identical SVG. Mutations: *M-10.4a* toggle from the cached state; *M-10.4b* the default
    accent draws brass.
+   *As built (2026-11-01):* `ObsFilterInstanceController` and `ObsFilterControlAction` (no `onTouchTap`, so a tap is
+   never routed; a test pins it). The dial rides 2 % of the range per tick with the usual acceleration; its cell
+   draws the setting's name and the filter's in white, the value at 24 px, a wave whose height follows the value, the
+   bar and the press hint in the accent; a disabled filter is drawn dimmed. Keys: a Look key draws a lens with
+   three rays (filled when on) and a large ON or OFF badge; a set key "Effect mix" with "To 0% in 2 s" and the Still,
+   wave or Full react glyph from the range (known from the settings, so it does not change when OBS answers); a step
+   key "Effect mix up". A retarget or a changed operation, value or time cancels the control's glide visibly
+   ("Glide cancelled"); a caption or accent edit does not. A refused press stays drawn until what refused it is
+   gone (the next read shows the setting free), the latch outranks it. A dial or value key without a setting says
+   "Choose a setting". `accent` (default, brass `#F5B841`, teal `#2DD4BF`, magenta `#E879F9`) on the scene, fade,
+   fader, layer (key and dial border, its scene header), Playlister, Restore and filter controls; the default leaves
+   every drawing byte-identical (hashes of the old key, problem key, dial, scene mixer and Restore drawings in
+   `tests/obs-filter-control.test.ts`; the QA pass compared 1,632 combinations). The manifest has ten actions,
+   "OBS Filter" and "Visual Panic" before the two optional ones, both `SupportedInMultiActions: false`, the filter's
+   triggers Rotate and Push only; `src/plugin.ts` creates one `FilterController` and one `VisualSafety` and
+   registers both actions; `ui/obs-filter.html` and `ui/visual-panic.html` are minimal pages with the shared sections
+   until 10.5. Texts in all eight files: 18 deck words (`filterChoose`, `filterReading`, `filterOn`, `filterOff`,
+   `filterOpLook`, `filterOpSet`, `filterOpStepUp`, `filterOpStepDown`, `filterSetTo`, the four setting names,
+   `filterSettingNone`, `filterPressDrop`, `filterPressToggle`, `filterGlideCancelled`, `filterChooseSetting`), two
+   inspector headings, both actions' Name and Tooltip and the filter's two trigger descriptions; Visual Sidechain's
+   own terms for Effect mix, Reactivity and the modulation amount, OBS's for Opacity. A `filter` caption action
+   (context: `dial:<setting>`, `toggle:`, `<operation>:<setting>`), empty until 10.6.
 6. **Step 10.5 -- Inspectors.** `ui/obs-filter.html`: source (scenes, groups and inputs, by UUID), filter (with its
    kind, read through the plugin), setting (the table first, numeric settings only, deny list and owned settings
    hidden or marked), the explicit range off the table, "Use current", banners; `ui/visual-panic.html`; an Accent row

@@ -18,6 +18,7 @@ import {
   DEFAULT_PLAYLISTER_TRANSPORT_SETTINGS,
   PlaylisterOperation,
   PlaylisterTransportSettings,
+  normalizeAccent,
   normalizeLabelOverride,
   normalizePlaylisterOperation
 } from "../types/settings.js";
@@ -202,7 +203,7 @@ export class PlaylisterTransportInstanceController {
     const reason = statusCellReason(this.client.getStatus(), translate);
     if (!uuid) {
       this.push(renderDirectKeySvg({
-        connected, reason, title, icon, configured: false, unboundSubtitle: t("errorMediaChoose")
+        connected, reason, title, icon, configured: false, unboundSubtitle: t("errorMediaChoose"), accent: this.settings.accent
       }));
       return;
     }
@@ -215,7 +216,7 @@ export class PlaylisterTransportInstanceController {
       default: problem = this.lastError ? wordText(this.lastError, translate) : undefined;
     }
     this.push(renderDirectKeySvg({
-      connected, reason, title, icon, configured: true,
+      connected, reason, title, icon, configured: true, accent: this.settings.accent,
       subtitle: describeMediaState(state),
       ...(problem ? { problem } : {})
     }));
@@ -232,7 +233,8 @@ export class PlaylisterTransportInstanceController {
       inputUuid: typeof raw?.inputUuid === "string" ? raw.inputUuid.trim() : DEFAULT_PLAYLISTER_TRANSPORT_SETTINGS.inputUuid,
       operation: normalizePlaylisterOperation(raw?.operation),
       inputName: typeof raw?.inputName === "string" ? raw.inputName.trim() : DEFAULT_PLAYLISTER_TRANSPORT_SETTINGS.inputName,
-      labelOverride: normalizeLabelOverride(raw?.labelOverride)
+      labelOverride: normalizeLabelOverride(raw?.labelOverride),
+      accent: normalizeAccent(raw?.accent)
     };
   }
 }

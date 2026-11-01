@@ -11,7 +11,7 @@
  * (scripts/generate-ui-i18n.ts; a test keeps it current).
  */
 
-export type CaptionAction = "scene" | "fader" | "fade" | "layerKey" | "layerDial" | "playlister" | "panic";
+export type CaptionAction = "scene" | "fader" | "fade" | "layerKey" | "layerDial" | "playlister" | "panic" | "filter";
 
 /** Captions per action and context, lower case; `shipped` are the ones in profiles/layouts.json. */
 export const PRESET_CAPTIONS: Readonly<Record<CaptionAction, Readonly<Record<string, {
@@ -70,7 +70,9 @@ export const PRESET_CAPTIONS: Readonly<Record<CaptionAction, Readonly<Record<str
   panic: {
     panic: { shipped: [], legacy: [] },
     restore: { shipped: [], legacy: [] }
-  }
+  },
+  // The VJ rig's OBS Filter controls, by control, operation and setting (shipped with the rig profiles, 10.6).
+  filter: {}
 };
 
 const AUTOMATIC_INPUT = /^__audio_(main|mic|aux|input_\d+)__$/;
@@ -94,6 +96,12 @@ export function captionContext(action: CaptionAction, settings: Readonly<Record<
       return text("operation") || "playpause";
     case "panic":
       return text("operation") || "panic";
+    case "filter": {
+      // A dial by its setting; a key by its operation and (except the on/off toggle) its setting.
+      if (text("control") === "dial") return `dial:${text("setting")}`;
+      const operation = text("keyOperation") || "toggle";
+      return operation === "toggle" ? "toggle:" : `${operation}:${text("setting")}`;
+    }
   }
 }
 

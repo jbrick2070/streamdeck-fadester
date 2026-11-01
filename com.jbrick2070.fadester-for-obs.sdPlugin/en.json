@@ -39,6 +39,20 @@
     "Name": "Playlister Transport",
     "Tooltip": "Previous, next, play/pause, stop, restart or status of one Playlister source through OBS's media controls."
   },
+  "com.jbrick2070.fadester-for-obs.obs-filter": {
+    "Name": "OBS Filter",
+    "Tooltip": "Ride a filter setting on a dial, or turn a filter on and off, set a value or step it from a key. Ranges, a gentle slew and ownership checks keep it safe.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "Ride the filter setting",
+        "Push": "Drop and return, or turn the filter on and off"
+      }
+    }
+  },
+  "com.jbrick2070.fadester-for-obs.visual-panic": {
+    "Name": "Visual Panic",
+    "Tooltip": "Visual Sidechain's Panic (instant) and Restore (hold 0.8 s), sent through OBS's own hotkeys. Panic keys show PANIC SENT until Restore."
+  },
   "com.jbrick2070.fadester-for-obs.fader": {
     "Name": "Midi Fadester Fader (optional)",
     "Tooltip": "Optional enhanced control for an existing Midi Fadester slot.",
@@ -290,6 +304,24 @@
     "vpHoldSeconds": "Hold {s} s",
     "vpHolding": "Keep holding",
     "vpNotLoaded": "Visual Sidechain missing",
+    "filterChoose": "Choose a filter",
+    "filterReading": "Reading OBS…",
+    "filterOn": "ON",
+    "filterOff": "OFF",
+    "filterOpLook": "Filter on/off",
+    "filterOpSet": "Set value",
+    "filterOpStepUp": "{setting} up",
+    "filterOpStepDown": "{setting} down",
+    "filterSetTo": "To {value} in {s} s",
+    "filterSettingEffectMix": "Effect mix",
+    "filterSettingReactivity": "Reactivity",
+    "filterSettingOpacity": "Opacity",
+    "filterSettingModAmount": "Mod {n} amount",
+    "filterSettingNone": "No setting",
+    "filterPressDrop": "Press: drop and return",
+    "filterPressToggle": "Press: filter on/off",
+    "filterGlideCancelled": "Glide cancelled",
+    "filterChooseSetting": "Choose a setting",
     "pi": {
       "scopeThisKey": "this key",
       "scopeThisDial": "this dial",
@@ -633,7 +665,9 @@
       "plBannerMissing": "The chosen Playlister is not in OBS now: it was removed, or it is in another scene collection. Choose a Playlister.",
       "plBannerWrongKind": "The chosen source is not a Playlister. Choose a Playlister source.",
       "plBannerUnsupported": "This OBS WebSocket does not offer the media requests (GetMediaInputStatus, TriggerMediaInputAction). Update OBS.",
-      "plNote": "Status only shows the state. Play / pause toggles from the observed state. Stop first drops the Playlister’s unsent presses. Nothing is sent while the Playlister is unavailable."
+      "plNote": "Status only shows the state. Play / pause toggles from the observed state. Stop first drops the Playlister’s unsent presses. Nothing is sent while the Playlister is unavailable.",
+      "fxHeading": "OBS filter",
+      "vpHeading": "Visual Panic"
     }
   }
 }

@@ -39,6 +39,20 @@
     "Name": "Playlister トランスポート",
     "Tooltip": "OBS のメディアコントロールで 1 つの Playlister ソースを操作（前へ・次へ・再生/一時停止・停止・最初から再生）するか、状態を表示します。"
   },
+  "com.jbrick2070.fadester-for-obs.obs-filter": {
+    "Name": "OBS フィルタ",
+    "Tooltip": "ダイヤルでフィルタの設定を操作、またはキーでフィルタのオン/オフ、値の設定、段階的な変更を行います。範囲、ゆるやかな変化、所有者の確認で安全に動作します。",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "フィルタの設定を操作",
+        "Push": "下げて戻す、またはフィルタのオン/オフ"
+      }
+    }
+  },
+  "com.jbrick2070.fadester-for-obs.visual-panic": {
+    "Name": "ビジュアル パニック",
+    "Tooltip": "Visual Sidechain のパニック (即時) と復元 (0.8 秒長押し) を OBS のホットキーで送ります。パニックキーは復元までパニック送信済みと表示します。"
+  },
   "com.jbrick2070.fadester-for-obs.fader": {
     "Name": "Midi Fadester フェーダー (オプション)",
     "Tooltip": "既存の Midi Fadester スロット用のオプションの拡張操作です。",
@@ -290,6 +304,24 @@
     "vpHoldSeconds": "{s} 秒長押し",
     "vpHolding": "押し続けて",
     "vpNotLoaded": "Visual Sidechain なし",
+    "filterChoose": "フィルタを選択",
+    "filterReading": "OBS を読み込み中…",
+    "filterOn": "オン",
+    "filterOff": "オフ",
+    "filterOpLook": "フィルタ切替",
+    "filterOpSet": "値を設定",
+    "filterOpStepUp": "{setting} を上げる",
+    "filterOpStepDown": "{setting} を下げる",
+    "filterSetTo": "{s} 秒で {value} に",
+    "filterSettingEffectMix": "エフェクトミックス",
+    "filterSettingReactivity": "反応度",
+    "filterSettingOpacity": "不透明度",
+    "filterSettingModAmount": "モジュレーション {n} 量",
+    "filterSettingNone": "設定なし",
+    "filterPressDrop": "押す: 下げて戻す",
+    "filterPressToggle": "押す: フィルタ切替",
+    "filterGlideCancelled": "フェードを中止",
+    "filterChooseSetting": "設定を選択",
     "pi": {
       "scopeThisKey": "このキー",
       "scopeThisDial": "このダイヤル",
@@ -633,7 +665,9 @@
       "plBannerMissing": "選択した Playlister は現在 OBS にありません。削除されたか、別のシーンコレクションにあります。Playlister を選び直してください。",
       "plBannerWrongKind": "選択したソースは Playlister ではありません。Playlister ソースを選択してください。",
       "plBannerUnsupported": "この OBS WebSocket はメディアリクエスト（GetMediaInputStatus、TriggerMediaInputAction）に対応していません。OBS を更新してください。",
-      "plNote": "「状態のみ」は状態を表示するだけです。「再生 / 一時停止」は観測された状態をもとに切り替えます。「停止」はまずその Playlister の未送信の操作を破棄します。Playlister が利用できない間は何も送信しません。"
+      "plNote": "「状態のみ」は状態を表示するだけです。「再生 / 一時停止」は観測された状態をもとに切り替えます。「停止」はまずその Playlister の未送信の操作を破棄します。Playlister が利用できない間は何も送信しません。",
+      "fxHeading": "OBS フィルタ",
+      "vpHeading": "ビジュアル パニック"
     }
   }
 }

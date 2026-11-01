@@ -45,6 +45,8 @@ const B = {
   mfKeyReason: { kind: "twoLines", name: "Midi Fadester key reason", size: 11, width: 108 } as Box,
   cleanFxTitle: line("Clean FX title", 16, 104),
   cleanFxCount: line("Clean FX count", 15, 104),
+  filterHead: line("filter dial head", 11, 120),
+  filterBadge: line("filter key badge", 13, 96),
   infobarStatus: { kind: "native", name: "Info Bar status", size: 10, width: 220 } as Box,
   infobarLine: { kind: "native", name: "Info Bar Live/Preview", size: 13, width: 220 } as Box
 };
@@ -100,6 +102,16 @@ function drawnTexts(): Array<{ key: StringKey; params?: TextParams; boxes: Box[]
   for (const key of ["vpPanic", "vpPanicSent", "vpRestore"] as const) add(key, [B.keyTitle]);
   for (const key of ["vpPanicHint", "vpLatchedHint", "vpHolding", "vpNotLoaded"] as const) add(key, [B.keySub]);
   add("vpHoldSeconds", [B.keySub], { s: "0,8" });
+  // The OBS Filter controls: key titles and subtitles, the dial's title, value line and press hint.
+  const settingNames = [t("filterSettingEffectMix"), t("filterSettingReactivity"), t("filterSettingOpacity"), t("filterSettingModAmount", { n: 8 })];
+  for (const key of ["filterSettingEffectMix", "filterSettingReactivity", "filterSettingOpacity", "filterSettingNone"] as const) add(key, [B.keyTitle, B.filterHead]);
+  add("filterSettingModAmount", [B.keyTitle, B.filterHead], { n: 8 });
+  for (const key of ["filterOpLook", "filterOpSet"] as const) add(key, [B.keyTitle]);
+  for (const setting of settingNames) for (const key of ["filterOpStepUp", "filterOpStepDown"] as const) add(key, [B.keyTitle], { setting });
+  for (const key of ["filterChoose", "filterReading", "filterGlideCancelled", "filterChooseSetting"] as const) add(key, [B.keySub, B.dialHint]);
+  for (const key of ["filterOn", "filterOff"] as const) add(key, [B.keySub, B.filterBadge]);
+  add("filterSetTo", [B.keySub], { value: "100 %", s: "2" });
+  for (const key of ["filterPressDrop", "filterPressToggle"] as const) add(key, [B.dialHint]);
   // Its operation words are titles; the state, pending and busy words its subtitle. The time is drawn
   // only in PLAYING and PAUSED, so a two-hour item with those two words is the longest sample.
   for (const key of ["plOpPrevious", "plOpNext", "plOpPlayPause", "plOpStop", "plOpRestart", "plOpStatus"] as const) add(key, [B.keyTitle]);

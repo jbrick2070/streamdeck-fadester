@@ -17,6 +17,7 @@ import {
   ObsFaderDialSettings,
   ObsFaderTarget,
   ObsFaderPressAction,
+  normalizeAccent,
   normalizeLabelOverride
 } from "../types/settings.js";
 import { CellRateLimiter } from "../gfx/cell-rate-limiter.js";
@@ -229,6 +230,7 @@ export class ObsFaderDialInstanceController {
         configured,
         ...(!isTbar && configured && !inputName ? { problem: inputRole ? t("roleUnavailable", { role: inputRole }) : t("audioInputUnavailable") } : {}),
         target: this.settings.target,
+        accent: this.settings.accent,
         ...(pressHint ? { pressHint: t(pressHint) } : {}),
         ...(isTbar ? {
           studioMode: catalog.studioMode,
@@ -257,7 +259,8 @@ export class ObsFaderDialInstanceController {
       labelOverride: normalizeLabelOverride(raw?.labelOverride),
       autoQueueNextScene: raw?.autoQueueNextScene === true,
       pressAction: validPressActions.includes(raw?.pressAction as ObsFaderPressAction)
-        ? raw!.pressAction! : DEFAULT_OBS_FADER_DIAL_SETTINGS.pressAction
+        ? raw!.pressAction! : DEFAULT_OBS_FADER_DIAL_SETTINGS.pressAction,
+      accent: normalizeAccent(raw?.accent)
     };
   }
 }

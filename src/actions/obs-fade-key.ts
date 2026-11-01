@@ -13,6 +13,7 @@ import { customCaption } from "../obs/preset-captions.js";
 import {
   DEFAULT_OBS_FADE_KEY_SETTINGS,
   ObsFadeKeySettings,
+  normalizeAccent,
   normalizeDurationMs,
   normalizeLabelOverride
 } from "../types/settings.js";
@@ -111,6 +112,7 @@ export class ObsFadeKeyInstanceController {
         subtitle,
         icon: this.settings.to === 1 ? "volume-up" : "volume-down",
         configured,
+        accent: this.settings.accent,
         ...(!inputName && configured ? { problem: role ? t("roleUnavailable", { role }) : t("audioInputUnavailable") } : {})
       })
     );
@@ -125,7 +127,8 @@ export class ObsFadeKeyInstanceController {
         raw?.durationMs,
         DEFAULT_OBS_FADE_KEY_SETTINGS.durationMs
       ),
-      labelOverride: normalizeLabelOverride(raw?.labelOverride)
+      labelOverride: normalizeLabelOverride(raw?.labelOverride),
+      accent: normalizeAccent(raw?.accent)
     };
   }
 }

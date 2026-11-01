@@ -22,6 +22,7 @@ import {
   DEFAULT_OBS_SCENE_TRANSITION_KEY_SETTINGS,
   ObsSceneOperation,
   ObsSceneTransitionKeySettings,
+  normalizeAccent,
   normalizeLabelOverride
 } from "../types/settings.js";
 import { CellRateLimiter } from "../gfx/cell-rate-limiter.js";
@@ -193,7 +194,8 @@ export class ObsSceneTransitionKeyInstanceController {
             : target === DIRECT_SCENE_PREVIOUS ? "previous"
               : this.settings.operation === "cut" ? "cut"
                 : this.settings.operation === "transition" ? "take" : "scene",
-        configured
+        configured,
+        accent: this.settings.accent
       })
     );
   }
@@ -209,7 +211,8 @@ export class ObsSceneTransitionKeyInstanceController {
         typeof raw?.transitionName === "string" && raw.transitionName.trim()
           ? raw.transitionName.trim()
           : OBS_TRANSITION_CURRENT,
-      labelOverride: normalizeLabelOverride(raw?.labelOverride)
+      labelOverride: normalizeLabelOverride(raw?.labelOverride),
+      accent: normalizeAccent(raw?.accent)
     };
   }
 }

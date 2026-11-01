@@ -39,6 +39,20 @@
     "Name": "Playlister 播放控制",
     "Tooltip": "通过 OBS 的媒体控制对一个 Playlister 源执行上一项、下一项、播放/暂停、停止、重新播放或显示状态。"
   },
+  "com.jbrick2070.fadester-for-obs.obs-filter": {
+    "Name": "OBS 滤镜",
+    "Tooltip": "用旋钮控制滤镜设置，或用按键开关滤镜、设定数值或分步调整。范围、平缓变化和归属检查保证安全。",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "控制滤镜设置",
+        "Push": "降低后复原，或开关滤镜"
+      }
+    }
+  },
+  "com.jbrick2070.fadester-for-obs.visual-panic": {
+    "Name": "视觉紧急停止",
+    "Tooltip": "通过 OBS 自身的快捷键发送 Visual Sidechain 的紧急停止（立即）和恢复（长按 0.8 秒）。紧急停止键会显示已发送紧急停止，直到恢复。"
+  },
   "com.jbrick2070.fadester-for-obs.fader": {
     "Name": "Midi Fadester 推子（可选）",
     "Tooltip": "用于现有 Midi Fadester 槽位的可选增强控制。",
@@ -290,6 +304,24 @@
     "vpHoldSeconds": "长按 {s} 秒",
     "vpHolding": "继续按住",
     "vpNotLoaded": "缺少 Visual Sidechain",
+    "filterChoose": "选择滤镜",
+    "filterReading": "正在读取 OBS…",
+    "filterOn": "开",
+    "filterOff": "关",
+    "filterOpLook": "滤镜开关",
+    "filterOpSet": "设定数值",
+    "filterOpStepUp": "{setting} 调高",
+    "filterOpStepDown": "{setting} 调低",
+    "filterSetTo": "{s} 秒内调至 {value}",
+    "filterSettingEffectMix": "效果混合",
+    "filterSettingReactivity": "响应度",
+    "filterSettingOpacity": "不透明度",
+    "filterSettingModAmount": "调制 {n} 量",
+    "filterSettingNone": "无设置",
+    "filterPressDrop": "按下：降低后复原",
+    "filterPressToggle": "按下：滤镜开关",
+    "filterGlideCancelled": "渐变已取消",
+    "filterChooseSetting": "选择设置",
     "pi": {
       "scopeThisKey": "此按键",
       "scopeThisDial": "此旋钮",
@@ -633,7 +665,9 @@
       "plBannerMissing": "所选的 Playlister 当前不在 OBS 中：它已被删除，或位于另一个场景集合中。请重新选择 Playlister。",
       "plBannerWrongKind": "所选源不是 Playlister。请选择 Playlister 源。",
       "plBannerUnsupported": "此 OBS WebSocket 不提供媒体请求（GetMediaInputStatus、TriggerMediaInputAction）。请更新 OBS。",
-      "plNote": "“仅状态”只显示状态。“播放 / 暂停”根据观测到的状态切换。“停止”会先丢弃该 Playlister 尚未发送的按键操作。Playlister 不可用时不会发送任何内容。"
+      "plNote": "“仅状态”只显示状态。“播放 / 暂停”根据观测到的状态切换。“停止”会先丢弃该 Playlister 尚未发送的按键操作。Playlister 不可用时不会发送任何内容。",
+      "fxHeading": "OBS 滤镜",
+      "vpHeading": "视觉紧急停止"
     }
   }
 }

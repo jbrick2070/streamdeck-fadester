@@ -1,0 +1,20 @@
+<!-- SPDX-License-Identifier: GPL-2.0-or-later -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Fadester for OBS — Visual Panic</title>
+  <link rel="stylesheet" href="pi.css" />
+</head>
+<body>
+  <h3><span data-i18n="vpHeading">Visual Panic</span> <span class="scope" data-i18n="scopeThisKey">this key</span></h3>
+  <div id="direct-shared-sections"></div>
+  <script src="i18n.js"></script>
+  <script src="preset-captions.js"></script>
+  <script src="direct-pi.js"></script>
+  <script>
+    // The Panic or Restore choice lands in step 10.5 (PLAN.md); the shared connection sections already work.
+    window.initDirectObsPropertyInspector(function () {});
+  </script>
+</body>
+</html>

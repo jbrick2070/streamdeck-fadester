@@ -347,7 +347,9 @@
       "plBannerMissing": "The chosen Playlister is not in OBS now: it was removed, or it is in another scene collection. Choose a Playlister.",
       "plBannerWrongKind": "The chosen source is not a Playlister. Choose a Playlister source.",
       "plBannerUnsupported": "This OBS WebSocket does not offer the media requests (GetMediaInputStatus, TriggerMediaInputAction). Update OBS.",
-      "plNote": "Status only shows the state. Play / pause toggles from the observed state. Stop first drops the Playlister’s unsent presses. Nothing is sent while the Playlister is unavailable."
+      "plNote": "Status only shows the state. Play / pause toggles from the observed state. Stop first drops the Playlister’s unsent presses. Nothing is sent while the Playlister is unavailable.",
+      "fxHeading": "OBS filter",
+      "vpHeading": "Visual Panic"
     },
     "de": {
       "scopeThisKey": "diese Taste",
@@ -692,7 +694,9 @@
       "plBannerMissing": "Der gewählte Playlister ist derzeit nicht in OBS: Er wurde entfernt oder gehört zu einer anderen Szenensammlung. Wählen Sie einen Playlister.",
       "plBannerWrongKind": "Die gewählte Quelle ist kein Playlister. Wählen Sie eine Playlister-Quelle.",
       "plBannerUnsupported": "Dieser OBS WebSocket bietet die Medienanfragen (GetMediaInputStatus, TriggerMediaInputAction) nicht an. Aktualisieren Sie OBS.",
-      "plNote": "„Nur Status“ zeigt lediglich den Zustand an. „Wiedergabe / Pause“ schaltet ausgehend vom beobachteten Zustand um. „Stopp“ verwirft zuerst die noch nicht gesendeten Befehle für diesen Playlister. Solange der Playlister nicht verfügbar ist, wird nichts gesendet."
+      "plNote": "„Nur Status“ zeigt lediglich den Zustand an. „Wiedergabe / Pause“ schaltet ausgehend vom beobachteten Zustand um. „Stopp“ verwirft zuerst die noch nicht gesendeten Befehle für diesen Playlister. Solange der Playlister nicht verfügbar ist, wird nichts gesendet.",
+      "fxHeading": "OBS-Filter",
+      "vpHeading": "Visual-Panik"
     },
     "es": {
       "scopeThisKey": "esta tecla",
@@ -1037,7 +1041,9 @@
       "plBannerMissing": "El Playlister elegido no está en OBS ahora: se ha eliminado o está en otra colección de escenas. Elige un Playlister.",
       "plBannerWrongKind": "La fuente elegida no es un Playlister. Elige una fuente Playlister.",
       "plBannerUnsupported": "Este OBS WebSocket no ofrece las solicitudes multimedia (GetMediaInputStatus, TriggerMediaInputAction). Actualiza OBS.",
-      "plNote": "Solo estado muestra el estado. Reproducir / pausar alterna según el estado observado. Detener descarta primero las pulsaciones no enviadas del Playlister. No se envía nada mientras el Playlister no esté disponible."
+      "plNote": "Solo estado muestra el estado. Reproducir / pausar alterna según el estado observado. Detener descarta primero las pulsaciones no enviadas del Playlister. No se envía nada mientras el Playlister no esté disponible.",
+      "fxHeading": "Filtro de OBS",
+      "vpHeading": "Pánico visual"
     },
     "fr": {
       "scopeThisKey": "cette touche",
@@ -1382,7 +1388,9 @@
       "plBannerMissing": "Le Playlister choisi n’est pas dans OBS actuellement : il a été supprimé ou se trouve dans une autre collection de scènes. Choisissez un Playlister.",
       "plBannerWrongKind": "La source choisie n’est pas un Playlister. Choisissez une source Playlister.",
       "plBannerUnsupported": "Cette version d’OBS WebSocket n’offre pas les requêtes multimédias (GetMediaInputStatus, TriggerMediaInputAction). Mettez OBS à jour.",
-      "plNote": "« État seulement » n’affiche que l’état. « Lecture / pause » bascule selon l’état observé. « Arrêter » annule d’abord les appuis non envoyés du Playlister. Rien n’est envoyé tant que le Playlister est indisponible."
+      "plNote": "« État seulement » n’affiche que l’état. « Lecture / pause » bascule selon l’état observé. « Arrêter » annule d’abord les appuis non envoyés du Playlister. Rien n’est envoyé tant que le Playlister est indisponible.",
+      "fxHeading": "Filtre OBS",
+      "vpHeading": "Panique visuelle"
     },
     "ja": {
       "scopeThisKey": "このキー",
@@ -1727,7 +1735,9 @@
       "plBannerMissing": "選択した Playlister は現在 OBS にありません。削除されたか、別のシーンコレクションにあります。Playlister を選び直してください。",
       "plBannerWrongKind": "選択したソースは Playlister ではありません。Playlister ソースを選択してください。",
       "plBannerUnsupported": "この OBS WebSocket はメディアリクエスト（GetMediaInputStatus、TriggerMediaInputAction）に対応していません。OBS を更新してください。",
-      "plNote": "「状態のみ」は状態を表示するだけです。「再生 / 一時停止」は観測された状態をもとに切り替えます。「停止」はまずその Playlister の未送信の操作を破棄します。Playlister が利用できない間は何も送信しません。"
+      "plNote": "「状態のみ」は状態を表示するだけです。「再生 / 一時停止」は観測された状態をもとに切り替えます。「停止」はまずその Playlister の未送信の操作を破棄します。Playlister が利用できない間は何も送信しません。",
+      "fxHeading": "OBS フィルタ",
+      "vpHeading": "ビジュアル パニック"
     },
     "ko": {
       "scopeThisKey": "이 키",
@@ -2072,7 +2082,9 @@
       "plBannerMissing": "선택한 Playlister가 지금 OBS에 없습니다. 삭제되었거나 다른 장면 모음에 있습니다. Playlister를 다시 선택하세요.",
       "plBannerWrongKind": "선택한 소스는 Playlister가 아닙니다. Playlister 소스를 선택하세요.",
       "plBannerUnsupported": "이 OBS WebSocket에는 미디어 요청(GetMediaInputStatus, TriggerMediaInputAction)이 없습니다. OBS를 업데이트하세요.",
-      "plNote": "'상태만'은 상태만 표시합니다. '재생 / 일시정지'는 확인된 상태를 기준으로 전환합니다. '정지'는 먼저 해당 Playlister의 미전송 입력을 버립니다. Playlister를 사용할 수 없는 동안에는 아무것도 보내지 않습니다."
+      "plNote": "'상태만'은 상태만 표시합니다. '재생 / 일시정지'는 확인된 상태를 기준으로 전환합니다. '정지'는 먼저 해당 Playlister의 미전송 입력을 버립니다. Playlister를 사용할 수 없는 동안에는 아무것도 보내지 않습니다.",
+      "fxHeading": "OBS 필터",
+      "vpHeading": "비주얼 긴급 정지"
     },
     "zh_CN": {
       "scopeThisKey": "此按键",
@@ -2417,7 +2429,9 @@
       "plBannerMissing": "所选的 Playlister 当前不在 OBS 中：它已被删除，或位于另一个场景集合中。请重新选择 Playlister。",
       "plBannerWrongKind": "所选源不是 Playlister。请选择 Playlister 源。",
       "plBannerUnsupported": "此 OBS WebSocket 不提供媒体请求（GetMediaInputStatus、TriggerMediaInputAction）。请更新 OBS。",
-      "plNote": "“仅状态”只显示状态。“播放 / 暂停”根据观测到的状态切换。“停止”会先丢弃该 Playlister 尚未发送的按键操作。Playlister 不可用时不会发送任何内容。"
+      "plNote": "“仅状态”只显示状态。“播放 / 暂停”根据观测到的状态切换。“停止”会先丢弃该 Playlister 尚未发送的按键操作。Playlister 不可用时不会发送任何内容。",
+      "fxHeading": "OBS 滤镜",
+      "vpHeading": "视觉紧急停止"
     },
     "zh_TW": {
       "scopeThisKey": "此按鍵",
@@ -2762,7 +2776,9 @@
       "plBannerMissing": "所選的 Playlister 目前不在 OBS 中：它已被移除，或位於另一個場景群組中。請重新選擇 Playlister。",
       "plBannerWrongKind": "所選來源不是 Playlister。請選擇 Playlister 來源。",
       "plBannerUnsupported": "此 OBS WebSocket 不提供媒體請求（GetMediaInputStatus、TriggerMediaInputAction）。請更新 OBS。",
-      "plNote": "「僅狀態」只顯示狀態。「播放 / 暫停」依觀測到的狀態切換。「停止」會先捨棄該 Playlister 尚未送出的按鍵操作。Playlister 無法使用時不會送出任何指令。"
+      "plNote": "「僅狀態」只顯示狀態。「播放 / 暫停」依觀測到的狀態切換。「停止」會先捨棄該 Playlister 尚未送出的按鍵操作。Playlister 無法使用時不會送出任何指令。",
+      "fxHeading": "OBS 濾鏡",
+      "vpHeading": "視覺緊急停止"
     }
   };
   var LANGUAGES = ["en", "de", "es", "fr", "ja", "ko", "zh_CN", "zh_TW"];

@@ -20,6 +20,7 @@ import { customCaption } from "../obs/preset-captions.js";
 import {
   DEFAULT_VISUAL_PANIC_SETTINGS,
   VisualPanicSettings,
+  normalizeAccent,
   normalizeLabelOverride,
   normalizeVisualPanicOperation
 } from "../types/settings.js";
@@ -155,6 +156,7 @@ export class VisualPanicInstanceController {
       latched: this.safety.isLatched(),
       holding: this.holdTimer !== null,
       holdSeconds: this.holdMs / 1000,
+      accent: this.settings.accent,
       title: customCaption("panic", this.settings),
       ...(this.lastError ? { problem: wordText(this.lastError, translate) } : {})
     });
@@ -166,7 +168,8 @@ export class VisualPanicInstanceController {
   private mergeSettings(raw?: VisualPanicSettings): Required<VisualPanicSettings> {
     return {
       operation: normalizeVisualPanicOperation(raw?.operation ?? DEFAULT_VISUAL_PANIC_SETTINGS.operation),
-      labelOverride: normalizeLabelOverride(raw?.labelOverride)
+      labelOverride: normalizeLabelOverride(raw?.labelOverride),
+      accent: normalizeAccent(raw?.accent)
     };
   }
 }

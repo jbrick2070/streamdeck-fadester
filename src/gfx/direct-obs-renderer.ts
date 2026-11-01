@@ -12,13 +12,32 @@ import {
 } from "../../packages/streamdeck-fadester-shared/src/text-fit.js";
 import { PLAYLISTER_PALETTE as P } from "../../packages/streamdeck-fadester-shared/src/palette.js";
 import { formatNumber, t } from "../i18n/strings.js";
+import type { AccentName } from "../types/settings.js";
 
 export { textFitAttributes, toSvgDataUri };
+
+/** The rig's page accents (PLAN.md 10): PERFORM brass, LAYERS teal, VISUALS magenta, SCENES today's violet. */
+export const ACCENT_COLORS: Readonly<Record<AccentName, string>> = {
+  default: P.accentPurple,
+  brass: "#F5B841",
+  teal: "#2DD4BF",
+  magenta: "#E879F9"
+};
+
+/** True for an accent that changes the drawing; the default keeps every existing SVG byte for byte. */
+function hasAccent(accent: AccentName | undefined): accent is Exclude<AccentName, "default"> {
+  return accent !== undefined && accent !== "default";
+}
+
+export function accentColor(accent: AccentName | undefined): string {
+  return ACCENT_COLORS[accent ?? "default"] ?? ACCENT_COLORS.default;
+}
 
 export type DirectKeyIcon = "scene" | "next" | "previous" | "shuffle" | "cut" | "take"
   | "volume-up" | "volume-down" | "source-next" | "source-previous" | "show" | "hide"
   | "layer-up" | "layer-down" | "blend" | "reset"
-  | "media-previous" | "media-next" | "play-pause" | "stop" | "restart" | "status";
+  | "media-previous" | "media-next" | "play-pause" | "stop" | "restart" | "status"
+  | "look-on" | "look-off" | "still" | "full-react" | "wave" | "wave-up" | "wave-down";
 
 export interface DirectDialRenderInput {
   connected: boolean;
@@ -34,6 +53,7 @@ export interface DirectDialRenderInput {
   autoQueueNextScene?: boolean;
   pressHint?: string;
   problem?: string;
+  accent?: AccentName;
 }
 
 export interface DirectKeyRenderInput {
@@ -46,6 +66,9 @@ export interface DirectKeyRenderInput {
   icon?: DirectKeyIcon;
   /** An unconfigured key that still names itself: its title is kept and this replaces "Open inspector". */
   unboundSubtitle?: string;
+  accent?: AccentName;
+  /** A large state word in place of the subtitle (a Look key's ON or OFF). */
+  badge?: { text: string; on: boolean };
 }
 
 const LATIN = "Segoe UI,Arial,sans-serif";
@@ -67,7 +90,7 @@ export function renderDirectDialSvg(input: DirectDialRenderInput): string {
       ? "#df6d38"
       : input.studioMode === false
         ? "#d6a84b"
-        : P.accentPurple;
+        : accentColor(input.accent);
   const title = input.configured ? input.label || t("faderDefault") : t("dialChooseControl");
   const reason = !input.configured
     ? t("dialOpenInspector")
@@ -87,7 +110,7 @@ export function renderDirectDialSvg(input: DirectDialRenderInput): string {
     '<rect x="2" y="2" width="196" height="96" rx="11" fill="url(#bg)" stroke="' + border + '" stroke-width="3"/>',
     `<text x="100" y="27" text-anchor="middle" fill="${P.whiteGlyph}" ${titleText.attrs} font-weight="700">${titleText.text}</text>`,
     `<rect x="25" y="49" width="150" height="13" rx="7" fill="${P.trackBg}"/>`,
-    '<rect x="25" y="49" width="' + barWidth + '" height="13" rx="7" fill="url(#audio)"/>',
+    '<rect x="25" y="49" width="' + barWidth + '" height="13" rx="7" fill="' + (hasAccent(input.accent) ? accentColor(input.accent) : "url(#audio)") + '"/>',
     `<rect x="${20 + barWidth}" y="43" width="10" height="25" rx="4" fill="${P.accentYellow}" stroke="${P.bgTop}" stroke-width="3"/>`,
     `<text x="100" y="${pressHint ? 80 : 86}" text-anchor="middle" fill="${P.mutedText}" ${reasonText.attrs} font-weight="600">${reasonText.text}</text>`,
     hintText ? `<text x="100" y="94" text-anchor="middle" fill="${P.accentYellow}" ${hintText.attrs}>${hintText.text}</text>` : "",
@@ -108,7 +131,7 @@ function renderSceneMixerSvg(input: DirectDialRenderInput): string {
     input.studioMode === false ? t("mixerTurnOnStudio") :
       sameScene ? t("mixerChooseDifferent") : "";
   const moving = !unavailable && !sameScene && value > 0.001 && value < 0.999;
-  const border = unavailable || moving ? P.orangeAccent : sameScene ? P.mutedText : P.accentPurple;
+  const border = unavailable || moving ? P.orangeAccent : sameScene ? P.mutedText : accentColor(input.accent);
   const handleX = Math.max(14, Math.min(176, 14 + Math.round(172 * value) - 5));
   const caption = reason || input.pressHint || (input.autoQueueNextScene ? t("mixerAutoQueue") :
     input.label || t("mixerPressTake"));
@@ -139,7 +162,7 @@ export function renderDirectKeySvg(input: DirectKeyRenderInput): string {
     ? P.trackBorder
     : unavailable
       ? "#df6d38"
-      : P.accentPurple;
+      : accentColor(input.accent);
   const title = input.configured
     ? input.title || t("keyDefaultTitle")
     : input.unboundSubtitle ? input.title || t("keyChooseAction") : t("keyChooseAction");
@@ -155,21 +178,80 @@ export function renderDirectKeySvg(input: DirectKeyRenderInput): string {
     return `<text x="60" y="${titleLayout.lines.length > 1 ? 69 + i * 16 : 77}" text-anchor="middle" fill="${P.whiteGlyph}" ${lineText.attrs} font-weight="700">${lineText.text}</text>`;
   }).join("");
   const subtitleText = boxText(subtitle, 9, 96);
+  const glyphColor = hasAccent(input.accent) ? accentColor(input.accent) : P.accentYellow;
   const glyph = !input.configured
     ? `<path d="M60 21v28M46 35h28"/>`
     : unavailable
       ? '<path d="M60 19 80 52H40Z"/><path d="M60 29v10m0 6v1"/>'
-      : keyGlyph(icon);
+      : keyGlyph(icon, glyphColor);
+  const badge = input.badge && input.configured && !unavailable ? input.badge : undefined;
+  const badgeText = badge ? boxText(badge.text, 13, 96) : undefined;
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" data-icon="${icon}">`,
     `<title>${escapeXml(title)} — ${escapeXml(subtitle)}</title>`,
     `<rect x="3" y="3" width="114" height="114" rx="14" fill="${P.bgTop}" stroke="${border}" stroke-width="3"/>`,
     `<rect x="31" y="12" width="58" height="44" rx="13" fill="${P.trackBg}"/>`,
-    `<g fill="none" stroke="${unavailable && input.configured ? P.orangeAccent : P.accentYellow}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">${glyph}</g>`,
+    `<g fill="none" stroke="${unavailable && input.configured ? P.orangeAccent : glyphColor}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">${glyph}</g>`,
     titleMarkup,
-    `<rect x="9" y="94" width="102" height="18" rx="5" fill="${P.trackBg}"/>`,
-    `<text x="60" y="107" text-anchor="middle" fill="${unavailable && input.configured ? P.orangeAccent : P.mutedText}" ${subtitleText.attrs} font-weight="600">${subtitleText.text}</text>`,
+    badge && badgeText
+      ? `<rect x="9" y="93" width="102" height="20" rx="6" fill="${badge.on ? glyphColor : P.trackBg}" stroke="${glyphColor}" stroke-width="3"/><text x="60" y="108" text-anchor="middle" fill="${badge.on ? P.bgTop : P.whiteGlyph}" ${badgeText.attrs} font-weight="800">${badgeText.text}</text>`
+      : `<rect x="9" y="94" width="102" height="18" rx="5" fill="${P.trackBg}"/>` +
+        `<text x="60" y="107" text-anchor="middle" fill="${unavailable && input.configured ? P.orangeAccent : P.mutedText}" ${subtitleText.attrs} font-weight="600">${subtitleText.text}</text>`,
     '</svg>'
+  ].join("");
+}
+
+export interface FilterDialRenderInput {
+  connected: boolean;
+  reason: string;
+  configured: boolean;
+  /** The caption, or the setting's short name. */
+  title: string;
+  /** The OBS filter's name (verbatim). */
+  filterName: string;
+  /** The value as drawn ("62 %"), or "—" when OBS has none. */
+  value: string;
+  /** 0..1 in the setting's range, for the bar and the wave. */
+  position: number;
+  enabled: boolean | null;
+  hint: string;
+  problem?: string;
+  accent?: AccentName;
+}
+
+/** A sine wave whose height follows the value: flat when still, tall when full. */
+function waveGlyph(x: number, y: number, width: number, height: number): string {
+  const amplitude = Math.max(0, Math.min(1, height));
+  const quarter = width / 4;
+  const a = Math.round(amplitude * 10 * 10) / 10;
+  return `<path d="M${x} ${y}q${quarter / 2} ${-a * 2} ${quarter} 0t${quarter} 0t${quarter} 0t${quarter} 0"/>`;
+}
+
+/** The OBS Filter dial: filter and setting small, the value big, a wave over the bar. */
+export function renderFilterDialSvg(input: FilterDialRenderInput): string {
+  const accent = accentColor(input.accent);
+  const problem = input.configured && (!input.connected || Boolean(input.problem));
+  const border = !input.configured ? "#777b86" : problem ? "#df6d38" : accent;
+  const position = Math.max(0, Math.min(1, input.position));
+  const title = input.configured ? input.title : t("dialChooseControl");
+  const footer = !input.configured ? t("dialOpenInspector")
+    : !input.connected ? input.reason || t("obsNotConnected") : input.problem || input.hint;
+  const head = boxText(input.configured ? `${title} · ${input.filterName}` : title, 11, 176);
+  const value = boxText(input.configured && input.connected ? input.value : "—", 24, 96);
+  const footerText = boxText(footer, 10, 176);
+  const barWidth = Math.round(position * 172);
+  const off = input.enabled === false;
+  return [
+    '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100" data-cell="filter">',
+    `<defs><linearGradient id="filterBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${P.bgTop}"/><stop offset="100%" stop-color="${P.bgBottom}"/></linearGradient></defs>`,
+    `<rect x="2" y="2" width="196" height="96" rx="11" fill="url(#filterBg)" stroke="${border}" stroke-width="3"/>`,
+    `<text x="100" y="19" text-anchor="middle" fill="${P.whiteGlyph}" ${head.attrs} font-weight="700">${head.text}</text>`,
+    `<text x="14" y="52" fill="${off ? P.mutedText : P.whiteGlyph}" ${value.attrs} font-weight="800">${value.text}</text>`,
+    `<g fill="none" stroke="${!input.configured ? P.trackBorder : problem ? P.orangeAccent : accent}" stroke-width="3" stroke-linecap="round" opacity="${off ? 0.45 : 1}">${waveGlyph(116, 42, 70, input.configured ? position : 0)}</g>`,
+    `<rect x="14" y="62" width="172" height="12" rx="6" fill="${P.trackBg}"/>`,
+    barWidth > 0 ? `<rect x="14" y="62" width="${barWidth}" height="12" rx="6" fill="${accent}" opacity="${off ? 0.45 : 1}"/>` : "",
+    `<text x="100" y="91" text-anchor="middle" fill="${problem ? P.orangeAccent : P.mutedText}" ${footerText.attrs} font-weight="600">${footerText.text}</text>`,
+    "</svg>"
   ].join("");
 }
 
@@ -183,6 +265,8 @@ export interface VisualPanicKeyRenderInput {
   holding?: boolean;
   /** How long Restore must be held (0.8 s, the dial hold of D-3). */
   holdSeconds?: number;
+  /** Restore's accent; Panic is always red. */
+  accent?: AccentName;
   /** The last failed send ("Visual Sidechain not loaded" or OBS's own text). */
   problem?: string;
   /** A custom caption; empty draws the operation word. */
@@ -229,7 +313,7 @@ function renderRestoreKeySvg(input: VisualPanicKeyRenderInput): string {
   const subtitle = !input.connected ? input.reason || t("obsNotConnected")
     : input.problem || (input.holding ? t("vpHolding") : t("vpHoldSeconds", { s: formatNumber(input.holdSeconds ?? 0.8) }));
   const problem = !input.connected || Boolean(input.problem);
-  const accent = P.accentPurple;
+  const accent = accentColor(input.accent);
   const titleLayout = keyTitleLines(title);
   const titleMarkup = titleLayout.lines.map((line, i) => {
     const lineText = boxText(line, titleLayout.fontSize, 102);
@@ -260,7 +344,7 @@ export function keyTitleLines(raw: string): { lines: string[]; fontSize: number 
   return { lines: splitTitle(title, 12, 102), fontSize: 12 };
 }
 
-function keyGlyph(icon: DirectKeyIcon): string {
+function keyGlyph(icon: DirectKeyIcon, color: string = P.accentYellow): string {
   const arrow = (left: boolean): string => left
     ? '<path d="M76 35H44m10-10L44 35l10 10"/>'
     : '<path d="M44 35h32M66 25l10 10-10 10"/>';
@@ -279,7 +363,10 @@ function keyGlyph(icon: DirectKeyIcon): string {
     case "hide": return '<path d="M40 35q20-23 40 0-20 23-40 0ZM43 19l34 32"/>';
     case "layer-up": return '<path d="M42 44h36M42 50h36M60 38V19m-9 9 9-9 9 9"/>';
     case "layer-down": return '<path d="M42 20h36M42 26h36M60 32v19m-9-9 9 9 9-9"/>';
-    case "blend": return `<circle cx="52" cy="35" r="14" fill="${P.accentPurple}" stroke="${P.accentPurple}"/><circle cx="68" cy="35" r="14"/>`;
+    case "blend": {
+      const fill = color === P.accentYellow ? P.accentPurple : color;
+      return `<circle cx="52" cy="35" r="14" fill="${fill}" stroke="${fill}"/><circle cx="68" cy="35" r="14"/>`;
+    }
     case "reset": return '<path d="M46 28a16 16 0 1 1 0 16M44 19v12h12"/>';
     case "media-previous": return '<path d="M47 24v22"/><path d="M73 24v22L55 35Z"/>';
     case "media-next": return '<path d="M47 24v22l18-11Z"/><path d="M73 24v22"/>';
@@ -287,6 +374,15 @@ function keyGlyph(icon: DirectKeyIcon): string {
     case "stop": return '<rect x="48" y="23" width="24" height="24" rx="4"/>';
     case "restart": return '<path d="M73 38a13 13 0 1 1-3.8-11.2"/><path d="M74 21v9h-9"/>';
     case "status": return '<circle cx="60" cy="35" r="12"/><path d="M60 28v7l5 3"/>';
+    // A lens with three rays, filled when the filter is on (a Look key).
+    case "look-on": return `<circle cx="56" cy="38" r="10" fill="${color}"/><path d="M63 45l8 8M56 21v4M44 26l3 3M68 26l-3 3"/>`;
+    case "look-off": return '<circle cx="56" cy="38" r="10"/><path d="M63 45l8 8M56 21v4M44 26l3 3M68 26l-3 3"/>';
+    // Waves: flat when still, tall when full, with an arrow for a step.
+    case "still": return '<path d="M42 35h36"/><path d="M42 44h36" stroke-dasharray="4 5"/>';
+    case "full-react": return '<path d="M40 35q5-16 10 0t10 0 10 0 10 0"/>';
+    case "wave": return '<path d="M40 35q5-8 10 0t10 0 10 0 10 0"/>';
+    case "wave-up": return '<path d="M40 41q4-7 8 0t8 0 8 0"/><path d="M74 46V24m-6 6 6-6 6 6"/>';
+    case "wave-down": return '<path d="M40 31q4-7 8 0t8 0 8 0"/><path d="M74 24v22m-6-6 6 6 6-6"/>';
     default: return '<rect x="40" y="21" width="40" height="28" rx="4"/><path d="m54 28 12 7-12 7Z"/>';
   }
 }

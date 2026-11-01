@@ -629,6 +629,26 @@ const MUTATIONS: MutationCheck[] = [
     target: "    this.setLatched(true);",
     mutated: "    if (this.latched) return;\n    this.setLatched(true);",
     testFile: "tests/visual-panic.test.ts"
+  },
+  {
+    id: "M-10.4a",
+    step: "Step 10.4 (a Look key toggles from a fresh read)",
+    description:
+      "Toggle a filter from the controller's cached state, and verify obs-filter-control.test.ts fails",
+    filePath: resolve(ROOT, "src/control/filter-controller.ts"),
+    target: "    const record = this.recordFor(target);\n    await this.readFilter(record, generation);\n    this.requireReady(record, { ...target, setting: \"\" }, generation);",
+    mutated: "    const record = this.recordFor(target);\n    if (record.read !== \"ok\") await this.readFilter(record, generation);\n    this.requireReady(record, { ...target, setting: \"\" }, generation);",
+    testFile: "tests/obs-filter-control.test.ts"
+  },
+  {
+    id: "M-10.4b",
+    step: "Step 10.4 (the default accent draws today's look)",
+    description:
+      "Draw the default accent in brass, and verify obs-filter-control.test.ts fails",
+    filePath: resolve(ROOT, "src/gfx/direct-obs-renderer.ts"),
+    target: "  default: P.accentPurple,",
+    mutated: '  default: "#F5B841",',
+    testFile: "tests/obs-filter-control.test.ts"
   }
 ];
 

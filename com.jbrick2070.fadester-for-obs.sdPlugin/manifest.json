@@ -229,6 +229,48 @@
       ]
     },
     {
+      "Name": "OBS Filter",
+      "UUID": "com.jbrick2070.fadester-for-obs.obs-filter",
+      "Icon": "imgs/actions/obs-filter/icon",
+      "Tooltip": "Ride a filter setting on a dial, or turn a filter on and off, set a value or step it from a key. Ranges, a gentle slew and ownership checks keep it safe.",
+      "PropertyInspectorPath": "ui/obs-filter.html",
+      "Controllers": [
+        "Keypad",
+        "Encoder"
+      ],
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": false,
+      "Encoder": {
+        "layout": "layouts/fader-cell.json",
+        "TriggerDescription": {
+          "Rotate": "Ride the filter setting",
+          "Push": "Drop and return, or turn the filter on and off"
+        }
+      },
+      "States": [
+        {
+          "Image": "imgs/actions/obs-filter/key"
+        }
+      ]
+    },
+    {
+      "Name": "Visual Panic",
+      "UUID": "com.jbrick2070.fadester-for-obs.visual-panic",
+      "Icon": "imgs/actions/visual-panic/icon",
+      "Tooltip": "Visual Sidechain's Panic (instant) and Restore (hold 0.8 s), sent through OBS's own hotkeys. Panic keys show PANIC SENT until Restore.",
+      "PropertyInspectorPath": "ui/visual-panic.html",
+      "Controllers": [
+        "Keypad"
+      ],
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": false,
+      "States": [
+        {
+          "Image": "imgs/actions/visual-panic/key"
+        }
+      ]
+    },
+    {
       "Name": "Midi Fadester Fader (optional)",
       "UUID": "com.jbrick2070.fadester-for-obs.fader",
       "Icon": "imgs/actions/fader/icon",

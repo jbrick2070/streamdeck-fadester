@@ -3,6 +3,7 @@ import { EventEmitter } from "node:events";
 import { DirectObsClient, DirectObsError } from "../obs/direct-obs-client.js";
 import { LocalText, errorLocalText, ownText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
 import { StringKey } from "../i18n/strings.js";
+import { AccentName, normalizeAccent } from "../types/settings.js";
 
 /** OBS's blend modes; `label` is the key of OBS's own term for each. */
 export const BLEND_MODES: readonly { readonly id: string; readonly label: StringKey }[] = [
@@ -38,6 +39,7 @@ export interface LayerSettings {
   dialMode?: "select_layer" | "blend" | "order";
   allowReorder?: boolean;
   labelOverride?: string;
+  accent?: AccentName;
 }
 export interface ObsLayer {
   sceneItemId: number;
@@ -69,7 +71,8 @@ export function normalizeLayerSettings(raw: LayerSettings = {}): Required<LayerS
     operation: operations.includes(raw.operation!) ? raw.operation! : "select_next",
     dialMode: raw.dialMode === "blend" || raw.dialMode === "order" ? raw.dialMode : "select_layer",
     allowReorder: raw.allowReorder === true,
-    labelOverride: typeof raw.labelOverride === "string" ? raw.labelOverride.trim().slice(0, 20) : ""
+    labelOverride: typeof raw.labelOverride === "string" ? raw.labelOverride.trim().slice(0, 20) : "",
+    accent: normalizeAccent(raw.accent)
   };
 }
 

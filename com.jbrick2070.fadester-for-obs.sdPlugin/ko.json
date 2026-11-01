@@ -39,6 +39,20 @@
     "Name": "Playlister 트랜스포트",
     "Tooltip": "OBS의 미디어 컨트롤로 Playlister 소스 하나의 이전, 다음, 재생/일시정지, 정지, 다시 재생을 실행하거나 상태를 표시합니다."
   },
+  "com.jbrick2070.fadester-for-obs.obs-filter": {
+    "Name": "OBS 필터",
+    "Tooltip": "다이얼로 필터 설정을 조절하거나, 키로 필터를 켜고 끄고, 값을 설정하거나 단계적으로 바꿉니다. 범위, 부드러운 변화, 소유 확인으로 안전합니다.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "필터 설정 조절",
+        "Push": "내렸다 복귀, 또는 필터 켜기/끄기"
+      }
+    }
+  },
+  "com.jbrick2070.fadester-for-obs.visual-panic": {
+    "Name": "비주얼 긴급 정지",
+    "Tooltip": "Visual Sidechain의 긴급 정지(즉시)와 복원(0.8초 길게 누르기)을 OBS 단축키로 보냅니다. 긴급 정지 키는 복원할 때까지 긴급 정지 전송됨을 표시합니다."
+  },
   "com.jbrick2070.fadester-for-obs.fader": {
     "Name": "Midi Fadester 페이더 (선택 사항)",
     "Tooltip": "기존 Midi Fadester 슬롯을 위한 선택 사항인 고급 제어입니다.",
@@ -290,6 +304,24 @@
     "vpHoldSeconds": "{s}초 길게 누르기",
     "vpHolding": "계속 누르세요",
     "vpNotLoaded": "Visual Sidechain 없음",
+    "filterChoose": "필터 선택",
+    "filterReading": "OBS 읽는 중…",
+    "filterOn": "켜짐",
+    "filterOff": "꺼짐",
+    "filterOpLook": "필터 켜기/끄기",
+    "filterOpSet": "값 설정",
+    "filterOpStepUp": "{setting} 올리기",
+    "filterOpStepDown": "{setting} 내리기",
+    "filterSetTo": "{s}초에 {value}로",
+    "filterSettingEffectMix": "효과 믹스",
+    "filterSettingReactivity": "반응도",
+    "filterSettingOpacity": "투명도",
+    "filterSettingModAmount": "모듈레이션 {n} 양",
+    "filterSettingNone": "설정 없음",
+    "filterPressDrop": "누르기: 내렸다 복귀",
+    "filterPressToggle": "누르기: 필터 켜기/끄기",
+    "filterGlideCancelled": "페이드 취소됨",
+    "filterChooseSetting": "설정 선택",
     "pi": {
       "scopeThisKey": "이 키",
       "scopeThisDial": "이 다이얼",
@@ -633,7 +665,9 @@
       "plBannerMissing": "선택한 Playlister가 지금 OBS에 없습니다. 삭제되었거나 다른 장면 모음에 있습니다. Playlister를 다시 선택하세요.",
       "plBannerWrongKind": "선택한 소스는 Playlister가 아닙니다. Playlister 소스를 선택하세요.",
       "plBannerUnsupported": "이 OBS WebSocket에는 미디어 요청(GetMediaInputStatus, TriggerMediaInputAction)이 없습니다. OBS를 업데이트하세요.",
-      "plNote": "'상태만'은 상태만 표시합니다. '재생 / 일시정지'는 확인된 상태를 기준으로 전환합니다. '정지'는 먼저 해당 Playlister의 미전송 입력을 버립니다. Playlister를 사용할 수 없는 동안에는 아무것도 보내지 않습니다."
+      "plNote": "'상태만'은 상태만 표시합니다. '재생 / 일시정지'는 확인된 상태를 기준으로 전환합니다. '정지'는 먼저 해당 Playlister의 미전송 입력을 버립니다. Playlister를 사용할 수 없는 동안에는 아무것도 보내지 않습니다.",
+      "fxHeading": "OBS 필터",
+      "vpHeading": "비주얼 긴급 정지"
     }
   }
 }

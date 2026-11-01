@@ -51,10 +51,31 @@ describe("Step 1.1 — Manifest, Layout, Icons & Repository Hygiene", () => {
 
     const actions = manifest.Actions as Array<Record<string, unknown>>;
     expect(Array.isArray(actions)).toBe(true);
-    expect(actions).toHaveLength(8);
+    expect(actions).toHaveLength(10);
     const byId = (id: string) => actions.find((entry) => entry.UUID === `com.jbrick2070.fadester-for-obs.${id}`)!;
-    expect(actions.slice(0, 6).every((entry) => !String(entry.Name).includes("optional"))).toBe(true);
-    expect(actions.slice(6).every((entry) => String(entry.Name).includes("optional"))).toBe(true);
+    expect(actions.slice(0, 8).every((entry) => !String(entry.Name).includes("optional"))).toBe(true);
+    expect(actions.slice(8).every((entry) => String(entry.Name).includes("optional"))).toBe(true);
+    // The VJ rig's two actions (PLAN.md 10.4), before the two optional ones.
+    expect(byId("obs-filter")).toMatchObject({
+      Controllers: ["Keypad", "Encoder"],
+      SupportedInMultiActions: false,
+      PropertyInspectorPath: "ui/obs-filter.html",
+      Icon: "imgs/actions/obs-filter/icon",
+      States: [{ Image: "imgs/actions/obs-filter/key" }]
+    });
+    expect(Object.keys((byId("obs-filter").Encoder as { TriggerDescription: Record<string, string> }).TriggerDescription)).toEqual(["Rotate", "Push"]);
+    expect(byId("visual-panic")).toMatchObject({
+      Controllers: ["Keypad"],
+      SupportedInMultiActions: false,
+      PropertyInspectorPath: "ui/visual-panic.html",
+      Icon: "imgs/actions/visual-panic/icon",
+      States: [{ Image: "imgs/actions/visual-panic/key" }]
+    });
+    for (const folder of ["obs-filter", "visual-panic"]) {
+      for (const icon of ["icon", "key"]) {
+        expect(statSync(join(PLUGIN_DIR, "imgs", "actions", folder, `${icon}.svg`)).size).toBeGreaterThan(64);
+      }
+    }
     expect(byId("playlister-transport")).toMatchObject({
       Controllers: ["Keypad"],
       SupportedInMultiActions: false,

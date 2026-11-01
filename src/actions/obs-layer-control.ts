@@ -5,7 +5,7 @@ import {
 } from "@elgato/streamdeck";
 import { BLEND_MODES, LayerController, LayerOperation, LayerSettings, matchesLayerIdentity, normalizeLayerSettings } from "../control/layer-controller.js";
 import { toSvgDataUri } from "../gfx/svg-renderer.js";
-import { boxText, renderDirectKeySvg } from "../gfx/direct-obs-renderer.js";
+import { accentColor, boxText, renderDirectKeySvg } from "../gfx/direct-obs-renderer.js";
 import { CellRateLimiter } from "../gfx/cell-rate-limiter.js";
 import { PLAYLISTER_PALETTE as P } from "../../packages/streamdeck-fadester-shared/src/palette.js";
 import { LocalText, errorLocalText, ownText, wordText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
@@ -127,6 +127,7 @@ export class ObsLayerInstanceController {
         configured: true,
         reason,
         icon,
+        accent: this.settings.accent,
         // A shipped caption ("Prev source") is a default: the key draws its translated operation.
         title: customCaption("layerKey", this.settings) || operationLabel,
         subtitle: layer ? t("layerKeySubtitle", { state: operation.startsWith("blend_") ? blend : shownState, source: name }) : missingSource,
@@ -154,8 +155,8 @@ export class ObsLayerInstanceController {
     this.limiter.push([
       '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100">',
       `<defs><linearGradient id="layerBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${P.bgTop}"/><stop offset="100%" stop-color="${P.bgBottom}"/></linearGradient></defs>`,
-      `<rect x="2" y="2" width="196" height="96" rx="11" fill="url(#layerBg)" stroke="${reason || !layer ? P.accentYellow : P.accentPurple}" stroke-width="3"/>`,
-      `<text x="100" y="22" text-anchor="middle" fill="${live ? P.programRed : preview ? P.previewGreen : P.accentPurple}" ${header.attrs}>${header.text}</text>`,
+      `<rect x="2" y="2" width="196" height="96" rx="11" fill="url(#layerBg)" stroke="${reason || !layer ? P.accentYellow : accentColor(this.settings.accent)}" stroke-width="3"/>`,
+      `<text x="100" y="22" text-anchor="middle" fill="${live ? P.programRed : preview ? P.previewGreen : accentColor(this.settings.accent)}" ${header.attrs}>${header.text}</text>`,
       `<text x="100" y="47" text-anchor="middle" fill="${P.whiteGlyph}" ${sourceText.attrs} font-weight="700">${sourceText.text}</text>`,
       `<text x="100" y="69" text-anchor="middle" fill="${reason || !layer ? P.accentYellow : P.mutedText}" ${statusText.attrs}>${statusText.text}</text>`,
       `<text x="100" y="89" text-anchor="middle" fill="${P.accentYellow}" ${footerText.attrs}>${footerText.text}</text>`,

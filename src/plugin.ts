@@ -13,6 +13,10 @@ import { LayerController } from "./control/layer-controller.js";
 import { ObsLayerControlAction } from "./actions/obs-layer-control.js";
 import { ObsNeoInfobarAction } from "./actions/obs-neo-infobar.js";
 import { PlaylisterTransportKeyAction } from "./actions/playlister-transport-key.js";
+import { FilterController } from "./control/filter-controller.js";
+import { VisualSafety } from "./control/visual-safety.js";
+import { ObsFilterControlAction } from "./actions/obs-filter-control.js";
+import { VisualPanicKeyAction } from "./actions/visual-panic-key.js";
 import {
   PiIncomingMessage,
   PropertyInspectorBridge
@@ -36,6 +40,9 @@ const enhancedClient = new FadesterClient(DEFAULT_GLOBAL_SETTINGS);
 const store = new FadesterStore(enhancedClient);
 const directClient = new DirectObsClient(DEFAULT_GLOBAL_SETTINGS);
 const layers = new LayerController(directClient);
+// The VJ rig (PLAN.md 10): one filter controller and one panic latch for every control.
+const filters = new FilterController(directClient);
+const visualSafety = new VisualSafety(directClient, filters);
 
 async function persistSharedConnection(
   settings: FadesterGlobalSettings
@@ -101,6 +108,8 @@ streamDeck.actions.registerAction(new ObsSceneTransitionKeyAction(directClient))
 streamDeck.actions.registerAction(new ObsLayerControlAction(layers));
 streamDeck.actions.registerAction(new ObsNeoInfobarAction(directClient));
 streamDeck.actions.registerAction(new PlaylisterTransportKeyAction(directClient));
+streamDeck.actions.registerAction(new ObsFilterControlAction(filters));
+streamDeck.actions.registerAction(new VisualPanicKeyAction(visualSafety, directClient));
 
 void streamDeck.connect().then(async () => {
   const globalSettings =

@@ -3,42 +3,44 @@
 <html lang="en">
 <head><meta charset="utf-8" /><title>Fadester — Source &amp; Layer</title><link rel="stylesheet" href="pi.css" /></head>
 <body>
-  <h3>Source &amp; layer <span class="scope">this control</span></h3>
-  <p class="muted">Browse the sources already in your scene. The deck shares one selected source per scene until the plugin restarts or the scene collection changes. Browsing keeps your layer order unchanged.</p>
-  <div id="layer-status" class="status-banner status-info">Connect OBS to list sources.</div>
-  <div class="row"><label for="layer-scope">Scene</label><select id="layer-scope">
-    <option value="auto">Follow Preview in Studio Mode, Live otherwise</option>
-    <option value="program">Always follow Live</option>
-    <option value="fixed">A specific scene</option>
+  <h3><span data-i18n="layerHeading">Source &amp; layer</span> <span class="scope" data-i18n="scopeThisControl">this control</span></h3>
+  <p class="muted" data-i18n="layerIntro">Browse the sources already in your scene. The deck shares one selected source per scene until the plugin restarts or the scene collection changes. Browsing keeps your layer order unchanged.</p>
+  <div id="layer-status" class="status-banner status-info" data-i18n="layerStatusConnect">Connect OBS to list sources.</div>
+  <div class="row"><label for="layer-scope" data-i18n="sceneLabel">Scene</label><select id="layer-scope">
+    <option value="auto" data-i18n="scopeAuto">Follow Preview in Studio Mode, Live otherwise</option>
+    <option value="program" data-i18n="scopeProgram">Always follow Live</option>
+    <option value="fixed" data-i18n="scopeFixed">A specific scene</option>
   </select></div>
-  <div class="row" id="layer-scene-row"><label for="layer-scene">Which scene</label><select id="layer-scene"></select></div>
-  <div class="row" id="layer-operation-row"><label for="layer-operation">Button does</label><select id="layer-operation">
-    <option value="select_next">Select next source</option><option value="select_previous">Select previous source</option>
-    <option value="show_hide">Show / hide selected source</option>
-    <optgroup label="Creative controls"><option value="move_up">Move layer up</option><option value="move_down">Move layer down</option>
-      <option value="blend_next">Next blend mode</option><option value="blend_previous">Previous blend mode</option><option value="blend_normal">Reset blend to Normal</option></optgroup>
+  <div class="row" id="layer-scene-row"><label for="layer-scene" data-i18n="whichScene">Which scene</label><select id="layer-scene"></select></div>
+  <div class="row" id="layer-operation-row"><label for="layer-operation" data-i18n="buttonDoes">Button does</label><select id="layer-operation">
+    <option value="select_next" data-i18n="opSelectNext">Select next source</option><option value="select_previous" data-i18n="opSelectPrevious">Select previous source</option>
+    <option value="show_hide" data-i18n="opShowHide">Show / hide selected source</option>
+    <optgroup label="Creative controls" data-i18n-label="creativeControls"><option value="move_up" data-i18n="opMoveUp">Move layer up</option><option value="move_down" data-i18n="opMoveDown">Move layer down</option>
+      <option value="blend_next" data-i18n="opBlendNext">Next blend mode</option><option value="blend_previous" data-i18n="opBlendPrevious">Previous blend mode</option><option value="blend_normal" data-i18n="opBlendNormal">Reset blend to Normal</option></optgroup>
   </select></div>
-  <div class="row" id="layer-dial-row"><label for="layer-dial-mode">Dial does</label><select id="layer-dial-mode">
-    <option value="select_layer">Browse sources · press to show / hide</option>
-    <option value="blend">Cycle blend modes · press for Normal</option>
-    <option value="order">Reorder layers · press to show / hide</option>
+  <div class="row" id="layer-dial-row"><label for="layer-dial-mode" data-i18n="dialDoes">Dial does</label><select id="layer-dial-mode">
+    <option value="select_layer" data-i18n="dialBrowse">Browse sources · press to show / hide</option>
+    <option value="blend" data-i18n="dialBlend">Cycle blend modes · press for Normal</option>
+    <option value="order" data-i18n="dialOrder">Reorder layers · press to show / hide</option>
   </select></div>
-  <div class="row" id="layer-target-row"><label for="layer-target">Act on</label><select id="layer-target">
-    <option value="selected">The source selected on the deck</option><option value="fixed">A fixed source</option>
+  <div class="row" id="layer-target-row"><label for="layer-target" data-i18n="actOn">Act on</label><select id="layer-target">
+    <option value="selected" data-i18n="actSelected">The source selected on the deck</option><option value="fixed" data-i18n="actFixed">A fixed source</option>
   </select></div>
-  <div class="row" id="layer-item-row"><label for="layer-item">Fixed source</label><select id="layer-item"></select></div>
-  <p class="muted">To save a source on a control across restarts, choose a non-browsing action and select A fixed source above.</p>
-  <div class="row" id="layer-reorder-row"><label for="layer-reorder">Reordering</label><input id="layer-reorder" type="checkbox" /><span class="hint">Allow this control to change layer order</span></div>
-  <p class="muted" id="layer-live-note">Layer edits change scene content immediately. Even in Studio Mode, editing a scene also on Program changes the live output. Blend modes are discrete choices, not a smooth crossfade.</p>
-  <p class="muted">Lists show top-level sources and groups; a group is controlled as one layer.</p>
-  <div class="row"><label for="layer-label">Label</label><input id="layer-label" maxlength="20" placeholder="Automatic" /></div>
-  <div class="row"><label></label><button class="btn secondary" id="layer-refresh" type="button">Refresh sources</button></div>
+  <div class="row" id="layer-item-row"><label for="layer-item" data-i18n="fixedSource">Fixed source</label><select id="layer-item"></select></div>
+  <p class="muted" data-i18n="fixedNote">To save a source on a control across restarts, choose a non-browsing action and select A fixed source above.</p>
+  <div class="row" id="layer-reorder-row"><label for="layer-reorder" data-i18n="reordering">Reordering</label><input id="layer-reorder" type="checkbox" /><span class="hint" data-i18n="reorderHint">Allow this control to change layer order</span></div>
+  <p class="muted" id="layer-live-note" data-i18n="liveNote">Layer edits change scene content immediately. Even in Studio Mode, editing a scene also on Program changes the live output. Blend modes are discrete choices, not a smooth crossfade.</p>
+  <p class="muted" data-i18n="groupsNote">Lists show top-level sources and groups; a group is controlled as one layer.</p>
+  <div class="row"><label for="layer-label" data-i18n="label">Label</label><input id="layer-label" maxlength="20" placeholder="Automatic" data-i18n-placeholder="placeholderAutomatic" /></div>
+  <div class="row"><label></label><button class="btn secondary" id="layer-refresh" type="button" data-i18n="refreshSources">Refresh sources</button></div>
   <div id="direct-shared-sections"></div>
+  <script src="i18n.js"></script>
   <script src="preset-captions.js"></script>
   <script src="direct-pi.js"></script>
   <script>
     let layerRequestSignature = "";
     window.initDirectObsPropertyInspector(function (settings, save, state) {
+      const T = window.FadesterI18n.t;
       const el = function (id) { return document.getElementById(id); };
       const catalog = state && state.catalog || {};
       const scope = settings.scope || "auto";
@@ -66,13 +68,13 @@
       assign("layer-scope", scope); assign("layer-operation", operation); assign("layer-dial-mode", dialMode);
       assign("layer-target", settings.target || "selected"); assign("layer-label", generatedLabel ? "" : settings.labelOverride || "");
       el("layer-reorder").checked = settings.allowReorder === true;
-      window.directObsFillSelect(el("layer-scene"), (catalog.scenes || []).map(function (name) { return { value: name, text: name }; }), settings.sceneName || "", "Choose a scene");
+      window.directObsFillSelect(el("layer-scene"), (catalog.scenes || []).map(function (name) { return { value: name, text: name }; }), settings.sceneName || "", T("chooseScene"));
       const fixedItems = (scene && scene.layers || []).map(function (item) {
-        return { value: String(item.sceneItemId), text: item.sourceName + (item.enabled ? " · shown" : " · hidden") };
+        return { value: String(item.sceneItemId), text: T(item.enabled ? "itemShown" : "itemHidden", { source: item.sourceName }) };
       });
-      if (missingFixedSource) fixedItems.unshift({ value: "__missing_fixed_source__", text: (settings.sourceName || "Saved source") + " · unavailable" });
+      if (missingFixedSource) fixedItems.unshift({ value: "__missing_fixed_source__", text: T("itemUnavailable", { source: settings.sourceName || T("savedSource") }) });
       window.directObsFillSelect(el("layer-item"), fixedItems,
-        missingFixedSource ? "__missing_fixed_source__" : Number(settings.sceneItemId) >= 0 ? String(settings.sceneItemId) : "", "Choose a source");
+        missingFixedSource ? "__missing_fixed_source__" : Number(settings.sceneItemId) >= 0 ? String(settings.sceneItemId) : "", T("chooseSource"));
       el("layer-scene-row").style.display = scope === "fixed" ? "" : "none";
       el("layer-operation-row").style.display = dial ? "none" : "";
       el("layer-dial-row").style.display = dial ? "" : "none";
@@ -81,13 +83,14 @@
       el("layer-reorder-row").style.display = reorder ? "" : "none";
       const selected = fixedTarget ? fixedSource : scene && scene.layers.find(function (item) { return item.sceneItemId === scene.selectedId; });
       const live = sceneName && sceneName === catalog.currentProgramScene;
-      const sceneRole = live ? "LIVE" : catalog.studioMode && sceneName === catalog.currentPreviewScene ? "PREVIEW" : "SCENE";
-      el("layer-status").textContent = !state || !state.status || state.status.kind !== "connected" ? "Connect OBS to list sources." :
+      const sceneRole = T(live ? "roleLive" : catalog.studioMode && sceneName === catalog.currentPreviewScene ? "rolePreview" : "roleScene");
+      // scene.error arrives worded by the plugin (an OBS comment stays as OBS wrote it).
+      el("layer-status").textContent = !state || !state.status || state.status.kind !== "connected" ? T("layerStatusConnect") :
         scene && scene.error ? scene.error :
-          selected ? sceneRole + " · " + sceneName + (fixedTarget ? " · Fixed source: " : " · Selected: ") + selected.sourceName :
-            missingFixedSource ? "Saved source unavailable. Choose a fixed source above to change this binding." :
-            scene ? scene.layers.length ? (fixedTarget ? "Choose a fixed source above." : "Choose a source with the deck’s source browsing controls.") : "No sources in " + sceneName + ". Add a source in OBS." :
-              sceneName ? "Loading sources in " + sceneName + "…" : "Choose an OBS scene.";
+          selected ? T(fixedTarget ? "layerStatusFixed" : "layerStatusSelected", { role: sceneRole, scene: sceneName, source: selected.sourceName }) :
+            missingFixedSource ? T("layerStatusSavedMissing") :
+            scene ? scene.layers.length ? T(fixedTarget ? "layerStatusChooseFixed" : "layerStatusChooseDeck") : T("layerStatusNoSources", { scene: sceneName }) :
+              sceneName ? T("layerStatusLoading", { scene: sceneName }) : T("layerStatusChooseScene");
       el("layer-status").className = "status-banner " + (live ? "status-warn" : "status-info");
       el("layer-scope").onchange = function () { save({ scope: el("layer-scope").value, target: "selected", sceneItemId: -1, sourceUuid: "", sourceName: "" }); };
       el("layer-scene").onchange = function () { save({ sceneName: el("layer-scene").value, sceneItemId: -1, sourceUuid: "", sourceName: "" }); };

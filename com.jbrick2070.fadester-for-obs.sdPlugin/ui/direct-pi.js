@@ -10,6 +10,8 @@
   let bindControls = null;
   let connectionEditorInitialized = false;
   let layoutBusy = false;
+  // Texts come from ui/i18n.js (loaded first), in Stream Deck's language (R-I18N-1).
+  const T = function (key, params) { return window.FadesterI18n.t(key, params); };
 
   function $(id) {
     return document.getElementById(id);
@@ -72,7 +74,7 @@
     if (selected && !found) {
       const missing = document.createElement("option");
       missing.value = selected;
-      missing.textContent = selected + " (not in OBS now)";
+      missing.textContent = T("notInObsNow", { value: selected });
       missing.selected = true;
       el.appendChild(missing);
     }
@@ -83,30 +85,31 @@
     if (!mount || mount.dataset.ready === "true") return;
     mount.dataset.ready = "true";
     mount.innerHTML = [
-      '<h3>OBS connection <span class="scope">all Fadester controls</span></h3>',
-      '<div id="direct-conn-status" class="status-banner status-err">Waiting for OBS…</div>',
-      '<p class="muted" id="direct-conn-hint">Connect once for every Fadester button and dial.</p>',
-      '<details id="direct-conn-editor" class="editor" open><summary id="direct-conn-summary">Set up OBS once</summary>',
-      '<p class="muted">These settings apply to all Fadester controls on all your layouts. Enter the OBS password once here.</p>',
-      '<div class="row"><label for="direct-conn-host">Host</label><input id="direct-conn-host" type="text" value="127.0.0.1" /></div>',
-      '<div class="row"><label for="direct-conn-port">Port</label><input id="direct-conn-port" type="number" value="4455" min="1" max="65535" /></div>',
-      '<div class="row"><label for="direct-conn-password">Password</label><input id="direct-conn-password" type="password" autocomplete="off" placeholder="Enter the OBS password once" /></div>',
-      '<div class="row"><label></label><button id="direct-conn-test" class="btn" type="button">Save for all controls &amp; test</button></div>',
+      '<h3><span data-i18n="connHeading">OBS connection</span> <span class="scope" data-i18n="scopeAllControls">all Fadester controls</span></h3>',
+      '<div id="direct-conn-status" class="status-banner status-err" data-i18n="connWaiting">Waiting for OBS…</div>',
+      '<p class="muted" id="direct-conn-hint" data-i18n="connHintOnce">Connect once for every Fadester button and dial.</p>',
+      '<details id="direct-conn-editor" class="editor" open><summary id="direct-conn-summary" data-i18n="connSetupOnce">Set up OBS once</summary>',
+      '<p class="muted" data-i18n="connAppliesAll">These settings apply to all Fadester controls on all your layouts. Enter the OBS password once here.</p>',
+      '<div class="row"><label for="direct-conn-host" data-i18n="host">Host</label><input id="direct-conn-host" type="text" value="127.0.0.1" /></div>',
+      '<div class="row"><label for="direct-conn-port" data-i18n="port">Port</label><input id="direct-conn-port" type="number" value="4455" min="1" max="65535" /></div>',
+      '<div class="row"><label for="direct-conn-password" data-i18n="password">Password</label><input id="direct-conn-password" type="password" autocomplete="off" placeholder="Enter the OBS password once" data-i18n-placeholder="passwordPlaceholderOnce" /></div>',
+      '<div class="row"><label></label><button id="direct-conn-test" class="btn" type="button" data-i18n="saveAndTest">Save for all controls &amp; test</button></div>',
       '</details>',
-      '<div id="direct-studio-setup" style="display:none"><p class="muted">This control uses Studio Mode. Prepare Preview from your existing scenes to start mixing.</p>',
+      '<div id="direct-studio-setup" style="display:none"><p class="muted" data-i18n="studioSetupNote">This control uses Studio Mode. Prepare Preview from your existing scenes to start mixing.</p>',
       '<button id="direct-studio-prepare" class="btn" type="button">Enable Studio Mode &amp; prepare Preview</button></div>',
       '<div id="direct-setup-status" class="status-banner" style="display:none"></div>',
-      '<details class="editor"><summary>Ready-made layouts</summary>',
-      '<p class="muted">Open an editable full, half, or creative desk. Scene buttons follow your current OBS scene list automatically. Main audio and microphone controls use matching OBS mixer inputs when available.</p>',
-      '<p class="muted">The current starter installs as an editable profile once. Any older layouts you customized stay available.</p>',
-      '<div class="row"><label for="direct-layout">Layout</label><select id="direct-layout"></select></div>',
+      '<details class="editor"><summary data-i18n="layoutsSummary">Ready-made layouts</summary>',
+      '<p class="muted" data-i18n="layoutsIntro">Open an editable full, half, or creative desk. Scene buttons follow your current OBS scene list automatically. Main audio and microphone controls use matching OBS mixer inputs when available.</p>',
+      '<p class="muted" data-i18n="layoutsInstallNote">The current starter installs as an editable profile once. Any older layouts you customized stay available.</p>',
+      '<div class="row"><label for="direct-layout" data-i18n="layoutLabel">Layout</label><select id="direct-layout"></select></div>',
       '<div class="row"><label></label><button id="direct-layout-open" class="btn" type="button">Open current starter layout</button></div>',
-      '<p class="muted">Everyday Source Desks keep layer order fixed. Creative Layer Lab enables its labelled reorder controls.</p>',
+      '<p class="muted" data-i18n="layoutsOrderNote">Everyday Source Desks keep layer order fixed. Creative Layer Lab enables its labelled reorder controls.</p>',
       '</details>',
-      '<details class="editor direct-optional"><summary>Optional: Midi Fadester integration</summary>',
-      '<p class="muted">You do not need Midi Fadester, an APC40, or any MIDI controller for the controls above. The separately labelled <em>Midi Fadester (optional)</em> actions keep advanced shared slots and A/B layer mixing for people who use that setup.</p>',
+      '<details class="editor direct-optional"><summary data-i18n="optionalSummary">Optional: Midi Fadester integration</summary>',
+      '<p class="muted" data-i18n="optionalNote">You do not need Midi Fadester, an APC40, or any MIDI controller for the controls above. The separately labelled <em data-slot="actions" data-i18n="optionalActions">Midi Fadester (optional)</em> actions keep advanced shared slots and A/B layer mixing for people who use that setup.</p>',
       '</details>'
     ].join("");
+    window.FadesterI18n.apply(mount);
 
     const host = $("direct-conn-host");
     const port = $("direct-conn-port");
@@ -140,7 +143,7 @@
       if (layout && !layoutBusy) {
         layoutBusy = true;
         updateLayoutButton();
-        setBanner($("direct-setup-status"), "Preparing layout…", "info");
+        setBanner($("direct-setup-status"), T("layoutPreparing"), "info");
         sendToPlugin({ event: "directActivateLayout", slug: layout.slug, prepareStudio: layout.obsMode === "studio" });
       }
     };
@@ -151,7 +154,7 @@
       if (layoutBusy) return;
       layoutBusy = true;
       updateStudioSetup();
-      setBanner($("direct-setup-status"), "Preparing Studio Mode and Preview…", "info");
+      setBanner($("direct-setup-status"), T("studioPreparing"), "info");
       sendToPlugin({ event: "directPrepareStudio" });
     };
   }
@@ -163,9 +166,9 @@
     const layout = (state.layouts || []).find(function (item) { return item.slug === (picker && picker.value); });
     if (!button) return;
     const studio = layout && layout.obsMode === "studio";
-    button.textContent = layoutBusy ? "Preparing…" : studio
-      ? (state.catalog && state.catalog.studioMode ? "Prepare Preview & open current starter layout" : "Enable Studio Mode & open current starter layout")
-      : "Open current starter layout";
+    button.textContent = T(layoutBusy ? "preparing" : studio
+      ? (state.catalog && state.catalog.studioMode ? "layoutOpenPrepare" : "layoutOpenEnable")
+      : "layoutOpen");
     button.disabled = layoutBusy || !layout || (studio && (!state.status || state.status.kind !== "connected"));
   }
 
@@ -178,7 +181,7 @@
     const sameScene = catalog.currentPreviewScene === catalog.currentProgramScene;
     if (mount) mount.style.display = usesStudio && state.status && state.status.kind === "connected" && (!catalog.studioMode || sameScene) ? "block" : "none";
     if (button) {
-      button.textContent = layoutBusy ? "Preparing…" : catalog.studioMode ? "Prepare a different Preview" : "Enable Studio Mode & prepare Preview";
+      button.textContent = T(layoutBusy ? "preparing" : catalog.studioMode ? "studioPrepareDifferent" : "studioPrepareEnable");
       button.disabled = layoutBusy;
     }
   }
@@ -194,27 +197,28 @@
     const summary = $("direct-conn-summary");
     if (host && document.activeElement !== host) host.value = connection.host || "127.0.0.1";
     if (port && document.activeElement !== port) port.value = String(connection.port || 4455);
-    if (hint) hint.textContent = status.kind === "wrong_password"
-      ? "OBS rejected the saved shared password. Replace it once here for all Fadester controls."
+    if (hint) hint.textContent = T(status.kind === "wrong_password"
+      ? "connHintRejected"
       : connection.passwordSet
-      ? "Password saved for all Fadester buttons and dials. You do not need to enter it again."
-      : "One OBS connection is shared by all Fadester buttons and dials.";
-    if (summary) summary.textContent = connection.passwordSet || status.kind === "connected"
-      ? "Edit shared connection" : "Set up OBS once";
+      ? "connHintSaved"
+      : "connHintShared");
+    if (summary) summary.textContent = T(connection.passwordSet || status.kind === "connected"
+      ? "connEdit" : "connSetupOnce");
     if (password && !passwordDirty && document.activeElement !== password) {
       password.value = "";
-      password.placeholder = connection.passwordSet ? "Saved — leave blank to keep" : "Enter the OBS password once";
+      password.placeholder = T(connection.passwordSet ? "passwordPlaceholderSaved" : "passwordPlaceholderOnce");
     }
     if (editor && !connectionEditorInitialized) {
       editor.open = !(connection.passwordSet || status.kind === "connected") || status.kind === "wrong_password";
       connectionEditorInitialized = true;
     }
     const kind = status.kind === "connected" ? "ok" : "err";
-    setBanner($("direct-conn-status"), status.sentence || "Waiting for OBS…", kind);
+    // The status sentence arrives worded in the plugin's language (the same as this page's).
+    setBanner($("direct-conn-status"), status.sentence || T("connWaiting"), kind);
     const layouts = state.layouts || [];
     const picker = $("direct-layout");
     const selected = picker && picker.value || "";
-    fillSelect(picker, layouts.map(function (layout) { return { value: layout.slug, text: layout.name }; }), selected, "Choose a ready-made layout");
+    fillSelect(picker, layouts.map(function (layout) { return { value: layout.slug, text: layout.name }; }), selected, T("layoutChoose"));
     updateLayoutButton();
     updateStudioSetup();
   }
@@ -231,12 +235,12 @@
     const catalog = state && state.catalog || {};
     const resolved = state && state.automaticInputs || {};
     const automatic = [
-      { value: "__audio_main__", text: "Main audio (automatic)" },
-      { value: "__audio_mic__", text: "Microphone (automatic)" },
-      { value: "__audio_aux__", text: "Aux audio (automatic)" },
-      { value: "__audio_input_2__", text: "Audio input 3 (automatic)" }
+      { value: "__audio_main__", text: T("audioMainAuto") },
+      { value: "__audio_mic__", text: T("audioMicAuto") },
+      { value: "__audio_aux__", text: T("audioAuxAuto") },
+      { value: "__audio_input_2__", text: T("audioInput3Auto") }
     ].map(function (item) {
-      return { value: item.value, text: item.text + " — " + (resolved[item.value] || "not available") };
+      return { value: item.value, text: T("automaticResolved", { label: item.text, input: resolved[item.value] || T("notAvailable") }) };
     });
     return automatic.concat(Object.keys(catalog.inputVolumes || {}).map(function (name) { return { value: name, text: name }; }));
   };
@@ -264,6 +268,8 @@
       inInfo,
       inActionInfo
     ) {
+      // Stream Deck's language first, so every text below is drawn in it.
+      window.FadesterI18n.setLanguage(window.FadesterI18n.languageFromInfo(inInfo));
       uuid = inPropertyInspectorUUID;
       actionInfo = JSON.parse(inActionInfo || "{}");
       window.directObsController = actionInfo.payload && actionInfo.payload.controller || "Keypad";
@@ -293,7 +299,7 @@
         }
         if (message.event === "sendToPropertyInspector" && message.payload && message.payload.event === "directSetupResult") {
           layoutBusy = false;
-          setBanner($("direct-setup-status"), message.payload.ok ? "Request completed. Accept the Stream Deck import prompt if one appears." : message.payload.error || "Could not prepare this layout.", message.payload.ok ? "ok" : "err");
+          setBanner($("direct-setup-status"), message.payload.ok ? T("setupDone") : message.payload.error || T("setupFailed"), message.payload.ok ? "ok" : "err");
           updateLayoutButton();
           updateStudioSetup();
         }

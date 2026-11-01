@@ -64,6 +64,9 @@ h3 .scope {
 .row label {
   width: 105px;
   flex-shrink: 0;
+  /* Longer translated labels wrap inside the column (R-I18N-1). */
+  overflow-wrap: anywhere;
+  hyphens: auto;
   color: var(--text-secondary);
 }
 .row select,

@@ -279,6 +279,16 @@ const MUTATIONS: MutationCheck[] = [
     target: "  if (exact) return exact;",
     mutated: '  if (exact) return "en";',
     testFile: "tests/i18n-strings.test.ts"
+  },
+  {
+    id: "M-8.5a",
+    step: "Step 8.5 (Translations: inspectors follow the language)",
+    description:
+      "Keep the inspectors in English whatever the language, and verify inspector-i18n.test.ts fails",
+    filePath: resolve(ROOT, "com.jbrick2070.fadester-for-obs.sdPlugin/ui/i18n.js"),
+    target: "active = TABLES[language] || EN;",
+    mutated: "active = EN;",
+    testFile: "tests/inspector-i18n.test.ts"
   }
 ];
 

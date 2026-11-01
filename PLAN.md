@@ -421,6 +421,30 @@ step's diff before its build; one commit per step; one push at the end.
    as VJster; if the vm-based inspector tests cannot load JSON, a generated `ui/i18n.js` checked against the
    `<lang>.json` files by a test). Static markup uses `data-i18n`; dynamic texts are keyed; scene and filter counts get
    one/many pairs. The vm test stubs and `pi-harness.ts` take a language.
+   *As built (2026-11-01):* the inspectors' texts live in each `<lang>.json` under `Localization.pi` (about 280
+   keys; English in `en.json` is the source). `scripts/generate-ui-i18n.ts` writes `ui/i18n.js` from every present
+   file plus the runtime in `scripts/ui-i18n-runtime.js` (run by hand; a test fails when it is stale), loaded
+   synchronously before `direct-pi.js` / `pi-common.js` on all seven pages: `window.FadesterI18n` with `t`,
+   `plural` (one/many pairs: scene count, filter count), `number` (Intl, "-3,5 dB"), `apply` (`data-i18n`,
+   `data-i18n-placeholder`, `data-i18n-label` for the optgroup; an element with `data-slot` children keeps them
+   where its template has `{slot}`, so "choose **OBS Fader** instead" is one sentence to translate) and
+   `setLanguage`, which both runtimes call first in `connectElgatoStreamDeckSocket` from `inInfo`, setting
+   `<html lang>` and refilling the page before anything is drawn; English until then. Fallback as on the deck. The
+   shared markup and every dynamic text in `direct-pi.js`, `pi-common.js` and the inline page scripts are keyed;
+   texts that come from Midi Fadester or OBS (slot name, label, reason, display_value, device name and error,
+   filter property labels and suffixes, scene/source/filter names, the status sentence and errors the plugin
+   words) are filled in as parameters, never looked up; sentences that were glued are separate keys joined as
+   whole sentences. The offline slot names stay English (they mirror the API). Placeholders of generated labels
+   describe the default ("From OBS (leave blank)", "Automatic"), translated, rather than repeating the deck word.
+   `pi.css` lets the 105 px label column wrap long words. `scripts/pi-harness.ts --lang de` sets the plugin side
+   and the page alike. The vm tests load the page's `i18n.js` (`tests/helpers/inspector-scripts.ts`, and
+   `pi-dom.test.ts` before `pi-common.js`); `tests/inspector-i18n.test.ts` checks currency, keys and placeholders
+   per language, that every used key exists and every text is used, that each page loads `i18n.js` first and
+   marks every static word, the runtime's fallback, counts, numbers and slot filling, and a German page. The
+   German deck sentence for the Studio layout button now quotes the German button. M-8.5a (inspectors stay
+   English; the behaviour test kills it on its own too) is new. The pages' `<title>` stays English (Stream Deck
+   does not show it). Not done here: es, fr, ja, ko, zh_CN, zh_TW (step 8.6) and a look at the pages in a real
+   Stream Deck window (8.7).
 6. **Step 8.6 -- Translations and checks.** Claude drafts the seven languages using OBS's own translated terms for that
    language (from OBS 33's frontend locale files); Gemini 4 Argon reviews each language; corrections are applied
    unless one breaks a rule. The fit test (8.3) passes for all; `npm run build` leaves the profiles unchanged;

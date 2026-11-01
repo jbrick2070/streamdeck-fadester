@@ -104,7 +104,10 @@ function harness() {
       isDirty() { return editorDirty; }
     };
   })();`);
-  runInNewContext(instrumented, { window, document, setTimeout, clearTimeout });
+  // The inspector loads ui/i18n.js before pi-common.js, as the pages do.
+  const i18n = readFileSync("com.jbrick2070.fadester-for-obs.sdPlugin/ui/i18n.js", "utf8");
+  runInNewContext(`${i18n}
+${instrumented}`, { window, document, setTimeout, clearTimeout });
   const state: RecordValue = {
     status: { kind: "connected" }, connection: { host: "127.0.0.1", port: 4455 }, capabilities: { catalog: true },
     profile: { slug: "apc40mk2" }, device: {}, studioMode: true,

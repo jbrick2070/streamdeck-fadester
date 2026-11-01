@@ -3,15 +3,19 @@
  * Writes the inspectors' copies of plugin tables as plain scripts (the
  * inspectors are file:// pages without a bundler or fetch):
  *   ui/preset-captions.js  the bundled profiles' captions (src/obs/preset-captions.ts)
+ *   ui/i18n.js             every <lang>.json's Localization.pi and the inspectors' translator
+ *                          (scripts/ui-i18n-runtime.js)
  * Run: node --import tsx scripts/generate-ui-i18n.ts
- * tests/preset-captions.test.ts fails when a generated file is out of date.
+ * tests/preset-captions.test.ts and tests/inspector-i18n.test.ts fail when a generated file is stale.
  */
-import { writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { PRESET_CAPTIONS } from "../src/obs/preset-captions.js";
+import { STREAM_DECK_LANGUAGES } from "../src/i18n/strings.js";
 
-export const UI_DIR = resolve(process.cwd(), "com.jbrick2070.fadester-for-obs.sdPlugin/ui");
+export const PLUGIN_ROOT = resolve(process.cwd(), "com.jbrick2070.fadester-for-obs.sdPlugin");
+export const UI_DIR = resolve(PLUGIN_ROOT, "ui");
 
 const HEADER = [
   "// SPDX-License-Identifier: GPL-2.0-or-later",
@@ -58,9 +62,38 @@ export function presetCaptionsScript(): string {
   ].join("\n");
 }
 
+/** Every present language file's inspector table (`Localization.pi`), English first. */
+export function inspectorTables(): Record<string, Record<string, string>> {
+  const tables: Record<string, Record<string, string>> = {};
+  for (const language of STREAM_DECK_LANGUAGES) {
+    const path = resolve(PLUGIN_ROOT, `${language}.json`);
+    if (!existsSync(path)) continue;
+    const json = JSON.parse(readFileSync(path, "utf8")) as { Localization?: { pi?: Record<string, string> } };
+    if (json.Localization?.pi) tables[language] = json.Localization.pi;
+  }
+  return tables;
+}
+
+export function inspectorI18nScript(): string {
+  const runtime = readFileSync(resolve(process.cwd(), "scripts/ui-i18n-runtime.js"), "utf8").replace(/\r\n/g, "\n")
+    .split("\n").filter((line) => !line.startsWith("// ") && !line.startsWith("/* global")).join("\n").trim();
+  const tables = JSON.stringify(inspectorTables(), null, 2).replace(/\n/g, "\n  ");
+  return [
+    ...HEADER,
+    "// The inspectors' texts (Localization.pi of every <lang>.json) and their translator, window.FadesterI18n.",
+    "(function () {",
+    "  \"use strict\";",
+    `  var TABLES = ${tables};`,
+    ...runtime.split("\n").map((line) => (line ? `  ${line}` : "")),
+    "})();",
+    ""
+  ].join("\n");
+}
+
 function main(): void {
   writeFileSync(resolve(UI_DIR, "preset-captions.js"), presetCaptionsScript());
-  console.log("Wrote ui/preset-captions.js");
+  writeFileSync(resolve(UI_DIR, "i18n.js"), inspectorI18nScript());
+  console.log("Wrote ui/preset-captions.js and ui/i18n.js");
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) main();

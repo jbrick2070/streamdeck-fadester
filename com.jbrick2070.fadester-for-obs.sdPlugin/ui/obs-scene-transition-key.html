@@ -7,36 +7,38 @@
   <link rel="stylesheet" href="pi.css" />
 </head>
 <body>
-  <h3>Scene &amp; transition <span class="scope">this key</span></h3>
-  <p class="muted">Previous, Next, and Random work with every scene in your current OBS collection. Automatic Scene 1/2/3 follows the OBS scene-list order, including renamed or reordered scenes.</p>
+  <h3><span data-i18n="sceneHeading">Scene &amp; transition</span> <span class="scope" data-i18n="scopeThisKey">this key</span></h3>
+  <p class="muted" data-i18n="sceneIntro">Previous, Next, and Random work with every scene in your current OBS collection. Automatic Scene 1/2/3 follows the OBS scene-list order, including renamed or reordered scenes.</p>
   <div id="direct-scene-status" class="status-banner status-info" style="display:none;"></div>
   <div class="row">
-    <label for="obs-scene-target">Scene</label>
+    <label for="obs-scene-target" data-i18n="sceneLabel">Scene</label>
     <select id="obs-scene-target"></select>
-    <button id="obs-scene-refresh" class="btn secondary" type="button">Refresh</button>
+    <button id="obs-scene-refresh" class="btn secondary" type="button" data-i18n="refresh">Refresh</button>
   </div>
   <div class="row">
-    <label for="obs-scene-operation">When pressed</label>
+    <label for="obs-scene-operation" data-i18n="whenPressed">When pressed</label>
     <select id="obs-scene-operation">
-      <option value="transition">Transition to it</option>
-      <option value="cut">Cut to it</option>
-      <option value="preview">Put it in Preview</option>
+      <option value="transition" data-i18n="opTransition">Transition to it</option>
+      <option value="cut" data-i18n="opCut">Cut to it</option>
+      <option value="preview" data-i18n="opPreview">Put it in Preview</option>
     </select>
   </div>
   <div class="row" id="obs-transition-row">
-    <label for="obs-transition-name">Transition</label>
+    <label for="obs-transition-name" data-i18n="transitionLabel">Transition</label>
     <select id="obs-transition-name"></select>
   </div>
-  <p id="obs-scene-hint" class="muted">Cut and Transition work in regular and Studio Mode. Preview and Current Preview need Studio Mode. A chosen transition applies to this press and preserves the scene’s saved transition override.</p>
+  <p id="obs-scene-hint" class="muted" data-i18n="sceneHint">Cut and Transition work in regular and Studio Mode. Preview and Current Preview need Studio Mode. A chosen transition applies to this press and preserves the scene’s saved transition override.</p>
   <div class="row">
-    <label for="obs-scene-label">Label</label>
-    <input id="obs-scene-label" type="text" maxlength="14" placeholder="From OBS (leave blank)" />
+    <label for="obs-scene-label" data-i18n="label">Label</label>
+    <input id="obs-scene-label" type="text" maxlength="14" placeholder="From OBS (leave blank)" data-i18n-placeholder="placeholderFromObs" />
   </div>
   <div id="direct-shared-sections"></div>
+  <script src="i18n.js"></script>
   <script src="preset-captions.js"></script>
   <script src="direct-pi.js"></script>
   <script>
     window.initDirectObsPropertyInspector(function (settings, save, state) {
+      const T = window.FadesterI18n.t;
       const scene = document.getElementById("obs-scene-target");
       const operation = document.getElementById("obs-scene-operation");
       const transition = document.getElementById("obs-transition-name");
@@ -52,28 +54,28 @@
       };
       const scenes = catalog.scenes || [];
       const sceneItems = [
-        { value: "__current_preview__", text: "Current Preview (take it live)" },
-        { value: "__next_scene__", text: "Next scene" },
-        { value: "__previous_scene__", text: "Previous scene" },
-        { value: "__random_scene__", text: "Random scene (avoids the live scene)" }
+        { value: "__current_preview__", text: T("targetCurrentPreview") },
+        { value: "__next_scene__", text: T("targetNext") },
+        { value: "__previous_scene__", text: T("targetPrevious") },
+        { value: "__random_scene__", text: T("targetRandom") }
       ].concat([0, 1, 2, 3].map(function (index) {
-        return { value: "__scene_index_" + index + "__", text: "Scene " + (index + 1) + " (automatic) — " + (scenes[index] || "not available") };
-      }), scenes.map(function (name) { return { value: name, text: name + " (fixed name)" }; }));
+        return { value: "__scene_index_" + index + "__", text: T("targetIndex", { n: index + 1, scene: scenes[index] || T("notAvailable") }) };
+      }), scenes.map(function (name) { return { value: name, text: T("targetFixed", { scene: name }) }; }));
       const transitionItems = [
-        { value: "__current_transition__", text: "Use OBS current transition" },
-        { value: "__cut__", text: "Cut" }
+        { value: "__current_transition__", text: T("transitionCurrent") },
+        { value: "__cut__", text: T("transitionCut") }
       ].concat((catalog.transitions || []).map(function (name) { return { value: name, text: name }; }));
-      window.directObsFillSelect(scene, sceneItems, selectedTarget, "Choose a scene");
-      window.directObsFillSelect(transition, transitionItems, settings.transitionName || "__current_transition__", "Use OBS current transition");
+      window.directObsFillSelect(scene, sceneItems, selectedTarget, T("chooseScene"));
+      window.directObsFillSelect(transition, transitionItems, settings.transitionName || "__current_transition__", T("transitionCurrent"));
       if (operation && document.activeElement !== operation) operation.value = selectedOperation;
       if (label && document.activeElement !== label) label.value = generatedLabel() ? "" : settings.labelOverride || "";
       if (transitionRow) transitionRow.style.display = selectedOperation === "transition" ? "" : "none";
       if (banner) {
         let text = "";
         const indexMatch = /^__scene_index_(\d+)__$/.exec(selectedTarget);
-        if (!selectedTarget) text = "Choose Next, Previous, Random, an automatic numbered scene, or a fixed scene.";
-        else if ((selectedOperation === "preview" || selectedTarget === "__current_preview__") && catalog.studioMode === false) text = "Enable Studio Mode below to prepare this control and Preview.";
-        else if (indexMatch && state && state.status && state.status.kind === "connected" && !scenes[Number(indexMatch[1])]) text = "Scene " + (Number(indexMatch[1]) + 1) + " is not available. Your current OBS collection has " + scenes.length + " scene(s). Next, Previous, and Random use the whole available list.";
+        if (!selectedTarget) text = T("sceneBannerChoose");
+        else if ((selectedOperation === "preview" || selectedTarget === "__current_preview__") && catalog.studioMode === false) text = T("sceneBannerStudio");
+        else if (indexMatch && state && state.status && state.status.kind === "connected" && !scenes[Number(indexMatch[1])]) text = window.FadesterI18n.plural("sceneBannerIndex", scenes.length, { n: Number(indexMatch[1]) + 1 });
         banner.textContent = text;
         banner.className = "status-banner " + (text && selectedOperation !== "cut" && selectedTarget ? "status-warn" : "status-info");
         banner.style.display = text ? "block" : "none";

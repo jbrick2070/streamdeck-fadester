@@ -7,75 +7,76 @@
   <link rel="stylesheet" href="pi.css" />
 </head>
 <body>
-  <h3>Midi Fadester fader <span class="scope">optional integration</span></h3>
-  <p class="muted">This is the advanced shared-slot integration. For normal OBS mixer and Scene T-bar control, choose <strong>OBS Fader</strong> instead.</p>
+  <h3><span data-i18n="mfFaderHeading">Midi Fadester fader</span> <span class="scope" data-i18n="scopeOptional">optional integration</span></h3>
+  <p class="muted" data-i18n="mfFaderIntro">This is the advanced shared-slot integration. For normal OBS mixer and Scene T-bar control, choose <strong data-slot="action" data-i18n="actionObsFader">OBS Fader</strong> instead.</p>
   <div id="slot-reason-banner" class="status-banner status-err" style="display:none;"></div>
 
   <div class="row">
-    <label for="slot-select">Slot</label>
+    <label for="slot-select" data-i18n="slot">Slot</label>
     <select id="slot-select"></select>
   </div>
 
   <div class="row">
-    <label for="label-input">Label</label>
-    <input type="text" id="label-input" maxlength="14" placeholder="From OBS (leave blank)" />
+    <label for="label-input" data-i18n="label">Label</label>
+    <input type="text" id="label-input" maxlength="14" placeholder="From OBS (leave blank)" data-i18n-placeholder="placeholderFromObs" />
   </div>
 
   <div class="row">
-    <label for="readout-select">Readout</label>
+    <label for="readout-select" data-i18n="readout">Readout</label>
     <select id="readout-select">
-      <option value="auto" selected>Engine value (px, dB, %)</option>
-      <option value="percent">Always percent</option>
+      <option value="auto" selected data-i18n="readoutAuto">Engine value (px, dB, %)</option>
+      <option value="percent" data-i18n="readoutPercent">Always percent</option>
     </select>
   </div>
 
   <div class="row">
-    <label for="step-select">Step per tick</label>
+    <label for="step-select" data-i18n="stepPerTick">Step per tick</label>
     <select id="step-select">
-      <option value="0.005">0.5 % (fine)</option>
-      <option value="0.01">1 %</option>
-      <option value="0.02" selected>2 % (default)</option>
-      <option value="0.05">5 %</option>
-      <option value="0.1">10 % (coarse)</option>
+      <option value="0.005" data-i18n="stepFine">0.5 % (fine)</option>
+      <option value="0.01" data-i18n="step1">1 %</option>
+      <option value="0.02" selected data-i18n="stepDefault">2 % (default)</option>
+      <option value="0.05" data-i18n="step5">5 %</option>
+      <option value="0.1" data-i18n="stepCoarse">10 % (coarse)</option>
     </select>
   </div>
 
   <div class="row">
-    <label for="accel-check">Acceleration</label>
+    <label for="accel-check" data-i18n="acceleration">Acceleration</label>
     <input type="checkbox" id="accel-check" checked />
-    <span class="hint">Fast turns take bigger steps</span>
+    <span class="hint" data-i18n="accelerationHint">Fast turns take bigger steps</span>
   </div>
 
   <div class="row">
-    <label for="press-select">Dial press</label>
+    <label for="press-select" data-i18n="dialPress">Dial press</label>
     <select id="press-select">
-      <option value="snap_0_100" selected>Snap to 0 / 100 %</option>
-      <option value="clean_0">Clean (0 %)</option>
-      <option value="auto_fade_1s">Auto-fade 1 s</option>
-      <option value="auto_fade_2s">Auto-fade 2 s</option>
-      <option value="cut">Cut</option>
-      <option value="finish_tbar">Finish T-bar</option>
+      <option value="snap_0_100" selected data-i18n="pressSnap">Snap to 0 / 100 %</option>
+      <option value="clean_0" data-i18n="pressClean">Clean (0 %)</option>
+      <option value="auto_fade_1s" data-i18n="pressAutoFade1">Auto-fade 1 s</option>
+      <option value="auto_fade_2s" data-i18n="pressAutoFade2">Auto-fade 2 s</option>
+      <option value="cut" data-i18n="pressCut">Cut</option>
+      <option value="finish_tbar" data-i18n="pressFinishTbar">Finish T-bar</option>
     </select>
   </div>
 
   <div class="row">
-    <label for="long-press-select">Hold (0.8 s)</label>
+    <label for="long-press-select" data-i18n="hold">Hold (0.8 s)</label>
     <select id="long-press-select">
-      <option value="auto_fade_3s" selected>Auto-fade 3 s (with Hold indicator)</option>
-      <option value="clean_all_fx">Clean All FX</option>
-      <option value="finish_tbar">Finish T-bar</option>
-      <option value="none">None</option>
+      <option value="auto_fade_3s" selected data-i18n="holdAutoFade3">Auto-fade 3 s (with Hold indicator)</option>
+      <option value="clean_all_fx" data-i18n="cleanAllFx">Clean All FX</option>
+      <option value="finish_tbar" data-i18n="pressFinishTbar">Finish T-bar</option>
+      <option value="none" data-i18n="holdNone">None</option>
     </select>
   </div>
 
   <div class="row">
-    <label for="thumb-check">Live thumbnails</label>
+    <label for="thumb-check" data-i18n="thumbnails">Live thumbnails</label>
     <input type="checkbox" id="thumb-check" checked />
-    <span class="hint">96×54 in Mix two layers cells (1–2 FPS)</span>
+    <span class="hint" data-i18n="thumbnailsHint">96×54 in Mix two layers cells (1–2 FPS)</span>
   </div>
 
   <div id="shared-sections"></div>
 
+  <script src="i18n.js"></script>
   <script src="pi-common.js"></script>
   <script>
     window.onFadesterState = function (state) {
@@ -85,9 +86,7 @@
       if (!opt) return;
       const connected = state.status && state.status.kind === "connected";
       const supported = state.capabilities && state.capabilities.resetFx;
-      opt.textContent = connected && !supported
-        ? "Clean All FX — needs Midi Fadester 0.4.0+"
-        : "Clean All FX";
+      opt.textContent = window.FadesterI18n.t(connected && !supported ? "cleanAllFxNeeds" : "cleanAllFx");
     };
 
     window.initFadesterPropertyInspector(function (settings, save) {

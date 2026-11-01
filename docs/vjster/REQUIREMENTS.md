@@ -149,6 +149,25 @@ operator answers before the phase that depends on them.
 | R-I18N-4 | Every word drawn on a key or dial fits its box in every language (the width estimate counts CJK and accented capitals correctly); a test fails when a translation would not fit. |
 | R-I18N-5 | A test checks every language file against English: the same keys, the same placeholders, valid JSON in UTF-8 without BOM, and every required language present. Each language file says it was drafted by an AI model and reviewed by a second one (in a `_comment` key the loaders ignore, or the README where a format has no comments). README and INSTALL say which languages exist and how to send corrections. |
 
+## 10b. Language choice on the Stream Deck (requested by the operator 2026-11-01)
+
+The rows are the root REQUIREMENTS.md 9e (`R-LANG-1..10`, both plugins); here is what each means for VJster. Approved
+by the operator on 2026-11-01 with every decision at its recommended default (root `PLAN.md` 11.6); the work is PLAN.md
+section 9.
+
+| ID | Requirement |
+|----|-------------|
+| R-LANG-1 | VJster has its own plugin-wide `language` global setting, `"auto"` or one of en, de, es, fr, ja, ko, zh_CN, zh_TW, nl; absent means `"auto"`. It is set apart from Fadester for OBS's, and the settings page's note says it covers all VJster controls. |
+| R-LANG-2 | Automatic is today's behaviour: the app's language by exact code, base, then English (so `zh-CN` stays English), no extra redraw, no page delay. |
+| R-LANG-3 | A fixed language covers every word VJster draws on keys and dials and its settings page (static and dynamic texts, `<html lang>`); the rate keeps its dot. Not covered: the OBS page and the Chrome extension; the OBS page address keeps `hl=` in the app's language (D-L7). |
+| R-LANG-4 | A change redraws every visible VJster key and dial without a restart; an open settings page re-labels in place, keeping unfinished input in action fields and in the port and extension-id boxes, and re-words the status and OBS status. |
+| R-LANG-5 | A deck or page text that is missing, empty, blank, echoes its key or has other placeholders shows English, never the app's language. An unknown stored value acts as Automatic, is kept until the next pick and is logged once without the value. |
+| R-LANG-6 | The note under the choice: "Applies to all VJster controls. Stream Deck's own menus, action list, tooltips and dial hints stay in Stream Deck's language." |
+| R-LANG-7 | `nl.json` in `com.jbrick2070.vjster.sdPlugin` with `Localization` (deck and `pi`), drafted by Claude, reviewed by Gemini 4 Argon, provenance in `Localization._comment`; every Dutch deck word fits its box; UTF-8 without BOM; "VJster" stays. |
+| R-LANG-8 | No write of VJster's global settings loses a key: the language is saved by the plugin through `saveGlobal` (fresh read and merge), never through the page's own copy, and a page write that omits `language`, `port` or `extensionIds` keeps them. |
+| R-LANG-9 | Tests: the shared resolver cases and VJster's own Automatic baseline, redraw on change, page refill and draft keeping, the races of R-LANG-8, malformed page texts, `nl` in the language lists and fit tests, and end-to-end in `nl` under `deck-sim.ts` (which echoes the request id as the real app does); mutations M-V-90..94. |
+| R-LANG-10 | The reel shows VJster in Dutch only after the operator's check on the real Stream Deck; simulator footage is labelled as such. |
+
 ## 11. Non-goals
 
 - Skipping, blocking or hurrying advertisements; downloading or recording video.

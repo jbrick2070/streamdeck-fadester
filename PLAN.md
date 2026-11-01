@@ -1226,3 +1226,199 @@ ships unbound.
 - Off the table, a setting needs an explicit range and may be marked whole numbers; group UUIDs come from the
   scenes' item lists (`GetGroupList` names only), read only when a group exists.
 - Neither new action is supported in Multi Actions (as Playlister Transport).
+
+---
+
+## 11. Language choice on the Stream Deck, Dutch included (`R-LANG-1..10`; requested by the operator 2026-11-01)
+
+Goal, in the operator's words: Dutch on the Stream Deck as well, "before the reel so we can demo it". The plan, its
+panel review (Codex, Gemini, a skeptic pass; 43 findings, each checked against the code) and the code facts it rests
+on are in `C:\Users\jeffr\Documents\obs-playlister\docs\sd-language-choice-plan.md` (the operator's local copy, not in this repository); that file's sections 1 (how the
+language is decided today, with line references) and 10 (the review table) are not repeated here. **Approved by the
+operator on 2026-11-01 ("I approve"), every decision at its recommended default** (11.6). It covers both plugins in
+this repository; VJster's part is also in `docs/vjster/PLAN.md` section 9, the requirements in REQUIREMENTS.md 9e and
+`docs/vjster/REQUIREMENTS.md` 10b.
+
+**In short.** Each plugin gets one plugin-wide **Language** setting: *Automatic* (the Stream Deck app's language, the
+default, so nothing changes for anyone who never touches it) or a fixed language out of nine: the eight Stream Deck
+offers plus Dutch (`nl`). The plugin already draws every key and dial word itself, so the choice only has to pick the
+table, redraw every visible control and tell an open settings page to refill. Dutch goes into an `nl.json` beside the
+other eight in each plugin folder; the Stream Deck app never reads it, our loaders do. What the app itself draws (the
+action list with names and tooltips, the action name header over the settings page, the dial Rotate/Push/Touch hints,
+Multi-Action step rows, the plugin description, profile prompts) stays in the app's language, and the settings note,
+README and the reel say so. Work splits into a **reel slice** (L.0 to L.5, about 15 h, ending with the operator's
+device check) and a **follow-up** (L.6 to L.8).
+
+### 11.1 Design
+
+- **One setting per plugin** (D-L1). Global settings are per plugin UUID and the two plugins have no channel to each
+  other, so each keeps a `language` key in its own global settings, the same values in both. The reel sets both.
+- **Resolver.** `choice = normalizeChoice(stored)` (`"auto"` or one of `PLUGIN_LANGUAGES`; anything else is
+  `"auto"`, flagged as unknown); `resolved = choice === "auto" ? appMapping(appLanguage) : choice`.
+  `PLUGIN_LANGUAGES = [...STREAM_DECK_LANGUAGES, "nl"]` sits next to `STREAM_DECK_LANGUAGES` (`src/i18n/strings.ts`),
+  which keeps meaning "what the app can select". `appMapping` is each plugin's current rule, unchanged (Fadester's
+  `normalizeLanguage`; VJster exact, base, English), so Automatic stays as today. A fixed choice matches
+  `PLUGIN_LANGUAGES` exactly (`zh_CN` as written). VJster cannot import `src/i18n/` (rollup builds `src/vjster/**`
+  only), so it keeps its own copy and one shared test table runs the fixed-choice and unknown-value cases against both
+  resolvers (D-L2).
+- **Fadester for OBS, plugin side.**
+  1. `setLanguage` notifies listeners only when the resolved code changes (`onLanguageChanged(listener): () => void`);
+     applying the same code again re-reads nothing and redraws nothing.
+  2. `src/settings/global-store.ts` (new): `ready` is the start-up `getGlobalSettings` promise; a `current` snapshot;
+     one serial queue; `patch(change)` awaits `ready`, sets `current = { ...current, ...change }` synchronously, then
+     calls `setGlobalSettings(current)`. Connection saves (`persistSharedConnection`) and language saves both go
+     through `patch`; page writes arriving by `onDidReceiveGlobalSettings` replace `current`.
+  3. `src/i18n/language-choice.ts` (new): takes the store, the app language, the plugin folder and a broadcast
+     callback; applies the stored choice after `ready`; handles `{ event: "setLanguageChoice", choice }` (validate,
+     `patch`, apply, broadcast). `plugin.ts` keeps only wiring; its start-up app-language call stays, so Automatic
+     draws never wait.
+  4. Redraw: each controller subscribes in `appear()` and unsubscribes in `disappear()`; every action's `onWillAppear`
+     first calls `disappear()` on an existing controller for that context (the guard `obs-filter-control.ts` has).
+  5. Filter catalogs keep setting identities and `LocalText` errors; labels and errors are worded at broadcast.
+  6. Both page broadcasts (`directObsState`, `fadesterState`) carry `language: { choice, resolved }`.
+  With a fixed language the first frame of a key may be in the app's language and redraw once when `ready` resolves;
+  accepted. Automatic: no extra redraw (tested).
+- **Fadester for OBS, settings pages** (the reel uses the direct pages, `direct-pi.js`; the Midi Fadester pages follow
+  in L.6, D-L12).
+  1. The runtime keeps `LANGUAGES` (the eight, for Automatic's `normalize`) and adds `PLUGIN_LANGUAGES` (nine) with
+     `setResolved(lang)` for an exact member; the generator loops over `PLUGIN_LANGUAGES`.
+  2. A **Language** section of its own near the top of the shared sections: heading "Language", badge "all Fadester
+     controls", a `<select>` with "Automatic (Stream Deck's language)" (D-L11, translated) and the nine endonyms
+     (never looked up, D-L3), and the R-LANG-6 note.
+  3. The select follows `language.choice` on every state message. A change sends `setLanguageChoice`; the page
+     refills when the plugin's broadcast arrives: `setResolved`, `apply`, then `updateConnection(currentState)` and
+     `refreshControls()`; `direct-setup-status` is cleared; typed inputs keep their values.
+  4. First paint uses the last resolved language from `localStorage` (try/catch), with no hold (D-L5).
+- **VJster**: `docs/vjster/PLAN.md` section 9.
+- **Fallbacks.** No `language` or `"auto"`: the app's language as today, deck and pages. A fixed language with a key
+  missing, empty, blank or with other placeholders: English for that key. `nl.json` missing or broken at run time:
+  English on the deck; the pages use the table built in at generation time (a broken file fails generation). An
+  unknown value (`"pt_BR"`, `42`, `"NL"`): acts as Automatic, is kept until the next pick (D-L6), logged once as
+  "unknown language choice" without the value; the select shows Automatic.
+- **What stays in the app's language:** the plugin's Name, Description and Category; each action's Name and Tooltip in
+  the action list; the action name header over the settings page; the dial hint strip on Stream Deck +; Multi-Action
+  step rows; profile names and the app's prompts. (All 17 actions set `UserTitleEnabled: false`, so the app's Title
+  field is not shown.) Outside Stream Deck: VJster's Chrome extension and OBS page (D-L7), OBS's own names, Midi
+  Fadester's texts, log lines.
+
+### 11.2 Dutch strings
+
+- Size: Fadester 254 deck and 403 page keys (about 19,700 characters of English); VJster 24 deck and 46 page keys.
+  `Localization` only for the reel; manifest texts in L.7 (D-L4).
+- Sources: OBS 33 `nl-NL.ini` (Studiomodus, Scène, Bron, Overgang, Programma, Audiomixer); the deck and Info Bar use
+  "Voorbeeld"/"VOORBEELD" (OBS also has "Voorvertoning", which overflows the T-bar name and Info Bar line). "Cut" stays
+  "Cut" on switcher keys ("Knippen" is clipboard cut and is not in OBS's file); OBS's obs-transitions locale is read for
+  the built-in Cut transition's name before `errorNoCutTransition` is worded. Blend modes: full OBS names on the pages,
+  short forms on keys ("Vermenigv.", "Donkerder", "Lichter"), as German did. Also Visual Sidechain's and
+  obs-playlister's `nl-NL.ini`, with "Afspelen / pauzeren" spaced (titles wrap only at spaces) and short state words on
+  keys ("Speelt", "Pauze").
+- Kept as is: Fadester, OBS, Stream Deck, Midi Fadester, FX, VJster, Cut, numbers with units; placeholders unchanged.
+- Length budgets: the 9 px key status line, the 220 px Info Bar line, the hold badge and the T-bar names (step 8.3's fit
+  rules above); VJster's limits in its PLAN 9. The fit tests decide.
+- Drafted by Claude, reviewed by Gemini 4 Argon against English for meaning, OBS terms, tone and length; corrections
+  applied unless one breaks a rule. Fadester's provenance is recorded here, as for its other languages (its tests
+  reject extra keys such as `_comment`); VJster's goes in `Localization._comment`.
+- Tests extended to `nl`: `presentLanguages()` filters `PLUGIN_LANGUAGES`; `i18n-strings.test.ts` checks present
+  languages against `PLUGIN_LANGUAGES`, and its manifest-shape test runs over the languages the app reads
+  (`STREAM_DECK_LANGUAGES`) until L.7.
+
+### 11.3 Steps
+
+Work in the `sd-language` worktree, since the mutation runners edit tracked files in place. Each step: Sonnet 5.5 QA
+of the diff before its build; then `npx vitest run`, `npx tsc --noEmit` plus the VJster tsconfigs, `npm run validate`
+and `npx streamdeck validate com.jbrick2070.vjster.sdPlugin` when a plugin folder changes, and both mutation runners;
+one commit per step; one push when the reel slice is finished (D-L9).
+
+**Reel slice: L.0 to L.5, about 15 h plus the operator's device check.**
+
+1. **Step L.0 -- This section, REQUIREMENTS 9e, VJster PLAN 9 and REQUIREMENTS 10b, with the decisions.** Docs and a
+   hygiene test (`tests/language-plan-docs.test.ts`: every `R-LANG-*` row, every decision answered, the four documents
+   in UTF-8 without BOM and free of the banned word). **0.5 h.**
+2. **Step L.1 -- Fadester: the choice on the deck.** `PLUGIN_LANGUAGES`, notify on a resolved change,
+   `global-store.ts`, `language-choice.ts`, `plugin.ts` as wiring, redraw in all ten actions with the double-willAppear
+   guard, filter catalogs worded at broadcast, `language` in both broadcasts; a fixture `nl` table in a temp folder.
+   Tests (`tests/language-choice.test.ts`, with a fake settings port that replaces on write and never echoes): the
+   resolver table; language then connection save, connection then language, both concurrent, a save before `ready`,
+   every key kept; start-up applies a stored `nl`; `setLanguageChoice` persists and applies; each action redraws once
+   per context after a change, also after willAppear twice, and stops after `disappear`; Automatic at start-up sends no
+   extra `setImage`/`setFeedback`; a filter catalog loaded before a switch is broadcast in the new language (driven
+   settings too); an unknown value acts as Automatic and is logged once; `npm run validate` passes with `nl.json`
+   present. Mutations: *M-11.1a* the resolver ignores the stored choice; *M-11.1b* no notify (no redraw); *M-11.1c* a
+   connection save writes host/port/password alone; *M-11.1d* the store is not updated after its own write; *M-11.1e*
+   start-up does not apply the stored choice; *M-11.1f* `setLanguageChoice` persists but does not apply; *M-11.1g*
+   notify on every apply (Automatic redraws). **4.5 h.**
+3. **Step L.2 -- Fadester: the direct settings pages.** The runtime's two lists and `setResolved`; the generator loops
+   `PLUGIN_LANGUAGES`; the Language section in `direct-pi.js`; the select from `language.choice`; refill on the
+   plugin's broadcast; `direct-setup-status` cleared; `localStorage` first paint. New page keys `languageHeading`,
+   `languageAuto`, `languageNote` (English now, the others in L.4). Tests (vm, `direct-inspector-feedback.test.ts`
+   style): every direct page has the section; a change sends the message; a broadcast with another `resolved` refills
+   static and dynamic texts (banner, hint, summary) and keeps a typed host and an open `<details>`; reopening with fixed
+   English shows "English", not Automatic; fixed English to Automatic updates the select; `nl` and `nl-NL` under
+   Automatic give English; `pt_BR` still English. Mutations: *M-11.2a* the page ignores `language.resolved`; *M-11.2b*
+   the select does not send the message; *M-11.2c* the select is set only on a resolved change. **2.5 h.**
+4. **Step L.3 -- VJster: own loader, the choice, the settings page.** `docs/vjster/PLAN.md` 9 (M-V-90..94). **3.5 h.**
+5. **Step L.4 -- Dutch strings.** Claude drafts `Localization` (deck and `pi`) of `nl.json` for both plugins and the
+   three new page keys in all languages; Gemini 4 Argon reviews; apply; shorten where fit fails; regenerate both
+   `ui/i18n.js`; the test lists add `nl` (11.2). Tests: every language test runs for `nl` (keys, placeholders, BOM,
+   fit, page currency); a Dutch deck shows no English word for shipped captions. Mutation *M-11.4a*
+   `presentLanguages()` back to `STREAM_DECK_LANGUAGES`, killed by the presence test. **3 h** (about 1.5 h waiting on
+   the review).
+6. **Step L.5 -- Device check, then the reel.** Automated evidence: VJster under `deck-sim.ts` with app `en` and stored
+   `nl`, every key image saved, flip to `auto` and back. The operator's check on the real Stream Deck: install both
+   builds, set Nederlands in each Language section, look at keys, dials, Info Bar and both pages, restart the plugin
+   (the choice is kept), back to Automatic. Then film. Both recorded here and in TESTING.md. **1 h plus the operator's
+   check.**
+
+**Follow-up (after the reel), about 6 h.**
+
+7. **Step L.6 -- Midi Fadester pages and numbers.** The Language section and refill in `pi-common.js` (relabel in
+   place; keep dirty editors and the open calibration section; clear assignment and profile results); visible numbers
+   formatted (`obs-filter.html` out-of-range banner, `pi-common.js` range hints). **2.5 h.**
+8. **Step L.7 -- Tools and manifest texts.** `pi-harness.ts --direct --choice`; `scripts/deck-frames.ts` only if
+   wanted (D-L8); Dutch manifest texts, with the shape test over all present languages (D-L4). **2.5 h.**
+9. **Step L.8 -- Docs and release.** README (both): the languages, Dutch by the plugin's own setting, set per plugin,
+   what stays in the app's language; VJster INSTALL; versions on the operator's word (D-L10). **1 h.**
+
+### 11.4 Risks
+
+| ID | Risk | Mitigation |
+|---|---|---|
+| RL-1 | A save erases another key (whole-object writes, no echo, concurrent saves, a save before `ready`) | `global-store.ts` serial merge; tests for every order; M-11.1c, M-11.1d |
+| RL-2 | The VJster page writes `{}` or a stale copy and wipes `port`/`extensionIds` (an empty list lets any extension in) | Language goes through the plugin; the repair keeps omitted keys; M-V-94 |
+| RL-3 | A text worded and stored stays in the old language | Catalog labels and errors worded at broadcast; banners cleared; tests per surface |
+| RL-4 | Dutch overflows tight boxes (9 px key line, Info Bar, VJster capitals) | Budgets in 11.2; fit tests |
+| RL-5 | One redraw at start with a fixed language | Accepted; Automatic unaffected (tested) |
+| RL-6 | The reel shows Dutch keys next to the English action list and dial hints | Said on screen and in README |
+| RL-7 | Stream Deck's Node lacks full ICU for `nl` numbers | `formatNumber` falls back; checked on the device |
+| RL-8 | Marketplace review objects to an unknown `nl.json` | `validate` passes; otherwise a subfolder with one loader change |
+| RL-9 | Elgato adds Dutch later | Extend `STREAM_DECK_LANGUAGES`; manifest texts (L.7) |
+| RL-10 | A fixed CJK language on an English app lacks a font | Font lists by script; device check |
+| RL-11 | The reel waits on this | Reel slice only (15 h); follow-up after |
+| RL-12 | The simulator e2e passes while start-up is broken (the sim drops the request id) | The sim echoes the id; M-V-93 |
+
+Not in scope: a per-action language, translating OBS names or Midi Fadester texts, Dutch for VJster's Chrome extension
+and OBS page (D-L7), better Chinese alias handling in VJster's Automatic.
+
+### 11.5 As built
+
+- *L.0 (2026-11-01):* this section, REQUIREMENTS.md 9e, `docs/vjster/PLAN.md` 9 and `docs/vjster/REQUIREMENTS.md`
+  10b; the hygiene test `tests/language-plan-docs.test.ts`. The plan's code facts spot-checked at `82f94c4`
+  (`STREAM_DECK_LANGUAGES` at `strings.ts:267`, the last mutations M-10.9o and M-V-89, `UserTitleEnabled: false` on
+  all 17 actions); no difference from the plan found. No mutation is listed for L.0.
+
+### 11.6 Decisions (approved by the operator 2026-11-01, every one at its recommended default)
+
+| ID | Decision | Answer |
+|---|---|---|
+| D-L1 | One setting per plugin, or shared | **Per plugin**; each note names its plugin |
+| D-L2 | VJster's own resolver copy, or move it into the shared package | **Own copy plus a shared case table** |
+| D-L3 | Which fixed languages | **All nine**, as endonyms |
+| D-L4 | Manifest texts in `nl.json` now, or `Localization` only | **`Localization` only for the reel**; manifest texts in L.7 |
+| D-L5 | First paint: `localStorage` cache, a 400 ms hold, or accept a flip | **`localStorage` cache**, no hold |
+| D-L6 | Unknown stored value: Automatic and keep, or reset | **Automatic and keep** |
+| D-L7 | VJster OBS page (4 strings) and Chrome extension (16) in Dutch, with `hl=` following the choice | **Not now**: `hl=` stays the app's language; the note says the OBS page and extension stay as they are |
+| D-L8 | Fadester frames script | **Skipped for the reel**; the device check covers it |
+| D-L9 | Pushes | **One push** after L.5; the follow-up gets its own |
+| D-L10 | Versions | **Fadester 0.8.0, VJster 0.2.0**, after the device check |
+| D-L11 | Automatic label | **"Automatic (Stream Deck's language)"**, translated |
+| D-L12 | Midi Fadester pages in the reel slice | **No** (the rig uses the direct pages); L.6 |

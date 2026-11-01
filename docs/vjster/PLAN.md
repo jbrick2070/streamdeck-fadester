@@ -437,3 +437,69 @@ steps above where they differ.**
   VJster docs carry the language notes. Each step adds its English entries and a German test entry at once, so fit and
   fallback problems show while the step is built; `DeckSim` takes a language. New mutation checks: a lookup bypass
   and a fit check. The full suite (not only `tests/vjster-`) runs before the commit.
+
+## 9. Language choice on the Stream Deck, Dutch included (R-LANG-1..10; requested by the operator 2026-11-01)
+
+Goal: the operator can pick VJster's language on the Stream Deck, Dutch included, before the demo reel. The whole plan
+(both plugins) is the root `PLAN.md` section 11, approved by the operator on 2026-11-01 with every decision at its
+recommended default (`PLAN.md` 11.6); the source with its code facts and review is
+`C:\Users\jeffr\Documents\obs-playlister\docs\sd-language-choice-plan.md` (the operator's local copy, not in this repository). This section is VJster's part; the
+requirements are REQUIREMENTS.md 10b.
+
+**How it works today.** Deck words come from the SDK's translator, bound once at load
+(`stringsFrom((key) => streamDeck.i18n.translate(key))`, `src/vjster/plugin/standalone.ts`); the limit is VJster's own
+start-up snapshot, not the SDK. The SDK's provider tries the exact code, its base, then English, so an app tag `zh-CN`
+gives English in VJster today. The one `strings` object is passed by reference to every action and controller, which
+read it at draw time. `saveGlobal` reads fresh and merges; the page-write repair restores only `obsToken` and
+`obsAlwaysOn`. The settings page holds its own `global = {}` until `didReceiveGlobalSettings` and writes the whole
+object back; `render()` rebuilds every action field; its `lookup` accepts any non-empty text.
+
+**Design.**
+1. `src/vjster/plugin/language.ts`: VJster's own resolver (`choice = normalizeChoice(stored)`, `resolved = choice ===
+   "auto" ? appMapping(appLanguage) : choice`, `appMapping` today's exact/base/English rule, unchanged) and
+   `readLocalization(lang, dir)`. VJster cannot import `src/i18n/`, so this is a copy; a shared test table runs the
+   fixed-choice and unknown-value cases against both resolvers and each plugin's Automatic baseline is tested on its
+   own (D-L2). `standalone.ts` builds the strings from our own table instead of `streamDeck.i18n.translate`.
+2. One stable `Strings` object whose fields are replaced in place on a change, plus an action-level notification that
+   calls `render()` on every instance. Controller signatures stay.
+3. `GlobalSettings` gains `language` (normalized, the raw value kept for the one log line); it is applied at connect
+   and on every settings event; the page-write repair also keeps `language`, `port` and `extensionIds` from `current`
+   when the page's copy omits them.
+4. Settings page: a **Language** section of its own (`<section class="global">`, heading and an "all VJster controls"
+   badge), apart from the link box and its Save button. A change sends `sendToPlugin { event: "setLanguage", choice
+   }`; the plugin saves with `saveGlobal`, applies and answers `{ event: "language", choice, resolved }`; the page
+   then translates. The page never writes `language` through its own `global` copy; the select stays disabled until
+   the first `language` answer.
+5. The refill keeps drafts: action fields are relabelled in place (not `render()`), the status and OBS status are
+   cached and re-worded from the last `showStatus` payload without touching `#port`/`#ext` while they are focused or
+   edited, and the page asks again for `status` and `obs-address`.
+6. The page's lookup uses English for blank, key-echo or placeholder-changed texts, as the deck does.
+7. `scripts/vjster/deck-sim.ts` echoes the request id of `getGlobalSettings`, as the real app does (today every sim
+   `getGlobalSettings` also fires `onDidReceiveGlobalSettings`).
+8. Not changed (D-L7): the OBS page address keeps `hl=` in the app's language; the Chrome extension and OBS page get
+   no Dutch now, and the note says so.
+
+**Dutch.** `nl.json` beside the other eight in `com.jbrick2070.vjster.sdPlugin`, `Localization` only (deck and `pi`;
+manifest texts later, D-L4), provenance in `Localization._comment`. 24 deck and 46 page keys. Budgets: bold capitals
+beside "FX SPEED" in the 180 px strip (about 7 to 9 capitals) and about 11 capitals on a 124 px key; short forms such
+as AUTO, VAST, RECLAME, FX-TEMPO, VASTGEZET, PAUZE, guided by `de.json`. The rate keeps its dot. `REQUIRED.deck` and
+`PLANNED.deck` add `nl` (`tests/vjster-languages.ts`); `deckLanguageFiles()` already picks up every `xx.json`.
+
+**Steps** (numbering of the root `PLAN.md` 11.3; the gate there).
+1. **L.0** -- this section and REQUIREMENTS 10b (with the root PLAN 11 and REQUIREMENTS 9e). Docs and a hygiene test.
+2. **L.3 -- own loader, the choice, the settings page** (design 1 to 7). Tests: the shared resolver cases; VJster's
+   own Automatic baseline (`zh-CN` stays English); a change redraws every instance; the page changes language before
+   global settings arrive and `port`/`extensionIds` survive; a keep-on auto-save racing a language save keeps both; a
+   stale page copy without `language` keeps it; label and numeric fields keep unfinished input across a switch;
+   connected, bad-id and OBS-status texts re-worded; malformed page translations (blank, key echo, wrong placeholder)
+   give English; e2e: the existing tests pass with the id echo, then a stored `nl` before start gives Dutch keys
+   without any `saveGlobal`, and `saveGlobal({ language: "de" })` redraws German live. Mutations: *M-V-90* deck words
+   from the SDK again; *M-V-91* no redraw on change; *M-V-92* the page ignores the `language` answer; *M-V-93* the
+   connect-time apply drops the language; *M-V-94* the repair drops `extensionIds`. **3.5 h.**
+3. **L.4** -- the Dutch `nl.json` (with Fadester's), Gemini 4 Argon review, fit.
+4. **L.5** -- `deck-sim.ts` evidence (app `en`, stored `nl`, every key image saved, flip to `auto` and back) and the
+   operator's check on the real Stream Deck.
+5. **L.7, L.8 (follow-up)** -- manifest texts in `nl.json`; INSTALL and README; VJster 0.2.0 after the device check
+   (D-L10).
+
+**As built.** *L.0 (2026-11-01):* this section and REQUIREMENTS 10b.

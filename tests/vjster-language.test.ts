@@ -302,15 +302,33 @@ describe("the plugin's own saves never lose a key (R-LANG-8)", () => {
     });
   }
 
-  it("keeps a list the settings page emptied on purpose, and a stored list it has not applied yet", async () => {
+  it("keeps a list the settings page emptied on purpose, and the plugin's list over a stored one it does not hold", async () => {
     const s = store({ port: 50123, extensionIds: IDS, obsToken: TOKEN });
     s.pageWrite({ port: 50123, extensionIds: [], obsToken: TOKEN });
     await s.saver.save({ language: "de" });
     expect(s.writes.at(-1)!.extensionIds).toEqual([]);
-    // The page stored a new list the plugin has not applied: the stored one stands, not the known one.
+    // A page write reaches the plugin before any read reflects it, so a read holding a list the plugin
+    // does not hold is older than the plugin's copy: the plugin's list stands, not the read's.
     const t = store({ port: 50123, extensionIds: IDS, obsToken: TOKEN }, async () => ({ port: 50123, extensionIds: [IDS[0].replace("a", "b")], obsToken: TOKEN }));
     await t.saver.save({ language: "fr" });
-    expect(t.writes.at(-1)!.extensionIds).toEqual([IDS[0].replace("a", "b")]);
+    expect(t.writes.at(-1)!.extensionIds).toEqual(IDS);
+  });
+
+  it("a read answered after a settings page's write, from before it, brings back neither the old port nor the old allow list", async () => {
+    const before: JsonObject = { port: 50123, extensionIds: IDS, obsToken: TOKEN, obsAlwaysOn: true, language: "de" };
+    let answer!: (stored: JsonObject) => void;
+    const s = store(before, () => new Promise<JsonObject>((resolve) => { answer = resolve; }));
+    const saving = s.saver.save({ language: "fr" });
+    await sleep(1); // the read is out
+    // The page writes a new port and a shorter allow list while the read is out; the plugin applies it first.
+    s.pageWrite({ port: 50200, extensionIds: [IDS[0]], obsToken: TOKEN, obsAlwaysOn: false, language: "de" });
+    answer(before);
+    await saving;
+    expect(s.writes).toEqual([{ port: 50200, extensionIds: [IDS[0]], obsToken: TOKEN, obsAlwaysOn: false, language: "fr" }]);
+    // What the plugin never held comes from the read: a key the page's copy lacked.
+    const t = store({ port: 50123, obsToken: TOKEN, other: "stored" }, async () => ({ port: 50123, obsToken: TOKEN, other: "stored" }));
+    await t.saver.save({ language: "nl" });
+    expect(t.writes).toEqual([{ port: 50123, obsToken: TOKEN, other: "stored", language: "nl" }]);
   });
 
   it("leaves the allow list out when there is none, so any extension stays allowed as before", async () => {

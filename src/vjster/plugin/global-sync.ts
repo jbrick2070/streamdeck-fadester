@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // VJster's plugin-wide settings writes (docs/vjster/PLAN.md 9, R-LANG-8): no
-// write loses a key. The plugin's own saves run one at a time, each reading
-// what is stored and merging into it; a write that omits the port, the
+// write loses a key. The plugin's own saves run one at a time, each merging
+// its change into what the plugin holds, with a fresh read filling in only
+// the keys the plugin does not hold; a write that omits the port, the
 // extension allow list, the language, the keep-on choice or the OBS token
 // (a settings page whose copy is older, or a read that never answered) keeps
 // what the plugin knows. An empty allow list lets any extension connect, so
@@ -53,27 +54,25 @@ export interface GlobalSaverOptions {
   readTimeoutMs?: number;
 }
 
-/** The plugin's own saves, one at a time, each a fresh read merged with its change (R-LANG-8). */
+/** The plugin's own saves, one at a time, each its change over what the plugin holds, a fresh read under both (R-LANG-8). */
 export class GlobalSaver {
   private queue: Promise<unknown> = Promise.resolve();
 
   constructor(private readonly options: GlobalSaverOptions) {}
 
   /**
-   * Merge `change` into what is stored, keep what the plugin knows, save, and apply. A change that is not
-   * about the allow list never stores an empty one while the plugin knows ids: a stored list that is empty
-   * or holds no id gives way to the plugin's (a deliberate clear from the settings page reaches the plugin
-   * through apply first, so it is not undone).
+   * Merge `change` over what the plugin holds, with the stored copy under both for the keys the plugin
+   * does not hold, save, and apply. The plugin's copy is the base, not the read: a settings page's write
+   * reaches the plugin (onDidReceiveGlobalSettings, then apply) before any read can reflect it, so a read
+   * answered after such a write, from before it, must not bring back the old port or allow list; and a
+   * stored allow list that is empty or holds no id never replaces the ids the plugin knows (a deliberate
+   * clear from the settings page reaches the plugin through apply first, so it is not undone).
    */
   save(change: JsonObject): Promise<void> {
     const run = async (): Promise<void> => {
       const stored = await this.readOrNothing();
       const current = this.options.current();
-      const base: JsonObject = { ...stored };
-      if (!("extensionIds" in change) && current.extensionIds.length > 0 && globalSettings(stored).extensionIds.length === 0) {
-        delete base.extensionIds;
-      }
-      const merged = keepOmitted({ ...base, ...change }, current);
+      const merged = keepOmitted({ ...stored, ...keepOmitted({}, current), ...change }, current);
       await this.options.write(merged);
       await this.options.apply(globalSettings(merged));
     };

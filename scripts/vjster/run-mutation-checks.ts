@@ -881,6 +881,14 @@ export const MUTATIONS: readonly Mutation[] = [
     from: '"build:vjster": "npm run build:vjster-page && rollup -c vjster-plugin/rollup.config.mjs",',
     to: '"build:vjster": "rollup -c vjster-plugin/rollup.config.mjs",',
     tests: ["tests/vjster-plugin-images.test.ts"]
+  },
+  {
+    id: "M-V-97",
+    rule: "a read answered after a settings page's write does not bring back the old port or allow list: the plugin's copy is the base (R-LANG-8)",
+    file: "src/vjster/plugin/global-sync.ts",
+    from: "      const merged = keepOmitted({ ...stored, ...keepOmitted({}, current), ...change }, current);",
+    to: "      const merged = keepOmitted({ ...stored, ...change }, current);",
+    tests: ["tests/vjster-language.test.ts"]
   }
 ];
 

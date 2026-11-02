@@ -852,10 +852,10 @@ export const MUTATIONS: readonly Mutation[] = [
   },
   {
     id: "M-V-94h",
-    rule: "a plugin save not about the allow list never stores an empty one while the plugin knows ids: the known list is in the base (R-LANG-8)",
+    rule: "before the plugin has applied the stored settings, its empty allow list is not the truth: the stored list is kept (R-LANG-8)",
     file: "src/vjster/plugin/global-sync.ts",
-    from: "      const base: JsonObject = { ...stored, ...keepOmitted({}, current) };",
-    to: "      const base: JsonObject = { ...stored, ...keepOmitted({}, { ...current, extensionIds: [] }) };",
+    from: "      if ((this.options.applied?.() ?? true) && \"extensionIds\" in stored) base.extensionIds = [...current.extensionIds];",
+    to: "      if (\"extensionIds\" in stored) base.extensionIds = [...current.extensionIds];",
     tests: ["tests/vjster-language.test.ts"]
   },
   {

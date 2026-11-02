@@ -107,6 +107,7 @@
     "errorChooseInput": "Wählen Sie zuerst einen vorhandenen Audiomixer-Eingang.",
     "errorConnectBeforeStudio": "Verbinden Sie OBS, bevor Sie ein Studio-Layout vorbereiten.",
     "errorStudioNotEnabled": "Der Studio-Modus von OBS konnte nicht aktiviert werden.",
+    "errorTakeUnconfirmed": "OBS hat Next nicht live geschaltet. Prüfe das Programm in OBS.",
     "errorTbarNeedsStudio": "Die Szenen-T-Bar benötigt den Studio-Modus von OBS.",
     "errorSceneIndexUnavailableOne": "Szene {n} ist nicht verfügbar; OBS hat {count} Szene.",
     "errorSceneIndexUnavailableMany": "Szene {n} ist nicht verfügbar; OBS hat {count} Szenen.",

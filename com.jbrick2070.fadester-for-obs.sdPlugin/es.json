@@ -107,6 +107,7 @@
     "errorChooseInput": "Elige primero una entrada existente del mezclador de audio.",
     "errorConnectBeforeStudio": "Conecta OBS antes de preparar una disposición de estudio.",
     "errorStudioNotEnabled": "No se pudo activar el Modo Estudio de OBS.",
+    "errorTakeUnconfirmed": "OBS no puso Next en directo. Revisa Programa en OBS.",
     "errorTbarNeedsStudio": "La T-bar de escenas necesita el Modo Estudio de OBS.",
     "errorSceneIndexUnavailableOne": "La escena {n} no está disponible; OBS tiene {count} escena.",
     "errorSceneIndexUnavailableMany": "La escena {n} no está disponible; OBS tiene {count} escenas.",

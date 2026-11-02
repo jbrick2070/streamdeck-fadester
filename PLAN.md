@@ -1575,7 +1575,11 @@ also races the frontend's queued `TransitionFullyStopped` and left OBS stuck on 
 ignores the encoder ticks that trail a take; the client ignores its own two `StudioModeStateChanged` events.
 The fake server models OBS 33.0.1 (`manualTransitionActive`: a release cancels, switches are refused, leaving
 Studio Mode takes). Tests: `tests/scene-cycle.test.ts` (rewritten to the real contract), `tests/dial-press.test.ts`;
-mutation M-TB.1 (release instead of the Studio Mode step). Requirement row `R-ACT-4`. The demo kit's expectation
+mutations M-TB.1 (release instead of the Studio Mode step), M-TB.2 (the re-enable skipped after a failed leave
+request) and M-TB.3 (the press's settle guard). QA (Sonnet, same day): the re-enable is now unconditional once the
+leave request was sent (no generation check between the two, one retry, then `GetStudioModeEnabled` and Studio
+Mode read as off), the take's own Studio Mode events are counted rather than windowed, an unconfirmed take has
+its own text (`errorTakeUnconfirmed`), and a press in the settle window is ignored like the ticks. Requirement row `R-ACT-4`. The demo kit's expectation
 (branch `kit-k6`, TESTING.md 1.1) should read: the dial press takes Next live with Program verified by
 `GetCurrentProgramScene`, the OBS log shows "Switched to regular Preview mode" then "Switched to Preview/Program mode"
 and no "Manual transition cancelled" at the take.

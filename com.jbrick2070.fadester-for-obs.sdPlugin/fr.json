@@ -107,6 +107,7 @@
     "errorChooseInput": "Choisissez d’abord une entrée existante du mélangeur audio.",
     "errorConnectBeforeStudio": "Connectez OBS avant de préparer une disposition studio.",
     "errorStudioNotEnabled": "Impossible d’activer le mode studio d’OBS.",
+    "errorTakeUnconfirmed": "OBS n’a pas mis Next à l’antenne. Vérifiez Programme dans OBS.",
     "errorTbarNeedsStudio": "La T-bar de scène nécessite le mode studio d’OBS.",
     "errorSceneIndexUnavailableOne": "La scène {n} est indisponible ; OBS a {count} scène.",
     "errorSceneIndexUnavailableMany": "La scène {n} est indisponible ; OBS a {count} scènes.",

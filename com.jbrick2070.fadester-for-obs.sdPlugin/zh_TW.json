@@ -107,6 +107,7 @@
     "errorChooseInput": "請先選擇既有的音效混音器輸入。",
     "errorConnectBeforeStudio": "準備工作室版面前請先連線 OBS。",
     "errorStudioNotEnabled": "無法啟用 OBS 工作室模式。",
+    "errorTakeUnconfirmed": "OBS 未將 Next 切換到節目。請檢查 OBS 中的節目。",
     "errorTbarNeedsStudio": "場景 T-bar 需要 OBS 工作室模式。",
     "errorSceneIndexUnavailableOne": "場景 {n} 無法使用；OBS 有 {count} 個場景。",
     "errorSceneIndexUnavailableMany": "場景 {n} 無法使用；OBS 有 {count} 個場景。",

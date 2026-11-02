@@ -31,6 +31,14 @@ export interface FakeObsServerOptions {
   filterWriteDelayMs?: number;
   filterReadDelayMs?: number;
   hotkeyDelayMs?: number;
+  /** Scene mixer take knobs: how many `SetStudioModeEnabled true` answer with an error first; a
+   * delay before the `false` answer; whether the `false` answer is never sent; whether the
+   * StudioModeStateChanged events are held until `flushStudioModeEvents()` (OBS sends them
+   * before its answer, the fake after; held, they arrive later than any answer). */
+  studioEnableFailures?: number;
+  studioDisableDelayMs?: number;
+  dropStudioDisableResponse?: boolean;
+  deferStudioModeEvents?: boolean;
 }
 
 /** An OBS input as `GetInputList` reports it (obs-websocket 5.6.3). */
@@ -555,6 +563,18 @@ export class FakeObsServer {
    * active, and leaving Studio Mode sets Program to its target in one step. */
   public manualTransitionActive = false;
   public manualTransitionTarget = "";
+  public studioEnableFailures: number;
+  public studioDisableDelayMs: number;
+  public dropStudioDisableResponse: boolean;
+  public deferStudioModeEvents: boolean;
+  private readonly heldStudioModeEvents: boolean[] = [];
+
+  /** Sends the StudioModeStateChanged events held by `deferStudioModeEvents`, in order. */
+  public flushStudioModeEvents(): void {
+    for (const enabled of this.heldStudioModeEvents.splice(0)) {
+      this.emitObsEvent("StudioModeStateChanged", { studioModeEnabled: enabled });
+    }
+  }
   public slots: FadesterSlot[];
   public validSources = new Set<string>([
     "Cam 1",
@@ -632,6 +652,10 @@ export class FakeObsServer {
     this.filterWriteDelayMs = opts?.filterWriteDelayMs ?? 0;
     this.filterReadDelayMs = opts?.filterReadDelayMs ?? 0;
     this.hotkeyDelayMs = opts?.hotkeyDelayMs ?? 0;
+    this.studioEnableFailures = opts?.studioEnableFailures ?? 0;
+    this.studioDisableDelayMs = opts?.studioDisableDelayMs ?? 0;
+    this.dropStudioDisableResponse = opts?.dropStudioDisableResponse ?? false;
+    this.deferStudioModeEvents = opts?.deferStudioModeEvents ?? false;
     this.slots = createDefaultSlots(
       this.studioMode,
       supportsFxApi(this.fadesterVersion)
@@ -1249,9 +1273,15 @@ export class FakeObsServer {
     if (requestType === "SetStudioModeEnabled") {
       this.directCallLog.push({ requestType, requestData });
       const enabled = requestData.studioModeEnabled === true;
+      if (enabled && this.studioEnableFailures > 0) {
+        this.studioEnableFailures--;
+        this.sendResponse(ws, requestId, requestType, false, 500, "Studio Mode could not be enabled.");
+        return;
+      }
       const finishesManualTransition = this.studioMode && !enabled && this.manualTransitionActive;
       this.studioMode = enabled;
-      this.sendResponse(ws, requestId, requestType, true, 100, "", {});
+      if (!enabled && this.studioDisableDelayMs > 0) await new Promise((r) => setTimeout(r, this.studioDisableDelayMs));
+      if (!(!enabled && this.dropStudioDisableResponse)) this.sendResponse(ws, requestId, requestType, true, 100, "", {});
       if (finishesManualTransition) {
         // Leaving Studio Mode: OBSBasic::SetPreviewProgramMode(false) force-sets the output
         // transition to programScene, the manual transition's target (OBSBasic_StudioMode.cpp:251-257).
@@ -1262,7 +1292,8 @@ export class FakeObsServer {
         this.emitObsEvent("SceneTransitionEnded", { transitionName: this.currentTransitionName });
         this.emitObsEvent("CurrentProgramSceneChanged", { sceneName: this.programSceneName });
       }
-      this.emitObsEvent("StudioModeStateChanged", { studioModeEnabled: this.studioMode });
+      if (this.deferStudioModeEvents) this.heldStudioModeEvents.push(this.studioMode);
+      else this.emitObsEvent("StudioModeStateChanged", { studioModeEnabled: this.studioMode });
       return;
     }
 

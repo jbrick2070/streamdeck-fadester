@@ -2,7 +2,7 @@
 import { once } from "node:events";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DirectObsClient, TBAR_SETTLE_MS } from "../src/obs/direct-obs-client.js";
-import { FakeObsServer } from "./helpers/fake-obs-server.js";
+import { FakeObsServer, FakeObsServerOptions } from "./helpers/fake-obs-server.js";
 
 /** The fake models OBS 33.0.1: a T-bar released over obs-websocket cancels ("Manual transition
  * cancelled"), scene switches are refused while the manual transition is active, and leaving
@@ -13,10 +13,10 @@ describe("Scene mixer take on OBS 33.0.1, and the optional queue-next cycle", ()
   let server: FakeObsServer;
   let client: DirectObsClient;
 
-  async function connect(): Promise<void> {
-    server = new FakeObsServer({ missingPlugin: true });
+  async function connect(opts: FakeObsServerOptions = {}, requestTimeoutMs?: number): Promise<void> {
+    server = new FakeObsServer({ missingPlugin: true, ...opts });
     const port = await server.start();
-    client = new DirectObsClient({ host: "127.0.0.1", port, password: "" });
+    client = new DirectObsClient({ host: "127.0.0.1", port, password: "", requestTimeoutMs });
     const ready = once(client, "statusChanged", { signal: AbortSignal.timeout(2000) });
     client.start();
     await ready;
@@ -276,5 +276,89 @@ describe("Scene mixer take on OBS 33.0.1, and the optional queue-next cycle", ()
     server.emitObsEvent("SceneTransitionEnded", { transitionName: "Fade" });
     await settle();
     expect(previewWrites()).toEqual([]);
+  });
+  it("re-enters Studio Mode once more when the first attempt fails, and the take completes", async () => {
+    await connect({ studioEnableFailures: 1 });
+    await client.nudgeTbar(0.4);
+    await client.takeTbar();
+    expect(server.studioMode).toBe(true);
+    expect(server.programSceneName).toBe("Scene Preview");
+    expect(calls("SetStudioModeEnabled")).toEqual([
+      { studioModeEnabled: false }, { studioModeEnabled: true }, { studioModeEnabled: true }
+    ]);
+    expect(client.getCatalog().studioMode).toBe(true);
+  });
+
+  it("gives up after the retry with a message every cell can show, and reads Studio Mode as off", async () => {
+    await connect({ studioEnableFailures: 2 });
+    await client.nudgeTbar(0.4);
+    const states: boolean[] = [];
+    client.on("directStateChanged", () => states.push(client.getCatalog().studioMode));
+    await expect(client.takeTbar()).rejects.toThrow("Studio Mode could not be enabled");
+    expect(calls("SetStudioModeEnabled")).toEqual([
+      { studioModeEnabled: false }, { studioModeEnabled: true }, { studioModeEnabled: true }
+    ]);
+    expect(server.studioMode).toBe(false);
+    expect(client.getCatalog().studioMode).toBe(false);
+    expect(client.getCatalog().tbarPosition).toBe(0);
+    expect(states.at(-1)).toBe(false);
+  });
+
+  it("always re-enters Studio Mode even when the collection changes between the two requests", async () => {
+    await connect({ studioDisableDelayMs: 60 });
+    await client.nudgeTbar(0.4);
+    const take = client.takeTbar();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    server.emitObsEvent("CurrentSceneCollectionChanging", {});
+    await expect(take).rejects.toThrow(/changed/i);
+    expect(server.studioMode).toBe(true);
+    expect(calls("SetStudioModeEnabled")).toEqual([{ studioModeEnabled: false }, { studioModeEnabled: true }]);
+  });
+
+  it("always re-enters Studio Mode even when the leave request times out", async () => {
+    await connect({ dropStudioDisableResponse: true }, 80);
+    await client.nudgeTbar(0.4);
+    await expect(client.takeTbar()).rejects.toThrow(/timed out|time/i);
+    expect(calls("SetStudioModeEnabled")).toEqual([{ studioModeEnabled: false }, { studioModeEnabled: true }]);
+    expect(server.studioMode).toBe(true);
+    expect(server.programSceneName).toBe("Scene Preview");
+    expect(client.getCatalog().studioMode).toBe(true);
+  });
+
+  it("is unharmed by its own Studio Mode events arriving after the answers: Preview stays known", async () => {
+    await connect({ deferStudioModeEvents: true });
+    await client.nudgeTbar(0.4);
+    await client.takeTbar();
+    expect(client.getCatalog().currentPreviewScene).toBe("Scene Live");
+    const states: boolean[] = [];
+    client.on("directStateChanged", () => states.push(client.getCatalog().studioMode));
+    server.flushStudioModeEvents();
+    await settle();
+    expect(states).toEqual([]);
+    expect(client.getCatalog().studioMode).toBe(true);
+    expect(client.getCatalog().currentPreviewScene).toBe("Scene Live");
+    // A stray repeat of the known state later changes nothing either.
+    server.emitObsEvent("StudioModeStateChanged", { studioModeEnabled: true });
+    await settle();
+    expect(states).toEqual([]);
+    expect(client.getCatalog().currentPreviewScene).toBe("Scene Live");
+  });
+
+  it("treats a press in the settle window as the end of the last take, like the trailing ticks", async () => {
+    await connect();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      await client.nudgeTbar(1.1, true);
+      expect(calls("SetStudioModeEnabled")).toHaveLength(2);
+      await client.takeTbar(true);
+      expect(calls("SetStudioModeEnabled")).toHaveLength(2);
+      expect(server.programSceneName).toBe("Scene Preview");
+      vi.setSystemTime(Date.now() + TBAR_SETTLE_MS + 1);
+      await client.takeTbar(true);
+      expect(calls("SetStudioModeEnabled")).toHaveLength(4);
+      expect(server.programSceneName).toBe("Scene 3");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -107,6 +107,7 @@
     "errorChooseInput": "先に既存の音声ミキサー入力を選んでください。",
     "errorConnectBeforeStudio": "スタジオ用レイアウトの準備前に OBS に接続してください。",
     "errorStudioNotEnabled": "OBS のスタジオモードを有効にできませんでした。",
+    "errorTakeUnconfirmed": "OBS は Next をライブにしませんでした。OBS のプログラムを確認してください。",
     "errorTbarNeedsStudio": "シーン T バーには OBS のスタジオモードが必要です。",
     "errorSceneIndexUnavailableOne": "シーン {n} は利用できません。OBS のシーンは {count} 個です。",
     "errorSceneIndexUnavailableMany": "シーン {n} は利用できません。OBS のシーンは {count} 個です。",

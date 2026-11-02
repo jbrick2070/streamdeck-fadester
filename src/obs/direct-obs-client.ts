@@ -23,6 +23,8 @@ export const OBS_TRANSITION_CURRENT = "__current_transition__";
 export const OBS_TRANSITION_CUT = "__cut__";
 /** After a queue-next take, encoder ticks this long are the end of the old throw, not a new one. */
 export const TBAR_SETTLE_MS = 300;
+/** A take's own Studio Mode events are expected within this time; older counts no longer mask. */
+export const TBAR_STUDIO_EVENT_GRACE_MS = 1500;
 
 export type DirectSceneOperation = "preview" | "cut" | "transition";
 
@@ -322,8 +324,9 @@ export class DirectObsClient extends ObsVendorClient {
   private sceneCycle: {
     token: number; live: string; next: string; transition: string; started: boolean; ended: boolean;
   } | null = null;
-  /** A scene mixer take is leaving and re-entering Studio Mode: its two StudioModeStateChanged events are ours. */
-  private tbarTakeInFlight = false;
+  /** A scene mixer take leaves and re-enters Studio Mode: that many StudioModeStateChanged events are its own. */
+  private tbarStudioEventsToIgnore = 0;
+  private tbarStudioEventsIgnoreUntil = 0;
   /** Encoder ticks that arrive just after a take do not start the next throw before this time. */
   private tbarSettleUntil = 0;
   private mediaCapability: MediaCapability = "unknown";
@@ -695,6 +698,8 @@ export class DirectObsClient extends ObsVendorClient {
   public async takeTbar(queueNextScene = false): Promise<number> {
     return this.queueTbar((generation) => {
       if (!this.catalog.studioMode) throw new DirectObsError(ownText("errorTbarNeedsStudio"), 400);
+      // A press in the settle window is the end of the last take, as the trailing ticks are.
+      if (Date.now() < this.tbarSettleUntil) return Promise.resolve(this.catalog.tbarPosition);
       return this.performTbarTake(queueNextScene, generation);
     });
   }
@@ -724,33 +729,41 @@ export class DirectObsClient extends ObsVendorClient {
       this.emitDirectState();
       return 0;
     }
-    this.tbarTakeInFlight = true;
+    // The take's own two StudioModeStateChanged events (off, then on), whenever they arrive:
+    // OBS broadcasts them before it answers; the fake after.
+    this.tbarStudioEventsToIgnore = 2;
+    this.tbarStudioEventsIgnoreUntil = Date.now() + TBAR_STUDIO_EVENT_GRACE_MS;
+    let left = false;
+    let restoreTried = false;
+    let restored = false;
     try {
       // Never `release: true`: that is the cancel. At the end of a throw this only re-aims the
       // manual transition (its eased value moves by about one percent before the next request);
       // from rest it starts one, and Program keeps showing Live until the step below.
       await this.sendObsRequest("SetTBarPosition", { position: 1, release: false });
       this.requireControlGeneration(generation);
+      left = true;
+      // Nothing may sit between leaving and re-entering: once OBS was asked to leave Studio
+      // Mode it is always asked back, whatever the answer, the connection or the collection does.
       await this.sendObsRequest("SetStudioModeEnabled", { studioModeEnabled: false });
-      this.requireControlGeneration(generation);
-      try {
-        await this.sendObsRequest("SetStudioModeEnabled", { studioModeEnabled: true });
-      } catch {
-        this.catalog.studioMode = false;
-        this.catalog.tbarPosition = 0;
-        this.emitDirectState();
-        throw new DirectObsError(ownText("errorStudioNotEnabled"), 500);
-      }
-      this.requireControlGeneration(generation);
+      restoreTried = true;
+      restored = await this.restoreStudioMode();
     } finally {
-      this.tbarTakeInFlight = false;
+      if (left && !restoreTried) restored = await this.restoreStudioMode();
+      if (left && !restored) {
+        this.tbarStudioEventsToIgnore = 0;
+        this.catalog.tbarPosition = 0;
+        await this.reconcileStudioMode();
+      }
     }
+    if (!restored) throw new DirectObsError(ownText("errorStudioNotEnabled"), 500);
+    this.requireControlGeneration(generation);
     this.catalog.tbarPosition = 0;
     await this.refreshCurrentSceneNames();
     this.requireControlGeneration(generation);
     if (this.catalog.currentProgramScene !== next) {
       this.emitDirectState();
-      throw new DirectObsError(ownText("errorControlChanged"), 500);
+      throw new DirectObsError(ownText("errorTakeUnconfirmed"), 500);
     }
     const previewTarget = queueNextScene ? await this.sceneAfter(next, generation) : live;
     if (previewTarget && previewTarget !== this.catalog.currentPreviewScene) {
@@ -761,6 +774,32 @@ export class DirectObsClient extends ObsVendorClient {
     if (queueNextScene) this.tbarSettleUntil = Date.now() + TBAR_SETTLE_MS;
     this.emitDirectState();
     return 0;
+  }
+
+  /** Re-enters Studio Mode after a take, once more on a failure; true when OBS confirmed it. */
+  private async restoreStudioMode(): Promise<boolean> {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        await this.sendObsRequest("SetStudioModeEnabled", { studioModeEnabled: true });
+        return true;
+      } catch {
+        // once more
+      }
+    }
+    return false;
+  }
+
+  /** After a take that could not confirm Studio Mode is back: ask OBS, and let every cell know. */
+  private async reconcileStudioMode(): Promise<void> {
+    let enabled = false;
+    try {
+      enabled = (await this.sendObsRequest("GetStudioModeEnabled")).studioModeEnabled === true;
+    } catch {
+      enabled = false;
+    }
+    this.catalog.studioMode = enabled;
+    if (!enabled) this.cancelSceneCycle();
+    this.emitDirectState();
   }
 
   /** The scene after `sceneName` in OBS's current order (wrapping), read fresh: OBS does not
@@ -968,8 +1007,16 @@ export class DirectObsClient extends ObsVendorClient {
   protected override handleObsEvent(d: Record<string, unknown>): void {
     const eventType = typeof d.eventType === "string" ? d.eventType : "";
     const eventData = (d.eventData ?? {}) as Record<string, unknown>;
-    // A take leaves and re-enters Studio Mode on purpose: Studio Mode stays on for every cell.
-    if (eventType === "StudioModeStateChanged" && this.tbarTakeInFlight) return;
+    if (eventType === "StudioModeStateChanged") {
+      // A take leaves and re-enters Studio Mode on purpose: Studio Mode stays on for every cell.
+      if (this.tbarStudioEventsToIgnore > 0 && Date.now() < this.tbarStudioEventsIgnoreUntil) {
+        this.tbarStudioEventsToIgnore--;
+        return;
+      }
+      // A late copy of a take's "on" (or any repeat of the known state) changes nothing: Preview
+      // is not cleared and nothing is re-read.
+      if ((eventData.studioModeEnabled === true) === this.catalog.studioMode) return;
+    }
     super.handleObsEvent(d);
 
     if (eventType === "SceneTransitionStarted") {

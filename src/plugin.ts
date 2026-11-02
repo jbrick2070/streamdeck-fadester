@@ -29,7 +29,7 @@ import {
 } from "./types/settings.js";
 import { useStreamDeckLanguage } from "./i18n/load.js";
 import { LanguageChoiceController } from "./i18n/language-choice.js";
-import { GlobalSettingsStore, connectionSaver } from "./settings/global-store.js";
+import { GlobalSettingsStore, START_READ_TIMEOUT_MS, connectionSaver } from "./settings/global-store.js";
 
 // Stream Deck's language, read once before any control draws (PLAN.md 8.4; 8.7 checks a language change).
 // Automatic draws never wait; a fixed choice applies when the stored settings are read (PLAN.md 11.1).
@@ -45,7 +45,7 @@ try {
 const settingsStore = new GlobalSettingsStore({
   getGlobalSettings: () => streamDeck.settings.getGlobalSettings<FadesterGlobalSettings>(),
   setGlobalSettings: (settings) => streamDeck.settings.setGlobalSettings(settings)
-});
+}, START_READ_TIMEOUT_MS, (message) => streamDeck.logger.warn(message));
 
 const enhancedClient = new FadesterClient(DEFAULT_GLOBAL_SETTINGS);
 const store = new FadesterStore(enhancedClient);

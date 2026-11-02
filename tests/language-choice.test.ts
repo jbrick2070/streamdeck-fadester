@@ -13,7 +13,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { EN, PLUGIN_LANGUAGES, STREAM_DECK_LANGUAGES, currentLanguage, onLanguageChanged, setLanguage, t } from "../src/i18n/strings.js";
 import { useStreamDeckLanguage } from "../src/i18n/load.js";
 import { LanguageChoiceController, normalizeChoice, resolveLanguage } from "../src/i18n/language-choice.js";
-import { GlobalSettingsPort, GlobalSettingsStore, connectionChange, connectionSaver } from "../src/settings/global-store.js";
+import { GlobalSettingsPort, GlobalSettingsStore, NOT_READ_MESSAGE, START_READ_TIMEOUT_MS, connectionChange, connectionSaver } from "../src/settings/global-store.js";
 import type { FadesterGlobalSettings } from "../src/types/settings.js";
 import { FadesterClient } from "../src/obs/fadester-client.js";
 import { FadesterStore } from "../src/state/fadester-store.js";
@@ -158,13 +158,23 @@ describe("the global settings store", () => {
     expect(connectionChange({ host: "h", port: 1, password: "", language: "nl" })).toEqual({ host: "h", port: 1, password: "" });
   });
 
-  it("a failed start-up read still lets saves run", async () => {
+  it("a failed start-up read lets saves run, in memory and logged, and writes nothing of its own", async () => {
+    const writes: FadesterGlobalSettings[] = [];
+    const logs: string[] = [];
     const store = new GlobalSettingsStore({
       getGlobalSettings: async () => { throw new Error("no answer"); },
-      setGlobalSettings: async () => {}
-    });
+      setGlobalSettings: async (settings) => { writes.push({ ...settings }); }
+    }, START_READ_TIMEOUT_MS, (message) => { logs.push(message); });
     await expect(store.start()).resolves.toEqual({});
     await expect(store.patch({ language: "nl" })).resolves.toEqual({ language: "nl" });
+    expect(store.snapshot()).toEqual({ language: "nl" });
+    // The whole object is not known: writing { language } as the whole object would erase host, port and password.
+    expect(writes).toEqual([]);
+    expect(logs).toEqual([NOT_READ_MESSAGE]);
+    // Once Stream Deck sends the settings, the held save is merged and written once.
+    store.replace({ ...CONNECTION, other: "kept" });
+    await store.patch({ language: "de" });
+    expect(writes).toEqual([{ ...CONNECTION, other: "kept", language: "nl" }, { ...CONNECTION, other: "kept", language: "de" }]);
   });
 
   it("a start-up read that never answers holds no save once Stream Deck sends the settings", async () => {
@@ -180,12 +190,14 @@ describe("the global settings store", () => {
     expect(writes).toEqual([{ ...CONNECTION, other: "kept", language: "nl" }]);
   });
 
-  it("a start-up read that never answers times out and saves run from what is known", async () => {
+  it("a start-up read that never answers times out; saves then run in memory, logged, and never write only their change", async () => {
     vi.useFakeTimers();
+    const writes: FadesterGlobalSettings[] = [];
+    const logs: string[] = [];
     const store = new GlobalSettingsStore({
       getGlobalSettings: () => new Promise<never>(() => {}),
-      setGlobalSettings: async () => {}
-    }, 50);
+      setGlobalSettings: async (settings) => { writes.push({ ...settings }); }
+    }, 50, (message) => { logs.push(message); });
     const started = store.start();
     const saved = store.patch({ language: "de" });
     await vi.advanceTimersByTimeAsync(49);
@@ -196,25 +208,56 @@ describe("the global settings store", () => {
     await vi.advanceTimersByTimeAsync(1);
     await expect(started).resolves.toEqual({});
     await expect(saved).resolves.toEqual({ language: "de" });
+    await store.patch(connectionChange({ port: 4470 }));
+    expect(store.snapshot()).toEqual({ language: "de", port: 4470 });
+    expect(writes).toEqual([]);
+    expect(logs).toEqual([NOT_READ_MESSAGE, NOT_READ_MESSAGE]);
   });
 
-  it("a start-up read answering after the timeout replaces nothing the store wrote", async () => {
+  it("a start-up read answering after the timeout is merged with the saves held meanwhile, written once, not discarded", async () => {
     vi.useFakeTimers();
+    const writes: FadesterGlobalSettings[] = [];
     let answer!: (settings: FadesterGlobalSettings) => void;
     const store = new GlobalSettingsStore({
       getGlobalSettings: () => new Promise((resolve) => { answer = resolve; }),
-      setGlobalSettings: async () => {}
+      setGlobalSettings: async (settings) => { writes.push({ ...settings }); }
     }, 50);
     const started = store.start();
     await vi.advanceTimersByTimeAsync(50);
     await started;
     await store.patch({ language: "nl" });
-    answer({ language: "de", other: "late" });
+    await store.patch(connectionChange({ password: "new" }));
+    expect(writes).toEqual([]);
+    answer({ ...CONNECTION, language: "de", other: "late" });
     await vi.advanceTimersByTimeAsync(0);
-    expect(store.snapshot()).toEqual({ language: "nl" });
+    // The stored host and port survive; the held language and password stand over the stored ones.
+    const merged = { ...CONNECTION, other: "late", language: "nl", password: "new" };
+    expect(store.snapshot()).toEqual(merged);
+    expect(writes).toEqual([merged]);
+    // Later saves write as usual, from the merged object.
+    await store.patch({ language: "ja" });
+    expect(writes).toEqual([merged, { ...merged, language: "ja" }]);
   });
 
-  it("a start-up read answering after the timeout fills in what is known when nothing was written", async () => {
+  it("a start-up read answering after Stream Deck sent the settings replaces nothing", async () => {
+    vi.useFakeTimers();
+    const writes: FadesterGlobalSettings[] = [];
+    let answer!: (settings: FadesterGlobalSettings) => void;
+    const store = new GlobalSettingsStore({
+      getGlobalSettings: () => new Promise((resolve) => { answer = resolve; }),
+      setGlobalSettings: async (settings) => { writes.push({ ...settings }); }
+    }, 50);
+    const started = store.start();
+    await vi.advanceTimersByTimeAsync(50);
+    await started;
+    store.replace({ ...CONNECTION, language: "ja" });
+    answer({ language: "de", other: "late" });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(store.snapshot()).toEqual({ ...CONNECTION, language: "ja" });
+    expect(writes).toEqual([]);
+  });
+
+  it("a start-up read answering after the timeout fills in what is known when nothing was saved", async () => {
     vi.useFakeTimers();
     let answer!: (settings: FadesterGlobalSettings) => void;
     const store = new GlobalSettingsStore({
@@ -249,6 +292,8 @@ describe("the global settings store", () => {
     expect(source).toContain("const persistSharedConnection = connectionSaver(settingsStore, [enhancedClient, directClient]);");
     expect(source.match(/persistGlobalSettings: persistSharedConnection/g)?.length).toBe(2);
     expect(source).toContain("settingsStore.replace(ev.settings);");
+    // A save held because the start-up read did not answer is logged (RL-1).
+    expect(source).toContain("}, START_READ_TIMEOUT_MS, (message) => streamDeck.logger.warn(message));");
   });
 });
 

@@ -906,8 +906,8 @@ const MUTATIONS: MutationCheck[] = [
     description:
       "Keep saves waiting for the start-up read when Stream Deck sends the settings itself, and verify language-choice.test.ts fails",
     filePath: resolve(ROOT, "src/settings/global-store.ts"),
-    target: "    this.current = copyOf(settings);\n    // A whole settings object is known now: saves need not wait for the start-up read.\n    this.resolveReady();\n",
-    mutated: "    this.current = copyOf(settings);\n",
+    target: "    this.current = { ...stored, ...this.pending };\n    this.resolveReady();\n",
+    mutated: "    this.current = { ...stored, ...this.pending };\n",
     testFile: "tests/language-choice.test.ts"
   },
   {
@@ -926,8 +926,8 @@ const MUTATIONS: MutationCheck[] = [
     description:
       "Let a late start-up read replace what the store wrote, and verify language-choice.test.ts fails",
     filePath: resolve(ROOT, "src/settings/global-store.ts"),
-    target: "if (!this.replaced && !this.written) this.current = copyOf(stored);",
-    mutated: "if (!this.replaced) this.current = copyOf(stored);",
+    target: "if (!this.known) this.learn(copyOf(stored));",
+    mutated: "this.learn(copyOf(stored));",
     testFile: "tests/language-choice.test.ts"
   },
   {
@@ -939,6 +939,16 @@ const MUTATIONS: MutationCheck[] = [
     target: "const persistSharedConnection = connectionSaver(settingsStore, [enhancedClient, directClient]);",
     mutated:
       "const persistSharedConnection = async (settings: FadesterGlobalSettings): Promise<void> => {\n  await streamDeck.settings.setGlobalSettings(settings);\n  enhancedClient.updateSettings(settings);\n  directClient.updateSettings(settings);\n};",
+    testFile: "tests/language-choice.test.ts"
+  },
+  {
+    id: "M-11.1l",
+    step: "Step L.1 (the Language choice on the deck)",
+    description:
+      "Write a save as the whole object while the start-up read has not answered (the write of only its own keys that erases host, port and password), and verify language-choice.test.ts fails",
+    filePath: resolve(ROOT, "src/settings/global-store.ts"),
+    target: "      if (!this.known) {\n        this.pending",
+    mutated: "      if (false) {\n        this.pending",
     testFile: "tests/language-choice.test.ts"
   },
   {

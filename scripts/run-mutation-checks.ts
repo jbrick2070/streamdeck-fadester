@@ -1524,8 +1524,8 @@ const MUTATIONS: MutationCheck[] = [
     description:
       "Drop 'restarts the clip' from the speed-text check and verify the speed-text test fails",
     filePath: resolve(ROOT, "demo-kit/kit_docs.py"),
-    target: "\"Playlister speed is a setting (Properties > Speed)\", \"restarts the clip\",",
-    mutated: "\"Playlister speed is a setting (Properties > Speed)\",",
+    target: "\"Playlister speed is a setting: changing it restarts the clip\"]",
+    mutated: "\"Playlister speed is a setting\"]",
     testFile: "tests/demo-kit-docs.test.ts"
   },
   {
@@ -1794,8 +1794,9 @@ const MUTATIONS: MutationCheck[] = [
     description:
       "Set Play / pause to the browser and verify the VJster test fails",
     filePath: resolve(ROOT, "demo-kit/kit-layouts.json"),
-    target: "{ \"kind\": \"transport\", \"at\": [3, 0], \"settings\": { \"target\": \"obs\" } }",
-    mutated: "{ \"kind\": \"transport\", \"at\": [3, 0], \"settings\": { \"target\": \"browser\" } }",
+    // kit-layouts.json is pretty-printed since K.6.
+    target: "\"kind\": \"transport\",\n        \"at\": [\n          3,\n          0\n        ],\n        \"settings\": {\n          \"target\": \"obs\"",
+    mutated: "\"kind\": \"transport\",\n        \"at\": [\n          3,\n          0\n        ],\n        \"settings\": {\n          \"target\": \"browser\"",
     testFile: "tests/demo-kit-profiles.test.ts"
   },
   {

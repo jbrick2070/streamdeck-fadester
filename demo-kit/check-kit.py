@@ -25,6 +25,8 @@ without touching an installed OBS, the shared test portable or the demo reel's O
    K.6 (kit 1.1): the profile is a Studio Mode layout, so the check turns Studio Mode on for the
    run (studio-mode row; off again at the end if it was off), cues every scene in Preview and
    fades one into Program over the T-bar the way the scene mixer dial does (preview-cues row),
+   takes it live the way the dial's press does in Fadester 0.8.1 (mixer-take row: never a
+   release, which OBS 33.0.1 cancels; leave and re-enter Studio Mode),
    and checks that every real-footage source and Playlister fills the canvas (full-frame row).
 5. Put back everything a row changed (each step on its own, even after a failure), close OBS,
    record the SHA-256 of every file in the portable's config in <dir>/events.json, and check
@@ -488,20 +490,42 @@ class Check:
         self.mixer_take(second, mark)
 
     def mixer_take(self, scene: dict, mark: int) -> None:
-        """The scene mixer's press: SetTBarPosition 1.0 with release, as Fadester's dial sends it. OBS
-        then finishes or cancels the manual transition (its log says which) and Program must be the
-        cued scene. Put back either way: Program on the first scene is the put-back row's job."""
-        self.obs.req("SetTBarPosition", {"position": 1.0, "release": True})
-        self.wait(1.5)
-        text = self.log_text()[mark:]
-        finished = f"Manual transition to scene '{scene['name']}' finished" in text
-        cancelled = "Manual transition cancelled" in text
+        """The scene mixer's press, sent as Fadester sends it (DirectObsClient.performTbarTake,
+        PLAN 12): never a release, which OBS 33.0.1 always cancels. SetTBarPosition 1.0 without
+        release aims the manual transition at Next, leaving Studio Mode makes Program the throw's
+        target in one UI step, Studio Mode is entered again, Program is read back with
+        GetCurrentProgramScene, and Preview gets the previous Live (OBS's own swap). Program must
+        be the cued scene; OBS must log the two Studio Mode lines and no "Manual transition
+        cancelled". Put back either way: Program on the first scene is the put-back row's job."""
         live = self.obs.req("GetCurrentProgramScene")
-        ok = finished and not cancelled and live.get("sceneUuid") == scene["uuid"]
-        self.r.add("mixer-take", ok, f"SetTBarPosition 1.0 released: OBS logged "
-                   f"{'finished' if finished else 'cancelled' if cancelled else 'neither finished nor cancelled'}; "
-                   f"Program is {live.get('sceneName')!r}" + ("" if ok else f" (wanted {scene['name']!r})"),
-                   finished=finished, cancelled=cancelled, program=live.get("sceneName"))
+        self.obs.req("SetTBarPosition", {"position": 1.0, "release": False})
+        try:
+            self.obs.req("SetStudioModeEnabled", {"studioModeEnabled": False})
+        finally:  # once asked to leave, always asked back (Fadester retries once)
+            try:
+                self.obs.req("SetStudioModeEnabled", {"studioModeEnabled": True})
+            except Exception:  # noqa: BLE001 - once more, as Fadester does
+                self.obs.req("SetStudioModeEnabled", {"studioModeEnabled": True})
+        self.wait(1.0)
+        program = self.obs.req("GetCurrentProgramScene")
+        studio = self.obs.req("GetStudioModeEnabled")["studioModeEnabled"]
+        if program.get("sceneUuid") == scene["uuid"] and live.get("sceneUuid"):
+            self.obs.req("SetCurrentPreviewScene", {"sceneUuid": live["sceneUuid"]})
+        left = self.log_has("Switched to regular Preview mode", mark)
+        back = self.log_has("Switched to Preview/Program mode", mark)
+        cancelled = "Manual transition cancelled" in self.log_text()[mark:]
+        ok = program.get("sceneUuid") == scene["uuid"] and studio is True and left and back and not cancelled
+        problems = [] if ok else [p for p, bad in (
+            (f"Program is {program.get('sceneName')!r}, wanted {scene['name']!r}", program.get("sceneUuid") != scene["uuid"]),
+            ("Studio Mode is off after the take", studio is not True),
+            ("OBS did not log \"Switched to regular Preview mode\"", not left),
+            ("OBS did not log \"Switched to Preview/Program mode\"", not back),
+            ("OBS logged \"Manual transition cancelled\"", cancelled)) if bad]
+        self.r.add("mixer-take", ok, "; ".join(problems) or
+                   f"the press as Fadester sends it (T-bar 1.0 unreleased, leave and re-enter Studio Mode): "
+                   f"Program is {program.get('sceneName')!r} by GetCurrentProgramScene, Studio Mode on, OBS logged "
+                   "both Studio Mode lines and no cancel",
+                   program=program.get("sceneName"), studio=studio, left=left, back=back, cancelled=cancelled)
 
     # -- the beat in Visual Sidechain
 

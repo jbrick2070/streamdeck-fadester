@@ -580,6 +580,51 @@ class CheckCleanup(unittest.TestCase):
         self.assertEqual(obs.requests("SetStudioModeEnabled"), [])
         self.assertTrue(obs.studio)
 
+    def test_the_mixer_take_sends_fadesters_press_and_never_a_release(self):
+        # OBS 33.0.1 cancels a T-bar released over obs-websocket; Fadester 0.8.1's press leaves and
+        # re-enters Studio Mode instead (PLAN 12), and the row drives it the same way.
+        log = self.log
+
+        class TakeObs(FakeLiveObs):
+            program = "Kit Welcome"
+
+            def call(self, request, data=None):
+                if request == "GetCurrentProgramScene":
+                    self.sent.append((request, data or {}))
+                    return 100, {"sceneName": self.program, "sceneUuid": IDS["scenes"][
+                        [s["name"] for s in IDS["scenes"]].index(self.program)]["uuid"]}
+                if request == "SetStudioModeEnabled":
+                    with open(log, "a", encoding="utf-8") as handle:
+                        handle.write("Switched to Preview/Program mode\n" if data["studioModeEnabled"]
+                                     else "Switched to regular Preview mode\n")
+                    if not data["studioModeEnabled"] and self.taken:
+                        self.program = "Kit Visuals"
+                if request == "SetTBarPosition" and data["position"] == 1.0:
+                    self.taken = not data["release"]
+                return super().call(request, data)
+
+        obs = TakeObs(log, studio=True)
+        obs.taken = False
+        check = self.check(obs)
+        check.log_has = lambda text, after, timeout_s=5: text in check.log_text()[after:]
+        second = IDS["scenes"][1]
+        check.mixer_take(second, len(check.log_text()))
+        row = check.r.rows[-1]
+        self.assertEqual((row["row"], row["ok"]), ("mixer-take", True), row)
+        self.assertEqual([d["release"] for d in obs.requests("SetTBarPosition")], [False])
+        self.assertEqual([d["studioModeEnabled"] for d in obs.requests("SetStudioModeEnabled")], [False, True])
+        self.assertEqual(obs.requests("SetCurrentPreviewScene"), [{"sceneUuid": IDS["scenes"][0]["uuid"]}])
+        # A cancel in the log fails the row even with Program right.
+        with open(log, "a", encoding="utf-8") as handle:
+            handle.write("Manual transition cancelled\n")
+        obs = TakeObs(log, studio=True)
+        obs.taken = False
+        check = self.check(obs)
+        check.log_has = lambda text, after, timeout_s=5: text in check.log_text()[after:]
+        check.mixer_take(second, 0)
+        self.assertFalse(check.r.rows[-1]["ok"])
+        self.assertIn("Manual transition cancelled", check.r.rows[-1]["detail"])
+
     def test_one_failing_undo_does_not_skip_the_others(self):
         obs = FakeLiveObs(self.log, fail={"SetInputSettings"})
         check = self.check(obs)

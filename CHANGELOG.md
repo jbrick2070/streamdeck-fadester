@@ -7,12 +7,16 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 ### Changed
 
 - The documentation was rewritten for ease of use: README, DECK-LAYOUTS.md, the profile library, VJster's README and INSTALL.md, and this changelog. Engineering records (REQUIREMENTS, PLAN, TESTING) are unchanged.
+- The **Suite Demo Kit 1.1** (`demo-kit/`): real footage (the train, sprint and hurdles clips) full frame instead of the generated loops; one Playlister per scene, with the 50 % copy in its own scene; the **Suite Demo Kit +** profile is a Studio Mode layout: every scene key cues in Preview and dial 1 of every page is the scene mixer (Scene blend).
+
+### Fixed
+
+- The scene mixer's press (and the end of a queue-next throw) takes Next live on OBS 33.0.1. OBS 33.0.1 cancels a T-bar released over obs-websocket and Program snapped back; the press now leaves and re-enters Studio Mode instead, checks that Program is Next, and says so on the dial when it is not. OBS logs "Switched to regular Preview mode" and "Switched to Preview/Program mode" at each take.
 
 ### Planned for 0.8.1 (not yet in the code)
 
 - Visual Panic's Restore key: a 2 s hold with a ring while holding and a green check when OBS accepts it (today 0.8 s).
 - A first-five-minutes hint on the settings page.
-- The T-bar press on OBS 33.0.1.
 
 ## 0.8.0 - 2026-11-01
 

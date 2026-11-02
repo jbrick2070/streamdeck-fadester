@@ -33,7 +33,7 @@ describe("the Language section (R-LANG-1, R-LANG-6)", () => {
     const html = page.all.filter((e) => e.getAttribute("data-i18n") === "languageNote");
     expect(html.map((e) => e.textContent)).toEqual([tables.en.pi.languageNote]);
     expect(tables.en.pi.languageNote).toBe(
-      "Applies to all VJster controls. Stream Deck's own menus, action list, tooltips and dial hints stay in Stream Deck's language."
+      "Applies to all VJster controls. Stream Deck's own menus, action list, tooltips and dial hints stay in Stream Deck's language. The OBS page and the Chrome extension keep their own language."
     );
     expect(tables.en.pi.languageBadge).toBe("all VJster controls");
   });

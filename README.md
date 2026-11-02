@@ -2,6 +2,8 @@
 
 **Fadester for OBS 0.8.0** puts OBS Studio on your Stream Deck: scenes, transitions, sources, filters and audio on keys and dials. It talks to OBS's built-in WebSocket server, so you need no MIDI desk and no extra OBS plugin for the main controls. Fourteen ready-made layouts open from any control's settings page. Nine languages.
 
+![Photo of a Stream Deck + running Fadester for OBS in Dutch: scene keys, two Playlister keys, the red PANIEK (Panic) key, a crossfader strip and a Desktop Audio dial on the touch strip. Several keys still ask for Studio Mode or a Playlister to be picked.](docs/images/streamdeck-fadester-hero.jpg)
+
 Needs Stream Deck 7.6 or later on Windows 10 or later (Stream Deck 6.x is not supported), and OBS Studio with its WebSocket server on (tested with OBS 33). Works on a Stream Deck, Stream Deck +, Stream Deck Mini and Stream Deck Neo.
 
 **Also in this repository:** [VJster](docs/vjster/README.md), a separate Stream Deck plugin that rides the speed of a YouTube video in Chrome or in an OBS browser source.
@@ -28,6 +30,8 @@ All fourteen are in [DECK-LAYOUTS.md](DECK-LAYOUTS.md), key by key. The layout's
 | Try blend modes and layer order | **Creative Layer Lab (Either Mode)** | yes | yes | |
 | Drive a Playlister source (needs Playlister 0.5) | **Playlister Transport + (Either Mode)** | yes | | |
 | Run a VJ set: four pages with Panic on every page | **VJ Rig (Studio Mode)** | yes | yes | |
+
+![The Perform page of the VJ Rig on a Stream Deck +, as the plugin draws it (a render from its own controllers against a running OBS, not a photo): Take, Previous, Next and Random scene keys, Playlister Play / pause and Next, Panic, a crossfader strip and Effect mix, Reactivity and Forest Camera dials.](docs/images/vj-rig-perform-page.png)
 
 Every layout is an editable copy: change, add or remove keys freely. Opening a layout a second time returns to your edited copy. Layouts never contain your password.
 

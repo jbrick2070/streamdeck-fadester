@@ -380,7 +380,7 @@ window.VJSTER_PI_STRINGS = {
       "fieldRate": "Tempo (0.1 tot 16)",
       "fieldStep": "Stap bij draaien",
       "fieldStepSize": "Stap",
-      "keepOn": "Verbinding aan houden",
+      "keepOn": "Verbinding aanhouden",
       "keepOnNote": "OBS laadt de pagina alleen bij het starten of als de bron vernieuwd wordt, dus de verbinding blijft aan zolang Stream Deck draait. Dit gaat vanzelf aan zodra een OBS-pagina voor het eerst verbindt.",
       "languageAuto": "Automatisch (taal van Stream Deck)",
       "languageBadge": "alle VJster-bedieningen",

@@ -69,7 +69,7 @@
       "address": "Adres",
       "copy": "Adres kopiëren",
       "copied": "Gekopieerd",
-      "keepOn": "Verbinding aan houden",
+      "keepOn": "Verbinding aanhouden",
       "keepOnNote": "OBS laadt de pagina alleen bij het starten of als de bron vernieuwd wordt, dus de verbinding blijft aan zolang Stream Deck draait. Dit gaat vanzelf aan zodra een OBS-pagina voor het eerst verbindt.",
       "obsNote": "Voeg in OBS een browserbron toe, vink Lokaal bestand uit en plak dit adres als URL. Zet daarna bij een actie Bediening op OBS-pagina of Beide. Het adres bevat de OBS-paginasleutel van deze computer: houd het uit screenshots en chats.",
       "languageHeading": "Taal",

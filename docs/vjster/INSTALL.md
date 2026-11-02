@@ -103,8 +103,7 @@ npx tsc --noEmit -p vjster-extension
 npx tsc --noEmit -p vjster-page
 npm test
 npx rollup -c vjster-extension/rollup.config.mjs
-npx rollup -c vjster-page/rollup.config.mjs
-npx rollup -c vjster-plugin/rollup.config.mjs
+npm run build:vjster
 node --import tsx scripts/vjster/build-profiles.ts
 npx streamdeck validate com.jbrick2070.vjster.sdPlugin
 npx streamdeck pack com.jbrick2070.vjster.sdPlugin --output release --force

@@ -13,9 +13,11 @@
     "node": ">=24.0.0"
   },
   "scripts": {
-    "build": "npm run build:profiles && rollup -c",
+    "build": "npm run build:profiles && rollup -c && npm run build:vjster",
     "watch": "rollup -c -w",
     "build:profiles": "node --import tsx scripts/build-profiles.ts",
+    "build:vjster": "npm run build:vjster-page && rollup -c vjster-plugin/rollup.config.mjs",
+    "build:vjster-page": "rollup -c vjster-page/rollup.config.mjs",
     "test": "vitest run",
     "test:mutation": "node --import tsx scripts/run-mutation-checks.ts",
     "test:obs-live": "node --import tsx tests/obs-live-conformance.ts",

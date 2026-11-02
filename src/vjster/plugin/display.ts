@@ -293,7 +293,8 @@ export interface KeyModel {
   readonly active: boolean;
   /** Dimmed: the key cannot act now (R-QLT-5, R-BEH-4). */
   readonly dim: boolean;
-  readonly glyph?: "play" | "pause" | "pin" | "up" | "down";
+  /** A symbol in place of the main text; `quality` is the language-neutral default image of the Quality dial. */
+  readonly glyph?: "play" | "pause" | "pin" | "up" | "down" | "quality";
 }
 
 function glyph(kind: NonNullable<KeyModel["glyph"]>, color: string): string {
@@ -308,6 +309,8 @@ function glyph(kind: NonNullable<KeyModel["glyph"]>, color: string): string {
       return `<path d="M72 34 L98 66 L46 66 Z" fill="${color}"/>`;
     case "down":
       return `<path d="M72 92 L98 60 L46 60 Z" fill="${color}"/>`;
+    case "quality":
+      return `<rect x="38" y="42" width="68" height="46" rx="7" fill="none" stroke="${color}" stroke-width="6"/><path d="M57 65 L68 76 L88 55" fill="none" stroke="${color}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>`;
   }
 }
 
@@ -333,7 +336,9 @@ export function mainSize(main: string): number | null {
   return MAIN_SIZES.find((s) => s <= byLength && textWidth(main, s) <= KEY_TEXT_WIDTH) ?? null;
 }
 
+/** The small line under the glyph or main text; nothing when there is no text (the language-neutral default images, PLAN.md 9 L.6). */
 function caption(y: number, sub: string, max: number): string {
+  if (sub === "") return "";
   const size = captionSize(sub, max);
   return text(KEY / 2, y, size ?? max - 7, size === null ? fit(sub, max - 7, KEY_SUB_WIDTH) : sub, C.dim, 'text-anchor="middle"');
 }

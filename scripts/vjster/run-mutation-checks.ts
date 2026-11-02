@@ -865,6 +865,22 @@ export const MUTATIONS: readonly Mutation[] = [
     from: "    if (!editingLink(\"port\")) {",
     to: "    if (true) {",
     tests: ["tests/vjster-pi-language.test.ts"]
+  },
+  {
+    id: "M-V-95",
+    rule: "the default key images carry no word, so they fit every language (PLAN.md 9, L.6)",
+    file: "scripts/vjster/make-plugin-images.ts",
+    from: '  speed: { main: "1x", sub: "", active: true, dim: false },',
+    to: '  speed: { main: "1x", sub: "SPEED", active: true, dim: false },',
+    tests: ["tests/vjster-plugin-images.test.ts"]
+  },
+  {
+    id: "M-V-96",
+    rule: "the plugin build also builds the OBS page into bin/obs, so the pack ships it (PLAN.md 9, L.6)",
+    file: "package.json",
+    from: '"build:vjster": "npm run build:vjster-page && rollup -c vjster-plugin/rollup.config.mjs",',
+    to: '"build:vjster": "rollup -c vjster-plugin/rollup.config.mjs",',
+    tests: ["tests/vjster-plugin-images.test.ts"]
   }
 ];
 

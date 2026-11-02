@@ -556,4 +556,28 @@ the page's pick of `auto`, the language again, a restart with what was saved); e
 back the same, and the restart kept it with no write; each pick was one save keeping port, allow list and token. The
 settings page in `nl` and `ja` was captured only above its OBS section (the section shows the page key). Images and
 `LOG.md`: `C:\midi-fadester\docs\demo-reel\production\v2\captures\deck-lang\`. The operator's device check:
-TESTING.md section 6, with the root `TESTING.md` section 1. Not done: the device check.
+TESTING.md section 6, with the root `TESTING.md` section 1. The device check: done by the operator on 2026-11-01,
+passed on every item run (the L.6 entry).
+*L.6 (2026-11-01, the device check's result and two fixes):* TESTING.md section 6 run by the operator on a Stream
+Deck + (device 4057/132), Stream Deck app 7.6.0.23012, Windows 11, with the b20bd27 build: 6.1, 6.3 and 6.4 passed;
+6.2 and 6.5 not run (no extension connected); the results are under the section. Two should-fixes it found, done
+here. (a) The static images Stream Deck draws inside the dial circles and in the action list
+(`imgs/actions/*/key.svg`, from `scripts/vjster/make-plugin-images.ts`) carried English words ("1x SPEED", "AUTO
+QUALITY"), whatever the plugin's language (R-LANG-1). The key specs now have an empty caption and a number or a
+symbol as the main text (1x, 2x, +0.25, 1080p; the pin and play glyphs; a new `quality` glyph in `display.ts`, a
+screen with a tick, for the Quality dial); `keyImage` draws no caption for an empty `sub`; the generator exports
+`GLYPHS`, `KEYS` and `renderAll()` and writes only when run directly; the icons (`icon.svg`) never had text.
+`tests/vjster-plugin-images.test.ts` checks every SVG of both plugins for a run of two Latin letters in a `<text>`,
+the specs for words, the committed images against a fresh render, and the plugin icon PNGs. (b) The pack had no
+`bin/obs`, so the plugin logged "the OBS page files are missing from the plugin": no npm script ran
+`vjster-page/rollup.config.mjs`. `package.json` now has `build:vjster-page` and `build:vjster` (page, then bundle)
+and the root `build` runs `build:vjster`; the same test fails when a built plugin folder lacks `bin/obs/player.html`
+or `player.js`. INSTALL.md and TESTING.md 2 and 3 say `npm run build:vjster`. Mutations *M-V-95* (a word back in a
+key spec) and *M-V-96* (the page build dropped). Rebuilt and re-packed (`streamdeck validate` passes): the new
+`com.jbrick2070.vjster.streamDeckPlugin` holds `bin/obs/player.html` and `player.js`, checked with Python's zipfile;
+in `C:\Users\jeffr\Documents\StreamDeck-builds\2026-11-01-language-choice\` with `BUILT-FROM.txt`, for the operator to
+re-install (not installed here). Version still 0.1.0.0 (D-L10). After the review: the SVG scan also reads text split
+over `tspan`s and fails on any `tspan`, `title` or `desc`; the icon test says it checks the generators, not the
+pixels; the `bin/obs` file check no longer `skipIf`s on a missing build: the npm-script check is the build-independent
+guard, and the file check fails after any build of either plugin that lacks the page, and checks the bundle is the
+page's own code.

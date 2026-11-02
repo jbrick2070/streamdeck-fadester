@@ -73,9 +73,9 @@
       "keepOnNote": "OBS laadt de pagina alleen bij het starten of als de bron vernieuwd wordt, dus de verbinding blijft aan zolang Stream Deck draait. Dit gaat vanzelf aan zodra een OBS-pagina voor het eerst verbindt.",
       "obsNote": "Voeg in OBS een browserbron toe, vink Lokaal bestand uit en plak dit adres als URL. Zet daarna bij een actie Bediening op OBS-pagina of Beide. Het adres bevat de OBS-paginasleutel van deze computer: houd het uit screenshots en chats.",
       "languageHeading": "Taal",
-      "languageBadge": "alle VJster-bedieningen",
+      "languageBadge": "alle VJster-toetsen en -draaiknoppen",
       "languageAuto": "Automatisch (taal van Stream Deck)",
-      "languageNote": "Geldt voor alle VJster-bedieningen. De eigen menu’s, actielijst, tooltips en draaiknophints van Stream Deck blijven in de taal van Stream Deck. De OBS-pagina en de Chrome-extensie houden hun eigen taal."
+      "languageNote": "Geldt voor alle VJster-toetsen en -draaiknoppen. De eigen menu’s, actielijst, tooltips en draaiknophints van Stream Deck blijven in de taal van Stream Deck. De OBS-pagina en de Chrome-extensie houden hun eigen taal."
     }
   }
 }

@@ -357,7 +357,7 @@
       "notAvailable": "利用不可",
       "languageHeading": "言語",
       "languageAuto": "自動 (Stream Deck の言語)",
-      "languageNote": "Fadester for OBS のすべての操作に適用されます。Stream Deck 自体のメニュー、アクション一覧、ツールチップ、ダイヤルのヒントは Stream Deck の言語のままです。",
+      "languageNote": "Fadester for OBS のすべての操作に適用されます。Stream Deck 自体のメニュー、アクション一覧、ツールチップ、ダイヤルのヒントは Stream Deck の言語のままです。Midi Fadester の 2 つの設定ページは、後のリリースで対応します。",
       "connHeading": "OBS 接続",
       "connWaiting": "OBS を待っています…",
       "connHintOnce": "一度接続すれば、すべての Fadester のボタンとダイヤルで使えます。",

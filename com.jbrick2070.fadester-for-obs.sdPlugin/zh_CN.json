@@ -357,7 +357,7 @@
       "notAvailable": "不可用",
       "languageHeading": "语言",
       "languageAuto": "自动（Stream Deck 的语言）",
-      "languageNote": "适用于所有 Fadester for OBS 控制。Stream Deck 自身的菜单、动作列表、工具提示和旋钮提示仍使用 Stream Deck 的语言。",
+      "languageNote": "适用于所有 Fadester for OBS 控制。Stream Deck 自身的菜单、动作列表、工具提示和旋钮提示仍使用 Stream Deck 的语言。Midi Fadester 的两个设置页面将在后续版本中跟进。",
       "connHeading": "OBS 连接",
       "connWaiting": "正在等待 OBS…",
       "connHintOnce": "连接一次，即可用于所有 Fadester 按钮和旋钮。",

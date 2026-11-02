@@ -357,7 +357,7 @@
       "notAvailable": "사용할 수 없음",
       "languageHeading": "언어",
       "languageAuto": "자동 (Stream Deck 언어)",
-      "languageNote": "Fadester for OBS의 모든 제어에 적용됩니다. Stream Deck 자체의 메뉴, 동작 목록, 도구 설명, 다이얼 힌트는 Stream Deck 언어로 유지됩니다.",
+      "languageNote": "Fadester for OBS의 모든 제어에 적용됩니다. Stream Deck 자체의 메뉴, 동작 목록, 도구 설명, 다이얼 힌트는 Stream Deck 언어로 유지됩니다. Midi Fadester의 두 설정 페이지는 이후 릴리스에서 지원됩니다.",
       "connHeading": "OBS 연결",
       "connWaiting": "OBS 기다리는 중…",
       "connHintOnce": "한 번 연결하면 모든 Fadester 버튼과 다이얼에서 사용합니다.",

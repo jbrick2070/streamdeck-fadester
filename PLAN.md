@@ -1299,7 +1299,8 @@ device check) and a **follow-up** (L.6 to L.8).
   the action list; the action name header over the settings page; the dial hint strip on Stream Deck +; Multi-Action
   step rows; profile names and the app's prompts. (All 17 actions set `UserTitleEnabled: false`, so the app's Title
   field is not shown.) Outside Stream Deck: VJster's Chrome extension and OBS page (D-L7), OBS's own names, Midi
-  Fadester's texts, log lines.
+  Fadester's texts, log lines. For now also the two Midi Fadester settings pages (`pi-common.js`, the plan's own
+  step L.6): they follow in a later release, and the settings note says so (the panel review's should-fix).
 
 ### 11.2 Dutch strings
 

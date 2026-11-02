@@ -288,7 +288,7 @@
       "notAvailable": "niet beschikbaar",
       "languageHeading": "Taal",
       "languageAuto": "Automatisch (taal van Stream Deck)",
-      "languageNote": "Geldt voor alle bedieningen van Fadester for OBS. De eigen menu’s, actielijst, tooltips en draaiknophints van Stream Deck blijven in de taal van Stream Deck.",
+      "languageNote": "Geldt voor alle bedieningen van Fadester for OBS. De eigen menu’s, actielijst, tooltips en draaiknophints van Stream Deck blijven in de taal van Stream Deck. De twee instellingenpagina’s van Midi Fadester volgen in een latere versie.",
       "connHeading": "OBS-verbinding",
       "connWaiting": "Wachten op OBS…",
       "connHintOnce": "Verbind één keer voor alle Fadester-toetsen en -draaiknoppen.",

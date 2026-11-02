@@ -337,6 +337,29 @@ describe("the plugin's own saves never lose a key (R-LANG-8)", () => {
     expect(s.writes[0]).not.toHaveProperty("extensionIds");
   });
 
+  it("a read answered after the settings page cleared the allow list, from before the clear, does not bring the list back", async () => {
+    const before: JsonObject = { port: 50123, extensionIds: IDS, obsToken: TOKEN };
+    let answer!: (stored: JsonObject) => void;
+    const s = store(before, () => new Promise<JsonObject>((resolve) => { answer = resolve; }));
+    const saving = s.saver.save({ language: "de" });
+    await sleep(1); // the read is out
+    s.pageWrite({ port: 50123, extensionIds: [], obsToken: TOKEN });
+    answer(before);
+    await saving;
+    expect(s.writes).toEqual([{ port: 50123, extensionIds: [], obsToken: TOKEN, language: "de" }]);
+    // Before the plugin has applied the stored settings its empty list means nothing: the stored list is kept.
+    const writes: JsonObject[] = [];
+    const early = new GlobalSaver({
+      read: async () => ({ ...before }),
+      write: async (w) => { writes.push({ ...w }); },
+      current: () => globalSettings({}),
+      apply: async () => undefined,
+      applied: () => false
+    });
+    await early.save({ language: "de" });
+    expect(writes[0].extensionIds).toEqual(IDS);
+  });
+
   it("goes on after a failed write", async () => {
     let fail = true;
     let stored: JsonObject = { extensionIds: IDS };

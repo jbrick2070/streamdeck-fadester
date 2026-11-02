@@ -854,8 +854,8 @@ export const MUTATIONS: readonly Mutation[] = [
     id: "M-V-94h",
     rule: "a plugin save not about the allow list never stores an empty one while the plugin knows ids: the known list is in the base (R-LANG-8)",
     file: "src/vjster/plugin/global-sync.ts",
-    from: "      const merged = keepOmitted({ ...stored, ...keepOmitted({}, current), ...change }, current);",
-    to: "      const merged = keepOmitted({ ...stored, ...keepOmitted({}, { ...current, extensionIds: [] }), ...change }, current);",
+    from: "      const base: JsonObject = { ...stored, ...keepOmitted({}, current) };",
+    to: "      const base: JsonObject = { ...stored, ...keepOmitted({}, { ...current, extensionIds: [] }) };",
     tests: ["tests/vjster-language.test.ts"]
   },
   {
@@ -886,8 +886,16 @@ export const MUTATIONS: readonly Mutation[] = [
     id: "M-V-97",
     rule: "a read answered after a settings page's write does not bring back the old port or allow list: the plugin's copy is the base (R-LANG-8)",
     file: "src/vjster/plugin/global-sync.ts",
-    from: "      const merged = keepOmitted({ ...stored, ...keepOmitted({}, current), ...change }, current);",
-    to: "      const merged = keepOmitted({ ...stored, ...change }, current);",
+    from: "      const base: JsonObject = { ...stored, ...keepOmitted({}, current) };",
+    to: "      const base: JsonObject = { ...stored };",
+    tests: ["tests/vjster-language.test.ts"]
+  },
+  {
+    id: "M-V-98",
+    rule: "a read from before the settings page cleared the allow list does not bring the list back once the plugin applied the clear (R-LANG-8)",
+    file: "src/vjster/plugin/global-sync.ts",
+    from: "      if ((this.options.applied?.() ?? true) && \"extensionIds\" in stored) base.extensionIds = [...current.extensionIds];",
+    to: "      if (false) base.extensionIds = [...current.extensionIds];",
     tests: ["tests/vjster-language.test.ts"]
   }
 ];

@@ -57,7 +57,8 @@ const saver = new GlobalSaver({
   read: () => streamDeck.settings.getGlobalSettings<JsonObject>(),
   write: (settings) => streamDeck.settings.setGlobalSettings(settings),
   current: () => current,
-  apply
+  apply,
+  applied: () => startupDone
 });
 
 /** Merge into the stored plugin-wide settings, save, and apply. */

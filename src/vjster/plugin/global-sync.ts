@@ -50,6 +50,8 @@ export interface GlobalSaverOptions {
   current(): GlobalSettings;
   /** Applies a saved copy. */
   apply(settings: GlobalSettings): Promise<void>;
+  /** Whether the plugin has applied the stored settings yet (start-up done); true when absent. */
+  applied?: () => boolean;
   /** How long a read may take before what the plugin knows stands in for it. */
   readTimeoutMs?: number;
 }
@@ -65,14 +67,17 @@ export class GlobalSaver {
    * does not hold, save, and apply. The plugin's copy is the base, not the read: a settings page's write
    * reaches the plugin (onDidReceiveGlobalSettings, then apply) before any read can reflect it, so a read
    * answered after such a write, from before it, must not bring back the old port or allow list; and a
-   * stored allow list that is empty or holds no id never replaces the ids the plugin knows (a deliberate
-   * clear from the settings page reaches the plugin through apply first, so it is not undone).
+   * stored allow list that is empty or holds no id never replaces the ids the plugin knows. Once the plugin
+   * has applied the stored settings, its allow list is the base even when empty: a deliberate clear from the
+   * settings page reaches the plugin through apply first, so a read from before the clear must not undo it.
    */
   save(change: JsonObject): Promise<void> {
     const run = async (): Promise<void> => {
       const stored = await this.readOrNothing();
       const current = this.options.current();
-      const merged = keepOmitted({ ...stored, ...keepOmitted({}, current), ...change }, current);
+      const base: JsonObject = { ...stored, ...keepOmitted({}, current) };
+      if ((this.options.applied?.() ?? true) && "extensionIds" in stored) base.extensionIds = [...current.extensionIds];
+      const merged = keepOmitted({ ...base, ...change }, current);
       await this.options.write(merged);
       await this.options.apply(globalSettings(merged));
     };

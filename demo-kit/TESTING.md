@@ -26,9 +26,13 @@ WM_CLOSE and checks the file OBS saved. Results go to `<dir>\results.jsonl`, scr
 after it are not run (each is recorded as failed, "not run"). After OBS closes, the SHA-256 of
 every file in the portable's config goes into `<dir>\events.json`. The check folder is kept.
 
+The committed script produces 30 rows: `reacts` is four (Look Prism, Look Kaleido, Look Pulse, the Audio
+Modulator) and `shot` five (one per scene); every other line of the table is one row.
+
 | Row | What passes |
 |---|---|
 | zip | the zip holds exactly the files the README's table names |
+| fresh portable | a fresh portable assembled in `<dir>\obs`: bin, data and core copied from the OBS 33 tree and hashed, Playlister and Visual Sidechain from their build folders |
 | import (scripted) | every `./` path became a path inside the unzip folder that exists |
 | plugins | OBS 33 or later; Playlister and Visual Sidechain at least the versions in `kit-ids.json` ("plugins"); no kit plugin or source failed in the OBS log |
 | scenes | the five scenes in the kit's order with the kit's UUIDs; every item id and source UUID |
@@ -50,8 +54,14 @@ every file in the portable's config goes into `<dir>\events.json`. The check fol
 | put-back | every change undone (the first scene, the mutes, the Speed Page's settings), each step on its own |
 | saved | the collection OBS saved on exit, with the unzip folder as `./`, is the kit's template: no value changed, every UUID the kit's |
 
-Last run: 2026-11-01, OBS 33.0.1 portable, Playlister 0.5.0, Visual Sidechain 0.6.0: all 28 rows
-passed (see section 3).
+Last recorded run: 2026-11-01, OBS 33.0.1 portable, Playlister 0.5.0, Visual Sidechain 0.6.0: all 28 rows
+the script had then passed (see section 3). That run predates the `quiet` and `put-back` rows (added
+after it, before dc6a394), so the committed 30-row script has not been run end to end yet. A re-run on
+a fresh portable is pending, with OBS closed and the lock free (section 2):
+
+```
+python demo-kit/check-kit.py run --zip <kit-build folder>\Suite-Demo-Kit-1.0.zip --dir <new check folder>
+```
 
 ## 2. The operator's checklist
 
@@ -129,7 +139,7 @@ password:
 
 | Date | Check | Result |
 |---|---|---|
-| 2026-11-01 | scripted, `check-kit.py run` | all 28 rows passed |
+| 2026-11-01 | scripted, `check-kit.py run` | all 28 rows of the script as it was then (before the `quiet` and `put-back` rows) passed; the 30-row re-run is pending |
 | | 2.1 real Import | operator |
 | | 2.2 Stream Deck + | operator |
 | | 2.3 Speed Page by hand | operator |

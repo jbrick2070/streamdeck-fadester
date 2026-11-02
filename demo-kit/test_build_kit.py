@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 """Unit tests for demo-kit/build-kit.py (the media step). Run by tests/demo-kit-media.test.ts.
 
-They need numpy, opencv-python and Pillow, but not the stock originals: the stock check
+They need numpy and Pillow, but not the stock originals: the stock check
 runs on small files made here. The title tests need Windows' Segoe UI and the ffmpeg tests
 need ffmpeg and ffprobe on PATH; each skips, with the reason, when its need is missing.
 """
@@ -34,13 +34,6 @@ def lavfi(output: Path, video: str, *extra: str) -> None:
     """A short synthetic file made by ffmpeg from a lavfi source."""
     subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i", video,
                     *extra, str(output)], check=True, capture_output=True)
-
-
-def sliding_loop(frame: int) -> np.ndarray:
-    """A cheap seamless loop for the build test: a gradient slid 16 px a frame (3 widths a loop)."""
-    row = np.tile(np.arange(256, dtype=np.uint8), kit.W // 256)
-    img = np.repeat(np.roll(row, 16 * frame)[None, :, None], kit.H, axis=0)
-    return np.repeat(img, 3, axis=2)
 
 
 def write_stock(folder: Path, files: dict[str, bytes], rows: list[dict]) -> None:
@@ -146,28 +139,6 @@ class StockCheck(unittest.TestCase):
         self.assertFalse((out / "media").exists())
 
 
-class Loops(unittest.TestCase):
-    def test_each_loop_is_720p_and_seamless_over_240_frames(self):
-        self.assertEqual((kit.W, kit.H, kit.FPS, kit.COUNT), (1280, 720, 30, 240))
-        for name, fn in kit.LOOPS.items():
-            with self.subTest(name):
-                self.assertEqual(fn(0).shape, (720, 1280, 3))
-                endpoint, ratio = kit.loop_seam(fn)
-                self.assertIsNone(kit.seam_problem(name, endpoint, ratio))
-
-    def test_the_seam_check_catches_a_jump(self):
-        self.assertIsNotNone(kit.seam_problem("x", .5, 1.0))
-        self.assertIsNotNone(kit.seam_problem("x", 0, 3.0))
-        self.assertIsNone(kit.seam_problem("x", 0, 1.0))
-
-    def test_the_loops_move_and_differ(self):
-        firsts = [fn(0) for fn in kit.LOOPS.values()]
-        for fn, first in zip(kit.LOOPS.values(), firsts):
-            self.assertGreater(np.mean(np.abs(first.astype(int) - fn(60).astype(int))), 1)
-        self.assertGreater(np.mean(np.abs(firsts[0].astype(int) - firsts[1].astype(int))), 10)
-        self.assertGreater(np.mean(np.abs(firsts[1].astype(int) - firsts[2].astype(int))), 10)
-
-
 class Beat(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -235,17 +206,25 @@ class Manifest(unittest.TestCase):
             with self.subTest(bad), self.assertRaises(ValueError):
                 kit.make_manifest([{"path": "media/x.mp4", "source": {"file": bad}}], {})
 
+    def test_no_generated_loop_is_made_or_shipped_since_k6(self):
+        self.assertEqual(kit.OUR_FILES, ["kit-beat.ogg", "kit-title.png"])
+        for gone in ("LOOPS", "render_loop", "loop_seam", "cool", "warm", "tide"):
+            self.assertFalse(hasattr(kit, gone), gone)
+        for name in ("kit-motion.mp4", "layer-a.mp4", "layer-b.mp4"):
+            self.assertNotIn(f"media/{name}", kit.kc.MEDIA_FILES)
+            self.assertNotIn(f"media/{name}", [n for n, _ in kit.kd.ORIGINALS])
+
     def test_entries_carry_licence_and_each_stock_clips_source_and_changes(self):
         with tempfile.TemporaryDirectory() as tmp:
             media = Path(tmp)
-            names = [*kit.LOOPS, "kit-beat.ogg", "kit-title.png", "clip-test.mp4", "clip-spare.mp4"]
+            names = ["kit-beat.ogg", "kit-title.png", "clip-test.mp4", "clip-spare.mp4"]
             for name in names:
                 (media / name).write_bytes(name.encode())
             spare = {**CLIP, "out": "clip-spare.mp4", "title": "File:A spare.webm", "shipped": False}
             rows = {"clip-test.mp4": row_for(CLIP["title"], b"a"), "clip-spare.mp4": row_for(spare["title"], b"bb")}
             entries = {e["path"]: e for e in kit.media_entries(media, [CLIP, spare], rows)}
         self.assertEqual(sorted(entries), sorted(f"media/{n}" for n in names))
-        for name in [*kit.LOOPS, "kit-beat.ogg", "kit-title.png"]:
+        for name in kit.OUR_FILES:
             entry = entries[f"media/{name}"]
             self.assertEqual((entry["kind"], entry["author"], entry["license"]),
                              ("original", "Jeffrey A. Brick", "CC BY 4.0"), name)
@@ -265,9 +244,9 @@ class Manifest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp)
             (out / "media").mkdir()
-            for name in ["kit-motion.mp4", "clip-marathon.mp4", "old.txt"]:
+            for name in ["kit-beat.ogg", "clip-marathon.mp4", "old.txt"]:
                 (out / "media" / name).write_bytes(b"x")
-            manifest = {"files": [{"path": "media/kit-motion.mp4"}]}
+            manifest = {"files": [{"path": "media/kit-beat.ogg"}]}
             self.assertEqual(kit.stray_files(out, manifest), ["clip-marathon.mp4", "old.txt"])
             self.assertTrue((out / "media" / "clip-marathon.mp4").exists())  # named, never deleted
 
@@ -327,7 +306,7 @@ class Checks(unittest.TestCase):
 @unittest.skipUnless(HAVE_FFMPEG, NO_FFMPEG)
 @unittest.skipUnless(HAVE_FONTS, NO_FONTS)
 class BuildMedia(unittest.TestCase):
-    """The whole media step on a small synthetic stock folder and one cheap loop."""
+    """The whole media step on a small synthetic stock folder."""
 
     def test_a_build_writes_checked_media_and_its_manifest(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -342,12 +321,12 @@ class BuildMedia(unittest.TestCase):
             clip = {"out": "clip-src.mp4", "title": "File:Src clip.mp4", "start": 1.0, "limit": 10,
                     "shipped": True}
             spare = {**clip, "out": "clip-spare.mp4", "shipped": False}
-            with mock.patch.object(kit, "STOCK_CLIPS", [clip, spare]), \
-                    mock.patch.object(kit, "LOOPS", {"kit-motion.mp4": sliding_loop}):
+            with mock.patch.object(kit, "STOCK_CLIPS", [clip, spare]):
                 manifest = kit.build_media(out, stock)
             paths = [f["path"] for f in manifest["files"]]
-            self.assertEqual(paths, ["media/clip-src.mp4", "media/kit-beat.ogg", "media/kit-motion.mp4",
-                                     "media/kit-title.png"])
+            self.assertEqual(paths, ["media/clip-src.mp4", "media/kit-beat.ogg", "media/kit-title.png"])
+            self.assertEqual(manifest["version"], kit.kd.KIT_VERSION)
+            self.assertEqual(sorted(manifest["tools"]), ["ffmpeg", "numpy", "pillow", "python"])
             self.assertFalse((out / "media" / "clip-spare.mp4").exists())
             written = json.loads((out / "media-manifest.json").read_text(encoding="utf-8"))
             self.assertEqual(written, manifest)
@@ -360,7 +339,7 @@ class BuildMedia(unittest.TestCase):
 
 class CollectionFiles(unittest.TestCase):
     def test_the_collection_points_at_exactly_what_the_media_step_ships(self):
-        made = {f"media/{n}" for n in [*kit.LOOPS, "kit-beat.ogg", "kit-title.png"]}
+        made = {f"media/{n}" for n in kit.OUR_FILES}
         made |= {f"media/{c['out']}" for c in kit.STOCK_CLIPS if c["shipped"]}
         self.assertEqual(set(kit.kc.MEDIA_FILES), made)
 

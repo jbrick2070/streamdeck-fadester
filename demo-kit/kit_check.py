@@ -21,7 +21,8 @@ tests (test_check_kit.py) cover it without an OBS:
 - profile_bindings() and binding_problems(): every key of the two .streamDeckProfile files and
   what it binds to, resolved through an ask(requestType, requestData) callable, the way the
   plugins resolve them (Playlister keys by inputUuid, filter keys by sourceUuid + filterName,
-  layer keys by scene name + item id, scene keys by display position, the beat fader by name).
+  layer keys by scene name + item id, scene keys by display position, the beat fader by name,
+  the scene mixer (an OBS Fader on the T-bar) by Studio Mode being on, which it needs).
 - loaded_versions(), version_problems(): the plugin versions in this run's OBS log against the
   minimums in kit-ids.json ("plugins").
 - auth_string(): obs-websocket 5's authentication.
@@ -232,7 +233,11 @@ def binding_problems(binding: dict, ask, ids: dict) -> list[str]:
         if response is not None and response.get("inputKind") != PLAYLISTER_KIND:
             problems.append(f"{where}: {s.get('inputUuid')} is a {response.get('inputKind')}, not a Playlister")
     elif kind == "obs-fader":
-        if s.get("target") != "input_volume":
+        if s.get("target") == "tbar":
+            studio = need("GetStudioModeEnabled", {})
+            if studio is not None and studio.get("studioModeEnabled") is not True:
+                problems.append(f"{where}: the scene mixer needs Studio Mode, which is off")
+        elif s.get("target") != "input_volume":
             problems.append(f"{where}: fader target {s.get('target')!r} is not checked")
         else:
             need("GetInputVolume", {"inputName": s.get("inputName")})

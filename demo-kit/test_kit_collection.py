@@ -88,8 +88,11 @@ class Ids(unittest.TestCase):
         self.assertIn("name used twice: Kit Note", text)
 
     def test_scene_order_and_beat_everywhere_but_welcome(self):
+        # K.6: six scenes; the 50 % Playlister has its own (cued and faded like any other).
         self.assertEqual([s["name"] for s in IDS["scenes"]],
-                         ["Kit Welcome", "Kit Visuals", "Kit Layers", "Kit Playlister", "Kit Speed Page"])
+                         ["Kit Welcome", "Kit Visuals", "Kit Layers", "Kit Playlister", "Kit Playlister 50%",
+                          "Kit Speed Page"])
+        self.assertEqual([s["index"] for s in IDS["scenes"]], list(range(6)))
         for scene in IDS["scenes"]:
             has_beat = any(i["source"] == "Kit Beat" for i in scene["items"])
             self.assertEqual(has_beat, scene["index"] > 0, scene["name"])
@@ -101,8 +104,8 @@ class Ids(unittest.TestCase):
         source(bad, "Layer B")["filters"] = []
         bad["scenes"][1]["items"].append({"id": 3, "source": "Layer A"})
         bad["scenes"][2]["items"].pop()
-        bad["scenes"][4]["name"] = "Kit Other"
-        bad["scenes"][4]["uuid"] = kc.kit_uuid("Kit Other")
+        bad["scenes"][5]["name"] = "Kit Other"
+        bad["scenes"][5]["uuid"] = kc.kit_uuid("Kit Other")
         bad["sources"].append({"name": "Kit Extra", "uuid": kc.kit_uuid("Kit Extra"), "id": "x",
                                "versioned_id": "x"})
         text = "\n".join(kc.ids_problems(bad))
@@ -176,10 +179,45 @@ class Draft(unittest.TestCase):
         self.assertEqual(self.draft["version"], 2)
         playlister = source(self.draft, "Kit Playlister")["settings"]["items"]
         clips = {i["name"]: i for i in playlister}
-        self.assertEqual(clips["Kit Clips"]["pos"], {"x": 40.0, "y": 250.0})
-        self.assertEqual(clips["Kit Clips 50%"]["bounds"], {"x": 900.0, "y": 506.0})
+        self.assertEqual(sorted(clips), ["Kit Background", "Kit Beat", "Kit Clips", "Kit Credits", "Speed Note 100"])
+        self.assertEqual(clips["Kit Clips"]["pos"], {"x": 0.0, "y": 0.0})
+        self.assertEqual(clips["Kit Clips"]["bounds"], {"x": 1920.0, "y": 1080.0})
+        self.assertEqual(clips["Speed Note 100"]["pos"], {"x": 60.0, "y": 40.0})
         self.assertEqual(clips["Kit Beat"]["bounds_type"], 0)
-        self.assertEqual(source(self.draft, "Kit Playlister")["settings"]["id_counter"], 7)
+        self.assertEqual(source(self.draft, "Kit Playlister")["settings"]["id_counter"], 5)
+
+    def test_the_50_percent_playlister_has_its_own_full_frame_scene(self):
+        # K.6: no 2-up; the 50 % copy is cued and faded like any scene, with its own note and the credits.
+        half = source(self.draft, "Kit Playlister 50%")["settings"]["items"]
+        self.assertEqual([i["name"] for i in half],
+                         ["Kit Background", "Kit Clips 50%", "Speed Note 50", "Kit Credits", "Kit Beat"])
+        self.assertEqual([i["id"] for i in half], [1, 2, 3, 4, 5])
+        clip = next(i for i in half if i["name"] == "Kit Clips 50%")
+        self.assertEqual((clip["pos"], clip["bounds_type"], clip["bounds"]),
+                         ({"x": 0.0, "y": 0.0}, 2, {"x": 1920.0, "y": 1080.0}))
+        self.assertNotIn("Kit Clips 50%", [i["name"] for i in source(self.draft, "Kit Playlister")["settings"]["items"]])
+        for scene_name in ("Kit Playlister", "Kit Playlister 50%"):
+            names = [i["name"] for i in source(self.draft, scene_name)["settings"]["items"]]
+            self.assertIn("Kit Credits", names, scene_name)
+
+    def test_real_footage_fills_the_frame_muted(self):
+        # K.6: the train under the looks, the sprint and the hurdles as the layers; no generated loop.
+        for name, clip in (("Kit Motion", "clip-train"), ("Layer A", "clip-sprint"), ("Layer B", "clip-hurdles")):
+            s = source(self.draft, name)
+            self.assertEqual(s["settings"]["local_file"], f"./media/{clip}.mp4", name)
+            self.assertIs(s["settings"]["looping"], True, name)
+            self.assertIs(s["muted"], True, name)
+        self.assertIs(source(self.draft, "Kit Clips")["muted"], False)
+        self.assertFalse(any("kit-motion" in f or "layer-" in f for f in kc.MEDIA_FILES))
+        for scene_name, item_name in (("Kit Visuals", "Kit Motion"), ("Kit Layers", "Layer A"), ("Kit Layers", "Layer B")):
+            item = next(i for i in source(self.draft, scene_name)["settings"]["items"] if i["name"] == item_name)
+            self.assertEqual((item["pos"], item["bounds"]), ({"x": 0.0, "y": 0.0}, {"x": 1920.0, "y": 1080.0}))
+
+    def test_a_media_item_off_the_full_frame_is_refused(self):
+        with mock.patch.dict(kc.LAYOUT, {"Kit Playlister": {**kc.LAYOUT["Kit Playlister"],
+                                                            "Kit Clips": ((40, 250), (900, 506))}}):
+            problems = kc.ids_problems(IDS)
+        self.assertEqual(problems, ["scene Kit Playlister: Kit Clips is not full frame (K.6: no 2-up)"])
 
 
 class RoundTrip(unittest.TestCase):
@@ -272,10 +310,10 @@ class Template(unittest.TestCase):
 
     def test_an_absolute_path_fails(self):
         def change(c):
-            source(c, "Layer B")["settings"]["local_file"] = "D:\\media\\layer-b.mp4"
+            source(c, "Kit Title")["settings"]["file"] = "D:\\media\\kit-title.png"
         text = self.problems_after(change)
-        self.assertIn("absolute path: 'D:\\\\media\\\\layer-b.mp4'", text)
-        self.assertIn("kit files no source uses: media/layer-b.mp4", text)
+        self.assertIn("absolute path: 'D:\\\\media\\\\kit-title.png'", text)
+        self.assertIn("kit files no source uses: media/kit-title.png", text)
 
     def test_unc_and_slash_paths_fail_but_urls_pass(self):
         def change(c):

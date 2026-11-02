@@ -1,75 +1,105 @@
 # Fadester for OBS
 
-**Fadester for OBS 0.8.0** makes a Stream Deck or Stream Deck + a simple, direct control surface for normal OBS Studio. It connects to OBS’s built-in WebSocket server on port `4455`; you do **not** need an APC40, a MIDI controller, or Midi Fadester to use the main actions.
+**Fadester for OBS 0.8.0** puts OBS Studio on your Stream Deck: scenes, transitions, sources, filters and audio on keys and dials. It talks to OBS's built-in WebSocket server, so you need no MIDI desk and no extra OBS plugin for the main controls. Fourteen ready-made layouts open from any control's settings page. Nine languages.
 
-The plugin requires Stream Deck software 7.6 or later on Windows 10 or later. Stream Deck Neo users can add a read-only Info Bar display for OBS connection and scene status; its regular keys can also use the plugin's key actions.
+Needs Stream Deck 7.6 or later on Windows 10 or later (Stream Deck 6.x is not supported), and OBS Studio with its WebSocket server on (tested with OBS 33). Works on a Stream Deck, Stream Deck +, Stream Deck Mini and Stream Deck Neo.
 
-The default look uses deep black backgrounds, punchy purple controls, and bright yellow accents. Distinct action symbols make scene navigation, source controls, and audio fades easier to tell apart; the scene mixer keeps red Live and green Next labels.
+**Also in this repository:** [VJster](docs/vjster/README.md), a separate Stream Deck plugin that rides the speed of a YouTube video in Chrome or in an OBS browser source.
 
-The starter Scene Desks load your current OBS scene list dynamically. Previous, Next, and Random work without assigning scene names; numbered shortcuts follow positions in the OBS Scenes list. Opening a Studio layout offers to enable Studio Mode and prepare a different Preview scene.
+## First five minutes
 
-The first setup is intentionally small:
+1. **Turn on OBS's WebSocket server.** In OBS: **Tools > WebSocket Server Settings**, tick **Enable WebSocket server**, keep **Enable Authentication** on, and press **Show Connect Info** to see the password.
+2. **Add one Fadester key.** In Stream Deck, drag **Scene & Transition** (category *Fadester for OBS*) onto a key and click it to open its settings. It starts as **Next scene**, so it is ready to press.
+3. **Paste the password once.** Under **OBS connection**, paste the password and press **Save for all controls & test**. On the same computer keep host `127.0.0.1` and port `4455`. It answers *Connected: OBS 33...*; press the key and OBS moves to the next scene. Every Fadester key and dial on every layout now uses this connection; you never type it again.
+4. **Open a ready-made layout.** In the same settings page, expand **Ready-made layouts**, pick one for your deck (**Scene Desk +** on a Stream Deck +, **Scene Desk 15 Keys** on a 15-key deck, **Source Desk Mini** on a Mini) and press **Open current starter layout**. The layout installs itself as an editable profile and your deck switches to it; your other profiles stay. A Studio Mode layout offers **Enable Studio Mode & open current starter layout** instead and prepares Preview for you.
+5. **Press the keys.** Previous, Next and Random already follow your OBS scene list; audio keys and dials already found your main audio and microphone. Change any key in its settings page whenever you like.
 
-1. In OBS, open **Tools → WebSocket Server Settings**, enable the server, and leave password authentication on.
-2. In Stream Deck, add a direct action and enter that password locally in its Property Inspector. The plugin never sends a saved password back to the inspector.
-3. The presets follow your current OBS scenes, sources, and audio automatically. Newly added scene keys start with Next Scene; audio keys and dials start with Main Audio. Choose a fixed target in the inspector when you want a saved manual assignment. Controls act when you press or turn them.
+Stream Deck installs no profile by itself when it installs the plugin: a layout arrives the first time you open it, so your profile list stays yours. You can also import any layout's `.streamDeckProfile` file by double-clicking it ([profile library](profiles/README.md)).
 
-## Direct OBS actions
+## Ready-made layouts
 
-| Action | What it does | Needs |
-|---|---|---|
-| **Source & Layer** | Browse existing scene sources using a dial or Previous/Next keys. Show/hide the deck-selected source. Optional creative controls cycle blend modes or reorder layers. | Any Stream Deck; works in Studio and regular mode. Reordering needs an explicit setting. |
-| **OBS Fader** | Adjust an audio source, or **Blend Live into Next scene**. The scene mixer keeps the original colorful track and orange handle, with LIVE/NEXT scene names. Press to take Next live. | Stream Deck + for a dial; scene blending needs two different scenes in OBS Studio Mode. |
-| **Scene & Transition** | Select a fixed scene, **Next scene**, **Previous scene**, or **Current Preview**; Cut or use a chosen transition. | Cut/Transition work in both modes. Preview selection and Current Preview need Studio Mode. |
-| **OBS Fade** | Fade one OBS mixer input up or down over a chosen time, or instantly. A later volume move cancels that input’s running fade. | Any Stream Deck key. |
-| **Playlister Transport** | **Previous**, **Next**, **Play/Pause**, **Stop**, **Restart**, or **Status** for one chosen Playlister source. The key shows the state OBS observes for that source (and its time while playing or paused), not just that a press was sent. | Any Stream Deck key; Playlister 0.5.0 or later in OBS. |
-| **OBS Filter** | Ride one filter setting on a dial (a Visual Sidechain Shader Filter's Effect mix or Reactivity, a Color Correction's opacity, or any numeric setting you give a range), its press dropping the value while held; or turn a filter on and off, set a value over a time, or step it from a key. Writes are paced and never touch a setting an Audio Modulator or a fader drives. | Any Stream Deck key or Stream Deck + dial. |
-| **Visual Panic** | Visual Sidechain's own **Panic** (instant) and **Restore** (hold 0.8 s), sent through OBS's hotkeys. Panic keys read PANIC SENT until a Restore is accepted; meanwhile no Visual Sidechain filter is written from the deck. | Any Stream Deck key; Visual Sidechain in OBS. |
-| **OBS Scene Info Bar** | Display OBS connection status, the live scene, and the preview scene in Studio Mode (outside Studio Mode it says so). | Stream Deck Neo Info Bar; display only. |
+All fourteen are in [DECK-LAYOUTS.md](DECK-LAYOUTS.md), key by key. The layout's name says which OBS mode it is for: **Studio Mode**, **Regular Mode**, or **Either Mode**.
 
-Source selection is shared across Fadester controls for each scene and lasts until the plugin restarts or the scene collection changes. To save an assignment across restarts, choose a non-browsing Source & Layer action and select **A fixed source** for that action. A fixed action keeps its own assignment; it does not pin the shared selection used by a fader's press. Browsing selects a control target; Show/hide changes its visibility and keeps your stack order. A visible source may still be covered by an opaque layer above it. The list handles top-level sources and treats groups as one layer.
+| You want to | Open | Stream Deck + | 15 keys | Mini |
+|---|---|---|---|---|
+| Switch scenes with Preview, then take them live | **Scene Desk (Studio Mode)** | yes | yes | |
+| Switch scenes directly, no Preview | **Scene Desk (Regular Mode)** | yes | yes | |
+| Show and hide the sources of one scene, fade audio | **Source Desk (Either Mode)**, or the **Half** version that leaves half the deck free | yes | yes | yes |
+| Try blend modes and layer order | **Creative Layer Lab (Either Mode)** | yes | yes | |
+| Drive a Playlister source (needs Playlister 0.5) | **Playlister Transport + (Either Mode)** | yes | | |
+| Run a VJ set: four pages with Panic on every page | **VJ Rig (Studio Mode)** | yes | yes | |
 
-Everyday Source Desk layouts keep layer order fixed. The separate Creative Layer Lab explicitly enables order changes and discrete Normal/Additive/Subtract/Screen/Multiply/Lighten/Darken blend modes. These compositing modes are separate from transitions or a continuous A/B crossfade; generic layer opacity and A/B crossfading remain outside native OBS WebSocket capabilities.
+Every layout is an editable copy: change, add or remove keys freely. Opening a layout a second time returns to your edited copy. Layouts never contain your password.
 
-By default, layer controls follow Preview in Studio Mode and Program in regular mode. A scene's content is shared: when Preview and Program use the same scene, layer edits also affect the live output. The dial and inspector label that scene LIVE.
+## The controls
 
-Use **Cut** for an immediate switch or **Transition** for a scene transition in either mode. Choose **Use OBS current transition**, **Cut**, **Fade**, **Fade to Black**, or any transition installed in OBS. A chosen per-key transition applies to that press and preserves the scene's saved transition settings afterward. Audio fades run independently of scene-transition duration.
+Each control lives in the *Fadester for OBS* category of Stream Deck's action list. Drag one onto a key or dial and open its settings page.
 
-On the manual scene mixer, **Scene loop → Queue the next scene after each transition** is optional. Turn the dial toward NEXT; reaching the end completes the transition. Only after OBS confirms completion does the following scene become NEXT, wrapping from the last scene to the first. You control each fade; the option does not start unattended transitions. It needs Studio Mode and at least two scenes.
+**Scene & Transition** (key). A fixed scene, **Next scene**, **Previous scene**, **Random**, or **Current Preview**; then **Cut** or a chosen transition (OBS's current one, Fade, Fade to Black, or any transition installed in OBS). Cut and Transition work in both modes; Preview and Current Preview need Studio Mode. Numbered scene keys follow positions in your OBS scene list, so they work without setup.
 
-**Dial press** is configurable: take Next live, cycle the selected source's blend mode, restore Normal blend, show/hide that source, or do nothing. **Next blend mode, then take Next live** is a two-step press: change the chosen source in Preview, then finish the scene transition. Choose the source in the inspector or through a Source & Layer control. Scene-loop queuing can follow this combined press too.
+**OBS Fader** (dial on a Stream Deck +). Turn to ride one audio input, or choose **Blend Live into Next scene**: the dial becomes a scene mixer with LIVE and NEXT names, and a press takes Next live. The scene mixer needs Studio Mode and two different scenes. **Dial press** is yours to choose: take Next live, next blend mode on the selected source, Normal blend, show or hide, or nothing. **Scene loop** can queue the next scene after each transition you finish, so you can walk through your scenes with one dial.
 
-## Starting deck layouts
+**OBS Fade** (key). Fade one audio input to 0 % or to 100 % over a chosen time, or instantly. A later move of that input cancels its running fade.
 
-Fourteen importable full, compact, buttons-only, scene, creative, Playlister transport and VJ rig profiles are in [DECK-LAYOUTS.md](DECK-LAYOUTS.md). Every layout name says **Studio Mode**, **Regular Mode**, or **Either Mode**. In a direct action's inspector, expand **Ready-made layouts** and open a compatible current starter layout. Studio layouts offer an explicit setup step to enable Studio Mode and prepare Preview. Scene buttons follow the current OBS list; audio controls automatically select matching Main audio and Microphone inputs. Aux chooses another mixer input, keeping it distinct from Main and Microphone. A missing role or numbered scene stays unavailable until that target exists. You can override any binding in the inspector. The current starter revision opens as an editable profile and preserves older customized profiles. You can also import the `.streamDeckProfile` files yourself. Half-deck layouts leave room for the specialist OBS plugins you already use.
+**Source & Layer** (key or dial). Browse the sources of the current scene with a dial or Previous/Next keys, and show or hide the selected one. The selection is shared by every Fadester control on that scene. In Studio Mode it follows Preview; otherwise it follows the live scene; you can pin it to a fixed scene. Optional creative controls cycle blend modes (Normal, Additive, Subtract, Screen, Multiply, Lighten, Darken) and move a layer up or down; reordering stays off until you turn it on. To fade a layer, put a Color Correction filter on it and ride its opacity with **OBS Filter**.
 
-## Optional Midi Fadester integration
+**OBS Filter** (key or dial). Ride one filter setting on a dial: a Visual Sidechain Shader Filter's Effect mix or Reactivity, a Color Correction's opacity, or most numeric settings you give a range (modes, file paths, colours and a few safety settings are off limits). Press the dial to drop the value while held. From a key: turn a filter on or off, glide a setting to a value over a time, or step it. Choose the source and its filter once in the settings page. Writes are gentle and never touch a setting an Audio Modulator or a fader already drives.
 
-The two actions explicitly labelled **Midi Fadester … (optional)** keep the older enhanced shared-slot workflow for people who use Midi Fadester with an APC40 or another MIDI controller. They provide fixed slots, shared controller profiles, advanced filter bindings, and Midi Fadester’s A/B mixing behavior.
+**Playlister Transport** (key). **Previous**, **Next**, **Play/pause**, **Stop**, **Restart** or **Status** for one [Playlister](https://github.com/jbrick2070/obs-playlister) source. The key shows what OBS reports (Playing, Paused, Stopped, with the time), not just that a press was sent. Needs Playlister 0.5 or later in OBS; choose the source in the key's settings page.
 
-That integration is separate from the normal direct OBS controls:
+**Visual Panic** (key). [Visual Sidechain](https://github.com/jbrick2070/visual-sidechain)'s own **Panic** (instant) and **Restore** (hold 0.8 s), sent through OBS's hotkeys. After Panic the key reads **PANIC SENT** until a Restore is accepted or the OBS connection drops; meanwhile no Visual Sidechain filter is written from the deck. Needs Visual Sidechain in OBS.
 
-- Direct actions never require a MIDI controller or probe for Midi Fadester.
-- Existing saved Midi Fadester actions keep their original slots and behavior.
-- The direct inspectors show the integration only as an optional note, so a new Stream Deck user is not sent into MIDI setup.
+**OBS Scene Info Bar** (Stream Deck Neo). Shows the connection, the live scene and, in Studio Mode, the preview scene. Display only.
 
-## Connection and safety
-
-Set up the OBS connection once for all Fadester keys, dials, layouts, and the Neo Info Bar. After setup the inspector says **Password saved for all Fadester buttons and dials**; host, port, and password stay under **Edit shared connection**. **Save for all controls & test** updates that shared connection. A saved password is never echoed back to the browser Property Inspector. Other plugins manage their own connection settings separately.
-
-When OBS is unavailable, an action alerts and performs at most one reconnect nudge every two seconds. Wrong-password status tells you exactly where to correct it in OBS without exposing the password.
+**Midi Fadester Fader (optional)** and **Midi Fadester Auto-fade (optional)**. For people who use [Midi Fadester](https://github.com/jbrick2070/midi-fadester) with an APC40 or another MIDI controller: a dial and a key for one of its slots. Everything else in this plugin works without Midi Fadester.
 
 ## Languages
 
-Fadester for OBS follows Stream Deck's language: English, German, Spanish, French, Japanese, Korean, Simplified
-Chinese and Traditional Chinese (the languages Stream Deck offers). OBS's own words (Studio Mode, Preview, Program,
-Scene, Source, Transition) follow OBS's translation for that language, so the deck matches OBS. Your scene, source
-and filter names, and the texts Midi Fadester sends, are shown as they are. The translations were drafted by an AI
-model (Claude) and reviewed by a second one (Gemini), whose corrections were taken; no native speaker has checked them
-yet; the texts of the VJ rig (OBS Filter, Visual Panic, the accents) are the newest drafts and still await that second review. If
-something reads wrong, please open an issue or a pull request: the files are
-`com.jbrick2070.fadester-for-obs.sdPlugin/<language>.json`, with `en.json` as the English source. (VJster's languages
-are described in `docs/vjster/INSTALL.md`.)
+Fadester for OBS speaks nine languages: English, German, Spanish, French, Japanese, Korean, Simplified Chinese, Traditional Chinese and Dutch. Open any control's settings page and choose under **Language**. **Automatic** follows Stream Deck's language. The choice applies to every Fadester key, dial and settings page at once and survives restarts. Stream Deck's own menus, action list, tooltips and dial hints stay in Stream Deck's language; the two Midi Fadester settings pages follow in a later release.
+
+OBS's own words (Studio Mode, Preview, Program, Scene, Source, Transition) use OBS's translation, so the deck matches OBS. Your scene, source and filter names are shown as they are.
+
+The translations were drafted by an AI model (Claude) and reviewed by a second one (Gemini); no native speaker has checked them yet. If something reads wrong, please open an issue or a pull request: the files are `com.jbrick2070.fadester-for-obs.sdPlugin/<language>.json`, with `en.json` as the English source. VJster's languages are in [docs/vjster/INSTALL.md](docs/vjster/INSTALL.md).
+
+## Optional OBS plugins
+
+None of these is needed for scenes, transitions, sources, audio or filters.
+
+| Plugin | What it adds on the deck |
+|---|---|
+| [Playlister](https://github.com/jbrick2070/obs-playlister) 0.5 or later | The Playlister Transport keys and layout. |
+| [Visual Sidechain](https://github.com/jbrick2070/visual-sidechain) | Visual Panic, and the Effect mix and Reactivity dials of the VJ Rig. |
+| [Midi Fadester](https://github.com/jbrick2070/midi-fadester) | The two actions labelled *(optional)*, for an APC40 or another MIDI controller. |
+
+The [Suite Demo Kit](demo-kit/README.md) is one OBS scene collection with media and two Stream Deck + profiles that show the plugins working together.
+
+## When something is off
+
+| The key or dial says | What to do |
+|---|---|
+| **OBS is not running or websocket is off** | Start OBS. In **Tools > WebSocket Server Settings** tick **Enable WebSocket server**. Check the port is 4455 (or the one you saved under **Edit shared connection**). |
+| **Wrong password** | In OBS, **Tools > WebSocket Server Settings > Show Connect Info**; paste the password into any Fadester control's **OBS connection** and press **Save for all controls & test**. The plugin stops retrying until you do, so OBS's log stays clean. |
+| **Scene T-bar needs OBS Studio Mode**, **Preview selection needs OBS Studio Mode** | Turn on Studio Mode in OBS (**View > Studio Mode**), or open the layout again with **Enable Studio Mode & open current starter layout**. The Regular Mode layouts have no Preview or T-bar. |
+| **Choose a different Next scene** | The scene mixer needs Preview and Program to be two different scenes. Pick another scene in Preview. |
+| **Choose a source**, **Choose a filter**, **Choose a Playlister** | That key or dial is not bound yet. Open its settings page and pick the source, filter or Playlister. VJ Rig and Playlister Transport keys ship unbound on purpose. |
+| **Visual Sidechain missing**, **Playlister missing** | Install that OBS plugin, or switch to the scene collection that has the source. |
+| **PANIC SENT** | Visual Sidechain's Panic is on. Hold **Restore** for 0.8 s to bring the effects back. |
+| A key moved the live output in Studio Mode | A scene's content is shared: when Preview and Program show the same scene, layer edits change both. The dial labels that scene LIVE. |
+| A numbered scene key does nothing | OBS has fewer scenes than the number. Add a scene, or pin the key to a named scene in its settings page. |
+
+When OBS goes away, the plugin reconnects by itself and every key shows the same one-line reason.
+
+## Documentation
+
+- [DECK-LAYOUTS.md](DECK-LAYOUTS.md): every ready-made layout, key by key.
+- [profiles/README.md](profiles/README.md): the profile library, importing by hand, and how the files are built.
+- [docs/vjster/README.md](docs/vjster/README.md) and [docs/vjster/INSTALL.md](docs/vjster/INSTALL.md): VJster.
+- [CHANGELOG.md](CHANGELOG.md): what changed in each version.
+- [demo-kit/README.md](demo-kit/README.md): the Suite Demo Kit.
+- [API-CONTRACT.md](API-CONTRACT.md): the optional `midi-fadester` vendor API.
+- [FEATURE-AUDIT.md](FEATURE-AUDIT.md): what OBS's WebSocket can and cannot do (why there is no generic layer opacity or A/B crossfade).
+- [PUBLISHING.md](PUBLISHING.md): packaging and Marketplace checklist (for the maintainer).
+- [LICENSE](LICENSE): GNU General Public License v2.0.
 
 ## Development
 
@@ -80,14 +110,10 @@ npm run validate
 npm run pack
 ```
 
-`npm run pi:harness [-- --page auto-fade-key]` serves the legacy optional Midi Fadester inspectors against the fake OBS server for development. Direct OBS controls are covered by the raw WebSocket client and action tests.
+`npm run pi:harness [-- --page auto-fade-key]` serves the optional Midi Fadester settings pages against the fake OBS server. The engineering record is in `REQUIREMENTS.md`, `PLAN.md` and `TESTING.md`.
 
-## Documentation
+## Credits and licence
 
-- [DECK-LAYOUTS.md](DECK-LAYOUTS.md) — recommended full, compact, and all-button layouts.
-- [API-CONTRACT.md](API-CONTRACT.md) — optional `midi-fadester` vendor API contract.
-- [FEATURE-AUDIT.md](FEATURE-AUDIT.md) — feature tradeoffs and constraints.
-- [PUBLISHING.md](PUBLISHING.md) — packaging and Marketplace checklist.
-- [LICENSE](LICENSE) — GNU General Public License v2.0.
+Fadester for OBS is written with AI coding tools under human direction, review and verification on real hardware. It is free software under the [GNU General Public License v2.0](LICENSE).
 
 > **Disclaimer:** Fadester for OBS is an independent third-party plugin and is not made, endorsed, or supported by the OBS Project or Elgato.

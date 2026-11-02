@@ -1,67 +1,52 @@
-# Ready-made Fadester layouts
+# The Fadester layout library
 
-The plugin includes fourteen importable layouts for a Stream Deck +, a 15-key Stream Deck, and a Stream Deck Mini. They require Stream Deck 7.1 or later and use Fadester's direct OBS actions. Every profile name includes **Studio Mode**, **Regular Mode**, or **Either Mode**. Each profile is editable and has its own name. The current starter revision opens as an updated profile while older profiles and their customizations remain available.
+Fourteen ready-made layouts ship inside the plugin for the Stream Deck +, the 15-key Stream Deck and the Stream Deck Mini. The easy way to open one is from any Fadester control's settings page: expand **Ready-made layouts**, choose, press **Open current starter layout**. This page is for importing a file by hand and for the people who build the files. What each layout does, key by key, is in [DECK-LAYOUTS.md](../DECK-LAYOUTS.md).
 
-## Choose a starting layout
+## The fourteen files
 
-For one OBS scene with many sources, start with **Source Desk**. Its source-selection controls share the selected source, so browsing with a dial or key updates the target used by Show/hide. These everyday layouts preserve the existing layer order.
-
-| Profile | OBS mode | Hardware | Keys / dials used | Purpose |
+| Layout | Mode | Deck | Keys and dials used | What it is for |
 |---|---|---|---|---|
-| [Source Desk +](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-source-desk-v3.streamDeckProfile) | **Either** | Stream Deck + | 7 keys / 4 dials | Source browsing, visibility, three mixer inputs, mic/music fade pairs. |
-| [Half Source Desk +](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-source-half-v2.streamDeckProfile) | **Either** | Stream Deck + | 4 keys / 2 dials | Source browsing, visibility, and one mixer input, with half the deck free. |
-| [Source Desk 15 Keys](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-source-desk-v4.streamDeckProfile) | **Either** | 15-key Stream Deck | 9 keys | Source browsing and three audio fade pairs, with six free keys. |
-| [Half Source Desk 15 Keys](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-source-half-v2.streamDeckProfile) | **Either** | 15-key Stream Deck | 7 keys | Source browsing, visibility, and mic/music fade pairs, with eight free keys. |
-| [Source Desk Mini](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/mini-source-desk-v2.streamDeckProfile) | **Either** | Stream Deck Mini | 5 keys | Previous/next source, visibility, and an audio fade pair. |
-| [Creative Layer Lab +](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-creative-layer-lab-v2.streamDeckProfile) | **Either** | Stream Deck + | 8 keys / 4 dials | Dedicated blend and layer-order experiments, plus source selection and audio. |
-| [Creative Layer Lab 15 Keys](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-creative-layer-lab-v2.streamDeckProfile) | **Either** | 15-key Stream Deck | 12 keys | The same creative layer controls through buttons, plus mic/music fade pairs. |
-| [Scene Desk + — Studio](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-scene-desk-v2.streamDeckProfile) | **Studio** | Stream Deck + | 8 keys / 3 dials | Previous/next/random Preview scenes, Cut, Transition, Scene 1, and mixer/T-bar dials. |
-| [Scene Desk 15 Keys — Studio](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-scene-desk-v2.streamDeckProfile) | **Studio** | 15-key Stream Deck | 13 keys | Previous/next/random Preview scenes, Cut and Transition, Scene 1–4, and audio fade pairs. |
-| [Scene Desk + — Regular](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-scene-regular-v3.streamDeckProfile) | **Regular** | Stream Deck + | 8 keys / 3 dials | Transition directly to previous/next/random scenes or Scene 1–3; mixer dials. |
-| [Scene Desk 15 Keys — Regular](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-scene-regular-v2.streamDeckProfile) | **Regular** | 15-key Stream Deck | 13 keys | Direct and random transitions, previous/next Cut keys, Scene 1–4, and audio fade pairs. |
-| [Playlister Transport +](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-playlister-transport-v1.streamDeckProfile) | **Either** | Stream Deck + | 6 keys / 0 dials | Previous, next, play / pause, stop, restart and status for one Playlister source; choose the source in each key's inspector. |
-| [VJ Rig +](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-vj-rig-v1.streamDeckProfile) | **Studio** | Stream Deck + | 4 pages of 8 keys / 4 dials | Perform, Layers, Visuals and Scenes pages: scenes and the T-bar, Playlister clips, layers and blends, Visual Sidechain looks and their mix and reactivity, Visual Panic bottom right on every page, Next page bottom left. Choose each filter and Playlister in its inspector. |
-| [VJ Rig 15 Keys](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-vj-rig-v1.streamDeckProfile) | **Studio** | 15-key Stream Deck | 4 pages of 15 keys | The same four pages through buttons, with Restore and Panic on the same two keys on every page. |
+| [Source Desk +](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-source-desk-v3.streamDeckProfile) | Either | Stream Deck + | 7 keys, 4 dials | Browse sources, show/hide, three mixer dials, mic and music fade pairs. |
+| [Half Source Desk +](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-source-half-v2.streamDeckProfile) | Either | Stream Deck + | 4 keys, 2 dials | The same for one mixer input, with half the deck free. |
+| [Source Desk 15 Keys](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-source-desk-v4.streamDeckProfile) | Either | 15 keys | 9 keys | Browse sources and three audio fade pairs; six keys free. |
+| [Half Source Desk 15 Keys](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-source-half-v2.streamDeckProfile) | Either | 15 keys | 7 keys | Browse sources, show/hide, mic and music fade pairs; eight keys free. |
+| [Source Desk Mini](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/mini-source-desk-v2.streamDeckProfile) | Either | Mini | 5 keys | Previous and next source, show/hide, one audio fade pair. |
+| [Creative Layer Lab +](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-creative-layer-lab-v2.streamDeckProfile) | Either | Stream Deck + | 8 keys, 4 dials | Blend modes and layer order, plus source selection and audio. |
+| [Creative Layer Lab 15 Keys](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-creative-layer-lab-v2.streamDeckProfile) | Either | 15 keys | 12 keys | The same through buttons, plus mic and music fade pairs. |
+| [Scene Desk +](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-scene-desk-v2.streamDeckProfile) | Studio | Stream Deck + | 8 keys, 3 dials | Previous, next and random Preview scene, Cut, Transition, Scene 1, mixer dials and the T-bar. |
+| [Scene Desk 15 Keys](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-scene-desk-v2.streamDeckProfile) | Studio | 15 keys | 13 keys | Previous, next and random Preview scene, Cut, Transition, Scene 1-4, audio fade pairs. |
+| [Scene Desk +, Regular](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-scene-regular-v3.streamDeckProfile) | Regular | Stream Deck + | 8 keys, 3 dials | Straight to the previous, next, random or numbered scene (1-3); mixer dials. |
+| [Scene Desk 15 Keys, Regular](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-scene-regular-v2.streamDeckProfile) | Regular | 15 keys | 13 keys | The same with Scene 1-4, Cut previous and Cut next, audio fade pairs. |
+| [Playlister Transport +](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-playlister-transport-v1.streamDeckProfile) | Either | Stream Deck + | 6 keys | Previous, next, play/pause, stop, restart and status for one Playlister source. |
+| [VJ Rig +](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-vj-rig-v1.streamDeckProfile) | Studio | Stream Deck + | 4 pages of 8 keys and 4 dials | Perform, Layers, Visuals and Scenes pages; Panic on the same key on every page. |
+| [VJ Rig 15 Keys](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-vj-rig-v1.streamDeckProfile) | Studio | 15 keys | 4 pages of 15 keys | The same four pages through buttons. |
 
-**Creative Layer Lab** deliberately enables the reorder setting for its layer-up/down controls. Its blend dial/buttons alter an OBS layer's blend mode; that is a creative compositing choice, not a transition between scenes. Keep a Source Desk profile for the everyday fixed-order workflow.
+Every profile name carries its mode: **Studio Mode**, **Regular Mode** or **Either Mode**. No file holds a host, a port, a password or a device serial number.
 
-## Import and configure
+## Import a file by hand
 
-In any direct Fadester action's inspector, expand **Ready-made layouts**, choose a layout for the connected device, and click **Open layout**. The first open creates the current starter's named, editable profile; later opens return to that profile with your edits. An updated starter has a separate revision, so opening it preserves older profiles and their customizations. The files above also support manual import.
+1. Open the `.streamDeckProfile` for your deck. Stream Deck imports it as a new profile.
+2. Open one Fadester key on it and, under **OBS connection**, paste OBS's WebSocket password once and press **Save for all controls & test**. Every Fadester control on every profile shares that connection.
+3. Press the keys. Scene keys follow your OBS scene list; Music, Mic and Aux controls have found your mixer inputs. Change any of them in the key's settings page; keep both keys of a fade pair on the same input.
+4. Playlister Transport and VJ Rig keys ship unbound: open each one's settings page once and choose the source, filter or Playlister.
+5. Put your other actions on the empty keys and dials.
 
-1. Open the `.streamDeckProfile` matching your device. Stream Deck offers to import it as a new profile.
-2. Open one Fadester action and connect it to OBS in its shared connection panel.
-3. Try the automatic audio controls. Music/Desktop/Audio use the main audio role, Mic uses a microphone role, and Aux uses another available input. You can override any control with a specific OBS mixer input; set both keys of a fade pair to the same input. If a suitable input is unavailable, choose one in the inspector.
-4. Try **Previous**, **Next**, and **Random** in any Scene Desk layout immediately; they use your existing OBS scene list without configuring one key per scene. Numbered shortcuts also refer to the top-to-bottom list positions: the Studio Plus layout has Scene 1, the Regular Plus layout has Scene 1–3, and the 15-key layouts have Scene 1–4. Cut/Transition controls are already configured too.
-5. The Playlister Transport keys start unbound: open each key's inspector and choose the Playlister source by name (the key keeps following it after a rename).
-6. Put your preferred existing actions on the empty keys or dials.
+Opening a layout from the settings page does the same, and the second time returns you to your edited copy. A later release's updated layout opens as its own profile; your old one and its edits stay.
 
-Source Desk follows Preview while Studio Mode is on and Program while regular mode is active. The action inspector can pin it to Program or a specific scene. OBS scene-item changes apply to that scene wherever it is used, including Preview and Program if both refer to the same scene.
+## Next to other plugins
 
-The **Studio Mode** Scene Desk profiles use Preview and a separate take-live control; their T-bar needs Studio Mode. The **Regular Mode** Scene Desk profiles send the chosen scene directly to Program using the selected transition and contain no Preview or T-bar controls. The audio and source layouts labelled **Either Mode** support both modes.
+The half layouts leave real empty keys for the OBS actions and tools you already use: recording, replay, chat, a transform. A profile can reference another plugin's actions, but Stream Deck does not carry that plugin inside the profile, so these layouts ship with Fadester actions only and the rest is yours to add.
 
-Scene navigation follows the current top-to-bottom OBS list, including added or reordered scenes, so the same Previous/Next/Random keys work with ten or more scenes. Random avoids the live Program scene when another scene is available. In Studio layouts it also avoids the current Preview scene when another non-live candidate exists. You can pin any shortcut to a specific named scene later. Numbered shortcuts track their list positions; if OBS has fewer scenes, the extra numbered shortcuts have no scene to select.
+## For developers: rebuilding the files
 
-Previous/Next scene navigation wraps at the ends of the scene list. The Scene T-bar's optional automatic queue setting prepares the next Preview scene after a completed transition.
-
-## Mixing with other plugins
-
-The half-deck profiles leave real empty positions, ready for the OBS actions and other tools you already use. Recording, replay, chat, or a specialist transform action can live beside Fadester. A profile can reference another plugin's actions, but Elgato does not transfer the plugin itself with a profile, so these starter downloads keep external dependencies out of the main setup.
-
-This is compatible layout composition, not copied third-party code. A future hybrid preset should identify each plugin dependency and use its published action settings, with its own setup instructions.
-
-## Rebuilding the files
-
-`layouts.json` is the reviewable source of truth. Run:
+`layouts.json` in this folder is the source of truth. Run:
 
 ```powershell
 node --import tsx scripts/build-profiles.ts
 ```
 
-The builder writes the `.streamDeckProfile` archives into the plugin's `profiles/` folder, plus `catalog.json` and `manifest-entries.json` here. It uses deterministic IDs and archives, rejects invalid positions/action IDs, and does not read or edit installed user profiles. It stores no host, password, device serial number, or global settings.
+The builder writes the `.streamDeckProfile` archives into the plugin's `profiles/` folder, plus `catalog.json` and `manifest-entries.json` here. It uses fixed IDs so the output is the same every time, rejects invalid positions and action IDs, and never reads or edits installed user profiles.
 
-The profile ZIP contains a root `*.sdProfile/manifest.json` with `Device`, `Name`, `Pages`, and `Version: "3.0"`; each page has `Controllers`, `Icon`, and `Name`, with actions keyed by `column,row`. Device model values come from the default profiles shipped with the locally installed Stream Deck app.
+Each profile ZIP holds a root `*.sdProfile/manifest.json` with `Device`, `Name`, `Pages` and `Version: "3.0"`; each page has `Controllers`, `Icon` and `Name`, with actions keyed by `column,row`. Device model values come from the default profiles the installed Stream Deck app ships.
 
-## Distribution references
-
-Elgato's [Profiles SDK guide](https://docs.elgato.com/streamdeck/sdk/guides/profiles/) documents bundling exported profiles in the plugin and registering them in the manifest. The [manifest profile reference](https://docs.elgato.com/streamdeck/sdk/references/manifest/#profile) defines the device type, editability, and install behavior. The generated manifest entries use `AutoInstall: false` and `DontAutoSwitchWhenInstalled: true` so the user chooses when to install or activate a preset. Elgato's [profile guidance](https://docs.elgato.com/stream-deck/profiles/getting-started/) explains that other plugins used by a profile must be installed separately.
+Elgato's [Profiles SDK guide](https://docs.elgato.com/streamdeck/sdk/guides/profiles/) covers bundling exported profiles in a plugin, and the [manifest profile reference](https://docs.elgato.com/streamdeck/sdk/references/manifest/#profile) the device type, editability and install behaviour. The manifest entries use `AutoInstall: false` and `DontAutoSwitchWhenInstalled: true`, so Stream Deck installs no layout when it installs the plugin; a layout is installed the first time it is opened from a settings page, and the plugin then switches the deck to it. Elgato's [profile guidance](https://docs.elgato.com/stream-deck/profiles/getting-started/) explains that other plugins a profile uses must be installed separately.

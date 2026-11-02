@@ -1,12 +1,52 @@
-# Fadester for OBS — ready-made layouts
+# Fadester for OBS: ready-made layouts
 
-Start with **Source Desk (Either Mode)** when you use one OBS scene containing many sources. For complete scene changes, choose **Scene Desk (Studio Mode)** or **Scene Desk (Regular Mode)** to match OBS. The separate **Creative Layer Lab (Either Mode)** adds blend and order controls for experimentation.
+Fourteen layouts for the Stream Deck +, the 15-key Stream Deck and the Stream Deck Mini. Every one is an editable profile; the name says which OBS mode it is for.
 
-These are real `.streamDeckProfile` downloads, ready to import as editable profiles. The [complete profile library](profiles/README.md) includes fourteen layouts for Stream Deck +, 15-key Stream Deck, and Stream Deck Mini. Every profile name clearly labels its OBS mode. Opening the current starter for the first time creates its updated named profile; later opens return to that editable profile. Older profiles and their customizations remain available.
+## Open one
 
-## Source Desk + — Either Mode
+In any Fadester control's settings page, expand **Ready-made layouts**, choose a layout for the deck you have, and press **Open current starter layout**. A Studio Mode layout offers **Enable Studio Mode & open current starter layout** and prepares Preview for you. The second time, the same button returns to your edited copy.
 
-[Import Source Desk +](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-source-desk-v3.streamDeckProfile). Source-selection keys and dial share the selected source. This layout leaves source order fixed.
+Or double-click a `.streamDeckProfile` file linked below; Stream Deck imports it as a new profile. The [profile library](profiles/README.md) lists every file.
+
+Set up the OBS connection once, on any key (README, *First five minutes*). Every layout uses it.
+
+## Which one
+
+| You want to | Layout | Mode |
+|---|---|---|
+| Browse scenes in Preview, then take one live with Cut, Transition or the T-bar dial | [Scene Desk](#scene-desk-studio-mode) | Studio |
+| Switch scenes directly, no Preview | [Scene Desk, Regular](#scene-desk-regular-mode) | Regular |
+| One scene with many sources: show, hide and fade audio | [Source Desk](#source-desk-either-mode) | Either |
+| The same with half the deck free for other plugins | [Half Source Desk](#half-source-desk-either-mode) | Either |
+| Blend modes and layer order | [Creative Layer Lab](#creative-layer-lab-either-mode) | Either |
+| Play, pause and skip a Playlister source | [Playlister Transport +](#playlister-transport--either-mode) | Either |
+| A VJ set: scenes, layers, looks and Panic on four pages | [VJ Rig](#vj-rig-studio-mode) | Studio |
+
+**Studio Mode** layouts use Preview and a separate take-live control. **Regular Mode** layouts send the chosen scene straight to Program with OBS's current transition. **Either Mode** layouts work in both.
+
+What every layout already knows:
+
+- **Scenes.** Previous, Next and Random follow your OBS scene list from top to bottom, including scenes you add or reorder, and wrap at the ends. Random avoids the live scene (and, in Studio layouts, the Preview scene). Scene 1, 2, 3... are positions in that list; a number beyond the end does nothing until you add a scene. Pin any key to a named scene in its settings page.
+- **Audio.** Music keys and dials pick your main audio input, Mic picks a microphone, Aux picks another input. Choose a specific OBS mixer input in the key's settings page whenever you want; keep both keys of a fade pair on the same input.
+- **Sources.** Source controls follow Preview in Studio Mode and the live scene otherwise, and share the selected source. A scene's content is shared, so when Preview and Program show the same scene, layer edits change both.
+
+## Scene Desk (Studio Mode)
+
+[Scene Desk +](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-scene-desk-v2.streamDeckProfile) for the Stream Deck +, [Scene Desk 15 Keys](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-scene-desk-v2.streamDeckProfile) for the 15-key deck.
+
+Browse scenes in Preview with **Previous**, **Next** or **Random**, then press **Cut** or **Transition** to take Preview live. The Plus layout adds a **Scene 1** key and the scene mixer dial (the T-bar: turn from LIVE to NEXT, press to take Next live); the 15-key layout has **Scene 1-4**. Both have audio controls.
+
+The T-bar's optional **Scene loop** queues the next scene after each transition you finish, so one dial walks through all your scenes.
+
+## Scene Desk (Regular Mode)
+
+[Scene Desk +, Regular](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-scene-regular-v3.streamDeckProfile) and [Scene Desk 15 Keys, Regular](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-scene-regular-v2.streamDeckProfile).
+
+**Previous**, **Next**, **Random** and the numbered keys change Program at once with OBS's current transition. The Plus layout has **Scene 1-3** and mixer dials; the 15-key layout has **Scene 1-4** plus **Cut previous** and **Cut next**. No Preview and no T-bar.
+
+## Source Desk (Either Mode)
+
+[Source Desk +](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-source-desk-v3.streamDeckProfile) for the Stream Deck +. Layer order stays fixed.
 
 | Column 1 | Column 2 | Column 3 | Column 4 |
 |---|---|---|---|
@@ -14,11 +54,15 @@ These are real `.streamDeckProfile` downloads, ready to import as editable profi
 | Music down | Music up | Mic down | Mic up |
 | **Dial:** Select source | **Dial:** Music | **Dial:** Mic | **Dial:** Aux |
 
-Audio controls start with automatic input roles: Music/Desktop/Audio use the main audio input, Mic uses a microphone, and Aux uses another available input. You can select a specific OBS mixer input in the Stream Deck app at any time; keep both keys of a fade pair on the same input. The free key is ready for a recording, replay, or specialist action from another plugin.
+The free key is ready for a recording, replay or chat action from another plugin.
 
-## Half Source Desk + — Either Mode
+Buttons only: [Source Desk 15 Keys](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-source-desk-v4.streamDeckProfile) has source selection and visibility on the first row, then three audio fade pairs (main audio, microphone, Aux), with six keys free. [Source Desk Mini](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/mini-source-desk-v2.streamDeckProfile) uses five of six keys: previous and next source, show/hide, one audio fade pair.
 
-[Import Half Source Desk +](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-source-half-v2.streamDeckProfile). It uses four keys and two dials; the other four keys and two dials are genuinely empty.
+A fade pair is a **0 %** key and a **100 %** key, so every audio job works without a dial.
+
+## Half Source Desk (Either Mode)
+
+[Half Source Desk +](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-source-half-v2.streamDeckProfile): four keys and two dials; the other four keys and two dials are empty for the OBS actions you already use.
 
 | Column 1 | Column 2 | Column 3 | Column 4 |
 |---|---|---|---|
@@ -26,17 +70,11 @@ Audio controls start with automatic input roles: Music/Desktop/Audio use the mai
 | Show/hide selected | Audio down | Free | Free |
 | **Dial:** Select source | **Dial:** Audio | **Dial:** Free | **Dial:** Free |
 
-Use the audio dial to bring the level back up. Reserve the free half for the proven OBS actions you already rely on.
+Turn the audio dial to bring the level back up. [Half Source Desk 15 Keys](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-source-half-v2.streamDeckProfile) leaves eight of fifteen keys free.
 
-## Buttons-only Source Desk — Either Mode
+## Creative Layer Lab (Either Mode)
 
-The [15-key Source Desk](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-source-desk-v4.streamDeckProfile) keeps source selection and visibility on the first row, then provides three audio fade pairs for main audio, microphone, and Aux, leaving six keys free. The [half version](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-source-half-v2.streamDeckProfile) leaves eight of fifteen keys free. The [Mini version](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/mini-source-desk-v2.streamDeckProfile) uses five of six keys for previous/next source, visibility, and one audio fade pair.
-
-Each fade pair has a `0 %` key and a `100 %` key, so every essential audio job works without a dial. The pairs use automatic audio roles immediately after connecting, and each can be changed to a specific mixer input in the Stream Deck app.
-
-## Creative Layer Lab — Either Mode
-
-The [Stream Deck + lab](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-creative-layer-lab-v2.streamDeckProfile) and [15-key buttons-only lab](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-creative-layer-lab-v2.streamDeckProfile) add the advanced controls explicitly.
+[Creative Layer Lab +](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-creative-layer-lab-v2.streamDeckProfile) and [Creative Layer Lab 15 Keys](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-creative-layer-lab-v2.streamDeckProfile).
 
 | Column 1 | Column 2 | Column 3 | Column 4 |
 |---|---|---|---|
@@ -44,23 +82,11 @@ The [Stream Deck + lab](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-c
 | Layer down | Layer up | Previous blend | Next blend |
 | **Dial:** Select layer | **Dial:** Blend mode | **Dial:** Layer order | **Dial:** Audio |
 
-The lab's reorder actions have **Allow reordering** enabled. Blend mode is a discrete compositing choice such as Normal, Additive, Screen, or Multiply; it is separate from a scene transition or a smooth fade. Use Normal blend to return the selected layer to its usual compositing mode.
+This is the one layout whose layer keys may reorder your sources (**Allow reordering** is on). Blend mode is a compositing choice (Normal, Additive, Screen, Multiply...), not a transition and not a smooth fade. **Normal blend** puts the selected layer back to normal. Keep a Source Desk for everyday use.
 
-## Scene Desk — Studio Mode
+## Playlister Transport + (Either Mode)
 
-The [Stream Deck + Scene Desk](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-scene-desk-v2.streamDeckProfile) and [15-key Scene Desk](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-scene-desk-v2.streamDeckProfile) use a familiar Studio Mode workflow: browse scenes in Preview with **Previous**, **Next**, or **Random**, then press a separate Cut or Transition key to take Preview live. The Plus profile also has a **Scene 1** shortcut; the 15-key profile provides **Scene 1–4**. These use positions in your existing OBS scene list, so they work immediately after connecting.
-
-## Scene Desk — Regular Mode
-
-The [Stream Deck + Scene Desk — Regular Mode](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-scene-regular-v3.streamDeckProfile) and [15-key Scene Desk — Regular Mode](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-scene-regular-v2.streamDeckProfile) change Program directly when you press **Previous**, **Next**, **Random**, or a chosen scene shortcut. They use OBS's current transition and include audio fade pairs; the Plus profile adds mixer dials. There are no Preview or T-bar controls in these layouts.
-
-The 15-key regular profile also provides **Cut previous** and **Cut next** keys for immediate scene changes. The Plus layout provides **Scene 1–3** shortcuts; the 15-key layout provides **Scene 1–4**.
-
-Scene navigation follows the OBS scene list from top to bottom and updates when that list changes. You can browse ten or more scenes with the same Previous/Next/Random keys; a separate key for every scene is optional. Random avoids the live Program scene when another scene is available. In Studio layouts it also avoids the current Preview scene when another non-live candidate exists. Numbered shortcuts track their list positions; select a named scene in the action inspector if you prefer a shortcut to stay pinned. A numbered shortcut beyond the end of the list has no scene to select.
-
-## Playlister Transport + — Either Mode
-
-[Import Playlister Transport +](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-playlister-transport-v1.streamDeckProfile). Six keys drive one [Playlister](https://github.com/jbrick2070/obs-playlister) source through OBS's own media controls; each key's inspector chooses the source by name, and the key follows it through renames (the binding is the source's UUID).
+[Playlister Transport +](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-playlister-transport-v1.streamDeckProfile). Six keys for one [Playlister](https://github.com/jbrick2070/obs-playlister) source (Playlister 0.5 or later in OBS).
 
 | Column 1 | Column 2 | Column 3 | Column 4 |
 |---|---|---|---|
@@ -68,11 +94,13 @@ Scene navigation follows the OBS scene list from top to bottom and updates when 
 | Restart | Status | Free | Free |
 | **Dial:** Free | **Dial:** Free | **Dial:** Free | **Dial:** Free |
 
-The keys show what OBS reports: the observed state (Playing, Paused, Stopped, Ended, Empty) with the position and duration while playing or paused, "Play sent" or "Pause sent" while a toggle waits for confirmation, and Busy when four presses are queued. Play / pause decides from a fresh reading of the state, Stop first drops presses not yet sent, and nothing is sent while the source is missing, not a Playlister, or OBS is unreachable. Status only watches.
+The keys ship unbound: open each key's settings page once and choose the Playlister source by name. The key keeps following it if you rename it. Each key shows what OBS reports (Playing, Paused, Stopped, Ended, Empty, with the time), *Play sent* or *Pause sent* while a press waits for OBS, and *Busy* when presses are queued. Nothing is sent while the source is missing or OBS is unreachable. Status only watches.
 
-## VJ Rig — Studio Mode
+## VJ Rig (Studio Mode)
 
-[Import VJ Rig +](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-vj-rig-v1.streamDeckProfile) or [VJ Rig 15 Keys](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-vj-rig-v1.streamDeckProfile). Four pages, each in its own accent: **Perform** (brass), **Layers** (teal), **Visuals** (magenta), **Scenes** (violet). Elgato's own Next page key sits bottom left and the red **PANIC** key bottom right on every page; no Cut or Transition key is ever next to Panic. Panic sends [Visual Sidechain](https://github.com/jbrick2070/visual-sidechain)'s own Panic through OBS's hotkeys at once; **Restore** needs a 0.8 s hold. Panic keys then read **PANIC SENT** until a Restore is accepted, and no Visual Sidechain filter is written from the deck meanwhile. Every filter and Playlister control ships unbound: choose the source and its filter (or the Playlister) once in its inspector.
+[VJ Rig +](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-vj-rig-v1.streamDeckProfile) or [VJ Rig 15 Keys](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-vj-rig-v1.streamDeckProfile). Four pages, each with its own colour: **Perform** (brass), **Layers** (teal), **Visuals** (magenta), **Scenes** (violet). **Next page** sits bottom left and the red **PANIC** key bottom right on every page; no Cut or Transition key is ever next to Panic.
+
+Panic sends [Visual Sidechain](https://github.com/jbrick2070/visual-sidechain)'s own Panic through OBS's hotkeys at once; **Restore** needs a 0.8 s hold. Panic keys then read **PANIC SENT** until a Restore is accepted. Every filter and Playlister control ships unbound: choose the source and its filter (or the Playlister) once in its settings page.
 
 Stream Deck +, one row per page (keys top row / bottom row; dials):
 
@@ -83,14 +111,19 @@ Stream Deck +, one row per page (keys top row / bottom row; dials):
 | Visuals | Look 1, Look 2, Look 3, Restore / Next page, Still, Full react, PANIC | Mix B, React B, Mix C, React C |
 | Scenes | Transition, Scene 1, Scene 2, Scene 3 / Next page, Cut preview, Scene 4, PANIC | Scene blend, Music, Aux, Mic |
 
-15 keys (three rows each): Perform — Prev scene, Next scene, Random scene, Cut preview, Transition / Mix drop, Mix full, React −, React +, Restore / Next page, Prev clip, Play / pause, Next clip, PANIC. Layers — Prev layer, Next layer, Show / hide, Prev blend, Next blend / A fade out, A fade in, B fade out, B fade in, Restore / Next page, Music down, Music up, Normal blend, PANIC. Visuals — Look 1 to Look 5 / Still, Full react, React −, React +, Restore / Next page, Mix −, Mix +, Mix drop, PANIC. Scenes — Scene 1 to Scene 5 / Cut preview, Scene 6, Scene 7, Scene 8, Restore / Next page, Transition, Prev scene, Next scene, PANIC.
+15 keys, three rows per page:
 
-The effect dials ride a Visual Sidechain Shader Filter's Effect mix or Reactivity; pressing one drops it while held and returns it on release. Look keys turn a filter on and off. The layer fades ride a **Color Correction** filter's opacity, so add one to each layer source you want to fade. Every write moves at most a tenth of the range at a time and is refused when an Audio Modulator or a fader already drives the setting.
+| Page | Row 1 | Row 2 | Row 3 |
+|---|---|---|---|
+| Perform | Prev scene, Next scene, Random scene, Cut preview, Transition | Mix drop, Mix full, React -, React +, Restore | Next page, Prev clip, Play / pause, Next clip, PANIC |
+| Layers | Prev layer, Next layer, Show / hide, Prev blend, Next blend | A fade out, A fade in, B fade out, B fade in, Restore | Next page, Music down, Music up, Normal blend, PANIC |
+| Visuals | Look 1, Look 2, Look 3, Look 4, Look 5 | Still, Full react, React -, React +, Restore | Next page, Mix -, Mix +, Mix drop, PANIC |
+| Scenes | Scene 1, Scene 2, Scene 3, Scene 4, Scene 5 | Cut preview, Scene 6, Scene 7, Scene 8, Restore | Next page, Transition, Prev scene, Next scene, PANIC |
 
-## Mode and setup notes
+The effect dials ride a Visual Sidechain Shader Filter's Effect mix or Reactivity; press one to drop it while held. Look keys turn a filter on and off. The layer fades ride a **Color Correction** filter's opacity, so add one to each layer source you want to fade. Writes move gently and are refused when an Audio Modulator or a fader already drives the setting.
 
-Source controls automatically follow Preview in Studio Mode and Program in regular mode. You can pin an action to Program or a fixed scene in its inspector. Editing a scene item affects that scene wherever OBS uses it, including both Preview and Program when they share a scene.
+## Good to know
 
-Use the Scene Desk version that matches the mode shown in its profile name. Audio and source controls labelled Either Mode work in both. Choose **Open layout** to create or open the current named, editable starter. Updated starters have their own revision, so opening one preserves older profiles and their edits. Presets do not install or switch automatically. See the [library setup guide](profiles/README.md) for import steps and dependencies.
-
-Previous/Next scene navigation wraps at the ends of the scene list. The Scene T-bar's optional automatic queue setting prepares the next Preview scene after a completed transition.
+- Opening a layout creates a named, editable profile. Your edits stay; an updated layout in a later release opens as its own profile and leaves the old one alone.
+- Layouts contain no host, port or password. The shared OBS connection lives in the plugin.
+- Half layouts leave real empty keys for other plugins. A profile can reference another plugin's actions, but Stream Deck does not carry that plugin with the profile, so install it separately.

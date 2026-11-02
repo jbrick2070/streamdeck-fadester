@@ -14,11 +14,11 @@ python demo-kit/build-kit.py zip --out <kit-build folder>
 python demo-kit/check-kit.py run --zip <kit-build folder>\Suite-Demo-Kit-1.0.zip --dir <new check folder>
 ```
 
-It refuses to start while any `obs64` runs, and takes the OBS lock (`C:\Users\jeffr\obs-run.lock`)
-like every other OBS run on this machine. It never touches an installed OBS, the shared test
+It refuses to start while any `obs64` runs, and takes the OBS lock (`--lock <lock file>`, by default
+the operator's `kit_obs.DEFAULT_LOCK`) like every other OBS run on this machine. It never touches an installed OBS, the shared test
 portable or the demo reel's OBS. It unzips into `<dir>\kit`, assembles a fresh portable in
-`<dir>\obs` (bin, data and core copied read-only from `C:\Users\jeffr\OBS-Studio-33-Portable` and
-hashed, with Playlister and Visual Sidechain from their build folders), imports the collection by
+`<dir>\obs` (bin, data and core copied read-only from `--core <the OBS 33 portable>`, by default the
+operator's `kit_obs.DEFAULT_CORE`, and hashed, with Playlister and Visual Sidechain from their build folders), imports the collection by
 OBS's own Import rules, starts that OBS, runs the rows, puts back what it changed, closes OBS with
 WM_CLOSE and checks the file OBS saved. Results go to `<dir>\results.jsonl`, screenshots to
 `<dir>\shots\`. Nothing is played aloud: `Kit Beat` and the Speed Page are muted for the run
@@ -66,7 +66,7 @@ python demo-kit/check-kit.py run --zip <kit-build folder>\Suite-Demo-Kit-1.0.zip
 ## 2. The operator's checklist
 
 Do these once per release, on this machine. Close every OBS first; another agent may hold the
-OBS lock (`C:\Users\jeffr\obs-run.lock`): wait until it is gone. For 2.1, which starts OBS by
+OBS lock (<lock file>, `kit_obs.DEFAULT_LOCK`): wait until it is gone. For 2.1, which starts OBS by
 hand, then take the lock yourself so no agent starts an OBS meanwhile, from the repository
 folder:
 

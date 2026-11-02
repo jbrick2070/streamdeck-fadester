@@ -288,4 +288,5 @@ are now a number or a symbol only, and `tests/vjster-plugin-images.test.ts` keep
 no `bin/obs`, so it logged "the OBS page files are missing from the plugin": `npm run build` did not run the page
 build. It does now (`build:vjster`), and the re-packed `com.jbrick2070.vjster.streamDeckPlugin` holds
 `bin/obs/player.html` and `player.js`. It is in `C:\Users\jeffr\Documents\StreamDeck-builds\2026-11-01-language-choice\`
-(with `BUILT-FROM.txt`) for the operator to re-install; 3.1 and 6.2 can then be run with the extension and OBS.
+(the operator's folder, with `BUILT-FROM.txt`) for the operator to re-install; 3.1 and 6.2 can then be run with the
+extension and OBS.

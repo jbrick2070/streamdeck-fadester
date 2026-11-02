@@ -109,14 +109,13 @@ python demo-kit/build-kit.py zip --out <folder>     # Suite-Demo-Kit-1.0.zip fro
 python demo-kit/check-kit.py run --zip <zip> --dir <new folder>   # the install-check (TESTING.md)
 ```
 
-Three inputs live only on the operator's machine and are given by flags, whose defaults are that
-machine's paths (the plan accepts this): the stock originals the media are cut from (`--stock` of
-`media` and `credits`, default `C:\midi-fadester\docs\demo-reel\production\v2\media\stock`), the
-official OBS 33 portable tree a fresh portable is copied from (`--core` of `roundtrip` and
-`check-kit.py run`, default `C:\Users\jeffr\OBS-Studio-33-Portable`, with the Playlister and Visual
-Sidechain build folders of `kit_obs.DEFAULT_PLUGINS`), and the OBS run lock every OBS run on that
-machine takes (`--lock`, default `C:\Users\jeffr\obs-run.lock`). On another machine pass the flags;
-nothing else in the build depends on where it runs.
+Three inputs live only on the operator's machine and are given by flags, whose defaults (in
+`build-kit.py` and `kit_obs.py`) are that machine's paths; the plan accepts this. The stock originals
+the media are cut from: `--stock <your stock folder>` of `media` and `credits`. The official OBS 33
+portable tree a fresh portable is copied from: `--core <the OBS 33 portable>` of `roundtrip` and
+`check-kit.py run`, with the Playlister and Visual Sidechain build folders of `kit_obs.DEFAULT_PLUGINS`.
+The lock file every OBS run on that machine takes: `--lock <lock file>`. On another machine pass the
+flags; nothing else in the build depends on where it runs.
 
 `kit-ids.json` holds every name and fixed id the profiles bind to; `kit-template.json` is the
 collection that ships as `Suite Demo Kit.json`; `kit-layouts.json` holds the two profiles' keys.

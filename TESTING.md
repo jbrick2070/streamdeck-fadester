@@ -18,9 +18,8 @@ change language without it.
 
 1.1 **Install the two builds.** The release files built from branch `sd-language` at b20bd27 (step L.4, the
 parent of the L.5 commit; L.5 changed docs only) for this check: `com.jbrick2070.fadester-for-obs.streamDeckPlugin` and
-`com.jbrick2070.vjster.streamDeckPlugin`, left in the build session's scratchpad folder
-`C:\Users\jeffr\AppData\Local\Temp\claude\C--Users-jeffr-Documents-obs-playlister\8f128e4d-248a-4661-8b45-ed4e10bd7d5d\scratchpad\lang-builds`.
-That folder is temporary: copy the two files somewhere of your own before installing. If it is gone, check out
+`com.jbrick2070.vjster.streamDeckPlugin`, left in the build session's scratchpad folder `lang-builds` (the
+operator's folder). That folder is temporary: copy the two files to <your builds folder> before installing. If it is gone, check out
 b20bd27, run `npm run build`, and pack each plugin folder without its `logs` with `npx streamdeck pack <folder>`.
 If either plugin is linked for development, unlink it first
 (`npx streamdeck unlink <uuid>`). Double-click each file. Expected: Stream Deck installs Fadester for OBS
@@ -91,5 +90,5 @@ Found on the way, fixed in step L.6 (PLAN.md 11.5): the static key images Stream
 circles and in its action list carried English words ("1x SPEED", "AUTO QUALITY"); they are now a number or a symbol
 only (Fadester's images never had words). And VJster's pack lacked its OBS page (`bin/obs`), see
 `docs/vjster/TESTING.md` section 6. The re-packed files (both plugins; Fadester's bytes unchanged) are in
-`C:\Users\jeffr\Documents\StreamDeck-builds\2026-11-01-language-choice\` (`BUILT-FROM.txt` says what they were built
-from) and in the scratchpad `lang-builds` folder of 1.1; the operator re-installs VJster from there.
+`C:\Users\jeffr\Documents\StreamDeck-builds\2026-11-01-language-choice\` (the operator's folder; `BUILT-FROM.txt` says what
+they were built from) and in the scratchpad `lang-builds` folder of 1.1; the operator re-installs VJster from there.

@@ -852,10 +852,10 @@ export const MUTATIONS: readonly Mutation[] = [
   },
   {
     id: "M-V-94h",
-    rule: "a plugin save not about the allow list never stores an empty one while the plugin knows ids (R-LANG-8)",
+    rule: "a plugin save not about the allow list never stores an empty one while the plugin knows ids: the known list is in the base (R-LANG-8)",
     file: "src/vjster/plugin/global-sync.ts",
-    from: "      if (!(\"extensionIds\" in change) && current.extensionIds.length > 0 && globalSettings(stored).extensionIds.length === 0) {",
-    to: "      if (false) {",
+    from: "      const merged = keepOmitted({ ...stored, ...keepOmitted({}, current), ...change }, current);",
+    to: "      const merged = keepOmitted({ ...stored, ...keepOmitted({}, { ...current, extensionIds: [] }), ...change }, current);",
     tests: ["tests/vjster-language.test.ts"]
   },
   {

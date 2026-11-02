@@ -1127,26 +1127,7 @@ const MUTATIONS: MutationCheck[] = [
     mutated: "\"-c:v\", \"libx264\",",
     testFile: "tests/demo-kit-media.test.ts"
   },
-  {
-    id: "M-K1.9",
-    step: "Demo kit step 1 (the loops have an 8 s period)",
-    description:
-      "Make the loop period one frame longer and verify the seam test fails",
-    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
-    target: "return TAU * frame / COUNT",
-    mutated: "return TAU * frame / (COUNT + 1)",
-    testFile: "tests/demo-kit-media.test.ts"
-  },
-  {
-    id: "M-K1.10",
-    step: "Demo kit step 1 (a loop with a seam jump is refused)",
-    description:
-      "Check only the endpoint, not the seam step, and verify the jump test fails",
-    filePath: resolve(ROOT, "demo-kit/build-kit.py"),
-    target: "if endpoint > .01 or not .8 <= ratio <= 1.25:",
-    mutated: "if endpoint > .01:",
-    testFile: "tests/demo-kit-media.test.ts"
-  },
+  // M-K1.9 and M-K1.10 (the generated loops' period and seam) went with the loops in kit 1.1 (K.6).
   {
     id: "M-K1.11",
     step: "Demo kit step 1 (the beat loops seamlessly)",
@@ -1769,11 +1750,11 @@ const MUTATIONS: MutationCheck[] = [
   },
   {
     id: "M-K4.11",
-    step: "Demo kit step 4 (the kit is regular mode (D-5))",
+    step: "Demo kit step 4 (the kit is Studio Mode (K.6))",
     description:
-      "Drop the regular-mode check and verify the studio-mode test fails",
+      "Drop the Studio Mode check and verify the regular-mode test fails",
     filePath: resolve(ROOT, "scripts/build-kit-profiles.ts"),
-    target: "if (preset.obsMode !== \"regular\") problems.push",
+    target: "if (preset.obsMode !== \"studio\") problems.push",
     mutated: "if (false) problems.push",
     testFile: "tests/demo-kit-profiles.test.ts"
   },
@@ -1799,12 +1780,12 @@ const MUTATIONS: MutationCheck[] = [
   },
   {
     id: "M-K4.14",
-    step: "Demo kit step 4 (Visuals' scene key cuts to the Visuals scene)",
+    step: "Demo kit step 4 (Visuals' scene key cues the Visuals scene in Preview)",
     description:
       "Point the Visuals page's scene key at scene index 2 and verify the scene test fails",
     filePath: resolve(ROOT, "demo-kit/kit-layouts.json"),
-    target: "\"label\": \"Scene 2\", \"settings\": { \"sceneTarget\": \"__scene_index_1__\", \"operation\": \"cut\" }",
-    mutated: "\"label\": \"Scene 3\", \"settings\": { \"sceneTarget\": \"__scene_index_2__\", \"operation\": \"cut\" }",
+    target: "\"label\": \"Scene 2\", \"settings\": { \"sceneTarget\": \"__scene_index_1__\", \"operation\": \"preview\" }",
+    mutated: "\"label\": \"Scene 3\", \"settings\": { \"sceneTarget\": \"__scene_index_2__\", \"operation\": \"preview\" }",
     testFile: "tests/demo-kit-profiles.test.ts"
   },
   {

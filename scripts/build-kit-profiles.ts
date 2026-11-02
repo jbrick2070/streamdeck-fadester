@@ -9,7 +9,9 @@
  * existing buildProfile (scripts/profile-checks.ts); the VJster page is built by VJster's
  * own profileFiles (scripts/vjster/build-profiles.ts). Neither builder is extended. On top,
  * this script checks every binding against demo-kit/kit-ids.json (the kit's fixed names and
- * UUIDs) and every caption against the shipped captions (plan section 15 item 1), then
+ * UUIDs), that the layout is the Studio Mode one (K.6: every scene key cues its scene in
+ * Preview, dial 1 of every page is the scene mixer, no Cut keys) and every caption against
+ * the shipped captions (plan section 15 item 1), then
  * writes the two .streamDeckProfile files named as the README promises
  * (kit_docs.PROFILE_FILES) into demo-kit/build/profiles/ (git-ignored; the zip is built
  * from there). The output is deterministic. It never reads or writes the user's Stream Deck
@@ -80,8 +82,14 @@ export function kitBindingProblems(preset: Preset, ids: KitIds): string[] {
   const byUuid = new Map(ids.sources.map((source) => [source.uuid, source]));
   const byName = new Map(ids.sources.map((source) => [source.name, source]));
   const text = (value: unknown): string => typeof value === "string" ? value : "";
-  if (preset.obsMode !== "regular") problems.push(`${preset.slug}: the kit is regular mode (D-5), not ${preset.obsMode}`);
+  // K.6: the kit is a Studio Mode layout. Every scene key sets Preview (no Cut, no Transition), and dial 1
+  // of every page is the scene mixer (the OBS Fader on the T-bar), which blends Preview into Program.
+  if (preset.obsMode !== "studio") problems.push(`${preset.slug}: the kit is Studio Mode (K.6), not ${preset.obsMode}`);
   for (const page of presetPages(preset)) {
+    const mixer = page.actions.find((entry) => entry.controller === "Encoder" && entry.column === 0);
+    if (!mixer || mixer.kind !== "fader" || mixer.settings.target !== "tbar") {
+      problems.push(`${page.name} Encoder 0,0: dial 1 of every page is the scene mixer (an OBS Fader on the T-bar)`);
+    }
     for (const entry of page.actions) {
       const where = `${page.name} ${entry.controller} ${entry.column},${entry.row}`;
       const s = entry.settings;
@@ -139,10 +147,14 @@ export function kitBindingProblems(preset: Preset, ids: KitIds): string[] {
           } else if (entry.label !== `Scene ${Number(index[1]) + 1}`) {
             problems.push(`${where}: a key to scene index ${index[1]} is captioned 'Scene ${Number(index[1]) + 1}'`);
           }
+          if (s.operation !== "preview") {
+            problems.push(`${where}: a kit scene key cues its scene in Preview (operation 'preview'), not '${text(s.operation)}'`);
+          }
           break;
         }
         case "fader":
         case "fade": {
+          if (entry.kind === "fader" && s.target === "tbar") break;  // the scene mixer: no input
           const source = byName.get(text(s.inputName));
           if (!source || source.id !== "ffmpeg_source") {
             problems.push(`${where}: inputName '${text(s.inputName)}' is not a kit media source`);

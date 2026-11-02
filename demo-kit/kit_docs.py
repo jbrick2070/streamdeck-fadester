@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import re
 
-KIT_VERSION = "1.0"
+KIT_VERSION = "1.1"
 OUR_AUTHOR = "Jeffrey A. Brick"
 OUR_LICENSE = "CC BY 4.0"
 OUR_LICENSE_URL = "https://creativecommons.org/licenses/by/4.0"
@@ -25,9 +25,6 @@ CODE_LICENSE = "GPL-2.0-or-later"
 
 # Our own media, in the order CREDITS.md lists them: (file, what it is).
 ORIGINALS = [
-    ("media/kit-motion.mp4", "8 s seamless motion loop, drawn by build-kit.py"),
-    ("media/layer-a.mp4", "8 s seamless motion loop, drawn by build-kit.py"),
-    ("media/layer-b.mp4", "8 s seamless motion loop, drawn by build-kit.py"),
     ("media/kit-beat.ogg", "16 s, 120 BPM drum loop, synthesised by build-kit.py"),
     ("media/kit-title.png", "the kit's title image, drawn by build-kit.py"),
 ]
@@ -215,6 +212,7 @@ README_MUSTS = [
     "260 characters", "Scene Collection > Import", "Enable WebSocket server", "Keep the link on",
     "Copy address", "untick Local file", "do not share or export", "Track 1 (Main Mix)",
     "Properties > Speed", "restarts the clip", "0.25x to 2x", "no public", "Playlister 0.5.0",
+    "Studio Mode", "cues that scene in Preview", "fade it in with the dial",
     "Visual Sidechain 0.6.0", "Fadester for OBS 0.7.7", "VJster 0.1.0",
 ]
 
@@ -236,16 +234,19 @@ def readme_problems(readme: str, ids: dict) -> list[str]:
 
 def speed_text_problems(texts: dict) -> list[str]:
     """The on-screen speed texts say what is true (plan 2.4 and 2.5): Playlister speed is a
-    setting that restarts the clip; VJster sets speed live, 0.25x to 2x in OBS."""
+    setting that restarts the clip; VJster sets speed live, 0.25x to 2x in OBS. Since K.6 each
+    Playlister note is one line over a full-frame clip."""
     need = {
-        "Speed Note 50": ["50 %", "Playlister speed is a setting (Properties > Speed)", "restarts the clip",
-                          "Speed Page"],
+        "Speed Note 50": ["50 %", "Playlister speed is a setting: changing it restarts the clip"],
         "Speed Note 100": ["100 %", "Previous, Play / pause and Next"],
         "Speed Page Note": ["VJster", "0.25x to 2x", "live in OBS", "Big Buck Bunny", "Blender Foundation",
                             "CC BY 3.0", "not included"],
     }
     problems = [f"{name} does not say {words!r}" for name, musts in need.items() for words in musts
                 if words not in texts.get(name, "")]
+    for name in ("Speed Note 100", "Speed Note 50"):
+        if "\n" in texts.get(name, ""):
+            problems.append(f"{name} is more than one line; since K.6 it sits over the full-frame clip")
     for name, text in texts.items():
         if re.search(r"\b(\d+(\.\d+)?x)\b", text) and name != "Speed Page Note":
             problems.append(f"{name} promises a live speed (an 'x' factor); only VJster has one")

@@ -2,7 +2,7 @@
 // The Suite Demo Kit's media builder (demo-kit/build-kit.py) is Python; its unit tests
 // are demo-kit/test_build_kit.py. This runs them inside vitest so the gate and the
 // mutation runner see them. They are skipped, with the reason, only when Python with
-// numpy, opencv-python and Pillow is not on this machine.
+// numpy and Pillow is not on this machine (opencv went with the generated loops in kit 1.1).
 import { describe, it, expect } from "vitest";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
@@ -10,10 +10,10 @@ import { join } from "node:path";
 const ROOT = process.cwd();
 const PYTHON = process.env.PYTHON ?? "python";
 
-const probe = spawnSync(PYTHON, ["-B", "-c", "import numpy, cv2, PIL"], { encoding: "utf8" });
+const probe = spawnSync(PYTHON, ["-B", "-c", "import numpy, PIL"], { encoding: "utf8" });
 const pythonReady = probe.status === 0;
 if (!pythonReady) {
-  console.warn(`demo-kit media tests skipped: ${PYTHON} with numpy, cv2 and PIL not found (${probe.error?.message ?? probe.stderr})`);
+  console.warn(`demo-kit media tests skipped: ${PYTHON} with numpy and PIL not found (${probe.error?.message ?? probe.stderr})`);
 }
 
 describe("demo-kit build-kit.py media", () => {

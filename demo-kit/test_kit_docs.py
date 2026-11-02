@@ -54,6 +54,8 @@ class Credits(unittest.TestCase):
             self.assertIn(want, section)
 
     def test_our_media_and_the_youtube_video_are_credited(self):
+        # K.6: the beat and the title image; the three generated loops are no longer made.
+        self.assertEqual([name for name, _ in kd.ORIGINALS], ["media/kit-beat.ogg", "media/kit-title.png"])
         text = kd.render_credits(CLIPS)
         for name, _ in kd.ORIGINALS:
             self.assertIn(f"`{name}`", text)
@@ -120,8 +122,15 @@ class SpeedTexts(unittest.TestCase):
     def test_playlister_speed_must_be_called_a_setting_that_restarts(self):
         texts = dict(kc.TEXTS, **{"Speed Note 50": "50 %: the hurdles clip. Live speed: see the Speed Page scene."})
         problems = kd.speed_text_problems(texts)
-        self.assertIn("Speed Note 50 does not say 'restarts the clip'", problems)
-        self.assertIn("Speed Note 50 does not say 'Playlister speed is a setting (Properties > Speed)'", problems)
+        self.assertEqual(problems, ["Speed Note 50 does not say 'Playlister speed is a setting: changing it restarts "
+                                    "the clip'"])
+
+    def test_each_playlister_note_is_one_line_since_k6(self):
+        for name in ("Speed Note 100", "Speed Note 50"):
+            self.assertNotIn("\n", kc.TEXTS[name])
+            texts = dict(kc.TEXTS, **{name: kc.TEXTS[name].replace(". ", ".\n", 1)})
+            self.assertIn(f"{name} is more than one line; since K.6 it sits over the full-frame clip",
+                          kd.speed_text_problems(texts))
 
     def test_the_100_note_says_which_playlister_the_keys_drive(self):
         texts = dict(kc.TEXTS, **{"Speed Note 100": "100 %: the three clips."})
@@ -197,6 +206,16 @@ class Readme(unittest.TestCase):
     def test_every_scene_is_named(self):
         problems = kd.readme_problems(README.replace("Kit Speed Page", "Speed scene"), IDS)
         self.assertEqual(problems, ["the README does not name scene Kit Speed Page"])
+        self.assertEqual(kd.readme_problems(README.replace("Kit Playlister 50%", "Kit Playlister"), IDS),
+                         ["the README does not name scene Kit Playlister 50%"])
+
+    def test_the_readme_says_studio_mode_cue_and_fade(self):
+        # K.6: the profile is a Studio Mode layout; a scene key cues, the dial fades.
+        for words in ("Studio Mode", "cues that scene in Preview", "fade it in with the dial"):
+            self.assertIn(f"the README does not say {words!r}", kd.readme_problems(README.replace(words, "x"), IDS))
+        self.assertNotIn("first key cuts to", README)
+        self.assertIn(f"Suite Demo Kit {kd.KIT_VERSION}", README)
+        self.assertEqual(kd.KIT_VERSION, "1.1")
 
 
 class Hygiene(unittest.TestCase):

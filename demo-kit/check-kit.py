@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 """Suite Demo Kit install-check, v1 rows (plan section 8, step 5).
 
-    python demo-kit/check-kit.py run --zip <Suite-Demo-Kit-1.0.zip> --dir <new check folder>
+    python demo-kit/check-kit.py run --zip <Suite-Demo-Kit-1.1.zip> --dir <new check folder>
                                      [--port 4488] [--no-speed-run]
     python demo-kit/check-kit.py compare-import --file <saved collection> --kit-dir <unzip folder> [--out <file>]
 
@@ -22,6 +22,10 @@ without touching an installed OBS, the shared test portable or the demo reel's O
    Speed Page's audio goes through OBS, muted, so the check plays nothing aloud.
    If the plugins row fails (a plugin older than the kit's minimum, or not loaded), the later
    rows are not run: each is recorded as failed, "not run".
+   K.6 (kit 1.1): the profile is a Studio Mode layout, so the check turns Studio Mode on for the
+   run (studio-mode row; off again at the end if it was off), cues every scene in Preview and
+   fades one into Program over the T-bar the way the scene mixer dial does (preview-cues row),
+   and checks that every real-footage source and Playlister fills the canvas (full-frame row).
 5. Put back everything a row changed (each step on its own, even after a failure), close OBS,
    record the SHA-256 of every file in the portable's config in <dir>/events.json, and check
    the collection OBS saved on exit: normalised back to ./ paths it must still pass
@@ -404,6 +408,101 @@ class Check:
         self.mute("Kit Beat")
         self.r.add("quiet", True, "Kit Beat muted for the check (put back at the end if it was not muted)")
 
+    def full_frame(self) -> None:
+        """K.6: every real-footage source and Playlister fills the canvas in every scene that holds
+        it, and the three real-footage sources play the clips the kit names, muted."""
+        problems, items = [], 0
+        for scene in self.ids["scenes"]:
+            for item in self.obs.req("GetSceneItemList", {"sceneUuid": scene["uuid"]})["sceneItems"]:
+                if item["sourceName"] not in kc.FULL_FRAME_SOURCES:
+                    continue
+                items += 1
+                t = self.obs.req("GetSceneItemTransform", {"sceneUuid": scene["uuid"], "sceneItemId": item["sceneItemId"]})
+                t = t["sceneItemTransform"]
+                got = (t.get("positionX"), t.get("positionY"), t.get("boundsType"), t.get("boundsWidth"), t.get("boundsHeight"))
+                want = (0, 0, "OBS_BOUNDS_SCALE_INNER", kc.CANVAS[0], kc.CANVAS[1])
+                if got != want:
+                    problems.append(f"{scene['name']}/{item['sourceName']}: {got}, the kit's {want}")
+        for name in kc.MUTED_SOURCES:
+            uuid = {"inputUuid": self.uuid[name]}
+            live = Path(self.obs.req("GetInputSettings", uuid)["inputSettings"].get("local_file", "")).name
+            want = Path(kc.SETTINGS[name]["local_file"]).name
+            if live != want:
+                problems.append(f"{name}: plays {live!r}, the kit's {want!r}")
+            if not self.obs.req("GetInputMute", uuid)["inputMuted"]:
+                problems.append(f"{name}: not muted")
+        self.r.add("full-frame", not problems and items > 0, "; ".join(problems) or
+                   f"{items} media items (the three real-footage sources and the two Playlisters) fill the "
+                   f"{kc.CANVAS[0]}x{kc.CANVAS[1]} canvas; Kit Motion, Layer A and Layer B play the train, the sprint "
+                   "and the hurdles, muted", items=items)
+
+    # -- Studio Mode (K.6): cue in Preview, fade with the mixer
+
+    def studio(self) -> None:
+        was = self.obs.req("GetStudioModeEnabled")["studioModeEnabled"]
+        if not was:
+            self.obs.req("SetStudioModeEnabled", {"studioModeEnabled": True})
+            self.undo.append(("studio", False))
+            self.wait(1.0)
+        now = self.obs.req("GetStudioModeEnabled")["studioModeEnabled"]
+        self.r.add("studio-mode", now is True, f"Studio Mode {'was already on' if was else 'turned on for the check'}"
+                   f"{'' if was else ' (off again at the end)'}; the kit profile needs it", was=was)
+
+    def cue(self, scene: dict, timeout_s: float = 4) -> dict:
+        """SetCurrentPreviewScene, then GetCurrentPreviewScene until it answers with that scene
+        (OBS applies the change on its UI thread, so the first read can still show the old one).
+        Returns the last answer."""
+        self.obs.req("SetCurrentPreviewScene", {"sceneUuid": scene["uuid"]})
+        deadline = time.monotonic() + timeout_s
+        while True:
+            got = self.obs.req("GetCurrentPreviewScene")
+            if got.get("sceneUuid") == scene["uuid"] or time.monotonic() > deadline:
+                return got
+            self.wait(0.2)
+
+    def preview_cues(self) -> None:
+        """Every scene can be cued in Preview, as the profile's scene keys do (SetCurrentPreviewScene);
+        then one is faded into Program over the T-bar, as the scene mixer dial does."""
+        problems, cued = [], []
+        for scene in self.ids["scenes"]:
+            got = self.cue(scene)
+            cued.append(got.get("sceneName"))
+            if got.get("sceneUuid") != scene["uuid"]:
+                problems.append(f"cued {scene['name']}, Preview shows {got.get('sceneName')!r}")
+        first, second = self.ids["scenes"][0], self.ids["scenes"][1]
+        self.program(first["name"], 1.0)
+        if self.cue(second).get("sceneUuid") != second["uuid"]:
+            problems.append(f"{second['name']} could not be cued before the fade")
+        self.wait(0.5)
+        mark = len(self.log_text())
+        for position in (0.25, 0.5, 0.75):
+            self.obs.req("SetTBarPosition", {"position": position, "release": False})
+            self.wait(0.2)
+        started = self.log_has(f"manual transition to scene '{second['name']}'", mark)
+        if not started:
+            problems.append(f"the T-bar did not start a manual transition to {second['name']} (OBS log)")
+        self.r.add("preview-cues", not problems, "; ".join(problems) or
+                   f"all {len(cued)} scenes cued in Preview by uuid ({', '.join(cued)}); {second['name']} cued and "
+                   "the T-bar at 0.25, 0.5, 0.75 blends it into Program (OBS logs the manual transition)",
+                   cued=cued, started=started)
+        self.mixer_take(second, mark)
+
+    def mixer_take(self, scene: dict, mark: int) -> None:
+        """The scene mixer's press: SetTBarPosition 1.0 with release, as Fadester's dial sends it. OBS
+        then finishes or cancels the manual transition (its log says which) and Program must be the
+        cued scene. Put back either way: Program on the first scene is the put-back row's job."""
+        self.obs.req("SetTBarPosition", {"position": 1.0, "release": True})
+        self.wait(1.5)
+        text = self.log_text()[mark:]
+        finished = f"Manual transition to scene '{scene['name']}' finished" in text
+        cancelled = "Manual transition cancelled" in text
+        live = self.obs.req("GetCurrentProgramScene")
+        ok = finished and not cancelled and live.get("sceneUuid") == scene["uuid"]
+        self.r.add("mixer-take", ok, f"SetTBarPosition 1.0 released: OBS logged "
+                   f"{'finished' if finished else 'cancelled' if cancelled else 'neither finished nor cancelled'}; "
+                   f"Program is {live.get('sceneName')!r}" + ("" if ok else f" (wanted {scene['name']!r})"),
+                   finished=finished, cancelled=cancelled, program=live.get("sceneName"))
+
     # -- the beat in Visual Sidechain
 
     def signals(self, samples: int = 16, every_s: float = 0.25) -> dict:
@@ -550,6 +649,7 @@ class Check:
         self.program("Kit Playlister", 2.5)
         clips = self.uuid["Kit Clips"]
         steps = []
+        other_before = self.current("Kit Clips 50%")  # in its own scene since K.6: it must not move
         start = self.wait_current("Kit Clips", "clip-hurdles")
         before = screenshot(self.obs, 320, sourceUuid=clips)[0]
         steps.append(("start", "clip-hurdles", start))
@@ -566,8 +666,8 @@ class Check:
             states[action.lower()] = self.wait_state("Kit Clips", state)
             if states[action.lower()] != state:
                 problems.append(f"{action.lower()}: {state} wanted, mediaState {states[action.lower()]}")
-        if "clip-hurdles" not in other:
-            problems.append(f"Kit Clips 50% moved too: {other!r}")
+        if other != other_before:
+            problems.append(f"Kit Clips 50% moved too: {other_before!r} became {other!r}")
         if moved < 5:
             problems.append(f"the picture hardly changed from the hurdles to the sprint ({moved:.1f})")
         for _, _, now in steps:
@@ -577,7 +677,7 @@ class Check:
         self.r.add("playlister-previous-next", not problems, "; ".join(problems) or
                    "Kit Clips by uuid: hurdles, next sprint, next train, previous sprint (current_file_name, "
                    f"inside the kit folder); the picture changed ({moved:.1f}); pause then play (mediaState); "
-                   "Kit Clips 50% stayed on the hurdles", steps=steps, states=states)
+                   f"Kit Clips 50% (its own scene) did not move ({other!r})", steps=steps, states=states)
 
     def wait_state(self, name: str, state: str, timeout_s: float = 4) -> str:
         deadline = time.monotonic() + timeout_s
@@ -588,22 +688,23 @@ class Check:
             self.wait(0.2)
 
     def playlister_speed(self) -> None:
-        names = ["Kit Clips", "Kit Clips 50%"]
-        for name in names:
+        """Each Playlister in its own scene since K.6 (a hidden one is stopped), so each is
+        measured with its scene in Program, one after the other."""
+        scenes = {"Kit Clips": "Kit Playlister", "Kit Clips 50%": "Kit Playlister 50%"}
+        rate, durations = {}, {}
+        for name, scene in scenes.items():
+            self.program(scene, 2.0)
             self.media(name, "RESTART")
-        self.wait(1.0)
-        first = {n: (self.obs.req("GetMediaInputStatus", {"inputUuid": self.uuid[n]}), time.monotonic())
-                 for n in names}
-        self.wait(4.0)
-        last = {n: (self.obs.req("GetMediaInputStatus", {"inputUuid": self.uuid[n]}), time.monotonic())
-                for n in names}
-        rate = {n: (last[n][0]["mediaCursor"] - first[n][0]["mediaCursor"]) / ((last[n][1] - first[n][1]) * 1000)
-                for n in names}
-        durations = {n: last[n][0]["mediaDuration"] for n in names}
+            self.wait(1.0)
+            first = (self.obs.req("GetMediaInputStatus", {"inputUuid": self.uuid[name]}), time.monotonic())
+            self.wait(4.0)
+            last = (self.obs.req("GetMediaInputStatus", {"inputUuid": self.uuid[name]}), time.monotonic())
+            rate[name] = (last[0]["mediaCursor"] - first[0]["mediaCursor"]) / ((last[1] - first[1]) * 1000)
+            durations[name] = last[0]["mediaDuration"]
         ok = 0.85 <= rate["Kit Clips"] <= 1.15 and 0.4 <= rate["Kit Clips 50%"] <= 0.6 and \
             abs(durations["Kit Clips"] - durations["Kit Clips 50%"]) <= 100
-        self.r.add("playlister-speed", ok, f"media cursor over about 4 s of wall time: Kit Clips "
-                   f"{rate['Kit Clips']:.2f}x, Kit Clips 50% {rate['Kit Clips 50%']:.2f}x; durations "
+        self.r.add("playlister-speed", ok, f"media cursor over about 4 s of wall time, each in its own scene: "
+                   f"Kit Clips {rate['Kit Clips']:.2f}x, Kit Clips 50% {rate['Kit Clips 50%']:.2f}x; durations "
                    f"{durations['Kit Clips']} and {durations['Kit Clips 50%']} ms (the container's, both)",
                    rate=rate, durations=durations)
 
@@ -721,12 +822,19 @@ class Check:
     def put_back(self) -> None:
         """Undo every change, newest first; one failing step does not skip the others."""
         failed, done = [], []
-        steps = [("program", self.ids["scenes"][0]["name"])] + self.undo[::-1]
+        first = self.ids["scenes"][0]["name"]
+        steps = [("program", first), ("preview", first)] + self.undo[::-1]
         self.undo = []
         for step in steps:
             try:
                 if step[0] == "program":
                     self.program(step[1], 1.0)
+                elif step[0] == "preview":  # Studio Mode's Preview back on the first scene too
+                    if self.obs.req("GetStudioModeEnabled")["studioModeEnabled"]:
+                        self.obs.req("SetCurrentPreviewScene", {"sceneName": step[1]})
+                elif step[0] == "studio":
+                    self.obs.req("SetStudioModeEnabled", {"studioModeEnabled": step[1]})
+                    self.wait(1.0)
                 elif step[0] == "unmute":
                     self.obs.req("SetInputMute", {"inputUuid": self.uuid[step[1]], "inputMuted": False})
                 elif step[0] == "settings":
@@ -803,8 +911,9 @@ def run(zip_path: Path, folder: Path, port: int, speed_run: bool, lock: Path, co
             try:
                 results.run_rows([
                     ("plugins", check.plugins), ("scenes", check.scenes), ("inputs", check.inputs),
-                    ("paths", check.paths), ("filters", check.filters), ("monitoring", check.monitoring),
-                    ("quiet", check.quiet), ("beat-signals", check.beat), ("reacts", check.looks_react),
+                    ("paths", check.paths), ("full-frame", check.full_frame), ("filters", check.filters),
+                    ("monitoring", check.monitoring), ("quiet", check.quiet), ("studio-mode", check.studio),
+                    ("preview-cues", check.preview_cues), ("beat-signals", check.beat), ("reacts", check.looks_react),
                     ("panic-restore", check.panic), ("playlister-previous-next", check.playlister),
                     ("playlister-speed", check.playlister_speed), ("profile-bindings", check.bindings),
                     ("renames", check.renames), ("shots", check.scene_shots), ("speed-page-card", check.speed_card),

@@ -91,11 +91,11 @@ describe("demo-kit Stream Deck profiles", () => {
     expect(again.map((profile) => profile.bytes.equals(builtProfiles().find((other) => other.file === profile.file)!.bytes))).toEqual([true, true]);
   });
 
-  it("the Fadester layout passes validatePreset: SD+, regular mode, a three-page rig with Panic and Next page on their keys", () => {
+  it("the Fadester layout passes validatePreset: SD+, Studio Mode, a three-page rig with Panic and Next page on their keys", () => {
     const preset = layouts.fadester;
     expect(() => validatePreset(preset, manifest)).not.toThrow();
     expect([preset.deviceType, preset.deviceModel, preset.columns, preset.rows, preset.dials, preset.obsMode])
-      .toEqual([7, "20GBD9901", 4, 2, 4, "regular"]);
+      .toEqual([7, "20GBD9901", 4, 2, 4, "studio"]);
     expect(preset.rig).toEqual({ panic: [3, 1], nextPage: [0, 1] });
     expect(presetPages(preset).map((page) => [page.name, page.accent])).toEqual([["Visuals", "magenta"], ["Layers", "teal"], ["Clips", "brass"]]);
     for (const page of presetPages(preset)) {
@@ -108,13 +108,36 @@ describe("demo-kit Stream Deck profiles", () => {
     }
   });
 
-  it("each page drives its scene from key 0,0, and every scene is reachable, by __scene_index_N__ with a cut", () => {
+  it("each page cues its scene in Preview from key 0,0, and every scene is reachable, by __scene_index_N__ (K.6: no Cut keys)", () => {
     const sceneKeys = presetPages(layouts.fadester).flatMap((page) => page.actions.filter((entry) => entry.kind === "scene"));
     expect(presetPages(layouts.fadester).map((page) => action(layouts.fadester, page.name, "Keypad", 0, 0).settings.sceneTarget))
       .toEqual(["__scene_index_1__", "__scene_index_2__", "__scene_index_3__"]);
+    expect(ids.scenes.map((scene) => scene.name))
+      .toEqual(["Kit Welcome", "Kit Visuals", "Kit Layers", "Kit Playlister", "Kit Playlister 50%", "Kit Speed Page"]);
     expect(new Set(sceneKeys.map((entry) => entry.settings.sceneTarget)))
       .toEqual(new Set(ids.scenes.map((scene) => `__scene_index_${scene.index}__`)));
-    for (const entry of sceneKeys) expect(entry.settings.operation).toBe("cut");
+    for (const entry of sceneKeys) expect(entry.settings.operation).toBe("preview");
+    expect(sceneKeys.some(changesProgram)).toBe(false);
+    // The 50 % scene is cued from the Clips page, the Speed Page from the Layers page, Welcome from Visuals.
+    expect(action(layouts.fadester, "Clips", "Keypad", 1, 1).settings.sceneTarget).toBe("__scene_index_4__");
+    expect(action(layouts.fadester, "Layers", "Keypad", 1, 1).settings.sceneTarget).toBe("__scene_index_5__");
+    expect(action(layouts.fadester, "Visuals", "Keypad", 1, 1).settings.sceneTarget).toBe("__scene_index_0__");
+  });
+
+  it("dial 1 of every page is the scene mixer: an OBS Fader on the T-bar, captioned with the shipped 'Scene blend'", () => {
+    for (const page of presetPages(layouts.fadester)) {
+      const mixer = action(layouts.fadester, page.name, "Encoder", 0, 0);
+      expect([mixer.kind, mixer.settings.target, mixer.label], page.name).toEqual(["fader", "tbar", "Scene blend"]);
+      expect(mixer.settings.inputName).toBeUndefined();
+    }
+    expect(problemsAfter((p) => { action(p, "Layers", "Encoder", 0, 0).settings.target = "input_volume"; }))
+      .toEqual([
+        expect.stringMatching(/Layers Encoder 0,0: dial 1 of every page is the scene mixer/),
+        expect.stringMatching(/Layers Encoder 0,0: inputName '' is not a kit media source/),
+        expect.stringMatching(/Layers Encoder 0,0: caption 'Scene blend' is neither/)
+      ]);
+    expect(problemsAfter((p) => { action(p, "Clips", "Keypad", 0, 0).settings.operation = "cut"; }))
+      .toEqual([expect.stringMatching(/Clips Keypad 0,0: a kit scene key cues its scene in Preview \(operation 'preview'\), not 'cut'/)]);
   });
 
   it("every binding matches kit-ids.json and every caption is shipped or the control's own OBS name", () => {
@@ -133,12 +156,15 @@ describe("demo-kit Stream Deck profiles", () => {
     expect(new Set(filters)).toEqual(new Set(["Kit Motion/Look Prism", "Kit Motion/Look Kaleido", "Kit Motion/Look Pulse", "Layer A/Layer Fade", "Layer B/Layer Fade"]));
     const layers = fadester.filter((entry) => entry.UUID.endsWith(".layer-control")).map((entry) => entry.Settings.sourceUuid);
     expect(layers).toEqual(expect.arrayContaining([uuidOf("Layer A"), uuidOf("Layer B")]));
-    const faders = fadester.filter((entry) => entry.UUID.endsWith(".obs-fader")).map((entry) => entry.Settings.inputName);
-    expect(faders).toEqual(["Kit Beat", "Kit Beat", "Kit Beat"]);
-    // Restart acts on the 50 % copy; the other transport keys on the 100 % one (plan section 4).
+    const faders = fadester.filter((entry) => entry.UUID.endsWith(".obs-fader")).map((entry) => [entry.Settings.target, entry.Settings.inputName]);
+    // Three scene mixers (one per page) and the beat on the Layers and Clips pages (Visuals has no room).
+    expect(faders.filter((fader) => fader[0] === "tbar")).toHaveLength(3);
+    expect(faders.filter((fader) => fader[0] === "input_volume")).toEqual([["input_volume", "Kit Beat"], ["input_volume", "Kit Beat"]]);
+    // Restart acts on the 50 % copy; the other transport keys on the 100 % one (plan section 4; Status went in K.6).
     const transport = fadester.filter((entry) => entry.UUID.endsWith(".playlister-transport"))
       .map((entry) => [entry.Settings.operation, entry.Settings.inputName]);
-    expect(transport).toEqual(expect.arrayContaining([["previous", "Kit Clips"], ["playpause", "Kit Clips"], ["next", "Kit Clips"], ["restart", "Kit Clips 50%"], ["status", "Kit Clips"]]));
+    expect(transport).toEqual(expect.arrayContaining([["previous", "Kit Clips"], ["playpause", "Kit Clips"], ["next", "Kit Clips"], ["restart", "Kit Clips 50%"]]));
+    expect(transport).toHaveLength(4);
     // No host, port or password in a profile (profiles/README.md).
     for (const entry of actions) expect(Object.keys(entry.Settings).filter((key) => /host|port|password|token|secret/i.test(key))).toEqual([]);
   });
@@ -146,7 +172,7 @@ describe("demo-kit Stream Deck profiles", () => {
   it("refuses a Playlister key on a source that is not a kit Playlister, or under another name", () => {
     expect(problemsAfter((p) => { action(p, "Clips", "Keypad", 1, 0).settings.inputUuid = uuidOf("Kit Motion"); }))
       .toEqual([expect.stringMatching(/Clips Keypad 1,0: inputUuid .* is not a kit Playlister/)]);
-    expect(problemsAfter((p) => { action(p, "Clips", "Keypad", 1, 1).settings.inputName = "Kit Clips"; }))
+    expect(problemsAfter((p) => { action(p, "Clips", "Keypad", 2, 1).settings.inputName = "Kit Clips"; }))
       .toEqual([expect.stringMatching(/inputName 'Kit Clips' is not 'Kit Clips 50%'/)]);
   });
 
@@ -157,7 +183,7 @@ describe("demo-kit Stream Deck profiles", () => {
       .toEqual([expect.stringMatching(/sourceName 'Kit Beat' is not 'Kit Motion'/)]);
     expect(problemsAfter((p) => { action(p, "Visuals", "Keypad", 2, 0).settings.filterName = "Look Spiral"; }))
       .toEqual([expect.stringMatching(/'Kit Motion' has no filter 'Look Spiral'/)]);
-    expect(problemsAfter((p) => { action(p, "Layers", "Encoder", 0, 0).settings.filterKind = "color_filter"; }))
+    expect(problemsAfter((p) => { action(p, "Layers", "Encoder", 1, 0).settings.filterKind = "color_filter"; }))
       .toEqual(expect.arrayContaining([expect.stringMatching(/filterKind 'color_filter' is not 'color_filter_v2'/)]));
     expect(problemsAfter((p) => { action(p, "Visuals", "Encoder", 1, 0).settings.setting = "vs_speed"; }))
       .toEqual(expect.arrayContaining([expect.stringMatching(/'vs_speed' is not a setting the deck rides/)]));
@@ -179,9 +205,9 @@ describe("demo-kit Stream Deck profiles", () => {
   it("refuses a scene key past the kit's scenes, or captioned for another scene", () => {
     expect(problemsAfter((p) => {
       const entry = action(p, "Layers", "Keypad", 1, 1);
-      entry.settings.sceneTarget = "__scene_index_5__";
-      entry.label = "Scene 6";
-    })).toEqual([expect.stringMatching(/'__scene_index_5__' is not __scene_index_N__ of a kit scene/)]);
+      entry.settings.sceneTarget = "__scene_index_6__";
+      entry.label = "Scene 7";
+    })).toEqual([expect.stringMatching(/'__scene_index_6__' is not __scene_index_N__ of a kit scene/)]);
     expect(problemsAfter((p) => { action(p, "Visuals", "Keypad", 0, 0).label = "Scene 3"; }))
       .toEqual([
         expect.stringMatching(/Visuals Keypad 0,0: a key to scene index 1 is captioned 'Scene 2'/),
@@ -189,13 +215,14 @@ describe("demo-kit Stream Deck profiles", () => {
       ]);
   });
 
-  it("refuses a fader on a source that is not kit media, and a studio-mode kit", () => {
+  it("refuses a fader on a source that is not kit media, and a regular-mode kit", () => {
     expect(problemsAfter((p) => {
-      const entry = action(p, "Visuals", "Encoder", 0, 0);
+      const entry = action(p, "Layers", "Encoder", 3, 0);
       entry.settings.inputName = "Kit Note";
       entry.label = "Kit Note";
     })).toEqual([expect.stringMatching(/inputName 'Kit Note' is not a kit media source/)]);
-    expect(problemsAfter((p) => { p.obsMode = "studio"; })).toEqual([expect.stringMatching(/regular mode/)]);
+    expect(problemsAfter((p) => { p.obsMode = "regular"; })).toEqual([expect.stringMatching(/the kit is Studio Mode \(K.6\), not regular/)]);
+    expect(problemsAfter((p) => { p.obsMode = "either"; })).toEqual([expect.stringMatching(/not either/)]);
   });
 
   it("refuses a custom caption, and an OBS name that is not the control's own target (plan section 15 item 1)", () => {

@@ -159,6 +159,7 @@ class FakeObs:
         self.items = {(sc["name"], i["id"]): i["source"] for sc in IDS["scenes"] for i in sc["items"]}
         self.kinds = {s["uuid"]: s["versioned_id"] for s in IDS["sources"]}
         self.hotkeys = ["OBSBasic.Screenshot", *kk.PANIC_HOTKEYS]
+        self.studio = True  # the kit's check turns Studio Mode on (K.6)
         self.scenes = copy.deepcopy(SCENES)
         self.calls = []
 
@@ -181,6 +182,8 @@ class FakeObs:
             return (100, {"inputVolumeDb": -12}) if data["inputName"] in UUID else (600, {})
         if request == "GetHotkeyList":
             return 100, {"hotkeys": self.hotkeys}
+        if request == "GetStudioModeEnabled":
+            return 100, {"studioModeEnabled": self.studio}
         raise AssertionError(request)
 
 
@@ -202,6 +205,8 @@ class Bindings(unittest.TestCase):
                 self.assertEqual(kk.binding_problems(self.bind(action, a["settings"]), FakeObs(), IDS), [], a)
                 count += 1
         self.assertEqual(count, 36)
+        scene_keys = [a for page in LAYOUTS["fadester"]["pages"] for a in page["actions"] if a["kind"] == "scene"]
+        self.assertTrue(scene_keys and all(a["settings"]["operation"] == "preview" for a in scene_keys))
 
     def test_profile_bindings_read_every_page_and_controller(self):
         data = profile({"PAGE-A": {("Keypad", "0,0"): (F + "visual-panic", {"operation": "panic"}),
@@ -265,6 +270,16 @@ class Bindings(unittest.TestCase):
             self.bind(F + "obs-fader", {"target": "input_volume", "inputName": "Beat"}), FakeObs(), IDS)[0])
         self.assertIn("is not checked", kk.binding_problems(
             self.bind(F + "obs-fader", {"target": "transition"}), FakeObs(), IDS)[0])
+
+    def test_the_scene_mixer_needs_studio_mode(self):
+        # K.6: dial 1 of every page is the OBS Fader on the T-bar, which only works in Studio Mode.
+        mixer = self.bind(F + "obs-fader", {"target": "tbar", "stepPerTick": 0.02})
+        obs = FakeObs()
+        self.assertEqual(kk.binding_problems(mixer, obs, IDS), [])
+        self.assertIn("GetStudioModeEnabled", obs.calls)
+        obs.studio = False
+        self.assertEqual(kk.binding_problems(mixer, obs, IDS),
+                         ["PAGE0000 Keypad 0,0 " + F + "obs-fader: the scene mixer needs Studio Mode, which is off"])
 
     def test_panic_keys_need_visual_sidechains_hotkeys(self):
         self.assertEqual(kk.binding_problems(self.bind(F + "visual-panic", {}), FakeObs(), IDS), [])
@@ -381,11 +396,11 @@ class Zip(unittest.TestCase):
         self.assertEqual(hashlib.sha256((self.out / kp.ZIP_NAME).read_bytes()).hexdigest(), second)
 
     def test_media_off_the_manifest_or_a_missing_profile_is_refused(self):
-        (self.kit / "build" / "media" / "layer-a.mp4").write_bytes(b"other")
+        (self.kit / "build" / "media" / "clip-sprint.mp4").write_bytes(b"other")
         (self.kit / "build" / "profiles" / kd.PROFILE_FILES[1]).rename(self.kit / "build" / "elsewhere")
         with self.assertRaises(RuntimeError) as caught:
             kp.zip_entries(self.kit)
-        self.assertIn("layer-a.mp4 does not match the media manifest", str(caught.exception))
+        self.assertIn("clip-sprint.mp4 does not match the media manifest", str(caught.exception))
         self.assertIn(f"{kd.PROFILE_FILES[1]} is missing", str(caught.exception))
         self.assertFalse(self.out.exists())
 
@@ -478,8 +493,8 @@ class CheckFolder(unittest.TestCase):
 class FakeLiveObs:
     """Just enough obs-websocket for the Check's mute, Panic and put-back logic."""
 
-    def __init__(self, log: Path, muted: bool = False, fail: set | None = None):
-        self.log, self.muted, self.fail = log, muted, fail or set()
+    def __init__(self, log: Path, muted: bool = False, fail: set | None = None, studio: bool = False):
+        self.log, self.muted, self.fail, self.studio = log, muted, fail or set(), studio
         self.sent: list[tuple[str, dict]] = []
         self.reads = 0
 
@@ -490,6 +505,10 @@ class FakeLiveObs:
             raise RuntimeError(f"{request} failed")
         if request == "GetInputMute":
             return 100, {"inputMuted": self.muted}
+        if request == "GetStudioModeEnabled":
+            return 100, {"studioModeEnabled": self.studio}
+        if request == "SetStudioModeEnabled":
+            self.studio = data["studioModeEnabled"]
         if request == "GetSourceFilter":
             self.reads += 1
             if "GetSourceFilter-after-panic" in self.fail and self.reads > 2 * len(ck.VS_FILTERS):
@@ -539,6 +558,27 @@ class CheckCleanup(unittest.TestCase):
         check.quiet()
         check.put_back()
         self.assertEqual([d["inputMuted"] for d in obs.requests("SetInputMute")], [True, False])
+
+    def test_studio_mode_is_turned_on_for_the_check_and_off_again_only_if_it_was_off(self):
+        # K.6: the kit profile needs Studio Mode; the check leaves the portable as it found it.
+        obs = FakeLiveObs(self.log, studio=False)
+        check = self.check(obs)
+        check.studio()
+        self.assertTrue(obs.studio)
+        self.assertEqual(check.undo, [("studio", False)])
+        check.put_back()
+        self.assertFalse(obs.studio)
+        # Preview back on the first scene while Studio Mode was still on, then Studio Mode off.
+        names = [r for r, _ in obs.sent]
+        self.assertLess(names.index("SetCurrentPreviewScene"), len(names) - 1 - names[::-1].index("SetStudioModeEnabled"))
+        self.assertEqual(obs.requests("SetCurrentPreviewScene"), [{"sceneName": "Kit Welcome"}])
+        self.assertTrue(check.r.rows[-1]["ok"], check.r.rows[-1])
+        obs = FakeLiveObs(self.log, studio=True)
+        check = self.check(obs)
+        check.studio()
+        check.put_back()
+        self.assertEqual(obs.requests("SetStudioModeEnabled"), [])
+        self.assertTrue(obs.studio)
 
     def test_one_failing_undo_does_not_skip_the_others(self):
         obs = FakeLiveObs(self.log, fail={"SetInputSettings"})

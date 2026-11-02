@@ -2,7 +2,7 @@
 """Suite Demo Kit: the scene collection (plan step 2). Standard library only.
 
 kit-ids.json is the single source of truth for every name, kind and UUID the Stream Deck
-profiles bind to: the five scenes in order (keys bind by __scene_index_N__), each scene's
+profiles bind to: the six scenes in order (keys bind by __scene_index_N__), each scene's
 items with their fixed item ids, every source and every filter. This module adds what a
 profile never binds to: settings, transforms and texts, and from both it writes the draft
 collection.
@@ -25,12 +25,19 @@ Where the code's reality differs from the plan (demo-kit-plan-r1.md, sections 3 
   round-trip's absolute path in the middle of a string ("1-3: C:/..."), which the importer's
   ./ rewrite cannot reach, so these keys are dropped and the kit starts at the first row.
   That is the one post-processing step besides ./ paths and UUIDs.
-- Kit Beat is an item in scenes 2-5 (Fable review, plan section 15 item 2), so the beat
+- Kit Beat is an item in scenes 2-6 (Fable review, plan section 15 item 2), so the beat
   dial and the looks' named tap hear it on every page; Kit Clips 50% has one row, the
-  hurdles clip (item 3).
-- Kit Credits (the clip credits) is in scenes 1 and 4: section 6's "scenes 4 and 5" was
-  written when the 100 % and 50 % copies had a scene each; scene 5 carries the Big Buck
+  hurdles clip.
+- Kit Credits (the clip credits) is in scenes 1, 4 and 5; scene 6 carries the Big Buck
   Bunny line in Speed Page Note.
+- K.6 (the operator's decisions of 2026-11-01): real footage everywhere. Kit Motion (the
+  Visuals base under the three looks and the Audio Modulator) is the train clip, Layer A
+  the sprint and Layer B the hurdles, each full canvas, looping and muted (their audio was
+  removed in the media step anyway); the generated loops are no longer made. The source
+  names and UUIDs stay, so the profiles the operator imported keep working. Kit Playlister
+  is one full-frame Playlister (Kit Clips); the 50 % copy has its own scene, Kit Playlister
+  50% (a scene cannot share the source's name "Kit Clips 50%"), so Studio Mode cues and
+  fades it like any other. No side-by-side anywhere; every media item is the whole canvas.
 """
 from __future__ import annotations
 
@@ -53,8 +60,8 @@ OBS_33 = 33 << 24
 UUID_PREFIX = "suite-demo-kit:"
 
 # Every file the collection points at, relative to the folder holding the collection.
-MEDIA_FILES = ["media/kit-title.png", "media/kit-beat.ogg", "media/kit-motion.mp4", "media/layer-a.mp4",
-               "media/layer-b.mp4", "media/clip-hurdles.mp4", "media/clip-sprint.mp4", "media/clip-train.mp4"]
+MEDIA_FILES = ["media/kit-title.png", "media/kit-beat.ogg", "media/clip-hurdles.mp4", "media/clip-sprint.mp4",
+               "media/clip-train.mp4"]
 SETUP_CARD = "vjster-setup.html"
 KIT_FILES = [*MEDIA_FILES, SETUP_CARD]
 
@@ -72,10 +79,9 @@ TEXTS = {
                     "28th Summer Universiade 2015 Gwangju\u201d by FISUTV, CC BY 3.0 \u00b7 \u201cT3 Train Crossing "
                     "Cooks River\u201d by Unyxium, CC BY 4.0 \u00b7 via Wikimedia Commons \u00b7 cut and re-encoded "
                     "\u00b7 full credits in CREDITS.md"),
-    "Speed Note 100": ("100 %: the three clips. Previous, Play / pause and Next on the deck act on this "
-                       "Playlister."),
-    "Speed Note 50": ("50 %: the hurdles clip. Playlister speed is a setting (Properties > Speed); changing "
-                      "it restarts the clip. Live speed: see the Speed Page scene."),
+    # One short line each (K.6): the clips fill the frame, the note sits over them at the top.
+    "Speed Note 100": "100 %: the three clips. Previous, Play / pause and Next act on this Playlister.",
+    "Speed Note 50": "50 %: the hurdles clip. Playlister speed is a setting: changing it restarts the clip.",
     "Speed Page Note": ("VJster: speed from the deck, 0.25x to 2x, live in OBS\n"
                         "Big Buck Bunny \u00b7 Blender Foundation \u00b7 CC BY 3.0 \u00b7 played from YouTube, "
                         "not included"),
@@ -84,8 +90,8 @@ TEXTS = {
 TEXT_BOXES = {
     "Kit Note": (1600, 120, 56),
     "Kit Credits": (1800, 140, 28),
-    "Speed Note 100": (900, 140, 30),
-    "Speed Note 50": (900, 140, 30),
+    "Speed Note 100": (1800, 60, 30),
+    "Speed Note 50": (1800, 60, 30),
     "Speed Page Note": (1600, 160, 36),
 }
 
@@ -135,13 +141,14 @@ SETTINGS = {
     **{name: _text(name) for name in TEXTS},
     "Kit Beat": {"is_local_file": True, "local_file": "./media/kit-beat.ogg", "looping": True,
                  "restart_on_activate": False},
-    "Kit Motion": {"is_local_file": True, "local_file": "./media/kit-motion.mp4", "looping": True,
+    # Real footage (K.6): the train under the looks, the sprint and the hurdles as the layers.
+    "Kit Motion": {"is_local_file": True, "local_file": "./media/clip-train.mp4", "looping": True,
                    "restart_on_activate": False},
-    "Layer A": {"is_local_file": True, "local_file": "./media/layer-a.mp4", "looping": True,
+    "Layer A": {"is_local_file": True, "local_file": "./media/clip-sprint.mp4", "looping": True,
                 "restart_on_activate": False},
-    "Layer B": {"is_local_file": True, "local_file": "./media/layer-b.mp4", "looping": True,
+    "Layer B": {"is_local_file": True, "local_file": "./media/clip-hurdles.mp4", "looping": True,
                 "restart_on_activate": False},
-    # visibility_behavior 0 is stop/restart, so both copies restart together when the scene shows.
+    # visibility_behavior 0 is stop/restart, so each copy restarts when its scene shows.
     "Kit Clips": {"playlist": _playlist("hurdles", "sprint", "train"), "loop": True, "speed_percent": 100,
                   "visibility_behavior": 0},
     "Kit Clips 50%": {"playlist": _playlist("hurdles"), "loop": True, "speed_percent": 50,
@@ -150,17 +157,22 @@ SETTINGS = {
 }
 
 # Item transforms per scene: (x, y) of the top-left corner and, for a bounded item, the box it
-# is scaled into (OBS_BOUNDS_SCALE_INNER). Unbounded items keep their own size.
+# is scaled into (OBS_BOUNDS_SCALE_INNER). Unbounded items keep their own size. Every media
+# item is FULL, the whole canvas (K.6: full frame, no 2-up); the notes and credits sit over it.
 FULL = ((0, 0), CANVAS)
+# The three real-footage sources and the two Playlisters: all full frame, in every scene.
+FULL_FRAME_SOURCES = ["Kit Motion", "Layer A", "Layer B", "Kit Clips", "Kit Clips 50%"]
+# Sources whose audio is muted in the collection (their clips have no audio stream anyway).
+MUTED_SOURCES = ["Kit Motion", "Layer A", "Layer B"]
 LAYOUT = {
     "Kit Welcome": {"Kit Background": FULL, "Kit Title": ((320, 200), None), "Kit Note": ((160, 600), None),
                     "Kit Credits": ((60, 900), None)},
     "Kit Visuals": {"Kit Motion": FULL, "Kit Beat": ((0, 0), None)},
     "Kit Layers": {"Layer A": FULL, "Layer B": FULL, "Kit Beat": ((0, 0), None)},
-    "Kit Playlister": {"Kit Background": FULL, "Kit Clips": ((40, 250), (900, 506)),
-                       "Kit Clips 50%": ((980, 250), (900, 506)), "Speed Note 100": ((40, 100), None),
-                       "Speed Note 50": ((980, 100), None), "Kit Credits": ((60, 900), None),
-                       "Kit Beat": ((0, 0), None)},
+    "Kit Playlister": {"Kit Background": FULL, "Kit Clips": FULL, "Speed Note 100": ((60, 40), None),
+                       "Kit Credits": ((60, 900), None), "Kit Beat": ((0, 0), None)},
+    "Kit Playlister 50%": {"Kit Background": FULL, "Kit Clips 50%": FULL, "Speed Note 50": ((60, 40), None),
+                           "Kit Credits": ((60, 900), None), "Kit Beat": ((0, 0), None)},
     "Kit Speed Page": {"Kit Background": FULL, "Speed Page": ((320, 100), (1280, 720)),
                        "Speed Page Note": ((160, 850), None), "Kit Beat": ((0, 0), None)},
 }
@@ -236,6 +248,8 @@ def ids_problems(ids: dict) -> list[str]:
                 problems.append(f"scene {scene['name']}: item {item['id']} names no kit source: {item['source']}")
             if item["source"] not in layout:
                 problems.append(f"scene {scene['name']}: item {item['id']} ({item['source']}) has no LAYOUT entry")
+            elif item["source"] in FULL_FRAME_SOURCES and layout[item["source"]] != FULL:
+                problems.append(f"scene {scene['name']}: {item['source']} is not full frame (K.6: no 2-up)")
         for name in sorted(set(layout) - {item["source"] for item in scene["items"]}):
             problems.append(f"scene {scene['name']}: LAYOUT entry {name} is no item of the scene")
     for name in sorted(set(LAYOUT) - {scene["name"] for scene in ids["scenes"]}):
@@ -260,8 +274,8 @@ def beat_volume() -> float:
     return 10 ** (BEAT_DB / 20)
 
 
-def _source_common(volume: float = 1.0, monitoring_type: int = 0) -> dict:
-    return {"prev_ver": OBS_33, "volume": volume, "muted": False, "monitoring_type": monitoring_type,
+def _source_common(volume: float = 1.0, monitoring_type: int = 0, muted: bool = False) -> dict:
+    return {"prev_ver": OBS_33, "volume": volume, "muted": muted, "monitoring_type": monitoring_type,
             "monitoring_enabled": monitoring_type != 0}
 
 
@@ -285,7 +299,7 @@ def draft_collection(ids: dict, root: str | None = None) -> dict:
         beat = name == "Kit Beat"
         entry = {"name": name, "uuid": source["uuid"], "id": source["id"], "versioned_id": source["versioned_id"],
                  "settings": copy.deepcopy(SETTINGS[name]),
-                 **_source_common(beat_volume() if beat else 1.0, 2 if beat else 0)}
+                 **_source_common(beat_volume() if beat else 1.0, 2 if beat else 0, name in MUTED_SOURCES)}
         if source.get("filters"):
             entry["filters"] = []
             for f in source["filters"]:

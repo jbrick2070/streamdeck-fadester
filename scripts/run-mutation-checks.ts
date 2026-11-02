@@ -2336,6 +2336,16 @@ const MUTATIONS: MutationCheck[] = [
     target: "            if not restore_sent:",
     mutated: "            if False:",
     testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-TB.1",
+    step: "Scene mixer take on OBS 33.0.1 (the T-bar release cancels)",
+    description:
+      "Release the T-bar at the take (the kit 1.1 failure) instead of leaving Studio Mode and verify the take test fails",
+    filePath: resolve(ROOT, "src/obs/direct-obs-client.ts"),
+    target: 'await this.sendObsRequest("SetTBarPosition", { position: 1, release: false });\n      this.requireControlGeneration(generation);\n      await this.sendObsRequest("SetStudioModeEnabled", { studioModeEnabled: false });',
+    mutated: 'await this.sendObsRequest("SetTBarPosition", { position: 1, release: true });\n      this.requireControlGeneration(generation);',
+    testFile: "tests/scene-cycle.test.ts"
   }
 ];
 

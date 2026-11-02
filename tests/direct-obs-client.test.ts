@@ -274,8 +274,9 @@ describe("Direct OBS client", () => {
   it("uses native OBS requests for mixer, T-bar, and selected scene transitions", async () => {
     const direct = await connect();
     await direct.nudgeInputVolume("Mic/Aux", 0.1);
-    await direct.setTbarPosition(0.4, false);
     await direct.runSceneAction(DIRECT_SCENE_NEXT, "transition", "Fade to Black");
+    // After the switch: OBS 33 refuses a scene switch while a T-bar throw is active.
+    await direct.setTbarPosition(0.4, false);
 
     expect(server?.inputVolumes.get("Mic/Aux")).toBeCloseTo(0.7, 5);
     expect(server?.directTbarPosition).toBeCloseTo(0.4, 5);

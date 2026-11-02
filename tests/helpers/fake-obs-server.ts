@@ -549,6 +549,12 @@ export class FakeObsServer {
     ["Mic/Aux", 0.6]
   ]);
   public directTbarPosition = 0;
+  /** OBS 33.0.1's manual (T-bar) transition: started by the first SetTBarPosition write while
+   * Program and Preview differ, aimed at the Preview of that moment. A release over
+   * obs-websocket cancels it (Program stays), scene switches and triggers are refused while it is
+   * active, and leaving Studio Mode sets Program to its target in one step. */
+  public manualTransitionActive = false;
+  public manualTransitionTarget = "";
   public slots: FadesterSlot[];
   public validSources = new Set<string>([
     "Cam 1",
@@ -1242,8 +1248,20 @@ export class FakeObsServer {
 
     if (requestType === "SetStudioModeEnabled") {
       this.directCallLog.push({ requestType, requestData });
-      this.studioMode = requestData.studioModeEnabled === true;
+      const enabled = requestData.studioModeEnabled === true;
+      const finishesManualTransition = this.studioMode && !enabled && this.manualTransitionActive;
+      this.studioMode = enabled;
       this.sendResponse(ws, requestId, requestType, true, 100, "", {});
+      if (finishesManualTransition) {
+        // Leaving Studio Mode: OBSBasic::SetPreviewProgramMode(false) force-sets the output
+        // transition to programScene, the manual transition's target (OBSBasic_StudioMode.cpp:251-257).
+        this.manualTransitionActive = false;
+        this.directTbarPosition = 0;
+        this.programSceneName = this.manualTransitionTarget;
+        this.previewSceneName = this.programSceneName;
+        this.emitObsEvent("SceneTransitionEnded", { transitionName: this.currentTransitionName });
+        this.emitObsEvent("CurrentProgramSceneChanged", { sceneName: this.programSceneName });
+      }
       this.emitObsEvent("StudioModeStateChanged", { studioModeEnabled: this.studioMode });
       return;
     }
@@ -1484,8 +1502,26 @@ export class FakeObsServer {
         this.sendResponse(ws, requestId, requestType, false, 400, "Studio Mode is off.");
       } else {
         this.directCallLog.push({ requestType, requestData });
-        this.directTbarPosition = Number(requestData.position ?? 0);
+        const wasActive = this.manualTransitionActive;
+        if (requestData.release === true) {
+          // OBS 33.0.1: TBarReleased reads the T-bar widget, which obs_frontend_set_tbar_position
+          // never moves, so a release over obs-websocket always cancels ("Manual transition
+          // cancelled", OBSBasic_Transitions.cpp:767-777): Program stays, nothing is taken.
+          this.directTbarPosition = 0;
+          this.manualTransitionActive = false;
+        } else {
+          this.directTbarPosition = Number(requestData.position ?? 0);
+          if (!wasActive && this.programSceneName !== this.previewSceneName) {
+            this.manualTransitionActive = true;
+            this.manualTransitionTarget = this.previewSceneName;
+          }
+        }
         this.sendResponse(ws, requestId, requestType, true, 100, "", {});
+        if (!wasActive && this.manualTransitionActive) {
+          this.emitObsEvent("SceneTransitionStarted", { transitionName: this.currentTransitionName });
+        } else if (wasActive && !this.manualTransitionActive) {
+          this.emitObsEvent("SceneTransitionEnded", { transitionName: this.currentTransitionName });
+        }
       }
       return;
     }
@@ -1510,6 +1546,11 @@ export class FakeObsServer {
         this.sendResponse(ws, requestId, requestType, false, 500, "Switch failed.");
       } else if (!this.sceneNames.includes(sceneName)) {
         this.sendResponse(ws, requestId, requestType, false, 400, "Choose an existing scene.");
+      } else if (this.studioMode && this.manualTransitionActive) {
+        // OBS 33.0.1 answers ok and does nothing while a manual transition is active
+        // (OBSBasic::TransitionToScene: "If actively transitioning, block new transitions").
+        this.directCallLog.push({ requestType, requestData });
+        this.sendResponse(ws, requestId, requestType, true, 100, "", {});
       } else {
         this.directCallLog.push({ requestType, requestData });
         this.lastSceneTransition = this.sceneTransitionOverrides.get(sceneName)?.transitionName || this.currentTransitionName;
@@ -1540,6 +1581,10 @@ export class FakeObsServer {
     if (requestType === "TriggerStudioModeTransition") {
       if (!this.studioMode) {
         this.sendResponse(ws, requestId, requestType, false, 400, "Studio Mode is off.");
+      } else if (this.manualTransitionActive) {
+        // Refused silently while the T-bar's manual transition is active (as SetCurrentProgramScene).
+        this.directCallLog.push({ requestType, requestData });
+        this.sendResponse(ws, requestId, requestType, true, 100, "", {});
       } else {
         this.directCallLog.push({ requestType, requestData });
         this.programSceneName = this.previewSceneName;

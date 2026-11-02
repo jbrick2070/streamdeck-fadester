@@ -1556,3 +1556,26 @@ and OBS page (D-L7), better Chinese alias handling in VJster's Automatic.
 | D-L10 | Versions | **Fadester 0.8.0, VJster 0.2.0**, after the device check |
 | D-L11 | Automatic label | **"Automatic (Stream Deck's language)"**, translated |
 | D-L12 | Midi Fadester pages in the reel slice | **No** (the rig uses the direct pages); L.6 |
+
+## 12. Scene mixer take on OBS 33.0.1 (found by the demo kit check 1.1, 2026-11-01)
+
+*As built (2026-11-01, worktree `tbar-take`):* OBS 33.0.1: the T-bar release over websocket cancels; the press now
+takes Next live by aiming the manual transition at Next, leaving and re-entering Studio Mode, then setting Preview.
+Cause, confirmed in the OBS source: `obs_frontend_set_tbar_position` only invokes `OBSBasic::TBarChanged`
+(`frontend/OBSStudioAPI.cpp:115-118`, the same in OBS 30), never the T-bar widget; `TBarReleased` reads
+`tBar->value()` (0) and takes the cancel branch (`frontend/widgets/OBSBasic_Transitions.cpp:750-777`), whose
+`obs_transition_set_manual_time(0)` hard-sets the old scene (`libobs/obs-source-transition.c:393-404`).
+Rejected on the portable: (a) a Cut via `SetCurrentSceneTransition` is refused while the manual transition is active
+(`OBSBasic::SetTransition` returns early), as are `TriggerStudioModeTransition` and `SetCurrentProgramScene`
+(`TransitionToScene`, "If actively transitioning"); (b) cancel then switch snaps Program back first (one old frame in
+14 recorded takes even with the switch awaited on the cancel's `SceneTransitionEnded`; the scene-override variant
+also races the frontend's queued `TransitionFullyStopped` and left OBS stuck on the old scene). Chosen:
+`DirectObsClient.takeTbar` / `performTbarTake` (`src/obs/direct-obs-client.ts`), used by the dial press
+(`obs-fader-dial.ts`) and by `writeTbarPosition` when a queue-next throw reaches 1.0; `TBAR_SETTLE_MS` (300 ms)
+ignores the encoder ticks that trail a take; the client ignores its own two `StudioModeStateChanged` events.
+The fake server models OBS 33.0.1 (`manualTransitionActive`: a release cancels, switches are refused, leaving
+Studio Mode takes). Tests: `tests/scene-cycle.test.ts` (rewritten to the real contract), `tests/dial-press.test.ts`;
+mutation M-TB.1 (release instead of the Studio Mode step). Requirement row `R-ACT-4`. The demo kit's expectation
+(branch `kit-k6`, TESTING.md 1.1) should read: the dial press takes Next live with Program verified by
+`GetCurrentProgramScene`, the OBS log shows "Switched to regular Preview mode" then "Switched to Preview/Program mode"
+and no "Manual transition cancelled" at the take.

@@ -21,6 +21,8 @@ export const DIRECT_SCENE_RANDOM = "__random_scene__";
 export const DIRECT_SCENE_CURRENT_PREVIEW = "__current_preview__";
 export const OBS_TRANSITION_CURRENT = "__current_transition__";
 export const OBS_TRANSITION_CUT = "__cut__";
+/** After a queue-next take, encoder ticks this long are the end of the old throw, not a new one. */
+export const TBAR_SETTLE_MS = 300;
 
 export type DirectSceneOperation = "preview" | "cut" | "transition";
 
@@ -320,6 +322,10 @@ export class DirectObsClient extends ObsVendorClient {
   private sceneCycle: {
     token: number; live: string; next: string; transition: string; started: boolean; ended: boolean;
   } | null = null;
+  /** A scene mixer take is leaving and re-entering Studio Mode: its two StudioModeStateChanged events are ours. */
+  private tbarTakeInFlight = false;
+  /** Encoder ticks that arrive just after a take do not start the next throw before this time. */
+  private tbarSettleUntil = 0;
   private mediaCapability: MediaCapability = "unknown";
   private mediaGeneration = 0;
   private mediaSequence = 0;
@@ -654,7 +660,9 @@ export class DirectObsClient extends ObsVendorClient {
     const shouldRelease = release || (queueNextScene && position >= 1);
     // Ignore extra encoder ticks while OBS's completed transition is settling
     // and the next Preview is being prepared.
-    if (this.sceneCycle?.ended) return this.catalog.tbarPosition;
+    if (this.sceneCycle?.ended || Date.now() < this.tbarSettleUntil) return this.catalog.tbarPosition;
+    // The end of a throw is a take: OBS 33.0.1 cancels a T-bar released over obs-websocket.
+    if (shouldRelease) return this.performTbarTake(queueNextScene, generation);
     if (!queueNextScene || position === 0) this.cancelSceneCycle();
     else if (!this.sceneCycle && this.catalog.currentProgramScene !== this.catalog.currentPreviewScene) {
       this.sceneCycle = {
@@ -667,13 +675,13 @@ export class DirectObsClient extends ObsVendorClient {
       };
     }
     try {
-      await this.sendObsRequest("SetTBarPosition", { position, release: shouldRelease });
+      await this.sendObsRequest("SetTBarPosition", { position, release: false });
       this.requireControlGeneration(generation);
     } catch (error) {
       this.cancelSceneCycle();
       throw error;
     }
-    this.catalog.tbarPosition = shouldRelease ? 0 : position;
+    this.catalog.tbarPosition = position;
     this.emitDirectState();
     return this.catalog.tbarPosition;
   }
@@ -681,6 +689,90 @@ export class DirectObsClient extends ObsVendorClient {
   public async nudgeTbar(delta: number, queueNextScene = false): Promise<number> {
     return this.queueTbar((generation) =>
       this.writeTbarPosition(this.catalog.tbarPosition + delta, false, queueNextScene, generation));
+  }
+
+  /** Takes Next live: the scene mixer's dial press, and the end of a throw. */
+  public async takeTbar(queueNextScene = false): Promise<number> {
+    return this.queueTbar((generation) => {
+      if (!this.catalog.studioMode) throw new DirectObsError(ownText("errorTbarNeedsStudio"), 400);
+      return this.performTbarTake(queueNextScene, generation);
+    });
+  }
+
+  /**
+   * OBS 33.0.1 cannot finish a T-bar throw over obs-websocket: `SetTBarPosition` with
+   * `release` calls `OBSBasic::TBarReleased`, which reads the T-bar widget's value, and
+   * `obs_frontend_set_tbar_position` only invokes `TBarChanged` without moving the widget
+   * (frontend/OBSStudioAPI.cpp:115-118), so the release always takes the cancel branch
+   * (frontend/widgets/OBSBasic_Transitions.cpp:767-777, "Manual transition cancelled") and
+   * Program snaps back. `TriggerStudioModeTransition`, `SetCurrentProgramScene` and
+   * `SetCurrentSceneTransition` are refused while the manual transition is active. The one
+   * request that sets Program to the throw's target in a single UI step is leaving Studio Mode
+   * (OBSBasic_StudioMode.cpp:251-257: `TransitionToScene(programScene, force)`), so the take
+   * is: make sure a manual transition toward Next is active (Program keeps showing the throw),
+   * leave Studio Mode (Program becomes Next at once, no frame of Live), re-enter it, then set
+   * Preview: the scene after Next when queue-next is on, otherwise the previous Live, as OBS's
+   * own swap after a transition does. Measured on OBS 33.0.1: 14 of 14 recorded takes showed no
+   * frame of the old scene; a cancel followed by a Cut showed one in 14.
+   */
+  private async performTbarTake(queueNextScene: boolean, generation: number): Promise<number> {
+    const live = this.catalog.currentProgramScene;
+    const next = this.catalog.currentPreviewScene;
+    this.cancelSceneCycle();
+    if (!next || next === live) {
+      this.catalog.tbarPosition = 0;
+      this.emitDirectState();
+      return 0;
+    }
+    this.tbarTakeInFlight = true;
+    try {
+      // Never `release: true`: that is the cancel. At the end of a throw this only re-aims the
+      // manual transition (its eased value moves by about one percent before the next request);
+      // from rest it starts one, and Program keeps showing Live until the step below.
+      await this.sendObsRequest("SetTBarPosition", { position: 1, release: false });
+      this.requireControlGeneration(generation);
+      await this.sendObsRequest("SetStudioModeEnabled", { studioModeEnabled: false });
+      this.requireControlGeneration(generation);
+      try {
+        await this.sendObsRequest("SetStudioModeEnabled", { studioModeEnabled: true });
+      } catch {
+        this.catalog.studioMode = false;
+        this.catalog.tbarPosition = 0;
+        this.emitDirectState();
+        throw new DirectObsError(ownText("errorStudioNotEnabled"), 500);
+      }
+      this.requireControlGeneration(generation);
+    } finally {
+      this.tbarTakeInFlight = false;
+    }
+    this.catalog.tbarPosition = 0;
+    await this.refreshCurrentSceneNames();
+    this.requireControlGeneration(generation);
+    if (this.catalog.currentProgramScene !== next) {
+      this.emitDirectState();
+      throw new DirectObsError(ownText("errorControlChanged"), 500);
+    }
+    const previewTarget = queueNextScene ? await this.sceneAfter(next, generation) : live;
+    if (previewTarget && previewTarget !== this.catalog.currentPreviewScene) {
+      await this.sendObsRequest("SetCurrentPreviewScene", { sceneName: previewTarget });
+      this.requireControlGeneration(generation);
+      this.catalog.currentPreviewScene = previewTarget;
+    }
+    if (queueNextScene) this.tbarSettleUntil = Date.now() + TBAR_SETTLE_MS;
+    this.emitDirectState();
+    return 0;
+  }
+
+  /** The scene after `sceneName` in OBS's current order (wrapping), read fresh: OBS does not
+   * reliably announce a reordering. Empty when the list is too short or the scene is gone. */
+  private async sceneAfter(sceneName: string, generation: number): Promise<string> {
+    const sceneList = await this.sendObsRequest("GetSceneList");
+    this.requireControlGeneration(generation);
+    this.applySceneList(sceneList.scenes);
+    const scenes = this.catalog.scenes;
+    const index = scenes.indexOf(sceneName);
+    if (index < 0 || scenes.length < 2) return "";
+    return scenes[(index + 1) % scenes.length] ?? "";
   }
 
   public cancelSceneCycle(): void {
@@ -874,9 +966,11 @@ export class DirectObsClient extends ObsVendorClient {
   }
 
   protected override handleObsEvent(d: Record<string, unknown>): void {
-    super.handleObsEvent(d);
     const eventType = typeof d.eventType === "string" ? d.eventType : "";
     const eventData = (d.eventData ?? {}) as Record<string, unknown>;
+    // A take leaves and re-enters Studio Mode on purpose: Studio Mode stays on for every cell.
+    if (eventType === "StudioModeStateChanged" && this.tbarTakeInFlight) return;
+    super.handleObsEvent(d);
 
     if (eventType === "SceneTransitionStarted") {
       const cycle = this.sceneCycle;

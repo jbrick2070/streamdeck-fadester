@@ -30,6 +30,9 @@ export const START_READ_TIMEOUT_MS = 5000;
 /** The log line of a save held in memory because the whole settings object is not known yet. */
 export const NOT_READ_MESSAGE = "settings not read; not saved";
 
+/** The log line of a write Stream Deck refused; the change is held for the next write. */
+export const NOT_SAVED_MESSAGE = "settings not saved";
+
 export class GlobalSettingsStore {
   /**
    * Resolves once the start-up read finished, failed or timed out, or once Stream Deck
@@ -88,9 +91,14 @@ export class GlobalSettingsStore {
     return { ...this.current };
   }
 
-  /** Settings Stream Deck sent (`onDidReceiveGlobalSettings`): they replace what is known. */
+  /**
+   * Settings Stream Deck sent (`onDidReceiveGlobalSettings`): they replace what is known. They are newer
+   * than the saves held while the start-up read was out, so a held key they carry gives way to theirs.
+   */
   public replace(settings: FadesterGlobalSettings | undefined): void {
-    this.learn(copyOf(settings));
+    const next = copyOf(settings);
+    if (this.pending) for (const key of Object.keys(next)) delete (this.pending as Record<string, unknown>)[key];
+    this.learn(next);
   }
 
   /**
@@ -109,27 +117,44 @@ export class GlobalSettingsStore {
         this.log?.(NOT_READ_MESSAGE);
         return { ...next };
       }
-      const written = { ...next };
-      await this.port.setGlobalSettings(written);
-      return written;
+      return this.write(change);
     });
     this.queue = task.then(() => undefined, () => undefined);
     return task;
   }
 
   /**
-   * The whole stored object, from the start-up read or from Stream Deck: it is what is known
-   * now, with the changes held meanwhile on top, and those are written once. Saves need not
-   * wait for the start-up read any more.
+   * The whole stored object, from the start-up read or from Stream Deck, becomes the known object,
+   * with the changes held meanwhile on top; those are then written once, through the queue. Saves
+   * need not wait for the start-up read any more.
    */
   private learn(stored: FadesterGlobalSettings): void {
     this.known = true;
-    this.current = { ...stored, ...this.pending };
-    this.resolveReady();
-    if (this.pending === undefined) return;
+    const held = this.pending;
     this.pending = undefined;
-    const task = this.queue.then(() => this.port.setGlobalSettings({ ...this.current }));
+    this.current = { ...stored, ...held };
+    this.resolveReady();
+    if (held === undefined || Object.keys(held).length === 0) return;
+    const task = this.queue.then(() => this.write(held));
     this.queue = task.then(() => undefined, () => undefined);
+  }
+
+  /**
+   * Writes the whole known object, which carries `change`. A write Stream Deck refuses is logged and
+   * `change` is held again, so the next write (a later save, or settings Stream Deck sends) carries it;
+   * a write that succeeds stored every held change, so nothing stays held.
+   */
+  private async write(change: FadesterGlobalSettings): Promise<FadesterGlobalSettings> {
+    const written = { ...this.current };
+    try {
+      await this.port.setGlobalSettings(written);
+    } catch (error) {
+      this.pending = { ...change, ...this.pending };
+      this.log?.(NOT_SAVED_MESSAGE);
+      throw error;
+    }
+    this.pending = undefined;
+    return written;
   }
 }
 

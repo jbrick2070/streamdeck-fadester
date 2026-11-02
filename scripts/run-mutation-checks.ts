@@ -906,8 +906,8 @@ const MUTATIONS: MutationCheck[] = [
     description:
       "Keep saves waiting for the start-up read when Stream Deck sends the settings itself, and verify language-choice.test.ts fails",
     filePath: resolve(ROOT, "src/settings/global-store.ts"),
-    target: "    this.current = { ...stored, ...this.pending };\n    this.resolveReady();\n",
-    mutated: "    this.current = { ...stored, ...this.pending };\n",
+    target: "    this.current = { ...stored, ...held };\n    this.resolveReady();\n",
+    mutated: "    this.current = { ...stored, ...held };\n",
     testFile: "tests/language-choice.test.ts"
   },
   {
@@ -949,6 +949,26 @@ const MUTATIONS: MutationCheck[] = [
     filePath: resolve(ROOT, "src/settings/global-store.ts"),
     target: "      if (!this.known) {\n        this.pending",
     mutated: "      if (false) {\n        this.pending",
+    testFile: "tests/language-choice.test.ts"
+  },
+  {
+    id: "M-11.1m",
+    step: "Step L.1 (the Language choice on the deck)",
+    description:
+      "Let a held save overwrite the newer value Stream Deck sent while the read was out, and verify language-choice.test.ts fails",
+    filePath: resolve(ROOT, "src/settings/global-store.ts"),
+    target: "    if (this.pending) for (const key of Object.keys(next)) delete (this.pending as Record<string, unknown>)[key];\n",
+    mutated: "",
+    testFile: "tests/language-choice.test.ts"
+  },
+  {
+    id: "M-11.1n",
+    step: "Step L.1 (the Language choice on the deck)",
+    description:
+      "Drop a change whose write Stream Deck refused instead of holding it for the next write, and verify language-choice.test.ts fails",
+    filePath: resolve(ROOT, "src/settings/global-store.ts"),
+    target: "      this.pending = { ...change, ...this.pending };",
+    mutated: "      this.pending = undefined;",
     testFile: "tests/language-choice.test.ts"
   },
   {

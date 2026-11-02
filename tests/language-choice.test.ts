@@ -13,7 +13,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { EN, PLUGIN_LANGUAGES, STREAM_DECK_LANGUAGES, currentLanguage, onLanguageChanged, setLanguage, t } from "../src/i18n/strings.js";
 import { useStreamDeckLanguage } from "../src/i18n/load.js";
 import { LanguageChoiceController, normalizeChoice, resolveLanguage } from "../src/i18n/language-choice.js";
-import { GlobalSettingsPort, GlobalSettingsStore, NOT_READ_MESSAGE, START_READ_TIMEOUT_MS, connectionChange, connectionSaver } from "../src/settings/global-store.js";
+import { GlobalSettingsPort, GlobalSettingsStore, NOT_READ_MESSAGE, NOT_SAVED_MESSAGE, START_READ_TIMEOUT_MS, connectionChange, connectionSaver } from "../src/settings/global-store.js";
 import type { FadesterGlobalSettings } from "../src/types/settings.js";
 import { FadesterClient } from "../src/obs/fadester-client.js";
 import { FadesterStore } from "../src/state/fadester-store.js";
@@ -237,6 +237,76 @@ describe("the global settings store", () => {
     // Later saves write as usual, from the merged object.
     await store.patch({ language: "ja" });
     expect(writes).toEqual([merged, { ...merged, language: "ja" }]);
+  });
+
+  it("settings Stream Deck sends while the read is out are newer than the held saves: a held key they carry gives way", async () => {
+    vi.useFakeTimers();
+    const writes: FadesterGlobalSettings[] = [];
+    const store = new GlobalSettingsStore({
+      getGlobalSettings: () => new Promise<never>(() => {}),
+      setGlobalSettings: async (settings) => { writes.push({ ...settings }); }
+    }, 50);
+    const started = store.start();
+    await vi.advanceTimersByTimeAsync(50);
+    await started;
+    await store.patch(connectionChange({ port: 4470 }));
+    await store.patch({ language: "nl" });
+    expect(writes).toEqual([]);
+    // A settings page saved port 4480 meanwhile: Stream Deck's object carries it, and it stands over the held 4470.
+    store.replace({ ...CONNECTION, port: 4480, other: "kept" });
+    await vi.advanceTimersByTimeAsync(0);
+    const merged = { ...CONNECTION, port: 4480, other: "kept", language: "nl" };
+    expect(store.snapshot()).toEqual(merged);
+    expect(writes).toEqual([merged]);
+    // Nothing held once every held key gave way: no write of its own.
+    const quiet = new GlobalSettingsStore({
+      getGlobalSettings: () => new Promise<never>(() => {}),
+      setGlobalSettings: async (settings) => { writes.push({ ...settings }); }
+    }, 50);
+    void quiet.start();
+    await vi.advanceTimersByTimeAsync(50);
+    await quiet.patch(connectionChange({ port: 4470 }));
+    quiet.replace({ ...CONNECTION, port: 4480 });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(writes).toHaveLength(1);
+    expect(quiet.snapshot()).toEqual({ ...CONNECTION, port: 4480 });
+  });
+
+  it("a refused write of the held saves is logged and held again for the next write; so is a refused save", async () => {
+    vi.useFakeTimers();
+    const writes: FadesterGlobalSettings[] = [];
+    const logs: string[] = [];
+    let refuse = true;
+    let answer!: (settings: FadesterGlobalSettings) => void;
+    const store = new GlobalSettingsStore({
+      getGlobalSettings: () => new Promise((resolve) => { answer = resolve; }),
+      setGlobalSettings: async (settings) => {
+        if (refuse) throw new Error("refused");
+        writes.push({ ...settings });
+      }
+    }, 50, (message) => { logs.push(message); });
+    const started = store.start();
+    await vi.advanceTimersByTimeAsync(50);
+    await started;
+    await store.patch({ language: "nl" });
+    answer({ ...CONNECTION, other: "late" });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(logs).toEqual([NOT_READ_MESSAGE, NOT_SAVED_MESSAGE]);
+    expect(writes).toEqual([]);
+    // Stream Deck sends the settings: the held language goes out with them.
+    refuse = false;
+    store.replace({ ...CONNECTION, other: "sent" });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(writes).toEqual([{ ...CONNECTION, other: "sent", language: "nl" }]);
+    // A refused save of a known store: rejected to its caller, logged, carried by the next write.
+    refuse = true;
+    await expect(store.patch(connectionChange({ port: 4470 }))).rejects.toThrow("refused");
+    expect(logs).toEqual([NOT_READ_MESSAGE, NOT_SAVED_MESSAGE, NOT_SAVED_MESSAGE]);
+    refuse = false;
+    // Stream Deck's object carries no port, so the held port rides along (one that carried a port would win).
+    store.replace({ host: CONNECTION.host, password: CONNECTION.password, other: "again" });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(writes.at(-1)).toEqual({ host: CONNECTION.host, password: CONNECTION.password, other: "again", port: 4470 });
   });
 
   it("a start-up read answering after Stream Deck sent the settings replaces nothing", async () => {

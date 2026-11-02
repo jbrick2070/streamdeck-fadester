@@ -1506,7 +1506,38 @@ and OBS page (D-L7), better Chinese alias handling in VJster's Automatic.
   script in the repository for the reel) stands. Where the code led: the repository had no root `TESTING.md` (only
   `docs/vjster/TESTING.md`), so the operator's device check is a new root `TESTING.md` section 1, with VJster's items
   in `docs/vjster/TESTING.md` section 6. Seen on the way: the deck shows "Houd 0,8 s vast" with a decimal comma (the
-  Fable review's `localeTag("nl")` point, by eye only, no test yet). Not done: the device check itself, then the reel.
+  Fable review's `localeTag("nl")` point, by eye only, no test yet). The device check: done by the operator on
+  2026-11-01, passed on every item run (the L.6 entry); then the reel.
+- *L.6 (2026-11-01, the device check's result and its two fixes; the plan's own step L.6, Midi Fadester pages and
+  numbers, is still to do):* the operator ran `TESTING.md` section 1 and `docs/vjster/TESTING.md` section 6 on a
+  Stream Deck + (device 4057/132), Stream Deck app 7.6.0.23012, OBS 33.0.1 with obs-websocket 5.7.6, Windows 11, with
+  the b20bd27 builds installed by double-click: 1.1, 1.2, 1.4 to 1.7 and 6.1, 6.3, 6.4 passed; 1.3 (no Neo), 6.2 (no
+  extension connected) and 6.5 not run; 1.8 no complaint. The item-by-item results are under each section. Two
+  should-fixes the check found, done here. (a) The static key images Stream Deck draws inside VJster's dial circles
+  and in its action list carried English words ("1x SPEED", "AUTO QUALITY"). Where the code led: they are SVGs, not
+  PNGs, and their generator is `scripts/vjster/make-plugin-images.ts` (`scripts/generate-plugin-icons.ts` draws only
+  Fadester's plugin icon PNGs, from shapes); Fadester's `imgs/actions/*/icon.svg` and `key.svg` never had a word, so
+  only VJster's seven `key.svg` changed. The key specs now have an empty caption and a number or a symbol as the main
+  text; the Quality dial gets a `quality` glyph (a screen with a tick) in `display.ts`, whose `keyImage` draws no
+  caption for an empty `sub`; the generator exports `GLYPHS`, `KEYS` and `renderAll()` and writes only when run
+  directly. `tests/vjster-plugin-images.test.ts`: no `<text>` in any SVG of either plugin holds two Latin letters in
+  a row, the generator's specs have no word, the committed images equal a fresh render, the plugin icons are real
+  PNGs drawn without text. (b) VJster's pack had no `bin/obs`: `npm run build` never ran
+  `vjster-page/rollup.config.mjs`, so the plugin logged "the OBS page files are missing from the plugin".
+  `package.json` now has `build:vjster-page` and `build:vjster` (page, then bundle), and `build` runs `build:vjster`
+  after Fadester's build; the same test fails when a built plugin folder lacks `bin/obs/player.html` or `player.js`
+  (it fails, it does not skip, whenever either plugin has build output and `bin/obs` is missing; only a tree with no
+  build output at all passes it with nothing checked). Mutations M-V-95 (a word back in a key spec) and M-V-96 (the page build dropped),
+  both flipped by hand once. Both plugins rebuilt and re-packed from copies without `logs` (`streamdeck validate`
+  passes on both): `com.jbrick2070.vjster.streamDeckPlugin` now holds `bin/obs/player.html` and `player.js` (checked
+  with Python's zipfile), Fadester's file is byte-identical to the L.5 one; in the scratchpad `lang-builds` folder and
+  in `C:\Users\jeffr\Documents\StreamDeck-builds\2026-11-01-language-choice\` with `BUILT-FROM.txt`; not installed. Versions
+  unchanged (D-L10). After the review: the SVG scan also reads text split over `tspan`s and fails on any `tspan`,
+  `title` or `desc`; the icon test says it checks the generators, not the pixels; the `bin/obs` file check no longer
+  `skipIf`s on a missing build: the npm-script check is the build-independent guard, and the file check fails after any
+  build that lacks the page, and checks the bundle is the page's own code; a leaked Fadester mutation (the
+  `MEDIA_QUEUE_LIMIT` guard in `direct-obs-client.ts` turned to `if (false)`) found in the working tree was reverted
+  before the commit. Still open: the `localeTag("nl")` decimal-comma test; the reel.
 
 ### 11.6 Decisions (approved by the operator 2026-11-01, every one at its recommended default)
 

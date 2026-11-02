@@ -8,29 +8,36 @@
 // The default key images reuse the same drawing code the actions use at run
 // time, so the action list shows what the deck will show. The plugin icon PNGs
 // are rendered from vjster-extension/icons/icon.svg (see TESTING.md).
+//
+// The static images are language-neutral (PLAN.md section 9, L.6): Stream
+// Deck draws them inside the dial circles and in its action list whatever
+// language the plugin is set to, so they carry a number or a symbol only,
+// never a word. The words come from the plugin at run time, in its language.
+// `tests/vjster-plugin-images.test.ts` holds the committed files to this.
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { keyImage } from "../../src/vjster/plugin/display.js";
+import { keyImage, type KeyModel } from "../../src/vjster/plugin/display.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-const imgs = join(root, "com.jbrick2070.vjster.sdPlugin", "imgs");
+/** The plugin's image folder. */
+export const IMAGES_DIR = join(root, "com.jbrick2070.vjster.sdPlugin", "imgs");
 const SPDX = "<!-- SPDX-License-Identifier: GPL-2.0-or-later -->";
 
-function write(path: string, svg: string): void {
-  mkdirSync(dirname(path), { recursive: true });
-  // Keep the SPDX notice inside the root element so the file stays valid SVG.
-  writeFileSync(path, svg.replace(/^(<svg[^>]*>)/, `$1${SPDX}`) + "\n");
+/** The file's contents: the SPDX notice inside the root element, so the file stays valid SVG. */
+function fileText(svg: string): string {
+  return svg.replace(/^(<svg[^>]*>)/, `$1${SPDX}`) + "\n";
 }
 
 /** A white line icon on transparent, as Stream Deck's action list wants. */
-function icon(size: number, body: string): string {
+export function icon(size: number, body: string): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 20 20" fill="none" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
 }
 
 const gauge = '<path d="M4 15 A7 7 0 1 1 16 15"/><path d="M10 11 L13.5 6.5"/>';
-const glyphs: Record<string, string> = {
+/** The action-list icons, by action folder: line drawings, no text. */
+export const GLYPHS: Readonly<Record<string, string>> = {
   speed: gauge,
   quality: '<rect x="2.5" y="5" width="15" height="10" rx="2"/><path d="M6 8 V12 M6 10 H8.5 M8.5 8 V12 M11.5 8 H13 A2 2 0 0 1 13 12 H11.5 Z"/>',
   "speed-preset": '<path d="M4 15 A7 7 0 1 1 16 15"/><circle cx="10" cy="11" r="1.4" fill="#ffffff"/>',
@@ -40,22 +47,34 @@ const glyphs: Record<string, string> = {
   transport: '<path d="M4 5 L10 10 L4 15 Z"/><path d="M13 5 V15 M16.5 5 V15"/>'
 };
 
-for (const [name, body] of Object.entries(glyphs)) {
-  write(join(imgs, "actions", name, "icon.svg"), icon(20, body));
-}
-write(join(imgs, "plugin", "category-icon.svg"), icon(28, gauge));
-
-const keys: Record<string, Parameters<typeof keyImage>[0]> = {
-  speed: { main: "1x", sub: "SPEED", active: true, dim: false },
-  quality: { main: "AUTO", sub: "QUALITY", active: true, dim: false },
-  "speed-preset": { main: "2x", sub: "SPEED", active: false, dim: false },
-  "speed-step": { main: "+0.25", sub: "SPEED", active: false, dim: false },
-  "quality-preset": { main: "1080p", sub: "QUALITY", active: false, dim: false },
-  pin: { main: "", sub: "PIN TAB", active: false, dim: false, glyph: "pin" },
-  transport: { main: "", sub: "PLAY", active: false, dim: false, glyph: "play" }
+/** The default key images, by action folder: a number or a symbol, and no caption (`sub` stays empty). */
+export const KEYS: Readonly<Record<string, KeyModel>> = {
+  speed: { main: "1x", sub: "", active: true, dim: false },
+  quality: { main: "", sub: "", active: true, dim: false, glyph: "quality" },
+  "speed-preset": { main: "2x", sub: "", active: false, dim: false },
+  "speed-step": { main: "+0.25", sub: "", active: false, dim: false },
+  "quality-preset": { main: "1080p", sub: "", active: false, dim: false },
+  pin: { main: "", sub: "", active: false, dim: false, glyph: "pin" },
+  transport: { main: "", sub: "", active: false, dim: false, glyph: "play" }
 };
-for (const [name, model] of Object.entries(keys)) {
-  write(join(imgs, "actions", name, "key.svg"), keyImage(model));
+
+/** Every image file the script writes, by path relative to the image folder (forward slashes). */
+export function renderAll(): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const [name, body] of Object.entries(GLYPHS)) out.set(`actions/${name}/icon.svg`, fileText(icon(20, body)));
+  out.set("plugin/category-icon.svg", fileText(icon(28, gauge)));
+  for (const [name, model] of Object.entries(KEYS)) out.set(`actions/${name}/key.svg`, fileText(keyImage(model)));
+  return out;
 }
 
-console.log(`wrote ${Object.keys(glyphs).length * 2 + 1} SVG files under ${imgs}`);
+function main(): void {
+  const files = renderAll();
+  for (const [rel, text] of files) {
+    const path = join(IMAGES_DIR, ...rel.split("/"));
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, text);
+  }
+  console.log(`wrote ${files.size} SVG files under ${IMAGES_DIR}`);
+}
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();

@@ -88,9 +88,13 @@ deck, so they are checked with the plugin in section 2.
 Build and check the plugin first, from the repository root:
 
 ```
-npx rollup -c vjster-plugin/rollup.config.mjs
+npm run build:vjster
 npx streamdeck validate com.jbrick2070.vjster.sdPlugin
 ```
+
+(`npm run build:vjster` builds the OBS page into `bin/obs` and then the plugin bundle; `npm run build` at the root
+runs it after Fadester's build. A pack made without the page makes the plugin log "the OBS page files are missing
+from the plugin", as the L.6 device check found.)
 
 2.1 **Link the plugin (changes the Stream Deck app).** Run
 `npx streamdeck link com.jbrick2070.vjster.sdPlugin`, then
@@ -164,9 +168,11 @@ The same flows run without hardware in `tests/vjster-plugin-e2e.test.ts`.
 Build the page with the plugin, from the repository root, then link the plugin as in 2.1:
 
 ```
-npx rollup -c vjster-page/rollup.config.mjs
-npx rollup -c vjster-plugin/rollup.config.mjs
+npm run build:vjster
 ```
+
+(the same as `npx rollup -c vjster-page/rollup.config.mjs` followed by `npx rollup -c vjster-plugin/rollup.config.mjs`;
+`tests/vjster-plugin-images.test.ts` fails when a build leaves `bin/obs/player.html` or `player.js` out.)
 
 3.1 **Add the page to OBS.** Open any VJster action's settings, find OBS page,
 paste a YouTube link, press Copy address. In OBS add a Browser source, untick
@@ -264,3 +270,22 @@ once; the port and the "only this extension" id are unchanged (open the page aga
 
 6.5 **日本語 on an English app.** As 6.1 with 日本語: 速度, 微調整, 画質, FX 速度, 再生中, タブ固定, 自動. Expected:
 the glyphs render in a Japanese font and fit (closes 5.2 for Japanese). Then Automatic again.
+
+**Result (2026-11-01).** Run by the operator with the root section 1, on a Stream Deck + (device 4057/132), Stream
+Deck app 7.6.0.23012, Windows 11; the VJster build from b20bd27 installed by double-click.
+
+- 6.1 PASSED: TEMPO, FX-TEMPO, PAUZE, VASTZETTEN, KWALITEIT and EXTENSIE UIT on all four strips; the page in Dutch:
+  DEZE ACTIE, Stap bij draaien, Bediening Chrome-tabblad, TAAL, VJSTER-VERBINDING, Wachten op de Chrome-extensie,
+  Verbinding opslaan.
+- 6.2 NOT RUN: no Chrome extension connected during the check.
+- 6.3 PASSED: app restarted at 15:08:01, Dutch came back on its own.
+- 6.4 PASSED: Automatic gave English again, port 48150 kept.
+- 6.5 NOT RUN.
+
+Found on the way, fixed in step L.6 (PLAN.md section 9): (a) the static images Stream Deck draws inside the dial
+circles and in the action list (`imgs/actions/*/key.svg`) carried English words ("1x SPEED", "AUTO QUALITY"); they
+are now a number or a symbol only, and `tests/vjster-plugin-images.test.ts` keeps them so. (b) The packed plugin had
+no `bin/obs`, so it logged "the OBS page files are missing from the plugin": `npm run build` did not run the page
+build. It does now (`build:vjster`), and the re-packed `com.jbrick2070.vjster.streamDeckPlugin` holds
+`bin/obs/player.html` and `player.js`. It is in `C:\Users\jeffr\Documents\StreamDeck-builds\2026-11-01-language-choice\`
+(with `BUILT-FROM.txt`) for the operator to re-install; 3.1 and 6.2 can then be run with the extension and OBS.

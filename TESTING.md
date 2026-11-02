@@ -67,3 +67,29 @@ keys overall, which no native speaker has reviewed yet.
 
 Record here and in PLAN.md 11.5: the date, who ran it, the Stream Deck app version, the device models, the OBS
 version, and each item passed or the words that failed.
+
+**Result (2026-11-01).** Run by the operator on a Stream Deck + (device 4057/132), Stream Deck app 7.6.0.23012,
+OBS 33.0.1 with obs-websocket 5.7.6, Windows 11; the builds from b20bd27 installed by double-click.
+
+- 1.1 PASSED: both installed, the existing profiles kept. Note: Fadester kept its last saved connection port, 4466,
+  from an earlier portable-OBS capture run; the operator set it back to 4455 and saved. That is the saved setting
+  surviving an update, as designed.
+- 1.2 PASSED: all pages of VJ Rig +: Filter aan/uit, Kies een filter, Herstellen with Houd 0,8 s vast, Reactiviteit,
+  PANIEK with Strobe en flits uit, Vorige/Volgende bron, Tonen / verbergen, Blend Normaal, Voorbeeld overnemen,
+  Vorige/Volgende/Willekeurige scène, Afspelen / pauzeren, Scène 1-4 (automatisch), the LIVE / VOLGENDE strip,
+  Kies OBS-bediening / Open de instellingen. Every word fits on the hardware; OBS's own names, LIVE and Cut
+  unchanged.
+- 1.3 NOT RUN: no Neo at hand.
+- 1.4 PASSED: other controls' pages opened in Dutch, no English flash seen.
+- 1.5 PASSED: app restarted at 15:03:40, the keys back in Dutch with no page opened.
+- 1.6 PASSED: Automatic gave English at once, OBS still connected.
+- 1.7 PASSED: 日本語: プレビューを送出, シーン 1 (自動), パニック with ストロボとフラッシュ停止, the page in Japanese; a real
+  Japanese font, fits, small but readable on the keys.
+- 1.8: no complaint reported.
+
+Found on the way, fixed in step L.6 (PLAN.md 11.5): the static key images Stream Deck draws inside VJster's dial
+circles and in its action list carried English words ("1x SPEED", "AUTO QUALITY"); they are now a number or a symbol
+only (Fadester's images never had words). And VJster's pack lacked its OBS page (`bin/obs`), see
+`docs/vjster/TESTING.md` section 6. The re-packed files (both plugins; Fadester's bytes unchanged) are in
+`C:\Users\jeffr\Documents\StreamDeck-builds\2026-11-01-language-choice\` (`BUILT-FROM.txt` says what they were built
+from) and in the scratchpad `lang-builds` folder of 1.1; the operator re-installs VJster from there.

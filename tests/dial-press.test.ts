@@ -18,7 +18,7 @@ function setup(settings: ObsFaderDialSettings = {}, withLayers = true) {
     isConnected: vi.fn(() => true),
     getCatalog: vi.fn(() => catalog),
     nudgeReconnect: vi.fn(),
-    setTbarPosition: vi.fn(async (..._args: unknown[]) => { calls.push("finish"); }),
+    takeTbar: vi.fn(async (..._args: unknown[]) => { calls.push("finish"); }),
     nudgeInputVolume: vi.fn(async () => {}),
     nudgeTbar: vi.fn(async () => {})
   };
@@ -40,12 +40,12 @@ describe("Configurable direct dial press", () => {
   it("preserves the old defaults: scene dial finishes, audio dial does nothing", async () => {
     const scene = setup({ target: "tbar", autoQueueNextScene: true }, false);
     await scene.controller.handleDialUp();
-    expect(scene.client.setTbarPosition).toHaveBeenCalledWith(1, true, true);
+    expect(scene.client.takeTbar).toHaveBeenCalledWith(true);
     expect(scene.sink.showAlert).not.toHaveBeenCalled();
 
     const audio = setup({ target: "input_volume" }, false);
     await audio.controller.handleDialUp();
-    expect(audio.client.setTbarPosition).not.toHaveBeenCalled();
+    expect(audio.client.takeTbar).not.toHaveBeenCalled();
     expect(audio.client.isConnected).not.toHaveBeenCalled();
     expect(audio.sink.showAlert).not.toHaveBeenCalled();
   });
@@ -59,7 +59,7 @@ describe("Configurable direct dial press", () => {
     const h = setup({ target: "input_volume", inputName: "", pressAction });
     await h.controller.handleDialUp();
     expect(h.layers.perform).toHaveBeenCalledWith({ scope: "auto", target: "selected" }, operation);
-    expect(h.client.setTbarPosition).not.toHaveBeenCalled();
+    expect(h.client.takeTbar).not.toHaveBeenCalled();
     expect(h.sink.showAlert).not.toHaveBeenCalled();
     // Rotation still needs a real mixer-input binding.
     await h.controller.handleRotate(1);
@@ -72,7 +72,7 @@ describe("Configurable direct dial press", () => {
     await h.controller.handleDialUp();
     expect(h.calls).toEqual(["source", "finish"]);
     expect(h.layers.perform).toHaveBeenCalledWith({ scope: "fixed", sceneName: "Next", target: "selected" }, "blend_next");
-    expect(h.client.setTbarPosition).toHaveBeenCalledWith(1, true, true);
+    expect(h.client.takeTbar).toHaveBeenCalledWith(true);
   });
 
   it.each(["same_scene", "studio_off", "audio_target"] as const)(
@@ -83,7 +83,7 @@ describe("Configurable direct dial press", () => {
       if (condition === "studio_off") h.catalog.studioMode = false;
       await h.controller.handleDialUp();
       expect(h.layers.perform).not.toHaveBeenCalled();
-      expect(h.client.setTbarPosition).not.toHaveBeenCalled();
+      expect(h.client.takeTbar).not.toHaveBeenCalled();
       expect(h.sink.showAlert).toHaveBeenCalledOnce();
     }
   );
@@ -92,7 +92,7 @@ describe("Configurable direct dial press", () => {
     const h = setup({ target: "tbar", pressAction: "next_blend_and_finish" });
     h.layers.perform.mockRejectedValueOnce(new Error("Selected layer was removed."));
     await h.controller.handleDialUp();
-    expect(h.client.setTbarPosition).not.toHaveBeenCalled();
+    expect(h.client.takeTbar).not.toHaveBeenCalled();
     expect(h.sink.showAlert).toHaveBeenCalledOnce();
   });
 
@@ -100,7 +100,7 @@ describe("Configurable direct dial press", () => {
     const h = setup({ target: "tbar", pressAction: "next_blend_and_finish" });
     h.layers.perform.mockImplementationOnce(async () => { h.catalog.currentPreviewScene = "Changed elsewhere"; });
     await h.controller.handleDialUp();
-    expect(h.client.setTbarPosition).not.toHaveBeenCalled();
+    expect(h.client.takeTbar).not.toHaveBeenCalled();
     expect(h.sink.showAlert).toHaveBeenCalledOnce();
   });
 
@@ -114,7 +114,7 @@ describe("Configurable direct dial press", () => {
 
     const absent = setup({ target: "tbar", pressAction: "next_blend_and_finish" }, false);
     await absent.controller.handleDialUp();
-    expect(absent.client.setTbarPosition).not.toHaveBeenCalled();
+    expect(absent.client.takeTbar).not.toHaveBeenCalled();
     expect(absent.sink.showAlert).toHaveBeenCalledOnce();
   });
 
@@ -124,7 +124,7 @@ describe("Configurable direct dial press", () => {
     await h.controller.handleDialUp();
     expect(h.client.isConnected).not.toHaveBeenCalled();
     expect(h.layers.perform).not.toHaveBeenCalled();
-    expect(h.client.setTbarPosition).not.toHaveBeenCalled();
+    expect(h.client.takeTbar).not.toHaveBeenCalled();
     expect(h.sink.showAlert).not.toHaveBeenCalled();
   });
 });

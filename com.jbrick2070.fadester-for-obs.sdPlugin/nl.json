@@ -38,6 +38,7 @@
     "errorChooseInput": "Kies eerst een bestaande OBS-mixeringang.",
     "errorConnectBeforeStudio": "Verbind met OBS voordat je een Studio-layout voorbereidt.",
     "errorStudioNotEnabled": "De Studiomodus van OBS kon niet worden ingeschakeld.",
+    "errorTakeUnconfirmed": "OBS heeft Next niet live gezet. Controleer Programma in OBS.",
     "errorTbarNeedsStudio": "De scène-T-bar vereist de Studiomodus van OBS.",
     "errorSceneIndexUnavailableOne": "Scène {n} is niet beschikbaar; OBS heeft {count} scène.",
     "errorSceneIndexUnavailableMany": "Scène {n} is niet beschikbaar; OBS heeft {count} scènes.",

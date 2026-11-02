@@ -2336,6 +2336,36 @@ const MUTATIONS: MutationCheck[] = [
     target: "            if not restore_sent:",
     mutated: "            if False:",
     testFile: "tests/demo-kit-check.test.ts"
+  },
+  {
+    id: "M-TB.1",
+    step: "Scene mixer take on OBS 33.0.1 (the T-bar release cancels)",
+    description:
+      "Release the T-bar at the take (the kit 1.1 failure) instead of leaving Studio Mode and verify the take test fails",
+    filePath: resolve(ROOT, "src/obs/direct-obs-client.ts"),
+    target: 'await this.sendObsRequest("SetTBarPosition", { position: 1, release: false });\n      this.requireControlGeneration(generation);\n      left = true;',
+    mutated: 'await this.sendObsRequest("SetTBarPosition", { position: 1, release: true });\n      this.requireControlGeneration(generation);\n      return 0;',
+    testFile: "tests/scene-cycle.test.ts"
+  },
+  {
+    id: "M-TB.2",
+    step: "Scene mixer take (once OBS left Studio Mode it is always asked back)",
+    description:
+      "Skip the re-enable in the finally after a failed leave request and verify the timeout test fails",
+    filePath: resolve(ROOT, "src/obs/direct-obs-client.ts"),
+    target: "      if (left && !restoreTried) restored = await this.restoreStudioMode();",
+    mutated: "      if (left && !restoreTried && !left) restored = await this.restoreStudioMode();",
+    testFile: "tests/scene-cycle.test.ts"
+  },
+  {
+    id: "M-TB.3",
+    step: "Scene mixer take (a press in the settle window does not take again)",
+    description:
+      "Drop the settle guard on the press and verify the settle-window press test fails",
+    filePath: resolve(ROOT, "src/obs/direct-obs-client.ts"),
+    target: "      if (Date.now() < this.tbarSettleUntil) return Promise.resolve(this.catalog.tbarPosition);",
+    mutated: "      if (Date.now() < 0) return Promise.resolve(this.catalog.tbarPosition);",
+    testFile: "tests/scene-cycle.test.ts"
   }
 ];
 

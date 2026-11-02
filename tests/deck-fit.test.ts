@@ -88,7 +88,7 @@ function drawnTexts(): Array<{ key: StringKey; params?: TextParams; boxes: Box[]
 
   for (const key of ["errorChooseInput", "errorTbarNeedsStudio", "errorChooseScene", "errorPreviewNeedsStudio",
     "errorNoCutTransition", "errorCurrentPreviewNeedsStudio", "errorControlChanged", "errorConnectBeforeStudio",
-    "errorStudioNotEnabled", "errorFilterChoose"] as const) add(key, [B.keySub]);
+    "errorStudioNotEnabled", "errorTakeUnconfirmed", "errorFilterChoose"] as const) add(key, [B.keySub]);
   add("errorNoVolume", [B.keySub], { input: "Desktop Audio" });
   // The Playlister key draws its last error as the problem line.
   for (const key of ["errorMediaChoose", "errorMediaMissing", "errorMediaUnsupported", "errorMediaBusy",

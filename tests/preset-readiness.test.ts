@@ -251,6 +251,9 @@ describe("ready-made presets operate an existing OBS collection", () => {
         obs.sceneNames.push(obs.sceneNames.shift()!);
         obs.programSceneName = obs.sceneNames[4];
         obs.previewSceneName = obs.sceneNames[6];
+        // A T-bar dial above may have left OBS mid-throw, where OBS 33 refuses scene switches:
+        // this key is pressed between throws.
+        obs.manualTransitionActive = false;
         const live = obs.programSceneName;
         const preview = obs.previewSceneName;
         const operation = String(settings.operation);

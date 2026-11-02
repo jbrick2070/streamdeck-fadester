@@ -159,7 +159,7 @@ export class ObsFaderDialInstanceController {
           await this.sink.showAlert();
           return;
         }
-        await this.client.setTbarPosition(1, true, this.settings.autoQueueNextScene);
+        await this.client.takeTbar(this.settings.autoQueueNextScene);
       }
     } catch {
       await this.sink.showAlert();

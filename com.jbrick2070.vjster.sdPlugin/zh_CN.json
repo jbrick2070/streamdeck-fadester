@@ -120,7 +120,7 @@
       "languageHeading": "语言",
       "languageBadge": "所有 VJster 控制",
       "languageAuto": "自动（Stream Deck 的语言）",
-      "languageNote": "适用于所有 VJster 控制。Stream Deck 自身的菜单、操作列表、工具提示和旋钮提示仍使用 Stream Deck 的语言。"
+      "languageNote": "适用于所有 VJster 控制。Stream Deck 自身的菜单、操作列表、工具提示和旋钮提示仍使用 Stream Deck 的语言。OBS 页面和 Chrome 扩展程序保留各自的语言。"
     }
   }
 }

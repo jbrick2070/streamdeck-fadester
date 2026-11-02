@@ -120,7 +120,7 @@
       "languageHeading": "Sprache",
       "languageBadge": "alle VJster-Steuerungen",
       "languageAuto": "Automatisch (Sprache von Stream Deck)",
-      "languageNote": "Gilt für alle VJster-Steuerungen. Die Menüs, die Aktionsliste, die Tooltips und die Drehregler-Hinweise von Stream Deck selbst bleiben in der Sprache von Stream Deck."
+      "languageNote": "Gilt für alle VJster-Steuerungen. Die Menüs, die Aktionsliste, die Tooltips und die Drehregler-Hinweise von Stream Deck selbst bleiben in der Sprache von Stream Deck. Die OBS-Seite und die Chrome-Erweiterung behalten ihre eigene Sprache."
     }
   }
 }

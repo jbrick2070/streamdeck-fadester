@@ -75,7 +75,7 @@
       "languageHeading": "Taal",
       "languageBadge": "alle VJster-bedieningen",
       "languageAuto": "Automatisch (taal van Stream Deck)",
-      "languageNote": "Geldt voor alle VJster-bedieningen. De eigen menu’s, actielijst, tooltips en draaiknophints van Stream Deck blijven in de taal van Stream Deck."
+      "languageNote": "Geldt voor alle VJster-bedieningen. De eigen menu’s, actielijst, tooltips en draaiknophints van Stream Deck blijven in de taal van Stream Deck. De OBS-pagina en de Chrome-extensie houden hun eigen taal."
     }
   }
 }

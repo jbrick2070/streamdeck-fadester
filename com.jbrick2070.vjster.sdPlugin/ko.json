@@ -120,7 +120,7 @@
       "languageHeading": "언어",
       "languageBadge": "모든 VJster 제어",
       "languageAuto": "자동 (Stream Deck 언어)",
-      "languageNote": "모든 VJster 제어에 적용됩니다. Stream Deck 자체의 메뉴, 작업 목록, 도구 설명, 다이얼 힌트는 Stream Deck 언어로 유지됩니다."
+      "languageNote": "모든 VJster 제어에 적용됩니다. Stream Deck 자체의 메뉴, 작업 목록, 도구 설명, 다이얼 힌트는 Stream Deck 언어로 유지됩니다. OBS 페이지와 Chrome 확장 프로그램은 각자의 언어를 유지합니다."
     }
   }
 }

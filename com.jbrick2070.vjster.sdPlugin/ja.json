@@ -120,7 +120,7 @@
       "languageHeading": "言語",
       "languageBadge": "すべての VJster 操作",
       "languageAuto": "自動 (Stream Deck の言語)",
-      "languageNote": "すべての VJster 操作に適用されます。Stream Deck 自体のメニュー、アクション一覧、ツールチップ、ダイヤルのヒントは Stream Deck の言語のままです。"
+      "languageNote": "すべての VJster 操作に適用されます。Stream Deck 自体のメニュー、アクション一覧、ツールチップ、ダイヤルのヒントは Stream Deck の言語のままです。OBS ページと Chrome 拡張機能は、それぞれの言語のままです。"
     }
   }
 }

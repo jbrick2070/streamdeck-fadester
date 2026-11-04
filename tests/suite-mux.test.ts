@@ -172,6 +172,19 @@ describe("the one stored settings object", () => {
     expect(children.fadester.map((m) => m.id)).toEqual(["late"]);
   });
 
+  it("ignores a second answer to its own read once the settings are known and may have been saved since", () => {
+    const { mux, host } = rig();
+    mux.start();
+    mux.fromHost({ event: "didReceiveGlobalSettings", id: "suite-global-settings", payload: { settings: stored } });
+    mux.fromChild("vjster", { event: "setGlobalSettings", context: PLUGIN, payload: { port: 48190 } });
+    host.length = 0;
+    // The host answers the timer's second read with what it held before the save.
+    mux.fromHost({ event: "didReceiveGlobalSettings", id: "suite-global-settings", payload: { settings: stored } });
+    expect(mux.settings).toMatchObject({ vjster: { port: 48190 } });
+    mux.fromChild("fadester", { event: "setGlobalSettings", context: PLUGIN, payload: { host: "h" } });
+    expect(host[0].payload).toEqual({ host: "h", vjster: { port: 48190 } });
+  });
+
   it("asks the host again each time it is told to, until the settings are known", () => {
     const { mux, host } = rig();
     mux.start();

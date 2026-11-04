@@ -124,8 +124,9 @@ function main(): void {
       if (!ending) setTimeout(() => start(child), 1000);
     };
     run.on("error", (error) => {
-      log(`${child}: could not start: ${error.message}`);
-      startAgain();
+      log(`${child}: error: ${error.message}`);
+      // A program that did start ends with an exit, which starts it again; only one that never started ends with this error alone.
+      if (run.pid === undefined) startAgain();
     });
     run.on("exit", (code) => {
       log(`${child}: ended (code ${code ?? "none"})`);

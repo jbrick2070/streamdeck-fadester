@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// npm run opendeck:install -- [vjster|fadester|all] [--layout] [--device <id>] [--config <dir>] [--dry-run] [--force]
+// npm run opendeck:install -- [suite|vjster|both] [--layout] [--device <id>] [--config <dir>] [--dry-run] [--force]
 // Copies the built plugins into OpenDeck's plugins folder; --layout also fills VJster's starter keys and dials.
 // OpenDeck rewrites its profiles when it quits, so it must be closed first (--force skips that check).
 
@@ -92,7 +92,7 @@ function main(argv: string[]): number {
   const args = parseArgs(argv);
   if (args.errors.length > 0) {
     for (const line of args.errors) console.error(line);
-    console.error("Usage: npm run opendeck:install -- [vjster|fadester|all] [--layout] [--device <id>] [--config <dir>] [--dry-run] [--force]");
+    console.error("Usage: npm run opendeck:install -- [suite|vjster|both] [--layout] [--device <id>] [--config <dir>] [--dry-run] [--force]");
     return 2;
   }
   const names = args.which === "both" ? (["suite", "vjster"] as const) : ([args.which] as const);

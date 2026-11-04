@@ -85,6 +85,8 @@ export class SuiteMux {
   /** A message from the host: delivered to the child that owns it, or to both. */
   fromHost(message: Message): void {
     if (message.event === "didReceiveGlobalSettings") {
+      // A second answer to the suite's own read, after the settings were known and perhaps saved since, is older than what is held.
+      if (this.fullKnown && message.id === READ_ID) return;
       const payload = isRecord(message.payload) ? message.payload : {};
       this.full = isRecord(payload.settings) ? { ...payload.settings } : {};
       const firstTime = !this.fullKnown;

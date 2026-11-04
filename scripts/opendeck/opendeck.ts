@@ -263,6 +263,8 @@ export interface Args {
   force: boolean;
   device?: string;
   config?: string;
+  /** "fit" or a comma list of layout slugs: Fadester's ready-made layouts to write as OpenDeck profiles. */
+  fadesterLayouts?: string;
   errors: string[];
 }
 
@@ -280,15 +282,16 @@ export function parseArgs(argv: string[]): Args {
     else if (a === "--layout") args.layout = true;
     else if (a === "--dry-run") args.dryRun = true;
     else if (a === "--force") args.force = true;
-    else if (a === "--device" || a === "--config") {
+    else if (a === "--device" || a === "--config" || a === "--fadester-layouts") {
       const next = argv[i + 1];
       if (next === undefined || next.startsWith("--")) args.errors.push(`${a} needs a value`);
       else {
-        args[a === "--device" ? "device" : "config"] = next;
+        args[a === "--device" ? "device" : a === "--config" ? "config" : "fadesterLayouts"] = next;
         i++;
       }
     } else args.errors.push(`unknown argument ${a}`);
   }
+  if (args.fadesterLayouts && args.which === "vjster") args.errors.push("--fadester-layouts needs fadester or all");
   if (args.layout && args.which === "fadester") args.errors.push("--layout places VJster's keys and dials; use it with vjster or all");
   return args;
 }

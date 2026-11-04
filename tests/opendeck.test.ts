@@ -351,6 +351,12 @@ describe("second-round hardening", () => {
     const result = placeLayout(profile, manifest, source, VJSTER_LAYOUT, "sd-ABC", "Live");
     expect(result.skipped).toEqual(["Speed Preset (key 1): the slot is in use"]);
   });
+  it("reads --fadester-layouts and wants Fadester with it", () => {
+    expect(parseArgs(["all", "--fadester-layouts", "fit"]).fadesterLayouts).toBe("fit");
+    expect(parseArgs(["fadester", "--fadester-layouts", "a,b"]).fadesterLayouts).toBe("a,b");
+    expect(parseArgs(["vjster", "--fadester-layouts", "fit"]).errors).toEqual(["--fadester-layouts needs fadester or all"]);
+    expect(parseArgs(["--fadester-layouts"]).errors).toEqual(["--fadester-layouts needs a value"]);
+  });
   it("rejects two plugin names", () => {
     expect(parseArgs(["vjster", "fadester"]).errors).toHaveLength(1);
     expect(parseArgs(["vjster", "vjster"]).errors).toEqual([]);

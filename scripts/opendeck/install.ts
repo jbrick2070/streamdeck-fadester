@@ -17,8 +17,11 @@ import {
   parseArgs,
   pluginFolderName,
   profileFile,
-  type PluginManifest
+  type PluginManifest,
+  type Profile
 } from "./opendeck.js";
+import { fits, writeLayouts } from "./fadester-layouts.js";
+import type { Preset } from "../profile-checks.js";
 
 const root = resolve(import.meta.dirname, "..", "..");
 const PLUGINS = {
@@ -41,6 +44,43 @@ function openDeckRunning(): boolean {
     }
     return false;
   }
+}
+
+/** Fadester's ready-made layouts as profiles for the deck; false (after saying why) when they cannot be written. */
+function fadesterLayouts(config: string, device: string | undefined, which: string, manifest: PluginManifest, pluginDir: string, dry: boolean): boolean {
+  const all = JSON.parse(readFileSync(join(root, "profiles", "layouts.json"), "utf8")) as Preset[];
+  const wanted = which === "fit" ? null : which.split(",").map((slug) => slug.trim());
+  const unknown = (wanted ?? []).filter((slug) => !all.some((preset) => preset.slug === slug));
+  if (unknown.length > 0) {
+    console.error(`No Fadester layout called ${unknown.join(", ")}. The slugs are in profiles/layouts.json.`);
+    return false;
+  }
+  if (!device) {
+    console.error("OpenDeck has no deck profile yet: connect the deck, start OpenDeck once, quit it, and run this again.");
+    return false;
+  }
+  const file = profileFile(config, device);
+  if (!existsSync(file)) {
+    console.error(`OpenDeck has no profile file at ${file}; check --device.`);
+    return false;
+  }
+  const current = JSON.parse(readFileSync(file, "utf8")) as Profile;
+  const deck = { keys: current.keys.length, dials: current.sliders.length };
+  const presets = all.filter((preset) => (wanted ? wanted.includes(preset.slug) : fits(preset, deck)));
+  const misfits = presets.filter((preset) => !fits(preset, deck));
+  if (misfits.length > 0) {
+    console.error(`${misfits.map((preset) => preset.slug).join(", ")} needs more keys or dials than this deck has (${deck.keys} keys, ${deck.dials} dials).`);
+    return false;
+  }
+  if (dry) {
+    console.log(`would write ${presets.length} Fadester layout(s) for ${deck.keys} keys and ${deck.dials} dials on ${device}`);
+    return true;
+  }
+  for (const written of writeLayouts(config, device, presets, manifest, pluginDir, deck)) {
+    console.log(`  ${written.status === "written" ? "wrote" : "kept"} profile "${written.name}"${written.status === "exists" ? " (already there; delete it in OpenDeck to build it again)" : ""}`);
+    for (const line of written.left) console.log(`    left empty: ${line}`);
+  }
+  return true;
 }
 
 function main(argv: string[]): number {
@@ -85,6 +125,10 @@ function main(argv: string[]): number {
     const target = join(config, "plugins", pluginFolderName(manifest.UUID));
     if (args.dryRun) console.log(`would copy ${PLUGINS[name]} to ${target}`);
     else console.log(`${manifest.Name}: copied to ${installPlugin(PLUGINS[name], config, manifest.UUID)}`);
+    if (name === "fadester" && args.fadesterLayouts) {
+      if (!fadesterLayouts(config, device, args.fadesterLayouts, manifest, target, args.dryRun)) return 1;
+      continue;
+    }
     if (name !== "vjster" || !args.layout) continue;
     if (devices.length > 1 && !args.device) console.log(`Several decks found (${devices.join(", ")}); using ${device}. Pass --device <id> to choose.`);
     if (args.dryRun) {

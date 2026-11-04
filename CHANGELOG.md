@@ -6,7 +6,7 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 
 ### Added
 
-- **OpenDeck support** ([docs/OPENDECK.md](docs/OPENDECK.md)): `npm run opendeck:install` copies VJster and Fadester into [OpenDeck](https://github.com/nekename/OpenDeck) (a free, open-source host for Stream Deck plugins) and puts VJster's starter keys and dials on the deck, filling free slots only. Tried on Windows with a Stream Deck +; the plugins themselves are unchanged.
+- **OpenDeck support** ([docs/OPENDECK.md](docs/OPENDECK.md)): `npm run opendeck:install` copies VJster and Fadester into [OpenDeck](https://github.com/nekename/OpenDeck) (a free, open-source host for Stream Deck plugins) and puts VJster's starter keys and dials on the deck, filling free slots only, and `--fadester-layouts` writes Fadester's ready-made layouts as OpenDeck profiles (a multi-page rig becomes one profile per page). Tried on Windows with a Stream Deck +; the plugins themselves are unchanged.
 
 ### Changed
 

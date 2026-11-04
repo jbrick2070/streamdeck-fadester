@@ -5,6 +5,7 @@ export {
   type KeyCellRenderInput,
   escapeXml,
   toSvgDataUri,
+  toStripUri,
   renderDialCellSvg,
   renderAutoFadeKeySvg
 } from "../../packages/streamdeck-fadester-shared/src/svg-renderer.js";

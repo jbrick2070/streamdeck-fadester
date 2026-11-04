@@ -275,7 +275,7 @@ export class DeckSim {
   svg(context: string): string {
     const uri = this.images.get(context) ?? "";
     const comma = uri.indexOf(",");
-    return comma < 0 ? "" : decodeURIComponent(uri.slice(comma + 1));
+    return comma < 0 ? "" : uri.slice(0, comma).includes(";base64") ? Buffer.from(uri.slice(comma + 1), "base64").toString("utf8") : decodeURIComponent(uri.slice(comma + 1));
   }
 
   async stop(): Promise<void> {

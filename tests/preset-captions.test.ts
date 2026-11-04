@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import { once } from "node:events";
+import { decodeSvgUri } from "./helpers/svg-text.js";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { runInNewContext } from "node:vm";
@@ -191,7 +192,7 @@ describe.each(CAPTION_LANGUAGES)("a $name deck shows no stored English caption",
     "%s (%s %s)", (label, kind, controller, entry) => {
       const settings = { ...entry.settings, labelOverride: label };
       let image = "";
-      const sink = (value: string): Promise<void> => { image = decodeURIComponent(value.replace("data:image/svg+xml;utf8,", "")); return Promise.resolve(); };
+      const sink = (value: string): Promise<void> => { image = decodeSvgUri(value); return Promise.resolve(); };
       const alert = (): Promise<void> => Promise.resolve();
       let control: { appear(): void; disappear(): void };
       if (kind === "scene") control = new ObsSceneTransitionKeyInstanceController(client, { setImage: sink, showAlert: alert }, settings);
@@ -228,7 +229,7 @@ describe.each(CAPTION_LANGUAGES)("a $name deck shows no stored English caption",
   ] as const)("draws a caption the operator typed on a %s control, the same way the check above looks for", (kind, base) => {
     const settings: Record<string, string | number> = { ...base, labelOverride: "Kamera an" };
     let image = "";
-    const sink = (value: string): Promise<void> => { image = decodeURIComponent(value.replace("data:image/svg+xml;utf8,", "")); return Promise.resolve(); };
+    const sink = (value: string): Promise<void> => { image = decodeSvgUri(value); return Promise.resolve(); };
     const alert = (): Promise<void> => Promise.resolve();
     const control = kind === "scene" ? new ObsSceneTransitionKeyInstanceController(client, { setImage: sink, showAlert: alert }, settings)
       : kind === "fade" ? new ObsFadeKeyInstanceController(client, { setImage: sink, showAlert: alert }, settings)

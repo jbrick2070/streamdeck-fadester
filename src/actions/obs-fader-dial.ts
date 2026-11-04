@@ -23,7 +23,7 @@ import {
 import { CellRateLimiter } from "../gfx/cell-rate-limiter.js";
 import {
   renderDirectDialSvg,
-  toSvgDataUri
+  toStripUri
 } from "../gfx/direct-obs-renderer.js";
 import { computeDialDelta, normalizeStepPerTick } from "./dial-math.js";
 import { statusCellReason } from "../../packages/streamdeck-fadester-shared/src/status-text.js";
@@ -58,7 +58,7 @@ export class ObsFaderDialInstanceController {
   ) {
     this.settings = this.mergeSettings(initialSettings);
     this.rateLimiter = new CellRateLimiter<string>(async (svg) => {
-      await this.sink.setFeedback({ canvas: toSvgDataUri(svg) });
+      await this.sink.setFeedback({ canvas: toStripUri(svg) });
     }, rateLimitMs);
   }
 

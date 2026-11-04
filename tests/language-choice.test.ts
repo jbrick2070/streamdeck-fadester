@@ -5,6 +5,7 @@
  * every visible control, and the filter lists worded at each broadcast.
  */
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { decodeSvgUri } from "./helpers/svg-text.js";
 import { once } from "node:events";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -502,7 +503,7 @@ function fakeContext(id: string, kind: "key" | "dial" | "infobar"): FakeContext 
     isDial: () => kind === "dial",
     isNeoInfobar: () => kind === "infobar",
     setImage: async (image: string) => { draws.push(image); },
-    setFeedback: async (feedback: unknown) => { draws.push(JSON.stringify(feedback)); },
+    setFeedback: async (feedback: unknown) => { const canvas = (feedback as { canvas?: unknown }).canvas; draws.push(typeof canvas === "string" ? decodeSvgUri(canvas) : JSON.stringify(feedback)); },
     setFeedbackLayout: async () => {},
     setSettings: async () => {},
     showAlert: async () => {},

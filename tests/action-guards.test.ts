@@ -1,15 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import { describe, it, expect, afterEach } from "vitest";
+import { decodeSvgUri } from "./helpers/svg-text.js";
 import { FadesterClient } from "../src/obs/fadester-client.js";
 import { FadesterStore } from "../src/state/fadester-store.js";
 import { FaderDialInstanceController } from "../src/actions/fader-dial.js";
 import { AutoFadeKeyInstanceController } from "../src/actions/auto-fade-key.js";
 import { FakeObsServer } from "./helpers/fake-obs-server.js";
-
-function decodeSvgUri(uri: string): string {
-  const prefix = "data:image/svg+xml;utf8,";
-  return uri.startsWith(prefix) ? decodeURIComponent(uri.slice(prefix.length)) : uri;
-}
 
 describe("Action guards: offline nudges, unavailable slots, label and readout options", () => {
   let server: FakeObsServer | null = null;

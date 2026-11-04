@@ -1,6 +1,6 @@
 {
   "name": "streamdeck-fadester",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Fadester for OBS — direct OBS scene, transition, mixer-fade, and Stream Deck + fader controls with optional Midi Fadester integration",
   "license": "GPL-2.0-or-later",
   "type": "module",

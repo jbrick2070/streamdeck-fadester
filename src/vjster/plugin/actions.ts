@@ -18,7 +18,7 @@ import type {
 } from "@elgato/streamdeck";
 import type { JsonObject } from "@elgato/utils";
 import { createCoalescer } from "../shared/coalesce.js";
-import { svgDataUri } from "./display.js";
+import { svgDataUri, svgStripUri } from "./display.js";
 import {
   PinController,
   QualityDialController,
@@ -85,7 +85,7 @@ abstract class VjsterAction<C extends Rendered> extends SingletonAction<JsonObje
     const send = (svg: string): void => {
       let uri: string;
       try {
-        uri = svgDataUri(svg);
+        uri = act.isDial() ? svgStripUri(svg) : svgDataUri(svg);
       } catch {
         return; // escapeText keeps this from happening; never let one title stop the drawing
       }

@@ -5,6 +5,7 @@
 // replaced in place, a change redrawing every instance, and the plugin-wide
 // settings writes that never lose a key, the extension allow list above all.
 import type { JsonObject } from "@elgato/utils";
+import { decodeSvgUri } from "./helpers/svg-text.js";
 import { describe, expect, it } from "vitest";
 import { normalizeChoice as fadesterChoice, resolveLanguage as fadesterResolve } from "../src/i18n/language-choice.js";
 import { PinAction, TransportAction } from "../src/vjster/plugin/actions.js";
@@ -156,7 +157,7 @@ function key(id: string, images: Map<string, string>) {
     id,
     isDial: () => false,
     setImage: (uri: string) => {
-      images.set(id, decodeURIComponent(uri.slice(uri.indexOf(",") + 1)));
+      images.set(id, decodeSvgUri(uri));
       return Promise.resolve();
     },
     showAlert: () => Promise.resolve()

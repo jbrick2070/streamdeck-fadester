@@ -113,6 +113,14 @@ export function svgDataUri(svg: string): string {
   return `data:image/svg+xml;charset=utf8,${encodeURIComponent(svg)}`;
 }
 
+/**
+ * The same picture for a dial's display strip, as base64: OpenDeck's strip renderer reads only a base64 data URI (it
+ * draws a checkerboard for the URL-encoded one a key's setImage accepts); Stream Deck software reads either.
+ */
+export function svgStripUri(svg: string): string {
+  return `data:image/svg+xml;base64,${Buffer.from(svg, "utf8").toString("base64")}`;
+}
+
 /** Why a target cannot show a video; logic compares these codes, never the words drawn for them (R-I18N-2). */
 export type StatusCode = "port-in-use" | "extension-off" | "page-off" | "no-video" | "n-a" | "ad";
 

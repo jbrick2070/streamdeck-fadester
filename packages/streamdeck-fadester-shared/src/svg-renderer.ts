@@ -112,6 +112,15 @@ export function toSvgDataUri(svg: string): string {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
+/**
+ * The picture of a dial's display strip: the same SVG as base64. A strip's picture is drawn from a layout item, and
+ * OpenDeck's strip renderer reads only a base64 data URI there (it draws a checkerboard for the URL-encoded form that
+ * a key's setImage accepts); Stream Deck software reads either.
+ */
+export function toStripUri(svg: string): string {
+  return `data:image/svg+xml;base64,${Buffer.from(svg, "utf8").toString("base64")}`;
+}
+
 function renderDialStatusSvg(
   title: string,
   reason: string,

@@ -13,6 +13,9 @@ const SUITE = join(ROOT, "com.jbrick2070.fadester-for-obs.sdPlugin");
 const VJSTER = join(ROOT, "com.jbrick2070.vjster.sdPlugin");
 const read = (path: string): { Actions: Array<Record<string, unknown>> } & Record<string, unknown> => JSON.parse(readFileSync(path, "utf8").replace(/^﻿/, ""));
 
+/** A file's text with LF line ends: a checkout may have either. */
+const lf = (value: string): string => value.replace(/\r\n/g, "\n");
+
 const temps: string[] = [];
 afterEach(() => {
   for (const dir of temps.splice(0)) rmSync(dir, { recursive: true, force: true });
@@ -62,12 +65,12 @@ describe("the suite plugin's generated files", () => {
         if (textual) expect(String((file[suiteActionId(kind)] as { Name?: string })?.Name ?? ""), `${language} ${kind}`).toMatch(/^VJster .+/);
         else expect(file, `${language} holds Localization only (D-L4)`).not.toHaveProperty(suiteActionId(kind));
       }
-      expect(readFileSync(join(SUITE, "vjster", `${language}.json`), "utf8")).toBe(readFileSync(join(VJSTER, `${language}.json`), "utf8"));
+      expect(lf(readFileSync(join(SUITE, "vjster", `${language}.json`), "utf8"))).toBe(lf(readFileSync(join(VJSTER, `${language}.json`), "utf8")));
     }
   });
 
   it("give the VJster plugin its own manifest where it starts, because the SDK reads manifest.json from there", () => {
-    expect(readFileSync(join(SUITE, "vjster", "manifest.json"), "utf8")).toBe(readFileSync(join(VJSTER, "manifest.json"), "utf8"));
+    expect(lf(readFileSync(join(SUITE, "vjster", "manifest.json"), "utf8"))).toBe(lf(readFileSync(join(VJSTER, "manifest.json"), "utf8")));
     expect(read(join(SUITE, "vjster", "manifest.json")).Actions.map((action) => action.UUID)).toEqual(read(join(VJSTER, "manifest.json")).Actions.map((action) => action.UUID));
   });
 });

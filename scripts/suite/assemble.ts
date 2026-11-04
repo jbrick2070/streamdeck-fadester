@@ -92,12 +92,13 @@ export function wanted(root: string): Map<string, Buffer | string> {
   return out;
 }
 
-const same = (a: Buffer | string, b: Buffer): boolean => Buffer.compare(typeof a === "string" ? Buffer.from(a, "utf8") : a, b) === 0;
+/** A file's text with line ends as LF: a checkout may give a file CRLF or LF (git's autocrlf), and either is the same file. */
+const text = (content: Buffer | string): string => (typeof content === "string" ? content : content.toString("utf8")).replace(/\r\n/g, "\n");
 
-/** The files that differ from what the assembly wants (none when it has been run). */
+/** The files that differ from what the assembly wants, line ends aside (none when it has been run). */
 export function differences(root: string): string[] {
   const base = join(root, FADESTER);
-  return [...wanted(root)].filter(([path, content]) => !existsSync(join(base, path)) || !same(content, readFileSync(join(base, path)))).map(([path]) => path);
+  return [...wanted(root)].filter(([path, content]) => !existsSync(join(base, path)) || text(content) !== text(readFileSync(join(base, path)))).map(([path]) => path);
 }
 
 /** Writes every file that differs; returns their paths. */
@@ -107,7 +108,9 @@ export function assemble(root: string): string[] {
   for (const path of changed) {
     const target = join(root, FADESTER, path);
     mkdirSync(dirname(target), { recursive: true });
-    writeFileSync(target, files.get(path) as Buffer | string);
+    // Keep the file's own line ends when it exists (a checkout without CRLF stays without); a new file gets CRLF, as these files are kept.
+    const eol = existsSync(target) && !readFileSync(target, "utf8").includes("\r\n") ? "\n" : "\r\n";
+    writeFileSync(target, text(files.get(path) as Buffer | string).replace(/\n/g, eol));
   }
   return changed;
 }

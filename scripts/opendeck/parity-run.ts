@@ -244,7 +244,7 @@ async function main(): Promise<number> {
     // The plugin, started exactly as OpenDeck starts it (plugin folder as the working directory, relative code path).
     const info = JSON.stringify({
       application: { font: "ui-sans-serif", language: "en", platform: "windows", platformVersion: "10.0.19045.4474", version: "7.1.0" },
-      plugin: { uuid: FOLDER, version: "0.9.0.0" },
+      plugin: { uuid: FOLDER, version: "0.9.1.0" },
       devicePixelRatio: 0,
       colors: {},
       devices: []
@@ -316,7 +316,10 @@ async function main(): Promise<number> {
       const dial = { context: `${device}.Default.Encoder.0.0`, column: 0, settings: { target: "input_volume", inputName: input, stepPerTick: 0.05, acceleration: false, labelOverride: "", accent: "default" } };
       host.appear(FADER, dial.context, device, dial.settings, dial.column, "Encoder");
       await until("the dial to draw", () => host!.of(dial.context, "setFeedback").length + host!.of(dial.context, "setImage").length > 0, 15000);
-      check("a dial draws its touch-strip feedback when it appears", host.of(dial.context, "setFeedback").length > 0, `${host.of(dial.context, "setFeedback").length} feedback message(s)`);
+      const strips = host.of(dial.context, "setFeedback").map((m) => String((m.payload as { canvas?: unknown } | undefined)?.canvas ?? ""));
+      check("a dial draws its touch-strip feedback when it appears", strips.length > 0, `${strips.length} feedback message(s)`);
+      // OpenDeck's strip renderer reads only a base64 picture; any other form is drawn as a grey and black checkerboard.
+      check("every strip picture is base64, the one form OpenDeck's strip renderer reads", strips.length > 0 && strips.every((uri) => uri.startsWith("data:image/svg+xml;base64,")), strips[0]?.slice(0, 30));
       await sleep(800);
       host.rotate(FADER, dial.context, device, dial.settings, dial.column, -4);
       await sleep(1500);

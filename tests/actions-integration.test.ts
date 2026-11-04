@@ -5,12 +5,7 @@ import { FadesterStore } from "../src/state/fadester-store.js";
 import { FaderDialInstanceController } from "../src/actions/fader-dial.js";
 import { AutoFadeKeyInstanceController } from "../src/actions/auto-fade-key.js";
 import { FakeObsServer } from "./helpers/fake-obs-server.js";
-import { svgText } from "./helpers/svg-text.js";
-
-function decodeSvgUri(uri: string): string {
-  const prefix = "data:image/svg+xml;utf8,";
-  return uri.startsWith(prefix) ? decodeURIComponent(uri.slice(prefix.length)) : uri;
-}
+import { svgText, decodeSvgUri } from "./helpers/svg-text.js";
 
 describe("Step 1.4 — End-to-End Fader Dial & Auto-fade Key Integration", () => {
   let server: FakeObsServer | null = null;

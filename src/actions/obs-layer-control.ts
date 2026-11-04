@@ -4,7 +4,7 @@ import {
   SingletonAction, TouchTapEvent, WillAppearEvent, WillDisappearEvent
 } from "@elgato/streamdeck";
 import { BLEND_MODES, LayerController, LayerOperation, LayerSettings, matchesLayerIdentity, normalizeLayerSettings } from "../control/layer-controller.js";
-import { toSvgDataUri } from "../gfx/svg-renderer.js";
+import { toStripUri, toSvgDataUri } from "../gfx/svg-renderer.js";
 import { accentColor, boxText, renderDirectKeySvg } from "../gfx/direct-obs-renderer.js";
 import { CellRateLimiter } from "../gfx/cell-rate-limiter.js";
 import { PLAYLISTER_PALETTE as P } from "../../packages/streamdeck-fadester-shared/src/palette.js";
@@ -183,7 +183,7 @@ export class ObsLayerControlAction extends SingletonAction<LayerSettings> {
     // Stream Deck can send willAppear twice for one context: the first controller stops first.
     this.instances.get(control.id)?.disappear();
     const controller = new ObsLayerInstanceController(this.layers, {
-      render: (svg) => control.isDial() ? control.setFeedback({ canvas: toSvgDataUri(svg) }) :
+      render: (svg) => control.isDial() ? control.setFeedback({ canvas: toStripUri(svg) }) :
         control.isKey() ? control.setImage(toSvgDataUri(svg)) : Promise.resolve(),
       showAlert: () => control.showAlert()
     }, dial, ev.payload.settings);

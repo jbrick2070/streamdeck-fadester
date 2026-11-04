@@ -2,6 +2,13 @@
 
 What changed in Fadester for OBS and, where it says so, in VJster. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are the plugin's own (`manifest.json`). There is no change control here: the newest entry is the version.
 
+## 0.9.1 - 2026-11-04
+
+### Fixed
+
+- **The display strip of a Stream Deck + in OpenDeck** drew a grey and black checkerboard instead of the dials' pictures. OpenDeck's strip renderer reads a layout picture only from a base64 data URI, and every dial sent the URL-encoded form that keys (and Stream Deck software) accept. Dials, in both Fadester and VJster, now send the strip picture as base64; keys are unchanged.
+- The suite's generated files are compared without regard to line ends, so a fresh checkout on Windows or Linux no longer reports them out of date.
+
 ## 0.9.0 - 2026-11-04
 
 ### Added

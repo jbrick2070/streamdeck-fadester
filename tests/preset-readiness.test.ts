@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import { once } from "node:events";
+import { decodeSvgUri } from "./helpers/svg-text.js";
 import { readFileSync } from "node:fs";
 import type { WebSocket } from "ws";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -92,7 +93,7 @@ function addNativeLayers(server: FakeObsServer): {
 }
 
 function svg(uri: string): string {
-  return decodeURIComponent(uri.replace("data:image/svg+xml;utf8,", ""));
+  return decodeSvgUri(uri);
 }
 
 describe("ready-made presets operate an existing OBS collection", () => {

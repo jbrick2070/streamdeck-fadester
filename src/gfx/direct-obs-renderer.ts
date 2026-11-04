@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import {
   escapeXml,
-  toSvgDataUri
+  toSvgDataUri,
+  toStripUri
 } from "../../packages/streamdeck-fadester-shared/src/svg-renderer.js";
 import {
   fitText,
@@ -14,7 +15,7 @@ import { PLAYLISTER_PALETTE as P } from "../../packages/streamdeck-fadester-shar
 import { formatNumber, t } from "../i18n/strings.js";
 import type { AccentName } from "../types/settings.js";
 
-export { textFitAttributes, toSvgDataUri };
+export { textFitAttributes, toSvgDataUri, toStripUri };
 
 /** The rig's page accents (PLAN.md 10): PERFORM brass, LAYERS teal, VISUALS magenta, SCENES today's violet. */
 export const ACCENT_COLORS: Readonly<Record<AccentName, string>> = {

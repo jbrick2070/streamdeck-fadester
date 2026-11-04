@@ -21,7 +21,7 @@ import {
 } from "../types/settings.js";
 import { CellRateLimiter } from "../gfx/cell-rate-limiter.js";
 import { ThumbnailFetcher } from "../gfx/thumbnail-fetcher.js";
-import { renderDialCellSvg, toSvgDataUri } from "../gfx/svg-renderer.js";
+import { renderDialCellSvg, toStripUri } from "../gfx/svg-renderer.js";
 import { onLanguageChanged, t, translate } from "../i18n/strings.js";
 import {
   computeDialDelta,
@@ -73,7 +73,7 @@ export class FaderDialInstanceController {
     this.sink = sink;
     this.settings = this.mergeSettings(initialSettings);
     this.rateLimiter = new CellRateLimiter<string>(async (svg) => {
-      await this.sink.setFeedback({ canvas: toSvgDataUri(svg) });
+      await this.sink.setFeedback({ canvas: toStripUri(svg) });
     }, rateLimitMs);
     this.thumbnailFetcher = new ThumbnailFetcher(
       store.getClient(),

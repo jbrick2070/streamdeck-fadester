@@ -22,7 +22,7 @@ import { FilterRange, rangePosition, resolveRange, restValue, settingLabel } fro
 import { customCaption } from "../obs/preset-captions.js";
 import { ObsFilterSettings, NormalizedObsFilterSettings, normalizeObsFilterSettings } from "../types/settings.js";
 import { CellRateLimiter } from "../gfx/cell-rate-limiter.js";
-import { DirectKeyIcon, renderDirectKeySvg, renderFilterDialSvg, toSvgDataUri } from "../gfx/direct-obs-renderer.js";
+import { DirectKeyIcon, renderDirectKeySvg, renderFilterDialSvg, toStripUri, toSvgDataUri } from "../gfx/direct-obs-renderer.js";
 import { computeDialDelta } from "./dial-math.js";
 import { statusCellReason } from "../../packages/streamdeck-fadester-shared/src/status-text.js";
 import { LocalText, errorLocalText, ownText, wordText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
@@ -342,7 +342,7 @@ export class ObsFilterControlAction extends SingletonAction<ObsFilterSettings> {
     if (!dial && !control.isKey()) return;
     this.instances.get(control.id)?.disappear();
     const controller = new ObsFilterInstanceController(this.filters, {
-      render: (svg) => control.isDial() ? control.setFeedback({ canvas: toSvgDataUri(svg) })
+      render: (svg) => control.isDial() ? control.setFeedback({ canvas: toStripUri(svg) })
         : control.isKey() ? control.setImage(toSvgDataUri(svg)) : Promise.resolve(),
       showAlert: () => control.showAlert()
     }, dial, ev.payload.settings);

@@ -4,8 +4,8 @@
 // own config directory, and a hand-placed action must look like the ones OpenDeck builds itself (verified on Windows,
 // OpenDeck 2.14.2): the settings page path joined to the plugin folder, and the images as data URIs.
 
-import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { join, relative, resolve, sep } from "node:path";
 
 export interface ManifestAction {
   Name: string;
@@ -78,12 +78,26 @@ export function isBuilt(sourceDir: string): boolean {
 export function installPlugin(sourceDir: string, config: string, uuid: string): string {
   if (!isBuilt(sourceDir)) throw new Error(`${sourceDir} has no bin/plugin.js; run npm run build first`);
   const target = join(config, "plugins", pluginFolderName(uuid));
+  const from = resolve(sourceDir);
+  const into = resolve(target);
+  if (from === into || from.startsWith(into + sep) || into.startsWith(from + sep)) {
+    throw new Error(`${sourceDir} and ${target} overlap; the plugin cannot be installed over itself`);
+  }
   mkdirSync(join(config, "plugins"), { recursive: true });
-  rmSync(target, { recursive: true, force: true });
-  cpSync(sourceDir, target, {
-    recursive: true,
-    filter: (from) => from.slice(sourceDir.length).split(/[\\/]/).filter(Boolean)[0] !== "logs"
-  });
+  // Copy beside the old folder and swap, so a copy that fails (a locked file) leaves the old install whole.
+  const fresh = `${target}.new`;
+  rmSync(fresh, { recursive: true, force: true });
+  try {
+    cpSync(sourceDir, fresh, {
+      recursive: true,
+      filter: (path) => relative(from, resolve(path)).split(/[\/]/)[0] !== "logs"
+    });
+    rmSync(target, { recursive: true, force: true });
+    renameSync(fresh, target);
+  } catch (error) {
+    rmSync(fresh, { recursive: true, force: true });
+    throw error;
+  }
   return target;
 }
 
@@ -128,14 +142,17 @@ export interface PlacementResult {
 
 /** True when the slot holds an instance of this very action of this plugin (an earlier run of the installer, or the user's own placing). */
 function isSameAction(instance: Instance, action: ManifestAction, folder: string): boolean {
-  const held = instance.action as { UUID?: unknown; uuid?: unknown; plugin?: unknown };
+  const held = (instance?.action ?? {}) as { UUID?: unknown; uuid?: unknown; plugin?: unknown };
   return (held.UUID === action.UUID || held.uuid === action.UUID) && held.plugin === folder;
 }
 
+/** What a user sets on a key in OpenDeck's own editor; a refresh keeps these and takes everything else from the manifest. */
+const KEPT_STATE_FIELDS = ["text", "text_override", "image_override", "show", "colour", "stroke_colour", "alignment", "family", "style", "size", "underline"];
+
 /**
  * Fill a profile's free slots from the layout. A slot that already holds a different action is left alone. A slot
- * that holds the layout's own action is built again from the manifest, keeping its settings, which repairs an
- * entry from an older run and picks up a changed plugin. A layout name the plugin does not have, or a slot the deck
+ * that holds the layout's own action is built again from the manifest, keeping its settings and the title styling
+ * set in OpenDeck, which repairs an entry from an older run and picks up a changed plugin. A layout name the plugin does not have, or a slot the deck
  * does not have (a deck without dials), is reported and skipped.
  */
 export function placeLayout(
@@ -160,7 +177,14 @@ export function placeLayout(
         result.skipped.push(`${label}: the slot is in use`);
       } else {
         const instance = buildInstance(action, folder, pluginDir, `${device}.${profileName}.${controller}.${position}.0`);
-        if (held !== null) instance.settings = held.settings ?? {};
+        if (held !== null) {
+          instance.settings = held.settings ?? {};
+          instance.states = instance.states.map((state, i) => {
+            const before = (held.states?.[i] ?? {}) as Record<string, unknown>;
+            const kept = Object.fromEntries(KEPT_STATE_FIELDS.filter((field) => field in before).map((field) => [field, before[field]]));
+            return { ...state, ...kept };
+          });
+        }
         slots[position] = instance;
         (held === null ? result.placed : result.refreshed).push(label);
       }
@@ -179,6 +203,11 @@ export function knownDevices(config: string): string[] {
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
     .sort();
+}
+
+/** The profile file for a deck: where the layout goes. */
+export function profileFile(config: string, device: string): string {
+  return join(config, "profiles", device, `${selectedProfile(config, device)}.json`);
 }
 
 /** The profile the deck is showing, which is where the layout goes ("Default" until OpenDeck says otherwise). */
@@ -203,7 +232,7 @@ export function applyLayout(
   layout: LayoutSpec
 ): PlacementResult & { file: string } {
   const profileName = selectedProfile(config, device);
-  const file = join(config, "profiles", device, `${profileName}.json`);
+  const file = profileFile(config, device);
   if (!existsSync(file)) throw new Error(`OpenDeck has no profile file at ${file}; start OpenDeck with the deck connected once`);
   let profile: Profile;
   try {
@@ -240,9 +269,14 @@ export interface Args {
 /** The command line of install.ts: a plugin name, the flags, and two flags that take a value. A typo is an error, not ignored. */
 export function parseArgs(argv: string[]): Args {
   const args: Args = { which: "all", layout: false, dryRun: false, force: false, errors: [] };
+  let named = "";
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === "vjster" || a === "fadester" || a === "all") args.which = a;
+    if (a === "vjster" || a === "fadester" || a === "all") {
+      if (named && named !== a) args.errors.push(`name one plugin (vjster, fadester or all), not ${named} and ${a}`);
+      named = a;
+      args.which = a;
+    }
     else if (a === "--layout") args.layout = true;
     else if (a === "--dry-run") args.dryRun = true;
     else if (a === "--force") args.force = true;

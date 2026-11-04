@@ -16,6 +16,7 @@ import {
   knownDevices,
   parseArgs,
   pluginFolderName,
+  profileFile,
   type PluginManifest
 } from "./opendeck.js";
 
@@ -68,9 +69,15 @@ function main(argv: string[]): number {
   }
   const devices = knownDevices(config);
   const device = args.device ?? devices[0];
-  if (!args.dryRun && args.layout && names.includes("vjster") && !device) {
-    console.error("OpenDeck has no deck profile yet: connect the deck, start OpenDeck once, quit it, and run this again.");
-    return 1;
+  if (!args.dryRun && args.layout && names.includes("vjster")) {
+    if (!device) {
+      console.error("OpenDeck has no deck profile yet: connect the deck, start OpenDeck once, quit it, and run this again.");
+      return 1;
+    }
+    if (!existsSync(profileFile(config, device))) {
+      console.error(`OpenDeck has no profile file at ${profileFile(config, device)} (decks it knows: ${devices.join(", ") || "none"}); check --device.`);
+      return 1;
+    }
   }
 
   for (const name of names) {
@@ -89,7 +96,9 @@ function main(argv: string[]): number {
     for (const line of result.refreshed) console.log(`  refreshed ${line}`);
     for (const line of result.skipped) console.log(`  skipped ${line}`);
   }
-  console.log("Start OpenDeck. Fadester's actions are in the action list; drag them onto keys and dials there.");
+  if (!args.dryRun) {
+    console.log(`Start OpenDeck.${names.includes("fadester") ? " Fadester's actions are in the action list; drag them onto keys and dials there." : ""}`);
+  }
   return 0;
 }
 

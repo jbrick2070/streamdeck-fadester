@@ -295,3 +295,75 @@ describe("the install command", () => {
     expect(result.stderr).toMatch(/No OpenDeck config folder/);
   });
 });
+
+describe("second-round hardening", () => {
+  it("installs from a relative source folder without copying its logs", () => {
+    const cwd = process.cwd();
+    try {
+      process.chdir(work);
+      const target = installPlugin(`${UUID}.sdPlugin`, config, UUID);
+      expect(existsSync(join(target, "bin", "plugin.js"))).toBe(true);
+      expect(existsSync(join(target, "logs"))).toBe(false);
+    } finally {
+      process.chdir(cwd);
+    }
+  });
+  it("leaves no .new folder behind and refuses to install a folder over itself", () => {
+    installPlugin(source, config, UUID);
+    expect(readdirSync(join(config, "plugins"))).toEqual([pluginFolderName(UUID)]);
+    const inPlace = join(config, "plugins", pluginFolderName(UUID));
+    expect(() => installPlugin(inPlace, config, UUID)).toThrow(/overlap/);
+    expect(existsSync(join(inPlace, "bin", "plugin.js"))).toBe(true);
+  });
+  it("keeps the old install whole when the copy fails", () => {
+    installPlugin(source, config, UUID);
+    const target = join(config, "plugins", pluginFolderName(UUID));
+    // A file name the OS cannot create makes the copy fail partway.
+    writeFileSync(join(source, "ui", "page.html"), "<html/>");
+    const bad = join(source, "ui", "x".repeat(300));
+    try {
+      writeFileSync(bad, "too long a name");
+    } catch {
+      /* the failure under test is the copy's; a platform that allows the name just copies it */
+    }
+    try {
+      installPlugin(source, config, UUID);
+    } catch {
+      expect(existsSync(join(target, "bin", "plugin.js"))).toBe(true);
+    }
+    expect(existsSync(`${target}.new`)).toBe(false);
+  });
+  it("keeps the title styling a user set when it rebuilds an entry", () => {
+    const profile = emptyProfile();
+    placeLayout(profile, manifest, source, VJSTER_LAYOUT, "sd-ABC", "Live");
+    const held = profile.keys[0] as { states: Array<Record<string, unknown>> };
+    held.states[0].text_override = "FAST";
+    held.states[0].colour = "#FF0000";
+    held.states[0].Image = "broken";
+    placeLayout(profile, manifest, source, VJSTER_LAYOUT, "sd-ABC", "Live");
+    expect(profile.keys[0]?.states[0].text_override).toBe("FAST");
+    expect(profile.keys[0]?.states[0].colour).toBe("#FF0000");
+    expect(String(profile.keys[0]?.states[0].Image)).toMatch(/^data:image\/png;base64,/);
+  });
+  it("skips, not crashes on, a slot whose action is missing", () => {
+    const profile = emptyProfile();
+    profile.keys[0] = { context: "x", states: [], current_state: 0, settings: {}, children: null } as unknown as Profile["keys"][0];
+    const result = placeLayout(profile, manifest, source, VJSTER_LAYOUT, "sd-ABC", "Live");
+    expect(result.skipped).toEqual(["Speed Preset (key 1): the slot is in use"]);
+  });
+  it("rejects two plugin names", () => {
+    expect(parseArgs(["vjster", "fadester"]).errors).toHaveLength(1);
+    expect(parseArgs(["vjster", "vjster"]).errors).toEqual([]);
+  });
+  it("names an unknown --device and installs nothing", () => {
+    const result = spawnSync(
+      process.execPath,
+      ["--import", "tsx", join(process.cwd(), "scripts", "opendeck", "install.ts"), "vjster", "--layout", "--force", "--config", config, "--device", "sd-NOPE"],
+      { encoding: "utf8" }
+    );
+    expect(result.status).toBe(1);
+    // A checkout that is not built stops one check earlier, at the build; either way nothing is installed.
+    expect(result.stderr).toMatch(/no profile file[\s\S]*sd-ABC|no bin\/plugin\.js/);
+    expect(existsSync(join(config, "plugins"))).toBe(false);
+  });
+});

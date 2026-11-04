@@ -15,7 +15,7 @@
    npm run opendeck:install -- all --layout
    ```
 
-   This copies VJster and Fadester into OpenDeck's plugins folder (`%APPDATA%\opendeck\plugins` on Windows) and puts VJster's four keys and two dials on your deck's current profile. It only fills free slots (a slot that holds another action is left alone), keeps the first copy of the profile file it changed in OpenDeck's `backups` folder, and says what it placed, refreshed and skipped. Run it again after you update the plugins: it replaces the plugin folders and rebuilds VJster's own keys and dials, keeping their settings. `--dry-run` shows what it would do; `vjster` or `fadester` instead of `all` installs one.
+   This copies VJster and Fadester into OpenDeck's plugins folder (`%APPDATA%\opendeck\plugins` on Windows) and puts VJster's four keys and two dials on your deck's current profile. It only fills free slots (a slot that holds another action is left alone), keeps the first copy of the profile file it changed in OpenDeck's `backups` folder, and says what it placed, refreshed and skipped. Run it again after you update the plugins: it replaces the plugin folders and rebuilds VJster's own keys and dials, keeping their settings and any title you styled in OpenDeck. `--dry-run` shows what it would do; `vjster` or `fadester` instead of `all` installs one.
 5. **Start OpenDeck.** The VJster keys read 1x, +0.25, Paused and Pin Tab, and the first two dials show Speed and Quality. Click a key to open its settings below the grid.
 6. **Add the Chrome extension** from [docs/vjster/INSTALL.md](vjster/INSTALL.md) (the same extension as with Stream Deck software), then open a video: the keys follow it.
 

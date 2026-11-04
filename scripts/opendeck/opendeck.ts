@@ -47,11 +47,18 @@ export interface LayoutSpec {
   sliders: Record<number, string>;
 }
 
-/** The VJster starter layout: the four keys and the two dials the demo uses (the other slots stay free). */
-export const VJSTER_LAYOUT: LayoutSpec = {
-  keys: { 0: "Speed Preset", 1: "Speed Step", 2: "Play / Pause", 3: "Pin Tab" },
-  sliders: { 0: "Speed", 1: "Quality" }
-};
+/** The VJster starter layout: the four keys and the two dials the demo uses (the other slots stay free). `prefix` is how the plugin names the actions. */
+export function vjsterLayout(prefix = ""): LayoutSpec {
+  return {
+    keys: { 0: `${prefix}Speed Preset`, 1: `${prefix}Speed Step`, 2: `${prefix}Play / Pause`, 3: `${prefix}Pin Tab` },
+    sliders: { 0: `${prefix}Speed`, 1: `${prefix}Quality` }
+  };
+}
+
+/** For the standalone VJster plugin, whose actions are named Speed, Quality and so on. */
+export const VJSTER_LAYOUT: LayoutSpec = vjsterLayout();
+/** For the suite plugin (the Fadester plugin that carries VJster), whose actions are named VJster Speed and so on. */
+export const SUITE_LAYOUT: LayoutSpec = vjsterLayout("VJster ");
 
 /** OpenDeck's config directory. Verified on Windows; the macOS and Linux places follow OpenDeck's README (Flatpak differs). */
 export function configDir(platform: NodeJS.Platform, env: Record<string, string | undefined>, home: string): string {
@@ -257,7 +264,8 @@ export function applyLayout(
 }
 
 export interface Args {
-  which: "vjster" | "fadester" | "all";
+  /** The suite (the Fadester plugin, with VJster in it), the standalone VJster plugin, or both. */
+  which: "suite" | "vjster" | "both";
   layout: boolean;
   dryRun: boolean;
   force: boolean;
@@ -270,14 +278,15 @@ export interface Args {
 
 /** The command line of install.ts: a plugin name, the flags, and two flags that take a value. A typo is an error, not ignored. */
 export function parseArgs(argv: string[]): Args {
-  const args: Args = { which: "all", layout: false, dryRun: false, force: false, errors: [] };
+  const args: Args = { which: "suite", layout: false, dryRun: false, force: false, errors: [] };
   let named = "";
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === "vjster" || a === "fadester" || a === "all") {
-      if (named && named !== a) args.errors.push(`name one plugin (vjster, fadester or all), not ${named} and ${a}`);
+    if (a === "suite" || a === "vjster" || a === "both" || a === "all" || a === "fadester") {
+      if (named && named !== a) args.errors.push(`name one plugin (suite, vjster or both), not ${named} and ${a}`);
       named = a;
-      args.which = a;
+      // "all" and "fadester" were the names before VJster moved into the Fadester plugin; both now mean the suite.
+      args.which = a === "vjster" || a === "both" ? a : "suite";
     }
     else if (a === "--layout") args.layout = true;
     else if (a === "--dry-run") args.dryRun = true;
@@ -291,7 +300,6 @@ export function parseArgs(argv: string[]): Args {
       }
     } else args.errors.push(`unknown argument ${a}`);
   }
-  if (args.fadesterLayouts && args.which === "vjster") args.errors.push("--fadester-layouts needs fadester or all");
-  if (args.layout && args.which === "fadester") args.errors.push("--layout places VJster's keys and dials; use it with vjster or all");
+  if (args.fadesterLayouts && args.which === "vjster") args.errors.push("--fadester-layouts needs the suite (suite, both, all or fadester)");
   return args;
 }

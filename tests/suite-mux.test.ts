@@ -130,8 +130,56 @@ describe("the one stored settings object", () => {
 
   it("treats a page's save with nothing in it as an empty part, not an error", () => {
     const { mux, host } = rig();
+    mux.fromHost({ event: "didReceiveGlobalSettings", payload: { settings: {} } });
     mux.fromHost({ event: "sendToPlugin", action: SPEED, context: "c2", payload: { event: SUITE_GLOBAL_EVENT, settings: "nonsense" } });
     expect(host[0].payload).toEqual({ vjster: {} });
+  });
+
+  it("holds a save made before the stored object is known, so it cannot replace keys it has not seen", () => {
+    const { mux, host, children } = rig();
+    // VJster saves, then Fadester saves, before the host has answered.
+    mux.fromChild("vjster", { event: "setGlobalSettings", context: PLUGIN, payload: { port: 48180 } });
+    mux.fromHost({ event: "sendToPlugin", action: SPEED, context: "c2", payload: { event: SUITE_GLOBAL_EVENT, settings: { port: 48181 } } });
+    mux.fromChild("fadester", { event: "setGlobalSettings", context: PLUGIN, payload: { host: "10.1.1.1", port: 4455, password: "pw", language: "de" } });
+    expect(host.filter((m) => m.event === "setGlobalSettings")).toEqual([]);
+    expect(host.filter((m) => m.event === "getGlobalSettings").length).toBeGreaterThan(0);
+    expect(children.vjster).toEqual([]);
+    mux.fromHost({ event: "didReceiveGlobalSettings", id: "suite-global-settings", payload: { settings: { host: "127.0.0.1", port: 4455, password: "pw", language: "de", vjster: { obsToken: "t" } } } });
+    const writes = host.filter((m) => m.event === "setGlobalSettings").map((m) => m.payload as Record<string, unknown>);
+    expect(writes).toHaveLength(3);
+    // Every write kept every key the stored object had, and the last one has both children's latest.
+    for (const write of writes) expect(write).toMatchObject({ host: expect.any(String), password: "pw", language: "de" });
+    expect(writes[2]).toEqual({ host: "10.1.1.1", port: 4455, password: "pw", language: "de", vjster: { port: 48181 } });
+  });
+
+  it("answers each read a child has waiting with that read's own id, even when one child asks twice", () => {
+    const { mux, children } = rig();
+    mux.fromChild("fadester", { event: "getGlobalSettings", id: "a" });
+    mux.fromChild("fadester", { event: "getGlobalSettings", id: "b" });
+    mux.fromChild("vjster", { event: "getGlobalSettings", id: "c" });
+    mux.fromHost({ event: "didReceiveGlobalSettings", id: "suite-global-settings", payload: { settings: stored } });
+    expect(children.fadester.map((m) => m.id)).toEqual(["a", "b"]);
+    expect(children.vjster.map((m) => m.id)).toEqual(["c"]);
+  });
+
+  it("does not tell a child the settings arrived when only the suite's own read was answered", () => {
+    const { mux, children } = rig();
+    mux.start();
+    mux.fromHost({ event: "didReceiveGlobalSettings", id: "suite-global-settings", payload: { settings: stored } });
+    expect(children.fadester).toEqual([]);
+    expect(children.vjster).toEqual([]);
+    mux.fromChild("fadester", { event: "getGlobalSettings", id: "late" });
+    expect(children.fadester.map((m) => m.id)).toEqual(["late"]);
+  });
+
+  it("asks the host again each time it is told to, until the settings are known", () => {
+    const { mux, host } = rig();
+    mux.start();
+    mux.start();
+    expect(host.filter((m) => m.event === "getGlobalSettings")).toHaveLength(2);
+    mux.fromHost({ event: "didReceiveGlobalSettings", payload: { settings: stored } });
+    mux.start();
+    expect(host.filter((m) => m.event === "getGlobalSettings")).toHaveLength(2);
   });
 
   it("does not take a settings-save message from a Fadester action", () => {
@@ -174,6 +222,36 @@ describe("a child that starts again", () => {
     expect(mux.replayFor("fadester").map((m) => `${m.event}:${m.context ?? ""}`)).toEqual(["deviceDidConnect:", "didReceiveGlobalSettings:", "willAppear:c1"]);
     mux.fromHost({ event: "deviceDidDisconnect", device: "d1" });
     expect(mux.replayFor("vjster").map((m) => m.event)).toEqual(["didReceiveGlobalSettings", "willAppear"]);
+  });
+});
+
+describe("a child's own plugin id and its alerts", () => {
+  it("is put back to the suite's id on plugin-level messages", () => {
+    const host: Message[] = [];
+    const mux = new SuiteMux({ pluginUuid: PLUGIN, vjsterActions: VJSTER_ACTIONS, namespace: VJSTER_NAMESPACE, childUuids: { fadester: "suite-f", vjster: "suite-v" }, toHost: (m) => host.push(m), toChild: () => undefined });
+    mux.fromChild("fadester", { event: "switchToProfile", context: "suite-f", device: "d", payload: { profile: "p" } });
+    mux.fromChild("vjster", { event: "logMessage", payload: { message: "x" } });
+    mux.fromChild("vjster", { event: "setImage", context: "suite-f", payload: {} }); // another child's id on a key is left alone
+    expect(host[0].context).toBe(PLUGIN);
+    expect(host[1]).toEqual({ event: "logMessage", payload: { message: "x" } });
+    expect(host[2].context).toBe("suite-f");
+  });
+
+  it("shows an alert on every key and dial of a child that cannot be started again, and on no other", () => {
+    const { mux, host } = rig();
+    mux.fromHost({ event: "willAppear", action: SPEED, context: "c2" });
+    mux.fromHost({ event: "willAppear", action: FADE, context: "c1" });
+    mux.showAlertsFor("vjster");
+    expect(host).toEqual([{ event: "showAlert", context: "c2" }]);
+  });
+
+  it("gives a restarted child the key's settings as they are now, whoever changed them", () => {
+    const { mux } = rig();
+    mux.fromHost({ event: "willAppear", action: SPEED, context: "c2", payload: { settings: { step: 0.1 }, controller: "Encoder" } });
+    mux.fromHost({ event: "didReceiveSettings", action: SPEED, context: "c2", payload: { settings: { step: 0.25 } } });
+    expect((mux.replayFor("vjster")[0].payload as { settings: unknown; controller: unknown })).toEqual({ settings: { step: 0.25 }, controller: "Encoder" });
+    mux.fromChild("vjster", { event: "setSettings", context: "c2", payload: { step: 0.5 } });
+    expect((mux.replayFor("vjster")[0].payload as { settings: unknown }).settings).toEqual({ step: 0.5 });
   });
 });
 

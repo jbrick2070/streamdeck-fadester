@@ -260,14 +260,19 @@ describe("parseArgs", () => {
       errors: []
     });
   });
-  it("means all plugins when none is named", () => {
-    expect(parseArgs([]).which).toBe("all");
+  it("means the suite when none is named, and keeps the older names working", () => {
+    expect(parseArgs([]).which).toBe("suite");
+    expect(parseArgs(["all"]).which).toBe("suite");
+    expect(parseArgs(["fadester"]).which).toBe("suite");
+    expect(parseArgs(["suite"]).which).toBe("suite");
+    expect(parseArgs(["both"]).which).toBe("both");
+    expect(parseArgs(["vjster"]).which).toBe("vjster");
   });
-  it("reports a typo, a value that is missing or is another flag, and --layout for Fadester alone", () => {
+  it("reports a typo and a value that is missing or is another flag", () => {
     expect(parseArgs(["--layuot"]).errors).toEqual(["unknown argument --layuot"]);
     expect(parseArgs(["--device"]).errors).toEqual(["--device needs a value"]);
     expect(parseArgs(["--device", "--dry-run"]).errors).toEqual(["--device needs a value", ]);
-    expect(parseArgs(["fadester", "--layout"]).errors).toHaveLength(1);
+    expect(parseArgs(["fadester", "--layout"]).errors).toEqual([]);
     expect(parseArgs(["all", "--layout"]).errors).toEqual([]);
   });
 });
@@ -279,8 +284,9 @@ describe("the install command", () => {
   it("changes nothing on a dry run and says what it would do", () => {
     const result = run("all", "--layout", "--dry-run", "--config", config);
     expect(result.status).toBe(0);
-    expect(result.stdout).toMatch(/would copy .*vjster/);
-    expect(result.stdout).toMatch(/would place the VJster starter layout on sd-ABC/);
+    expect(result.stdout).toMatch(/would copy .*fadester-for-obs\.sdPlugin/);
+    expect(result.stdout).not.toMatch(/would copy .*vjster\.sdPlugin/);
+    expect(result.stdout).toMatch(/would place the Fadester for OBS starter layout on sd-ABC/);
     expect(existsSync(join(config, "plugins"))).toBe(false);
     expect(readFileSync(join(config, "profiles", "sd-ABC", "Live.json"), "utf8")).toBe(JSON.stringify(emptyProfile()));
   });
@@ -360,11 +366,13 @@ describe("second-round hardening", () => {
   it("reads --fadester-layouts and wants Fadester with it", () => {
     expect(parseArgs(["all", "--fadester-layouts", "fit"]).fadesterLayouts).toBe("fit");
     expect(parseArgs(["fadester", "--fadester-layouts", "a,b"]).fadesterLayouts).toBe("a,b");
-    expect(parseArgs(["vjster", "--fadester-layouts", "fit"]).errors).toEqual(["--fadester-layouts needs fadester or all"]);
+    expect(parseArgs(["vjster", "--fadester-layouts", "fit"]).errors).toEqual(["--fadester-layouts needs the suite (suite, both, all or fadester)"]);
+    expect(parseArgs(["both", "--fadester-layouts", "fit"]).errors).toEqual([]);
     expect(parseArgs(["--fadester-layouts"]).errors).toEqual(["--fadester-layouts needs a value"]);
   });
   it("rejects two plugin names", () => {
     expect(parseArgs(["vjster", "fadester"]).errors).toHaveLength(1);
+    expect(parseArgs(["suite", "all"]).errors).toHaveLength(1);
     expect(parseArgs(["vjster", "vjster"]).errors).toEqual([]);
   });
   it("names an unknown --device and installs nothing", () => {

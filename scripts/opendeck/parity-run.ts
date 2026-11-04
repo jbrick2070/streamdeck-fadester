@@ -360,6 +360,20 @@ async function main(): Promise<number> {
         `keys: ${Object.keys(stored).join(", ")}`);
       await until("VJster's link on the new port", () => listening(48155), 10000);
       check("VJster applies the saved port", true, "127.0.0.1:48155");
+
+      // A child that stops is started again and given the key that was showing (Windows: the child is found by its command line).
+      if (process.platform === "win32") {
+        // The suite starts the VJster plugin from bin/vjster/plugin.js with a plugin id that begins "suite-".
+        const find = "Get-CimInstance Win32_Process -Filter \"Name='node.exe'\" | Where-Object { $_.CommandLine -like '*vjster*plugin.js*' -and $_.CommandLine -like '*suite-*' } | ForEach-Object { $_.ProcessId }";
+        const pids = spawnSync("powershell.exe", ["-NoProfile", "-Command", find], { encoding: "utf8" }).stdout.split(/\s+/).filter(Boolean);
+        const before = host.of(preset.context, "setImage").length;
+        for (const pid of pids) spawnSync("taskkill", ["/PID", pid, "/F"]);
+        check("a VJster process was found to stop", pids.length > 0, `${pids.length} process(es)`);
+        await until("the VJster key to be drawn again by the restarted plugin", () => host!.of(preset.context, "setImage").length > before, 20000).catch(() => undefined);
+        check("a stopped VJster plugin is started again and draws its key", host.of(preset.context, "setImage").length > before, `${host.of(preset.context, "setImage").length - before} new image(s)`);
+        await until("VJster's link on the saved port after the restart", () => listening(48155), 10000).catch(() => undefined);
+        check("the restarted VJster plugin has its saved port", await listening(48155), "127.0.0.1:48155");
+      }
     }
 
     const alerts = host.received.filter((m) => m.event === "showAlert").length;

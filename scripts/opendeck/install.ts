@@ -8,6 +8,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import {
+  SUITE_LAYOUT,
   VJSTER_LAYOUT,
   applyLayout,
   configDir,
@@ -24,9 +25,10 @@ import { fits, writeLayouts } from "./fadester-layouts.js";
 import type { Preset } from "../profile-checks.js";
 
 const root = resolve(import.meta.dirname, "..", "..");
+// The suite is the Fadester plugin's folder, which carries VJster too; the standalone VJster plugin is a folder of its own.
 const PLUGINS = {
-  vjster: join(root, "com.jbrick2070.vjster.sdPlugin"),
-  fadester: join(root, "com.jbrick2070.fadester-for-obs.sdPlugin")
+  suite: join(root, "com.jbrick2070.fadester-for-obs.sdPlugin"),
+  vjster: join(root, "com.jbrick2070.vjster.sdPlugin")
 } as const;
 
 /** True when OpenDeck is running; false when it is not or when this computer cannot say (the answer is then a warning). */
@@ -93,7 +95,9 @@ function main(argv: string[]): number {
     console.error("Usage: npm run opendeck:install -- [vjster|fadester|all] [--layout] [--device <id>] [--config <dir>] [--dry-run] [--force]");
     return 2;
   }
-  const names = args.which === "all" ? (["vjster", "fadester"] as const) : ([args.which] as const);
+  const names = args.which === "both" ? (["suite", "vjster"] as const) : ([args.which] as const);
+  // VJster's starter layout goes on the suite when it is installed, else on the standalone plugin.
+  const layoutOn = names.includes("suite") ? "suite" : "vjster";
   const config = args.config ?? configDir(process.platform, process.env, homedir());
 
   if (!args.dryRun && !args.force && openDeckRunning()) {
@@ -112,7 +116,7 @@ function main(argv: string[]): number {
   }
   const devices = knownDevices(config);
   const device = args.device ?? devices[0];
-  if (!args.dryRun && args.layout && names.includes("vjster")) {
+  if (!args.dryRun && args.layout) {
     if (!device) {
       console.error("OpenDeck has no deck profile yet: connect the deck, start OpenDeck once, quit it, and run this again.");
       return 1;
@@ -124,7 +128,7 @@ function main(argv: string[]): number {
   }
 
   let plan: FadesterPlan | null = null;
-  if (args.fadesterLayouts && names.includes("fadester")) {
+  if (args.fadesterLayouts && names.includes("suite")) {
     const planned = planFadesterLayouts(config, device, args.fadesterLayouts, args.dryRun);
     if (typeof planned === "string") {
       console.error(planned);
@@ -138,24 +142,26 @@ function main(argv: string[]): number {
     const target = join(config, "plugins", pluginFolderName(manifest.UUID));
     if (args.dryRun) console.log(`would copy ${PLUGINS[name]} to ${target}`);
     else console.log(`${manifest.Name}: copied to ${installPlugin(PLUGINS[name], config, manifest.UUID)}`);
-    if (name === "fadester" && plan) {
+    if (name === "suite" && plan) {
       if (args.dryRun) console.log(`would write ${plan.presets.length} Fadester layout(s) as OpenDeck profiles${plan.deck.keys ? ` for ${plan.deck.keys} keys and ${plan.deck.dials} dials on ${device}` : ""}`);
       else writeFadesterLayouts(plan, config, device as string, manifest, target);
+    }
+    if (!args.layout || name !== layoutOn) {
+      if (args.layout && name === "vjster") console.log("  the standalone VJster plugin gets no starter layout: the suite has it");
       continue;
     }
-    if (name !== "vjster" || !args.layout) continue;
     if (devices.length > 1 && !args.device) console.log(`Several decks found (${devices.join(", ")}); using ${device}. Pass --device <id> to choose.`);
     if (args.dryRun) {
       console.log(`would place the ${manifest.Name} starter layout on ${device ?? "the deck (none found yet)"}`);
       continue;
     }
-    const result = applyLayout(config, device as string, manifest, target, VJSTER_LAYOUT);
+    const result = applyLayout(config, device as string, manifest, target, name === "suite" ? SUITE_LAYOUT : VJSTER_LAYOUT);
     for (const line of result.placed) console.log(`  placed ${line}`);
     for (const line of result.refreshed) console.log(`  refreshed ${line}`);
     for (const line of result.skipped) console.log(`  skipped ${line}`);
   }
   if (!args.dryRun) {
-    console.log(`Start OpenDeck.${names.includes("fadester") ? " Fadester's actions are in the action list; drag them onto keys and dials there." : ""}`);
+    console.log(`Start OpenDeck.${names.includes("suite") ? " Fadester's and VJster's actions are in the action list; drag them onto keys and dials there." : ""}`);
   }
   return 0;
 }

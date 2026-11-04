@@ -88,21 +88,23 @@ export function writeLayouts(
   deck: DeckSize
 ): WrittenProfile[] {
   const folder = join(config, "profiles", device);
-  mkdirSync(folder, { recursive: true });
-  const out: WrittenProfile[] = [];
+  // Every page is built before any file is written, so a layout that cannot be built leaves nothing half written.
+  const todo: Array<{ name: string; file: string; built?: ReturnType<typeof buildPageProfile> }> = [];
+  const names = new Set<string>();
   for (const preset of presets) {
     const pages = presetPages(preset);
     for (const page of pages) {
       const name = profileNameFor(preset, page, pages.length);
+      if (names.has(name.toLowerCase())) throw new Error(`Two layouts would both be called "${name}"`);
+      names.add(name.toLowerCase());
       const file = join(folder, `${name}.json`);
-      if (existsSync(file)) {
-        out.push({ name, file, status: "exists", placed: 0, left: [] });
-        continue;
-      }
-      const built = buildPageProfile(preset, page, manifest, pluginDir, device, name, deck);
-      writeFileSync(file, JSON.stringify(built.profile, null, 2));
-      out.push({ name, file, status: "written", placed: built.placed, left: built.left });
+      todo.push({ name, file, built: existsSync(file) ? undefined : buildPageProfile(preset, page, manifest, pluginDir, device, name, deck) });
     }
   }
-  return out;
+  mkdirSync(folder, { recursive: true });
+  return todo.map(({ name, file, built }) => {
+    if (!built) return { name, file, status: "exists" as const, placed: 0, left: [] };
+    writeFileSync(file, JSON.stringify(built.profile, null, 2));
+    return { name, file, status: "written" as const, placed: built.placed, left: built.left };
+  });
 }

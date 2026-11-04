@@ -289,6 +289,12 @@ describe("the install command", () => {
     expect(result.status).toBe(2);
     expect(result.stderr).toMatch(/unknown argument --layuot[\s\S]*Usage:/);
   });
+  it("checks a wrong layout name before it installs anything", () => {
+    const result = run("fadester", "--force", "--fadester-layouts", "nosuch", "--config", config);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(/No Fadester layout called nosuch|no bin\/plugin\.js/);
+    expect(existsSync(join(config, "plugins"))).toBe(false);
+  });
   it("names a missing OpenDeck folder", () => {
     const result = run("vjster", "--force", "--config", join(work, "nowhere"));
     expect(result.status).toBe(1);

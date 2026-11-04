@@ -107,6 +107,19 @@ describe("writeLayouts", () => {
     expect(again.every((w) => w.status === "exists")).toBe(true);
     expect(readFileSync(edited, "utf8")).toBe("edited by hand");
   });
+  it("writes nothing when a later layout cannot be built", () => {
+    const config = join(work, "opendeck");
+    const good = presets.find((p) => p.slug === "mini-source-desk") as Preset;
+    const bad = { ...good, slug: "bad", name: "Fadester \u2014 Bad", pages: undefined, actions: [{ controller: "Keypad", column: 0, row: 0, kind: "fade", settings: {} }, { controller: "Keypad", column: 9, row: 9, kind: "fade", settings: {} }] } as unknown as Preset;
+    expect(() => writeLayouts(config, "sd-M", [good, bad], manifest, plugin(), MINI)).toThrow(/past the deck's last slot/);
+    expect(existsSync(join(config, "profiles", "sd-M"))).toBe(false);
+  });
+  it("refuses two layouts that would share a file name", () => {
+    const config = join(work, "opendeck");
+    const a = presets.find((p) => p.slug === "mini-source-desk") as Preset;
+    expect(() => writeLayouts(config, "sd-M", [a, { ...a, slug: "other" }], manifest, plugin(), MINI)).toThrow(/Two layouts would both be called/);
+    expect(existsSync(join(config, "profiles", "sd-M"))).toBe(false);
+  });
   it("writes valid profile JSON that OpenDeck can read back", () => {
     const config = join(work, "opendeck");
     const preset = presets.find((p) => p.slug === "mini-source-desk") as Preset;

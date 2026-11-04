@@ -13,7 +13,9 @@
     "node": ">=24.0.0"
   },
   "scripts": {
-    "build": "npm run build:profiles && rollup -c && npm run build:vjster",
+    "build": "npm run build:profiles && rollup -c && npm run build:vjster && npm run build:suite",
+    "build:suite": "node --import tsx scripts/suite/assemble.ts && rollup -c suite-plugin/rollup.config.mjs && node --import tsx scripts/suite/copy-vjster.ts",
+    "suite:assemble": "node --import tsx scripts/suite/assemble.ts",
     "watch": "rollup -c -w",
     "opendeck:install": "node --import tsx scripts/opendeck/install.ts",
     "opendeck:parity": "node --import tsx scripts/opendeck/parity-run.ts",

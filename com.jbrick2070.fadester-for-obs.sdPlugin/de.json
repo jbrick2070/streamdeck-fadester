@@ -68,6 +68,48 @@
     "Name": "Midi Fadester Auto-Fade (optional)",
     "Tooltip": "Optionaler erweiterter Fade für einen vorhandenen Slot von Midi Fadester."
   },
+  "com.jbrick2070.fadester-for-obs.vjster-speed": {
+    "Name": "VJster Tempo",
+    "Tooltip": "Drehen für das Tempo, gedrückt drehen für feine Schritte, drücken für 1x, die Leiste antippen für Wiedergabe oder Pause.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "Tempo (gedrückt: feine Schritte)",
+        "Push": "Zurück auf 1x",
+        "Touch": "Wiedergabe oder Pause"
+      }
+    }
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-quality": {
+    "Name": "VJster Qualität",
+    "Tooltip": "Drehen, um durch die Qualitätsstufen des Videos zu gehen; drücken oder antippen für Auto. Nur YouTube.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "Qualitätsstufe",
+        "Push": "Auto",
+        "Touch": "Auto"
+      }
+    }
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-speed-preset": {
+    "Name": "VJster Tempo-Vorgabe",
+    "Tooltip": "Ein festes Tempo. Leuchtet, solange dieses Tempo läuft."
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-speed-step": {
+    "Name": "VJster Tempo-Schritt",
+    "Tooltip": "Um einen Schritt schneller oder langsamer."
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-quality-preset": {
+    "Name": "VJster Qualitäts-Vorgabe",
+    "Tooltip": "Eine feste Qualitätsstufe oder Auto. Gedimmt, wenn das Video sie nicht anbietet."
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-pin": {
+    "Name": "VJster Tab anheften",
+    "Tooltip": "Steuert weiter den aktuellen Chrome-Tab, egal was sonst läuft. Erneut drücken zum Lösen."
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-transport": {
+    "Name": "VJster Wiedergabe / Pause",
+    "Tooltip": "Das Video abspielen oder anhalten."
+  },
   "Localization": {
     "statusUnreachable": "OBS läuft nicht oder der WebSocket ist aus (Werkzeuge > WebSocket-Servereinstellungen)",
     "statusUnreachableShort": "OBS läuft nicht oder WebSocket ist aus",

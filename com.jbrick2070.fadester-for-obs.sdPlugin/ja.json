@@ -68,6 +68,48 @@
     "Name": "Midi Fadester オートフェード (オプション)",
     "Tooltip": "既存の Midi Fadester スロット用のオプションの拡張フェードです。"
   },
+  "com.jbrick2070.fadester-for-obs.vjster-speed": {
+    "Name": "VJster 速度",
+    "Tooltip": "回すと速度を変更、押しながら回すと細かいステップで変更、押すと 1x に戻し、タッチストリップをタップすると再生または一時停止します。",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "速度 (押しながら: 細かいステップ)",
+        "Push": "1x に戻す",
+        "Touch": "再生または一時停止"
+      }
+    }
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-quality": {
+    "Name": "VJster 画質",
+    "Tooltip": "回すと動画の画質を順に切り替え、押すかタップすると自動になります。YouTube のみ。",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "画質",
+        "Push": "自動",
+        "Touch": "自動"
+      }
+    }
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-speed-preset": {
+    "Name": "VJster 速度プリセット",
+    "Tooltip": "固定の速度です。その速度で再生中は点灯します。"
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-speed-step": {
+    "Name": "VJster 速度ステップ",
+    "Tooltip": "1 ステップ速く、または遅くします。"
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-quality-preset": {
+    "Name": "VJster 画質プリセット",
+    "Tooltip": "固定の画質、または自動です。動画がその画質に対応していないときは暗く表示されます。"
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-pin": {
+    "Name": "VJster タブを固定",
+    "Tooltip": "ほかで何が再生されても、現在の Chrome タブを操作し続けます。もう一度押すと解除します。"
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-transport": {
+    "Name": "VJster 再生 / 一時停止",
+    "Tooltip": "動画を再生または一時停止します。"
+  },
   "Localization": {
     "statusUnreachable": "OBS が起動していないか、WebSocket がオフです (ツール > WebSocket サーバー設定)",
     "statusUnreachableShort": "OBS 未起動か WebSocket オフ",

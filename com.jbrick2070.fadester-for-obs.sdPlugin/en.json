@@ -68,6 +68,48 @@
     "Name": "Midi Fadester Auto-fade (optional)",
     "Tooltip": "Optional enhanced fade for an existing Midi Fadester slot."
   },
+  "com.jbrick2070.fadester-for-obs.vjster-speed": {
+    "Name": "VJster Speed",
+    "Tooltip": "Turn for speed, hold and turn for fine steps, press for 1x, tap the strip to play or pause.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "Speed (hold for fine steps)",
+        "Push": "Back to 1x",
+        "Touch": "Play or pause"
+      }
+    }
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-quality": {
+    "Name": "VJster Quality",
+    "Tooltip": "Turn to step through the video's quality levels, press or tap for Auto. YouTube only.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "Quality level",
+        "Push": "Auto",
+        "Touch": "Auto"
+      }
+    }
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-speed-preset": {
+    "Name": "VJster Speed Preset",
+    "Tooltip": "One fixed speed. Lights up while it is the speed playing."
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-speed-step": {
+    "Name": "VJster Speed Step",
+    "Tooltip": "Faster or slower by one step."
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-quality-preset": {
+    "Name": "VJster Quality Preset",
+    "Tooltip": "One fixed quality level, or Auto. Dimmed when the video does not offer it."
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-pin": {
+    "Name": "VJster Pin Tab",
+    "Tooltip": "Keep controlling the current Chrome tab, whatever else plays. Press again to let go."
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-transport": {
+    "Name": "VJster Play / Pause",
+    "Tooltip": "Play or pause the video."
+  },
   "Localization": {
     "statusUnreachable": "OBS is not running or the websocket is off (Tools > WebSocket Server Settings)",
     "statusUnreachableShort": "OBS is not running or websocket is off",

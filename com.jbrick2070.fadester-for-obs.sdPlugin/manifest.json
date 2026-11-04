@@ -325,6 +325,141 @@
           "Image": "imgs/actions/auto-fade/key"
         }
       ]
+    },
+    {
+      "Name": "VJster Speed",
+      "UUID": "com.jbrick2070.fadester-for-obs.vjster-speed",
+      "Icon": "imgs/actions/vjster-speed/icon",
+      "Tooltip": "Turn for speed, hold and turn for fine steps, press for 1x, tap the strip to play or pause.",
+      "PropertyInspectorPath": "ui/vjster/vjster.html",
+      "Controllers": [
+        "Encoder"
+      ],
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": false,
+      "Encoder": {
+        "layout": "layouts/vjster-strip.json",
+        "TriggerDescription": {
+          "Rotate": "Speed (hold for fine steps)",
+          "Push": "Back to 1x",
+          "Touch": "Play or pause"
+        }
+      },
+      "States": [
+        {
+          "Image": "imgs/actions/vjster-speed/key"
+        }
+      ]
+    },
+    {
+      "Name": "VJster Quality",
+      "UUID": "com.jbrick2070.fadester-for-obs.vjster-quality",
+      "Icon": "imgs/actions/vjster-quality/icon",
+      "Tooltip": "Turn to step through the video's quality levels, press or tap for Auto. YouTube only.",
+      "PropertyInspectorPath": "ui/vjster/vjster.html",
+      "Controllers": [
+        "Encoder"
+      ],
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": false,
+      "Encoder": {
+        "layout": "layouts/vjster-strip.json",
+        "TriggerDescription": {
+          "Rotate": "Quality level",
+          "Push": "Auto",
+          "Touch": "Auto"
+        }
+      },
+      "States": [
+        {
+          "Image": "imgs/actions/vjster-quality/key"
+        }
+      ]
+    },
+    {
+      "Name": "VJster Speed Preset",
+      "UUID": "com.jbrick2070.fadester-for-obs.vjster-speed-preset",
+      "Icon": "imgs/actions/vjster-speed-preset/icon",
+      "Tooltip": "One fixed speed. Lights up while it is the speed playing.",
+      "PropertyInspectorPath": "ui/vjster/vjster.html",
+      "Controllers": [
+        "Keypad"
+      ],
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": true,
+      "States": [
+        {
+          "Image": "imgs/actions/vjster-speed-preset/key"
+        }
+      ]
+    },
+    {
+      "Name": "VJster Speed Step",
+      "UUID": "com.jbrick2070.fadester-for-obs.vjster-speed-step",
+      "Icon": "imgs/actions/vjster-speed-step/icon",
+      "Tooltip": "Faster or slower by one step.",
+      "PropertyInspectorPath": "ui/vjster/vjster.html",
+      "Controllers": [
+        "Keypad"
+      ],
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": true,
+      "States": [
+        {
+          "Image": "imgs/actions/vjster-speed-step/key"
+        }
+      ]
+    },
+    {
+      "Name": "VJster Quality Preset",
+      "UUID": "com.jbrick2070.fadester-for-obs.vjster-quality-preset",
+      "Icon": "imgs/actions/vjster-quality-preset/icon",
+      "Tooltip": "One fixed quality level, or Auto. Dimmed when the video does not offer it.",
+      "PropertyInspectorPath": "ui/vjster/vjster.html",
+      "Controllers": [
+        "Keypad"
+      ],
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": true,
+      "States": [
+        {
+          "Image": "imgs/actions/vjster-quality-preset/key"
+        }
+      ]
+    },
+    {
+      "Name": "VJster Pin Tab",
+      "UUID": "com.jbrick2070.fadester-for-obs.vjster-pin",
+      "Icon": "imgs/actions/vjster-pin/icon",
+      "Tooltip": "Keep controlling the current Chrome tab, whatever else plays. Press again to let go.",
+      "PropertyInspectorPath": "ui/vjster/vjster.html",
+      "Controllers": [
+        "Keypad"
+      ],
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": false,
+      "States": [
+        {
+          "Image": "imgs/actions/vjster-pin/key"
+        }
+      ]
+    },
+    {
+      "Name": "VJster Play / Pause",
+      "UUID": "com.jbrick2070.fadester-for-obs.vjster-transport",
+      "Icon": "imgs/actions/vjster-transport/icon",
+      "Tooltip": "Play or pause the video.",
+      "PropertyInspectorPath": "ui/vjster/vjster.html",
+      "Controllers": [
+        "Keypad"
+      ],
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": true,
+      "States": [
+        {
+          "Image": "imgs/actions/vjster-transport/key"
+        }
+      ]
     }
   ]
 }

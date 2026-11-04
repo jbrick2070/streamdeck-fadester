@@ -1,0 +1,126 @@
+{
+  "Name": "VJster",
+  "Description": "Pilotez la vitesse et la qualité de la vidéo lue dans Chrome depuis votre Stream Deck : molettes pour la vitesse, le réglage fin et la vitesse FX, touches pour les valeurs fixes, lecture/pause et l'épinglage de l'onglet. Fonctionne avec l'extension VJster pour Chrome ; rien ne quitte cet ordinateur.",
+  "Category": "VJster",
+  "com.jbrick2070.vjster.speed": {
+    "Name": "Vitesse",
+    "Tooltip": "Tourner pour la vitesse, tourner en appuyant pour des pas fins, appuyer pour 1x, toucher la bande tactile pour lire ou mettre en pause.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "Vitesse (en appuyant : pas fins)",
+        "Push": "Retour à 1x",
+        "Touch": "Lecture ou pause"
+      }
+    }
+  },
+  "com.jbrick2070.vjster.quality": {
+    "Name": "Qualité",
+    "Tooltip": "Tourner pour parcourir les niveaux de qualité de la vidéo ; appuyer ou toucher pour Auto. YouTube uniquement.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "Niveau de qualité",
+        "Push": "Auto",
+        "Touch": "Auto"
+      }
+    }
+  },
+  "com.jbrick2070.vjster.speed-preset": {
+    "Name": "Vitesse fixe",
+    "Tooltip": "Une vitesse fixe. S'allume tant que c'est la vitesse en cours."
+  },
+  "com.jbrick2070.vjster.speed-step": {
+    "Name": "Pas de vitesse",
+    "Tooltip": "Un pas plus vite ou plus lentement."
+  },
+  "com.jbrick2070.vjster.quality-preset": {
+    "Name": "Qualité fixe",
+    "Tooltip": "Un niveau de qualité fixe, ou Auto. Grisé quand la vidéo ne le propose pas."
+  },
+  "com.jbrick2070.vjster.pin": {
+    "Name": "Épingler l'onglet",
+    "Tooltip": "Continuer à piloter l'onglet Chrome actuel, même si autre chose est en lecture ailleurs. Appuyer à nouveau pour le libérer."
+  },
+  "com.jbrick2070.vjster.transport": {
+    "Name": "Lecture / Pause",
+    "Tooltip": "Lire la vidéo ou la mettre en pause."
+  },
+  "Localization": {
+    "_comment": "Français : rédigé par Claude Opus 5.5 et relu par Gemini 4 Argon (deux modèles d'IA) ; pas encore relu par des locuteurs natifs. Corrections : voir docs/vjster/INSTALL.md.",
+    "statusPortInUse": "PORT UTILISÉ",
+    "statusExtensionOff": "EXTENSION INACTIVE",
+    "statusPageOff": "PAS DE PAGE",
+    "statusNoVideo": "PAS DE VIDÉO",
+    "statusNotAvailable": "N/D",
+    "statusAd": "PUB EN COURS",
+    "tagWeb": "WEB",
+    "tagObs": "OBS",
+    "tagAd": "PUB",
+    "tagExt": "EXT",
+    "tagAuto": "AUTO",
+    "tagFixed": "FIXE",
+    "auto": "AUTO",
+    "speed": "VITESSE",
+    "fxSpeed": "VITESSE FX",
+    "quality": "QUALITÉ",
+    "nudge": "PAS FIN",
+    "sync": "SYNC",
+    "pinned": "ÉPINGLÉ",
+    "pinTab": "ÉPINGLER",
+    "playing": "LECTURE",
+    "paused": "PAUSE",
+    "captionObs": "OBS {word}",
+    "captionSync": "SYNC {word}",
+    "pi": {
+      "thisAction": "Cette action",
+      "fieldLabel": "Libellé de la bande tactile",
+      "fieldStep": "Pas par cran",
+      "fieldFineStep": "Pas (molette enfoncée)",
+      "fieldExtended": "Plage étendue (0.1x à 16x, FX)",
+      "fieldHoldSpeed": "Garder la vitesse pour la vidéo suivante",
+      "fieldControl": "Piloter",
+      "fieldHoldLevel": "Garder le niveau pour la vidéo suivante",
+      "fieldRate": "Vitesse (0.1 à 16)",
+      "fieldDirect": "Agir directement sur l'élément vidéo (nécessaire sous 0.25x ou au-dessus de 4x)",
+      "fieldDirection": "Sens",
+      "faster": "Plus vite",
+      "slower": "Plus lentement",
+      "fieldStepSize": "Pas",
+      "fieldExtendedShort": "Plage étendue",
+      "fieldLevel": "Niveau",
+      "levelAuto": "Auto",
+      "targetBrowser": "Onglet Chrome",
+      "targetObs": "Page OBS",
+      "targetBoth": "Les deux",
+      "pinNote": "Appuyez pour continuer à piloter l'onglet Chrome actuellement actif ; appuyez à nouveau pour le libérer.",
+      "linkTitle": "Liaison VJster",
+      "checking": "Vérification...",
+      "port": "Port",
+      "onlyExtension": "Uniquement cette extension",
+      "anyExtension": "toute extension",
+      "extensionNote": "Laissez vide pour accepter toute extension Chrome, ou collez l'ID que l'extension VJster affiche dans ses options. Tout reste sur cet ordinateur.",
+      "saveLink": "Enregistrer la liaison",
+      "statusConnected": "Extension Chrome connectée",
+      "statusWaiting": "En attente de l'extension Chrome",
+      "statusPortInUse": "Le port {port} est utilisé par un autre programme",
+      "noValidId": "Aucune entrée n'est un ID d'extension Chrome : aucune extension ne peut se connecter",
+      "badIdOne": "{n} entrée ignorée : ce n'est pas un ID d'extension Chrome",
+      "badIdMany": "{n} entrées ignorées : ce ne sont pas des ID d'extension Chrome",
+      "obsTitle": "Page OBS",
+      "noObsPage": "Cette copie du plugin n'a pas de page OBS",
+      "obsConnected": "Page OBS connectée",
+      "obsWaiting": "Aucune page OBS connectée",
+      "videoInput": "Lien ou ID YouTube",
+      "videoPlaceholder": "collez un lien YouTube",
+      "address": "Adresse",
+      "copy": "Copier l'adresse",
+      "copied": "Copiée",
+      "keepOn": "Garder la liaison active",
+      "keepOnNote": "OBS ne charge la page qu'au démarrage ou quand la source est actualisée ; la liaison reste donc active tant que Stream Deck tourne. Cette option s'active d'elle-même la première fois qu'une page OBS se connecte.",
+      "obsNote": "Dans OBS, ajoutez une source Navigateur, décochez Fichier local et collez cette adresse comme URL. Puis, dans une action, réglez Piloter sur Page OBS ou Les deux. L'adresse contient la clé de page OBS de cet ordinateur : ne la montrez ni dans des captures d'écran ni dans des chats.",
+      "languageHeading": "Langue",
+      "languageBadge": "tous les contrôles VJster",
+      "languageAuto": "Automatique (langue de Stream Deck)",
+      "languageNote": "S’applique à tous les contrôles VJster. Les menus, la liste des actions, les info-bulles et les indications des molettes de Stream Deck lui-même restent dans la langue de Stream Deck. La page OBS et l’extension Chrome conservent leur propre langue."
+    }
+  }
+}

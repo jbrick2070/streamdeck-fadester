@@ -1,0 +1,126 @@
+{
+  "Name": "VJster",
+  "Description": "Chrome で再生中の動画の速度と画質を Stream Deck から操作します。ダイヤルで速度、微調整、FX 速度を、キーでプリセット、再生/一時停止、タブの固定を操作できます。VJster の Chrome 拡張機能と連携し、データがこのパソコンの外に出ることはありません。",
+  "Category": "VJster",
+  "com.jbrick2070.vjster.speed": {
+    "Name": "速度",
+    "Tooltip": "回すと速度を変更、押しながら回すと細かいステップで変更、押すと 1x に戻し、タッチストリップをタップすると再生または一時停止します。",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "速度 (押しながら: 細かいステップ)",
+        "Push": "1x に戻す",
+        "Touch": "再生または一時停止"
+      }
+    }
+  },
+  "com.jbrick2070.vjster.quality": {
+    "Name": "画質",
+    "Tooltip": "回すと動画の画質を順に切り替え、押すかタップすると自動になります。YouTube のみ。",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "画質",
+        "Push": "自動",
+        "Touch": "自動"
+      }
+    }
+  },
+  "com.jbrick2070.vjster.speed-preset": {
+    "Name": "速度プリセット",
+    "Tooltip": "固定の速度です。その速度で再生中は点灯します。"
+  },
+  "com.jbrick2070.vjster.speed-step": {
+    "Name": "速度ステップ",
+    "Tooltip": "1 ステップ速く、または遅くします。"
+  },
+  "com.jbrick2070.vjster.quality-preset": {
+    "Name": "画質プリセット",
+    "Tooltip": "固定の画質、または自動です。動画がその画質に対応していないときは暗く表示されます。"
+  },
+  "com.jbrick2070.vjster.pin": {
+    "Name": "タブを固定",
+    "Tooltip": "ほかで何が再生されても、現在の Chrome タブを操作し続けます。もう一度押すと解除します。"
+  },
+  "com.jbrick2070.vjster.transport": {
+    "Name": "再生 / 一時停止",
+    "Tooltip": "動画を再生または一時停止します。"
+  },
+  "Localization": {
+    "_comment": "日本語: Claude Opus 5.5 が作成し、Gemini 4 Argon が確認しました (どちらも AI モデル)。ネイティブ話者による確認はまだです。修正の送り方は docs/vjster/INSTALL.md を参照してください。",
+    "statusPortInUse": "ポート使用中",
+    "statusExtensionOff": "拡張機能オフ",
+    "statusPageOff": "ページなし",
+    "statusNoVideo": "動画なし",
+    "statusNotAvailable": "非対応",
+    "statusAd": "広告再生中",
+    "tagWeb": "WEB",
+    "tagObs": "OBS",
+    "tagAd": "広告",
+    "tagExt": "EXT",
+    "tagAuto": "自動",
+    "tagFixed": "固定",
+    "auto": "自動",
+    "speed": "速度",
+    "fxSpeed": "FX 速度",
+    "quality": "画質",
+    "nudge": "微調整",
+    "sync": "同期",
+    "pinned": "固定中",
+    "pinTab": "タブ固定",
+    "playing": "再生中",
+    "paused": "一時停止",
+    "captionObs": "OBS {word}",
+    "captionSync": "同期 {word}",
+    "pi": {
+      "thisAction": "このアクション",
+      "fieldLabel": "タッチストリップのラベル",
+      "fieldStep": "回したときのステップ",
+      "fieldFineStep": "押しながら回したときのステップ",
+      "fieldExtended": "拡張範囲 (0.1x～16x、FX)",
+      "fieldHoldSpeed": "次の動画でも速度を維持",
+      "fieldControl": "操作対象",
+      "fieldHoldLevel": "次の動画でも画質を維持",
+      "fieldRate": "速度 (0.1～16)",
+      "fieldDirect": "動画要素に直接設定する (0.25x 未満または 4x を超える場合に必要)",
+      "fieldDirection": "方向",
+      "faster": "速く",
+      "slower": "遅く",
+      "fieldStepSize": "ステップ",
+      "fieldExtendedShort": "拡張範囲",
+      "fieldLevel": "画質",
+      "levelAuto": "自動",
+      "targetBrowser": "Chrome タブ",
+      "targetObs": "OBS ページ",
+      "targetBoth": "両方",
+      "pinNote": "押すと、いまアクティブな Chrome タブを操作し続けます。もう一度押すと解除します。",
+      "linkTitle": "VJster の接続",
+      "checking": "確認中...",
+      "port": "ポート",
+      "onlyExtension": "この拡張機能のみ",
+      "anyExtension": "すべての拡張機能",
+      "extensionNote": "空欄にするとすべての Chrome 拡張機能を受け入れます。VJster 拡張機能のオプションに表示される ID を貼り付けることもできます。すべてこのパソコン内で完結します。",
+      "saveLink": "接続設定を保存",
+      "statusConnected": "Chrome 拡張機能に接続済み",
+      "statusWaiting": "Chrome 拡張機能を待機中",
+      "statusPortInUse": "ポート {port} は別のプログラムが使用中です",
+      "noValidId": "入力内容に Chrome 拡張機能の ID が 1 つもありません: どの拡張機能も接続できません",
+      "badIdOne": "{n} 件を無視しました: Chrome 拡張機能の ID ではありません",
+      "badIdMany": "{n} 件を無視しました: Chrome 拡張機能の ID ではありません",
+      "obsTitle": "OBS ページ",
+      "noObsPage": "このプラグインには OBS ページがありません",
+      "obsConnected": "OBS ページに接続済み",
+      "obsWaiting": "OBS ページが接続されていません",
+      "videoInput": "YouTube のリンクまたは ID",
+      "videoPlaceholder": "YouTube のリンクを貼り付け",
+      "address": "アドレス",
+      "copy": "アドレスをコピー",
+      "copied": "コピーしました",
+      "keepOn": "接続を常にオンにする",
+      "keepOnNote": "OBS は起動時かソースの更新時にしかページを読み込まないため、Stream Deck の実行中は接続をオンのままにします。OBS ページが初めて接続したときに自動でオンになります。",
+      "obsNote": "OBS でブラウザソースを追加し、[ローカルファイル] のチェックを外して、このアドレスを URL に貼り付けます。次に、アクションの [操作対象] を [OBS ページ] または [両方] にします。このアドレスにはこのパソコンの OBS ページのキーが含まれています。スクリーンショットやチャットに載せないでください。",
+      "languageHeading": "言語",
+      "languageBadge": "すべての VJster 操作",
+      "languageAuto": "自動 (Stream Deck の言語)",
+      "languageNote": "すべての VJster 操作に適用されます。Stream Deck 自体のメニュー、アクション一覧、ツールチップ、ダイヤルのヒントは Stream Deck の言語のままです。OBS ページと Chrome 拡張機能は、それぞれの言語のままです。"
+    }
+  }
+}

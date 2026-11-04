@@ -68,6 +68,48 @@
     "Name": "Midi Fadester 自動淡入淡出（選用）",
     "Tooltip": "用於既有 Midi Fadester 插槽的選用進階淡入淡出。"
   },
+  "com.jbrick2070.fadester-for-obs.vjster-speed": {
+    "Name": "VJster 速度",
+    "Tooltip": "旋轉調整速度，按住旋轉進行微調，按下恢復 1x，輕觸觸控條播放或暫停。",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "速度（按住：微調）",
+        "Push": "恢復 1x",
+        "Touch": "播放或暫停"
+      }
+    }
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-quality": {
+    "Name": "VJster 畫質",
+    "Tooltip": "旋轉逐級切換影片的畫質，按下或輕觸切換為自動。僅限 YouTube。",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "畫質等級",
+        "Push": "自動",
+        "Touch": "自動"
+      }
+    }
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-speed-preset": {
+    "Name": "VJster 速度預設",
+    "Tooltip": "單一固定速度。目前播放速度為此速度時亮起。"
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-speed-step": {
+    "Name": "VJster 速度增減",
+    "Tooltip": "加快或減慢一級。"
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-quality-preset": {
+    "Name": "VJster 畫質預設",
+    "Tooltip": "單一固定畫質等級或自動。影片不提供此畫質時會變暗。"
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-pin": {
+    "Name": "VJster 固定分頁",
+    "Tooltip": "無論其他地方播放什麼，都繼續控制目前的 Chrome 分頁。再按一次即可取消。"
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-transport": {
+    "Name": "VJster 播放 / 暫停",
+    "Tooltip": "播放或暫停影片。"
+  },
   "Localization": {
     "statusUnreachable": "OBS 未執行或 WebSocket 已關閉（工具 > WebSocket 伺服器設定）",
     "statusUnreachableShort": "OBS 未執行或 WebSocket 關閉",

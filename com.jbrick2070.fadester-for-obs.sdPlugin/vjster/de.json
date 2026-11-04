@@ -1,0 +1,126 @@
+{
+  "Name": "VJster",
+  "Description": "Steuere Tempo und Qualität des Videos, das in Chrome läuft, vom Stream Deck aus: Drehregler für Tempo, Feinschritte und FX-Tempo, Tasten für feste Vorgaben, Wiedergabe/Pause und Tab-Anheften. Arbeitet mit der VJster-Erweiterung für Chrome; nichts verlässt diesen Computer.",
+  "Category": "VJster",
+  "com.jbrick2070.vjster.speed": {
+    "Name": "Tempo",
+    "Tooltip": "Drehen für das Tempo, gedrückt drehen für feine Schritte, drücken für 1x, die Leiste antippen für Wiedergabe oder Pause.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "Tempo (gedrückt: feine Schritte)",
+        "Push": "Zurück auf 1x",
+        "Touch": "Wiedergabe oder Pause"
+      }
+    }
+  },
+  "com.jbrick2070.vjster.quality": {
+    "Name": "Qualität",
+    "Tooltip": "Drehen, um durch die Qualitätsstufen des Videos zu gehen; drücken oder antippen für Auto. Nur YouTube.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "Qualitätsstufe",
+        "Push": "Auto",
+        "Touch": "Auto"
+      }
+    }
+  },
+  "com.jbrick2070.vjster.speed-preset": {
+    "Name": "Tempo-Vorgabe",
+    "Tooltip": "Ein festes Tempo. Leuchtet, solange dieses Tempo läuft."
+  },
+  "com.jbrick2070.vjster.speed-step": {
+    "Name": "Tempo-Schritt",
+    "Tooltip": "Um einen Schritt schneller oder langsamer."
+  },
+  "com.jbrick2070.vjster.quality-preset": {
+    "Name": "Qualitäts-Vorgabe",
+    "Tooltip": "Eine feste Qualitätsstufe oder Auto. Gedimmt, wenn das Video sie nicht anbietet."
+  },
+  "com.jbrick2070.vjster.pin": {
+    "Name": "Tab anheften",
+    "Tooltip": "Steuert weiter den aktuellen Chrome-Tab, egal was sonst läuft. Erneut drücken zum Lösen."
+  },
+  "com.jbrick2070.vjster.transport": {
+    "Name": "Wiedergabe / Pause",
+    "Tooltip": "Das Video abspielen oder anhalten."
+  },
+  "Localization": {
+    "_comment": "Deutsch: entworfen von Claude Opus 5.5 und geprüft von Gemini 4 Argon (zwei KI-Modelle); noch nicht von Muttersprachlern geprüft. Korrekturen: siehe docs/vjster/INSTALL.md.",
+    "statusPortInUse": "PORT BELEGT",
+    "statusExtensionOff": "ERWEITERUNG AUS",
+    "statusPageOff": "KEINE SEITE",
+    "statusNoVideo": "KEIN VIDEO",
+    "statusNotAvailable": "N/V",
+    "statusAd": "WERBUNG LÄUFT",
+    "tagWeb": "WEB",
+    "tagObs": "OBS",
+    "tagAd": "WERBUNG",
+    "tagExt": "EXT",
+    "tagAuto": "AUTO",
+    "tagFixed": "FEST",
+    "auto": "AUTO",
+    "speed": "TEMPO",
+    "fxSpeed": "FX-TEMPO",
+    "quality": "QUALITÄT",
+    "nudge": "FEIN",
+    "sync": "SYNC",
+    "pinned": "ANGEHEFTET",
+    "pinTab": "ANHEFTEN",
+    "playing": "LÄUFT",
+    "paused": "PAUSE",
+    "captionObs": "OBS {word}",
+    "captionSync": "SYNC {word}",
+    "pi": {
+      "thisAction": "Diese Aktion",
+      "fieldLabel": "Beschriftung",
+      "fieldStep": "Schritt beim Drehen",
+      "fieldFineStep": "Schritt beim Drücken und Drehen",
+      "fieldExtended": "Erweiterter Bereich (0.1x bis 16x, FX)",
+      "fieldHoldSpeed": "Tempo beim nächsten Video beibehalten",
+      "fieldControl": "Steuerung",
+      "fieldHoldLevel": "Stufe beim nächsten Video beibehalten",
+      "fieldRate": "Tempo (0.1 bis 16)",
+      "fieldDirect": "Tempo direkt am Video setzen (nötig unter 0.25x oder über 4x)",
+      "fieldDirection": "Richtung",
+      "faster": "Schneller",
+      "slower": "Langsamer",
+      "fieldStepSize": "Schritt",
+      "fieldExtendedShort": "Erweiterter Bereich",
+      "fieldLevel": "Stufe",
+      "levelAuto": "Auto",
+      "targetBrowser": "Chrome-Tab",
+      "targetObs": "OBS-Seite",
+      "targetBoth": "Beide",
+      "pinNote": "Drücken, um den gerade aktiven Chrome-Tab weiter zu steuern; erneut drücken zum Lösen.",
+      "linkTitle": "VJster-Verbindung",
+      "checking": "Wird geprüft...",
+      "port": "Port",
+      "onlyExtension": "Nur diese Erweiterung",
+      "anyExtension": "jede Erweiterung",
+      "extensionNote": "Leer lassen, um jede Chrome-Erweiterung zuzulassen, oder die ID einfügen, die die VJster-Erweiterung in ihren Optionen zeigt. Alles bleibt auf diesem Computer.",
+      "saveLink": "Verbindung speichern",
+      "statusConnected": "Chrome-Erweiterung verbunden",
+      "statusWaiting": "Warte auf die Chrome-Erweiterung",
+      "statusPortInUse": "Port {port} wird von einem anderen Programm belegt",
+      "noValidId": "Kein Eintrag ist eine Chrome-Erweiterungs-ID: keine Erweiterung kann sich verbinden",
+      "badIdOne": "{n} Eintrag ignoriert: keine Chrome-Erweiterungs-ID",
+      "badIdMany": "{n} Einträge ignoriert: keine Chrome-Erweiterungs-IDs",
+      "obsTitle": "OBS-Seite",
+      "noObsPage": "Diese Version des Plugins enthält keine OBS-Seite",
+      "obsConnected": "OBS-Seite verbunden",
+      "obsWaiting": "Keine OBS-Seite verbunden",
+      "videoInput": "YouTube-Link oder ID",
+      "videoPlaceholder": "YouTube-Link einfügen",
+      "address": "Adresse",
+      "copy": "Adresse kopieren",
+      "copied": "Kopiert",
+      "keepOn": "Verbindung aktiv halten",
+      "keepOnNote": "OBS lädt die Seite nur beim Start oder wenn die Quelle aktualisiert wird, deshalb bleibt die Verbindung aktiv, solange Stream Deck läuft. Diese Option aktiviert sich automatisch, sobald sich zum ersten Mal eine OBS-Seite verbindet.",
+      "obsNote": "In OBS eine Browser-Quelle hinzufügen, Lokale Datei abwählen und diese Adresse als URL einfügen. Dann bei einer Aktion unter Steuerung OBS-Seite oder Beide wählen. Die Adresse enthält den OBS-Seiten-Schlüssel dieses Computers: nicht in Screenshots oder Chats zeigen.",
+      "languageHeading": "Sprache",
+      "languageBadge": "alle VJster-Steuerungen",
+      "languageAuto": "Automatisch (Sprache von Stream Deck)",
+      "languageNote": "Gilt für alle VJster-Steuerungen. Die Menüs, die Aktionsliste, die Tooltips und die Drehregler-Hinweise von Stream Deck selbst bleiben in der Sprache von Stream Deck. Die OBS-Seite und die Chrome-Erweiterung behalten ihre eigene Sprache."
+    }
+  }
+}

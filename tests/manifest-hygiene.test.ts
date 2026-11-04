@@ -52,10 +52,15 @@ describe("Step 1.1 — Manifest, Layout, Icons & Repository Hygiene", () => {
 
     const actions = manifest.Actions as Array<Record<string, unknown>>;
     expect(Array.isArray(actions)).toBe(true);
-    expect(actions).toHaveLength(10);
+    // Fadester's ten (the last two optional), then VJster's seven, which the suite assembly adds (scripts/suite/assemble.ts).
+    expect(actions).toHaveLength(17);
     const byId = (id: string) => actions.find((entry) => entry.UUID === `com.jbrick2070.fadester-for-obs.${id}`)!;
     expect(actions.slice(0, 8).every((entry) => !String(entry.Name).includes("optional"))).toBe(true);
-    expect(actions.slice(8).every((entry) => String(entry.Name).includes("optional"))).toBe(true);
+    expect(actions.slice(8, 10).every((entry) => String(entry.Name).includes("optional"))).toBe(true);
+    expect(actions.slice(10).map((entry) => entry.UUID)).toEqual(
+      ["speed", "quality", "speed-preset", "speed-step", "quality-preset", "pin", "transport"].map((kind) => `com.jbrick2070.fadester-for-obs.vjster-${kind}`)
+    );
+    expect(actions.slice(10).every((entry) => String(entry.Name).startsWith("VJster "))).toBe(true);
     // The VJ rig's two actions (PLAN.md 10.4), before the two optional ones.
     expect(byId("obs-filter")).toMatchObject({
       Controllers: ["Keypad", "Encoder"],
@@ -93,7 +98,9 @@ describe("Step 1.1 — Manifest, Layout, Icons & Repository Hygiene", () => {
     expect(statSync(join(PLUGIN_DIR, encoderLayoutRel)).size).toBeGreaterThan(0);
     for (const entry of actions.filter((action) => (action.Controllers as string[]).includes("Encoder"))) {
       const layout = (entry.Encoder as { layout: string }).layout;
-      expect(layout, `Encoder layout for ${entry.Name}`).toBe("layouts/fader-cell.json");
+      // Fadester's dials share one cell layout; VJster's two dials draw their own strip (docs/vjster/PLAN.md step 5).
+      const wanted = String(entry.UUID).includes(".vjster-") ? "layouts/vjster-strip.json" : "layouts/fader-cell.json";
+      expect(layout, `Encoder layout for ${entry.Name}`).toBe(wanted);
       expect(statSync(join(PLUGIN_DIR, layout)).size).toBeGreaterThan(0);
     }
     expect(

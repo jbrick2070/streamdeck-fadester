@@ -68,6 +68,48 @@
     "Name": "Fundido automático de Midi Fadester (opcional)",
     "Tooltip": "Fundido avanzado opcional para un slot existente de Midi Fadester."
   },
+  "com.jbrick2070.fadester-for-obs.vjster-speed": {
+    "Name": "VJster Velocidad",
+    "Tooltip": "Gira para cambiar la velocidad, mantén pulsado y gira para pasos finos, pulsa para 1x, toca la barra táctil para reproducir o pausar.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "Velocidad (pulsado: pasos finos)",
+        "Push": "Volver a 1x",
+        "Touch": "Reproducir o pausar"
+      }
+    }
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-quality": {
+    "Name": "VJster Calidad",
+    "Tooltip": "Gira para recorrer los niveles de calidad del vídeo; pulsa o toca para Auto. Solo YouTube.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "Nivel de calidad",
+        "Push": "Auto",
+        "Touch": "Auto"
+      }
+    }
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-speed-preset": {
+    "Name": "VJster Velocidad fija",
+    "Tooltip": "Una velocidad fija. Se ilumina mientras es la velocidad en uso."
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-speed-step": {
+    "Name": "VJster Paso de velocidad",
+    "Tooltip": "Un paso más rápido o más lento."
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-quality-preset": {
+    "Name": "VJster Calidad fija",
+    "Tooltip": "Un nivel de calidad fijo, o Auto. Atenuado cuando el vídeo no lo ofrece."
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-pin": {
+    "Name": "VJster Fijar pestaña",
+    "Tooltip": "Sigue controlando la pestaña actual de Chrome, se reproduzca lo que se reproduzca. Pulsa de nuevo para soltarla."
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-transport": {
+    "Name": "VJster Reproducir / Pausar",
+    "Tooltip": "Reproduce o pausa el vídeo."
+  },
   "Localization": {
     "statusUnreachable": "OBS no se está ejecutando o el WebSocket está apagado (Herramientas > Ajustes del servidor WebSocket)",
     "statusUnreachableShort": "OBS cerrado o WebSocket apagado",

@@ -68,6 +68,48 @@
     "Name": "Midi Fadester 자동 페이드 (선택 사항)",
     "Tooltip": "기존 Midi Fadester 슬롯을 위한 선택 사항인 고급 페이드입니다."
   },
+  "com.jbrick2070.fadester-for-obs.vjster-speed": {
+    "Name": "VJster 속도",
+    "Tooltip": "돌리면 속도를 조절하고, 누른 채 돌리면 미세하게 조절합니다. 누르면 1x로 돌아가고, 스트립을 탭하면 재생하거나 일시중지합니다.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "속도 (누른 채 돌리면 미세 조절)",
+        "Push": "1x로 되돌리기",
+        "Touch": "재생 또는 일시중지"
+      }
+    }
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-quality": {
+    "Name": "VJster 화질",
+    "Tooltip": "돌리면 동영상의 화질 단계를 차례로 바꾸고, 누르거나 탭하면 자동입니다. YouTube 전용.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "화질 단계",
+        "Push": "자동",
+        "Touch": "자동"
+      }
+    }
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-speed-preset": {
+    "Name": "VJster 속도 프리셋",
+    "Tooltip": "고정된 속도 하나입니다. 이 속도로 재생 중일 때 켜집니다."
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-speed-step": {
+    "Name": "VJster 속도 단계",
+    "Tooltip": "한 단계 빠르게 또는 느리게 합니다."
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-quality-preset": {
+    "Name": "VJster 화질 프리셋",
+    "Tooltip": "고정된 화질 단계 하나 또는 자동입니다. 동영상이 이 화질을 제공하지 않으면 흐리게 표시됩니다."
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-pin": {
+    "Name": "VJster 탭 고정",
+    "Tooltip": "다른 곳에서 무엇이 재생되든 현재 Chrome 탭을 계속 조절합니다. 다시 누르면 해제됩니다."
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-transport": {
+    "Name": "VJster 재생 / 일시중지",
+    "Tooltip": "동영상을 재생하거나 일시중지합니다."
+  },
   "Localization": {
     "statusUnreachable": "OBS가 실행 중이 아니거나 WebSocket이 꺼져 있습니다 (도구 > WebSocket 서버 설정)",
     "statusUnreachableShort": "OBS 미실행 또는 WebSocket 꺼짐",

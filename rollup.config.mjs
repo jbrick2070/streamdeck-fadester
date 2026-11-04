@@ -6,7 +6,7 @@ import typescript from "@rollup/plugin-typescript";
 export default {
   input: "src/plugin.ts",
   output: {
-    file: "com.jbrick2070.fadester-for-obs.sdPlugin/bin/plugin.js",
+    file: "com.jbrick2070.fadester-for-obs.sdPlugin/bin/fadester.js",
     format: "esm",
     sourcemap: true
   },

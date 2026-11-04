@@ -68,6 +68,48 @@
     "Name": "Fondu auto Midi Fadester (facultatif)",
     "Tooltip": "Fondu avancé facultatif pour un slot existant de Midi Fadester."
   },
+  "com.jbrick2070.fadester-for-obs.vjster-speed": {
+    "Name": "VJster Vitesse",
+    "Tooltip": "Tourner pour la vitesse, tourner en appuyant pour des pas fins, appuyer pour 1x, toucher la bande tactile pour lire ou mettre en pause.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "Vitesse (en appuyant : pas fins)",
+        "Push": "Retour à 1x",
+        "Touch": "Lecture ou pause"
+      }
+    }
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-quality": {
+    "Name": "VJster Qualité",
+    "Tooltip": "Tourner pour parcourir les niveaux de qualité de la vidéo ; appuyer ou toucher pour Auto. YouTube uniquement.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "Niveau de qualité",
+        "Push": "Auto",
+        "Touch": "Auto"
+      }
+    }
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-speed-preset": {
+    "Name": "VJster Vitesse fixe",
+    "Tooltip": "Une vitesse fixe. S'allume tant que c'est la vitesse en cours."
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-speed-step": {
+    "Name": "VJster Pas de vitesse",
+    "Tooltip": "Un pas plus vite ou plus lentement."
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-quality-preset": {
+    "Name": "VJster Qualité fixe",
+    "Tooltip": "Un niveau de qualité fixe, ou Auto. Grisé quand la vidéo ne le propose pas."
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-pin": {
+    "Name": "VJster Épingler l'onglet",
+    "Tooltip": "Continuer à piloter l'onglet Chrome actuel, même si autre chose est en lecture ailleurs. Appuyer à nouveau pour le libérer."
+  },
+  "com.jbrick2070.fadester-for-obs.vjster-transport": {
+    "Name": "VJster Lecture / Pause",
+    "Tooltip": "Lire la vidéo ou la mettre en pause."
+  },
   "Localization": {
     "statusUnreachable": "OBS n’est pas lancé ou le WebSocket est désactivé (Outils > Paramètres du serveur WebSocket)",
     "statusUnreachableShort": "OBS fermé ou WebSocket désactivé",

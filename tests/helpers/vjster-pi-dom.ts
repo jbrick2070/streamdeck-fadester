@@ -69,6 +69,8 @@ export function element(tag: string, attrs: Record<string, string> = {}): FakeEl
 export interface LoadOptions {
   /** Changes the generated text tables before the page reads them (malformed translations). */
   patchStrings?(tables: Record<string, { pi: Record<string, string>; deck: Record<string, string> }>): void;
+  /** Run the page as the suite plugin shows it (ui/vjster/suite.js sets this before vjster.js runs). */
+  suite?: boolean;
 }
 
 /** Load the page in a fresh context; returns the document, what it sent, and a way to talk to it. */
@@ -123,9 +125,10 @@ export function loadPage(language: string, action: string, settings: Record<stri
   (context.WebSocket as { OPEN: number }).OPEN = 1;
   runInNewContext(i18n, context);
   options.patchStrings?.(window.VJSTER_PI_STRINGS as Parameters<NonNullable<LoadOptions["patchStrings"]>>[0]);
+  if (options.suite) window.VJSTER_SUITE = { prefix: "com.jbrick2070.fadester-for-obs.vjster-", namespace: "vjster" };
   runInNewContext(js, context);
   const info = JSON.stringify({ application: { language } });
-  const actionInfo = JSON.stringify({ action: `com.jbrick2070.vjster.${action}`, payload: { settings } });
+  const actionInfo = JSON.stringify({ action: `${options.suite ? "com.jbrick2070.fadester-for-obs.vjster-" : "com.jbrick2070.vjster."}${action}`, payload: { settings } });
   (window.connectElgatoStreamDeckSocket as (...a: unknown[]) => void)(1, "ctx", "registerPropertyInspector", info, actionInfo);
   const fields = all.find((e) => e.id === "fields")!;
   const toPage = (payload: Record<string, unknown>) => socket!.onmessage!({ data: JSON.stringify({ event: "sendToPropertyInspector", payload }) });

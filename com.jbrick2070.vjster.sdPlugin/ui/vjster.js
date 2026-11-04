@@ -10,7 +10,9 @@
 (function () {
   "use strict";
 
-  var PREFIX = "com.jbrick2070.vjster.";
+  // Inside the Fadester plugin (the suite) the page is told its action ids and where its settings live (suite.js).
+  var SUITE = window.VJSTER_SUITE || null;
+  var PREFIX = SUITE ? SUITE.prefix : "com.jbrick2070.vjster.";
   var STEPS = [
     ["0.05", "0.05x"],
     ["0.1", "0.1x"],
@@ -308,7 +310,9 @@
     Object.keys(global).forEach(function (k) {
       if (k !== "language") copy[k] = global[k];
     });
-    send({ event: "setGlobalSettings", context: context, payload: copy });
+    // In the suite the page does not write the stored object (it holds Fadester's settings too): the plugin saves this part.
+    if (SUITE) send({ event: "sendToPlugin", action: PREFIX + kind, context: context, payload: { event: "suiteGlobal", settings: copy } });
+    else send({ event: "setGlobalSettings", context: context, payload: copy });
   }
 
   document.getElementById("obs-always").addEventListener("change", function (event) {
@@ -428,7 +432,10 @@
       } catch (e) {
         return;
       }
-      if (m.event === "didReceiveGlobalSettings" && m.payload) global = m.payload.settings || {};
+      if (m.event === "didReceiveGlobalSettings" && m.payload) {
+        global = m.payload.settings || {};
+        if (SUITE) global = global[SUITE.namespace] || {};
+      }
       if (m.event === "didReceiveSettings" && m.payload) {
         settings = m.payload.settings || {};
         render();

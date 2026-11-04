@@ -118,11 +118,12 @@ interface Sent {
 class Host {
   readonly server: WebSocketServer;
   readonly received: Sent[] = [];
+  readonly globalWrites: Array<Record<string, unknown>> = [];
   private plugin: WebSocket | null = null;
   private readonly timers: Array<ReturnType<typeof setTimeout>> = [];
   registered = false;
 
-  constructor(private readonly globalSettings: Record<string, unknown>) {
+  constructor(readonly globalSettings: Record<string, unknown>) {
     this.server = new WebSocketServer({ host: "127.0.0.1", port: 0 });
     this.server.on("connection", (socket) => {
       this.plugin = socket;
@@ -146,9 +147,15 @@ class Host {
   private onPlugin(message: Sent & { uuid?: string }): void {
     this.received.push(message);
     if (message.event === "registerPlugin") this.registered = message.uuid === FOLDER;
-    if (message.event === "getGlobalSettings") this.send({ event: "didReceiveGlobalSettings", payload: { settings: this.globalSettings } });
+    // Like Stream Deck, the answer to a read carries the read's id (the SDK hands it to that read only).
+    if (message.event === "getGlobalSettings") this.send({ event: "didReceiveGlobalSettings", id: (message as { id?: string }).id, payload: { settings: this.globalSettings } });
     if (message.event === "getSettings") this.send({ event: "didReceiveSettings", context: message.context, payload: { settings: {} } });
-    if (message.event === "setGlobalSettings" && message.payload) Object.assign(this.globalSettings, message.payload);
+    // Like Stream Deck, a write replaces what is stored.
+    if (message.event === "setGlobalSettings" && message.payload) {
+      for (const key of Object.keys(this.globalSettings)) delete this.globalSettings[key];
+      Object.assign(this.globalSettings, message.payload);
+      this.globalWrites.push({ ...message.payload });
+    }
   }
 
   deviceUp(device: string): void {
@@ -157,6 +164,11 @@ class Host {
 
   appear(action: string, context: string, device: string, settings: Record<string, unknown>, column: number, controller: "Keypad" | "Encoder" = "Keypad"): void {
     this.send({ event: "willAppear", action, context, device, payload: { settings, coordinates: { column, row: controller === "Keypad" ? 0 : 2 }, controller, isInMultiAction: false, state: 0 } });
+  }
+
+  /** A settings page's message to the plugin (what a property inspector's sendToPlugin becomes on the plugin's side). */
+  fromPage(action: string, context: string, device: string, payload: Record<string, unknown>): void {
+    this.send({ event: "sendToPlugin", action, context, device, payload });
   }
 
   rotate(action: string, context: string, device: string, settings: Record<string, unknown>, column: number, ticks: number): void {
@@ -315,6 +327,39 @@ async function main(): Promise<number> {
       const raised = await volume();
       check("turning it up raises the volume again", raised > lowered, `volume ${raised.toFixed(3)}`);
       await obs.call("RemoveInput", { inputName: input }).catch(() => undefined);
+    }
+
+    // The suite also carries VJster: its keys draw, and its settings are kept apart from Fadester's.
+    const manifest = JSON.parse(readFileSync(join(pluginDir, "manifest.json"), "utf8")) as { Actions: Array<{ UUID: string }> };
+    const VJSTER_PRESET = `${PLUGIN_ID}.vjster-speed-preset`;
+    if (manifest.Actions.some((a) => a.UUID === VJSTER_PRESET)) {
+      const preset = { context: `${device}.Default.Keypad.3.0`, column: 3, settings: {} as Record<string, unknown> };
+      host.appear(VJSTER_PRESET, preset.context, device, preset.settings, preset.column);
+      await until("the VJster key to draw", () => host!.of(preset.context, "setImage").length > 0, 15000);
+      check("a VJster key draws an image through the suite, with no alert", host.of(preset.context, "showAlert").length === 0, `${host.of(preset.context, "setImage").length} image(s)`);
+      const listening = async (port: number): Promise<boolean> => {
+        const net = await import("node:net");
+        return new Promise((resolve) => {
+          const socket = net.connect(port, "127.0.0.1");
+          socket.once("connect", () => {
+            socket.destroy();
+            resolve(true);
+          });
+          socket.once("error", () => resolve(false));
+        });
+      };
+      await until("VJster's link on its default port", () => listening(48150), 10000);
+      check("VJster's link server starts on its own port, not Fadester's OBS port", true, "127.0.0.1:48150");
+
+      const fadesterKeys = { host: host.globalSettings.host, port: host.globalSettings.port, password: host.globalSettings.password };
+      host.fromPage(VJSTER_PRESET, preset.context, device, { event: "suiteGlobal", settings: { port: 48155 } });
+      const stored = host.globalSettings as { vjster?: { port?: number } } & Record<string, unknown>;
+      await until("the settings write", () => stored.vjster?.port === 48155, 8000).catch(() => undefined);
+      check("a VJster settings save keeps Fadester's settings and files its own under vjster",
+        stored.host === fadesterKeys.host && stored.port === fadesterKeys.port && stored.password === fadesterKeys.password && stored.vjster?.port === 48155,
+        `keys: ${Object.keys(stored).join(", ")}`);
+      await until("VJster's link on the new port", () => listening(48155), 10000);
+      check("VJster applies the saved port", true, "127.0.0.1:48155");
     }
 
     const alerts = host.received.filter((m) => m.event === "showAlert").length;

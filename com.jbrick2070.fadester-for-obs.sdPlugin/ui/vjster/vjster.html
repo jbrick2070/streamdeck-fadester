@@ -1,0 +1,73 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-2.0-or-later -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>VJster</title>
+    <link rel="stylesheet" href="vjster.css" />
+  </head>
+  <body>
+    <section id="fields"></section>
+
+    <!-- One Language for all of VJster, kept by the plugin (docs/vjster/PLAN.md 9); the page only asks for a change. -->
+    <!-- The nine languages are named in their own words and never translated. -->
+    <section class="global">
+      <h2><span data-i18n="languageHeading">Language</span> <span class="scope" data-i18n="languageBadge">all VJster controls</span></h2>
+      <label class="row">
+        <span data-i18n="languageHeading">Language</span>
+        <select id="language" disabled>
+          <option value="auto" data-i18n="languageAuto">Automatic (Stream Deck's language)</option>
+          <option value="en" lang="en">English</option>
+          <option value="de" lang="de">Deutsch</option>
+          <option value="es" lang="es">Español</option>
+          <option value="fr" lang="fr">Français</option>
+          <option value="ja" lang="ja">日本語</option>
+          <option value="ko" lang="ko">한국어</option>
+          <option value="zh_CN" lang="zh-CN">简体中文</option>
+          <option value="zh_TW" lang="zh-TW">繁體中文</option>
+          <option value="nl" lang="nl">Nederlands</option>
+        </select>
+      </label>
+      <p class="note" data-i18n="languageNote">Applies to all VJster controls. Stream Deck's own menus, action list, tooltips and dial hints stay in Stream Deck's language. The OBS page and the Chrome extension keep their own language.</p>
+    </section>
+
+    <section class="global">
+      <h2 data-i18n="linkTitle">VJster link</h2>
+      <div id="status" class="status" data-i18n="checking">Checking...</div>
+      <label class="row">
+        <span data-i18n="port">Port</span>
+        <input id="port" type="number" min="1024" max="65535" />
+      </label>
+      <label class="row">
+        <span data-i18n="onlyExtension">Only this extension</span>
+        <input id="ext" type="text" placeholder="any extension" data-i18n-placeholder="anyExtension" spellcheck="false" />
+      </label>
+      <p class="note" data-i18n="extensionNote">Leave empty to accept any Chrome extension, or paste the id the VJster extension shows in its options. Everything stays on this computer.</p>
+      <button id="save-global" type="button" data-i18n="saveLink">Save link settings</button>
+    </section>
+
+    <section class="global">
+      <h2 data-i18n="obsTitle">OBS page</h2>
+      <div id="obs-status" class="status" data-i18n="checking">Checking...</div>
+      <label class="row">
+        <span data-i18n="videoInput">YouTube link or id</span>
+        <input id="obs-video" type="text" placeholder="paste a YouTube link" data-i18n-placeholder="videoPlaceholder" spellcheck="false" />
+      </label>
+      <label class="row">
+        <span data-i18n="address">Address</span>
+        <input id="obs-address" type="text" readonly spellcheck="false" />
+      </label>
+      <button id="obs-copy" type="button" data-i18n="copy">Copy address</button>
+      <label class="row">
+        <span data-i18n="keepOn">Keep the link on</span>
+        <input id="obs-always" type="checkbox" />
+      </label>
+      <p class="note" data-i18n="keepOnNote">OBS loads the page only when it starts or when the source is refreshed, so the link stays on while Stream Deck runs. This turns on by itself the first time an OBS page connects.</p>
+      <p class="note" data-i18n="obsNote">In OBS, add a Browser source, untick Local file, and paste this address as its URL. Then set an action's Control to OBS page or Both. The address carries this computer's OBS page key: keep it out of screenshots and chat.</p>
+    </section>
+
+    <script src="i18n.js"></script>
+    <script src="suite.js"></script>
+    <script src="vjster.js"></script>
+  </body>
+</html>

@@ -98,6 +98,7 @@ When OBS goes away, the plugin reconnects by itself and every key shows the same
 - [DECK-LAYOUTS.md](DECK-LAYOUTS.md): every ready-made layout, key by key.
 - [profiles/README.md](profiles/README.md): the profile library, importing by hand, and how the files are built.
 - [docs/vjster/README.md](docs/vjster/README.md) and [docs/vjster/INSTALL.md](docs/vjster/INSTALL.md): VJster.
+- [docs/OPENDECK.md](docs/OPENDECK.md): running VJster and Fadester with OpenDeck, the free open-source alternative to Stream Deck software.
 - [CHANGELOG.md](CHANGELOG.md): what changed in each version.
 - [demo-kit/README.md](demo-kit/README.md): the Suite Demo Kit.
 - [API-CONTRACT.md](API-CONTRACT.md): the optional `midi-fadester` vendor API.

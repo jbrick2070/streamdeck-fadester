@@ -65,7 +65,12 @@ class Obs {
   async connect(port: number, password: string): Promise<void> {
     this.socket = new WebSocket(`ws://127.0.0.1:${port}`);
     await new Promise<void>((resolve, reject) => {
+      const giveUp = setTimeout(() => reject(new Error("OBS did not finish the websocket handshake")), 5000);
       this.socket.on("error", reject);
+      this.socket.on("close", () => {
+        for (const waiting of this.waiting.values()) waiting({ ok: false, data: {}, comment: "the OBS websocket closed" });
+        reject(new Error("the OBS websocket closed"));
+      });
       this.socket.on("message", (raw) => {
         const message = JSON.parse(String(raw)) as { op: number; d: Record<string, unknown> };
         if (message.op === 0) {
@@ -76,7 +81,10 @@ class Obs {
             identify.authentication = createHash("sha256").update(secret + auth.challenge).digest("base64");
           }
           this.socket.send(JSON.stringify({ op: 1, d: identify }));
-        } else if (message.op === 2) resolve();
+        } else if (message.op === 2) {
+          clearTimeout(giveUp);
+          resolve();
+        }
         else if (message.op === 7) {
           const status = message.d.requestStatus as { result: boolean; comment?: string };
           this.waiting.get(String(message.d.requestId))?.({ ok: status.result, data: (message.d.responseData ?? {}) as Record<string, unknown>, comment: status.comment });
@@ -89,7 +97,8 @@ class Obs {
     const requestId = `r${this.next++}`;
     const reply = new Promise<{ ok: boolean; data: Record<string, unknown>; comment?: string }>((resolve) => this.waiting.set(requestId, resolve));
     this.socket.send(JSON.stringify({ op: 6, d: { requestType, requestId, requestData } }));
-    const result = await reply;
+    const result = await Promise.race([reply, sleep(10000).then(() => ({ ok: false, data: {}, comment: "no answer from OBS in 10 s" }))]);
+    this.waiting.delete(requestId);
     if (!result.ok) throw new Error(`${requestType}: ${result.comment ?? "failed"}`);
     return result.data;
   }
@@ -110,6 +119,7 @@ class Host {
   readonly server: WebSocketServer;
   readonly received: Sent[] = [];
   private plugin: WebSocket | null = null;
+  private readonly timers: Array<ReturnType<typeof setTimeout>> = [];
   registered = false;
 
   constructor(private readonly globalSettings: Record<string, unknown>) {
@@ -125,13 +135,19 @@ class Host {
   }
 
   private send(message: Record<string, unknown>): void {
-    this.plugin?.send(JSON.stringify(message));
+    if (this.plugin?.readyState === WebSocket.OPEN) this.plugin.send(JSON.stringify(message));
+  }
+
+  stop(): void {
+    for (const timer of this.timers) clearTimeout(timer);
+    this.server.close();
   }
 
   private onPlugin(message: Sent & { uuid?: string }): void {
     this.received.push(message);
     if (message.event === "registerPlugin") this.registered = message.uuid === FOLDER;
     if (message.event === "getGlobalSettings") this.send({ event: "didReceiveGlobalSettings", payload: { settings: this.globalSettings } });
+    if (message.event === "getSettings") this.send({ event: "didReceiveSettings", context: message.context, payload: { settings: {} } });
     if (message.event === "setGlobalSettings" && message.payload) Object.assign(this.globalSettings, message.payload);
   }
 
@@ -148,9 +164,9 @@ class Host {
   }
 
   press(action: string, context: string, device: string, settings: Record<string, unknown>, column: number): void {
-    const payload = { settings, coordinates: { column, row: 0 }, isInMultiAction: false, state: 0 };
+    const payload = { settings, coordinates: { column, row: 0 }, controller: "Keypad", isInMultiAction: false, state: 0 };
     this.send({ event: "keyDown", action, context, device, payload });
-    setTimeout(() => this.send({ event: "keyUp", action, context, device, payload }), 60);
+    this.timers.push(setTimeout(() => this.send({ event: "keyUp", action, context, device, payload }), 60));
   }
 
   of(context: string, event: string): Sent[] {
@@ -163,11 +179,33 @@ async function main(): Promise<number> {
   if (obsRunning()) throw new Error("obs64.exe is already running; this run will not touch an OBS that is not its own");
   console.log(`plugin ${pluginDir}\nOBS    ${obsRoot} (port ${wsConfig.server_port})\n`);
 
-  const obsProcess = launchObs();
   const obs = new Obs();
-  const host = new Host({ host: "127.0.0.1", port: wsConfig.server_port, password: wsConfig.server_password });
+  let host: Host | null = null;
   let plugin: ChildProcess | null = null;
+  let obsProcess: ChildProcess | null = null;
+  let cleaned = false;
+  // Closes everything this run started, and nothing else: the plugin, the host, and the OBS it launched itself.
+  const cleanup = (): void => {
+    if (cleaned) return;
+    cleaned = true;
+    plugin?.kill();
+    obs.close();
+    host?.stop();
+    if (obsProcess?.pid) {
+      spawnSync("powershell.exe", ["-NoProfile", "-Command", `$p = Get-Process -Id ${obsProcess.pid} -ErrorAction SilentlyContinue; if ($p) { $null = $p.CloseMainWindow(); Start-Sleep 5; if (!$p.HasExited) { $p.Kill() } }`]);
+    }
+  };
+  for (const signal of ["SIGINT", "SIGTERM"] as const) {
+    process.once(signal, () => {
+      cleanup();
+      process.exit(130);
+    });
+  }
+
   try {
+    host = new Host({ host: "127.0.0.1", port: wsConfig.server_port, password: wsConfig.server_password });
+    obsProcess = launchObs();
+    obsProcess.on("error", (error) => console.error(`could not start OBS: ${error.message}`));
     await until("OBS to answer", async () => {
       try {
         await obs.connect(wsConfig.server_port, wsConfig.server_password);
@@ -177,16 +215,19 @@ async function main(): Promise<number> {
       }
     }, 40000);
     await sleep(1500);
-    // Three scenes, A live, Studio Mode off: the plain case the Scene & Transition key starts from.
+    // Three scenes, Studio Mode off: the plain case the Scene & Transition key starts from. They stay in the test copy.
     for (const name of ["ParityA", "ParityB", "ParityC"]) await obs.call("CreateScene", { sceneName: name }).catch(() => undefined);
     await obs.call("SetStudioModeEnabled", { studioModeEnabled: false });
-    await obs.call("SetCurrentProgramScene", { sceneName: "ParityA" });
     // OBS's own order, as the plugin reads it: highest sceneIndex first.
     const scenes = async (): Promise<string[]> =>
       ((await obs.call("GetSceneList")).scenes as Array<{ sceneName: string; sceneIndex: number }>).sort((a, b) => b.sceneIndex - a.sceneIndex).map((s) => s.sceneName);
-    const listed = await scenes();
-    check("OBS has the three test scenes", ["ParityA", "ParityB", "ParityC"].every((n) => listed.includes(n)), listed.join(", "));
+    const order = await scenes();
+    check("OBS has the three test scenes", ["ParityA", "ParityB", "ParityC"].every((n) => order.includes(n)), order.join(", "));
     const program = async (): Promise<string> => String((await obs.call("GetCurrentProgramScene")).sceneName);
+    const setProgram = async (name: string): Promise<void> => {
+      await obs.call("SetCurrentProgramScene", { sceneName: name });
+      await sleep(700); // the plugin hears of the change from OBS's events before the key is pressed
+    };
 
     // The plugin, started exactly as OpenDeck starts it (plugin folder as the working directory, relative code path).
     const info = JSON.stringify({
@@ -197,36 +238,41 @@ async function main(): Promise<number> {
       devices: []
     });
     plugin = spawn("node", ["bin/plugin.js", "-port", String(host.port), "-pluginUUID", FOLDER, "-registerEvent", "registerPlugin", "-info", info], { cwd: pluginDir, stdio: "ignore" });
-    await until("the plugin to register", () => host.registered, 15000);
-    check("the plugin registers under OpenDeck's plugin id (the folder name)", host.registered, FOLDER);
-    await until("the plugin to ask for its settings", () => host.received.some((m) => m.event === "getGlobalSettings"));
-    check("the plugin asks the host for its global settings and starts", true);
+    plugin.on("error", (error) => console.error(`could not start the plugin: ${error.message}`));
+    await until("the plugin to register", () => host!.registered, 15000);
+    await until("the plugin to ask for its settings", () => host!.received.some((m) => m.event === "getGlobalSettings"));
+    check("the plugin registers under OpenDeck's plugin id (the folder name) and asks for its global settings", host.registered, FOLDER);
 
     const device = "sd-PARITY";
     host.deviceUp(device);
     const SCENE = `${PLUGIN_ID}.scene-transition`;
-    const keyA = { context: `${device}.Default.Keypad.0.0`, column: 0, settings: { sceneTarget: "__next_scene__", operation: "cut", transitionName: "__cut__", labelOverride: "", accent: "default" } };
+    const keyNext = { context: `${device}.Default.Keypad.0.0`, column: 0, settings: { sceneTarget: "__next_scene__", operation: "cut", transitionName: "__cut__", labelOverride: "", accent: "default" } };
     const keyC = { context: `${device}.Default.Keypad.1.0`, column: 1, settings: { sceneTarget: "ParityC", operation: "cut", transitionName: "__cut__", labelOverride: "", accent: "default" } };
-    for (const key of [keyA, keyC]) host.appear(SCENE, key.context, device, key.settings, key.column);
-    await until("the keys to draw", () => host.of(keyA.context, "setImage").length > 0 && host.of(keyC.context, "setImage").length > 0, 15000);
-    check("a key draws an image when it appears", true, `${host.of(keyA.context, "setImage").length} image(s)`);
-    check("no key is shown as an alert while OBS is connected", host.of(keyA.context, "showAlert").length === 0 && host.of(keyC.context, "showAlert").length === 0);
-
+    for (const key of [keyNext, keyC]) host.appear(SCENE, key.context, device, key.settings, key.column);
+    await until("the keys to draw", () => host!.of(keyNext.context, "setImage").length > 0 && host!.of(keyC.context, "setImage").length > 0, 15000);
+    check("keys draw an image when they appear, and none shows an alert while OBS is connected",
+      host.of(keyNext.context, "showAlert").length === 0 && host.of(keyC.context, "showAlert").length === 0,
+      `${host.of(keyNext.context, "setImage").length} and ${host.of(keyC.context, "setImage").length} image(s)`);
     await sleep(1500);
-    const before = await program();
-    host.press(SCENE, keyA.context, device, keyA.settings, keyA.column);
-    const afterNext = await until("OBS to leave scene A", async () => ((await program()) !== before ? await program() : false));
-    const order = await scenes();
-    const expected = order[(order.indexOf(before) + 1) % order.length];
-    check("Next scene (cut) changes Program to the next scene in OBS's list", afterNext === expected, `${before} -> ${afterNext}`);
 
-    host.press(SCENE, keyC.context, device, keyC.settings, keyC.column);
-    const afterDirect = await until("OBS to cut to ParityC", async () => ((await program()) === "ParityC" ? "ParityC" : false));
-    check("a key set to one scene cuts to that scene", afterDirect === "ParityC");
+    // Next scene, from the first scene in OBS's list, goes to the second; from the last it wraps to the first.
+    const press = (key: typeof keyNext): void => host!.press(SCENE, key.context, device, key.settings, key.column);
+    await setProgram(order[0]);
+    press(keyNext);
+    const second = await until("OBS to leave the first scene", async () => ((await program()) !== order[0] ? await program() : false));
+    check("Next scene (cut) goes from the first scene to the second in OBS's list", second === order[1], `${order[0]} -> ${second}`);
 
-    host.press(SCENE, keyA.context, device, keyA.settings, keyA.column);
-    await sleep(1200);
-    check("Next scene wraps round from the last scene", (await program()) === order[(order.indexOf("ParityC") + 1) % order.length], await program());
+    await setProgram(order[order.length - 1]);
+    press(keyNext);
+    const wrapped = await until("OBS to leave the last scene", async () => ((await program()) !== order[order.length - 1] ? await program() : false));
+    check("Next scene wraps round from the last scene to the first", wrapped === order[0], `${order[order.length - 1]} -> ${wrapped}`);
+
+    // A key set to one scene cuts to it, from a scene that is not that one.
+    const elsewhere = order.find((name) => name !== "ParityC") as string;
+    await setProgram(elsewhere);
+    press(keyC);
+    const direct = await until("OBS to cut to ParityC", async () => ((await program()) === "ParityC" ? "ParityC" : false));
+    check("a key set to one scene cuts to that scene", direct === "ParityC", `${elsewhere} -> ${direct}`);
 
     // An audio input to fade and ride: a desktop-audio capture is the one input kind every Windows OBS has.
     const input = "ParityAudio";
@@ -247,17 +293,17 @@ async function main(): Promise<number> {
       const FADE = `${PLUGIN_ID}.obs-fade`;
       const fade = { context: `${device}.Default.Keypad.2.0`, column: 2, settings: { inputName: input, to: 0, durationMs: 400, labelOverride: "", accent: "default" } };
       host.appear(FADE, fade.context, device, fade.settings, fade.column);
-      await until("the fade key to draw", () => host.of(fade.context, "setImage").length > 0, 15000);
+      await until("the fade key to draw", () => host!.of(fade.context, "setImage").length > 0, 15000);
       host.press(FADE, fade.context, device, fade.settings, fade.column);
       await sleep(2000);
       const faded = await volume();
-      check("a fade key takes an audio input down to silence in OBS", faded < 0.05, `volume ${faded.toFixed(3)}, ${host.of(fade.context, "showAlert").length} alert(s) on the key, ${host.of(fade.context, "setImage").length} image(s)`);
+      check("a fade key takes an audio input down to silence in OBS", faded < 0.05, `volume ${faded.toFixed(3)}, ${host.of(fade.context, "showAlert").length} alert(s) on the key`);
 
       await obs.call("SetInputVolume", { inputName: input, inputVolumeMul: 1 });
       const FADER = `${PLUGIN_ID}.obs-fader`;
       const dial = { context: `${device}.Default.Encoder.0.0`, column: 0, settings: { target: "input_volume", inputName: input, stepPerTick: 0.05, acceleration: false, labelOverride: "", accent: "default" } };
       host.appear(FADER, dial.context, device, dial.settings, dial.column, "Encoder");
-      await until("the dial to draw", () => host.of(dial.context, "setFeedback").length + host.of(dial.context, "setImage").length > 0, 15000);
+      await until("the dial to draw", () => host!.of(dial.context, "setFeedback").length + host!.of(dial.context, "setImage").length > 0, 15000);
       check("a dial draws its touch-strip feedback when it appears", host.of(dial.context, "setFeedback").length > 0, `${host.of(dial.context, "setFeedback").length} feedback message(s)`);
       await sleep(800);
       host.rotate(FADER, dial.context, device, dial.settings, dial.column, -4);
@@ -276,10 +322,7 @@ async function main(): Promise<number> {
   } catch (error) {
     check("run completed", false, error instanceof Error ? error.message : String(error));
   } finally {
-    plugin?.kill();
-    obs.close();
-    host.server.close();
-    spawnSync("powershell.exe", ["-NoProfile", "-Command", `$p = Get-Process -Id ${obsProcess.pid} -ErrorAction SilentlyContinue; if ($p) { $null = $p.CloseMainWindow(); Start-Sleep 5; if (!$p.HasExited) { $p.Kill() } }`]);
+    cleanup();
   }
   const failed = results.filter((r) => !r.ok);
   console.log(`\n${results.length - failed.length} passed, ${failed.length} failed`);

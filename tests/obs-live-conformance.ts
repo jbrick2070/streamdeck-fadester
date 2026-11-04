@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import { spawn, spawnSync, ChildProcess } from "node:child_process";
 import { Socket } from "node:net";
 import { FadesterClient } from "../src/obs/fadester-client.js";
@@ -96,6 +96,8 @@ async function waitForTcpPort(port: number, timeoutMs = 15000): Promise<void> {
 }
 
 function launchPortableObs(): ChildProcess {
+  // The test copy is closed by force when a run stops early; clear OBS's crash marker so the launch does not stop to ask.
+  rmSync(`${OBS_ROOT}\config\obs-studio\.sentinel`, { recursive: true, force: true });
   const child = spawn(OBS_EXE, ["--portable", "--disable-updater"], {
     cwd: OBS_BIN_DIR,
     stdio: "ignore",

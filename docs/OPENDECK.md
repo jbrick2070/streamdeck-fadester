@@ -39,4 +39,8 @@ Two things differ from Stream Deck software:
 - **Nothing happens when you turn a dial.** Check that Chrome has the VJster extension and that a video is playing; the settings page (click a VJster key) shows whether the link is up.
 - **The deck is not found.** OpenDeck lists only Elgato decks as supported; check its own page for your model.
 
+## Checking it against a real OBS
+
+`npm run opendeck:parity` runs Fadester's plugin from OpenDeck's plugins folder the way OpenDeck starts it (the same command line and plugin id, with a stand-in for OpenDeck's side of the plugin protocol), against the isolated portable OBS 33 that `npm run test:obs-live` uses, and checks what OBS did: Next scene, a key set to one scene, the wrap-round, a fade key on an audio input, and a dial that lowers and raises its volume. It needs that OBS copy (see `tests/obs-live-conformance.ts`) and no deck.
+
 macOS and Linux: `--config <folder>` points the installer at OpenDeck's folder if it is not where the installer looks (`~/Library/Application Support/opendeck`, `~/.config/opendeck`; the Flatpak build keeps it under `~/.var/app`). These paths follow OpenDeck's documentation and have not been tried.

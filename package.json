@@ -16,6 +16,7 @@
     "build": "npm run build:profiles && rollup -c && npm run build:vjster",
     "watch": "rollup -c -w",
     "opendeck:install": "node --import tsx scripts/opendeck/install.ts",
+    "opendeck:parity": "node --import tsx scripts/opendeck/parity-run.ts",
     "build:profiles": "node --import tsx scripts/build-profiles.ts",
     "build:vjster": "npm run build:vjster-page && rollup -c vjster-plugin/rollup.config.mjs",
     "build:vjster-page": "rollup -c vjster-page/rollup.config.mjs",

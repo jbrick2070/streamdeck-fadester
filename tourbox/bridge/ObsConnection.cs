@@ -1,0 +1,132 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+using System.Buffers;
+using System.Collections.Concurrent;
+using System.Net.WebSockets;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json.Nodes;
+
+namespace Fadester.TourBox;
+
+internal sealed class ObsError(string request, int code, string comment) : Exception($"{request}: {comment} ({code})")
+{
+    public int Code { get; } = code;
+}
+
+internal sealed class ObsConnection : IDisposable
+{
+    private readonly ClientWebSocket socket = new();
+    private readonly SemaphoreSlim send = new(1);
+    private readonly ConcurrentDictionary<string, TaskCompletionSource<JsonObject>> pending = new();
+    private readonly CancellationTokenSource lifetime = new();
+    private readonly TaskCompletionSource disconnected = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    public Task Disconnected => disconnected.Task;
+    public event Action<string, double>? InputVolumeChanged;
+    public event Action<Guid, double>? InputLevelChangedById;
+    public event Action<JsonObject>? CustomEvent;
+
+    public static async Task<ObsConnection> Connect(BridgeConfig cfg, CancellationToken stop)
+    {
+        var client = new ObsConnection();
+        try
+        {
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(stop);
+            timeout.CancelAfter(TimeSpan.FromSeconds(6));
+            string password = cfg.Password();
+            var endpoint = new UriBuilder("ws", cfg.Host, cfg.Port).Uri;
+            client.socket.Options.AddSubProtocol("obswebsocket.json");
+            await client.socket.ConnectAsync(endpoint, timeout.Token);
+            var hello = await client.Receive(timeout.Token);
+            if (hello["op"]?.GetValue<int>() != 0 || hello["d"]?["authentication"] is not JsonObject auth)
+                throw new InvalidOperationException("Expected OBS WebSocket v5 with authentication enabled.");
+            static string Hash(string s) => Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(s)));
+            string signature = Hash(Hash(password + auth["salt"]!.GetValue<string>()) + auth["challenge"]!.GetValue<string>());
+            await client.Send(new() { ["op"] = 1, ["d"] = new JsonObject { ["rpcVersion"] = 1, ["eventSubscriptions"] = 9, ["authentication"] = signature } }, timeout.Token);
+            if ((await client.Receive(timeout.Token))["op"]?.GetValue<int>() != 2) throw new IOException("OBS rejected identification.");
+            _ = client.Listen();
+            return client;
+        }
+        catch { client.Dispose(); throw; }
+    }
+
+    private async Task<JsonObject> Receive(CancellationToken token)
+    {
+        var buffer = new ArrayBufferWriter<byte>();
+        while (true)
+        {
+            var message = await socket.ReceiveAsync(buffer.GetMemory(8192), token);
+            if (message.MessageType == WebSocketMessageType.Close) throw new IOException(socket.CloseStatus == (WebSocketCloseStatus)4009 ? "OBS rejected the password." : "OBS disconnected.");
+            if (message.MessageType != WebSocketMessageType.Text || buffer.WrittenCount + message.Count > 16 * 1024 * 1024) throw new InvalidDataException("Invalid OBS packet.");
+            buffer.Advance(message.Count);
+            if (message.EndOfMessage) return JsonNode.Parse(buffer.WrittenSpan)?.AsObject() ?? throw new InvalidDataException("Empty OBS packet.");
+        }
+    }
+
+    private async Task Send(JsonObject packet, CancellationToken token)
+    {
+        await send.WaitAsync(token);
+        try { await socket.SendAsync(Encoding.UTF8.GetBytes(packet.ToJsonString()), WebSocketMessageType.Text, true, token); }
+        finally { send.Release(); }
+    }
+
+    private async Task Listen()
+    {
+        try
+        {
+            while (!lifetime.IsCancellationRequested)
+            {
+                var packet = await Receive(lifetime.Token);
+                if (packet["op"]?.GetValue<int>() == 5 && (string?)packet["d"]?["eventType"] == "CustomEvent" &&
+                    packet["d"]?["eventData"] is JsonObject custom)
+                {
+                    CustomEvent?.Invoke(custom);
+                    continue;
+                }
+                if (packet["op"]?.GetValue<int>() == 5 && packet["d"]?["eventType"]?.GetValue<string>() == "InputVolumeChanged" &&
+                    packet["d"]?["eventData"] is JsonObject change && change["inputName"]?.GetValue<string>() is string source &&
+                    change["inputVolumeDb"]?.GetValue<double>() is double level)
+                {
+                    InputVolumeChanged?.Invoke(source, Math.Clamp(level, -100, 26));
+                    if (Guid.TryParse(change["inputUuid"]?.GetValue<string>(), out var id) &&
+                        change["inputVolumeMul"]?.GetValue<double>() is double mul && double.IsFinite(mul))
+                        InputLevelChangedById?.Invoke(id, mul);
+                    continue;
+                }
+                if (packet["op"]?.GetValue<int>() != 7 || packet["d"] is not JsonObject reply) continue;
+                if (pending.TryRemove(reply["requestId"]!.GetValue<string>(), out var wait)) wait.TrySetResult(reply);
+            }
+        }
+        catch (Exception) { /* Outstanding requests fail below. No write is replayed on reconnect. */ }
+        finally { Close(); }
+    }
+
+    public async Task<JsonObject> Call(string request, JsonObject? args = null)
+    {
+        if (Disconnected.IsCompleted) throw new IOException("OBS is disconnected.");
+        string id = Guid.NewGuid().ToString("N");
+        var wait = new TaskCompletionSource<JsonObject>(TaskCreationOptions.RunContinuationsAsynchronously);
+        pending[id] = wait;
+        try
+        {
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+            timeout.CancelAfter(TimeSpan.FromSeconds(5));
+            await Send(new() { ["op"] = 6, ["d"] = new JsonObject { ["requestType"] = request, ["requestId"] = id, ["requestData"] = args?.DeepClone() ?? new JsonObject() } }, timeout.Token);
+            var reply = await wait.Task.WaitAsync(timeout.Token);
+            var status = reply["requestStatus"]!.AsObject();
+            if (!status["result"]!.GetValue<bool>()) throw new ObsError(request, status["code"]!.GetValue<int>(), status["comment"]?.GetValue<string>() ?? "request refused");
+            return reply["responseData"] as JsonObject ?? new JsonObject();
+        }
+        catch (OperationCanceledException) { Close(); throw new IOException($"{request} timed out or disconnected; command was not retried."); }
+        finally { pending.TryRemove(id, out _); }
+    }
+
+    private void Close()
+    {
+        if (!disconnected.TrySetResult()) return;
+        lifetime.Cancel();
+        socket.Abort();
+        foreach (var item in pending.Values) item.TrySetException(new IOException("OBS disconnected."));
+    }
+
+    public void Dispose() { Close(); socket.Dispose(); }
+}

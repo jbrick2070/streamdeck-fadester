@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <AssemblyName>FadesterCoreChecks</AssemblyName>
+    <RootNamespace>Fadester.TourBox</RootNamespace>
+  </PropertyGroup>
+  <!-- Deliberately exclude Windows Program, Hotkeys and NativeTBar. These links
+       exercise production managed logic rather than copies made for the tests. -->
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="ObsTransportChecks.cs" />
+    <Compile Include="../../bridge/AudioDesk.cs" Link="Shared/AudioDesk.cs" />
+    <Compile Include="../../bridge/Bindings.cs" Link="Shared/Bindings.cs" />
+    <Compile Include="../../bridge/BridgeConfig.cs" Link="Shared/BridgeConfig.cs" />
+    <Compile Include="../../bridge/DeskActions.cs" Link="Shared/DeskActions.cs" />
+    <Compile Include="../../bridge/MixDesk.cs" Link="Shared/MixDesk.cs" />
+    <Compile Include="../../bridge/MixJournal.cs" Link="Shared/MixJournal.cs" />
+    <Compile Include="../../bridge/MixProtocolServer.cs" Link="Shared/MixProtocolServer.cs" />
+    <Compile Include="../../bridge/ObsConnection.cs" Link="Shared/ObsConnection.cs" />
+    <Compile Include="../../bridge/StudioFader.cs" Link="Shared/StudioFader.cs" />
+    <Compile Include="../../bridge/BridgeSelfTests.cs" Link="Tests/BridgeSelfTests.cs" />
+    <Compile Include="../../bridge/MixSelfTests.cs" Link="Tests/MixSelfTests.cs" />
+    <Compile Include="../StudioFaderSelfTests.cs" Link="Tests/StudioFaderSelfTests.cs" />
+    <Content Include="../../presets/map.json" Link="presets/map.json"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

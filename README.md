@@ -1,12 +1,12 @@
 # Fadester for OBS
 
-**Fadester for OBS 0.8.0** puts OBS Studio on your Stream Deck: scenes, transitions, sources, filters and audio on keys and dials. It talks to OBS's built-in WebSocket server, so you need no MIDI desk and no extra OBS plugin for the main controls. Fourteen ready-made layouts open from any control's settings page. Nine languages.
+**Fadester for OBS 0.9.0** puts OBS Studio on your Stream Deck: scenes, transitions, sources, filters and audio on keys and dials. It talks to OBS's built-in WebSocket server, so you need no MIDI desk and no extra OBS plugin for the main controls. Fourteen ready-made layouts open from any control's settings page. Nine languages.
 
 ![Photo of a Stream Deck + running Fadester for OBS in Dutch: scene keys, two Playlister keys, the red PANIEK (Panic) key, a crossfader strip and a Desktop Audio dial on the touch strip. Several keys still ask for Studio Mode or a Playlister to be picked.](docs/images/streamdeck-fadester-hero.jpg)
 
 Needs Stream Deck 7.6 or later on Windows 10 or later (Stream Deck 6.x is not supported), and OBS Studio with its WebSocket server on (tested with OBS 33). Works on a Stream Deck, Stream Deck +, Stream Deck Mini and Stream Deck Neo.
 
-**Also in this repository:** [VJster](docs/vjster/README.md), a separate Stream Deck plugin that rides the speed of a YouTube video in Chrome or in an OBS browser source.
+**One plugin, two products.** From 0.9.0 this plugin also carries [VJster](docs/vjster/README.md): speed and quality dials and keys that ride the video playing in Chrome or in an OBS browser source. Its seven actions sit in the same action list, named **VJster Speed** and so on. How it is built is in [docs/SUITE.md](docs/SUITE.md); VJster is still released on its own for decks with no OBS. It also runs in [OpenDeck](docs/OPENDECK.md), the free open-source alternative to Stream Deck software.
 
 ## First five minutes
 
@@ -98,7 +98,8 @@ When OBS goes away, the plugin reconnects by itself and every key shows the same
 - [DECK-LAYOUTS.md](DECK-LAYOUTS.md): every ready-made layout, key by key.
 - [profiles/README.md](profiles/README.md): the profile library, importing by hand, and how the files are built.
 - [docs/vjster/README.md](docs/vjster/README.md) and [docs/vjster/INSTALL.md](docs/vjster/INSTALL.md): VJster.
-- [docs/OPENDECK.md](docs/OPENDECK.md): running VJster and Fadester with OpenDeck, the free open-source alternative to Stream Deck software.
+- [docs/SUITE.md](docs/SUITE.md): the one plugin that carries Fadester and VJster, and how it is built.
+- [docs/OPENDECK.md](docs/OPENDECK.md): running the plugin with OpenDeck, the free open-source alternative to Stream Deck software.
 - [CHANGELOG.md](CHANGELOG.md): what changed in each version.
 - [demo-kit/README.md](demo-kit/README.md): the Suite Demo Kit.
 - [API-CONTRACT.md](API-CONTRACT.md): the optional `midi-fadester` vendor API.

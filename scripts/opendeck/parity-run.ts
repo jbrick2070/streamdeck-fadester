@@ -244,7 +244,7 @@ async function main(): Promise<number> {
     // The plugin, started exactly as OpenDeck starts it (plugin folder as the working directory, relative code path).
     const info = JSON.stringify({
       application: { font: "ui-sans-serif", language: "en", platform: "windows", platformVersion: "10.0.19045.4474", version: "7.1.0" },
-      plugin: { uuid: FOLDER, version: "0.8.0.0" },
+      plugin: { uuid: FOLDER, version: "0.9.0.0" },
       devicePixelRatio: 0,
       colors: {},
       devices: []

@@ -328,7 +328,7 @@ export class ObsFilterInstanceController {
   }
 }
 
-@action({ UUID: "com.jbrick2070.fadester-for-obs.obs-filter" })
+@action({ UUID: "io.github.jbrick2070.fadester-for-obs.obs-filter" })
 export class ObsFilterControlAction extends SingletonAction<ObsFilterSettings> {
   private readonly instances = new Map<string, ObsFilterInstanceController>();
 

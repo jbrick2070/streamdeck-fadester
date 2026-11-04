@@ -94,7 +94,7 @@ function harness() {
     getElementById: (id: string) => root.descendants().find((x) => x.id === id) ?? null
   };
   const window: RecordValue = {};
-  const source = readFileSync("com.jbrick2070.fadester-for-obs.sdPlugin/ui/pi-common.js", "utf8");
+  const source = readFileSync("io.github.jbrick2070.fadester-for-obs.sdPlugin/ui/pi-common.js", "utf8");
   const instrumented = source.replace(/\}\)\(\);\s*$/, `
     window.testApi = { renderModeFields, collectSetSlotFields, validateFields, refreshCatalog,
       refreshEditor, bindEditor, bindControllerPanel, updateControllerPanel, markEditorDirty,
@@ -105,7 +105,7 @@ function harness() {
     };
   })();`);
   // The inspector loads ui/i18n.js before pi-common.js, as the pages do.
-  const i18n = readFileSync("com.jbrick2070.fadester-for-obs.sdPlugin/ui/i18n.js", "utf8");
+  const i18n = readFileSync("io.github.jbrick2070.fadester-for-obs.sdPlugin/ui/i18n.js", "utf8");
   runInNewContext(`${i18n}
 ${instrumented}`, { window, document, setTimeout, clearTimeout });
   const state: RecordValue = {

@@ -2,6 +2,11 @@
 
 What changed in Fadester for OBS and, where it says so, in VJster. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are the plugin's own (`manifest.json`). There is no change control here: the newest entry is the version.
 
+## 0.10.0 - 2026-11-04
+
+- Fadester’s bundle and all 17 suite actions now use the GitHub account namespace `io.github.jbrick2070.fadester-for-obs`. The previous `com.jbrick2070.fadester-for-obs` build and its custom profiles can stay installed during migration; the new plugin has separate settings. Re-enter the OBS password and use a new starter or rebind your controls. Standalone VJster keeps its own ID.
+- First-time OpenDeck users can choose a working Scene Desk straight from the profile list (Source Desk on Mini). No source build is necessary. The optional source installer selects that layout on a new, empty deck. See the [OpenDeck guide](docs/OPENDECK.md#first-five-minutes).
+
 ## 0.9.1 - 2026-11-04
 
 ### Fixed

@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 /** Execute the shipped inline inspector callback with its observed OBS state. */
 function inspector(file: string) {
-  const html = readFileSync(`com.jbrick2070.fadester-for-obs.sdPlugin/ui/${file}`, "utf8");
+  const html = readFileSync(`io.github.jbrick2070.fadester-for-obs.sdPlugin/ui/${file}`, "utf8");
   const elements = new Map([...html.matchAll(/\bid="([^"]+)"/g)].map((match) => [match[1], {
     value: "", textContent: "", checked: false, className: "", style: {} as Record<string, string>,
     onchange: undefined as (() => void) | undefined,

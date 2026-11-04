@@ -9,7 +9,7 @@ type Fill = { items: Item[]; selected: string; placeholder: string };
 
 /** Runs the shipped Playlister inspector's inline callback with an observed OBS state (PLAN.md 9.4). */
 function inspector() {
-  const html = readFileSync("com.jbrick2070.fadester-for-obs.sdPlugin/ui/playlister-transport-key.html", "utf8");
+  const html = readFileSync("io.github.jbrick2070.fadester-for-obs.sdPlugin/ui/playlister-transport-key.html", "utf8");
   const elements = new Map([...html.matchAll(/\bid="([^"]+)"/g)].map((match) => [match[1], {
     value: "", textContent: "", className: "", style: {} as Record<string, string>,
     onchange: undefined as (() => void) | undefined, onclick: undefined as (() => void) | undefined

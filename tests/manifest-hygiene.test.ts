@@ -6,7 +6,7 @@ import { profilePathForSlug, READY_LAYOUTS } from "../src/types/layouts.js";
 import { Preset, presetPages } from "../scripts/profile-checks.js";
 
 const ROOT = process.cwd();
-const PLUGIN_DIR = join(ROOT, "com.jbrick2070.fadester-for-obs.sdPlugin");
+const PLUGIN_DIR = join(ROOT, "io.github.jbrick2070.fadester-for-obs.sdPlugin");
 
 function walkFiles(dir: string): string[] {
   const results: string[] = [];
@@ -54,11 +54,11 @@ describe("Step 1.1 — Manifest, Layout, Icons & Repository Hygiene", () => {
     expect(Array.isArray(actions)).toBe(true);
     // Fadester's ten (the last two optional), then VJster's seven, which the suite assembly adds (scripts/suite/assemble.ts).
     expect(actions).toHaveLength(17);
-    const byId = (id: string) => actions.find((entry) => entry.UUID === `com.jbrick2070.fadester-for-obs.${id}`)!;
+    const byId = (id: string) => actions.find((entry) => entry.UUID === `io.github.jbrick2070.fadester-for-obs.${id}`)!;
     expect(actions.slice(0, 8).every((entry) => !String(entry.Name).includes("optional"))).toBe(true);
     expect(actions.slice(8, 10).every((entry) => String(entry.Name).includes("optional"))).toBe(true);
     expect(actions.slice(10).map((entry) => entry.UUID)).toEqual(
-      ["speed", "quality", "speed-preset", "speed-step", "quality-preset", "pin", "transport"].map((kind) => `com.jbrick2070.fadester-for-obs.vjster-${kind}`)
+      ["speed", "quality", "speed-preset", "speed-step", "quality-preset", "pin", "transport"].map((kind) => `io.github.jbrick2070.fadester-for-obs.vjster-${kind}`)
     );
     expect(actions.slice(10).every((entry) => String(entry.Name).startsWith("VJster "))).toBe(true);
     // The VJ rig's two actions (PLAN.md 10.4), before the two optional ones.
@@ -114,22 +114,22 @@ describe("Step 1.1 — Manifest, Layout, Icons & Repository Hygiene", () => {
       statSync(join(PLUGIN_DIR, String(byId("auto-fade").PropertyInspectorPath))).size
     ).toBeGreaterThan(0);
     expect(byId("obs-fader")).toMatchObject({
-      UUID: "com.jbrick2070.fadester-for-obs.obs-fader",
+      UUID: "io.github.jbrick2070.fadester-for-obs.obs-fader",
       Controllers: ["Encoder"],
       PropertyInspectorPath: "ui/obs-fader-dial.html"
     });
     expect(byId("scene-transition")).toMatchObject({
-      UUID: "com.jbrick2070.fadester-for-obs.scene-transition",
+      UUID: "io.github.jbrick2070.fadester-for-obs.scene-transition",
       Controllers: ["Keypad"],
       PropertyInspectorPath: "ui/obs-scene-transition-key.html"
     });
     expect(byId("obs-fade")).toMatchObject({
-      UUID: "com.jbrick2070.fadester-for-obs.obs-fade",
+      UUID: "io.github.jbrick2070.fadester-for-obs.obs-fade",
       Controllers: ["Keypad"],
       PropertyInspectorPath: "ui/obs-fade-key.html"
     });
     expect(byId("layer-control")).toMatchObject({
-      UUID: "com.jbrick2070.fadester-for-obs.layer-control",
+      UUID: "io.github.jbrick2070.fadester-for-obs.layer-control",
       Controllers: ["Keypad", "Encoder"],
       PropertyInspectorPath: "ui/obs-layer-control.html"
     });

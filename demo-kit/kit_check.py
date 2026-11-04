@@ -41,7 +41,7 @@ from pathlib import Path
 MAX_PATH = 260
 OBS_NOT_FOUND = 600  # obs-websocket RequestStatus::ResourceNotFound
 
-FADESTER = "com.jbrick2070.fadester-for-obs."
+FADESTER = "io.github.jbrick2070.fadester-for-obs."
 VJSTER = "com.jbrick2070.vjster."
 PAGE_ACTIONS = {"com.elgato.streamdeck.page.next", "com.elgato.streamdeck.page.previous"}
 PANIC_HOTKEYS = ["visual_sidechain_panic", "visual_sidechain_restore"]

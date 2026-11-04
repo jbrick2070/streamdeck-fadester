@@ -177,7 +177,7 @@ export class AutoFadeKeyInstanceController {
   }
 }
 
-@action({ UUID: "com.jbrick2070.fadester-for-obs.auto-fade" })
+@action({ UUID: "io.github.jbrick2070.fadester-for-obs.auto-fade" })
 export class AutoFadeKeyAction extends SingletonAction<AutoFadeKeySettings> {
   private readonly store: FadesterStore;
   private readonly instances = new Map<string, AutoFadeKeyInstanceController>();

@@ -11,40 +11,8 @@ import { createHash } from "node:crypto";
 import { deflateRawSync } from "node:zlib";
 import { profilePathForSlug, profileRevisionForSlug } from "../src/types/layouts.js";
 
-export type PresetKind = "layer" | "scene" | "fader" | "fade" | "playlister" | "filter" | "panic" | "page";
-
-export type PresetAction = {
-  controller: "Keypad" | "Encoder";
-  column: number;
-  row: number;
-  kind: PresetKind;
-  /** The caption stored as `labelOverride` (English, R-I18N-2); a page key has none. */
-  label?: string;
-  settings: Record<string, string | number | boolean>;
-};
-
-export type PresetPage = {
-  name: string;
-  /** The page's accent for every Fadester control on it (PLAN.md 10.4). */
-  accent?: string;
-  actions: PresetAction[];
-};
-
-export type Preset = {
-  slug: string;
-  name: string;
-  description: string;
-  obsMode: "either" | "studio" | "regular";
-  deviceType: 0 | 1 | 7;
-  deviceModel: string;
-  columns: number;
-  rows: number;
-  dials: number;
-  actions?: PresetAction[];
-  pages?: PresetPage[];
-  /** A multi-page rig: Panic and Next page sit on these keys (column, row) on every page. */
-  rig?: { panic: [number, number]; nextPage: [number, number] };
-};
+import { actionUuidFor, presetPages, NEXT_PAGE_ACTION, type Preset, type PresetAction } from "../src/opendeck/starter-profile.js";
+export { actionUuidFor, presetPages, NEXT_PAGE_ACTION, type Preset, type PresetAction, type PresetKind, type PresetPage } from "../src/opendeck/starter-profile.js";
 
 export type PluginManifest = {
   Name: string;
@@ -55,29 +23,8 @@ export type PluginManifest = {
 
 /** Elgato's page plugin (com.elgato.streamdeck.page.sdPlugin, PrivateAPI, profile format 3.0). */
 export const PAGE_PLUGIN = { Name: "Pages", UUID: "com.elgato.streamdeck.page", Version: "1.0" } as const;
-export const NEXT_PAGE_ACTION = "com.elgato.streamdeck.page.next";
-
-const FADESTER_ACTIONS: Record<Exclude<PresetKind, "page">, string> = {
-  layer: "layer-control",
-  scene: "scene-transition",
-  fader: "obs-fader",
-  fade: "obs-fade",
-  playlister: "playlister-transport",
-  filter: "obs-filter",
-  panic: "visual-panic"
-};
-
-export function actionUuidFor(kind: PresetKind, pluginUuid: string): string {
-  return kind === "page" ? NEXT_PAGE_ACTION : `${pluginUuid}.${FADESTER_ACTIONS[kind]}`;
-}
-
-/** Every page of a preset; a single-page preset is one page named as the profile. */
-export function presetPages(preset: Preset): PresetPage[] {
-  return preset.pages ?? [{ name: preset.name, actions: preset.actions ?? [] }];
-}
-
-export function stableUuid(slug: string, seed: string): string {
-  const bytes = createHash("sha256").update(`fadester-profile:v${profileRevisionForSlug(slug)}:${slug}:${seed}`).digest().subarray(0, 16);
+function stableUuid(pluginUuid: string, slug: string, seed: string): string {
+  const bytes = createHash("sha256").update(`${pluginUuid}:profile:v${profileRevisionForSlug(slug)}:${slug}:${seed}`).digest().subarray(0, 16);
   bytes[6] = (bytes[6]! & 0x0f) | 0x50;
   bytes[8] = (bytes[8]! & 0x3f) | 0x80;
   const hex = bytes.toString("hex");
@@ -239,9 +186,11 @@ export interface BuiltProfile {
 export function buildProfile(preset: Preset, manifest: PluginManifest): BuiltProfile {
   const pages = presetPages(preset);
   const multi = pages.length > 1;
-  const profileUuid = stableUuid(preset.slug, "root");
-  const pageUuids = pages.map((_, index) => stableUuid(preset.slug, index === 0 ? "page" : `page:${index + 1}`));
-  const defaultPageUuid = stableUuid(preset.slug, "default");
+  // A renamed plugin can coexist with the old one; each needs its own profile, pages and action instances.
+  const idFor = (seed: string): string => stableUuid(manifest.UUID, preset.slug, seed);
+  const profileUuid = idFor("root");
+  const pageUuids = pages.map((_, index) => idFor(index === 0 ? "page" : `page:${index + 1}`));
+  const defaultPageUuid = idFor("default");
   const prefix = `${profileUuid.toUpperCase()}.sdProfile`;
   const controllerNames = preset.dials > 0 ? ["Keypad", "Encoder"] : ["Keypad"];
   const pageFiles = pages.map((page, index) => {
@@ -250,7 +199,7 @@ export function buildProfile(preset: Preset, manifest: PluginManifest): BuiltPro
     const controllers = controllerNames.map((controller) => {
       const actions: Record<string, unknown> = {};
       for (const entry of page.actions.filter((candidate) => candidate.controller === controller)) {
-        const actionId = stableUuid(preset.slug, seed(controller, entry));
+        const actionId = idFor(seed(controller, entry));
         if (entry.kind === "page") {
           // Elgato's page key exactly: its own plugin block, no settings, no caption (its icon says it).
           actions[`${entry.column},${entry.row}`] = {

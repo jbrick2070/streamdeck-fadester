@@ -9,7 +9,7 @@ import { LANGUAGES, assemble, differences, wanted } from "../scripts/suite/assem
 import { VJSTER_KINDS, suiteActionId } from "../src/suite/actions.js";
 
 const ROOT = join(import.meta.dirname, "..");
-const SUITE = join(ROOT, "com.jbrick2070.fadester-for-obs.sdPlugin");
+const SUITE = join(ROOT, "io.github.jbrick2070.fadester-for-obs.sdPlugin");
 const VJSTER = join(ROOT, "com.jbrick2070.vjster.sdPlugin");
 const read = (path: string): { Actions: Array<Record<string, unknown>> } & Record<string, unknown> => JSON.parse(readFileSync(path, "utf8").replace(/^﻿/, ""));
 
@@ -25,7 +25,7 @@ afterEach(() => {
 function copyOfPlugins(): string {
   const dir = mkdtempSync(join(tmpdir(), "suite-assemble-"));
   temps.push(dir);
-  for (const folder of ["com.jbrick2070.fadester-for-obs.sdPlugin", "com.jbrick2070.vjster.sdPlugin"]) {
+  for (const folder of ["io.github.jbrick2070.fadester-for-obs.sdPlugin", "com.jbrick2070.vjster.sdPlugin"]) {
     cpSync(join(ROOT, folder), join(dir, folder), { recursive: true, filter: (from) => !/[\\/](bin|logs)([\\/]|$)/.test(from.slice(join(ROOT, folder).length)) });
   }
   return dir;
@@ -79,9 +79,9 @@ describe("the assembly", () => {
   it("lists what has drifted and puts it right", () => {
     const dir = copyOfPlugins();
     expect(differences(dir)).toEqual([]);
-    rmSync(join(dir, "com.jbrick2070.fadester-for-obs.sdPlugin", "imgs", "actions", "vjster-pin", "key.svg"));
-    writeFileSync(join(dir, "com.jbrick2070.fadester-for-obs.sdPlugin", "ui", "vjster", "vjster.css"), "changed");
-    const manifestPath = join(dir, "com.jbrick2070.fadester-for-obs.sdPlugin", "manifest.json");
+    rmSync(join(dir, "io.github.jbrick2070.fadester-for-obs.sdPlugin", "imgs", "actions", "vjster-pin", "key.svg"));
+    writeFileSync(join(dir, "io.github.jbrick2070.fadester-for-obs.sdPlugin", "ui", "vjster", "vjster.css"), "changed");
+    const manifestPath = join(dir, "io.github.jbrick2070.fadester-for-obs.sdPlugin", "manifest.json");
     const manifest = read(manifestPath);
     manifest.Actions = manifest.Actions.filter((action) => !String(action.UUID).endsWith("vjster-transport"));
     writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
@@ -110,6 +110,6 @@ describe("the assembly", () => {
     const manifest = read(join(SUITE, "manifest.json"));
     const own = manifest.Actions.filter((action) => !String(action.UUID).startsWith(suiteActionId("")));
     expect(own).toHaveLength(10);
-    expect(own[0].UUID).toBe("com.jbrick2070.fadester-for-obs.obs-neo-infobar");
+    expect(own[0].UUID).toBe("io.github.jbrick2070.fadester-for-obs.obs-neo-infobar");
   });
 });

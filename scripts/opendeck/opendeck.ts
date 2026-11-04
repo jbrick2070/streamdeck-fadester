@@ -7,38 +7,8 @@
 import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join, relative, resolve, sep } from "node:path";
 
-export interface ManifestAction {
-  Name: string;
-  UUID: string;
-  Icon?: string;
-  PropertyInspectorPath?: string;
-  Controllers?: string[];
-  States?: Array<{ Image?: string } & Record<string, unknown>>;
-  [key: string]: unknown;
-}
-
-export interface PluginManifest {
-  Name: string;
-  UUID: string;
-  Actions: ManifestAction[];
-}
-
-/** One action instance in an OpenDeck profile (the fields OpenDeck itself saves). */
-export interface Instance {
-  action: Record<string, unknown>;
-  context: string;
-  states: Array<Record<string, unknown>>;
-  current_state: number;
-  settings: Record<string, unknown>;
-  children: null;
-}
-
-export interface Profile {
-  id?: string;
-  keys: Array<Instance | null>;
-  sliders: Array<Instance | null>;
-  infobars?: Array<Instance | null>;
-}
+import { buildInstance, pluginFolderName, type ManifestAction, type PluginManifest, type Profile, type Instance } from "../../src/opendeck/starter-profile.js";
+export { buildInstance, pluginFolderName, type ManifestAction, type PluginManifest, type Profile, type Instance } from "../../src/opendeck/starter-profile.js";
 
 export interface LayoutSpec {
   /** Action name to place, by key position. */
@@ -65,11 +35,6 @@ export function configDir(platform: NodeJS.Platform, env: Record<string, string 
   if (platform === "win32") return join(env.APPDATA || join(home, "AppData", "Roaming"), "opendeck");
   if (platform === "darwin") return join(home, "Library", "Application Support", "opendeck");
   return join(env.XDG_CONFIG_HOME || join(home, ".config"), "opendeck");
-}
-
-/** OpenDeck names a plugin by its folder, so the folder keeps the manifest's UUID and the .sdPlugin ending. */
-export function pluginFolderName(uuid: string): string {
-  return `${uuid}.sdPlugin`;
 }
 
 /** True when a plugin folder has been built (its code is bin/plugin.js). */
@@ -106,39 +71,6 @@ export function installPlugin(sourceDir: string, config: string, uuid: string): 
     throw error;
   }
   return target;
-}
-
-/** The first file the images can be read from (OpenDeck's own rule is the same: the manifest names no extension). */
-function imageUri(pluginDir: string, relative: string | undefined): string {
-  if (!relative) return "";
-  for (const [extension, type] of [[".svg", "image/svg+xml"], [".png", "image/png"]] as const) {
-    const file = join(pluginDir, ...relative.split("/")) + extension;
-    if (existsSync(file)) return `data:${type};base64,${readFileSync(file).toString("base64")}`;
-  }
-  return relative;
-}
-
-/** An action instance as OpenDeck would build it from the manifest, for one slot. */
-export function buildInstance(
-  action: ManifestAction,
-  pluginFolder: string,
-  pluginDir: string,
-  context: string
-): Instance {
-  const { PropertyInspectorPath, ...rest } = action;
-  return {
-    action: {
-      ...rest,
-      plugin: pluginFolder,
-      Icon: imageUri(pluginDir, action.Icon),
-      property_inspector: PropertyInspectorPath ? join(pluginDir, ...PropertyInspectorPath.split("/")) : ""
-    },
-    context,
-    states: (action.States ?? []).map((state) => ({ ...state, Image: imageUri(pluginDir, state.Image) })),
-    current_state: 0,
-    settings: {},
-    children: null
-  };
 }
 
 export interface PlacementResult {

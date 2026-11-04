@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { PLUGIN_LANGUAGES, STREAM_DECK_LANGUAGES } from "../../src/i18n/strings.js";
 
-export const PLUGIN_DIR = resolve(process.cwd(), "com.jbrick2070.fadester-for-obs.sdPlugin");
+export const PLUGIN_DIR = resolve(process.cwd(), "io.github.jbrick2070.fadester-for-obs.sdPlugin");
 
 /**
  * The languages that must ship. Extend this one list when a language is added;

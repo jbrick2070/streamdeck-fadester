@@ -271,7 +271,7 @@ export class ObsFaderDialInstanceController {
   }
 }
 
-@action({ UUID: "com.jbrick2070.fadester-for-obs.obs-fader" })
+@action({ UUID: "io.github.jbrick2070.fadester-for-obs.obs-fader" })
 export class ObsFaderDialAction extends SingletonAction<ObsFaderDialSettings> {
   private readonly instances = new Map<string, ObsFaderDialInstanceController>();
 

@@ -13,7 +13,7 @@ type Fill = { items: Item[]; selected: string; placeholder: string };
 
 /** Runs the shipped OBS Filter inspector's inline callback with an observed state (PLAN.md 10.5). */
 function inspector(controller: "Keypad" | "Encoder") {
-  const html = readFileSync("com.jbrick2070.fadester-for-obs.sdPlugin/ui/obs-filter.html", "utf8");
+  const html = readFileSync("io.github.jbrick2070.fadester-for-obs.sdPlugin/ui/obs-filter.html", "utf8");
   const elements = new Map([...html.matchAll(/\bid="([^"]+)"/g)].map((match) => [match[1], {
     value: "", textContent: "", className: "", checked: false, disabled: false, style: {} as Record<string, string>,
     onchange: undefined as (() => void) | undefined, onclick: undefined as (() => void) | undefined

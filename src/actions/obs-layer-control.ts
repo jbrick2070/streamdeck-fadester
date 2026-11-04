@@ -171,7 +171,7 @@ export class ObsLayerInstanceController {
   }
 }
 
-@action({ UUID: "com.jbrick2070.fadester-for-obs.layer-control" })
+@action({ UUID: "io.github.jbrick2070.fadester-for-obs.layer-control" })
 export class ObsLayerControlAction extends SingletonAction<LayerSettings> {
   private readonly instances = new Map<string, ObsLayerInstanceController>();
   public constructor(private readonly layers: LayerController) { super(); }

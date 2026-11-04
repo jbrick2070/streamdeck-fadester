@@ -114,6 +114,7 @@ export interface DirectPiTransport {
   sendToPropertyInspector(payload: Record<string, unknown>): void;
   persistGlobalSettings(settings: FadesterGlobalSettings): Promise<void>;
   getDeviceType?(): number | undefined;
+  getOpenDeckStarter?(): { profileName: string | null } | undefined;
   activateLayout?(slug: string): Promise<void>;
   /** The Language setting and the language the deck draws in (PLAN.md 11.1). */
   getLanguage?(): LanguageState;
@@ -178,6 +179,7 @@ export class DirectObsPropertyInspectorBridge {
       filterEpoch: this.filterEpoch,
       layerScenes: Object.fromEntries(Object.entries(this.layers?.getCatalog() ?? {}).map(([name, scene]) =>
         [name, { ...scene, error: wordText(scene.error, translate) }])),
+      openDeckStarter: this.transport.getOpenDeckStarter?.(),
       layouts: READY_LAYOUTS.filter((layout) => layout.deviceType === this.transport.getDeviceType?.())
         .map((layout) => ({ ...layout, name: readyLayoutName(layout) })),
       language: this.transport.getLanguage?.() ?? { choice: "auto", resolved: currentLanguage() }
@@ -243,6 +245,7 @@ export class DirectObsPropertyInspectorBridge {
         this.broadcast();
         return true;
       case "directActivateLayout": {
+        if (this.transport.getOpenDeckStarter?.()) return true;
         const layout = READY_LAYOUTS.find((entry) => entry.slug === msg.slug);
         if (layout && layout.deviceType === this.transport.getDeviceType?.() && this.transport.activateLayout) {
           try {

@@ -374,7 +374,7 @@ export class FaderDialInstanceController {
   }
 }
 
-@action({ UUID: "com.jbrick2070.fadester-for-obs.fader" })
+@action({ UUID: "io.github.jbrick2070.fadester-for-obs.fader" })
 export class FaderDialAction extends SingletonAction<FaderDialSettings> {
   private readonly store: FadesterStore;
   private readonly instances = new Map<string, FaderDialInstanceController>();

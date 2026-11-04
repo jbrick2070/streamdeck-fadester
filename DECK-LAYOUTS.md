@@ -32,7 +32,7 @@ What every layout already knows:
 
 ## Scene Desk (Studio Mode)
 
-[Scene Desk +](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-scene-desk-v2.streamDeckProfile) for the Stream Deck +, [Scene Desk 15 Keys](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-scene-desk-v2.streamDeckProfile) for the 15-key deck.
+[Scene Desk +](io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-scene-desk-v2.streamDeckProfile) for the Stream Deck +, [Scene Desk 15 Keys](io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-scene-desk-v2.streamDeckProfile) for the 15-key deck.
 
 Browse scenes in Preview with **Previous**, **Next** or **Random**, then press **Cut** or **Transition** to take Preview live. The Plus layout adds a **Scene 1** key and the scene mixer dial (the T-bar: turn from LIVE to NEXT, press to take Next live); the 15-key layout has **Scene 1-4**. Both have audio controls.
 
@@ -40,13 +40,13 @@ The T-bar's optional **Scene loop** queues the next scene after each transition 
 
 ## Scene Desk (Regular Mode)
 
-[Scene Desk +, Regular](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-scene-regular-v3.streamDeckProfile) and [Scene Desk 15 Keys, Regular](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-scene-regular-v2.streamDeckProfile).
+[Scene Desk +, Regular](io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-scene-regular-v3.streamDeckProfile) and [Scene Desk 15 Keys, Regular](io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-scene-regular-v2.streamDeckProfile).
 
 **Previous**, **Next**, **Random** and the numbered keys change Program at once with OBS's current transition. The Plus layout has **Scene 1-3** and mixer dials; the 15-key layout has **Scene 1-4** plus **Cut previous** and **Cut next**. No Preview and no T-bar.
 
 ## Source Desk (Either Mode)
 
-[Source Desk +](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-source-desk-v3.streamDeckProfile) for the Stream Deck +. Layer order stays fixed.
+[Source Desk +](io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-source-desk-v3.streamDeckProfile) for the Stream Deck +. Layer order stays fixed.
 
 | Column 1 | Column 2 | Column 3 | Column 4 |
 |---|---|---|---|
@@ -56,13 +56,13 @@ The T-bar's optional **Scene loop** queues the next scene after each transition 
 
 The free key is ready for a recording, replay or chat action from another plugin.
 
-Buttons only: [Source Desk 15 Keys](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-source-desk-v4.streamDeckProfile) has source selection and visibility on the first row, then three audio fade pairs (main audio, microphone, Aux), with six keys free. [Source Desk Mini](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/mini-source-desk-v2.streamDeckProfile) uses five of six keys: previous and next source, show/hide, one audio fade pair.
+Buttons only: [Source Desk 15 Keys](io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-source-desk-v4.streamDeckProfile) has source selection and visibility on the first row, then three audio fade pairs (main audio, microphone, Aux), with six keys free. [Source Desk Mini](io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/mini-source-desk-v2.streamDeckProfile) uses five of six keys: previous and next source, show/hide, one audio fade pair.
 
 A fade pair is a **0 %** key and a **100 %** key, so every audio job works without a dial.
 
 ## Half Source Desk (Either Mode)
 
-[Half Source Desk +](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-source-half-v2.streamDeckProfile): four keys and two dials; the other four keys and two dials are empty for the OBS actions you already use.
+[Half Source Desk +](io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-source-half-v2.streamDeckProfile): four keys and two dials; the other four keys and two dials are empty for the OBS actions you already use.
 
 | Column 1 | Column 2 | Column 3 | Column 4 |
 |---|---|---|---|
@@ -70,11 +70,11 @@ A fade pair is a **0 %** key and a **100 %** key, so every audio job works witho
 | Show/hide selected | Audio down | Free | Free |
 | **Dial:** Select source | **Dial:** Audio | **Dial:** Free | **Dial:** Free |
 
-Turn the audio dial to bring the level back up. [Half Source Desk 15 Keys](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-source-half-v2.streamDeckProfile) leaves eight of fifteen keys free.
+Turn the audio dial to bring the level back up. [Half Source Desk 15 Keys](io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-source-half-v2.streamDeckProfile) leaves eight of fifteen keys free.
 
 ## Creative Layer Lab (Either Mode)
 
-[Creative Layer Lab +](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-creative-layer-lab-v2.streamDeckProfile) and [Creative Layer Lab 15 Keys](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-creative-layer-lab-v2.streamDeckProfile).
+[Creative Layer Lab +](io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-creative-layer-lab-v2.streamDeckProfile) and [Creative Layer Lab 15 Keys](io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-creative-layer-lab-v2.streamDeckProfile).
 
 | Column 1 | Column 2 | Column 3 | Column 4 |
 |---|---|---|---|
@@ -86,7 +86,7 @@ This is the one layout whose layer keys may reorder your sources (**Allow reorde
 
 ## Playlister Transport + (Either Mode)
 
-[Playlister Transport +](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-playlister-transport-v1.streamDeckProfile). Six keys for one [Playlister](https://github.com/jbrick2070/obs-playlister) source (Playlister 0.5 or later in OBS).
+[Playlister Transport +](io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-playlister-transport-v1.streamDeckProfile). Six keys for one [Playlister](https://github.com/jbrick2070/obs-playlister) source (Playlister 0.5 or later in OBS).
 
 | Column 1 | Column 2 | Column 3 | Column 4 |
 |---|---|---|---|
@@ -98,7 +98,7 @@ The keys ship unbound: open each key's settings page once and choose the Playlis
 
 ## VJ Rig (Studio Mode)
 
-[VJ Rig +](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-vj-rig-v1.streamDeckProfile) or [VJ Rig 15 Keys](com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-vj-rig-v1.streamDeckProfile). Four pages, each with its own colour: **Perform** (brass), **Layers** (teal), **Visuals** (magenta), **Scenes** (violet). **Next page** sits bottom left and the red **PANIC** key bottom right on every page; no Cut or Transition key is ever next to Panic.
+[VJ Rig +](io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-vj-rig-v1.streamDeckProfile) or [VJ Rig 15 Keys](io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-vj-rig-v1.streamDeckProfile). Four pages, each with its own colour: **Perform** (brass), **Layers** (teal), **Visuals** (magenta), **Scenes** (violet). **Next page** sits bottom left and the red **PANIC** key bottom right on every page; no Cut or Transition key is ever next to Panic.
 
 Panic sends [Visual Sidechain](https://github.com/jbrick2070/visual-sidechain)'s own Panic through OBS's hotkeys at once; **Restore** needs a 0.8 s hold. Panic keys then read **PANIC SENT** until a Restore is accepted. Every filter and Playlister control ships unbound: choose the source and its filter (or the Playlister) once in its settings page.
 

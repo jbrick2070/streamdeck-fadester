@@ -1,6 +1,6 @@
 # Fadester for OBS
 
-**Fadester for OBS 0.9.1** puts OBS Studio on your Stream Deck: scenes, transitions, sources, filters and audio on keys and dials. It talks to OBS's built-in WebSocket server, so you need no MIDI desk and no extra OBS plugin for the main controls. Fourteen ready-made layouts open from any control's settings page. Nine languages.
+**Fadester for OBS 0.10.0** puts OBS Studio on your Stream Deck: scenes, transitions, sources, filters and audio on keys and dials. It talks to OBS's built-in WebSocket server, so you need no MIDI desk and no extra OBS plugin for the main controls. Fourteen ready-made layouts open from any control's settings page. Nine languages.
 
 ![Photo of a Stream Deck + running Fadester for OBS in Dutch: scene keys, two Playlister keys, the red PANIEK (Panic) key, a crossfader strip and a Desktop Audio dial on the touch strip. Several keys still ask for Studio Mode or a Playlister to be picked.](docs/images/streamdeck-fadester-hero.jpg)
 
@@ -9,6 +9,10 @@ Needs Stream Deck 7.6 or later on Windows 10 or later (Stream Deck 6.x is not su
 **One plugin, two products.** From 0.9.0 this plugin also carries [VJster](docs/vjster/README.md): speed and quality dials and keys that ride the video playing in Chrome or in an OBS browser source. Its seven actions sit in the same action list, named **VJster Speed** and so on. How it is built is in [docs/SUITE.md](docs/SUITE.md); VJster is still released on its own for decks with no OBS. It also runs in [OpenDeck](docs/OPENDECK.md), the free open-source alternative to Stream Deck software.
 
 ## First five minutes
+
+**Using OpenDeck?** Follow the [OpenDeck quick start](docs/OPENDECK.md#first-five-minutes). The packaged plugin supplies a starter for the Plus, 15-key deck and Mini. The steps below are for Elgato’s Stream Deck software.
+
+**Upgrading from 0.9.x or earlier?** Fadester 0.10 uses a new plugin ID. Install it alongside the old version, enter the OBS password once for the new plugin, and open a fresh starter or replace old Fadester actions in a copy of your custom profile. Keep the old plugin until you’ve checked the new controls. The standalone VJster ID has not changed.
 
 1. **Turn on OBS's WebSocket server.** In OBS: **Tools > WebSocket Server Settings**, tick **Enable WebSocket server**, keep **Enable Authentication** on, and press **Show Connect Info** to see the password.
 2. **Add one Fadester key.** In Stream Deck, drag **Scene & Transition** (category *Fadester for OBS*) onto a key and click it to open its settings. It starts as **Next scene**, so it is ready to press.
@@ -63,7 +67,7 @@ Fadester for OBS speaks nine languages: English, German, Spanish, French, Japane
 
 OBS's own words (Studio Mode, Preview, Program, Scene, Source, Transition) use OBS's translation, so the deck matches OBS. Your scene, source and filter names are shown as they are.
 
-The translations were drafted by an AI model (Claude) and reviewed by a second one (Gemini); no native speaker has checked them yet. If something reads wrong, please open an issue or a pull request: the files are `com.jbrick2070.fadester-for-obs.sdPlugin/<language>.json`, with `en.json` as the English source. VJster's languages are in [docs/vjster/INSTALL.md](docs/vjster/INSTALL.md).
+The translations were drafted by an AI model (Claude) and reviewed by a second one (Gemini); no native speaker has checked them yet. If something reads wrong, please open an issue or a pull request: the files are `io.github.jbrick2070.fadester-for-obs.sdPlugin/<language>.json`, with `en.json` as the English source. VJster's languages are in [docs/vjster/INSTALL.md](docs/vjster/INSTALL.md).
 
 ## Optional OBS plugins
 

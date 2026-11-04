@@ -125,10 +125,10 @@ export function loadPage(language: string, action: string, settings: Record<stri
   (context.WebSocket as { OPEN: number }).OPEN = 1;
   runInNewContext(i18n, context);
   options.patchStrings?.(window.VJSTER_PI_STRINGS as Parameters<NonNullable<LoadOptions["patchStrings"]>>[0]);
-  if (options.suite) window.VJSTER_SUITE = { prefix: "com.jbrick2070.fadester-for-obs.vjster-", namespace: "vjster" };
+  if (options.suite) window.VJSTER_SUITE = { prefix: "io.github.jbrick2070.fadester-for-obs.vjster-", namespace: "vjster" };
   runInNewContext(js, context);
   const info = JSON.stringify({ application: { language } });
-  const actionInfo = JSON.stringify({ action: `${options.suite ? "com.jbrick2070.fadester-for-obs.vjster-" : "com.jbrick2070.vjster."}${action}`, payload: { settings } });
+  const actionInfo = JSON.stringify({ action: `${options.suite ? "io.github.jbrick2070.fadester-for-obs.vjster-" : "com.jbrick2070.vjster."}${action}`, payload: { settings } });
   (window.connectElgatoStreamDeckSocket as (...a: unknown[]) => void)(1, "ctx", "registerPropertyInspector", info, actionInfo);
   const fields = all.find((e) => e.id === "fields")!;
   const toPage = (payload: Record<string, unknown>) => socket!.onmessage!({ data: JSON.stringify({ event: "sendToPropertyInspector", payload }) });

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Builds the suite plugin's launcher (docs/SUITE.md) into com.jbrick2070.fadester-for-obs.sdPlugin/bin/plugin.js; the
+// Builds the suite plugin's launcher (docs/SUITE.md) into io.github.jbrick2070.fadester-for-obs.sdPlugin/bin/plugin.js; the
 // Fadester plugin is bin/fadester.js (rollup.config.mjs) and VJster's is copied to bin/vjster/ (scripts/suite/copy-vjster.ts).
 // Run from the repository root:
 //
@@ -16,7 +16,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 export default {
   input: join(root, "src/suite/launcher.ts"),
   output: {
-    file: join(root, "com.jbrick2070.fadester-for-obs.sdPlugin/bin/plugin.js"),
+    file: join(root, "io.github.jbrick2070.fadester-for-obs.sdPlugin/bin/plugin.js"),
     format: "esm",
     sourcemap: true,
     banner: "// SPDX-License-Identifier: GPL-2.0-or-later"

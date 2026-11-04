@@ -52,7 +52,7 @@ function openPage(page: string, options: PageOptions = {}) {
     runInContext(src ? readFileSync(join(UI, src), "utf8") : inline, context, { filename: src ?? `${page} (inline)` });
   }
   const connect = context.connectElgatoStreamDeckSocket as (...args: string[]) => void;
-  const action = `com.jbrick2070.fadester-for-obs.${page.replace(/\.html$/, "")}`;
+  const action = `io.github.jbrick2070.fadester-for-obs.${page.replace(/\.html$/, "")}`;
   connect("28196", "pi-uuid", "registerPropertyInspector",
     JSON.stringify({ application: { language: options.appLanguage ?? "en" } }),
     JSON.stringify({ action, payload: { settings: options.settings ?? {}, controller: "Keypad" } }));
@@ -148,7 +148,7 @@ describe("a Language change (R-LANG-4)", () => {
     select.value = "nl";
     select.onchange?.();
     const sent = h.socket.sent.slice(before);
-    expect(sent).toEqual([{ action: "com.jbrick2070.fadester-for-obs.obs-fade-key", event: "sendToPlugin", context: "pi-uuid",
+    expect(sent).toEqual([{ action: "io.github.jbrick2070.fadester-for-obs.obs-fade-key", event: "sendToPlugin", context: "pi-uuid",
       payload: { event: "setLanguageChoice", choice: "nl" } }]);
     // The page neither saves the choice in the control's settings nor in the global settings.
     expect(h.socket.sent.some((message) => message.event === "setSettings" || message.event === "setGlobalSettings")).toBe(false);

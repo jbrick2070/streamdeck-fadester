@@ -223,7 +223,7 @@ export class ObsSceneTransitionKeyInstanceController {
   }
 }
 
-@action({ UUID: "com.jbrick2070.fadester-for-obs.scene-transition" })
+@action({ UUID: "io.github.jbrick2070.fadester-for-obs.scene-transition" })
 export class ObsSceneTransitionKeyAction extends SingletonAction<ObsSceneTransitionKeySettings> {
   private readonly instances = new Map<
     string,

@@ -6,8 +6,8 @@ import { VJSTER_ACTIONS, VJSTER_KINDS, VJSTER_NAMESPACE, suiteActionId, vjsterAc
 import { WATCHDOG, parseLaunchArgs } from "../src/suite/launch-args.js";
 import { SUITE_GLOBAL_EVENT, SuiteMux, type Child, type Message } from "../src/suite/mux.js";
 
-const PLUGIN = "com.jbrick2070.fadester-for-obs.sdPlugin";
-const FADE = "com.jbrick2070.fadester-for-obs.obs-fade";
+const PLUGIN = "io.github.jbrick2070.fadester-for-obs.sdPlugin";
+const FADE = "io.github.jbrick2070.fadester-for-obs.obs-fade";
 const SPEED = suiteActionId("speed");
 
 function rig() {
@@ -27,7 +27,7 @@ describe("the action ids", () => {
   it("pair each of VJster's seven actions with the suite's name for it", () => {
     expect(Object.keys(VJSTER_ACTIONS)).toHaveLength(7);
     for (const kind of VJSTER_KINDS) expect(VJSTER_ACTIONS[suiteActionId(kind)]).toBe(vjsterActionId(kind));
-    expect(suiteActionId("speed")).toBe("com.jbrick2070.fadester-for-obs.vjster-speed");
+    expect(suiteActionId("speed")).toBe("io.github.jbrick2070.fadester-for-obs.vjster-speed");
     expect(vjsterActionId("speed")).toBe("com.jbrick2070.vjster.speed");
   });
 });

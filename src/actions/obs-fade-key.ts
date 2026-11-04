@@ -139,7 +139,7 @@ export class ObsFadeKeyInstanceController {
   }
 }
 
-@action({ UUID: "com.jbrick2070.fadester-for-obs.obs-fade" })
+@action({ UUID: "io.github.jbrick2070.fadester-for-obs.obs-fade" })
 export class ObsFadeKeyAction extends SingletonAction<ObsFadeKeySettings> {
   private readonly instances = new Map<string, ObsFadeKeyInstanceController>();
 

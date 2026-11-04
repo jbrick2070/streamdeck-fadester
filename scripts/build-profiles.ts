@@ -11,7 +11,7 @@ import { PluginManifest, Preset, buildProfile, validatePreset, zip } from "./pro
  * The shapes, checks and contents live in scripts/profile-checks.ts (tests import them).
  */
 const root = resolve(import.meta.dirname, "..");
-const pluginDirectory = join(root, "com.jbrick2070.fadester-for-obs.sdPlugin");
+const pluginDirectory = join(root, "io.github.jbrick2070.fadester-for-obs.sdPlugin");
 const manifest = JSON.parse(readFileSync(join(pluginDirectory, "manifest.json"), "utf8")) as PluginManifest;
 const presets = JSON.parse(readFileSync(join(root, "profiles", "layouts.json"), "utf8")) as Preset[];
 
@@ -29,6 +29,18 @@ for (const preset of presets) {
   catalog.push(built.catalogEntry);
   console.log(`${preset.name}: ${destination}`);
 }
+
+// OpenDeck creates one editable native starter from this data on first use.
+// Keep the actions in the same source as the Elgato downloads.
+const starterSlugs = ["plus-scene-regular", "buttons-scene-regular", "mini-source-desk"];
+const starters = starterSlugs.map((slug) => {
+  const preset = presets.find((entry) => entry.slug === slug);
+  if (!preset) throw new Error(`Missing OpenDeck starter: ${slug}`);
+  return preset;
+});
+const openDeckOutput = join(pluginDirectory, "opendeck");
+mkdirSync(openDeckOutput, { recursive: true });
+writeFileSync(join(openDeckOutput, "starters.json"), JSON.stringify(starters, null, 2) + "\n");
 
 // Reviewable generated metadata for manifest hookup and an eventual in-app
 // preset picker. The script does not mutate the plugin manifest itself.

@@ -8,7 +8,7 @@ import { join, resolve } from "node:path";
 
 export function copyVjster(root: string): string {
   const from = join(root, "com.jbrick2070.vjster.sdPlugin", "bin");
-  const to = join(root, "com.jbrick2070.fadester-for-obs.sdPlugin", "bin", "vjster");
+  const to = join(root, "io.github.jbrick2070.fadester-for-obs.sdPlugin", "bin", "vjster");
   if (!existsSync(join(from, "plugin.js"))) throw new Error(`${from} has no plugin.js; run npm run build:vjster first`);
   rmSync(to, { recursive: true, force: true });
   mkdirSync(to, { recursive: true });

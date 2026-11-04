@@ -6,18 +6,23 @@
 
 ## First five minutes
 
-1. **Install OpenDeck** from its [releases page](https://github.com/nekename/OpenDeck/releases), or on Windows with `winget install nekename.OpenDeck`. Install [Node.js](https://nodejs.org/) 24 or later too: OpenDeck starts these plugins with the `node` on your computer, and the Flatpak build of Node does not work.
-2. **Start OpenDeck once with your deck connected, then quit it** (also from the tray icon). Close Elgato's Stream Deck software first: only one program can hold the deck.
-3. **Build the plugin** in this folder, once: `npm install`, then `npm run build`.
-4. **Install it:**
+1. **Connect the deck.** Start [OpenDeck](https://github.com/nekename/OpenDeck/releases) with Elgato’s Stream Deck software closed. OpenDeck needs [Node.js](https://nodejs.org/) 24 or later to run this plugin.
+2. **Install Fadester.** In OpenDeck’s plugin manager, install **Fadester for OBS** if it is listed, or use its local-file install button with the [Fadester download](https://github.com/jbrick2070/streamdeck-fadester/releases/latest/download/io.github.jbrick2070.fadester-for-obs.streamDeckPlugin). No terminal or source build is needed.
+3. **Choose your starter** in the profile list beneath the device name. Fadester adds **Scene Desk + (Regular Mode)** for the Plus, **Scene Desk 15 Keys (Regular Mode)** for a 15-key deck, or **Source Desk Mini (Either Mode)** for a Mini. The installed plugin leaves your current profile selected. If the new profile is missing, quit OpenDeck from the tray and reopen it. On other models, drag **Scene & Transition** to one key.
+4. **Connect OBS once.** In OBS, open **Tools → WebSocket Server Settings**, enable the server and use **Show Connect Info** to find the password. Click a Fadester key in OpenDeck, paste the password under **OBS connection**, and choose **Save for all controls & test**.
+5. **Try it.** With at least two scenes in OBS and streaming and recording off, press **Next scene** on Scene Desk. You’ll see OBS switch scenes and the deck show the real scene names. On a Mini, use **Next source** to select a source and **Show/hide** to toggle it. You can press it again to put the source back.
 
-   ```powershell
-   npm run opendeck:install -- --layout --fadester-layouts fit
-   ```
+## More layouts and VJster
 
-   This copies the plugin (Fadester with VJster in it) into OpenDeck's plugins folder (`%APPDATA%\opendeck\plugins` on Windows) and puts VJster's four keys and two dials on your deck's current profile. It only fills free slots (a slot that holds another action is left alone), keeps the first copy of the profile file it changed in OpenDeck's `backups` folder, and says what it placed, refreshed and skipped. Run it again after you update the plugins: it replaces the plugin folders and rebuilds VJster's own keys and dials, keeping their settings and any title you styled in OpenDeck. `--fadester-layouts fit` also writes Fadester's ready-made layouts for your deck (see below). `--dry-run` shows what it would do. The standalone VJster plugin (for a deck with no OBS) is `vjster` after the command's name, and `both` installs it beside the suite; `all` and `fadester` still mean the suite.
-5. **Start OpenDeck.** The VJster keys read 1x, +0.25, Paused and Pin Tab, and the first two dials show Speed and Quality. Click a key to open its settings below the grid. Fadester's and VJster's actions are in the action list on the right, VJster's named **VJster Speed**, **VJster Quality** and so on.
-6. **Add the Chrome extension** from [docs/vjster/INSTALL.md](vjster/INSTALL.md) (the same extension as with Stream Deck software), then open a video: the keys follow it.
+To install the rest of the [layout library](../DECK-LAYOUTS.md) from source, start OpenDeck once with the deck attached, quit it fully, then run these commands in the repository:
+
+```sh
+npm install
+npm run build
+npm run opendeck:install -- --fadester-layouts fit
+```
+
+On a fresh deck with only an empty Default profile, the source installer also selects the recommended starter so it appears on next launch. Existing selections and edited profiles are preserved. To add VJster’s four keys and two dials to free slots on the current profile as well, include `--layout`. To use VJster with Chrome, follow the [extension instructions](vjster/INSTALL.md).
 
 ## Fadester for OBS in OpenDeck
 
@@ -25,9 +30,9 @@
 
 Then follow the README's [first five minutes](../README.md#first-five-minutes) from step 3 (the OBS WebSocket password).
 
-Two things differ from Stream Deck software:
+In OpenDeck:
 
-- **The layouts are written by the install command, not opened from a settings page.** OpenDeck does not read Stream Deck's profile files, so the settings page's "Open starter layout" does not apply. [DECK-LAYOUTS.md](../DECK-LAYOUTS.md) lists every layout key by key.
+- **Select profiles in OpenDeck.** Fadester supplies one starter directly; the source installer adds the full library. [DECK-LAYOUTS.md](../DECK-LAYOUTS.md) lists every layout key by key.
 - **The VJ Rig's pages are separate profiles.** Each page (Perform, Layers, Visuals, Scenes) is one OpenDeck profile, and Elgato's Next page key has no counterpart, so that key is left empty: switch pages from the profile list.
 - **The Stream Deck Neo's Info Bar** is not part of what was tried.
 

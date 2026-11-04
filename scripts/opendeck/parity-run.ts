@@ -13,7 +13,7 @@ import { join } from "node:path";
 import { WebSocket, WebSocketServer } from "ws";
 import { configDir, pluginFolderName } from "./opendeck.js";
 
-const PLUGIN_ID = "com.jbrick2070.fadester-for-obs";
+const PLUGIN_ID = "io.github.jbrick2070.fadester-for-obs";
 const FOLDER = pluginFolderName(PLUGIN_ID);
 
 function arg(name: string): string | undefined {
@@ -244,7 +244,7 @@ async function main(): Promise<number> {
     // The plugin, started exactly as OpenDeck starts it (plugin folder as the working directory, relative code path).
     const info = JSON.stringify({
       application: { font: "ui-sans-serif", language: "en", platform: "windows", platformVersion: "10.0.19045.4474", version: "7.1.0" },
-      plugin: { uuid: FOLDER, version: "0.9.1.0" },
+      plugin: { uuid: FOLDER, version: "0.10.0.0" },
       devicePixelRatio: 0,
       colors: {},
       devices: []

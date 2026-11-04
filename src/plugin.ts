@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-import streamDeck from "@elgato/streamdeck";
+import streamDeck, { type Device } from "@elgato/streamdeck";
 import type { JsonObject } from "@elgato/utils";
+import { fileURLToPath } from "node:url";
+import { isOpenDeckInstall, provisionOpenDeckStarter } from "./opendeck/starter.js";
 import { FadesterClient } from "./obs/fadester-client.js";
 import { DirectObsClient } from "./obs/direct-obs-client.js";
 import { FadesterStore } from "./state/fadester-store.js";
@@ -70,6 +72,10 @@ const languageChoice = new LanguageChoiceController({
 // too, should the operator later add an enhanced action.
 const persistSharedConnection = connectionSaver(settingsStore, [enhancedClient, directClient]);
 
+// bin/fadester.js runs inside the installed suite, including after the launcher restarts this child.
+const pluginDir = fileURLToPath(new URL("../", import.meta.url));
+const openDeckStarters = new Map<string, string>();
+
 const bridge = new PropertyInspectorBridge(store, enhancedClient, {
   sendToPropertyInspector(payload) {
     if (!streamDeck.ui.action) {
@@ -91,6 +97,11 @@ const directBridge = new DirectObsPropertyInspectorBridge(directClient, {
   persistGlobalSettings: persistSharedConnection,
   getLanguage: () => languageChoice.state(),
   getDeviceType: () => streamDeck.ui.action?.device.type,
+  getOpenDeckStarter() {
+    if (!isOpenDeckInstall(pluginDir)) return undefined;
+    const device = streamDeck.ui.action?.device;
+    return { profileName: device ? openDeckStarters.get(device.id) ?? null : null };
+  },
   async activateLayout(slug) {
     const device = streamDeck.ui.action?.device;
     if (device) await streamDeck.profiles.switchToProfile(device.id, profilePathForSlug(slug));
@@ -135,7 +146,27 @@ streamDeck.actions.registerAction(new PlaylisterTransportKeyAction(directClient)
 streamDeck.actions.registerAction(new ObsFilterControlAction(filters));
 streamDeck.actions.registerAction(new VisualPanicKeyAction(visualSafety, directClient));
 
+function offerOpenDeckStarter(device: Pick<Device, "id" | "type" | "size">): void {
+  openDeckStarters.delete(device.id);
+  try {
+    const result = provisionOpenDeckStarter({
+      pluginDir, deviceId: device.id, deviceType: device.type,
+      rows: device.size.rows, columns: device.size.columns
+    });
+    if (result.status !== "skipped") openDeckStarters.set(device.id, result.name);
+  } catch (error) {
+    streamDeck.logger.warn("Could not prepare the OpenDeck starter profile", error);
+  }
+}
+// A fresh OpenDeck install can create its profiles directory only when its first device connects.
+streamDeck.devices.onDeviceDidConnect(({ device }) => offerOpenDeckStarter(device));
+streamDeck.devices.onDeviceDidDisconnect(({ device }) => {
+  if (device) openDeckStarters.delete(device.id);
+});
+
 void streamDeck.connect().then(async () => {
+  // The SDK's registration list also includes devices that have not emitted deviceDidConnect.
+  for (const device of streamDeck.devices) offerOpenDeckStarter(device);
   const globalSettings = await settingsStore.start();
   enhancedClient.updateSettings(globalSettings);
   directClient.updateSettings(globalSettings);

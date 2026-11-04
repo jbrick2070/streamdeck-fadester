@@ -8,7 +8,7 @@ import { ObsFadeKeyInstanceController } from "../src/actions/obs-fade-key.js";
 
 /** Run the real inspector callback and invoke its target selection handler. */
 function change(file: string, id: string, settings: Record<string, unknown>, value: string): Record<string, unknown> {
-  const html = readFileSync(`com.jbrick2070.fadester-for-obs.sdPlugin/ui/${file}`, "utf8");
+  const html = readFileSync(`io.github.jbrick2070.fadester-for-obs.sdPlugin/ui/${file}`, "utf8");
   const elements = new Map([...html.matchAll(/\bid="([^"]+)"/g)].map((match) => [match[1], {
     value: "", textContent: "", checked: false, className: "", style: {} as Record<string, string>,
     querySelector: () => ({ textContent: "", disabled: false }), onchange: () => {}

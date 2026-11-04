@@ -104,8 +104,8 @@ C:\streamdeck-fadester\
   PLAN.md                                  This implementation plan
   package.json                             Pinned @elgato/streamdeck 3.0.3, vitest, rollup, typescript
   tsconfig.json                            Strict TypeScript configuration (ES2022)
-  rollup.config.mjs                        Bundles src/plugin.ts -> com.jbrick2070.fadester-for-obs.sdPlugin/bin/plugin.js
-  com.jbrick2070.fadester-for-obs.sdPlugin/
+  rollup.config.mjs                        Bundles src/plugin.ts -> io.github.jbrick2070.fadester-for-obs.sdPlugin/bin/plugin.js
+  io.github.jbrick2070.fadester-for-obs.sdPlugin/
     manifest.json                          Name: "Fadester for OBS", SDKVersion: 3, Nodejs: "24", 2 launch actions
     layouts/
       fader-cell.json                      200x100 full-canvas pixmap layout for runtime Playlister SVG dial cells
@@ -160,8 +160,8 @@ C:\streamdeck-fadester\
 ### Phase 1 — Launch Set: `Fader` (Dial), `Auto-fade` (Key), and Launch Runtime SVG Cells
 
 #### Step 1.1: Project Scaffold, `manifest.json`, `layouts/fader-cell.json`, and Own Icons
-- Create `package.json`, `tsconfig.json`, `rollup.config.mjs`, `.gitignore`, and the `com.jbrick2070.fadester-for-obs.sdPlugin/` bundle layout.
-- Author `manifest.json` with `Name: "Fadester for OBS"`, `SDKVersion: 3`, `Nodejs.Version: "24"`, `Software.MinimumVersion: "7.1"`, and the two launch actions (`com.jbrick2070.fadester-for-obs.fader` on `["Encoder"]` with `Encoder.layout: "layouts/fader-cell.json"`, and `com.jbrick2070.fadester-for-obs.auto-fade` on `["Keypad"]`).
+- Create `package.json`, `tsconfig.json`, `rollup.config.mjs`, `.gitignore`, and the `io.github.jbrick2070.fadester-for-obs.sdPlugin/` bundle layout.
+- Author `manifest.json` with `Name: "Fadester for OBS"`, `SDKVersion: 3`, `Nodejs.Version: "24"`, `Software.MinimumVersion: "7.1"`, and the two launch actions (`io.github.jbrick2070.fadester-for-obs.fader` on `["Encoder"]` with `Encoder.layout: "layouts/fader-cell.json"`, and `io.github.jbrick2070.fadester-for-obs.auto-fade` on `["Keypad"]`).
 - Create original Playlister-styled SVG/PNG icons (`imgs/`).
 - **Step 1.1 Automated Tests:**
   - `manifest-hygiene.test.ts`: Verifies `manifest.json` parses cleanly, `Name === "Fadester for OBS"`, `Actions.length === 2`, `layouts/fader-cell.json` exists and defines a `200 × 100` `pixmap` canvas, all referenced icon files exist and are non-empty, and all repo files have UTF-8 without BOM, `SPDX-License-Identifier: GPL-2.0-or-later` headers on code files, and zero occurrences of the banned placeholder word.
@@ -314,7 +314,7 @@ Target environment:
 Goal: Fadester for OBS speaks Stream Deck's seven languages besides English, as VJster does in the same repository.
 Inventory (2026-10-31, after 0.7.7): about 24 manifest strings, about 150 drawn on the deck or in status and error
 sentences, about 415 in the property inspectors, 38 English captions stored in the bundled profiles. Only Fadester's
-files change (`com.jbrick2070.fadester-for-obs.sdPlugin/`, `src/` outside `src/vjster/`,
+files change (`io.github.jbrick2070.fadester-for-obs.sdPlugin/`, `src/` outside `src/vjster/`,
 `packages/streamdeck-fadester-shared/`, `scripts/` except `scripts/vjster/`, its tests); VJster's translation work in
 the same repository is done separately. Each step ends with `npx vitest run`, `npx tsc --noEmit`,
 `npm run test:mutation` and, when the plugin folder changes, `npm run validate`, all green; Sonnet 5.5 QA of the
@@ -624,7 +624,7 @@ and `TriggerMediaInputAction` take `inputUuid`; `mediaDuration` and `mediaCursor
    `mediaActionAttempts` (refused ones included) for the no-retry test.
 3. **Step 9.3 -- The action.** `src/actions/playlister-transport-key.ts`: `PlaylisterTransportInstanceController`
    (client, sink, settings) and `PlaylisterTransportKeyAction` on UUID
-   `com.jbrick2070.fadester-for-obs.playlister-transport`, Keypad only, after the pattern of
+   `io.github.jbrick2070.fadester-for-obs.playlister-transport`, Keypad only, after the pattern of
    `src/actions/obs-fade-key.ts` (`appear`/`disappear` :50-65, `CellRateLimiter` at 100 ms :45-47,
    `onWillAppear` :141-158). Settings in `src/types/settings.ts`: `PlaylisterTransportSettings { inputUuid: string;
    operation: "previous"|"next"|"playpause"|"stop"|"restart"|"status"; inputName?: string (display hint only, never
@@ -733,7 +733,7 @@ and `TriggerMediaInputAction` take `inputUuid`; `mediaDuration` and `mediaCursor
    `mediaUnconfirmed`, `mediaBusy`; inspector `pi.plHeading`, `plIntro`, `plSource`, `plOptPrevious`, `plOptNext`,
    `plOptPlayPause`, `plOptStop`, `plOptRestart`, `plOptStatus`, `plChooseSource`, `plUnknownSource`,
    `plBannerChoose`, `plBannerNone`, `plBannerMissing`, `plBannerWrongKind`, `plBannerUnsupported`, `plNote`; and
-   the action `com.jbrick2070.fadester-for-obs.playlister-transport` Name and Tooltip. Reviewer notes: German
+   the action `io.github.jbrick2070.fadester-for-obs.playlister-transport` Name and Tooltip. Reviewer notes: German
    "Läuft" and Spanish "En curso" for Playing are width choices; Japanese "最初から再生" for Restart departs from
    OBS's "再開" on purpose; "Status" is the same word in German.
 7. **Step 9.7 -- Acceptance.** Full suite, `npm run test:mutation` (M-9.1a..M-9.6a killed), `npm run validate`,
@@ -992,7 +992,7 @@ ships unbound.
    no global cap (the per-filter 50 ms equals the global 50 ms spacing, so it has no mutation of its own).
 4. **Step 10.3 -- Visual Panic and the latch.** `src/control/visual-safety.ts` (shared by every key: the latch, set
    when Panic is sent and cleared by a Restore that OBS accepts, by a Panic or Restore answered 600, and on disconnect
-   or reconnect); `src/actions/visual-panic-key.ts` (`com.jbrick2070.fadester-for-obs.visual-panic`, keys only,
+   or reconnect); `src/actions/visual-panic-key.ts` (`io.github.jbrick2070.fadester-for-obs.visual-panic`, keys only,
    `operation: panic | restore`): Panic sends `TriggerHotkeyByName` `visual_sidechain_panic` on key down, every press,
    with no debounce and no `GetHotkeyList` pre-check; Restore sends `visual_sidechain_restore` only after an 800 ms
    hold, drawing a hold ring meanwhile; 600 shows "Visual Sidechain not loaded". Its manifest entry and registration
@@ -1493,7 +1493,7 @@ and OBS page (D-L7), better Chinese alias handling in VJster's Automatic.
   `LOCALIZATION_ONLY` list empties.
 - *L.5 (2026-11-01, the automated part; the device check is the operator's):* both plugins built in the worktree
   at b20bd27 (L.4, the parent of this L.5 commit, which changed docs only) and packed for the device check
-  (`com.jbrick2070.fadester-for-obs.streamDeckPlugin`, 0.7.7.0, and
+  (`io.github.jbrick2070.fadester-for-obs.streamDeckPlugin`, 0.7.7.0, and
   `com.jbrick2070.vjster.streamDeckPlugin`, 0.1.0.0, versions unchanged until after the check, D-L10), from copies of
   the plugin folders without their `logs`; not installed. The simulator evidence goes beyond the plan's VJster-only
   run: both shipped bundles under a pretend Stream Deck with the app in English and the plugin's own setting stored as

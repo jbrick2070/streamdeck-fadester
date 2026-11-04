@@ -245,7 +245,7 @@ export class PlaylisterTransportInstanceController {
   }
 }
 
-@action({ UUID: "com.jbrick2070.fadester-for-obs.playlister-transport" })
+@action({ UUID: "io.github.jbrick2070.fadester-for-obs.playlister-transport" })
 export class PlaylisterTransportKeyAction extends SingletonAction<PlaylisterTransportSettings> {
   private readonly instances = new Map<string, PlaylisterTransportInstanceController>();
 

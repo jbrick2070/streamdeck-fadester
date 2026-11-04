@@ -67,7 +67,7 @@ export class ObsNeoInfobarInstanceController {
   }
 }
 
-@action({ UUID: "com.jbrick2070.fadester-for-obs.obs-neo-infobar" })
+@action({ UUID: "io.github.jbrick2070.fadester-for-obs.obs-neo-infobar" })
 export class ObsNeoInfobarAction extends SingletonAction {
   private readonly instances = new Map<string, ObsNeoInfobarInstanceController>();
 

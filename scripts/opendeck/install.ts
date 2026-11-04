@@ -7,6 +7,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   SUITE_LAYOUT,
   VJSTER_LAYOUT,
@@ -21,18 +22,19 @@ import {
   type PluginManifest,
   type Profile
 } from "./opendeck.js";
-import { fits, writeLayouts } from "./fadester-layouts.js";
+import { fits, writeLayouts, type WrittenProfile } from "./fadester-layouts.js";
+import { firstSelection, selectWrittenStarter } from "./first-selection.js";
 import type { Preset } from "../profile-checks.js";
 
 const root = resolve(import.meta.dirname, "..", "..");
 // The suite is the Fadester plugin's folder, which carries VJster too; the standalone VJster plugin is a folder of its own.
 const PLUGINS = {
-  suite: join(root, "com.jbrick2070.fadester-for-obs.sdPlugin"),
+  suite: join(root, "io.github.jbrick2070.fadester-for-obs.sdPlugin"),
   vjster: join(root, "com.jbrick2070.vjster.sdPlugin")
 } as const;
 
-/** True when OpenDeck is running; false when it is not or when this computer cannot say (the answer is then a warning). */
-function openDeckRunning(): boolean {
+/** Unknown status allows manual installation, but never automatic profile selection. */
+function openDeckRunning(): boolean | undefined {
   try {
     if (process.platform === "win32") {
       return execFileSync("tasklist", ["/FI", "IMAGENAME eq opendeck.exe", "/NH"], { encoding: "utf8" }).toLowerCase().includes("opendeck.exe");
@@ -41,10 +43,9 @@ function openDeckRunning(): boolean {
     return true;
   } catch (error) {
     // pgrep exits 1 for "no such process"; anything else means the check itself did not work.
-    if ((error as { status?: number }).status !== 1 && process.platform !== "win32") {
-      console.warn("Could not tell whether OpenDeck is running; make sure it is closed.");
-    }
-    return false;
+    if (process.platform !== "win32" && (error as { status?: number }).status === 1) return false;
+    console.warn("Could not tell whether OpenDeck is running; make sure it is closed.");
+    return undefined;
   }
 }
 
@@ -81,14 +82,16 @@ function planFadesterLayouts(config: string, device: string | undefined, which: 
 }
 
 /** Write a plan's layouts as profiles. */
-function writeFadesterLayouts(plan: FadesterPlan, config: string, device: string, manifest: PluginManifest, pluginDir: string): void {
-  for (const written of writeLayouts(config, device, plan.presets, manifest, pluginDir, plan.deck)) {
+function writeFadesterLayouts(plan: FadesterPlan, config: string, device: string, manifest: PluginManifest, pluginDir: string): WrittenProfile[] {
+  const layouts = writeLayouts(config, device, plan.presets, manifest, pluginDir, plan.deck);
+  for (const written of layouts) {
     console.log(`  ${written.status === "written" ? "wrote" : "kept"} profile "${written.name}"${written.status === "exists" ? " (already there; delete it in OpenDeck to build it again)" : ""}`);
     for (const line of written.left) console.log(`    left empty: ${line}`);
   }
+  return layouts;
 }
 
-function main(argv: string[]): number {
+export function main(argv: string[]): number {
   const args = parseArgs(argv);
   if (args.errors.length > 0) {
     for (const line of args.errors) console.error(line);
@@ -100,7 +103,8 @@ function main(argv: string[]): number {
   const layoutOn = names.includes("suite") ? "suite" : "vjster";
   const config = args.config ?? configDir(process.platform, process.env, homedir());
 
-  if (!args.dryRun && !args.force && openDeckRunning()) {
+  const running = args.dryRun || args.force ? undefined : openDeckRunning();
+  if (running) {
     console.error("OpenDeck is running. Quit it (the tray icon too), then run this again; it rewrites its profiles when it quits.");
     return 1;
   }
@@ -137,14 +141,20 @@ function main(argv: string[]): number {
     plan = planned;
   }
 
+  let selection: ReturnType<typeof firstSelection>;
+  let written: WrittenProfile[] = [];
   for (const name of names) {
     const manifest = JSON.parse(readFileSync(join(PLUGINS[name], "manifest.json"), "utf8")) as PluginManifest;
     const target = join(config, "plugins", pluginFolderName(manifest.UUID));
+    if (running === false && name === "suite" && plan && args.fadesterLayouts === "fit" && device &&
+        devices.includes(device) && (devices.length === 1 || args.device)) {
+      selection = firstSelection(config, device, manifest.UUID, plan.presets);
+    }
     if (args.dryRun) console.log(`would copy ${PLUGINS[name]} to ${target}`);
     else console.log(`${manifest.Name}: copied to ${installPlugin(PLUGINS[name], config, manifest.UUID)}`);
     if (name === "suite" && plan) {
       if (args.dryRun) console.log(`would write ${plan.presets.length} Fadester layout(s) as OpenDeck profiles${plan.deck.keys ? ` for ${plan.deck.keys} keys and ${plan.deck.dials} dials on ${device}` : ""}`);
-      else writeFadesterLayouts(plan, config, device as string, manifest, target);
+      else written = writeFadesterLayouts(plan, config, device as string, manifest, target);
     }
     if (!args.layout || name !== layoutOn) {
       if (args.layout && name === "vjster") console.log("  the standalone VJster plugin gets no starter layout: the suite has it");
@@ -155,10 +165,15 @@ function main(argv: string[]): number {
       console.log(`would place the ${manifest.Name} starter layout on ${device ?? "the deck (none found yet)"}`);
       continue;
     }
+    if (selection && readFileSync(selection.defaultFile, "utf8") !== selection.defaultContents) selection = undefined;
     const result = applyLayout(config, device as string, manifest, target, name === "suite" ? SUITE_LAYOUT : VJSTER_LAYOUT);
+    if (selection) selection.defaultContents = readFileSync(selection.defaultFile, "utf8");
     for (const line of result.placed) console.log(`  placed ${line}`);
     for (const line of result.refreshed) console.log(`  refreshed ${line}`);
     for (const line of result.skipped) console.log(`  skipped ${line}`);
+  }
+  if (selection && selectWrittenStarter(selection, written)) {
+    console.log(`  Selected "${selection.profile}" for the new deck; the original selection is backed up in ${selection.backup}.`);
   }
   if (!args.dryRun) {
     console.log(`Start OpenDeck.${names.includes("suite") ? " Fadester's and VJster's actions are in the action list; drag them onto keys and dials there." : ""}`);
@@ -166,9 +181,11 @@ function main(argv: string[]): number {
   return 0;
 }
 
-try {
-  process.exitCode = main(process.argv.slice(2));
-} catch (error) {
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exitCode = 1;
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  try {
+    process.exitCode = main(process.argv.slice(2));
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  }
 }

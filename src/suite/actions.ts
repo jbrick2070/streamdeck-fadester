@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The suite's action ids (docs/SUITE.md). Stream Deck wants every action id of a plugin to start with the plugin's
-// own id, so VJster's seven actions are listed in the suite as com.jbrick2070.fadester-for-obs.vjster-<kind>; the
+// own id, so VJster's seven actions are listed in the suite as io.github.jbrick2070.fadester-for-obs.vjster-<kind>; the
 // VJster plugin inside it still knows them as com.jbrick2070.vjster.<kind> (as its standalone build does).
 
-export const SUITE_PLUGIN_ID = "com.jbrick2070.fadester-for-obs";
+export const SUITE_PLUGIN_ID = "io.github.jbrick2070.fadester-for-obs";
 export const VJSTER_PLUGIN_ID = "com.jbrick2070.vjster";
 /** The key of the global-settings object that holds VJster's own settings in the suite. */
 export const VJSTER_NAMESPACE = "vjster";

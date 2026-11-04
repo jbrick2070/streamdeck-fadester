@@ -6,20 +6,20 @@ Fourteen ready-made layouts ship inside the plugin for the Stream Deck +, the 15
 
 | Layout | Mode | Deck | Keys and dials used | What it is for |
 |---|---|---|---|---|
-| [Source Desk +](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-source-desk-v3.streamDeckProfile) | Either | Stream Deck + | 7 keys, 4 dials | Browse sources, show/hide, three mixer dials, mic and music fade pairs. |
-| [Half Source Desk +](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-source-half-v2.streamDeckProfile) | Either | Stream Deck + | 4 keys, 2 dials | The same for one mixer input, with half the deck free. |
-| [Source Desk 15 Keys](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-source-desk-v4.streamDeckProfile) | Either | 15 keys | 9 keys | Browse sources and three audio fade pairs; six keys free. |
-| [Half Source Desk 15 Keys](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-source-half-v2.streamDeckProfile) | Either | 15 keys | 7 keys | Browse sources, show/hide, mic and music fade pairs; eight keys free. |
-| [Source Desk Mini](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/mini-source-desk-v2.streamDeckProfile) | Either | Mini | 5 keys | Previous and next source, show/hide, one audio fade pair. |
-| [Creative Layer Lab +](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-creative-layer-lab-v2.streamDeckProfile) | Either | Stream Deck + | 8 keys, 4 dials | Blend modes and layer order, plus source selection and audio. |
-| [Creative Layer Lab 15 Keys](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-creative-layer-lab-v2.streamDeckProfile) | Either | 15 keys | 12 keys | The same through buttons, plus mic and music fade pairs. |
-| [Scene Desk +](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-scene-desk-v2.streamDeckProfile) | Studio | Stream Deck + | 8 keys, 3 dials | Previous, next and random Preview scene, Cut, Transition, Scene 1, mixer dials and the T-bar. |
-| [Scene Desk 15 Keys](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-scene-desk-v2.streamDeckProfile) | Studio | 15 keys | 13 keys | Previous, next and random Preview scene, Cut, Transition, Scene 1-4, audio fade pairs. |
-| [Scene Desk +, Regular](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-scene-regular-v3.streamDeckProfile) | Regular | Stream Deck + | 8 keys, 3 dials | Straight to the previous, next, random or numbered scene (1-3); mixer dials. |
-| [Scene Desk 15 Keys, Regular](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-scene-regular-v2.streamDeckProfile) | Regular | 15 keys | 13 keys | The same with Scene 1-4, Cut previous and Cut next, audio fade pairs. |
-| [Playlister Transport +](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-playlister-transport-v1.streamDeckProfile) | Either | Stream Deck + | 6 keys | Previous, next, play/pause, stop, restart and status for one Playlister source. |
-| [VJ Rig +](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-vj-rig-v1.streamDeckProfile) | Studio | Stream Deck + | 4 pages of 8 keys and 4 dials | Perform, Layers, Visuals and Scenes pages; Panic on the same key on every page. |
-| [VJ Rig 15 Keys](../com.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-vj-rig-v1.streamDeckProfile) | Studio | 15 keys | 4 pages of 15 keys | The same four pages through buttons. |
+| [Source Desk +](../io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-source-desk-v3.streamDeckProfile) | Either | Stream Deck + | 7 keys, 4 dials | Browse sources, show/hide, three mixer dials, mic and music fade pairs. |
+| [Half Source Desk +](../io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-source-half-v2.streamDeckProfile) | Either | Stream Deck + | 4 keys, 2 dials | The same for one mixer input, with half the deck free. |
+| [Source Desk 15 Keys](../io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-source-desk-v4.streamDeckProfile) | Either | 15 keys | 9 keys | Browse sources and three audio fade pairs; six keys free. |
+| [Half Source Desk 15 Keys](../io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-source-half-v2.streamDeckProfile) | Either | 15 keys | 7 keys | Browse sources, show/hide, mic and music fade pairs; eight keys free. |
+| [Source Desk Mini](../io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/mini-source-desk-v2.streamDeckProfile) | Either | Mini | 5 keys | Previous and next source, show/hide, one audio fade pair. |
+| [Creative Layer Lab +](../io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-creative-layer-lab-v2.streamDeckProfile) | Either | Stream Deck + | 8 keys, 4 dials | Blend modes and layer order, plus source selection and audio. |
+| [Creative Layer Lab 15 Keys](../io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-creative-layer-lab-v2.streamDeckProfile) | Either | 15 keys | 12 keys | The same through buttons, plus mic and music fade pairs. |
+| [Scene Desk +](../io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-scene-desk-v2.streamDeckProfile) | Studio | Stream Deck + | 8 keys, 3 dials | Previous, next and random Preview scene, Cut, Transition, Scene 1, mixer dials and the T-bar. |
+| [Scene Desk 15 Keys](../io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-scene-desk-v2.streamDeckProfile) | Studio | 15 keys | 13 keys | Previous, next and random Preview scene, Cut, Transition, Scene 1-4, audio fade pairs. |
+| [Scene Desk +, Regular](../io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-scene-regular-v3.streamDeckProfile) | Regular | Stream Deck + | 8 keys, 3 dials | Straight to the previous, next, random or numbered scene (1-3); mixer dials. |
+| [Scene Desk 15 Keys, Regular](../io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-scene-regular-v2.streamDeckProfile) | Regular | 15 keys | 13 keys | The same with Scene 1-4, Cut previous and Cut next, audio fade pairs. |
+| [Playlister Transport +](../io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-playlister-transport-v1.streamDeckProfile) | Either | Stream Deck + | 6 keys | Previous, next, play/pause, stop, restart and status for one Playlister source. |
+| [VJ Rig +](../io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-vj-rig-v1.streamDeckProfile) | Studio | Stream Deck + | 4 pages of 8 keys and 4 dials | Perform, Layers, Visuals and Scenes pages; Panic on the same key on every page. |
+| [VJ Rig 15 Keys](../io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-vj-rig-v1.streamDeckProfile) | Studio | 15 keys | 4 pages of 15 keys | The same four pages through buttons. |
 
 Every profile name carries its mode: **Studio Mode**, **Regular Mode** or **Either Mode**. No file holds a host, a port, a password or a device serial number.
 

@@ -105,7 +105,7 @@ function renderPluginIconPng(size: number): Buffer {
   ]);
 }
 
-const outDir = join(process.cwd(), "com.jbrick2070.fadester-for-obs.sdPlugin", "imgs", "plugin");
+const outDir = join(process.cwd(), "io.github.jbrick2070.fadester-for-obs.sdPlugin", "imgs", "plugin");
 mkdirSync(outDir, { recursive: true });
 writeFileSync(join(outDir, "plugin-icon.png"), renderPluginIconPng(256));
 writeFileSync(join(outDir, "plugin-icon@2x.png"), renderPluginIconPng(512));

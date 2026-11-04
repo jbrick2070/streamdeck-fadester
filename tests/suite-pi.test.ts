@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import { loadPage } from "./helpers/vjster-pi-dom.js";
 
 const ROOT = join(import.meta.dirname, "..");
-const SUITE_ACTION = "com.jbrick2070.fadester-for-obs.vjster-speed";
+const SUITE_ACTION = "io.github.jbrick2070.fadester-for-obs.vjster-speed";
 
 /** The page's Save button, after the operator typed a port. */
 function savePort(page: ReturnType<typeof loadPage>, port: string): void {
@@ -56,9 +56,9 @@ describe("VJster's settings page in the suite", () => {
   });
 
   it("is the same page file the standalone plugin has, with the suite's script ahead of it", () => {
-    const page = readFileSync(join(ROOT, "com.jbrick2070.fadester-for-obs.sdPlugin", "ui", "vjster", "vjster.html"), "utf8");
+    const page = readFileSync(join(ROOT, "io.github.jbrick2070.fadester-for-obs.sdPlugin", "ui", "vjster", "vjster.html"), "utf8");
     expect(page.indexOf('<script src="suite.js"></script>')).toBeGreaterThan(0);
     expect(page.indexOf('<script src="suite.js"></script>')).toBeLessThan(page.indexOf('<script src="vjster.js"></script>'));
-    expect(readFileSync(join(ROOT, "com.jbrick2070.fadester-for-obs.sdPlugin", "ui", "vjster", "suite.js"), "utf8")).toContain('prefix: "com.jbrick2070.fadester-for-obs.vjster-"');
+    expect(readFileSync(join(ROOT, "io.github.jbrick2070.fadester-for-obs.sdPlugin", "ui", "vjster", "suite.js"), "utf8")).toContain('prefix: "io.github.jbrick2070.fadester-for-obs.vjster-"');
   });
 });

@@ -41,7 +41,7 @@ const MUTATIONS: MutationCheck[] = [
       "Mutate encoder Layouts path in manifest.json to a non-existent file and verify manifest-hygiene.test.ts fails",
     filePath: resolve(
       ROOT,
-      "com.jbrick2070.fadester-for-obs.sdPlugin/manifest.json"
+      "io.github.jbrick2070.fadester-for-obs.sdPlugin/manifest.json"
     ),
     target: '"layout": "layouts/fader-cell.json"',
     mutated: '"layout": "layouts/missing-cell.json"',
@@ -285,7 +285,7 @@ const MUTATIONS: MutationCheck[] = [
     step: "Step 8.5 (Translations: inspectors follow the language)",
     description:
       "Keep the inspectors in English whatever the language, and verify inspector-i18n.test.ts fails",
-    filePath: resolve(ROOT, "com.jbrick2070.fadester-for-obs.sdPlugin/ui/i18n.js"),
+    filePath: resolve(ROOT, "io.github.jbrick2070.fadester-for-obs.sdPlugin/ui/i18n.js"),
     target: "active = TABLES[language] || EN;",
     mutated: "active = EN;",
     testFile: "tests/inspector-i18n.test.ts"
@@ -455,7 +455,7 @@ const MUTATIONS: MutationCheck[] = [
     step: "Step 9.4 (Playlister transport inspector: Playlister sources only)",
     description:
       "List every input kind in the Playlister picker, and verify playlister-inspector.test.ts fails",
-    filePath: resolve(ROOT, "com.jbrick2070.fadester-for-obs.sdPlugin/ui/playlister-transport-key.html"),
+    filePath: resolve(ROOT, "io.github.jbrick2070.fadester-for-obs.sdPlugin/ui/playlister-transport-key.html"),
     target: 'return (input.unversionedInputKind || String(input.inputKind || "").replace(/_v\\d+$/, "")) === "obs_playlister_source";',
     mutated: "return true;",
     testFile: "tests/playlister-inspector.test.ts"
@@ -975,7 +975,7 @@ const MUTATIONS: MutationCheck[] = [
     id: "M-11.2a",
     step: "Step L.2 (the direct settings pages)",
     description: "Make the direct page ignore language.resolved (no refill), and verify direct-pi-language.test.ts fails",
-    filePath: resolve(ROOT, "com.jbrick2070.fadester-for-obs.sdPlugin/ui/direct-pi.js"),
+    filePath: resolve(ROOT, "io.github.jbrick2070.fadester-for-obs.sdPlugin/ui/direct-pi.js"),
     target: "    if (!window.FadesterI18n.setResolved(language.resolved)) return;",
     mutated: "    return;",
     testFile: "tests/direct-pi-language.test.ts"
@@ -984,7 +984,7 @@ const MUTATIONS: MutationCheck[] = [
     id: "M-11.2b",
     step: "Step L.2 (the direct settings pages)",
     description: "Make the Language select send nothing on a change, and verify direct-pi-language.test.ts fails",
-    filePath: resolve(ROOT, "com.jbrick2070.fadester-for-obs.sdPlugin/ui/direct-pi.js"),
+    filePath: resolve(ROOT, "io.github.jbrick2070.fadester-for-obs.sdPlugin/ui/direct-pi.js"),
     target: '      sendToPlugin({ event: "setLanguageChoice", choice: languagePicker.value });',
     mutated: "      void languagePicker;",
     testFile: "tests/direct-pi-language.test.ts"
@@ -993,7 +993,7 @@ const MUTATIONS: MutationCheck[] = [
     id: "M-11.2c",
     step: "Step L.2 (the direct settings pages)",
     description: "Set the Language select only when the resolved language changes, and verify direct-pi-language.test.ts fails",
-    filePath: resolve(ROOT, "com.jbrick2070.fadester-for-obs.sdPlugin/ui/direct-pi.js"),
+    filePath: resolve(ROOT, "io.github.jbrick2070.fadester-for-obs.sdPlugin/ui/direct-pi.js"),
     target:
       '    if (picker) picker.value = known ? language.choice : "auto";',
     mutated:
@@ -1004,7 +1004,7 @@ const MUTATIONS: MutationCheck[] = [
     id: "M-11.2d",
     step: "Step L.2 (the direct settings pages)",
     description: "Paint a new page in Stream Deck's language, ignoring the remembered one, and verify direct-pi-language.test.ts fails",
-    filePath: resolve(ROOT, "com.jbrick2070.fadester-for-obs.sdPlugin/ui/direct-pi.js"),
+    filePath: resolve(ROOT, "io.github.jbrick2070.fadester-for-obs.sdPlugin/ui/direct-pi.js"),
     target: "      if (!window.FadesterI18n.setResolved(recalledLanguage())) {",
     mutated: "      if (!window.FadesterI18n.setResolved(null)) {",
     testFile: "tests/direct-pi-language.test.ts"
@@ -1014,7 +1014,7 @@ const MUTATIONS: MutationCheck[] = [
     step: "Step L.2 (the direct settings pages)",
     description:
       "Let the pages' setResolved (generated ui/i18n.js) take any code through the Automatic mapping, so a stale remembered value is used, and verify direct-pi-language.test.ts fails",
-    filePath: resolve(ROOT, "com.jbrick2070.fadester-for-obs.sdPlugin/ui/i18n.js"),
+    filePath: resolve(ROOT, "io.github.jbrick2070.fadester-for-obs.sdPlugin/ui/i18n.js"),
     target: '    return typeof code === "string" && PLUGIN_LANGUAGES.indexOf(code) !== -1 ? use(code) : null;',
     mutated: "    return use(normalize(code));",
     testFile: "tests/direct-pi-language.test.ts"
@@ -1023,7 +1023,7 @@ const MUTATIONS: MutationCheck[] = [
     id: "M-11.2f",
     step: "Step L.2 (the direct settings pages)",
     description: "Remember a resolved language the page refused (stale memory), and verify direct-pi-language.test.ts fails",
-    filePath: resolve(ROOT, "com.jbrick2070.fadester-for-obs.sdPlugin/ui/direct-pi.js"),
+    filePath: resolve(ROOT, "io.github.jbrick2070.fadester-for-obs.sdPlugin/ui/direct-pi.js"),
     target: "    if (!window.FadesterI18n.setResolved(language.resolved)) return;\n    rememberLanguage(language.resolved);",
     mutated: "    rememberLanguage(language.resolved);\n    if (!window.FadesterI18n.setResolved(language.resolved)) return;",
     testFile: "tests/direct-pi-language.test.ts"
@@ -1032,7 +1032,7 @@ const MUTATIONS: MutationCheck[] = [
     id: "M-11.2g",
     step: "Step L.2 (the direct settings pages)",
     description: "Redraw only the connection after a state message (no refreshControls), so the pages' drawn texts stay in the old language, and verify direct-pi-language.test.ts fails",
-    filePath: resolve(ROOT, "com.jbrick2070.fadester-for-obs.sdPlugin/ui/direct-pi.js"),
+    filePath: resolve(ROOT, "io.github.jbrick2070.fadester-for-obs.sdPlugin/ui/direct-pi.js"),
     target: "          updateLanguage(currentState.language);\n          updateConnection(currentState);\n          refreshControls();",
     mutated: "          updateLanguage(currentState.language);\n          updateConnection(currentState);",
     testFile: "tests/direct-pi-language.test.ts"

@@ -11,7 +11,7 @@ import { VJSTER_KINDS, VJSTER_PLUGIN_ID, suiteActionId } from "../../src/suite/a
 
 export const LANGUAGES = ["en", "de", "es", "fr", "ja", "ko", "zh_CN", "zh_TW", "nl"] as const;
 
-const FADESTER = "com.jbrick2070.fadester-for-obs.sdPlugin";
+const FADESTER = "io.github.jbrick2070.fadester-for-obs.sdPlugin";
 const VJSTER = "com.jbrick2070.vjster.sdPlugin";
 
 type Json = Record<string, unknown>;
@@ -119,10 +119,15 @@ if (process.argv[1] && resolve(process.argv[1]) === resolve(import.meta.filename
   const root = resolve(import.meta.dirname, "..", "..");
   if (process.argv.includes("--check")) {
     const off = differences(root);
+    // OpenAction looks here when a repository contains multiple plugin manifests.
+    const mirror = join(root, "assets", "manifest.json");
+    if (!existsSync(mirror) || text(readFileSync(mirror)) !== text(readFileSync(join(root, FADESTER, "manifest.json")))) off.push("assets/manifest.json");
     for (const path of off) console.log(`differs: ${path}`);
     process.exitCode = off.length > 0 ? 1 : 0;
   } else {
     const changed = assemble(root);
+    mkdirSync(join(root, "assets"), { recursive: true });
+    writeFileSync(join(root, "assets", "manifest.json"), readFileSync(join(root, FADESTER, "manifest.json")));
     console.log(changed.length === 0 ? "The suite plugin already holds VJster as it is." : changed.map((path) => `wrote ${path}`).join("\n"));
   }
 }

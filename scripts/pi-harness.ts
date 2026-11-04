@@ -21,17 +21,17 @@ import { useStreamDeckLanguage } from "../src/i18n/load.js";
 
 const HTTP_PORT = Number(process.env.PI_HARNESS_HTTP_PORT ?? 4480);
 const SD_WS_PORT = Number(process.env.PI_HARNESS_SD_PORT ?? 4481);
-const UI_DIR = join(process.cwd(), "com.jbrick2070.fadester-for-obs.sdPlugin", "ui");
+const UI_DIR = join(process.cwd(), "io.github.jbrick2070.fadester-for-obs.sdPlugin", "ui");
 const langArgIndex = process.argv.indexOf("--lang");
 // The plugin side and the page take the same language, as under Stream Deck.
 const LANGUAGE = useStreamDeckLanguage(langArgIndex >= 0 ? process.argv[langArgIndex + 1] : "en",
-  join(process.cwd(), "com.jbrick2070.fadester-for-obs.sdPlugin"));
+  join(process.cwd(), "io.github.jbrick2070.fadester-for-obs.sdPlugin"));
 const pageArgIndex = process.argv.indexOf("--page");
 const PAGE = pageArgIndex >= 0 ? process.argv[pageArgIndex + 1] : "fader-dial";
 const ACTION_UUID =
   PAGE === "auto-fade-key"
-    ? "com.jbrick2070.fadester-for-obs.auto-fade"
-    : "com.jbrick2070.fadester-for-obs.fader";
+    ? "io.github.jbrick2070.fadester-for-obs.auto-fade"
+    : "io.github.jbrick2070.fadester-for-obs.fader";
 
 async function main(): Promise<void> {
   const obs = new FakeObsServer({ password: "harness-pw", buildCommit: "h4rn355", fadesterVersion: "0.6.0" });

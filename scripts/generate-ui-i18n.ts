@@ -14,7 +14,7 @@ import { pathToFileURL } from "node:url";
 import { PRESET_CAPTIONS } from "../src/obs/preset-captions.js";
 import { PLUGIN_LANGUAGES } from "../src/i18n/strings.js";
 
-export const PLUGIN_ROOT = resolve(process.cwd(), "com.jbrick2070.fadester-for-obs.sdPlugin");
+export const PLUGIN_ROOT = resolve(process.cwd(), "io.github.jbrick2070.fadester-for-obs.sdPlugin");
 export const UI_DIR = resolve(PLUGIN_ROOT, "ui");
 
 const HEADER = [

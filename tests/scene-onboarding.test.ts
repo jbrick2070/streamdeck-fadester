@@ -32,7 +32,7 @@ describe("Scene layout onboarding", () => {
   });
 
   it("offers Scene 1 to 8, so the 15-key VJ rig's Scene 5 to 8 keys show their own automatic target", () => {
-    const html = readFileSync("com.jbrick2070.fadester-for-obs.sdPlugin/ui/obs-scene-transition-key.html", "utf8");
+    const html = readFileSync("io.github.jbrick2070.fadester-for-obs.sdPlugin/ui/obs-scene-transition-key.html", "utf8");
     type Element = { value: string; textContent: string; className: string; style: Record<string, string>; onchange?: () => void };
     const elements = new Map<string, Element>([...html.matchAll(/\bid="([^"]+)"/g)].map((match) => [match[1], {
       value: "", textContent: "", className: "", style: {}
@@ -58,7 +58,7 @@ describe("Scene layout onboarding", () => {
   });
 
   it("shows the automatic default in the inspector and saves user choices as explicit bindings", () => {
-    const html = readFileSync("com.jbrick2070.fadester-for-obs.sdPlugin/ui/obs-scene-transition-key.html", "utf8");
+    const html = readFileSync("io.github.jbrick2070.fadester-for-obs.sdPlugin/ui/obs-scene-transition-key.html", "utf8");
     type Element = { value: string; textContent: string; className: string; style: Record<string, string>; onchange?: () => void };
     const elements = new Map<string, Element>([...html.matchAll(/\bid="([^"]+)"/g)].map((match) => [match[1], {
       value: "", textContent: "", className: "", style: {}
@@ -138,6 +138,23 @@ describe("Scene layout onboarding", () => {
     await vi.waitFor(() => expect(images).toHaveLength(2));
     expect(decodeURIComponent(images[1])).toContain("My next cue");
     key.disappear();
+  });
+
+  it("gives an OpenDeck user their native profile name without trying to switch profiles or OBS mode", async () => {
+    const client = new DirectObsClient();
+    const prepare = vi.spyOn(client, "prepareStudioLayout");
+    const activate = vi.fn(async () => {});
+    const send = vi.fn();
+    const starter = { profileName: "Fadester Scene Desk + (Regular Mode) (New ID)" };
+    const bridge = new DirectObsPropertyInspectorBridge(client, {
+      sendToPropertyInspector: send, persistGlobalSettings: async () => {}, getDeviceType: () => 7,
+      getOpenDeckStarter: () => starter, activateLayout: activate
+    });
+    bridge.broadcast();
+    expect(send).toHaveBeenCalledWith(expect.objectContaining({ openDeckStarter: starter }));
+    await bridge.handleMessage({ event: "directActivateLayout", slug: "plus-scene-desk", prepareStudio: true });
+    expect(activate).not.toHaveBeenCalled();
+    expect(prepare).not.toHaveBeenCalled();
   });
 
   it("requires the explicit Studio setup action before changing OBS mode and opening its layout", async () => {

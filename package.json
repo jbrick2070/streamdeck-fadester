@@ -1,6 +1,6 @@
 {
   "name": "streamdeck-fadester",
-  "version": "0.9.1",
+  "version": "0.10.0",
   "description": "Fadester for OBS — direct OBS scene, transition, mixer-fade, and Stream Deck + fader controls with optional Midi Fadester integration",
   "license": "GPL-2.0-or-later",
   "type": "module",
@@ -26,8 +26,8 @@
     "test:mutation": "node --import tsx scripts/run-mutation-checks.ts",
     "test:obs-live": "node --import tsx tests/obs-live-conformance.ts",
     "pi:harness": "node --import tsx scripts/pi-harness.ts",
-    "validate": "streamdeck validate com.jbrick2070.fadester-for-obs.sdPlugin",
-    "pack": "streamdeck pack com.jbrick2070.fadester-for-obs.sdPlugin --output release --force"
+    "validate": "streamdeck validate io.github.jbrick2070.fadester-for-obs.sdPlugin",
+    "pack": "streamdeck pack io.github.jbrick2070.fadester-for-obs.sdPlugin --output release --force"
   },
   "dependencies": {
     "@elgato/streamdeck": "3.0.3"

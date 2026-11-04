@@ -8,7 +8,7 @@ import { fits, buildPageProfile, profileNameFor, settingsFor, writeLayouts, type
 import type { PluginManifest } from "../scripts/opendeck/opendeck.js";
 
 const root = join(import.meta.dirname, "..");
-const manifest = JSON.parse(readFileSync(join(root, "com.jbrick2070.fadester-for-obs.sdPlugin", "manifest.json"), "utf8")) as PluginManifest;
+const manifest = JSON.parse(readFileSync(join(root, "io.github.jbrick2070.fadester-for-obs.sdPlugin", "manifest.json"), "utf8")) as PluginManifest;
 const presets = JSON.parse(readFileSync(join(root, "profiles", "layouts.json"), "utf8")) as Preset[];
 const PLUS: DeckSize = { keys: 8, dials: 4 };
 const KEYS15: DeckSize = { keys: 15, dials: 0 };
@@ -53,7 +53,7 @@ describe("every ready-made layout as an OpenDeck profile", () => {
     const { profile } = buildPageProfile(preset, page, manifest, join(work, "plugin"), "sd-X", "Fadester Source Desk +", PLUS);
     const music = page.actions.find((a) => a.label === "Music down")!;
     const slot = profile.keys[music.row * preset.columns + music.column]!;
-    expect(slot.action.UUID).toBe("com.jbrick2070.fadester-for-obs.obs-fade");
+    expect(slot.action.UUID).toBe("io.github.jbrick2070.fadester-for-obs.obs-fade");
     expect(slot.settings).toMatchObject({ inputName: "__audio_main__", to: 0, durationMs: 1000, labelOverride: "Music down" });
     expect(slot.context).toBe(`sd-X.Fadester Source Desk +.Keypad.${music.row * preset.columns + music.column}.0`);
     const dial = page.actions.find((a) => a.controller === "Encoder" && a.column === 2)!;

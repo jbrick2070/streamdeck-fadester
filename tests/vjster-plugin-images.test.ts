@@ -10,7 +10,7 @@ import { GLYPHS, IMAGES_DIR, KEYS, renderAll } from "../scripts/vjster/make-plug
 
 const ROOT = process.cwd();
 const VJSTER = join(ROOT, "com.jbrick2070.vjster.sdPlugin");
-const FADESTER = join(ROOT, "com.jbrick2070.fadester-for-obs.sdPlugin");
+const FADESTER = join(ROOT, "io.github.jbrick2070.fadester-for-obs.sdPlugin");
 
 /** Every file under a folder, by path relative to it with forward slashes. */
 function filesUnder(dir: string, base = dir): string[] {

@@ -40,7 +40,7 @@ export interface KitIds { scenes: KitScene[]; sources: KitSource[] }
 
 const ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
 export const KIT_DIR = join(ROOT, "demo-kit");
-const FADESTER_MANIFEST = join(ROOT, "com.jbrick2070.fadester-for-obs.sdPlugin", "manifest.json");
+const FADESTER_MANIFEST = join(ROOT, "io.github.jbrick2070.fadester-for-obs.sdPlugin", "manifest.json");
 
 /** The zip names the README promises, read from kit_docs.PROFILE_FILES (one list, in Python). */
 export function promisedProfileFiles(kitDocs = readFileSync(join(KIT_DIR, "kit_docs.py"), "utf8")): string[] {

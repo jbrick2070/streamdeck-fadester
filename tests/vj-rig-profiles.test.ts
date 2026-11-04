@@ -155,7 +155,29 @@ describe("VJ rig profiles", () => {
     expect((manifest as unknown as { Profiles: Array<{ Name: string }> }).Profiles.map((profile) => profile.Name)).toContain(built.path);
   });
 
-  it("builds every one-page profile as before (the twelve archives byte for byte, identities unchanged)", () => {
+  it("keeps different plugin namespaces disjoint and retains all profile, page and action IDs across a normal update", () => {
+    const source = rigs[0]!;
+    const identities = (owner: PluginManifest): Set<string> => {
+      const { files } = buildProfile(source, owner);
+      const ids = new Set<string>();
+      for (const { path, content } of files) {
+        for (const guid of path.match(/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}/gi) ?? []) ids.add(guid.toLowerCase());
+        const page = JSON.parse(content) as { Controllers?: Array<{ Actions: Record<string, { ActionID: string }> | null }> };
+        for (const controller of page.Controllers ?? []) {
+          for (const action of Object.values(controller.Actions ?? {})) ids.add(action.ActionID);
+        }
+      }
+      return ids;
+    };
+    const renamed = "test.another-publisher";
+    const otherOwner = { ...manifest, UUID: renamed, Actions: manifest.Actions.map(a => ({ ...a, UUID: a.UUID.replace(manifest.UUID, renamed) })) };
+    const current = identities(manifest);
+    expect(current.size).toBe(2 + presetPages(source).length + presetPages(source).reduce((count, page) => count + page.actions.length, 0));
+    expect([...identities(otherOwner)].filter(id => current.has(id))).toEqual([]);
+    expect(identities({ ...manifest, Version: "19.2.0.0" })).toEqual(current);
+  });
+
+  it("builds every one-page profile byte for byte as bundled", () => {
     const single = presets.filter((preset) => !preset.pages);
     expect(single).toHaveLength(12);
     for (const preset of single) {

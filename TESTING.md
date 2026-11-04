@@ -17,7 +17,7 @@ Leave the Stream Deck app in its own language (English) for the whole check: the
 change language without it.
 
 1.1 **Install the two builds.** The release files built from branch `sd-language` at b20bd27 (step L.4, the
-parent of the L.5 commit; L.5 changed docs only) for this check: `com.jbrick2070.fadester-for-obs.streamDeckPlugin` and
+parent of the L.5 commit; L.5 changed docs only) for this check: `io.github.jbrick2070.fadester-for-obs.streamDeckPlugin` and
 `com.jbrick2070.vjster.streamDeckPlugin`, left in the build session's scratchpad folder `lang-builds` (the
 operator's folder). That folder is temporary: copy the two files to <your builds folder> before installing. If it is gone, check out
 b20bd27, run `npm run build`, and pack each plugin folder without its `logs` with `npx streamdeck pack <folder>`.

@@ -188,7 +188,7 @@ export class VisualPanicInstanceController {
   }
 }
 
-@action({ UUID: "com.jbrick2070.fadester-for-obs.visual-panic" })
+@action({ UUID: "io.github.jbrick2070.fadester-for-obs.visual-panic" })
 export class VisualPanicKeyAction extends SingletonAction<VisualPanicSettings> {
   private readonly instances = new Map<string, VisualPanicInstanceController>();
 

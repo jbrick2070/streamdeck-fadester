@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Inicio rápido · OBS Fadester for TourBox</title>
+  <link rel="stylesheet" href="quickstart.css">
+</head>
+<body>
+  <main>
+    <header>
+      <p>Inicio rápido · Windows x64</p>
+      <h1>OBS Fadester for TourBox</h1>
+      <p>Prepara escenas, haz transiciones manuales y ajusta el audio de OBS Studio con TourBox.</p>
+    </header>
+
+    <h2>Conecta TourBox con OBS</h2>
+    <ol>
+      <li>Extrae todo el archivo ZIP de Windows y ejecuta <strong>Fadester for TourBox.exe</strong> desde la carpeta extraída.</li>
+      <li>Abre OBS y, en TourBox Console, usa <strong>Import</strong> junto a <strong>Preset List</strong> para importar <code>presets/es/OBS Fadester for TourBox.tb</code>. Vincula el preajuste con OBS y activa <strong>Auto Switch</strong>. Importa una sola versión del preajuste.</li>
+      <li>En OBS, abre <strong>Herramientas → Configuración del servidor WebSocket</strong> y activa el servidor con autenticación. Para usar el fader manual en OBS Studio <strong>33.0.0 o 33.0.1</strong>, activa el <strong>Modo de estudio</strong>, selecciona la transición <strong>Fundido (Fade)</strong> y deja visible la barra blanca entre Vista previa y Programa.</li>
+      <li>En Fadester, pulsa <strong>Leer escenas y entradas de OBS</strong>. Introduce el puerto y la contraseña de OBS si se solicitan. Para probar el volumen, elige la entrada de música en <strong>Asignaciones</strong>. Pulsa <strong>Guardar e iniciar</strong>, elige <strong>OBS Fadester for TourBox</strong> en TourBox Console y vuelve a OBS. Deja abierto Fadester.</li>
+    </ol>
+    <p>Si Windows está en otro idioma, cierra Fadester y, desde PowerShell en la carpeta extraída, ejecútalo con <code>&amp; '.\Fadester for TourBox.exe' --language es</code>.</p>
+
+    <h2>Prueba con dos escenas distintas</h2>
+    <ul>
+      <li>Gira la rueda <strong>Scroll</strong> para cambiar Vista previa sin cambiar Programa. Púlsala para consultar los nombres de ambas escenas en el panel.</li>
+      <li>Gira poco a poco el <strong>Dial</strong> plano para mover la barra de OBS y mezclar ambas escenas. Para cancelar la transición en curso, mantén pulsado <strong>Side</strong> y pulsa <strong>Dial</strong>.</li>
+      <li>Gira el <strong>Knob</strong> elevado para ajustar el volumen de la entrada de música asignada. Púlsalo para consultar niveles y estados de silencio.</li>
+    </ul>
+
+    <h2>Ajusta toda la mezcla</h2>
+    <p>Si los controles están activos, pulsa <strong>Detener controles</strong>. En <strong>Configuración</strong>, activa <strong>Controlar todas las entradas del mezclador de OBS</strong> y pulsa <strong>Guardar e iniciar</strong>. Mantén pulsado <strong>Side</strong> y gira <strong>Knob</strong> para ajustar el grupo. Desde el menú <strong>Tour</strong>, puedes fundir la mezcla a silencio y recuperar los niveles anteriores. Las entradas silenciadas siguen silenciadas.</p>
+
+    <h2>Ayuda</h2>
+    <p>Los diagnósticos del puente de Fadester están en inglés. Si un control no responde, comprueba el preajuste activo en TourBox Console y consulta la pestaña <strong>Actividad</strong> de Fadester.</p>
+    <p><a href="../START-HERE.html" hreflang="en">Guía completa y referencia de controles (en inglés)</a> · <a href="../START-HERE.html#recovery" hreflang="en">Solución de problemas (en inglés)</a></p>
+  </main>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Быстрый старт · OBS Fadester for TourBox</title>
+  <link rel="stylesheet" href="quickstart.css">
+</head>
+<body>
+  <main>
+    <header>
+      <p>Быстрый старт · Windows x64</p>
+      <h1>OBS Fadester for TourBox</h1>
+      <p>Подготавливайте сцены, выполняйте плавные переходы вручную и регулируйте звук в OBS Studio с помощью TourBox.</p>
+    </header>
+
+    <h2>Подключите TourBox к OBS</h2>
+    <ol>
+      <li>Распакуйте весь ZIP-архив для Windows и запустите <strong>Fadester for TourBox.exe</strong> из распакованной папки.</li>
+      <li>Откройте OBS. В TourBox Console нажмите кнопку импорта рядом со списком пресетов и выберите <code>presets/ru/OBS Fadester for TourBox.tb</code>. Привяжите пресет к OBS и включите автоматическое переключение (<strong>Auto Switch</strong>). Импортируйте пресет только на одном языке.</li>
+      <li>В OBS откройте <strong>Инструменты → Настройки сервера WebSocket</strong> и включите сервер с аутентификацией. Для ручного перехода в OBS Studio <strong>33.0.0 или 33.0.1</strong> включите <strong>Режим студии</strong>, выберите плавный переход <strong>Fade</strong> и оставьте видимым белый ползунок между предпросмотром и программой.</li>
+      <li>В Fadester загрузите список сцен и входов из OBS. При необходимости введите порт и пароль из настроек OBS. Выберите <strong>OBS Fadester for TourBox</strong> в TourBox Console, сохраните настройки и запустите управление в Fadester. Вернитесь к окну OBS, оставив Fadester открытым.</li>
+    </ol>
+    <p>Если язык интерфейса Windows отличается, закройте Fadester и выполните в PowerShell из распакованной папки команду <code>&amp; '.\Fadester for TourBox.exe' --language ru</code>.</p>
+
+    <h2>Попробуйте на двух разных сценах</h2>
+    <ul>
+      <li>Вращайте колесо <strong>Scroll</strong>, чтобы сменить сцену предпросмотра. Сцена в программе останется прежней. Нажмите на колесо, чтобы увидеть названия обеих сцен в панели.</li>
+      <li>Медленно поверните плоский регулятор <strong>Dial</strong>. Ползунок OBS сдвинется, и сцены начнут смешиваться. Чтобы отменить незавершённый переход, удерживайте <strong>Side</strong> и нажмите <strong>Dial</strong>.</li>
+      <li>Назначьте музыкальный вход в Fadester. Вращайте выступающую ручку <strong>Knob</strong>, чтобы отрегулировать громкость музыки. Нажмите её, чтобы проверить уровни и состояние отключения звука.</li>
+    </ul>
+
+    <h2>Регулируйте весь микс</h2>
+    <p>В настройках включите управление всеми входами микшера OBS, затем сохраните настройки и запустите управление. Удерживайте <strong>Side</strong> и вращайте <strong>Knob</strong> для регулировки уровня группы. В меню <strong>Tour</strong> можно плавно убрать весь звук или восстановить прежние уровни. Звук на отключённых входах не включается.</p>
+
+    <h2>Помощь</h2>
+    <p>Диагностические сообщения фонового процесса отображаются на английском. Если команда не срабатывает, проверьте активный пресет в TourBox Console и откройте журнал действий Fadester.</p>
+    <p><a href="../START-HERE.html" hreflang="en">Полное руководство и список команд (на английском)</a> · <a href="../START-HERE.html#recovery" hreflang="en">Устранение неполадок (на английском)</a></p>
+  </main>
+</body>
+</html>

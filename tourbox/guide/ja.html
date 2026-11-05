@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>クイックスタート · OBS Fadester for TourBox</title>
+  <link rel="stylesheet" href="quickstart.css">
+</head>
+<body>
+  <main>
+    <header>
+      <p>クイックスタート · Windows x64</p>
+      <h1>OBS Fadester for TourBox</h1>
+      <p>TourBox で OBS Studio のシーンを選び、手動でフェードし、音量を調整できます。</p>
+    </header>
+
+    <h2>TourBox を OBS に接続する</h2>
+    <ol>
+      <li>Windows 用 ZIP ファイル全体を展開し、展開先のフォルダーで <strong>Fadester for TourBox.exe</strong> を起動します。</li>
+      <li>OBS を開きます。TourBox Console のプリセットリスト横のインポートボタンから <code>presets/ja/OBS Fadester for TourBox.tb</code> を読み込みます。プリセットを OBS に関連付け、自動切り替え（<strong>Auto Switch</strong>）を有効にします。読み込むプリセットは、使用する言語のもの一つだけです。</li>
+      <li>OBS の <strong>ツール → WebSocket サーバー設定</strong>で、認証を有効にした状態でサーバーをオンにします。OBS Studio <strong>33.0.0 または 33.0.1</strong> で手動フェードを使うには、<strong>スタジオモード</strong>を有効にし、<strong>フェード（Fade）</strong>を選び、プレビューとプログラムの間にある白いスライダーを表示したままにします。</li>
+      <li>Fadester で OBS のシーンと入力を読み込みます。必要に応じて OBS に設定したポートとパスワードを入力します。TourBox Console で <strong>OBS Fadester for TourBox</strong> を選び、Fadester で設定を保存して操作を開始します。Fadester を開いたまま OBS を前面に戻します。</li>
+    </ol>
+    <p>Windows の表示言語が日本語以外の場合は、Fadester を閉じ、展開先のフォルダーで PowerShell を開いて <code>&amp; '.\Fadester for TourBox.exe' --language ja</code> を実行します。</p>
+
+    <h2>異なる二つのシーンで試す</h2>
+    <ul>
+      <li><strong>Scroll</strong> ホイールを回すと、プログラムはそのままでプレビューのシーンだけが変わります。押すと両方のシーン名がパネルに表示されます。</li>
+      <li>平たい <strong>Dial</strong> をゆっくり回すと、OBS のスライダーが動いて二つのシーンが混ざります。途中で取り消すには、<strong>Side</strong> を押したまま <strong>Dial</strong> を押します。</li>
+      <li>Fadester で音楽に使う入力を割り当てます。突き出た <strong>Knob</strong> を回すと音量を調整できます。押すと音量とミュートの状態を確認できます。</li>
+    </ul>
+
+    <h2>ミックス全体を調整する</h2>
+    <p>セットアップ画面で OBS ミキサーの全入力をまとめて操作する設定を有効にし、設定を保存して操作を開始します。<strong>Side</strong> を押したまま <strong>Knob</strong> を回すとグループ全体の音量が変わります。<strong>Tour</strong> メニューから、ミックス全体を無音までフェードアウトしたり、前の音量に戻したりできます。ミュート済みの入力はそのままです。</p>
+
+    <h2>困ったときは</h2>
+    <p>バックグラウンド処理の診断メッセージは英語で表示されます。操作が反応しない場合は、TourBox Console の現在のプリセットと Fadester の操作履歴を確認してください。</p>
+    <p><a href="../START-HERE.html" hreflang="en">詳しいガイドと操作一覧（英語）</a> · <a href="../START-HERE.html#recovery" hreflang="en">トラブルシューティング（英語）</a></p>
+  </main>
+</body>
+</html>

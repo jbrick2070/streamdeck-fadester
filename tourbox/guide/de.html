@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Schnellstart · OBS Fadester for TourBox</title>
+  <link rel="stylesheet" href="quickstart.css">
+</head>
+<body>
+  <main>
+    <header>
+      <p>Schnellstart · Windows x64</p>
+      <h1>OBS Fadester for TourBox</h1>
+      <p>Wählen Sie Szenen vor, blenden Sie manuell über und regeln Sie den Ton in OBS Studio mit Ihrer TourBox.</p>
+    </header>
+
+    <h2>TourBox mit OBS verbinden</h2>
+    <ol>
+      <li>Entpacken Sie das gesamte Windows-ZIP und starten Sie <strong>Fadester for TourBox.exe</strong> im entpackten Ordner.</li>
+      <li>Öffnen Sie OBS. Importieren Sie in TourBox Console über die Schaltfläche neben der Preset-Liste <code>presets/de/OBS Fadester for TourBox.tb</code>. Verknüpfen Sie das Preset mit OBS und aktivieren Sie den automatischen Wechsel (<strong>Auto Switch</strong>). Importieren Sie nur eine Sprachversion.</li>
+      <li>Öffnen Sie in OBS <strong>Werkzeuge → WebSocket-Servereinstellungen</strong> und aktivieren Sie den Server mit Authentifizierung. Für die manuelle Überblendung in OBS Studio <strong>33.0.0 oder 33.0.1</strong> aktivieren Sie den <strong>Studiomodus</strong>, wählen <strong>Überblenden (Fade)</strong> und lassen den weißen Schieberegler zwischen Vorschau und Programm sichtbar.</li>
+      <li>Lesen Sie in Fadester die Szenen und Eingänge aus OBS ein. Geben Sie bei Bedarf den in OBS eingestellten Port und das Passwort ein. Wählen Sie <strong>OBS Fadester for TourBox</strong> in TourBox Console, speichern und starten Sie die Steuerung in Fadester und wechseln Sie zurück zu OBS. Lassen Sie Fadester geöffnet.</li>
+    </ol>
+    <p>Wenn Windows eine andere Anzeigesprache verwendet, schließen Sie Fadester und führen Sie im entpackten Ordner in PowerShell <code>&amp; '.\Fadester for TourBox.exe' --language de</code> aus.</p>
+
+    <h2>Mit zwei unterschiedlichen Szenen üben</h2>
+    <ul>
+      <li>Drehen Sie das <strong>Scroll</strong>-Rad, um die Vorschau zu wechseln. Das Programm bleibt unverändert. Ein Druck zeigt beide Szenennamen im Bedienfenster an.</li>
+      <li>Drehen Sie das flache <strong>Dial</strong> langsam, um den OBS-Schieberegler zu bewegen und die Szenen zu mischen. Zum Abbrechen einer laufenden Überblendung halten Sie <strong>Side</strong> gedrückt und drücken das <strong>Dial</strong>.</li>
+      <li>Weisen Sie in Fadester einen Musikeingang zu. Drehen Sie den erhöhten <strong>Knob</strong>, um dessen Lautstärke zu regeln. Drücken Sie ihn, um Pegel und Stummschaltung abzulesen.</li>
+    </ul>
+
+    <h2>Gesamte Mischung regeln</h2>
+    <p>Aktivieren Sie in der Einrichtung die Steuerung aller OBS-Mixereingänge und speichern und starten Sie die Steuerung. Halten Sie <strong>Side</strong> gedrückt und drehen Sie den <strong>Knob</strong>, um den Gruppenpegel zu ändern. Im <strong>Tour</strong>-Menü können Sie die Mischung bis zur Stille ausblenden und die vorherigen Pegel wiederherstellen. Stummgeschaltete Eingänge bleiben stumm.</p>
+
+    <h2>Hilfe</h2>
+    <p>Diagnosemeldungen des Hintergrunddienstes erscheinen auf Englisch. Wenn eine Steuerung nicht reagiert, prüfen Sie das aktive Preset in TourBox Console und öffnen Sie das Aktivitätsprotokoll in Fadester.</p>
+    <p><a href="../START-HERE.html" hreflang="en">Vollständige Anleitung und Tastenbelegung (Englisch)</a> · <a href="../START-HERE.html#recovery" hreflang="en">Fehlerbehebung (Englisch)</a></p>
+  </main>
+</body>
+</html>

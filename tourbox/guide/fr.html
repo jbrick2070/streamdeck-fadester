@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prise en main · OBS Fadester for TourBox</title>
+  <link rel="stylesheet" href="quickstart.css">
+</head>
+<body>
+  <main>
+    <header>
+      <p>Prise en main · Windows x64</p>
+      <h1>OBS Fadester for TourBox</h1>
+      <p>Préparez les scènes, réalisez des fondus manuels et réglez le son d’OBS Studio avec votre TourBox.</p>
+    </header>
+
+    <h2>Relier TourBox à OBS</h2>
+    <ol>
+      <li>Décompressez toute l’archive ZIP Windows, puis lancez <strong>Fadester for TourBox.exe</strong> depuis le dossier extrait.</li>
+      <li>Ouvrez OBS. Dans TourBox Console, utilisez <strong>Import</strong> à côté de <strong>Preset List</strong> pour importer <code>presets/fr/OBS Fadester for TourBox.tb</code>. Associez le préréglage à OBS et activez <strong>Auto Switch</strong>. Importez une seule version du préréglage.</li>
+      <li>Dans OBS, ouvrez <strong>Outils → Paramètres du serveur WebSocket</strong> et activez le serveur avec l’authentification. Pour utiliser le fondu manuel dans OBS Studio <strong>33.0.0 ou 33.0.1</strong>, activez le <strong>Mode studio</strong>, sélectionnez la transition <strong>Fondu (Fade)</strong> et laissez visible le curseur blanc entre Aperçu et Programme.</li>
+      <li>Dans Fadester, cliquez sur <strong>Lire les scènes et entrées d’OBS</strong>. Saisissez le port et le mot de passe d’OBS si nécessaire. Pour essayer le réglage du volume, choisissez l’entrée musicale dans <strong>Affectations</strong>. Cliquez sur <strong>Enregistrer et démarrer</strong>, sélectionnez <strong>OBS Fadester for TourBox</strong> dans TourBox Console et revenez dans OBS. Gardez Fadester ouvert.</li>
+    </ol>
+    <p>Si Windows est dans une autre langue, fermez Fadester et relancez-le depuis PowerShell dans le dossier extrait avec <code>&amp; '.\Fadester for TourBox.exe' --language fr</code>.</p>
+
+    <h2>Essayer avec deux scènes distinctes</h2>
+    <ul>
+      <li>Tournez la molette <strong>Scroll</strong> pour changer la scène dans Aperçu sans modifier Programme. Appuyez dessus pour afficher les noms des deux scènes dans le panneau.</li>
+      <li>Tournez doucement le <strong>Dial</strong> plat pour déplacer le curseur d’OBS et fondre les scènes. Pour annuler un fondu en cours, maintenez <strong>Side</strong> et appuyez sur <strong>Dial</strong>.</li>
+      <li>Tournez le <strong>Knob</strong> surélevé pour régler le volume de l’entrée musicale choisie. Appuyez dessus pour vérifier les niveaux et l’état de sourdine.</li>
+    </ul>
+
+    <h2>Régler tout le mixage</h2>
+    <p>Si les commandes sont actives, cliquez sur <strong>Arrêter les commandes</strong>. Dans <strong>Configuration</strong>, activez <strong>Piloter toutes les entrées du mixeur OBS</strong>, puis cliquez sur <strong>Enregistrer et démarrer</strong>. Maintenez <strong>Side</strong> et tournez <strong>Knob</strong> pour régler le groupe. Le menu <strong>Tour</strong> permet de baisser le mixage jusqu’au silence et de rétablir les niveaux précédents. Les entrées en sourdine le restent.</p>
+
+    <h2>Aide</h2>
+    <p>Les diagnostics du pont Fadester sont en anglais. Si une commande ne répond pas, vérifiez le préréglage actif dans TourBox Console et consultez l’onglet <strong>Activité</strong> de Fadester.</p>
+    <p><a href="../START-HERE.html" hreflang="en">Guide complet et liste des commandes (en anglais)</a> · <a href="../START-HERE.html#recovery" hreflang="en">Dépannage (en anglais)</a></p>
+  </main>
+</body>
+</html>

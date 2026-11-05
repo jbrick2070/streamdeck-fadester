@@ -2,12 +2,14 @@
 
 Use a full-size TourBox to operate OBS Studio on Windows. The Scroll wheel cues the next scene, the flat Dial drives OBS’s native Studio Mode crossfader, and the raised Knob rides the music bed. Press **Tour** for media, overlays, transition settings and capture tools.
 
-Open **START-HERE.html** in the extracted package for an illustrated control layout, a first-minute rehearsal, the complete preset reference and recovery steps. The panel’s **Quick guide** button opens the same offline guide. Its control tables are generated from the map shipped with this preset.
+Open **START-HERE.html** in the extracted package for an illustrated control layout, a first-minute rehearsal, the complete preset reference and recovery steps. Its control tables are generated from the map shipped with this preset.
+
+The panel, native preset labels and quick starts are available in English, German, Spanish, French, Italian, Japanese, Korean, Russian, Simplified Chinese and Traditional Chinese. The panel follows the Windows display language. To choose a language explicitly, pass `--language` and the locale code to **Fadester for TourBox.exe**, for example `--language fr`. The panel’s **Quick guide** button opens the matching offline guide. The full operator reference and bridge diagnostic messages are in English.
 
 ## Connect the desk
 
 1. Extract the whole Windows x64 ZIP into a folder you want to keep. Run **Fadester for TourBox.exe** from that folder.
-2. Open OBS. In TourBox Console, use **Import** beside **Preset List** to add **OBS Fadester for TourBox.tb** from the presets folder. Enable **Auto Switch** and link **OBS Fadester for TourBox** to the running OBS application. For later updates, select this existing preset and use its own menu’s **Import** to replace its contents.
+2. Open OBS. In TourBox Console, use **Import** beside **Preset List** to add **OBS Fadester for TourBox.tb**. The panel’s **Open preset folder** button opens the matching language folder. Import one language only. Enable **Auto Switch** and link **OBS Fadester for TourBox** to the running OBS application. To change languages or update, select this existing preset and use its own menu’s **Import** to replace its contents.
 3. In OBS, enable **Tools → WebSocket Server Settings** with authentication. Use **Studio Mode**, select **Fade**, and keep the main OBS window and its white T-bar visible. The manual fader targets OBS Studio **33.0.0 and 33.0.1**.
 4. In the Fadester panel, click **Read scenes and inputs from OBS**. If your server uses a different port or the saved password is unavailable, enter the port and password from OBS. A password entered in the panel lasts for that session.
 5. Select **OBS Fadester for TourBox**, click **Save & start controls**, and bring OBS to the front. Keep the Fadester panel running.

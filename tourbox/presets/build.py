@@ -2,10 +2,12 @@
 
 import argparse
 import base64
+from copy import deepcopy
 import gzip
 import io
 import json
 from pathlib import Path
+import re
 import struct
 import xml.etree.ElementTree as ET
 
@@ -341,10 +343,43 @@ def check(preset, data):
             "Expected hidden General HUD with unique assigned controls")
 
 
+def localized_presets(presets, translations):
+    master = presets["master"]
+    actions = set(ACTION_KEYS.values()) | {"native.tourMenu"}
+    require(isinstance(translations, dict) and translations and "en" not in translations,
+            "Expected translations separate from the English master")
+    baseline, _, _ = decode(build(master))
+    for entry in baseline.findall("shortCuts/ShortDesc"):
+        entry.remove(entry.find("d"))
+    baseline_xml = ET.tostring(baseline)
+    for locale, labels in translations.items():
+        require(re.fullmatch(r"[a-z]{2}(?:-[A-Z]{2})?", locale), f"Invalid locale: {locale}")
+        require(isinstance(labels, dict) and labels.keys() == actions,
+                f"{locale}: translate every action ID exactly once")
+        require(all(isinstance(label, str) and label.strip() and not re.search(r"[\r\n]", label)
+                    for label in labels.values()), f"{locale}: labels must be nonempty single lines")
+        localized = deepcopy(presets)
+        preset = localized["master"]
+        for binding in preset["bindings"] + preset["menuBindings"]:
+            binding["label"] = labels[binding["action"]]
+        for binding in preset["nativeBindings"]:
+            binding["label"] = labels["native.tourMenu"]
+        check_master(localized)
+        data = build(preset)
+        check(preset, data)
+        translated, _, _ = decode(data)
+        for entry in translated.findall("shortCuts/ShortDesc"):
+            entry.remove(entry.find("d"))
+        require(baseline_xml == ET.tostring(translated),
+                f"{locale}: translations must only change shortcut labels")
+        yield locale, localized, data
+
+
 def main():
     cli = argparse.ArgumentParser(description=__doc__)
-    cli.add_argument("--check", action="store_true", help="validate shipped presets without writing")
+    cli.add_argument("--check", action="store_true", help="validate the English preset without rewriting it")
     cli.add_argument("--reference", type=Path, help="also verify an existing OBS Scene Test.tb (Ctrl+Shift+F9/F10)")
+    cli.add_argument("--localized-out", type=Path, help="write translated presets and maps into locale subfolders")
     args = cli.parse_args()
     if args.reference:
         _, records, labels = decode(args.reference.read_bytes())
@@ -370,6 +405,16 @@ def main():
             out.write_bytes(data)
         print(f"{out.name}: {len(preset['bindings'])} shortcuts, {len(preset['nativeBindings'])} native controls, "
               f"{len(menu_keys(preset))} menu items, {len(hud_slots(preset))} HUD rows")
+    translations = json.loads((HERE / "locales.json").read_text(encoding="utf-8"))
+    for locale, localized, data in localized_presets(presets, translations):
+        if args.localized_out:
+            folder = args.localized_out / locale
+            folder.mkdir(parents=True, exist_ok=True)
+            (folder / localized["master"]["file"]).write_bytes(data)
+            (folder / "map.json").write_text(
+                json.dumps({"version": 1, "presets": localized}, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8")
+        print(f"{locale}: all shortcut labels verified against the master")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>快速入門 · OBS Fadester for TourBox</title>
+  <link rel="stylesheet" href="quickstart.css">
+</head>
+<body>
+  <main>
+    <header>
+      <p>快速入門 · Windows x64</p>
+      <h1>OBS Fadester for TourBox</h1>
+      <p>使用 TourBox 預選 OBS Studio 場景、手動淡入淡出並調整音量。</p>
+    </header>
+
+    <h2>連接 TourBox 與 OBS</h2>
+    <ol>
+      <li>將 Windows ZIP 壓縮檔完整解壓縮，再從解壓縮後的資料夾執行 <strong>Fadester for TourBox.exe</strong>。</li>
+      <li>開啟 OBS。在 TourBox Console 中，使用預設清單旁的匯入按鈕載入 <code>presets/zh-TW/OBS Fadester for TourBox.tb</code>。將預設連結至 OBS，並啟用自動切換（<strong>Auto Switch</strong>）。只需匯入所用語言的版本。</li>
+      <li>在 OBS 開啟<strong>工具 → WebSocket 伺服器設定</strong>，啟用伺服器並開啟驗證。若要在 OBS Studio <strong>33.0.0 或 33.0.1</strong> 使用手動淡入淡出，請開啟<strong>工作室模式</strong>、選擇<strong>淡入淡出（Fade）</strong>轉場，並讓預覽與節目畫面之間的白色推桿保持可見。</li>
+      <li>在 Fadester 讀取 OBS 的場景和輸入來源。視需要輸入 OBS 的連接埠與密碼。在 TourBox Console 選擇 <strong>OBS Fadester for TourBox</strong>，接著在 Fadester 儲存設定並啟動控制。保持 Fadester 開啟，再切回 OBS。</li>
+    </ol>
+    <p>如果 Windows 使用其他顯示語言，請關閉 Fadester，然後在解壓縮後的資料夾中開啟 PowerShell，執行 <code>&amp; '.\Fadester for TourBox.exe' --language zh-TW</code>。</p>
+
+    <h2>用兩個不同的場景練習</h2>
+    <ul>
+      <li>轉動 <strong>Scroll</strong> 滾輪可更換預覽場景，節目輸出保持不變。按下滾輪可在面板中查看兩個場景的名稱。</li>
+      <li>緩慢轉動扁平的 <strong>Dial</strong> 轉盤，OBS 推桿會移動並混合兩個場景。要取消進行中的轉場，請按住 <strong>Side</strong> 再按下 <strong>Dial</strong>。</li>
+      <li>在 Fadester 指定音樂輸入來源。轉動凸起的 <strong>Knob</strong> 旋鈕可調整音樂音量，按下可查看音量及靜音狀態。</li>
+    </ul>
+
+    <h2>調整整體混音</h2>
+    <p>在設定中啟用 OBS 混音器的所有輸入控制，然後儲存並啟動控制。按住 <strong>Side</strong> 並轉動 <strong>Knob</strong> 可調整群組音量。透過 <strong>Tour</strong> 選單可以將整體混音淡出至靜音，或恢復原有音量。已靜音的輸入來源會保持靜音。</p>
+
+    <h2>取得協助</h2>
+    <p>背景程序的診斷訊息以英文顯示。若控制沒有回應，請確認 TourBox Console 目前啟用的預設，並查看 Fadester 的活動記錄。</p>
+    <p><a href="../START-HERE.html" hreflang="en">完整指南與控制項目（英文）</a> · <a href="../START-HERE.html#recovery" hreflang="en">疑難排解（英文）</a></p>
+  </main>
+</body>
+</html>

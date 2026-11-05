@@ -2,6 +2,13 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const map = JSON.parse(fs.readFileSync(path.join(__dirname, 'presets', 'map.json'), 'utf8'));
+const locales = JSON.parse(fs.readFileSync(path.join(__dirname, 'presets', 'locales.json'), 'utf8'));
+const languageNames = {
+  de: 'Deutsch', es: 'Español', fr: 'Français', it: 'Italiano', ja: '日本語', ko: '한국어',
+  ru: 'Русский', 'zh-CN': '简体中文', 'zh-TW': '繁體中文',
+};
+const languageLinks = Object.keys(locales).sort().map(locale =>
+  `<a href="guide/${locale}.html" hreflang="${locale}" lang="${locale}">${languageNames[locale] || locale}</a>`).join(' ');
 const escapeHtml = value => String(value).replace(/[&<>"']/g, char => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
 })[char]);
@@ -152,6 +159,7 @@ const page = `<!doctype html>
 <header><p class="eyebrow">Operator guide <span>/</span> Windows x64</p><h1>OBS Fadester for TourBox</h1>
 <p>Cue, mix and take scenes with one preset. Open Tour for media, overlays, transition settings and capture tools.</p></header>
 <nav aria-label="Guide sections"><a href="#surface">Desk layout</a><a href="#setup">First minute</a><a href="#master">All controls</a><a href="#recovery">At the desk</a></nav>
+<nav aria-label="Quick starts in other languages">${languageLinks}</nav>
 <section class="sheet" id="surface" aria-labelledby="surface-heading"><p class="eyebrow">Orientation <span>/</span> 01</p>
 <h2 id="surface-heading">Find the controls by touch</h2>
 <div class="surface"><figure>${surfaceDiagram()}<figcaption>Full-size TourBox, top view. The small Tour button sits between the flat Dial and the raised Knob.</figcaption></figure>

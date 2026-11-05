@@ -4,10 +4,10 @@ Title: OBS Fadester for TourBox
 Application: OBS Studio
 Platform: Windows x64
 Creator: Jeffrey Brick
-Language: English
+Package languages: English, German, Spanish, French, Italian, Japanese, Korean, Russian, Simplified Chinese, Traditional Chinese
 Preset file: OBS Fadester for TourBox.tb
 Artwork: artwork/master-cover.png
-The illustrated guide and eight operator category icons are included in the companion ZIP. Console renders the native shortcut menu.
+The gallery attachment is the English preset. The Windows companion ZIP includes all ten preset languages, matching panel translations and first-run guides. Select one preset when importing into TourBox Console. The full illustrated operator guide and bridge diagnostics are in English.
 
 One-sentence introduction (under 200 characters):
 Cue scenes, ride audio and turn the flat Dial for an OBS Studio dissolve. One Tour menu adds media, overlays and capture tools. Requires the Fadester for TourBox Windows companion.

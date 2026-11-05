@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>快速入门 · OBS Fadester for TourBox</title>
+  <link rel="stylesheet" href="quickstart.css">
+</head>
+<body>
+  <main>
+    <header>
+      <p>快速入门 · Windows x64</p>
+      <h1>OBS Fadester for TourBox</h1>
+      <p>用 TourBox 预选 OBS Studio 场景、手动淡入淡出并调节音量。</p>
+    </header>
+
+    <h2>连接 TourBox 和 OBS</h2>
+    <ol>
+      <li>完整解压 Windows ZIP 压缩包，然后在解压后的文件夹中运行 <strong>Fadester for TourBox.exe</strong>。</li>
+      <li>打开 OBS。在 TourBox Console 中，使用预设列表旁的<strong>导入（Import）</strong>按钮导入 <code>presets/zh-CN/OBS Fadester for TourBox.tb</code>。将预设关联到 OBS，并启用<strong>自动切换（Auto Switch）</strong>。只需导入一个语言版本的预设。</li>
+      <li>在 OBS 中打开<strong>工具 → WebSocket 服务器设置</strong>，启用服务器和身份验证。要在 OBS Studio <strong>33.0.0 或 33.0.1</strong> 中使用手动推子，请进入<strong>工作室模式（Studio Mode）</strong>，选择<strong>淡入淡出（Fade）</strong>转场，并让预览和输出画面之间的白色推子保持可见。</li>
+      <li>在 Fadester 中点击<strong>从 OBS 读取场景和输入</strong>。如有需要，输入 OBS 的端口和密码。要试用音量调节，请在<strong>分配</strong>中选择音乐输入源。点击<strong>保存并启动控制</strong>，在 TourBox Console 中选择 <strong>OBS Fadester for TourBox</strong>，再将 OBS 切回前台。保持 Fadester 运行。</li>
+    </ol>
+    <p>如果 Windows 的显示语言不是简体中文，请先关闭 Fadester，再从解压后的文件夹中打开 PowerShell，运行 <code>&amp; '.\Fadester for TourBox.exe' --language zh-CN</code>。</p>
+
+    <h2>用两个不同的场景试一试</h2>
+    <ul>
+      <li>转动 <strong>Scroll</strong> 滚轮可更换预览场景，当前输出画面保持不变。按下滚轮可在面板中查看两个场景的名称。</li>
+      <li>缓慢转动扁平的 <strong>Dial</strong> 转盘可移动 OBS 推子，在两个场景之间手动淡入淡出。按住 <strong>Side</strong> 再按下 <strong>Dial</strong>，即可取消进行中的转场。</li>
+      <li>转动凸起的 <strong>Knob</strong> 旋钮可调节所选音乐输入源的音量，按下可查看音量和静音状态。</li>
+    </ul>
+
+    <h2>调节整个混音</h2>
+    <p>如果控制已经启动，请先点击<strong>停止控制</strong>。在<strong>设置</strong>中勾选<strong>启用 OBS 混音器全部输入控制</strong>，然后点击<strong>保存并启动控制</strong>。按住 <strong>Side</strong> 并转动 <strong>Knob</strong> 可整体调节音量。打开 <strong>Tour</strong> 菜单可将整个混音淡出至静音，也可以恢复之前的音量。已静音的输入源仍保持静音。</p>
+
+    <h2>帮助</h2>
+    <p>Fadester 桥接程序的诊断信息使用英语。如果控件没有响应，请检查 TourBox Console 当前启用的预设，并查看 Fadester 的<strong>活动</strong>选项卡。</p>
+    <p><a href="../START-HERE.html" hreflang="en">完整指南和控件参考（英语）</a> · <a href="../START-HERE.html#recovery" hreflang="en">故障排查（英语）</a></p>
+  </main>
+</body>
+</html>

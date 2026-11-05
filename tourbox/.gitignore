@@ -1,0 +1,7 @@
+dist/
+bridge/bin/
+bridge/obj/
+tests/bin/
+tests/obj/
+**/bin/
+**/obj/

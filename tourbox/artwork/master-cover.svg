@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
+<title id="title">OBS Fadester for TourBox</title>
+<desc id="desc">One native TourBox preset for scenes, audio, media and production tools. An amber Program frame and mint Preview frame sit above a manual fader. Four labeled pictograms identify scene, audio, media and production controls.</desc>
+<rect x="0" y="0" width="1200" height="675" rx="0" fill="#112821" stroke="none" stroke-width="1"/>
+<path d="M60 48L60 79" fill="none" stroke="#FFBC74" stroke-width="3"/>
+<path d="M69 48L69 79" fill="none" stroke="#8BE0C4" stroke-width="3"/>
+<path d="M78 48L78 79" fill="none" stroke="#F8F4E5" stroke-width="3"/>
+<rect x="56" y="64" width="8" height="5" rx="0" fill="#FFBC74" stroke="none" stroke-width="1"/>
+<rect x="65" y="55" width="8" height="5" rx="0" fill="#8BE0C4" stroke="none" stroke-width="1"/>
+<rect x="74" y="51" width="8" height="5" rx="0" fill="#F8F4E5" stroke="none" stroke-width="1"/>
+<text x="96" y="73" fill="#F8F4E5" font-family="Arial,Helvetica,sans-serif" font-size="29" font-weight="bold">FADESTER</text>
+<text x="913" y="69" fill="#C0D1C6" font-family="Courier New,Courier,monospace" font-size="18" font-weight="bold">ONE NATIVE PRESET</text>
+<path d="M56 99L1144 99" fill="none" stroke="#46665C" stroke-width="1"/>
+<text x="58" y="186" fill="#FFBC74" font-family="Courier New,Courier,monospace" font-size="18" font-weight="bold">LIVE PRODUCTION</text>
+<text x="55" y="270" fill="#F8F4E5" font-family="Arial,Helvetica,sans-serif" font-size="63" font-weight="bold">OBS Fadester</text>
+<text x="55" y="340" fill="#F8F4E5" font-family="Arial,Helvetica,sans-serif" font-size="63" font-weight="bold">for TourBox</text>
+<text x="60" y="397" fill="#C0D1C6" font-family="Arial,Helvetica,sans-serif" font-size="28" font-weight="normal">Cue scenes. Ride the mix.</text>
+<text x="60" y="435" fill="#C0D1C6" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="normal">Turn, press, hold Side.</text>
+<rect x="550" y="149" width="594" height="383" rx="8" fill="#19372E" stroke="#46665C" stroke-width="1"/>
+<text x="582" y="195" fill="#FFBC74" font-family="Courier New,Courier,monospace" font-size="15" font-weight="bold">A  /  PROGRAM</text>
+<text x="868" y="195" fill="#8BE0C4" font-family="Courier New,Courier,monospace" font-size="15" font-weight="bold">B  /  PREVIEW</text>
+<rect x="582" y="216" width="246" height="150" rx="0" fill="#ECAD70" stroke="none" stroke-width="1"/>
+<rect x="868" y="216" width="246" height="150" rx="0" fill="#8CCBB2" stroke="none" stroke-width="1"/>
+<circle cx="756" cy="258" r="22" fill="#FCE9BA"/>
+<path d="M582 328l57-65 48 51 32-33 109 85H582z" fill="#8C5C49"/>
+<path d="M582 344l37-23 26 8 59-25 63 22 61-10v50H582z" fill="#59453A"/>
+<path d="M868 325c38-42 51-66 77-56s51 70 81 34 52-26 88-62v125H868z" fill="#477E71"/>
+<path d="M868 349c48-30 67-57 110-36s69 42 136-9v62H868z" fill="#326458"/>
+<path d="M582 405L1114 405" fill="none" stroke="#46665C" stroke-width="1"/>
+<text x="582" y="436" fill="#C0D1C6" font-family="Courier New,Courier,monospace" font-size="14" font-weight="bold">MANUAL DISSOLVE</text>
+<path d="M590.0 452L590.0 465" fill="none" stroke="#C0D1C6" stroke-width="1"/>
+<path d="M611.5 452L611.5 459" fill="none" stroke="#C0D1C6" stroke-width="1"/>
+<path d="M633.0 452L633.0 459" fill="none" stroke="#C0D1C6" stroke-width="1"/>
+<path d="M654.5 452L654.5 459" fill="none" stroke="#C0D1C6" stroke-width="1"/>
+<path d="M676.0 452L676.0 465" fill="none" stroke="#C0D1C6" stroke-width="1"/>
+<path d="M697.5 452L697.5 459" fill="none" stroke="#C0D1C6" stroke-width="1"/>
+<path d="M719.0 452L719.0 459" fill="none" stroke="#C0D1C6" stroke-width="1"/>
+<path d="M740.5 452L740.5 459" fill="none" stroke="#C0D1C6" stroke-width="1"/>
+<path d="M762.0 452L762.0 465" fill="none" stroke="#C0D1C6" stroke-width="1"/>
+<path d="M783.5 452L783.5 459" fill="none" stroke="#C0D1C6" stroke-width="1"/>
+<path d="M805.0 452L805.0 459" fill="none" stroke="#C0D1C6" stroke-width="1"/>
+<path d="M826.5 452L826.5 459" fill="none" stroke="#C0D1C6" stroke-width="1"/>
+<path d="M848.0 452L848.0 465" fill="none" stroke="#C0D1C6" stroke-width="1"/>
+<path d="M869.5 452L869.5 459" fill="none" stroke="#C0D1C6" stroke-width="1"/>
+<path d="M891.0 452L891.0 459" fill="none" stroke="#C0D1C6" stroke-width="1"/>
+<path d="M912.5 452L912.5 459" fill="none" stroke="#C0D1C6" stroke-width="1"/>
+<path d="M934.0 452L934.0 465" fill="none" stroke="#C0D1C6" stroke-width="1"/>
+<path d="M955.5 452L955.5 459" fill="none" stroke="#C0D1C6" stroke-width="1"/>
+<path d="M977.0 452L977.0 459" fill="none" stroke="#C0D1C6" stroke-width="1"/>
+<path d="M998.5 452L998.5 459" fill="none" stroke="#C0D1C6" stroke-width="1"/>
+<path d="M1020.0 452L1020.0 465" fill="none" stroke="#C0D1C6" stroke-width="1"/>
+<path d="M1041.5 452L1041.5 459" fill="none" stroke="#C0D1C6" stroke-width="1"/>
+<path d="M1063.0 452L1063.0 459" fill="none" stroke="#C0D1C6" stroke-width="1"/>
+<path d="M1084.5 452L1084.5 459" fill="none" stroke="#C0D1C6" stroke-width="1"/>
+<path d="M1106.0 452L1106.0 465" fill="none" stroke="#C0D1C6" stroke-width="1"/>
+<rect x="584" y="478" width="528" height="9" rx="4.5" fill="#0D201B" stroke="#46665C" stroke-width="1"/>
+<rect x="788" y="465" width="63" height="34" rx="5" fill="#FFBC74" stroke="#F2D7AD" stroke-width="1"/>
+<path d="M817 469L817 495" fill="none" stroke="#6D4E35" stroke-width="2"/>
+<path d="M822 469L822 495" fill="none" stroke="#6D4E35" stroke-width="2"/>
+<path d="M56 572L1144 572" fill="none" stroke="#46665C" stroke-width="1"/>
+<text x="58" y="615" fill="#F8F4E5" font-family="Arial,Helvetica,sans-serif" font-size="30" font-weight="bold">Scenes • Audio • Media • Production tools</text>
+<text x="58" y="648" fill="#C0D1C6" font-family="Courier New,Courier,monospace" font-size="16" font-weight="normal">Native Tour menu  /  Windows companion</text>
+<g transform="translate(60 472) scale(1.45)" fill="none" stroke="#FFBC74" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><rect x="2" y="4" width="14" height="11" rx="1.5"/><path d="M7 18h11a2 2 0 0 0 2-2V9M10 21h8M8 9l3 2-3 2z"/></g>
+<text x="60" y="529" fill="#C0D1C6" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="bold">Scenes</text>
+<g transform="translate(174 472) scale(1.45)" fill="none" stroke="#FFBC74" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M5 3v7m0 5v6m7-18v12m0 4v2m7-18v3m0 4v11"/><path d="M2.5 10h5v4h-5zM9.5 15h5v4h-5zM16.5 6h5v4h-5z"/></g>
+<text x="174" y="529" fill="#C0D1C6" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="bold">Audio</text>
+<g transform="translate(288 472) scale(1.45)" fill="none" stroke="#8BE0C4" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m8 8 6 4-6 4zm9 0v8"/></g>
+<text x="288" y="529" fill="#C0D1C6" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="bold">Media</text>
+<g transform="translate(402 472) scale(1.45)" fill="none" stroke="#8BE0C4" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M9 4H4v5m11-5h5v5M4 15v5h5m6 0h5v-5"/><circle cx="12" cy="12" r="4"/></g>
+<text x="402" y="529" fill="#C0D1C6" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="bold">Tools</text>
+</svg>

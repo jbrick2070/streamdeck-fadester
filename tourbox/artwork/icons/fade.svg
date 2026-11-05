@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+<title id="title">Studio fade</title>
+<desc id="desc">Fadester category icon for studio fade.</desc>
+<rect x="2" y="2" width="60" height="60" rx="13" fill="#112821" stroke="#46665C" stroke-width="2"/>
+<g transform="translate(11.5 11.5) scale(1.7)" fill="none" stroke="#FFBC74" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M3 16h18M5 13v6m14-6v6M9 4h6v4H9zM12 8v8"/><circle cx="12" cy="16" r="2"/></g>
+</svg>

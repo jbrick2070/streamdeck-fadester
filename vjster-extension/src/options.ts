@@ -12,7 +12,10 @@ async function show(): Promise<void> {
   const stored = await chrome.storage.local.get([PORT_KEY, ALL_SITES_KEY]);
   $<HTMLInputElement>("port").value = String(readPort(stored[PORT_KEY]));
   $<HTMLElement>("ext-id").textContent = chrome.runtime.id;
-  $<HTMLInputElement>("all-sites").checked = await chrome.permissions.contains({ origins: ["<all_urls>"] });
+  // The Chrome Web Store build is YouTube only: with no optional all-sites permission in the manifest, the option is not offered.
+  const offered = (chrome.runtime.getManifest().optional_host_permissions ?? []).includes("<all_urls>");
+  $<HTMLElement>("all-sites-row").hidden = !offered;
+  $<HTMLInputElement>("all-sites").checked = offered && (await chrome.permissions.contains({ origins: ["<all_urls>"] }));
 }
 
 /** Show a status line in Chrome's language (`_locales`, PLAN.md 8.5). */

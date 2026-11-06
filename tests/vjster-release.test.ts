@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { inflateRawSync } from "node:zlib";
 import { afterEach, describe, expect, it } from "vitest";
-import { ALSO_NEEDED, localesIn, neededFiles, packExtension, SOURCE_LOCALES } from "../scripts/vjster/pack-extension.js";
+import { ALSO_NEEDED, localesIn, neededFiles, packExtension, SOURCE_LOCALES, storeManifest } from "../scripts/vjster/pack-extension.js";
 import { REQUIRED } from "./vjster-languages.js";
 
 const dirs: string[] = [];
@@ -118,5 +118,38 @@ describe("the extension zip (step 6)", () => {
     expect(() => packExtension(build({ skip: "manifest.json" }))).toThrow(/no manifest\.json/);
     for (const version of ["one", "1.2.3.4.5", "x1.0", "1.0x", 1, undefined]) expect(() => packExtension(build({ version }))).toThrow(/version/);
     expect(packExtension(build({ version: "1.2.3.4" })).version).toBe("1.2.3.4");
+  });
+});
+
+describe("the Chrome Web Store zip", () => {
+  const store = (): Record<string, unknown> => JSON.parse(unzip(packExtension(build(), LOCALES, { store: true }).bytes).get("manifest.json") as string) as Record<string, unknown>;
+
+  it("is YouTube only: no all-sites permission, no scripting, and no key", () => {
+    const manifest = store();
+    expect(manifest.optional_host_permissions).toBeUndefined();
+    expect(manifest.permissions).toEqual(["storage", "alarms"]);
+    expect(manifest.host_permissions).toEqual(["*://*.youtube.com/*", "ws://127.0.0.1/*"]);
+    expect(manifest.key).toBeUndefined();
+    expect(JSON.stringify(manifest)).not.toContain("all_urls");
+  });
+
+  it("keeps everything else of the manifest, and the other files byte for byte", () => {
+    const { optional_host_permissions: _o, permissions: _p, ...kept } = MANIFEST;
+    const { permissions: _q, ...got } = store();
+    expect(got).toEqual({ ...kept, version: "0.1.0" });
+    const plain = unzip(packExtension(build()).bytes);
+    const stored = unzip(packExtension(build(), LOCALES, { store: true }).bytes);
+    for (const [name, body] of plain) if (name !== "manifest.json") expect(stored.get(name)).toBe(body);
+    expect([...stored.keys()].sort()).toEqual(EXPECTED);
+  });
+
+  it("does not change the zip to load unpacked, and the same build gives the same store bytes", () => {
+    expect(unzip(packExtension(build()).bytes).get("manifest.json")).toContain("optional_host_permissions");
+    expect(packExtension(build({ touch: 1_000_000_000 }), LOCALES, { store: true }).bytes).toEqual(packExtension(build({ reverse: true, touch: 1_700_000_000 }), LOCALES, { store: true }).bytes);
+  });
+
+  it("storeManifest leaves a manifest without those fields as it was", () => {
+    expect(storeManifest({ version: "1" })).toEqual({ version: "1" });
+    expect(storeManifest({ permissions: ["storage"] })).toEqual({ permissions: ["storage"] });
   });
 });

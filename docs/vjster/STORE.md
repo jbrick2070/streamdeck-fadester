@@ -25,7 +25,7 @@ The zip has no `key`: the store refuses one on a first upload and gives the exte
 
 **Name:** VJster
 
-**Short description** (the manifest's, in all 11 languages): the dashboard reads it from the zip.
+**Short description** (the manifest's, in all 12 languages): the dashboard reads it from the zip.
 
 **Detailed description:**
 
@@ -37,7 +37,7 @@ The zip has no `key`: the store refuses one on a first upload and gives the exte
 >
 > Made with the help of AI (Claude, by Anthropic); the code is open source (GPL-2.0-or-later).
 
-**Category:** Productivity. **Language:** English (the listing; the extension itself has 11).
+**Category:** Productivity. **Language:** English (the listing; the extension itself has 12).
 
 **Single purpose:** Let the VJster plugin on the user's Stream Deck or OpenDeck change the speed and quality of the YouTube video in a tab.
 

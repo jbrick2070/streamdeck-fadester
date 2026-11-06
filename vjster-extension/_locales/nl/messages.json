@@ -1,0 +1,60 @@
+{
+  "extDescription": {
+    "message": "Stream Deck-bediening van tempo en kwaliteit van de video in Chrome. Praat alleen met de VJster-acties op deze computer."
+  },
+  "htmlLang": {
+    "message": "nl"
+  },
+  "optionsTitle": {
+    "message": "VJster-opties"
+  },
+  "portLabel": {
+    "message": "Verbindingspoort"
+  },
+  "save": {
+    "message": "Opslaan"
+  },
+  "portNote": {
+    "message": "De poort waarop de VJster-acties op je Stream Deck luisteren, alleen op deze computer. Wijzig hem alleen als je hem daar hebt gewijzigd."
+  },
+  "idLabel": {
+    "message": "De id van deze extensie"
+  },
+  "idNote": {
+    "message": "Zodat alleen deze extensie verbinding kan maken: plak de id in de VJster-instellingen op je Stream Deck."
+  },
+  "allSites": {
+    "message": "Video's bedienen op elke site, niet alleen op YouTube"
+  },
+  "allSitesNote": {
+    "message": "Alleen het tempo: voor kwaliteit is de speler van YouTube nodig. Chrome vraagt toestemming om elke site te lezen en te wijzigen."
+  },
+  "statusBadPort": {
+    "message": "Gebruik een geheel getal van 1024 tot 65535; $DEFAULT$ is de standaardwaarde.",
+    "placeholders": {
+      "default": {
+        "content": "$1"
+      }
+    }
+  },
+  "statusSaved": {
+    "message": "Opgeslagen. VJster maakt nu verbinding met poort $PORT$.",
+    "placeholders": {
+      "port": {
+        "content": "$1"
+      }
+    }
+  },
+  "statusNotAllowed": {
+    "message": "Niet toegestaan: VJster blijft alleen op YouTube."
+  },
+  "statusAllSites": {
+    "message": "VJster bedient nu video's op elke site. Laad geopende tabbladen opnieuw om ze mee te nemen."
+  },
+  "statusYouTubeOnly": {
+    "message": "VJster werkt weer alleen op YouTube."
+  },
+  "statusYouTubeOnlyKept": {
+    "message": "VJster werkt weer alleen op YouTube; Chrome heeft de toestemming voor alle sites behouden, verwijder die op de detailpagina van de extensie."
+  }
+}

@@ -1,6 +1,6 @@
 # VJster: install
 
-On a TourBox you do not need the Stream Deck plugin: use Fadester for TourBox with the Chrome extension, and follow `tourbox/README.md`.
+On a TourBox you do not need the Stream Deck plugin: use Fadester for TourBox with the Chrome extension, and follow `tourbox/README.md`. The TourBox controls YouTube in Chrome only, not the OBS page.
 
 VJster has three parts. The Stream Deck plugin holds the keys and dials and serves the OBS page. The Chrome extension controls the video in a Chrome tab. The OBS page is a browser source for OBS. They talk over one local socket on this computer (port 48150 by default); nothing goes to the internet except what YouTube's own player loads. What VJster is and what each control does: [README.md](README.md).
 

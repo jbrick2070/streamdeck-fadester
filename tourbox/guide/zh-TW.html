@@ -1,4 +1,5 @@
 <!doctype html>
+<!-- SPDX-License-Identifier: GPL-2.0-or-later -->
 <html lang="zh-TW">
 <head>
   <meta charset="utf-8">
@@ -17,7 +18,7 @@
     <h2>連接 TourBox 與 OBS</h2>
     <ol>
       <li>將 Windows ZIP 壓縮檔完整解壓縮，再從解壓縮後的資料夾執行 <strong>Fadester for TourBox.exe</strong>。</li>
-      <li>開啟 OBS。在 TourBox Console 中，使用預設清單旁的匯入按鈕載入 <code>presets/zh-TW/OBS Fadester for TourBox.tb</code>。將預設連結至 OBS，並啟用自動切換（<strong>Auto Switch</strong>）。只需匯入所用語言的版本。</li>
+      <li>開啟 OBS。在 TourBox Console 中，使用預設清單旁的匯入按鈕載入 <code>presets/zh-TW/OBS Fadester for TourBox.tb</code>。將預設連結至 OBS，並啟用自動切換（<strong>Auto Switch</strong>）。只需匯入所用語言的版本。 請使用 Fadester 中的<strong>匯入到 TourBox Console</strong>按鈕；請勿按兩下 <code>.tb</code> 檔案。</li>
       <li>在 OBS 開啟<strong>工具 → WebSocket 伺服器設定</strong>，啟用伺服器並開啟驗證。若要在 OBS Studio <strong>33.0.0 或 33.0.1</strong> 使用手動淡入淡出，請開啟<strong>工作室模式</strong>、選擇<strong>淡入淡出（Fade）</strong>轉場，並讓預覽與節目畫面之間的白色推桿保持可見。</li>
       <li>在 Fadester 讀取 OBS 的場景和輸入來源。視需要輸入 OBS 的連接埠與密碼。在 TourBox Console 選擇 <strong>OBS Fadester for TourBox</strong>，接著在 Fadester 儲存設定並啟動控制。保持 Fadester 開啟，再切回 OBS。</li>
     </ol>
@@ -28,6 +29,7 @@
       <li>轉動 <strong>Scroll</strong> 滾輪可更換預覽場景，節目輸出保持不變。按下滾輪可在面板中查看兩個場景的名稱。</li>
       <li>緩慢轉動扁平的 <strong>Dial</strong> 轉盤，OBS 推桿會移動並混合兩個場景。要取消進行中的轉場，請按住 <strong>Side</strong> 再按下 <strong>Dial</strong>。</li>
       <li>在 Chrome 中播放 YouTube 影片（需要免費的 VJster 擴充功能）。轉動凸起的 <strong>Knob</strong> 旋鈕可改變速度，按住轉動可微調，按下可讀取影片狀態。</li>
+      <li>VJster 只能控制 Chrome 中的 YouTube，無法控制 OBS 中的 YouTube 瀏覽器來源。請用 Chrome 的視窗擷取在 OBS 中顯示影片。 請新增 Chrome 的應用程式音訊擷取以取得聲音。</li>
       <li>在 Fadester 指定音樂輸入來源。按住 <strong>Side</strong> 並轉動扁平的 <strong>Dial</strong> 可調整其音量。按住 <strong>Top</strong> 時，Knob、Scroll 和 Dial 控制 VJ 圖層（混合模式與不透明度）。</li>
     </ul>
 

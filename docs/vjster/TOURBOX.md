@@ -1,6 +1,12 @@
-# VJster from the TourBox: as built (2026-11-06)
+# VJster from the TourBox: as built
 
-The one VJster Chrome extension works from the Stream Deck, OpenDeck and the TourBox. The extension never changed for this: it connects to whatever listens on the VJster port on your own computer, and the TourBox companion now hosts that link itself.
+The one VJster Chrome extension works from the Stream Deck, OpenDeck and the TourBox. The extension never changed for this: it connects to whatever listens on the VJster port on your own computer, and the TourBox companion hosts that link itself.
+
+## YouTube must be in Chrome
+
+The TourBox controls YouTube in Chrome only. Nothing can reach a YouTube browser source in OBS from outside, and the OBS page that embeds a player is served by the Stream Deck plugin, not by this companion. To show the video in OBS, use a Window Capture of the Chrome window, plus an Application Audio Capture of Chrome for its sound.
+
+With several videos open, the extension chooses the one playing; among several playing, the active tab of the focused Chrome window, else the one that started last. Pause the others. The TourBox has no pin, because the extension pins only while Chrome is focused.
 
 ## What the companion does
 
@@ -12,7 +18,7 @@ The two VJ layers (`layer1.*`, `layer2.*` in `DeskActions.cs`) are OBS actions o
 
 ## The layout
 
-One preset, `OBS Fadester for TourBox`. Every original action keeps its Ctrl+Alt+Shift chord; the VJ actions use Ctrl+Shift+F1–F12 and Alt+Shift+F1–F6, which `tourbox/presets/build.py` now accepts (modifier subsets in Console's order).
+One preset, `OBS Fadester for TourBox`. Every original action keeps its Ctrl+Alt+Shift chord; the VJ actions use Ctrl+Shift+F1–F12 and Alt+Shift+F1–F3 and F5–F7, which `tourbox/presets/build.py` accepts (modifier subsets in Console's order). Alt+Shift+F4 is never used: with the companion stopped, Windows could read it as Alt+F4 and close the window in front.
 
 | Control | Does |
 |---|---|
@@ -20,7 +26,7 @@ One preset, `OBS Fadester for TourBox`. Every original action keeps its Ctrl+Alt
 | Knob press and turn | video speed, 0.05 |
 | Knob press | read the video (title, speed, quality) |
 | Side + Knob press | speed back to 1x |
-| Side + Dial turn | Music (moved here from the Knob) |
+| Side + Dial turn | Music |
 | Scroll press and turn | video quality down / up |
 | Side + D-pad Up | play or pause the video |
 | Top + Knob turn | Layer 1 blend mode previous / next |
@@ -34,7 +40,7 @@ Everything else is as before. Pin is not on the hardware: the extension pins onl
 
 - `FadesterTourBoxBridge --self-test` and `tourbox/tests/portable` (any OS): the gate and the parser case by case, a loopback connection with a stand-in extension (ClientWebSocket), and the layer actions against a fake OBS.
 - `tests/tourbox-vjster-link.test.ts`: the built bridge, the real extension logic (Router, LinkClient, Adapter over a fake player) and `dispatch <action>` on the bridge's stdin, which runs an action exactly as the hotkey would. Skipped when the bridge is not built.
-- Not yet checked on hardware (see `tourbox/REHEARSAL.md` steps 4 and 10): the Top holds against Top's own Cut on release, press-and-turn on the Knob, opacity and the blend modes in a real OBS.
+- Not yet checked on hardware (see `tourbox/REHEARSAL.md` steps 4, 7 and 11): the Top holds against Top's own Cut on release, press-and-turn on the Knob, opacity and the blend modes in a real OBS, and transport on an OBS Playlister source.
 
 ## What comes next
 

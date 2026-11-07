@@ -69,7 +69,7 @@ VJ_KEYS = {
     "Ctrl+Shift+F9": "vjster.quality.down", "Ctrl+Shift+F10": "vjster.quality.up", "Ctrl+Shift+F11": "vjster.playPause",
     "Ctrl+Shift+F12": "layer2.blend.previous", "Alt+Shift+F1": "layer2.blend.next",
     "Alt+Shift+F2": "layer1.blend.previous", "Alt+Shift+F3": "layer1.blend.next",
-    "Alt+Shift+F4": "vjster.quality.reset", "Alt+Shift+F5": "layer1.blend.reset", "Alt+Shift+F6": "layer2.blend.reset",
+    "Alt+Shift+F7": "vjster.quality.reset", "Alt+Shift+F5": "layer1.blend.reset", "Alt+Shift+F6": "layer2.blend.reset",
 }
 ALL_ACTIONS = set(ACTION_KEYS.values()) | set(VJ_KEYS.values())
 # slot:gesture:chord for the controls the VJ layout reassigned; a bare key means Ctrl+Alt+Shift as below.

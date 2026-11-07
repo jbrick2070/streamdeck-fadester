@@ -13,6 +13,18 @@ namespace Fadester.TourBox;
 
 internal sealed record KeyInput(string Action, int Generation, long Timestamp);
 
+/** Side + Dial is Music; a detent Console sends as the plain Dial while Side is held must not move Program. */
+internal static class KeyGuards
+{
+    public static readonly TimeSpan AfterMusicTurn = TimeSpan.FromMilliseconds(400);
+    public static bool IsMusicTurn(string action) => action is "music.up" or "music.down";
+    public static bool IsFaderTick(string action) => action is "fader.back" or "fader.forward" or "fader.fineBack" or "fader.fineForward";
+    /** Turn ticks drop sooner when late: a stale one would keep moving something after the hand stops. */
+    public static bool IsTurnTick(string action) => IsFaderTick(action) || action is "layer2.opacity.up" or "layer2.opacity.down"
+        or "layer1.blend.previous" or "layer1.blend.next" or "layer2.blend.previous" or "layer2.blend.next";
+    public static bool IsStrayFaderTick(string action, long lastMusicTurn, long at) => IsFaderTick(action) && lastMusicTurn != 0 && Stopwatch.GetElapsedTime(lastMusicTurn, at) < AfterMusicTurn;
+}
+
 internal sealed class VjsterDesk(VjsterLink link)
 {
     public static readonly HashSet<string> Actions = new(("vjster.speed.down vjster.speed.up vjster.speed.fineDown vjster.speed.fineUp vjster.speed.reset " +
@@ -107,16 +119,17 @@ internal sealed class VjsterHost : IAsyncDisposable
     async Task Bind(CancellationToken stop)
     {
         string? last = null;
+        void Once(string message) { if (message != last) { last = message; log(message); } }
         while (!stop.IsCancellationRequested)
         {
             try { await Link.StartAsync(); return; }
             catch (VjsterPortInUseException e)
             {
-                if (e.Message != last)
-                {
-                    last = e.Message;
-                    log($"VJster port {e.Port} is in use, probably by the VJster actions in your Stream Deck or OpenDeck software. Remove them from the deck, or choose another port here and on the extension's options page. Trying again every 30 s.");
-                }
+                Once($"VJster port {e.Port} is in use, probably by the VJster actions in your Stream Deck or OpenDeck software. Remove them from the deck, or choose another port here and on the extension's options page. Trying again every 30 s.");
+            }
+            catch (System.Net.Sockets.SocketException e)
+            {
+                Once($"The VJster port could not be opened ({e.SocketErrorCode}). Trying again every 30 s.");
             }
             try { await Task.Delay(PortRetry, stop); } catch (OperationCanceledException) { return; }
         }

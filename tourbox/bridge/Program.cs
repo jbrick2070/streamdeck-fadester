@@ -114,8 +114,10 @@ internal static class Program
         {
             await keys.Ready;
             Console.WriteLine(bindings.Count > 0 ? $"Listening for {bindings.Count} TourBox shortcuts. Type quit to stop." : "Mix-only companion: no controller shortcuts registered. Type quit to stop.");
-            // With the panel gone nothing can stop this process, and it would keep the shortcuts and block the next start.
-            if (Console.IsInputRedirected) _ = Task.Run(async () => { try { while (!stop.IsCancellationRequested && await Console.In.ReadLineAsync() is { } line) Command(line); if (!stop.IsCancellationRequested) { Console.WriteLine("The control panel closed: stopping."); stop.Cancel(); } } catch (IOException) { } });
+            // Started by the panel, stdin ending means the panel is gone: nothing else could stop this process, and it would
+            // keep the shortcuts and block the next start. A launch from a script with no input is not a panel going away.
+            bool panelOwned = Environment.GetEnvironmentVariable("FADESTER_PANEL") == "1";
+            if (Console.IsInputRedirected) _ = Task.Run(async () => { try { while (!stop.IsCancellationRequested && await Console.In.ReadLineAsync() is { } line) Command(line); if (panelOwned && !stop.IsCancellationRequested) { Console.WriteLine("The control panel closed: stopping."); stop.Cancel(); } } catch (IOException) { } });
             else _ = Task.Run(() => { try { while (!stop.IsCancellationRequested && Console.ReadLine() is { } line) Command(line); } catch (IOException) { } });
             string? lastError = null;
             while (!stop.IsCancellationRequested)
@@ -133,7 +135,7 @@ internal static class Program
                     try
                     {
                         using var wait = CancellationTokenSource.CreateLinkedTokenSource(stop.Token);
-                        long lastMusicTurn = 0;
+                        long lastHeldTurn = 0;
                         while (!stop.IsCancellationRequested && !obs.Disconnected.IsCompleted)
                         {
                             var readable = input.Reader.WaitToReadAsync(wait.Token).AsTask();
@@ -144,8 +146,8 @@ internal static class Program
                             if (!input.Reader.TryRead(out var ev) || ev.Generation != mine) continue;
                             if (stop.IsCancellationRequested) break;
                             if (Stopwatch.GetElapsedTime(ev.Timestamp) > TimeSpan.FromMilliseconds(KeyGuards.IsTurnTick(ev.Action) ? 180 : 1500)) { Console.WriteLine("Discarded stale input: " + ev.Action); continue; }
-                            if (KeyGuards.IsStrayFaderTick(ev.Action, lastMusicTurn, ev.Timestamp)) { Console.WriteLine("Ignored a T-bar tick right after a Music turn: was Side still held?"); continue; }
-                            if (KeyGuards.IsMusicTurn(ev.Action)) lastMusicTurn = ev.Timestamp;
+                            if (KeyGuards.IsStrayFaderTick(ev.Action, lastHeldTurn, ev.Timestamp)) { Console.WriteLine("Ignored a T-bar tick right after a held Dial turn: was the button still held?"); continue; }
+                            if (KeyGuards.IsHeldDialTurn(ev.Action)) lastHeldTurn = ev.Timestamp;
                             if (ev.Action == "bridge.reconnect") { Console.WriteLine("Reconnecting."); break; }
                             try { Console.WriteLine(await desk.Dispatch(ev.Action)); }
                             catch (Exception e) { Console.WriteLine("Action " + ev.Action + ": " + e.Message); }

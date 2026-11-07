@@ -60,8 +60,11 @@ ACTION_KEYS = dict(zip(
      "recording.status bridge.reconnect soundcheck mix.fadeOut mix.restore "
      "music.fineDown music.fineUp fader.fineBack fader.fineForward fader.status preview.status "
      "mix.down mix.up mix.status").split(), strict=True))
-# Full chords for the VJ actions: Ctrl+Shift and Alt+Shift with F-keys, which no
-# app on a show PC uses and which Console encodes as modifier bits (mods 10 and 6).
+# Full chords for the VJ actions: Ctrl+Shift and Alt+Shift with F-keys, which
+# Console encodes as modifier bits (mods 10 and 6). They reach the focused window
+# when the bridge is stopped, so Alt+Shift+F4 is not used: Windows could read it
+# as Alt+F4. The others have no known default action in OBS or Chrome; that is a
+# static check, not a guarantee for every app.
 VJ_KEYS = {
     "Ctrl+Shift+F1": "vjster.speed.down", "Ctrl+Shift+F2": "vjster.speed.up", "Ctrl+Shift+F3": "vjster.status",
     "Ctrl+Shift+F4": "vjster.speed.fineDown", "Ctrl+Shift+F5": "vjster.speed.fineUp", "Ctrl+Shift+F6": "vjster.speed.reset",

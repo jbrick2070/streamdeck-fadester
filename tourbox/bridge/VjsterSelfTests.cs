@@ -78,6 +78,7 @@ internal static class VjsterSelfTests
         Check(!KeyGuards.IsStrayFaderTick("fader.back", t, ms(600)), "a T-bar tick well after a Music turn is real");
         Check(!KeyGuards.IsStrayFaderTick("fader.back", 0, ms(100)), "with no Music turn yet, the T-bar works");
         Check(!KeyGuards.IsStrayFaderTick("take", t, ms(100)), "only ticks are filtered, never a Take");
+        Check(KeyGuards.IsHeldDialTurn("music.up") && KeyGuards.IsHeldDialTurn("layer2.opacity.down") && !KeyGuards.IsHeldDialTurn("mix.up"), "held Dial turns");
         Check(KeyGuards.IsTurnTick("layer2.opacity.up") && KeyGuards.IsTurnTick("layer1.blend.next") && KeyGuards.IsTurnTick("fader.forward") && !KeyGuards.IsTurnTick("take.cut"), "turn ticks");
     }
 
@@ -245,13 +246,17 @@ internal static class VjsterSelfTests
         string blendA = "OBS_BLEND_NORMAL", blendB = "OBS_BLEND_NORMAL";
         var filters = new List<JsonObject>();
         double opacity = 1.0; string? created = null; bool legacy = false; JsonObject? lastSet = null;
+        var items = new[] { ("Clip A", 7), ("Clip B", 8) };
         Task<JsonObject> Fake(string op, JsonObject? args)
         {
             JsonObject reply = new();
             string Arg(string k) => args![k]!.GetValue<string>();
             switch (op)
             {
-                case "GetSceneItemId": Check(Arg("sceneName") == "Mix", "scene by name"); reply["sceneItemId"] = Arg("sourceName") == "Clip A" ? 7 : 8; break;
+                case "GetSceneItemList":
+                    Check(Arg("sceneName") == "Mix", "scene by name");
+                    reply["sceneItems"] = new JsonArray(items.Select(i => (JsonNode)new JsonObject { ["sourceName"] = i.Item1, ["sceneItemId"] = i.Item2 }).ToArray());
+                    break;
                 case "GetSceneItemBlendMode": reply["sceneItemBlendMode"] = args!["sceneItemId"]!.GetValue<int>() == 7 ? blendA : blendB; break;
                 case "SetSceneItemBlendMode": if (args!["sceneItemId"]!.GetValue<int>() == 7) blendA = Arg("sceneItemBlendMode"); else blendB = Arg("sceneItemBlendMode"); break;
                 case "GetSourceFilterList": Check(Arg("sourceName") == "Clip B", "opacity rides layer 2"); reply["filters"] = new JsonArray(filters.Select(f => (JsonNode)f.DeepClone()).ToArray()); break;
@@ -274,6 +279,13 @@ internal static class VjsterSelfTests
         Check(await desk.Dispatch("layer1.blend.next") == "Layer 1 blend: Additive" && blendA == "OBS_BLEND_ADDITIVE", "blend next");
         Check(await desk.Dispatch("layer2.blend.previous") == "Layer 2 blend: Darken" && blendB == "OBS_BLEND_DARKEN" && blendA == "OBS_BLEND_ADDITIVE", "blend previous wraps, per layer");
         Check(await desk.Dispatch("layer2.blend.reset") == "Layer 2 blend: Normal", "blend reset");
+        async Task<string> Refused(string action) { try { await desk.Dispatch(action); return ""; } catch (InvalidOperationException e) { return e.Message; } }
+        var all = items;
+        items = [("Clip A", 7)];
+        Check((await Refused("layer2.opacity.up")).Contains("found 0"), "opacity refuses a source that left the layer's scene");
+        items = [("Clip A", 7), ("Clip A", 9), ("Clip B", 8)];
+        Check((await Refused("layer1.blend.next")).Contains("found 2"), "blend refuses two copies of the source");
+        items = all;
         Check(await desk.Dispatch("layer2.opacity.down") == "Layer 2 opacity 95 %" && created == DeskActions.OpacityFilterName && opacity == 0.95, "a missing Color Correction filter is created, then stepped");
         Check(lastSet!["overlay"]!.GetValue<bool>() && lastSet["filterName"]!.GetValue<string>() == DeskActions.OpacityFilterName, "settings are overlaid on the filter");
         for (int i = 0; i < 30; i++) await desk.Dispatch("layer2.opacity.down");

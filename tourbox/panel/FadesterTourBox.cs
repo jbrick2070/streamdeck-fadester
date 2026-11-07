@@ -177,7 +177,7 @@ namespace Fadester.TourBox {
     }
     void SetNumber(NumericUpDown n,string key,bool reciprocal=false){
       object v;if(!config.TryGetValue(key,out v) || v==null)return;
-      try{decimal x=Convert.ToDecimal(v,System.Globalization.CultureInfo.InvariantCulture);if(reciprocal){if(x<=0)return;x=Decimal.Round(1m/x);}n.Value=Math.Min(n.Maximum,Math.Max(n.Minimum,x));}catch(FormatException){}catch(OverflowException){}
+      try{decimal x=Convert.ToDecimal(v,System.Globalization.CultureInfo.InvariantCulture);if(reciprocal){if(x<=0)return;x=Decimal.Round(1m/x);}n.Value=Math.Min(n.Maximum,Math.Max(n.Minimum,x));}catch(FormatException){}catch(OverflowException){}catch(InvalidCastException){}
     }
     void Fill(string k,string[] options,string initial) {
       var c=boxes[k]; c.BeginUpdate(); c.Items.Clear(); c.Items.Add("");
@@ -294,6 +294,7 @@ namespace Fadester.TourBox {
       var exe=Path.Combine(folder,"FadesterTourBoxBridge.exe"); if(!File.Exists(exe))throw new FileNotFoundException(text.Get("bridgeMissing"));
       var pi=new ProcessStartInfo(exe,args) {UseShellExecute=false,CreateNoWindow=true,WorkingDirectory=folder,RedirectStandardOutput=true,RedirectStandardError=true,RedirectStandardInput=true,StandardOutputEncoding=Encoding.UTF8,StandardErrorEncoding=Encoding.UTF8};
       if(password.Text.Length!=0) pi.EnvironmentVariables["FADESTER_OBS_PASSWORD"]=password.Text;
+      pi.EnvironmentVariables["FADESTER_PANEL"]="1";
       return pi;
     }
     async Task Connect() {

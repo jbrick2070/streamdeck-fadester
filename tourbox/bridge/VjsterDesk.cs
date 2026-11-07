@@ -13,16 +13,20 @@ namespace Fadester.TourBox;
 
 internal sealed record KeyInput(string Action, int Generation, long Timestamp);
 
-/** Side + Dial is Music; a detent Console sends as the plain Dial while Side is held must not move Program. */
+/**
+ * Side + Dial and Top + Dial must not move Program if Console sends one detent as the plain Dial. The bridge sees only
+ * shortcuts, not which buttons are held, so this is a time window and a partial guard: it cannot catch a stray tick
+ * before the first held turn or after a pause, and a deliberate fade in the window loses its first ticks.
+ */
 internal static class KeyGuards
 {
-    public static readonly TimeSpan AfterMusicTurn = TimeSpan.FromMilliseconds(400);
-    public static bool IsMusicTurn(string action) => action is "music.up" or "music.down";
+    public static readonly TimeSpan AfterHeldTurn = TimeSpan.FromMilliseconds(400);
+    public static bool IsHeldDialTurn(string action) => action is "music.up" or "music.down" or "layer2.opacity.up" or "layer2.opacity.down";
     public static bool IsFaderTick(string action) => action is "fader.back" or "fader.forward" or "fader.fineBack" or "fader.fineForward";
     /** Turn ticks drop sooner when late: a stale one would keep moving something after the hand stops. */
     public static bool IsTurnTick(string action) => IsFaderTick(action) || action is "layer2.opacity.up" or "layer2.opacity.down"
         or "layer1.blend.previous" or "layer1.blend.next" or "layer2.blend.previous" or "layer2.blend.next";
-    public static bool IsStrayFaderTick(string action, long lastMusicTurn, long at) => IsFaderTick(action) && lastMusicTurn != 0 && Stopwatch.GetElapsedTime(lastMusicTurn, at) < AfterMusicTurn;
+    public static bool IsStrayFaderTick(string action, long lastHeldTurn, long at) => IsFaderTick(action) && lastHeldTurn != 0 && Stopwatch.GetElapsedTime(lastHeldTurn, at) < AfterHeldTurn;
 }
 
 internal sealed class VjsterDesk(VjsterLink link)

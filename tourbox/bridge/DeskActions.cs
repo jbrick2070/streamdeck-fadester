@@ -10,7 +10,12 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
         "fader.back fader.forward fader.fineBack fader.fineForward fader.cancel fader.status take take.cut preview.previous preview.next preview.sync preview.status anchor.1 anchor.2 anchor.3 anchor.4 " +
         "media.previous media.next media.play media.restart overlay.show overlay.hide mic.mute transition.previous transition.next " +
         "transition.shorter transition.longer capture.screenshot recording.chapter replay.save recording.status bridge.reconnect soundcheck " +
-        "mix.up mix.down mix.fadeOut mix.restore mix.status").Split(' '));
+        "mix.up mix.down mix.fadeOut mix.restore mix.status " +
+        "layer2.opacity.down layer2.opacity.up layer1.blend.previous layer1.blend.next layer1.blend.reset layer2.blend.previous layer2.blend.next layer2.blend.reset " +
+        "vjster.speed.down vjster.speed.up vjster.speed.fineDown vjster.speed.fineUp vjster.speed.reset vjster.quality.down vjster.quality.up vjster.quality.reset vjster.playPause vjster.status").Split(' '));
+    /** OBS scene-item blend modes in the order the Layer rotaries cycle them (obs-websocket SetSceneItemBlendMode). */
+    public static readonly string[] BlendModes = ["OBS_BLEND_NORMAL", "OBS_BLEND_ADDITIVE", "OBS_BLEND_SUBTRACT", "OBS_BLEND_SCREEN", "OBS_BLEND_MULTIPLY", "OBS_BLEND_LIGHTEN", "OBS_BLEND_DARKEN"];
+    public const string OpacityFilterName = "Fadester opacity";
     private readonly StudioFader fader = new(rpc, cfg.FaderStep, nativeMove);
     private readonly AudioDesk audio = new(rpc, rampSteps);
     private readonly MixDesk mix = new(cfg, rpc);
@@ -32,8 +37,19 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
     public async Task<string> Dispatch(string id)
     {
         if (!Supported.Contains(id)) throw new ArgumentException("Unknown action: " + id);
+        if (id.StartsWith("vjster.")) throw new InvalidOperationException("VJster actions go to the Chrome extension, not to OBS; they run on the VJster desk.");
         switch (id)
         {
+            case "layer2.opacity.down":
+            case "layer2.opacity.up":
+                return await Opacity(id);
+            case "layer1.blend.previous":
+            case "layer1.blend.next":
+            case "layer1.blend.reset":
+            case "layer2.blend.previous":
+            case "layer2.blend.next":
+            case "layer2.blend.reset":
+                return await Blend(id);
             case "mix.up": return await StepMixAsync(1);
             case "mix.down": return await StepMixAsync(-1);
             case "mix.fadeOut": return await SetMixAsync(-100, cfg.MixFadeMs);
@@ -126,6 +142,54 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
                 }
             default: throw new InvalidOperationException("Reconnect is handled by the connection manager.");
         }
+    }
+    /** The scene item a Layer action drives: scene and source from the panel's Assignments. */
+    private (string Scene, string Source, string Label) Layer(string id)
+    {
+        bool two = id.StartsWith("layer2");
+        var scene = Bound(two ? cfg.Layer2Scene : cfg.Layer1Scene, two ? "layer 2 scene" : "layer 1 scene");
+        var source = Bound(two ? cfg.Layer2Source : cfg.Layer1Source, two ? "layer 2 source" : "layer 1 source");
+        return (scene, source, two ? "Layer 2" : "Layer 1");
+    }
+    private async Task<string> Blend(string id)
+    {
+        var (scene, source, label) = Layer(id);
+        int item = (await rpc("GetSceneItemId", new() { ["sceneName"] = scene, ["sourceName"] = source }))["sceneItemId"]!.GetValue<int>();
+        var current = Str(await rpc("GetSceneItemBlendMode", new() { ["sceneName"] = scene, ["sceneItemId"] = item }), "sceneItemBlendMode");
+        int i = Array.IndexOf(BlendModes, current);
+        string next = id.EndsWith(".reset") ? BlendModes[0] : BlendModes[(Math.Max(i, 0) + (id.EndsWith(".next") ? 1 : -1) + BlendModes.Length) % BlendModes.Length];
+        await rpc("SetSceneItemBlendMode", new() { ["sceneName"] = scene, ["sceneItemId"] = item, ["sceneItemBlendMode"] = next });
+        return $"{label} blend: {BlendName(next)}";
+    }
+    public static string BlendName(string mode) => mode.StartsWith("OBS_BLEND_") ? char.ToUpperInvariant(mode[10]) + mode[11..].ToLowerInvariant() : mode;
+    /**
+     * Opacity rides the source's Color Correction filter: the first one it has, else a new one named OpacityFilterName
+     * at the end of the chain. color_filter_v2 takes 0..1, the legacy color_filter 0..100. `overlay` keeps its other
+     * settings. A disabled filter is reported, not switched on (that could change the look someone set up).
+     */
+    private async Task<string> Opacity(string id)
+    {
+        var (_, source, label) = Layer(id);
+        var filters = (await rpc("GetSourceFilterList", new() { ["sourceName"] = source }))["filters"]!.AsArray().Select(n => n!.AsObject());
+        var color = filters.FirstOrDefault(f => f["filterKind"]?.GetValue<string>() is "color_filter_v2" or "color_filter");
+        string name, kind;
+        if (color == null)
+        {
+            name = OpacityFilterName; kind = "color_filter_v2";
+            await rpc("CreateSourceFilter", new() { ["sourceName"] = source, ["filterName"] = name, ["filterKind"] = kind, ["filterSettings"] = new JsonObject { ["opacity"] = 1.0 } });
+        }
+        else
+        {
+            name = Str(color, "filterName"); kind = Str(color, "filterKind");
+            if (color["filterEnabled"]?.GetValue<bool>() == false) throw new InvalidOperationException($"{label}: the filter {name} is disabled in OBS; enable it to ride its opacity.");
+        }
+        double scale = kind == "color_filter" ? 100 : 1;
+        var settings = (await rpc("GetSourceFilter", new() { ["sourceName"] = source, ["filterName"] = name }))["filterSettings"] as JsonObject;
+        double current = settings?["opacity"] is JsonValue v && v.TryGetValue<double>(out var d) ? d / scale : 1.0; // OBS omits a setting at its default
+        double next = Math.Clamp(Math.Round((current + (id.EndsWith(".up") ? cfg.OpacityStep : -cfg.OpacityStep)) * 1000) / 1000, 0, 1);
+        JsonNode value = scale == 100 ? JsonValue.Create((int)Math.Round(next * 100)) : JsonValue.Create(next);
+        await rpc("SetSourceFilterSettings", new() { ["sourceName"] = source, ["filterName"] = name, ["filterSettings"] = new JsonObject { ["opacity"] = value }, ["overlay"] = true });
+        return $"{label} opacity {Math.Round(next * 100)} %";
     }
     private async Task<string> Cue(string id)
     {

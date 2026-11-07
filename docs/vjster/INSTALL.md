@@ -9,7 +9,7 @@ VJster has three parts. The Stream Deck plugin holds the keys and dials and serv
 | `com.jbrick2070.vjster.streamDeckPlugin` | The Stream Deck plugin, with the OBS page and four bundled profiles inside |
 | `vjster-chrome-extension-<version>.zip` | The Chrome extension, to unzip and load unpacked |
 
-There is no Elgato Marketplace listing and no Chrome Web Store listing yet, so the extension is loaded unpacked for now.
+There is no Elgato Marketplace listing and no Chrome Web Store listing yet, so the extension is loaded unpacked for now. The TourBox package (`tourbox/`, OBS Fadester for TourBox) hosts the same link, so the extension also works from a TourBox without any deck software; see `tourbox/README.md`.
 
 ## Install
 

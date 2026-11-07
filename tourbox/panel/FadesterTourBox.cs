@@ -42,8 +42,8 @@ namespace Fadester.TourBox {
     readonly Dictionary<string,Image> glyphs=new Dictionary<string,Image>();
     Dictionary<string, object> config = new Dictionary<string, object>(), catalog = new Dictionary<string, object>();
     Label state, live; TextBox password; ListBox activity; Button connect, start, save;
-    CheckBox enableMix, mixOnly;
-    NumericUpDown mixStep, mixDuration;
+    CheckBox enableMix, mixOnly, enableVjster;
+    NumericUpDown mixStep, mixDuration, vjsterPort, opacityStep; TextBox extensionId;
     NumericUpDown port,volumeStep,duckLevel,fadeTicks,transitionStep; FlowLayoutPanel body; DataGridView controls; Process worker; Feedback hud; bool closing, refreshing, invalidConfig;
     readonly Color navy = Color.FromArgb(26,34,51), accent = Color.FromArgb(38,90,158);
     static Dictionary<string,object> Decode(string s) { return Json.Deserialize<Dictionary<string,object>>(s); }
@@ -92,6 +92,15 @@ namespace Fadester.TourBox {
       enableMix.CheckedChanged+=delegate{mixOnly.Enabled=enableMix.Checked;if(!enableMix.Checked)mixOnly.Checked=false;};
       mixStep=Number(body,text.Get("mixStep"),0.25m,12m,3m,0.25m,2);
       mixDuration=Number(body,text.Get("mixFade"),0m,10000m,600m,100m,0);
+      Title(body,text.Get("vjsterTitle"));
+      enableVjster=Check(body,text.Get("enableVjster")); enableVjster.Checked=true;
+      Hint(body,text.Get("vjsterHint"));
+      var vjRow=new FlowLayoutPanel {AutoSize=true,WrapContents=true,Margin=new Padding(0,3,0,3)};
+      vjRow.Controls.Add(new Label {Text=text.Get("vjsterPort"),AutoSize=true,Margin=new Padding(4,8,4,0)});
+      vjsterPort=new NumericUpDown {Minimum=1024,Maximum=65535,Value=48150,Width=78}; vjRow.Controls.Add(vjsterPort);
+      vjRow.Controls.Add(new Label {Text=text.Get("vjsterExtensionId"),AutoSize=true,Margin=new Padding(10,8,4,0)});
+      extensionId=new TextBox {Width=290}; vjRow.Controls.Add(extensionId); body.Controls.Add(vjRow);
+      Hint(body,text.Get("vjsterIdHint"));
       var assign=Page(tabs,text.Get("assignments")); Title(assign,text.Get("assignTitle"));
       Hint(assign,text.Get("assignHint"));
       foreach (var field in new[] { "musicInput", "contentInput", "micInput", "mediaInput", "overlayScene", "overlaySource" })
@@ -99,11 +108,16 @@ namespace Fadester.TourBox {
       boxes["overlayScene"].SelectedIndexChanged += delegate { PopulateOverlay(); };
       string[] dirs={"up","right","down","left"}; for(int i=0;i<4;i++) Field(assign,text.Get(dirs[i]),"anchor"+i);
       AddButton(assign,text.Get("assignFirstFour"),delegate {var sc=List(catalog,"scenes"); if(sc.Length==0){Note(text.Get("discoverFirst"));return;} for(int i=0;i<4;i++)boxes["anchor"+i].SelectedItem=i<sc.Length?sc[i]:""; Note(text.Get("assignPreviewed"));});
+      Title(assign,text.Get("layersTitle")); Hint(assign,text.Get("layersHint"));
+      foreach (var field in new[] { "layer1Scene", "layer1Source", "layer2Scene", "layer2Source" }) Field(assign,text.Get(field),field);
+      boxes["layer1Scene"].SelectedIndexChanged += delegate { PopulateLayer(1); };
+      boxes["layer2Scene"].SelectedIndexChanged += delegate { PopulateLayer(2); };
       Title(assign,text.Get("adjust"));
       volumeStep=Number(assign,text.Get("musicStep"),0.25m,6m,1m,0.25m,2);
       duckLevel=Number(assign,text.Get("duckCeiling"),-60m,0m,-12m,1m,1);
       fadeTicks=Number(assign,text.Get("fadeTicks"),4m,200m,20m,1m,0);
       transitionStep=Number(assign,text.Get("timingStep"),10m,1000m,50m,10m,0);
+      opacityStep=Number(assign,text.Get("opacityStep"),1m,50m,5m,1m,0);
       Hint(assign,text.Get("adjustHint"));
       var keypage=new TabPage(text.Get("controlMap")); tabs.Controls.Add(keypage); controls=new DataGridView {Dock=DockStyle.Fill,ReadOnly=true,AllowUserToAddRows=false,AllowUserToDeleteRows=false,RowHeadersVisible=false,AutoSizeColumnsMode=DataGridViewAutoSizeColumnsMode.Fill,SelectionMode=DataGridViewSelectionMode.FullRowSelect,BackgroundColor=Color.White};
       controls.DefaultCellStyle.WrapMode=DataGridViewTriState.True;
@@ -162,6 +176,12 @@ namespace Fadester.TourBox {
       string scene=boxes["overlayScene"].Text, keep=scene==Val(config,"overlayScene")?Val(config,"overlaySource"):"";
       Fill("overlaySource",List(d,scene),keep);
     }
+    void PopulateLayer(int n) {
+      object items; var d=catalog.TryGetValue("sceneItems",out items)?items as Dictionary<string,object>:null;
+      string sceneKey="layer"+n+"Scene", sourceKey="layer"+n+"Source";
+      string scene=boxes[sceneKey].Text, keep=scene==Val(config,sceneKey)?Val(config,sourceKey):"";
+      Fill(sourceKey,List(d,scene),keep);
+    }
     void LoadChoices(bool preserveEdits) {
       string[] audio=List(catalog,"audioInputs"), scenes=List(catalog,"scenes"), anchors=List(config,"anchors");
       Func<string,string,string> keep=(k,old)=>preserveEdits?boxes[k].Text:old;
@@ -170,6 +190,11 @@ namespace Fadester.TourBox {
       string oldOverlay=keep("overlaySource",Val(config,"overlaySource"));
       Fill("overlayScene",scenes,keep("overlayScene",Val(config,"overlayScene"))); PopulateOverlay();
       if(boxes["overlaySource"].Items.Contains(oldOverlay)) boxes["overlaySource"].SelectedItem=oldOverlay;
+      foreach(int n in new[]{1,2}) {
+        string sk="layer"+n+"Scene", srk="layer"+n+"Source"; string oldSource=keep(srk,Val(config,srk));
+        Fill(sk,scenes,keep(sk,Val(config,sk))); PopulateLayer(n);
+        if(boxes[srk].Items.Contains(oldSource)) boxes[srk].SelectedItem=oldSource;
+      }
       for(int i=0;i<4;i++){ string k="anchor"+i; Fill(k,scenes,keep(k,i<anchors.Length?anchors[i]:"")); }
     }
     void ReadSettings() {
@@ -179,6 +204,13 @@ namespace Fadester.TourBox {
       enableMix.Checked=String.Equals(Val(config,"mixEnabled"),"true",StringComparison.OrdinalIgnoreCase);
       mixOnly.Checked=enableMix.Checked && String.Equals(Val(config,"mixOnly"),"true",StringComparison.OrdinalIgnoreCase);
       SetNumber(mixStep,"mixStepDb"); SetNumber(mixDuration,"mixFadeMs");
+      enableVjster.Checked=!String.Equals(Val(config,"vjsterEnabled"),"false",StringComparison.OrdinalIgnoreCase);
+      int vp; if(Int32.TryParse(Val(config,"vjsterPort"),out vp) && vp>=1024 && vp<=65535) vjsterPort.Value=vp;
+      extensionId.Text=Val(config,"vjsterExtensionId");
+      object os; if(config.TryGetValue("opacityStep",out os) && os!=null) {
+        try { decimal x=Decimal.Round(Convert.ToDecimal(os,CultureInfo.InvariantCulture)*100m); opacityStep.Value=Math.Min(opacityStep.Maximum,Math.Max(opacityStep.Minimum,x)); }
+        catch(FormatException){} catch(OverflowException){} catch(InvalidCastException){}
+      }
       SetNumber(volumeStep,"volumeStepDb");SetNumber(duckLevel,"duckDb");SetNumber(fadeTicks,"faderStep",true);SetNumber(transitionStep,"transitionStepMs");
       LoadChoices(false);
     }
@@ -198,7 +230,7 @@ namespace Fadester.TourBox {
       string category;
       switch(action.Split('.')[0]){
         case "mix":case "music":case "content":case "mic":case "soundcheck":case "undo":category="audio";break;
-        case "fader":category="fade";break;case "media":category="media";break;case "overlay":category="overlay";break;
+        case "fader":category="fade";break;case "media":case "vjster":category="media";break;case "overlay":case "layer1":case "layer2":category="overlay";break;
         case "capture":case "recording":case "replay":category="capture";break;
         case "transition":case "take":category="transition";break;case "anchor":case "preview":category="scenes";break;
         default:category="diagnostics";break;
@@ -213,7 +245,9 @@ namespace Fadester.TourBox {
     protected override void Dispose(bool disposing){if(disposing){foreach(var img in glyphs.Values)if(img!=null)img.Dispose();glyphs.Clear();}base.Dispose(disposing);}
     void WriteConfig() {
       if(invalidConfig)throw new InvalidOperationException(text.Get("cannotWrite"));
-      foreach(string k in new[]{"musicInput","contentInput","micInput","mediaInput","overlayScene","overlaySource"}) config[k]=boxes[k].Text;
+      foreach(string k in new[]{"musicInput","contentInput","micInput","mediaInput","overlayScene","overlaySource","layer1Scene","layer1Source","layer2Scene","layer2Source"}) config[k]=boxes[k].Text;
+      config["vjsterEnabled"]=enableVjster.Checked; config["vjsterPort"]=(int)vjsterPort.Value; config["vjsterExtensionId"]=extensionId.Text.Trim();
+      config["opacityStep"]=(double)opacityStep.Value/100.0;
       config["anchors"]=Enumerable.Range(0,4).Select(i=>boxes["anchor"+i].Text).ToArray();
       config["mixEnabled"]=enableMix.Checked; config["mixOnly"]=mixOnly.Checked; config["mixStepDb"]=mixStep.Value; config["mixFadeMs"]=(int)mixDuration.Value;
       config["volumeStepDb"]=volumeStep.Value;config["duckDb"]=duckLevel.Value;config["faderStep"]=1m/fadeTicks.Value;config["transitionStepMs"]=(int)transitionStep.Value;

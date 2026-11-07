@@ -4,6 +4,8 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 
 ## Unreleased
 
+- **OBS Fadester for TourBox drives YouTube and two VJ layers.** The companion hosts the VJster link itself (the loopback WebSocket the VJster Chrome extension connects to; the same rules and protocol as the Stream Deck plugin's), outside its OBS loop, so the video works with OBS closed. The one preset's layout changed: the raised Knob is the video's speed (press and turn for 0.05 steps, tap to read the video, Side + press for 1x), Scroll press-and-turn its quality, Side + D-pad Up play/pause; Music moved to Side + Dial. Hold Top for the VJ layers: Knob and Scroll cycle Layer 1's and Layer 2's blend mode, the Dial rides Layer 2's opacity through its Color Correction filter. The new actions use Ctrl+Shift and Alt+Shift F-key chords. The panel gets the VJster port and extension pin, Layer 1 and 2 and the opacity step; labels in nine languages; a port taken by the Stream Deck plugin's VJster is reported, never taken over. Self-tests cover the link and the layer actions; `tests/tourbox-vjster-link.test.ts` drives the built bridge with the real extension logic.
+
 - **VJster Chrome extension 0.1.1:** the options page now says the extension needs the VJster plugin, with links to get it, the install steps and the privacy policy (in all 12 languages), and a first install opens that page. The manifest names the project's home page. Dutch is the extension's twelfth language.
 
 ## 0.10.0 - 2026-11-04

@@ -63,7 +63,7 @@ internal static class Program
             else if (command == "--check") Console.WriteLine($"OBS {(await obs.Call("GetVersion"))["obsVersion"]} connected. {Binding.Load(map).Count} global shortcuts validated.");
             else
             {
-                if (args[1].StartsWith("mix.") || (args[1].StartsWith("fader.") && args[1] != "fader.status") || args[1] is "music.duck" or "music.restore" or "undo" or "bridge.reconnect")
+                if (args[1].StartsWith("mix.") || args[1].StartsWith("vjster.") || (args[1].StartsWith("fader.") && args[1] != "fader.status") || args[1] is "music.duck" or "music.restore" or "undo" or "bridge.reconnect")
                     throw new ArgumentException("This action needs the running bridge's session state. Use --listen.");
                 Console.WriteLine(await desk.Dispatch(args[1]));
             }
@@ -72,7 +72,6 @@ internal static class Program
         catch (Exception e) { Console.Error.WriteLine("ERROR: " + e.Message); return 1; }
     }
 
-    private sealed record KeyInput(string Action, int Generation, long Timestamp);
     private static async Task Listen(BridgeConfig cfg, List<Binding> bindings, CancellationTokenSource stop)
     {
         // One gain authority per local OBS endpoint, including other Windows login sessions.
@@ -80,20 +79,42 @@ internal static class Program
         using var single = new Mutex(false, @"Global\FadesterMixBridge-" + cfg.Port, out bool first);
         if (!first) throw new InvalidOperationException("Fadester controls are already running for this OBS port. Use the existing panel.");
         var input = Channel.CreateBounded<KeyInput>(new BoundedChannelOptions(128) { SingleReader = true, FullMode = BoundedChannelFullMode.Wait });
+        // VJster actions go to the Chrome extension, never to OBS, so they are queued whether or not OBS is connected.
+        var vjInput = Channel.CreateBounded<KeyInput>(new BoundedChannelOptions(64) { SingleReader = true, FullMode = BoundedChannelFullMode.DropOldest });
         int current = 0, generation = 0;
-        var keys = new Hotkeys(bindings, action =>
+        VjsterHost? vjster = cfg.VjsterEnabled && bindings.Count > 0 ? new VjsterHost(cfg, Console.WriteLine) : null;
+        void Enqueue(string action)
         {
+            if (action.StartsWith("vjster."))
+            {
+                if (vjster == null) Console.WriteLine("VJster is off: ignored " + action);
+                else if (!vjInput.Writer.TryWrite(new(action, 1, Stopwatch.GetTimestamp()))) Console.WriteLine("VJster queue closed: ignored " + action);
+                return;
+            }
             int g = Volatile.Read(ref current);
             if (g == 0) { Console.WriteLine("Offline: ignored " + action); return; }
             if (!input.Writer.TryWrite(new(action, g, Stopwatch.GetTimestamp()))) Console.WriteLine("Input queue full: ignored " + action);
-        });
+        }
+        var keys = new Hotkeys(bindings, Enqueue);
         keys.Start(stop.Token);
+        // The panel and the tests can type "dispatch <action>" on stdin; it runs exactly as the hotkey would.
+        void Command(string line)
+        {
+            line = line.Trim();
+            if (line.Equals("quit", StringComparison.OrdinalIgnoreCase)) { stop.Cancel(); return; }
+            if (line.StartsWith("dispatch ", StringComparison.OrdinalIgnoreCase))
+            {
+                var action = line["dispatch ".Length..].Trim();
+                if (DeskActions.Supported.Contains(action)) Enqueue(action); else Console.WriteLine("Unknown action: " + action);
+            }
+        }
+        Task vjTask = vjster?.Run(vjInput.Reader, stop.Token) ?? Task.CompletedTask;
         try
         {
             await keys.Ready;
             Console.WriteLine(bindings.Count > 0 ? $"Listening for {bindings.Count} TourBox shortcuts. Type quit to stop." : "Mix-only companion: no controller shortcuts registered. Type quit to stop.");
-            if (Console.IsInputRedirected) _ = Task.Run(async () => { try { while (await Console.In.ReadLineAsync() is { } line) if (line.Trim().Equals("quit", StringComparison.OrdinalIgnoreCase)) { stop.Cancel(); break; } } catch (IOException) { } });
-            else _ = Task.Run(() => { try { while (Console.ReadLine() is { } line) if (line.Trim().Equals("quit", StringComparison.OrdinalIgnoreCase)) { stop.Cancel(); break; } } catch (IOException) { } });
+            if (Console.IsInputRedirected) _ = Task.Run(async () => { try { while (!stop.IsCancellationRequested && await Console.In.ReadLineAsync() is { } line) Command(line); } catch (IOException) { } });
+            else _ = Task.Run(() => { try { while (!stop.IsCancellationRequested && Console.ReadLine() is { } line) Command(line); } catch (IOException) { } });
             string? lastError = null;
             while (!stop.IsCancellationRequested)
             {
@@ -139,7 +160,13 @@ internal static class Program
                 if (!stop.IsCancellationRequested) { try { await Task.Delay(1200, stop.Token); } catch (OperationCanceledException) { break; } }
             }
         }
-        finally { stop.Cancel(); await keys.Done; }
+        finally
+        {
+            stop.Cancel(); await keys.Done;
+            vjInput.Writer.TryComplete();
+            try { await vjTask; } catch (OperationCanceledException) { }
+            if (vjster != null) await vjster.DisposeAsync();
+        }
         Console.WriteLine("Bridge stopped.");
     }
 }

@@ -23,6 +23,17 @@ internal sealed class BridgeConfig
     public bool MixEnabled { get; set; }
     public double MixStepDb { get; set; } = 3;
     public int MixFadeMs { get; set; } = 600;
+    /** VJster: the link the Chrome extension connects to (docs/vjster R-LNK-1..2); off leaves the port alone. */
+    public bool VjsterEnabled { get; set; } = true;
+    public int VjsterPort { get; set; } = VjsterLink.DefaultPort;
+    /** Empty lets any VJster extension connect; otherwise only this 32-letter id (the extension's options page shows it). */
+    public string VjsterExtensionId { get; set; } = "";
+    /** The two VJ layers: a scene item each, by scene and source name. Layer 2 is the one opacity rides. */
+    public string Layer1Scene { get; set; } = "";
+    public string Layer1Source { get; set; } = "";
+    public string Layer2Scene { get; set; } = "";
+    public string Layer2Source { get; set; } = "";
+    public double OpacityStep { get; set; } = 0.05;
     [JsonIgnore] public string MixStateDirectory { get; set; } = Path.Combine(Path.GetDirectoryName(DefaultPath)!, "mix-state");
     public static readonly JsonSerializerOptions Options = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true };
     public static string DefaultPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FadesterTourBox", "config.json");
@@ -38,6 +49,12 @@ internal sealed class BridgeConfig
             throw new InvalidDataException("Invalid anchors, volume step (0–12 dB), duck level (−100–0 dB), fader step (0–1), or transition step (1–5000 ms).");
         if (!double.IsFinite(config.MixStepDb) || config.MixStepDb is <= 0 or > 12 || config.MixFadeMs is < 0 or > 10000)
             throw new InvalidDataException("Mix steps must be above 0 and at most 12 dB, and mix fade duration must be 0–10000 ms.");
+        if (config.VjsterPort is < 1024 or > 65535 || !double.IsFinite(config.OpacityStep) || config.OpacityStep is < 0.01 or > 0.5)
+            throw new InvalidDataException("The VJster port must be 1024–65535 and the opacity step 0.01–0.5.");
+        config.VjsterExtensionId = (config.VjsterExtensionId ?? "").Trim().ToLowerInvariant();
+        if (config.VjsterExtensionId.Length > 0 && !System.Text.RegularExpressions.Regex.IsMatch(config.VjsterExtensionId, "^[a-p]{32}$"))
+            throw new InvalidDataException("The VJster extension id is 32 letters a to p, as the extension's options page shows it.");
+        foreach (var layer in new[] { config.Layer1Scene, config.Layer1Source, config.Layer2Scene, config.Layer2Source }) if (layer == null) throw new InvalidDataException("Layer assignments must be text.");
         config.MixStateDirectory = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(path))!, "mix-state");
         return config;
     }

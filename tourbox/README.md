@@ -1,6 +1,6 @@
 # OBS Fadester for TourBox
 
-Use a full-size TourBox to operate OBS Studio on Windows. The Scroll wheel cues the next scene, the flat Dial drives OBS’s native Studio Mode crossfader, and the raised Knob rides the music bed. Press **Tour** for media, overlays, transition settings and capture tools.
+Use a full-size TourBox to operate OBS Studio on Windows. The Scroll wheel cues the next scene, the flat Dial drives OBS’s native Studio Mode crossfader, and the raised Knob rides the speed of the YouTube video in Chrome (Music moved to Side + Dial). Press **Tour** for media, overlays, transition settings and capture tools.
 
 Open **START-HERE.html** in the extracted package for an illustrated control layout, a first-minute rehearsal, the complete preset reference and recovery steps. Its control tables are generated from the map shipped with this preset.
 
@@ -24,7 +24,7 @@ From rest, **Tall** takes Preview using the selected transition. **Top** cuts di
 
 ## Learn the surface
 
-**Fade the whole mix.** Under Setup, enable **All OBS mixer inputs**, then save and start controls. Hold **Side** and turn the **raised Knob** to lower or raise the group; Side + Knob press reads the level. Press **Tour** and choose **Fade whole mix to silence** or **Restore whole mix** for a timed fade. The default is 600 ms and each turn steps 3 dB. Music duck/restore and the Content control remain available separately.
+**Fade the whole mix.** Under Setup, enable **All OBS mixer inputs**, then save and start controls. Hold **Side** and turn the **raised Knob** to lower or raise the group; the Tour menu reads its level. Press **Tour** and choose **Fade whole mix to silence** or **Restore whole mix** for a timed fade. The default is 600 ms and each turn steps 3 dB. Music duck/restore and the Content control remain available separately.
 
 The group scales each public, non-composite OBS audio input in this scene collection from its own starting volume. New eligible inputs join while it is active. Muted inputs stay muted. Editing a source’s level by hand releases that input from the current group until the next fade cycle. Restore brings the untouched faders back to their original levels. Stopping the companion does not raise the sound: restart with the same config and select Restore. This controls the input faders feeding every track and monitor, not a separate post-processing or stream-only master. A newly created source can be heard briefly before it is discovered; use OBS mute when adding a source that must enter silently.
 
@@ -32,9 +32,9 @@ Stream Deck, OpenDeck and MIDI users can select **Run for Stream Deck, OpenDeck 
 
 | Control | Action |
 | --- | --- |
-| Raised Knob | Turn to ride Music. Tap for levels and mute states. Press and turn for quarter steps. |
+| Raised Knob | Turn to change the YouTube video’s speed (needs the VJster extension). Tap to read the video. Press and turn for 0.05 steps. |
 | Flat Dial | Turn for a manual blend. Tap to read the current fade. Press and turn for quarter steps. |
-| Scroll wheel | Turn to cue Preview. Tap for Program and Preview names. Press and turn for previous or next media. |
+| Scroll wheel | Turn to cue Preview. Tap for Program and Preview names. Press and turn for the video’s quality. |
 | D-pad | Cue assigned scenes. Up, Right, Down and Left correspond to anchors 1–4. |
 | C1 / C2 | Duck music / restore the saved bed level. |
 | Tall / Short | Take Preview / undo the last supported audio adjustment. |
@@ -46,26 +46,34 @@ Hold one of the four prime buttons while turning a rotary for these additional c
 
 | Hold | Raised Knob | Scroll | Flat Dial |
 | --- | --- | --- | --- |
-| Side | Whole mix level | Previous / next media | Content level |
+| Side | Whole mix level | Previous / next media | Music level |
 | Tall | Content level | Previous / next transition | Fine scene blend |
 | Short | Fine Music level | Previous / next Preview scene | Fine scene blend |
-| Top | Content level | Previous / next media | Shorter / longer transition |
+| Top | Layer 1 blend mode | Layer 2 blend mode | Layer 2 opacity |
 
 **Side, Tall, Short and Top** use Console’s **UP** mode. Their single-button actions happen on release. Hold the modifier first, operate the second control, then release. The expanded modifier combinations need a physical hold/release rehearsal on the actual device. Follow **REHEARSAL.md** before using them during a show. [TourBox UP mode](https://www.tourboxtech.com/en/news/up-mode-and-rep-mode.html)
 
-**Side + Dial press** cancels a manual mix, and **Side + Scroll press** sets Preview to the current Program scene. Side + Tall and Side + Short provide the same cancel and sync actions. Hold Side and press D-pad Up for play/pause, Down for restart, or Left/Right for previous/next media.
+**Side + Dial press** cancels a manual mix, and **Side + Scroll press** sets Preview to the current Program scene. Side + Tall and Side + Short provide the same cancel and sync actions. Hold Side and press D-pad Up to play or pause the YouTube video, Down to restart media, or Left/Right for previous/next media; Side + Knob press returns the video to 1x. OBS media play/pause and the transition duration steps are in the Tour menu.
 
-For direct production shortcuts, **Side + Top** saves a screenshot, **Top + Tall** adds a recording chapter, and **Top + Short** saves the running replay buffer. **Tall + Short** reads the audio levels. **Top + D-pad Up / Down** shows or hides the assigned overlay; Top + Left / Right selects the previous or next transition. With whole-mix control enabled, **Side + C1 / C2** fades the mix to silence or restores it. The generated reference lists every assigned combination.
+For direct production shortcuts, **Side + Top** saves a screenshot, **Top + Tall** adds a recording chapter, and **Top + Short** saves the running replay buffer. **Tall + Short** reads the audio levels. **Top + D-pad Up / Down** shows or hides the assigned overlay; Top + Left / Right selects the previous or next transition. With **Top** held, the Knob, Scroll and Dial drive the VJ layers (see below). With whole-mix control enabled, **Side + C1 / C2** fades the mix to silence or restores it. The generated reference lists every assigned combination.
 
 **Tour** and **Side + Tour** open the same menu at the pointer. Scroll through its entries, then press Tall or click the choice to run it. Short dismisses the menu. It provides scene and fade readouts, soundcheck, Preview sync, duck/restore, whole-mix fades, transition selection and duration, media transport, overlay visibility, mic mute, screenshot, recording status, chapters, replay and reconnect. Select **Mute microphone** to mute the assigned mic; unmute it in OBS.
 
 For a compact assignment card, open **General HUD** at the top right of Console. It starts hidden and shows a curated list for this preset. The panel’s **Control map** tab and the offline guide contain the full physical assignments and menu choices.
 
+## Drive YouTube and the VJ layers
+
+Install the free **VJster** extension in Chrome (from this project’s releases, or the Chrome Web Store) and play a YouTube video. The extension connects to the companion on your own computer, on the **VJster port** in Setup (48150 unless you change it there and on the extension’s options page); OBS can be closed. Turn the **raised Knob** for the speed, press and turn it for 0.05 steps, tap it to read the video, and hold **Side** and press it to return to 1x. Press and turn **Scroll** for the quality; **Side + D-pad Up** plays or pauses; **Tour** has quality back to Auto.
+
+In **Assignments**, set **Layer 1** and **Layer 2** to two items in your mix scene. Hold **Top** and turn the **Knob** to cycle Layer 1’s blend mode, **Scroll** for Layer 2’s, and the **Dial** to ride Layer 2’s opacity (through a Color Correction filter, added when the source has none). Tour has both blend modes back to Normal. The **Activity** tab reads back the video and each layer after every move.
+
+If the VJster actions of the Stream Deck or OpenDeck plugin are on a deck page, they hold the port and Activity says so; remove them from the deck or choose another port in both places. The companion tries the port again every 30 seconds.
+
 ## Assign your show
 
 Open **Assignments** after reading your sources. Set Music and Content to the audio inputs you want to ride. Choose a mic for mute, a media source for transport, and both a scene and an item for overlay visibility. Assign up to four scene shortcuts by name. Empty roles can stay unassigned. Save changes and restart controls to apply them.
 
-Under **Adjust the feel**, set the dB step for level rides, the duck ceiling, ticks per full fade, and the transition timing step. The press-and-turn steps on the Knob and Dial are a quarter of their normal movement. Duck and restore take about 450 ms. Duck leaves music that is already below the ceiling at its current level. A separate mixer move can interrupt a fade and disarm its saved restore. An audio update already sent can still land while two operators move the same fader.
+Under **Adjust the feel**, set the dB step for level rides, the duck ceiling, ticks per full fade, and the transition timing step. The press-and-turn step on the Dial is a quarter of its normal movement; on the Knob it is a 0.05 speed step. **Opacity step** sets how far one Top + Dial detent moves Layer 2. Duck and restore take about 450 ms. Duck leaves music that is already below the ceiling at its current level. A separate mixer move can interrupt a fade and disarm its saved restore. An audio update already sent can still land while two operators move the same fader.
 
 For an interview, use **C1** to duck the bed as the guest comes up, hold **Side** and turn the Dial to trim Content, then press **C2** to restore. For a lower third, press **Tour** and select **Show overlay** or **Hide overlay**. Confirm the target item and the scene it belongs to. Shared media and overlay changes can affect Program.
 

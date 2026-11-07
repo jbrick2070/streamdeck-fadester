@@ -47,8 +47,9 @@ OPEN_MENU_ZERO = bytes.fromhex("00 00 20 00 00 00 00 00 00 00 00 00")
 NATIVE_ACTIONS = {"tourMenu": OPEN_MENU_ZERO}
 EMPTY = bytes(5)
 
-# Compatibility contract from the former two presets. Consolidation must preserve
-# every action/chord and the established Show hardware layout, not just its count.
+# Compatibility contract from the former two presets: every original action keeps
+# its Ctrl+Alt+Shift chord. The VJ layout (2026-11) moves some of them to other
+# controls and adds VJ_KEYS; VJ_PHYSICAL_KEYS lists the controls it changed.
 ACTION_KEYS = dict(zip(
     [f"F{i}" for i in range(1, 13)] + list("ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789"),
     ("music.down music.up fader.back fader.forward preview.previous preview.next take undo "
@@ -59,6 +60,25 @@ ACTION_KEYS = dict(zip(
      "recording.status bridge.reconnect soundcheck mix.fadeOut mix.restore "
      "music.fineDown music.fineUp fader.fineBack fader.fineForward fader.status preview.status "
      "mix.down mix.up mix.status").split(), strict=True))
+# Full chords for the VJ actions: Ctrl+Shift and Alt+Shift with F-keys, which no
+# app on a show PC uses and which Console encodes as modifier bits (mods 10 and 6).
+VJ_KEYS = {
+    "Ctrl+Shift+F1": "vjster.speed.down", "Ctrl+Shift+F2": "vjster.speed.up", "Ctrl+Shift+F3": "vjster.status",
+    "Ctrl+Shift+F4": "vjster.speed.fineDown", "Ctrl+Shift+F5": "vjster.speed.fineUp", "Ctrl+Shift+F6": "vjster.speed.reset",
+    "Ctrl+Shift+F7": "layer2.opacity.down", "Ctrl+Shift+F8": "layer2.opacity.up",
+    "Ctrl+Shift+F9": "vjster.quality.down", "Ctrl+Shift+F10": "vjster.quality.up", "Ctrl+Shift+F11": "vjster.playPause",
+    "Ctrl+Shift+F12": "layer2.blend.previous", "Alt+Shift+F1": "layer2.blend.next",
+    "Alt+Shift+F2": "layer1.blend.previous", "Alt+Shift+F3": "layer1.blend.next",
+    "Alt+Shift+F4": "vjster.quality.reset", "Alt+Shift+F5": "layer1.blend.reset", "Alt+Shift+F6": "layer2.blend.reset",
+}
+ALL_ACTIONS = set(ACTION_KEYS.values()) | set(VJ_KEYS.values())
+# slot:gesture:chord for the controls the VJ layout reassigned; a bare key means Ctrl+Alt+Shift as below.
+VJ_PHYSICAL_KEYS = """
+4:ccw:Ctrl+Shift+F1 4:cw:Ctrl+Shift+F2 55:press:Ctrl+Shift+F3 59:ccw:Ctrl+Shift+F4 59:cw:Ctrl+Shift+F5
+126:press:Ctrl+Shift+F6 171:ccw:F1 171:cw:F2 170:ccw:Ctrl+Shift+F7 170:cw:Ctrl+Shift+F8
+69:ccw:Ctrl+Shift+F9 69:cw:Ctrl+Shift+F10 20:press:Ctrl+Shift+F11 13:ccw:Ctrl+Shift+F12 13:cw:Alt+Shift+F1
+7:ccw:Alt+Shift+F2 7:cw:Alt+Shift+F3
+""".split()
 ORIGINAL_PHYSICAL_KEYS = """
 126:press:9 8:ccw:7 8:cw:8 4:ccw:F1 4:cw:F2 15:ccw:F3 15:cw:F4
 9:ccw:F5 9:cw:F6 0:press:F7 3:press:F8 16:press:F9 19:press:F10
@@ -76,11 +96,12 @@ ADDED_PHYSICAL_KEYS = """
 46:press:O 26:press:X
 """.split()
 RELEASE_SLOTS = {0, 1, 2, 3}
-HUD_SLOTS = [15, 75, 9, 4, 171, 8, 14, 170, 0, 3, 1, 34, 35, 154, 156, 42]
+HUD_SLOTS = [15, 75, 9, 4, 59, 69, 171, 8, 170, 13, 7, 0, 3, 1, 55, 126, 20, 34, 35, 42]
 MASTER_MENU = ("preview.status fader.status soundcheck preview.sync music.duck music.restore "
                "mix.status mix.fadeOut mix.restore recording.status capture.screenshot recording.chapter "
                "replay.save media.play bridge.reconnect transition.previous transition.next "
-               "transition.shorter transition.longer overlay.show overlay.hide mic.mute").split()
+               "transition.shorter transition.longer overlay.show overlay.hide mic.mute "
+               "vjster.status vjster.speed.reset vjster.quality.reset layer1.blend.reset layer2.blend.reset").split()
 MASTER_NAME = "OBS Fadester for TourBox"
 
 
@@ -96,14 +117,14 @@ def check_master(presets):
             preset["tourMenu"]["name"] == MASTER_NAME, "Master preset/file/menu name differs")
     bindings = preset["bindings"] + preset.get("menuBindings", [])
     actual = {b["hotkey"]: b["action"] for b in bindings}
-    expected = {"Ctrl+Alt+Shift+" + key: action for key, action in ACTION_KEYS.items()}
-    require(len(expected) == 47 and actual == expected, "All 47 original action/shortcut pairs must remain")
+    expected = {"Ctrl+Alt+Shift+" + key: action for key, action in ACTION_KEYS.items()} | VJ_KEYS
+    require(len(expected) == 65 and actual == expected, "All 47 original and 18 VJ action/shortcut pairs must remain")
     require(all(actual[b["hotkey"]] == b["action"] for b in bindings), "Conflicting action/shortcut pair")
     physical = {(slot(b), b["gesture"]): b["hotkey"] for b in preset["bindings"]}
-    fixed = {(int(i), gesture): "Ctrl+Alt+Shift+" + key
-             for i, gesture, key in (row.split(":") for row in ORIGINAL_PHYSICAL_KEYS + ADDED_PHYSICAL_KEYS)}
+    fixed = {(int(i), gesture): key if "+" in key else "Ctrl+Alt+Shift+" + key
+             for i, gesture, key in (row.split(":") for row in ORIGINAL_PHYSICAL_KEYS + ADDED_PHYSICAL_KEYS + VJ_PHYSICAL_KEYS)}
     require(len(preset["bindings"]) == 68 and physical == fixed,
-            "Preserve the original 35 shortcuts and the approved 33 additions")
+            "Preserve the original 35 shortcuts, the approved 33 additions and the VJ layout's 17 reassignments")
     require({slot(b) for b in preset["bindings"] if b.get("mode") == "release"} == RELEASE_SLOTS and
             all(b.get("mode", "standard") in ("standard", "release") for b in preset["bindings"]),
             "Bare Side, Top, Tall and Short must use calibrated UP/release mode")
@@ -119,8 +140,8 @@ def check_master(presets):
             "Tour and Side+Tour must open the same menu; preset switching is not allowed")
     require(preset["tourMenu"]["actions"] == MASTER_MENU, "Master menu must retain the full production action list")
     accessible = {b["action"] for b in preset["bindings"]} | set(preset["tourMenu"]["actions"])
-    require(accessible == set(ACTION_KEYS.values()), "Every original action must be accessible on hardware or menu")
-    require(hud_slots(preset) == HUD_SLOTS, "Preserve the curated 16-row HUD")
+    require(accessible == ALL_ACTIONS, "Every original and VJ action must be accessible on hardware or menu")
+    require(hud_slots(preset) == HUD_SLOTS, "Preserve the curated 20-row HUD")
 
 
 def slot(binding):
@@ -131,14 +152,15 @@ def slot(binding):
 
 def key_block(hotkey):
     *mods, key = hotkey.split("+")
-    require(mods == list(MODS), f"Unexpected bridge modifiers in {hotkey}")
+    # Modifiers in Console's order, at least two of them (a lone modifier would be a typing key on some layouts).
+    require(len(mods) >= 2 and mods == [name for name in MODS if name in mods], f"Unexpected bridge modifiers in {hotkey}")
     if key in [f"F{i}" for i in range(1, 13)]:
         kind, code = 1, int(key[1:]) + 9
     else:
         require(len(key) == 1 and key.isascii() and (key.isupper() or key.isdigit()),
                 f"Unsupported TourBox key {key}")
         kind, code = 0, ord(key)
-    return bytes((sum(MODS.values()), kind, 0, 0, code))
+    return bytes((sum(MODS[name] for name in mods), kind, 0, 0, code))
 
 
 def shortcut_id(hotkey):
@@ -345,7 +367,7 @@ def check(preset, data):
 
 def localized_presets(presets, translations):
     master = presets["master"]
-    actions = set(ACTION_KEYS.values()) | {"native.tourMenu"}
+    actions = ALL_ACTIONS | {"native.tourMenu"}
     require(isinstance(translations, dict) and translations and "en" not in translations,
             "Expected translations separate from the English master")
     baseline, _, _ = decode(build(master))

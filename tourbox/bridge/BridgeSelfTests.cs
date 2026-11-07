@@ -136,5 +136,6 @@ internal static class BridgeSelfTests
         try { await desk.Dispatch("anchor.1"); throw new Exception("Self-test: anchor changed scene outside Studio Mode"); }
         catch (InvalidOperationException) { }
         await desk.Dispatch("media.play"); Check(media.Single() == "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE", "play toggles a playing source");
+        await VjsterSelfTests.RunAsync();
     }
 }

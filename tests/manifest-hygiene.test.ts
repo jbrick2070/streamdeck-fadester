@@ -258,6 +258,9 @@ describe("Step 1.1 — Manifest, Layout, Icons & Repository Hygiene", () => {
         bytes[2] === 0xbf;
       expect(hasBom, `BOM found in ${file}`).toBe(false);
 
+      // Google's site verification file has to stay exactly as Google issued it.
+      if (/[\\/]google[0-9a-f]{16}\.html$/.test(file)) continue;
+
       if (
         file.endsWith(".ts") ||
         file.endsWith(".js") ||

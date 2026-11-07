@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+<title id="title">Audio mix</title>
+<desc id="desc">Fadester category icon for audio mix.</desc>
+<rect x="2" y="2" width="60" height="60" rx="13" fill="#112821" stroke="#46665C" stroke-width="2"/>
+<g transform="translate(11.5 11.5) scale(1.7)" fill="none" stroke="#FFBC74" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M5 3v7m0 5v6m7-18v12m0 4v2m7-18v3m0 4v11"/><path d="M2.5 10h5v4h-5zM9.5 15h5v4h-5zM16.5 6h5v4h-5z"/></g>
+</svg>

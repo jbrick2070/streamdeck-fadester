@@ -117,6 +117,60 @@ internal static class StudioFaderSelfTests
         Check(native.Position == 0 && nativeObs.Program == "a" && nativeObs.Cursor == 0 &&
             nativeObs.NativeCalls.TakeLast(2).SequenceEqual([(0.375, 0d), (0d, 0d)]) &&
             nativeObs.Writes.SequenceEqual(["SetTBarPosition"]), "native cancel releases at zero and verifies the parked widget");
+        // The native widget can reach its target before the compositor catches up.
+        // Drive that lag by read count, not a timing-sensitive background task.
+        var laggingObs = new Obs();
+        int partialCursorReads = 0;
+        Task<JsonObject> LaggingRpc(string action, JsonObject? data)
+        {
+            if (action == "GetCurrentSceneTransitionCursor" && laggingObs.Origin != null && laggingObs.Slider > 0)
+            {
+                double cursor = ++partialCursorReads switch { 1 or 2 => 0, 3 => 0.013281249441206455, _ => 0.0498046875 };
+                return Task.FromResult(new JsonObject { ["transitionCursor"] = cursor });
+            }
+            return laggingObs.Call(action, data);
+        }
+        var lagging = new StudioFader(LaggingRpc, 0.05, laggingObs.NativeMove);
+        await lagging.DispatchAsync("fader.forward");
+        Check(partialCursorReads == 3 && lagging.Position == 0.05 && laggingObs.Slider == 0.05 &&
+            laggingObs.NativeCalls.SequenceEqual([(0d, 0.05)]) && laggingObs.Writes.Count == 0,
+            "a nonterminal renderer confirms one native move without waiting for or replaying its target");
+        await lagging.DispatchAsync("fader.cancel");
+        Check(partialCursorReads == 4 && laggingObs.Program == "a" && laggingObs.Preview == "b" &&
+            laggingObs.Cursor == 0 && laggingObs.Slider == 0 && laggingObs.Commits == 0 && laggingObs.Releases == 1 &&
+            laggingObs.NativeCalls.SequenceEqual([(0d, 0.05), (0.05, 0d), (0d, 0d)]) &&
+            laggingObs.Writes.SequenceEqual(["SetTBarPosition"]),
+            "a lagging first blend can be cancelled once through native zero and frontend release");
+
+        foreach (bool loseNativeZeroReply in new[] { true, false })
+        {
+            var uncertainCancelObs = new Obs();
+            async Task UncertainNative(double from, double to)
+            {
+                await uncertainCancelObs.NativeMove(from, to);
+                if (loseNativeZeroReply && from > 0 && to == 0)
+                    throw new IOException("Synthetic native zero acknowledgement lost after its write");
+            }
+            async Task<JsonObject> UncertainRpc(string action, JsonObject? data)
+            {
+                var result = await uncertainCancelObs.Call(action, data);
+                if (!loseNativeZeroReply && action == "SetTBarPosition" && (double?)data?["position"] == 0 && (bool?)data?["release"] == true)
+                    throw new IOException("Synthetic cancel release acknowledgement lost after its write");
+                return result;
+            }
+            var uncertainCancel = new StudioFader(UncertainRpc, 0.05, UncertainNative);
+            await uncertainCancel.DispatchAsync("fader.forward");
+            await Blocked(() => uncertainCancel.DispatchAsync("fader.cancel"));
+            await Blocked(() => uncertainCancel.DispatchAsync("fader.forward"));
+            await Blocked(() => uncertainCancel.DispatchAsync("take"));
+            // Explicitly clearing the latch must not replay an uncertain release.
+            await uncertainCancel.DispatchAsync("fader.cancel");
+            Check(uncertainCancelObs.NativeCalls.SequenceEqual([(0d, 0.05), (0.05, 0d)]) &&
+                uncertainCancelObs.Slider == 0 && uncertainCancelObs.Commits == 0 && uncertainCancelObs.Takes == 0 &&
+                uncertainCancelObs.Releases == (loseNativeZeroReply ? 0 : 1) &&
+                uncertainCancelObs.Writes.SequenceEqual(loseNativeZeroReply ? Array.Empty<string>() : ["SetTBarPosition"]),
+                "uncertain native zero or frontend release disarms without replay, fallback or extra take");
+        }
         await native.DispatchAsync("fader.forward"); await native.DispatchAsync("fader.forward");
         Check(nativeObs.Slider == 0 && nativeObs.Program == "b" && nativeObs.Preview == "a" &&
             nativeObs.Commits == 1 && nativeObs.NativeCalls.TakeLast(2).SequenceEqual([(0.5, 1d), (0d, 0d)]) &&

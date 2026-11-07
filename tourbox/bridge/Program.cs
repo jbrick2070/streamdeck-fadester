@@ -1,0 +1,145 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+using System.Diagnostics;
+using System.Text;
+using System.Text.Json;
+using System.Threading.Channels;
+
+namespace Fadester.TourBox;
+
+internal static class Program
+{
+    static string DefaultMap()
+    {
+        var packaged = Path.Combine(AppContext.BaseDirectory, "presets", "map.json");
+        if (File.Exists(packaged)) return packaged;
+        foreach (var root in new[] { Environment.CurrentDirectory, AppContext.BaseDirectory })
+            for (var dir = new DirectoryInfo(root); dir != null; dir = dir.Parent)
+            {
+                var candidate = Path.Combine(dir.FullName, "tourbox", "presets", "map.json");
+                if (File.Exists(candidate)) return candidate;
+            }
+        return packaged;
+    }
+    internal static async Task<int> Main(string[] argv)
+    {
+        Console.OutputEncoding = new UTF8Encoding(false);
+        try
+        {
+            var args = argv.ToList();
+            string Option(string key, string fallback)
+            {
+                int i = args.IndexOf(key); if (i < 0) return fallback;
+                if (i + 1 >= args.Count || args[i + 1].StartsWith("--")) throw new ArgumentException(key + " needs a path.");
+                string v = args[i + 1]; args.RemoveRange(i, 2); return Path.GetFullPath(v);
+            }
+            string configPath = Option("--config", BridgeConfig.DefaultPath), map = Option("--map", DefaultMap());
+            string command = args.FirstOrDefault() ?? "--listen";
+            if ((command == "--dispatch" && args.Count != 2) || (command != "--dispatch" && args.Count > 1)) throw new ArgumentException("Invalid arguments. See --help.");
+            if (command == "--help") { Console.WriteLine("FadesterTourBoxBridge [--config PATH] [--map PATH] [--init | --catalog | --check | --self-test | --dispatch ACTION | --listen | --mix-only]\nMix-only serves other controllers without registering shortcuts. Type quit or press Ctrl+C to stop."); return 0; }
+            if (command == "--init")
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(configPath)!);
+                if (!File.Exists(configPath)) { using var f = new FileStream(configPath, FileMode.CreateNew); JsonSerializer.Serialize(f, new BridgeConfig(), BridgeConfig.Options); }
+                Console.WriteLine("Configuration: " + configPath); return 0;
+            }
+            if (command == "--self-test")
+            {
+                var bindings = Binding.Load(map); await BridgeSelfTests.RunAsync(); await StudioFaderSelfTests.RunAsync();
+                Console.WriteLine($"PASS: dispatcher, Studio T-bar and {bindings.Count} mapped shortcuts. No live OBS commands sent."); return 0;
+            }
+            var config = BridgeConfig.Load(configPath);
+            using var stop = new CancellationTokenSource();
+            Console.CancelKeyPress += (_, eventArgs) => { eventArgs.Cancel = true; stop.Cancel(); };
+            if (command is "--listen" or "--mix-only")
+            {
+                if (command == "--mix-only" && !config.MixEnabled) throw new ArgumentException("Enable All OBS mixer inputs in Setup first.");
+                await Listen(config, command == "--listen" ? Binding.Load(map) : [], stop); return 0;
+            }
+            if (command is not ("--catalog" or "--check" or "--dispatch")) throw new ArgumentException("Unknown option " + command + ". See --help.");
+            using var obs = await ObsConnection.Connect(config, stop.Token);
+            using var native = new NativeTBar(config.Port);
+            var desk = new DeskActions(config, obs.Call, nativeMove: native.MoveAsync);
+            if (command == "--catalog") Console.WriteLine((await desk.Catalog()).ToJsonString());
+            else if (command == "--check") Console.WriteLine($"OBS {(await obs.Call("GetVersion"))["obsVersion"]} connected. {Binding.Load(map).Count} global shortcuts validated.");
+            else
+            {
+                if (args[1].StartsWith("mix.") || (args[1].StartsWith("fader.") && args[1] != "fader.status") || args[1] is "music.duck" or "music.restore" or "undo" or "bridge.reconnect")
+                    throw new ArgumentException("This action needs the running bridge's session state. Use --listen.");
+                Console.WriteLine(await desk.Dispatch(args[1]));
+            }
+            return 0;
+        }
+        catch (Exception e) { Console.Error.WriteLine("ERROR: " + e.Message); return 1; }
+    }
+
+    private sealed record KeyInput(string Action, int Generation, long Timestamp);
+    private static async Task Listen(BridgeConfig cfg, List<Binding> bindings, CancellationTokenSource stop)
+    {
+        // One gain authority per local OBS endpoint, including other Windows login sessions.
+        // Retain the handle without thread ownership: awaiting OBS can resume on another thread.
+        using var single = new Mutex(false, @"Global\FadesterMixBridge-" + cfg.Port, out bool first);
+        if (!first) throw new InvalidOperationException("Fadester controls are already running for this OBS port. Use the existing panel.");
+        var input = Channel.CreateBounded<KeyInput>(new BoundedChannelOptions(128) { SingleReader = true, FullMode = BoundedChannelFullMode.Wait });
+        int current = 0, generation = 0;
+        var keys = new Hotkeys(bindings, action =>
+        {
+            int g = Volatile.Read(ref current);
+            if (g == 0) { Console.WriteLine("Offline: ignored " + action); return; }
+            if (!input.Writer.TryWrite(new(action, g, Stopwatch.GetTimestamp()))) Console.WriteLine("Input queue full: ignored " + action);
+        });
+        keys.Start(stop.Token);
+        try
+        {
+            await keys.Ready;
+            Console.WriteLine(bindings.Count > 0 ? $"Listening for {bindings.Count} TourBox shortcuts. Type quit to stop." : "Mix-only companion: no controller shortcuts registered. Type quit to stop.");
+            if (Console.IsInputRedirected) _ = Task.Run(async () => { try { while (await Console.In.ReadLineAsync() is { } line) if (line.Trim().Equals("quit", StringComparison.OrdinalIgnoreCase)) { stop.Cancel(); break; } } catch (IOException) { } });
+            else _ = Task.Run(() => { try { while (Console.ReadLine() is { } line) if (line.Trim().Equals("quit", StringComparison.OrdinalIgnoreCase)) { stop.Cancel(); break; } } catch (IOException) { } });
+            string? lastError = null;
+            while (!stop.IsCancellationRequested)
+            {
+                try
+                {
+                    using var obs = await ObsConnection.Connect(cfg, stop.Token); lastError = null;
+                    using var native = new NativeTBar(cfg.Port);
+                    var desk = new DeskActions(cfg, obs.Call, nativeMove: native.MoveAsync); int mine = ++generation;
+                    obs.InputVolumeChanged += desk.OnVolumeChanged;
+                    obs.InputLevelChangedById += desk.OnMixInputLevelChanged;
+                    desk.StartMixMonitor();
+                    var protocol = new MixProtocolServer(obs,desk);
+                    Volatile.Write(ref current, mine); Console.WriteLine($"Connected to OBS at {cfg.Host}:{cfg.Port}.");
+                    try
+                    {
+                        using var wait = CancellationTokenSource.CreateLinkedTokenSource(stop.Token);
+                        while (!stop.IsCancellationRequested && !obs.Disconnected.IsCompleted)
+                        {
+                            var readable = input.Reader.WaitToReadAsync(wait.Token).AsTask();
+                            var completed = await Task.WhenAny(readable, obs.Disconnected, keys.Done);
+                            if (completed == keys.Done) { await keys.Done; stop.Cancel(); break; }
+                            if (completed != readable) { wait.Cancel(); break; }
+                            if (!await readable) break;
+                            if (!input.Reader.TryRead(out var ev) || ev.Generation != mine) continue;
+                            if (stop.IsCancellationRequested) break;
+                            bool sweepTick = ev.Action is "fader.back" or "fader.forward" or "fader.fineBack" or "fader.fineForward";
+                            if (Stopwatch.GetElapsedTime(ev.Timestamp) > TimeSpan.FromMilliseconds(sweepTick ? 180 : 1500)) { Console.WriteLine("Discarded stale input: " + ev.Action); continue; }
+                            if (ev.Action == "bridge.reconnect") { Console.WriteLine("Reconnecting."); break; }
+                            try { Console.WriteLine(await desk.Dispatch(ev.Action)); }
+                            catch (Exception e) { Console.WriteLine("Action " + ev.Action + ": " + e.Message); }
+                        }
+                    }
+                    finally
+                    {
+                        Volatile.Write(ref current, 0);
+                        await protocol.DisposeAsync();
+                        await desk.StopAudioAsync();
+                        if (!obs.Disconnected.IsCompleted) { try { await desk.CancelOwnedAsync(); } catch (Exception e) { Console.WriteLine("Could not cancel T-bar: " + e.Message); } }
+                    }
+                }
+                catch (OperationCanceledException) when (stop.IsCancellationRequested) { break; }
+                catch (Exception e) { if (e.Message != lastError) { Console.WriteLine("Offline: " + e.Message); lastError = e.Message; } }
+                if (!stop.IsCancellationRequested) { try { await Task.Delay(1200, stop.Token); } catch (OperationCanceledException) { break; } }
+            }
+        }
+        finally { stop.Cancel(); await keys.Done; }
+        Console.WriteLine("Bridge stopped.");
+    }
+}

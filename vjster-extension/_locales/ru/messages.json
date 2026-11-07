@@ -1,6 +1,6 @@
 {
   "extDescription": {
-    "message": "Управление скоростью и качеством видео в Chrome со Stream Deck. Связывается только с действиями VJster на этом компьютере."
+    "message": "Управление скоростью и качеством видео в Chrome со Stream Deck, OpenDeck или TourBox. Общается только с VJster на этом компьютере."
   },
   "htmlLang": {
     "message": "ru"
@@ -9,10 +9,10 @@
     "message": "Параметры VJster"
   },
   "companionNote": {
-    "message": "Для работы VJster нужен бесплатный плагин VJster в программе вашего Stream Deck или OpenDeck. Само по себе это расширение ничего не делает."
+    "message": "Для работы VJster нужна бесплатная программа-компаньон на этом компьютере: плагин VJster для Stream Deck или OpenDeck либо Fadester for TourBox. Само по себе это расширение ничего не делает."
   },
   "linkGet": {
-    "message": "Скачать плагин"
+    "message": "Загрузки"
   },
   "linkHelp": {
     "message": "Инструкция по установке"
@@ -27,13 +27,13 @@
     "message": "Сохранить"
   },
   "portNote": {
-    "message": "Порт (только на этом компьютере), который слушают действия VJster на вашем Stream Deck. Меняйте его, только если изменили там."
+    "message": "Порт (только на этом компьютере), который слушает VJster в плагине Stream Deck или OpenDeck либо в Fadester for TourBox. Меняйте его, только если изменили там."
   },
   "idLabel": {
     "message": "Идентификатор этого расширения"
   },
   "idNote": {
-    "message": "Чтобы подключаться могло только это расширение, вставьте идентификатор в настройки VJster на Stream Deck."
+    "message": "Чтобы подключаться могло только это расширение, вставьте идентификатор в настройки VJster в плагине Stream Deck или OpenDeck либо в Fadester for TourBox."
   },
   "allSites": {
     "message": "Управлять видео на всех сайтах, а не только на YouTube"

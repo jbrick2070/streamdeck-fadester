@@ -29,9 +29,9 @@ The zip has no `key`: the store refuses one on a first upload and gives the exte
 
 **Detailed description:**
 
-> VJster lets the VJster dials and keys on your Stream Deck or OpenDeck change the speed and picture quality of a YouTube video: slow it for a beat-match, speed it up, nudge it in small steps, set the quality, play or pause. The deck shows the video's title and speed.
+> VJster lets the VJster dials, keys and knobs on your Stream Deck, OpenDeck or TourBox change the speed and picture quality of a YouTube video: slow it for a beat-match, speed it up, nudge it in small steps, set the quality, play or pause. The deck shows the video's title and speed.
 >
-> VJster needs the free VJster plugin on your deck software (from github.com/jbrick2070/streamdeck-fadester). On its own, this extension does nothing.
+> VJster needs a free companion on this computer: the VJster plugin for Stream Deck or OpenDeck, or Fadester for TourBox (from github.com/jbrick2070/streamdeck-fadester). On its own, this extension does nothing.
 >
 > It talks only to your own computer. No account, no tracking, nothing sent to any server.
 >
@@ -39,7 +39,7 @@ The zip has no `key`: the store refuses one on a first upload and gives the exte
 
 **Category:** Productivity. **Language:** English (the listing; the extension itself has 12).
 
-**Single purpose:** Let the VJster plugin on the user's Stream Deck or OpenDeck change the speed and quality of the YouTube video in a tab.
+**Single purpose:** Let the VJster plugin for the user's Stream Deck or OpenDeck, or Fadester for TourBox, change the speed and quality of the YouTube video in a tab.
 
 **Privacy policy URL:** https://github.com/jbrick2070/streamdeck-fadester/blob/main/docs/vjster/PRIVACY.md
 
@@ -48,9 +48,9 @@ The zip has no `key`: the store refuses one on a first upload and gives the exte
 | Permission | Why |
 |---|---|
 | `storage` | Keeps the port number, and the pinned tab until the browser closes. |
-| `alarms` | Checks once a minute that the link to the plugin is open, because Chrome stops an idle extension worker after 30 seconds. |
+| `alarms` | Checks once a minute that the link to the companion is open, because Chrome stops an idle extension worker after 30 seconds. |
 | Host `*://*.youtube.com/*` | The content scripts that read the player's state and change its speed and quality run on YouTube pages. |
-| Host `ws://127.0.0.1/*` | The connection to the VJster plugin on this computer. |
+| Host `ws://127.0.0.1/*` | The connection to the VJster companion on this computer. |
 | Remote code | None. All code is in the package. |
 
 **Data use form:** it collects no user data for transmission anywhere. Tick none of the collected data types; certify that data is not sold, not used for unrelated purposes and not used for creditworthiness.

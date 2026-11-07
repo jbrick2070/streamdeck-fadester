@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "VJster",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "homepage_url": "https://github.com/jbrick2070/streamdeck-fadester",
   "description": "__MSG_extDescription__",
   "default_locale": "en",

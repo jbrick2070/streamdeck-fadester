@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The extension says it needs the VJster plugin and links to it: the options page's notice and links, the
 // manifest's home page, and the page a first install opens.
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -20,6 +20,25 @@ describe("the extension says it needs the VJster plugin", () => {
       expect(href.startsWith(`${REPO}/`), href).toBe(true);
       expect(rest).toContain('target="_blank"');
       expect(rest).toContain("noopener");
+    }
+  });
+
+  it("names every companion in every language, in a description the store accepts", () => {
+    const localeDir = join(dir, "_locales");
+    const languages = readdirSync(localeDir);
+    expect(languages.length).toBe(12);
+    for (const language of languages) {
+      const messages = JSON.parse(readFileSync(join(localeDir, language, "messages.json"), "utf8")) as Record<string, { message: string }>;
+      const description = messages.extDescription.message;
+      expect(description.length, language).toBeLessThanOrEqual(132);
+      for (const name of ["Stream Deck", "OpenDeck", "TourBox"]) expect(description, `${language} description`).toContain(name);
+      for (const key of ["companionNote", "portNote", "idNote"]) {
+        const text = messages[key].message;
+        // German writes the plugins as compounds: "Stream-Deck-".
+        expect(text.replace("Stream-Deck", "Stream Deck"), `${language} ${key}`).toContain("Stream Deck");
+        expect(text, `${language} ${key}`).toContain("OpenDeck");
+        expect(text, `${language} ${key}`).toContain("Fadester for TourBox");
+      }
     }
   });
 

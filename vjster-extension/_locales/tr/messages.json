@@ -1,6 +1,6 @@
 {
   "extDescription": {
-    "message": "Chrome'daki videonun hızını ve kalitesini Stream Deck'ten kontrol edin. Yalnızca bu bilgisayardaki VJster eylemleriyle konuşur."
+    "message": "Chrome videosunun hızını ve kalitesini Stream Deck, OpenDeck veya TourBox'tan yönetin. Yalnızca bu bilgisayarda VJster ile konuşur."
   },
   "htmlLang": {
     "message": "tr"
@@ -9,10 +9,10 @@
     "message": "VJster seçenekleri"
   },
   "companionNote": {
-    "message": "VJster, Stream Deck'inizin veya OpenDeck'in yazılımında ücretsiz VJster eklentisine ihtiyaç duyar. Bu uzantı tek başına hiçbir şey yapmaz."
+    "message": "VJster, bu bilgisayarda ücretsiz bir yardımcı uygulamaya ihtiyaç duyar: Stream Deck veya OpenDeck için VJster eklentisi ya da Fadester for TourBox. Bu uzantı tek başına hiçbir şey yapmaz."
   },
   "linkGet": {
-    "message": "Eklentiyi edinin"
+    "message": "İndirmeler"
   },
   "linkHelp": {
     "message": "Kurulum adımları"
@@ -27,13 +27,13 @@
     "message": "Kaydet"
   },
   "portNote": {
-    "message": "Stream Deck'inizdeki VJster eylemlerinin yalnızca bu bilgisayarda dinlediği bağlantı noktası. Yalnızca orada değiştirdiyseniz değiştirin."
+    "message": "VJster'in Stream Deck veya OpenDeck eklentinizde ya da Fadester for TourBox'ta yalnızca bu bilgisayarda dinlediği bağlantı noktası. Yalnızca orada değiştirdiyseniz değiştirin."
   },
   "idLabel": {
     "message": "Bu uzantının kimliği"
   },
   "idNote": {
-    "message": "Yalnızca bu uzantının bağlanmasına izin vermek için kimliği Stream Deck'inizdeki VJster ayarlarına yapıştırın."
+    "message": "Yalnızca bu uzantının bağlanmasına izin vermek için kimliği Stream Deck veya OpenDeck eklentinizdeki VJster ayarlarına ya da Fadester for TourBox'a yapıştırın."
   },
   "allSites": {
     "message": "Yalnızca YouTube'da değil, tüm sitelerde videoları kontrol et"

@@ -1,6 +1,6 @@
 {
   "extDescription": {
-    "message": "Chrome에서 재생 중인 동영상의 속도와 화질을 Stream Deck에서 조절합니다. 이 컴퓨터의 VJster 작업과만 통신합니다."
+    "message": "Chrome에서 재생 중인 동영상의 속도와 화질을 Stream Deck, OpenDeck, TourBox에서 조절합니다. 이 컴퓨터의 VJster와만 통신합니다."
   },
   "htmlLang": {
     "message": "ko"
@@ -9,10 +9,10 @@
     "message": "VJster 옵션"
   },
   "companionNote": {
-    "message": "VJster를 사용하려면 Stream Deck 또는 OpenDeck 소프트웨어에 무료 VJster 플러그인이 필요합니다. 이 확장 프로그램만으로는 아무 기능도 하지 않습니다."
+    "message": "VJster를 사용하려면 이 컴퓨터에 무료 연동 프로그램이 필요합니다. Stream Deck 또는 OpenDeck용 VJster 플러그인이나 Fadester for TourBox입니다. 이 확장 프로그램만으로는 아무 기능도 하지 않습니다."
   },
   "linkGet": {
-    "message": "플러그인 받기"
+    "message": "다운로드"
   },
   "linkHelp": {
     "message": "설치 방법"
@@ -27,13 +27,13 @@
     "message": "저장"
   },
   "portNote": {
-    "message": "Stream Deck의 VJster 작업이 이 컴퓨터 내부에서만 수신 대기하는 포트입니다. Stream Deck에서 변경한 경우에만 변경하세요."
+    "message": "Stream Deck 또는 OpenDeck 플러그인이나 Fadester for TourBox에서 VJster가 이 컴퓨터 내부에서만 수신 대기하는 포트입니다. 그곳에서 변경한 경우에만 변경하세요."
   },
   "idLabel": {
     "message": "이 확장 프로그램의 ID"
   },
   "idNote": {
-    "message": "이 확장 프로그램만 연결되게 하려면 Stream Deck의 VJster 설정에 이 ID를 붙여 넣으세요."
+    "message": "이 확장 프로그램만 연결되게 하려면 Stream Deck 또는 OpenDeck 플러그인의 VJster 설정이나 Fadester for TourBox에 이 ID를 붙여 넣으세요."
   },
   "allSites": {
     "message": "YouTube뿐 아니라 모든 사이트의 동영상 조절"

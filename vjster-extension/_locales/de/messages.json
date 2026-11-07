@@ -1,6 +1,6 @@
 {
   "extDescription": {
-    "message": "Steuerung für Tempo und Qualität des Videos in Chrome per Stream Deck. Kommuniziert nur mit den VJster-Aktionen auf diesem Computer."
+    "message": "Tempo und Qualität des Chrome-Videos per Stream Deck, OpenDeck oder TourBox steuern. Spricht nur mit VJster auf diesem Computer."
   },
   "htmlLang": {
     "message": "de"
@@ -9,10 +9,10 @@
     "message": "VJster-Optionen"
   },
   "companionNote": {
-    "message": "VJster braucht das kostenlose VJster-Plugin in der Stream-Deck- oder OpenDeck-Software. Allein tut diese Erweiterung nichts."
+    "message": "VJster braucht ein kostenloses Begleitprogramm auf diesem Computer: das VJster-Plugin für Stream Deck oder OpenDeck oder Fadester for TourBox. Allein tut diese Erweiterung nichts."
   },
   "linkGet": {
-    "message": "Plugin herunterladen"
+    "message": "Downloads"
   },
   "linkHelp": {
     "message": "Installationsanleitung"
@@ -27,13 +27,13 @@
     "message": "Speichern"
   },
   "portNote": {
-    "message": "Der Port, auf dem die VJster-Aktionen auf dem Stream Deck lauschen, nur auf diesem Computer. Nur ändern, wenn er dort geändert wurde."
+    "message": "Der Port, auf dem VJster im Stream-Deck- oder OpenDeck-Plugin oder in Fadester for TourBox lauscht, nur auf diesem Computer. Nur ändern, wenn er dort geändert wurde."
   },
   "idLabel": {
     "message": "ID dieser Erweiterung"
   },
   "idNote": {
-    "message": "Damit sich nur diese Erweiterung verbinden kann, die ID in die VJster-Einstellungen auf dem Stream Deck einfügen."
+    "message": "Damit sich nur diese Erweiterung verbinden kann, die ID in die VJster-Einstellungen im Stream-Deck- oder OpenDeck-Plugin oder in Fadester for TourBox einfügen."
   },
   "allSites": {
     "message": "Videos auf allen Websites steuern, nicht nur auf YouTube"

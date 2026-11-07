@@ -1,6 +1,6 @@
 {
   "extDescription": {
-    "message": "Stream Deck-bediening van tempo en kwaliteit van de video in Chrome. Praat alleen met de VJster-acties op deze computer."
+    "message": "Bedien tempo en kwaliteit van de video in Chrome met Stream Deck, OpenDeck of TourBox. Praat alleen met VJster op deze computer."
   },
   "htmlLang": {
     "message": "nl"
@@ -9,10 +9,10 @@
     "message": "VJster-opties"
   },
   "companionNote": {
-    "message": "VJster heeft de gratis VJster-plug-in nodig in de software van je Stream Deck of OpenDeck. Op zichzelf doet deze extensie niets."
+    "message": "VJster heeft een gratis begeleidend programma op deze computer nodig: de VJster-plug-in voor Stream Deck of OpenDeck, of Fadester for TourBox. Op zichzelf doet deze extensie niets."
   },
   "linkGet": {
-    "message": "Plug-in downloaden"
+    "message": "Downloads"
   },
   "linkHelp": {
     "message": "Installatiestappen"
@@ -27,13 +27,13 @@
     "message": "Opslaan"
   },
   "portNote": {
-    "message": "De poort waarop de VJster-acties op je Stream Deck luisteren, alleen op deze computer. Wijzig hem alleen als je hem daar hebt gewijzigd."
+    "message": "De poort waarop VJster luistert in je Stream Deck- of OpenDeck-plug-in of in Fadester for TourBox, alleen op deze computer. Wijzig hem alleen als je hem daar hebt gewijzigd."
   },
   "idLabel": {
     "message": "De id van deze extensie"
   },
   "idNote": {
-    "message": "Zodat alleen deze extensie verbinding kan maken: plak de id in de VJster-instellingen op je Stream Deck."
+    "message": "Zodat alleen deze extensie verbinding kan maken: plak de id in de VJster-instellingen van je Stream Deck- of OpenDeck-plug-in, of in Fadester for TourBox."
   },
   "allSites": {
     "message": "Video's bedienen op elke site, niet alleen op YouTube"

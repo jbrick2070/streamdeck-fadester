@@ -1,6 +1,6 @@
 {
   "extDescription": {
-    "message": "Controle da velocidade e da qualidade do vídeo no Chrome pelo Stream Deck. Comunica-se só com as ações do VJster neste computador."
+    "message": "Controle velocidade e qualidade do vídeo no Chrome com Stream Deck, OpenDeck ou TourBox. Fala só com o VJster neste computador."
   },
   "htmlLang": {
     "message": "pt-BR"
@@ -9,10 +9,10 @@
     "message": "Opções do VJster"
   },
   "companionNote": {
-    "message": "O VJster precisa do plugin gratuito do VJster no software do seu Stream Deck ou OpenDeck. Sozinha, esta extensão não faz nada."
+    "message": "O VJster precisa de um programa complementar gratuito neste computador: o plugin do VJster para Stream Deck ou OpenDeck, ou o Fadester for TourBox. Sozinha, esta extensão não faz nada."
   },
   "linkGet": {
-    "message": "Obter o plugin"
+    "message": "Downloads"
   },
   "linkHelp": {
     "message": "Passos de instalação"
@@ -27,13 +27,13 @@
     "message": "Salvar"
   },
   "portNote": {
-    "message": "A porta em que as ações do VJster no seu Stream Deck escutam, somente neste computador. Altere-a apenas se você a alterou lá."
+    "message": "A porta em que o VJster escuta no seu plugin do Stream Deck ou OpenDeck ou no Fadester for TourBox, somente neste computador. Altere-a apenas se você a alterou lá."
   },
   "idLabel": {
     "message": "ID desta extensão"
   },
   "idNote": {
-    "message": "Para permitir que somente esta extensão se conecte, cole o ID nas configurações do VJster no seu Stream Deck."
+    "message": "Para permitir que somente esta extensão se conecte, cole o ID nas configurações do VJster no seu plugin do Stream Deck ou OpenDeck, ou no Fadester for TourBox."
   },
   "allSites": {
     "message": "Controlar vídeos em todos os sites, não só no YouTube"

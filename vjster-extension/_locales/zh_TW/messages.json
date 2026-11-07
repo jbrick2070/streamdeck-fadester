@@ -1,6 +1,6 @@
 {
   "extDescription": {
-    "message": "在 Stream Deck 上控制 Chrome 中正在播放的影片速度與畫質。只與這台電腦上的 VJster 動作通訊。"
+    "message": "在 Stream Deck、OpenDeck 或 TourBox 上控制 Chrome 中正在播放的影片速度與畫質。只與這台電腦上的 VJster 通訊。"
   },
   "htmlLang": {
     "message": "zh-TW"
@@ -9,10 +9,10 @@
     "message": "VJster 選項"
   },
   "companionNote": {
-    "message": "VJster 需要在 Stream Deck 或 OpenDeck 軟體中安裝免費的 VJster 外掛程式。單獨使用時，此擴充功能不會有任何作用。"
+    "message": "VJster 需要這台電腦上有一個免費的配套程式：適用於 Stream Deck 或 OpenDeck 的 VJster 外掛程式，或 Fadester for TourBox。單獨使用時，此擴充功能不會有任何作用。"
   },
   "linkGet": {
-    "message": "取得外掛程式"
+    "message": "下載"
   },
   "linkHelp": {
     "message": "安裝步驟"
@@ -27,13 +27,13 @@
     "message": "儲存"
   },
   "portNote": {
-    "message": "Stream Deck 上的 VJster 動作所監聽的連接埠，僅限這台電腦。只有在那裡變更過時才需要變更。"
+    "message": "VJster 在 Stream Deck 或 OpenDeck 外掛程式或 Fadester for TourBox 中監聽的連接埠，僅限這台電腦。只有在那裡變更過時才需要變更。"
   },
   "idLabel": {
     "message": "此擴充功能的 ID"
   },
   "idNote": {
-    "message": "如果只允許此擴充功能連線，請將此 ID 貼到 Stream Deck 上的 VJster 設定中。"
+    "message": "如果只允許此擴充功能連線，請將此 ID 貼到 Stream Deck 或 OpenDeck 外掛程式的 VJster 設定中，或貼到 Fadester for TourBox 中。"
   },
   "allSites": {
     "message": "控制所有網站上的影片，而不只是 YouTube"

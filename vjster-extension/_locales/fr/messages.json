@@ -1,6 +1,6 @@
 {
   "extDescription": {
-    "message": "Pilotage par Stream Deck de la vitesse et de la qualité de la vidéo dans Chrome. Ne parle qu'aux actions VJster de cet ordinateur."
+    "message": "Pilotez vitesse et qualité de la vidéo dans Chrome avec Stream Deck, OpenDeck ou TourBox. Ne parle qu'à VJster sur cet ordinateur."
   },
   "htmlLang": {
     "message": "fr"
@@ -9,10 +9,10 @@
     "message": "Options de VJster"
   },
   "companionNote": {
-    "message": "VJster a besoin du plugin VJster gratuit dans le logiciel de votre Stream Deck ou d'OpenDeck. Seule, cette extension ne fait rien."
+    "message": "VJster a besoin d'un compagnon gratuit sur cet ordinateur : le plugin VJster pour Stream Deck ou OpenDeck, ou Fadester for TourBox. Seule, cette extension ne fait rien."
   },
   "linkGet": {
-    "message": "Obtenir le plugin"
+    "message": "Téléchargements"
   },
   "linkHelp": {
     "message": "Étapes d'installation"
@@ -27,13 +27,13 @@
     "message": "Enregistrer"
   },
   "portNote": {
-    "message": "Le port sur lequel les actions VJster de votre Stream Deck écoutent, sur cet ordinateur uniquement. Ne le modifiez que si vous l'avez modifié dans Stream Deck."
+    "message": "Le port sur lequel VJster écoute dans votre plugin Stream Deck ou OpenDeck ou dans Fadester for TourBox, sur cet ordinateur uniquement. Ne le modifiez que si vous l'avez modifié là-bas."
   },
   "idLabel": {
     "message": "ID de cette extension"
   },
   "idNote": {
-    "message": "Pour que seule cette extension puisse se connecter, collez l'ID dans les paramètres VJster de votre Stream Deck."
+    "message": "Pour que seule cette extension puisse se connecter, collez l'ID dans les paramètres VJster de votre plugin Stream Deck ou OpenDeck, ou dans Fadester for TourBox."
   },
   "allSites": {
     "message": "Piloter les vidéos sur tous les sites, pas seulement YouTube"

@@ -1,0 +1,5 @@
+# Rehearsal release: Fadester for TourBox
+
+Ship two importable Windows presets with the same local control panel and bridge. Show gives a first-time operator Scroll to cue and the flat Dial for a manual dissolve. In Show all three rotaries have turns, read-only taps and distinct press-and-turn actions. Destructive reset/cancel gestures require Side. Tools covers transitions, media, audio checks, overlay, recording status/chapters and replays. Source roles are optional and explicitly assigned; no mic or stream controls fire on startup. Generated map, native presets and panel labels are the reference.
+
+The release gate covers authenticated Windows listener integration, native Console import, read-only local discovery, a real isolated 33.0.1 mix/cancel/take/return, and interruption of a timed fade by another real OBS client. Package source, compatible runtime and a quick guide with the two presets. An operator should rehearse actual rotations and chords before any public model-compatibility claim. Publish a durable companion download before submitting Show and Tools to the TourBox gallery; a .tb alone cannot drive OBS.

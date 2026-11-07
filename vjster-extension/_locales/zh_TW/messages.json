@@ -8,6 +8,18 @@
   "optionsTitle": {
     "message": "VJster 選項"
   },
+  "companionNote": {
+    "message": "VJster 需要在 Stream Deck 或 OpenDeck 軟體中安裝免費的 VJster 外掛程式。單獨使用時，此擴充功能不會有任何作用。"
+  },
+  "linkGet": {
+    "message": "取得外掛程式"
+  },
+  "linkHelp": {
+    "message": "安裝步驟"
+  },
+  "linkPrivacy": {
+    "message": "隱私權政策"
+  },
   "portLabel": {
     "message": "連接埠"
   },

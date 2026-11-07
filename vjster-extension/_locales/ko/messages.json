@@ -8,6 +8,18 @@
   "optionsTitle": {
     "message": "VJster 옵션"
   },
+  "companionNote": {
+    "message": "VJster를 사용하려면 Stream Deck 또는 OpenDeck 소프트웨어에 무료 VJster 플러그인이 필요합니다. 이 확장 프로그램만으로는 아무 기능도 하지 않습니다."
+  },
+  "linkGet": {
+    "message": "플러그인 받기"
+  },
+  "linkHelp": {
+    "message": "설치 방법"
+  },
+  "linkPrivacy": {
+    "message": "개인정보처리방침"
+  },
   "portLabel": {
     "message": "연결 포트"
   },

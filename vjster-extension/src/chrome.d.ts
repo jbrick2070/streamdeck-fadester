@@ -20,7 +20,7 @@ declare namespace chrome {
     const onMessage: {
       addListener(cb: (message: unknown, sender: MessageSender, sendResponse: (response?: unknown) => void) => boolean | void): void;
     };
-    const onInstalled: { addListener(cb: () => void): void };
+    const onInstalled: { addListener(cb: (details: { reason: string }) => void): void };
     const onStartup: { addListener(cb: () => void): void };
   }
 

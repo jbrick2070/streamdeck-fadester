@@ -8,6 +8,18 @@
   "optionsTitle": {
     "message": "VJster options"
   },
+  "companionNote": {
+    "message": "VJster needs the free VJster plugin on your Stream Deck or OpenDeck software. On its own, this extension does nothing."
+  },
+  "linkGet": {
+    "message": "Get the plugin"
+  },
+  "linkHelp": {
+    "message": "Install steps"
+  },
+  "linkPrivacy": {
+    "message": "Privacy policy"
+  },
   "portLabel": {
     "message": "Link port"
   },

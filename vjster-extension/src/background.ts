@@ -6,6 +6,11 @@
 import type { SocketLike } from "./link-client.js";
 import { installWorker, type WorkerChrome } from "./worker-core.js";
 
+// A first install opens the options page, which says the extension needs the VJster plugin and links to it.
+chrome.runtime.onInstalled.addListener((details) => {
+  if (details.reason === "install") void chrome.runtime.openOptionsPage();
+});
+
 installWorker({
   chrome: chrome as unknown as WorkerChrome,
   openSocket: (url) => new WebSocket(url) as unknown as SocketLike,

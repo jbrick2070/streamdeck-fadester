@@ -13,11 +13,20 @@
       code { font-size: 0.95em; padding: 0.1rem 0.3rem; border-radius: 4px; background: rgba(127, 127, 127, 0.15); user-select: all; }
       button { margin-left: 0.5rem; padding: 0.3rem 0.9rem; }
       p.note { opacity: 0.75; margin: 0.25rem 0 0; }
+      p.callout { margin: 0 0 1rem; padding: 0.6rem 0.8rem; border-radius: 8px; background: rgba(127, 127, 127, 0.12); }
+      p.callout a { margin-right: 1rem; }
       #status { margin-top: 1.25rem; min-height: 1.5em; font-weight: 600; }
     </style>
   </head>
   <body>
     <h1>VJster</h1>
+
+    <p class="callout">
+      <span data-i18n="companionNote">VJster needs the free VJster plugin on your Stream Deck or OpenDeck software. On its own, this extension does nothing.</span><br />
+      <a href="https://github.com/jbrick2070/streamdeck-fadester/releases/latest" target="_blank" rel="noopener noreferrer" data-i18n="linkGet">Get the plugin</a>
+      <a href="https://github.com/jbrick2070/streamdeck-fadester/blob/main/docs/vjster/INSTALL.md" target="_blank" rel="noopener noreferrer" data-i18n="linkHelp">Install steps</a>
+      <a href="https://github.com/jbrick2070/streamdeck-fadester/blob/main/docs/vjster/PRIVACY.md" target="_blank" rel="noopener noreferrer" data-i18n="linkPrivacy">Privacy policy</a>
+    </p>
 
     <label for="port" data-i18n="portLabel">Link port</label>
     <input id="port" type="number" min="1024" max="65535" /><button id="save" data-i18n="save">Save</button>

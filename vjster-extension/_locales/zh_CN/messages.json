@@ -8,6 +8,18 @@
   "optionsTitle": {
     "message": "VJster 选项"
   },
+  "companionNote": {
+    "message": "VJster 需要在 Stream Deck 或 OpenDeck 软件中安装免费的 VJster 插件。单独使用，此扩展程序不会执行任何操作。"
+  },
+  "linkGet": {
+    "message": "获取插件"
+  },
+  "linkHelp": {
+    "message": "安装步骤"
+  },
+  "linkPrivacy": {
+    "message": "隐私政策"
+  },
   "portLabel": {
     "message": "连接端口"
   },

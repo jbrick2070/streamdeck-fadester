@@ -8,6 +8,18 @@
   "optionsTitle": {
     "message": "VJster-Optionen"
   },
+  "companionNote": {
+    "message": "VJster braucht das kostenlose VJster-Plugin in der Stream-Deck- oder OpenDeck-Software. Allein tut diese Erweiterung nichts."
+  },
+  "linkGet": {
+    "message": "Plugin herunterladen"
+  },
+  "linkHelp": {
+    "message": "Installationsanleitung"
+  },
+  "linkPrivacy": {
+    "message": "Datenschutzerklärung"
+  },
   "portLabel": {
     "message": "Verbindungsport"
   },

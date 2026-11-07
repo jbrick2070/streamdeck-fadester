@@ -8,6 +8,18 @@
   "optionsTitle": {
     "message": "VJster seçenekleri"
   },
+  "companionNote": {
+    "message": "VJster, Stream Deck'inizin veya OpenDeck'in yazılımında ücretsiz VJster eklentisine ihtiyaç duyar. Bu uzantı tek başına hiçbir şey yapmaz."
+  },
+  "linkGet": {
+    "message": "Eklentiyi edinin"
+  },
+  "linkHelp": {
+    "message": "Kurulum adımları"
+  },
+  "linkPrivacy": {
+    "message": "Gizlilik politikası"
+  },
   "portLabel": {
     "message": "Bağlantı noktası"
   },

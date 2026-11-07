@@ -2,6 +2,10 @@
 
 What changed in Fadester for OBS and, where it says so, in VJster. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are the plugin's own (`manifest.json`). There is no change control here: the newest entry is the version.
 
+## Unreleased
+
+- **VJster Chrome extension 0.1.1:** the options page now says the extension needs the VJster plugin, with links to get it, the install steps and the privacy policy (in all 12 languages), and a first install opens that page. The manifest names the project's home page. Dutch is the extension's twelfth language.
+
 ## 0.10.0 - 2026-11-04
 
 - Fadester’s bundle and all 17 suite actions now use the GitHub account namespace `io.github.jbrick2070.fadester-for-obs`. The previous `com.jbrick2070.fadester-for-obs` build and its custom profiles can stay installed during migration; the new plugin has separate settings. Re-enter the OBS password and use a new starter or rebind your controls. Standalone VJster keeps its own ID.

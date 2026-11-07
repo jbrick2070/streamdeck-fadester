@@ -8,6 +8,18 @@
   "optionsTitle": {
     "message": "Параметры VJster"
   },
+  "companionNote": {
+    "message": "Для работы VJster нужен бесплатный плагин VJster в программе вашего Stream Deck или OpenDeck. Само по себе это расширение ничего не делает."
+  },
+  "linkGet": {
+    "message": "Скачать плагин"
+  },
+  "linkHelp": {
+    "message": "Инструкция по установке"
+  },
+  "linkPrivacy": {
+    "message": "Политика конфиденциальности"
+  },
   "portLabel": {
     "message": "Порт подключения"
   },

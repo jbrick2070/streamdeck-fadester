@@ -6,6 +6,7 @@ on:
     paths:
       - .github/workflows/tourbox-macos.yml
       - tourbox/bridge/**
+      - tourbox/macos/**
       - tourbox/tests/portable/**
       - tourbox/tests/StudioFaderSelfTests.cs
       - tourbox/presets/**
@@ -16,6 +17,7 @@ on:
     paths:
       - .github/workflows/tourbox-macos.yml
       - tourbox/bridge/**
+      - tourbox/macos/**
       - tourbox/tests/portable/**
       - tourbox/tests/StudioFaderSelfTests.cs
       - tourbox/presets/**
@@ -70,11 +72,48 @@ jobs:
           test "$(uname -m)" = "$EXPECTED_MACHINE"
           sw_vers
           dotnet --info
-      - name: Validate the master preset format
-        run: python tourbox/presets/build.py --check
+      - name: Validate Windows and Mac master presets
+        run: |
+          python tourbox/presets/build.py --check
+          python tourbox/presets/build_macos.py --check
+          python -m unittest discover -s tourbox/presets -p test_build_macos.py
+      - name: Compile the read-only native probe (no launch)
+        # Compilation and ad-hoc signing only. No GUI, OBS, AX inspection or permission prompt.
+        run: bash tourbox/macos/probe/build.sh
+      - name: Check the Mac native slider with synthetic state
+        # --self-test includes the real bounded reader's open-pipe regression.
+        # No NSApplication launch, AX access, OBS inspection or permission prompt.
+        run: |
+          bash tourbox/macos/native/build.sh
+          "tourbox/macos/native/build/Fadester Native Slider Experimental.app/Contents/MacOS/FadesterNativeSlider" --self-test
+          dotnet run --project tourbox/macos/native/tests/AdapterChecks.csproj --configuration Release
+      - name: Check the Mac shortcut protocol (no registration)
+        # These test modes never register Carbon shortcuts or observe hardware.
+        run: |
+          bash tourbox/macos/input/build.sh
+          input="tourbox/macos/input/build/Fadester Mac Shortcuts Experimental.app/Contents/MacOS/FadesterMacShortcuts"
+          "$input" --self-test --map tourbox/presets/map.json
+          python tourbox/macos/input/tests/open-pipe.py "$input"
+          dotnet run --project tourbox/macos/input/tests/InputChecks.csproj --configuration Release
+      - name: Build and check the Mac action host (fake OBS only)
+        env:
+          TARGET_RID: ${{ matrix.rid }}
+        run: |
+          host="$RUNNER_TEMP/FadesterMacHost-$TARGET_RID"
+          dotnet publish tourbox/macos/host/FadesterMacHost.csproj \
+            --configuration Release --runtime "$TARGET_RID" --self-contained true \
+            -p:PublishSingleFile=true -p:DebugType=None --output "$host"
+          # Test the self-contained executable outside the checkout. No --run,
+          # native/input helper launch, installed OBS config or live OBS access.
+          (cd "$RUNNER_TEMP" && "$host/FadesterMacHost" --help && "$host/FadesterMacHost" --self-test)
+          python tourbox/macos/host/tests/open-pipe.py "$host/FadesterMacHost"
       - name: Run shared production core checks
         run: dotnet run --project tourbox/tests/portable/FadesterCoreChecks.csproj --configuration Release -- --map tourbox/presets/map.json
-      - name: Build and verify the native developer executable
+      - name: Build and self-test the experimental Mac setup window (no GUI)
+        # Separate UI-only bundle; synthetic child lifecycle/settings tests only.
+        # It contains no runtime host and cannot register shortcuts or use OBS.
+        run: bash tourbox/macos/panel/build.sh --ui-only
+      - name: Build and verify the native developer executables
         env:
           TARGET_RID: ${{ matrix.rid }}
         run: |
@@ -84,6 +123,14 @@ jobs:
             -p:PublishSingleFile=true -p:DebugType=None --output "$bundle"
           # Running from outside the checkout verifies packaged map discovery.
           (cd "$RUNNER_TEMP" && "$bundle/FadesterCoreChecks")
+          host="$bundle/developer-mix-host"
+          dotnet publish tourbox/macos/bridge/FadesterMixHost.csproj \
+            --configuration Release --runtime "$TARGET_RID" --self-contained true \
+            -p:PublishSingleFile=true -p:DebugType=None --output "$host"
+          # These commands use no installed OBS configuration, real OBS or input hardware.
+          (cd "$RUNNER_TEMP" && "$host/FadesterMixHost" --help && "$host/FadesterMixHost" --self-test)
+          cp tourbox/macos/bridge/README.md "$host/README.md"
+          printf '%s\n' 'Developer-only grouped-mix CLI. Not the Mac TourBox app or a signed/notarized product release.' > "$host/DEVELOPER-ONLY.txt"
           cp tourbox/MACOS.md "$bundle/README.md"
           cp LICENSE "$bundle/LICENSE"
           mkdir -p "$bundle/runtime-notices"
@@ -109,5 +156,7 @@ jobs:
             printf '### TourBox shared-core checks: %s\n\n' "$TARGET_RID"
             printf 'Result: **%s**. Commit: `%s`.\n\n' "$RESULT" "$GITHUB_SHA"
             printf '%s\n' 'Builds and executes the shared production OBS/audio/fader logic with controlled test doubles and a local fake OBS transport.'
-            printf '\n%s\n' '**Developer executable only.** This is not the Mac TourBox app. Native TourBox input, the setup window, OBS slider movement, permissions and physical hardware are not verified by this job.'
+            printf '\n%s\n' 'Also validates Windows/Mac preset parity; builds both Swift helpers and runs their synthetic/open-pipe checks plus the C# transport checks; and publishes and self-tests the action host against fake OBS. No shortcuts, GUI or Accessibility access are used by those tests.'
+            printf '\n%s\n' 'Also compiles the read-only native probe without launching it, and publishes and runs offline self-tests for the mix-only host in the developer-mix-host subfolder.'
+            printf '\n%s\n' '**Developer executables only.** This is not the Mac TourBox app or a signed/notarized product release. Native TourBox input, the setup window, real OBS audio, OBS slider movement, permissions and physical hardware are not verified by this job.'
           } >> "$GITHUB_STEP_SUMMARY"

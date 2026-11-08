@@ -2,7 +2,7 @@ name: TourBox macOS core checks
 
 on:
   push:
-    branches: [main, codex/tourbox-macos-ci]
+    branches: [main]
     paths:
       - .github/workflows/tourbox-macos.yml
       - tourbox/bridge/**

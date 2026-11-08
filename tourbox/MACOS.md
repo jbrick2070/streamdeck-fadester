@@ -2,6 +2,8 @@
 
 The [Mac workflow](https://github.com/jbrick2070/streamdeck-fadester/actions/workflows/tourbox-macos.yml) is configured to build and run the shared Fadester control logic on GitHub-hosted Macs. Its output is a **developer core-check bundle**. A usable Fadester for TourBox Mac application is still to be built.
 
+> **Status, 2026-11-07.** Everything under `tourbox/macos/` and `tourbox/presets/macos/` is experimental and was written against the Windows package at 61e77c4, before bee7115 moved VJster into the one preset and added its Ctrl+Shift and Alt+Shift chords. The Mac preset generator and the Mac preset follow the current map again. Still to port, and not buildable on the Windows PC: the Mac shortcut helper (`macos/input/Core.swift`) accepts Ctrl+Alt+Shift chords only, so it refuses the current map; the Mac host does not host the VJster link, so the video and layer actions do nothing there; the Mac panel's settings lack the VJster port, extension pin and layer fields. None of the Mac pieces has been built since the merge.
+
 ## Cloud builds
 
 The workflow uses standard macOS 15 runners for both architectures:
@@ -13,7 +15,7 @@ The workflow uses standard macOS 15 runners for both architectures:
 
 GitHub provides these standard runners free for public repositories. This workflow does not use the paid larger-runner labels. See [GitHub’s runner reference](https://docs.github.com/en/actions/reference/runners/github-hosted-runners#standard-github-hosted-runners-for-public-repositories). Private forks have different billing rules.
 
-The workflow, **TourBox macOS core checks**, runs for relevant changes on `main` and `codex/tourbox-macos-ci`, and pull requests into `main`. It also supports manual dispatch; the **Run workflow** button becomes available after the workflow is on the default branch.
+The workflow, **TourBox macOS core checks**, runs for relevant changes on `main` and pull requests into `main`. It also supports manual dispatch; the **Run workflow** button becomes available after the workflow is on the default branch.
 
 Open the repository’s **Actions** tab, select that workflow and inspect both architecture jobs. The artifacts **FadesterCoreChecks-osx-arm64** and **FadesterCoreChecks-osx-x64** contain a `.tar.gz` with the test executable, preset map, developer README, license, runtime notices and source commit, plus a SHA-256 checksum file. The current workflow also places the optional grouped-mix CLI in a separately labeled `developer-mix-host` subfolder. These artifacts are retained for three days and are not product releases. Check the run’s commit and results before relying on it: the workflow definition alone is not passing test evidence.
 

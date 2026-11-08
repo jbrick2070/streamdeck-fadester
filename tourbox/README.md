@@ -92,7 +92,7 @@ For an interview, use **C1** to duck the bed as the guest comes up, hold **Tall*
 
 This edition targets Windows x64. The native preset requires TourBox Console and a full-size desktop TourBox with three pushable rotaries, Side, Tour, C1/C2 and a D-pad. The shared mixer companion includes its runtime, runs on the OBS computer and needs neither TourBox Console nor TourBox hardware in mix-only mode. See the rehearsal notes for hardware and software checks.
 
-macOS support is in development; this package is for Windows.
+macOS support is in development ([MACOS.md](MACOS.md) describes the experimental pieces and what they still lack); this package is for Windows.
 
 The source includes the native preset generator and validator, bridge, Windows panel, C++ slider helper, icons and guide generator. Rebuilding on Windows requires an 8.x .NET SDK, Node.js, Python 3, PowerShell, Visual Studio 2022 C++ build tools with the Windows SDK and the stock .NET Framework C# compiler. Run `./build.ps1` from the TourBox source folder. Use `-DotNet C:\path\to\dotnet.exe` to select an SDK. The optional transport integration test uses the Node package `ws`. The distribution includes the source license and separate notices for the .NET runtime.
 

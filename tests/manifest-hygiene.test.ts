@@ -14,7 +14,8 @@ function walkFiles(dir: string): string[] {
     const full = join(dir, entry.name);
     const tourboxRoot = join(ROOT, "tourbox");
     if (entry.isDirectory() && (full === join(tourboxRoot, "dist") ||
-        (entry.name === "obj" && full.startsWith(tourboxRoot + sep)))) continue;
+        (entry.name === "obj" && full.startsWith(tourboxRoot + sep)) ||
+        (entry.name === "build" && full.startsWith(join(tourboxRoot, "macos") + sep)))) continue;
     if (
       entry.name === "node_modules" ||
       entry.name === ".git" ||

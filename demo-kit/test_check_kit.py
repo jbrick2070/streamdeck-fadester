@@ -448,7 +448,9 @@ class CheckFolder(unittest.TestCase):
         self.assertEqual(ck.redact({"event": "step"}), {"event": "step"})
 
     def test_unzip_refuses_a_name_that_leaves_the_folder(self):
-        for bad in ["../escape.txt", "media/../../escape.txt", "C:/escape.txt", "/escape.txt"]:
+        # The first four climb or are absolute, which the name check refuses; "." and "./" pass it but land on the kit
+        # folder itself, which only the resolved-path check refuses.
+        for bad in ["../escape.txt", "media/../../escape.txt", "C:/escape.txt", "/escape.txt", ".", "./"]:
             zpath = self.root / "bad.zip"
             with zipfile.ZipFile(zpath, "w") as z:
                 z.writestr("README.md", b"r")

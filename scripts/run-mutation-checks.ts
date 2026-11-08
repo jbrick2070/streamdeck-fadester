@@ -1244,7 +1244,7 @@ const MUTATIONS: MutationCheck[] = [
     description:
       "Accept the round-trip folder inside a string and verify the refusal test fails",
     filePath: resolve(ROOT, "demo-kit/kit_collection.py"),
-    target: "if root_l in flat.lower():",
+    target: "if any(spelling.lower() in flat.lower() for spelling in roots):",
     mutated: "if False:",
     testFile: "tests/demo-kit-collection.test.ts"
   },

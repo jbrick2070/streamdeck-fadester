@@ -1,8 +1,8 @@
 # Experimental macOS master preset
 
-This is the Mac encoding of the same single **OBS Fadester for TourBox** master: 68 physical shortcut assignments, 47 distinct actions, 22 TourMenu entries, the same native menu controls, UP modes and assignment HUD. It does not install or start a companion. Use only with the matching experimental Mac companion and verify native Console import and physical gestures before relying on it.
+This is the Mac encoding of the same single **OBS Fadester for TourBox** master: the same physical shortcut assignments, labels, TourMenu entries, native menu controls, UP modes and assignment HUD as `../OBS Fadester for TourBox.tb`, generated from the same `../map.json`. It does not install or start a companion. Use only with the matching experimental Mac companion and verify native Console import and physical gestures before relying on it.
 
-The Mac shortcuts are **Control + Option + Shift**, followed by the key in the canonical `../map.json`. **Command is absent.** Mac Console's native modifier encoding differs: Control=1, Shift=2, Option=4, Command=8. The Windows master uses mask14 for Ctrl+Alt+Shift; the Mac file uses mask7. Importing the Windows file unchanged is not evidence of equivalent Mac shortcuts.
+The Mac shortcuts keep the key from the canonical `../map.json` and translate the modifiers bit by bit: the OBS actions' **Ctrl+Alt+Shift** becomes **Control+Option+Shift** (Windows mask 14, Mac mask 7), the video and layer actions' **Ctrl+Shift** becomes **Control+Shift** (10 to 3) and their **Alt+Shift** stays **Option+Shift** (6). **Command is absent.** Mac Console's native modifier encoding differs: Control=1, Shift=2, Option=4, Command=8. Importing the Windows file unchanged is not evidence of equivalent Mac shortcuts. The experimental Mac shortcut helper in `../../macos/input` still registers Control+Option+Shift chords only, so the video and layer shortcuts in this file reach nothing on a Mac until it is updated.
 
 Generate and check from the repository root:
 
@@ -12,7 +12,7 @@ python3 tourbox/presets/build_macos.py --check
 python3 -m unittest discover -s tourbox/presets -p test_build_macos.py
 ```
 
-The generator reads the canonical map and reuses the existing master builder, then changes only the 68 physical modifier bytes, 47 shortcut-label modifier fields and 22 menu modifier fields. It does not edit `../OBS Fadester for TourBox.tb`, the Windows map, Console's database, app links or any live device. The header stays unchanged: its second byte is the generic plugin identifier, not a platform marker. A reverse-normalization check verifies every other field against the original builder.
+The generator reads the canonical map and reuses the existing master builder, then changes only the physical modifier bytes, the shortcut-label modifier fields and the menu modifier fields. It does not edit `../OBS Fadester for TourBox.tb`, the Windows map, Console's database, app links or any live device. The header stays unchanged: its second byte is the generic plugin identifier, not a platform marker. A reverse-normalization check verifies every other field against the original builder.
 
 Calibration was read from installed Mac Console 5.12.1 factory `resources/presets/*.json` and its native table records on 2026-11-04. Final Cut's Control+T (slot24) uses mask1; Control+Shift+R (slot22) uses mask3; Photoshop's Command+0 (slot10) uses mask8. Bare Shift uses2 and Option4. Mac tables retain 22-byte headers and 256 13-byte control records. Native UP examples also use byte2 value0x10. These facts establish encoding; they do not prove successful import, shortcut dispatch, hardware timing or another model's chord behavior.
 

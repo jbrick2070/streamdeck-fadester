@@ -15,6 +15,12 @@ import {
 } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
 
 const PLUGIN_EN = {
+  mixAll: "All OBS mixer inputs",
+  mixDisabled: "Whole mix disabled",
+  mixOffline: "Mix controller offline",
+  mixFadeOut: "Fade out mix",
+  mixRestore: "Restore mix",
+  mixDb: "{db} dB",
   // Direct OBS client errors
   errorNoVolume: "OBS did not return a volume for '{input}'.",
   errorRoleUnavailable: "{role} is unavailable. Choose an OBS mixer input in the inspector.",

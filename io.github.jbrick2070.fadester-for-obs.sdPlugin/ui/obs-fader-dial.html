@@ -16,6 +16,7 @@
     <select id="obs-fader-target">
       <option value="unconfigured" selected data-i18n="controlChoose">Choose an OBS control</option>
       <option value="input_volume" data-i18n="controlAudio">Audio volume</option>
+      <option value="all_inputs" data-i18n="mixAll">All OBS mixer inputs</option>
       <option value="tbar" data-i18n="controlTbar">Blend Live into Next scene</option>
     </select>
   </div>
@@ -42,7 +43,7 @@
     <div class="row"><label for="obs-fader-press-layer" data-i18n="selectedSource">Selected source</label><select id="obs-fader-press-layer"></select></div>
     <p class="muted" id="obs-fader-press-hint">This source selection is shared with Source &amp; Layer controls on the deck.</p>
   </div>
-  <div class="row">
+  <div class="row" id="obs-fader-step-row">
     <label for="obs-fader-step" data-i18n="stepPerTick">Step per tick</label>
     <select id="obs-fader-step">
       <option value="0.005" data-i18n="stepFine">0.5 % (fine)</option>
@@ -52,7 +53,7 @@
       <option value="0.1" data-i18n="stepCoarse">10 % (coarse)</option>
     </select>
   </div>
-  <div class="row">
+  <div class="row" id="obs-fader-accel-row">
     <label for="obs-fader-accel" data-i18n="acceleration">Acceleration</label>
     <input id="obs-fader-accel" type="checkbox" checked />
     <span class="hint" data-i18n="accelerationHint">Fast turns take bigger steps</span>
@@ -135,6 +136,10 @@
       if (label && document.activeElement !== label) label.value = generatedLabel() ? "" : settings.labelOverride || "";
       window.directObsFillSelect(input, window.directObsAudioItems(state), selectedInput, T("chooseAudioSource"));
       if (inputRow) inputRow.style.display = selectedTarget === "input_volume" ? "" : "none";
+      ["obs-fader-step-row", "obs-fader-accel-row"].forEach(function (id) {
+        const row = document.getElementById(id);
+        if (row) row.style.display = selectedTarget === "all_inputs" ? "none" : "";
+      });
       if (tbarHint) tbarHint.style.display = selectedTarget === "tbar" ? "" : "none";
       if (cycleRow) cycleRow.style.display = selectedTarget === "tbar" ? "" : "none";
       if (cycle) cycle.checked = settings.autoQueueNextScene === true;
@@ -146,6 +151,10 @@
         } else if (selectedTarget === "tbar" && catalog.currentProgramScene && catalog.currentProgramScene === catalog.currentPreviewScene) {
           banner.textContent = T("faderBannerSame");
           banner.className = "status-banner status-warn";
+          banner.style.display = "block";
+        } else if (selectedTarget === "all_inputs") {
+          banner.textContent = window.directObsMixHint(state);
+          banner.className = "status-banner status-info";
           banner.style.display = "block";
         } else if (selectedTarget === "unconfigured") {
           banner.textContent = T("faderBannerChoose");

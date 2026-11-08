@@ -7,6 +7,7 @@
 import { FadesterGlobalSettings } from "../types/settings.js";
 import { ConnectionStatusInfo } from "../../packages/streamdeck-fadester-shared/src/types.js";
 import { automaticInputRole, resolveAutomaticInputName } from "./automatic-targets.js";
+import { WholeMixClient } from "./whole-mix.js";
 import { LocalText, ownText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
 import { t } from "../i18n/strings.js";
 import {
@@ -295,6 +296,11 @@ function clampUnit(value: number): number {
  * installed.
  */
 export class DirectObsClient extends ObsVendorClient {
+  public readonly wholeMix = new WholeMixClient(
+    () => this.isConnected() && !this.collectionChanging,
+    (eventData) => this.sendObsRequest("BroadcastCustomEvent", { eventData }),
+    () => this.emit("wholeMixChanged")
+  );
   private catalog: DirectObsCatalog = {
     scenes: [],
     sceneDetails: [],
@@ -348,6 +354,8 @@ export class DirectObsClient extends ObsVendorClient {
     this.mediaPauseWaitMs = options?.mediaPauseWaitMs ?? MEDIA_PAUSE_WAIT_MS;
     // Several controls on a full deck intentionally share this one client.
     this.setMaxListeners(0);
+    this.on("connectionReset", () => this.wholeMix.reset());
+    this.on("connectionReady", () => this.wholeMix.refresh());
     this.on("statusChanged", (status: ConnectionStatusInfo) => {
       if (status.kind !== "connected") {
         this.collectionChanging = false;
@@ -1021,6 +1029,10 @@ export class DirectObsClient extends ObsVendorClient {
       if ((eventData.studioModeEnabled === true) === this.catalog.studioMode) return;
     }
     super.handleObsEvent(d);
+    if (eventType === "CustomEvent") {
+      this.wholeMix.receive(eventData);
+      return;
+    }
 
     if (eventType === "SceneTransitionStarted") {
       const cycle = this.sceneCycle;
@@ -1041,6 +1053,8 @@ export class DirectObsClient extends ObsVendorClient {
     }
     if (eventType === "CurrentSceneCollectionChanging" || eventType === "CurrentSceneCollectionChanged") {
       this.collectionChanging = eventType === "CurrentSceneCollectionChanging";
+      if (this.collectionChanging) this.wholeMix.reset();
+      else this.wholeMix.refresh();
       this.controlGeneration++;
       this.catalogRefreshGeneration++;
       this.cancelAllInputFades();

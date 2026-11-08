@@ -315,6 +315,11 @@
   }
 
   window.directObsFillSelect = fillSelect;
+  window.directObsMixHint = function (state) {
+    const availability = state && state.wholeMix && state.wholeMix.availability;
+    return T(availability === "ready" ? "mixHint" : availability === "disabled" ? "mixDisabled" : "mixOffline");
+  };
+
   window.directObsAudioItems = function (state) {
     const catalog = state && state.catalog || {};
     const resolved = state && state.automaticInputs || {};

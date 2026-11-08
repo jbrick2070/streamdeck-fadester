@@ -48,7 +48,8 @@ export interface DirectDialRenderInput {
   value: number;
   configured: boolean;
   studioMode?: boolean;
-  target?: "input_volume" | "tbar" | "unconfigured";
+  target?: "input_volume" | "tbar" | "unconfigured" | "all_inputs";
+  valueLabel?: string;
   programSceneName?: string;
   previewSceneName?: string;
   autoQueueNextScene?: boolean;
@@ -99,7 +100,7 @@ export function renderDirectDialSvg(input: DirectDialRenderInput): string {
       ? input.reason || t("obsNotConnected")
       : input.problem || (input.studioMode === false
         ? t("studioModeOff")
-        : t("percent", { n: Math.round(Math.max(0, Math.min(1, input.value)) * 100) }));
+        : input.valueLabel || t("percent", { n: Math.round(Math.max(0, Math.min(1, input.value)) * 100) }));
   const barWidth = Math.round(Math.max(0, Math.min(1, input.value)) * 150);
   const pressHint = input.configured && input.connected && !input.problem ? input.pressHint : "";
   const titleText = boxText(title, 15, 176);

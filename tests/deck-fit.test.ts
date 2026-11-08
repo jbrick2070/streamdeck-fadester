@@ -146,6 +146,10 @@ function drawnTexts(): Array<{ key: StringKey; params?: TextParams; boxes: Box[]
   for (const key of ["pressNormalBlend", "pressShowHide"] as const) add(key, [B.dialHint, B.mixerCaption, B.layerFooter]);
   add("dialChooseControl", [B.dialTitle]);
   add("faderDefault", [B.dialTitle]);
+  add("mixAll", [B.keyTitle, B.dialTitle]);
+  for (const key of ["mixOffline", "mixDisabled"] as const) add(key, [B.keySub, B.dialReason]);
+  for (const key of ["mixFadeOut", "mixRestore"] as const) add(key, [B.keySub]);
+  add("mixDb", [B.dialReason], { db: "-36.5" });
   add("dialOpenInspector", [B.dialReason]);
   add("obsNotConnected", [B.dialReason, B.keySub, B.mixerCaption]);
   add("studioModeOff", [B.dialReason]);

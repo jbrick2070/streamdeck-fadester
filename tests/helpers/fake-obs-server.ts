@@ -155,7 +155,7 @@ const FAKE_REQUEST_TYPES = [
   "SetCurrentSceneTransition", "TriggerStudioModeTransition", "GetSourceScreenshot", "CallVendorRequest",
   "GetMediaInputStatus", "TriggerMediaInputAction", "GetGroupList", "GetSourceFilterList",
   "GetSourceFilter", "GetSourceFilterDefaultSettings", "SetSourceFilterSettings", "SetSourceFilterEnabled",
-  "GetHotkeyList", "TriggerHotkeyByName"
+  "GetHotkeyList", "TriggerHotkeyByName", "BroadcastCustomEvent"
 ];
 
 interface FakeProfileMeta {
@@ -1204,6 +1204,11 @@ export class FakeObsServer {
     requestType: string,
     requestData: Record<string, unknown>
   ): Promise<void> {
+    if (requestType === "BroadcastCustomEvent") {
+      this.emitObsEvent("CustomEvent", requestData.eventData as Record<string, unknown>);
+      this.sendResponse(ws, requestId, requestType, true, 100, "", {});
+      return;
+    }
     if (requestType === "GetVersion") {
       this.sendResponse(ws, requestId, requestType, true, 100, "", {
         obsVersion: this.obsVersion,

@@ -140,6 +140,7 @@ export class DirectObsPropertyInspectorBridge {
   ) {
     client.on("statusChanged", () => this.broadcast());
     client.on("directStateChanged", () => this.broadcast());
+    client.on("wholeMixChanged", () => this.broadcast());
     // A filter list read under another connection is stale; the page asks again.
     client.on("connectionReset", () => {
       this.filterEpoch++;
@@ -169,6 +170,7 @@ export class DirectObsPropertyInspectorBridge {
         passwordSet: settings.password.length > 0
       },
       catalog,
+      wholeMix: this.client.wholeMix?.state,
       // Whether this OBS offers the media requests (the Playlister inspector's compatibility banner).
       mediaCapability: this.client.getMediaCapability(),
       automaticInputs: Object.fromEntries(["__audio_main__", "__audio_mic__", "__audio_aux__", "__audio_input_2__"]

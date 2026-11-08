@@ -8,6 +8,7 @@ import {
   WillAppearEvent,
   WillDisappearEvent
 } from "@elgato/streamdeck";
+import { mixProblem } from "../obs/whole-mix.js";
 import { DirectObsClient } from "../obs/direct-obs-client.js";
 import { automaticInputRoleName, migrateAutomaticInputSettings } from "../obs/automatic-targets.js";
 import { customCaption } from "../obs/preset-captions.js";
@@ -27,7 +28,7 @@ import {
 } from "../gfx/direct-obs-renderer.js";
 import { computeDialDelta, normalizeStepPerTick } from "./dial-math.js";
 import { statusCellReason } from "../../packages/streamdeck-fadester-shared/src/status-text.js";
-import { StringKey, onLanguageChanged, t, translate } from "../i18n/strings.js";
+import { StringKey, formatNumber, onLanguageChanged, t, translate } from "../i18n/strings.js";
 
 interface DialFeedbackSink {
   setFeedback(feedback: { canvas: string }): Promise<void>;
@@ -36,7 +37,7 @@ interface DialFeedbackSink {
 
 function normalizeTarget(raw: unknown): ObsFaderTarget {
   if (raw === undefined) return DEFAULT_OBS_FADER_DIAL_SETTINGS.target;
-  return raw === "input_volume" || raw === "tbar" ? raw : "unconfigured";
+  return raw === "input_volume" || raw === "tbar" || raw === "all_inputs" ? raw : "unconfigured";
 }
 
 export class ObsFaderDialInstanceController {
@@ -44,6 +45,7 @@ export class ObsFaderDialInstanceController {
   private readonly rateLimiter: CellRateLimiter<string>;
   private visible = false;
   /** Unsubscribes this control from language changes (PLAN.md 11.1). */
+  private offMix?: () => void;
   private offLanguage: () => void = () => {};
   private lastRotateAt = 0;
 
@@ -71,6 +73,8 @@ export class ObsFaderDialInstanceController {
     this.offLanguage = onLanguageChanged(() => this.renderNow());
     this.client.on("statusChanged", this.onStateChanged);
     this.client.on("directStateChanged", this.onStateChanged);
+    this.client.on("wholeMixChanged", this.onStateChanged);
+    this.syncMixObserver();
     this.renderNow();
   }
 
@@ -82,16 +86,25 @@ export class ObsFaderDialInstanceController {
     this.rateLimiter.dispose();
     this.client.off("statusChanged", this.onStateChanged);
     this.client.off("directStateChanged", this.onStateChanged);
+    this.client.off("wholeMixChanged", this.onStateChanged);
+    this.syncMixObserver();
   }
 
   public updateSettings(settings: ObsFaderDialSettings): void {
     if (this.settings.autoQueueNextScene && (settings.autoQueueNextScene !== true || settings.target !== "tbar")) this.client.cancelSceneCycle();
     this.settings = this.mergeSettings(settings);
+    this.syncMixObserver();
     this.renderNow();
   }
 
   public async handleRotate(ticks: number, now = Date.now()): Promise<void> {
     if (!(await this.ensureReady(now))) {
+      return;
+    }
+    if (this.settings.target === "all_inputs") {
+      if (!Number.isInteger(ticks) || ticks === 0) return;
+      try { await this.client.wholeMix.command(ticks > 0 ? "mix.up" : "mix.down", Math.min(32, Math.abs(ticks))); }
+      catch { await this.sink.showAlert(); }
       return;
     }
     const elapsed = this.lastRotateAt > 0 ? now - this.lastRotateAt : 999;
@@ -199,25 +212,36 @@ export class ObsFaderDialInstanceController {
     return true;
   }
 
+  private syncMixObserver(): void {
+    if (this.visible && this.settings.target === "all_inputs") {
+      this.offMix ??= this.client.wholeMix.observe();
+    } else {
+      this.offMix?.();
+      this.offMix = undefined;
+    }
+  }
+
   private renderNow(): void {
     if (!this.visible) {
       return;
     }
     const catalog = this.client.getCatalog();
+    const all = this.settings.target === "all_inputs";
     const configured =
-      this.settings.target === "tbar" ||
+      all || this.settings.target === "tbar" ||
       (this.settings.target === "input_volume" && Boolean(this.settings.inputName));
     const isTbar = this.settings.target === "tbar";
-    const inputName = isTbar ? "" : this.client.resolveInputName(this.settings.inputName);
+    const inputName = isTbar || all ? "" : this.client.resolveInputName(this.settings.inputName);
     const inputRole = automaticInputRoleName(this.settings.inputName);
-    const value = isTbar
+    const mix = all ? this.client.wholeMix.state : undefined;
+    const value = mix ? (mix.db === null ? 0 : Math.pow(10, mix.db / 20)) : isTbar
       ? catalog.tbarPosition
       : catalog.inputVolumes[inputName] ?? 0;
     // A shipped caption ("Scene blend", "Music") is a default: the dial draws its role instead.
     const customLabel = customCaption("fader", this.settings);
     // The T-bar's own name is a default, not a label: the scene mixer then draws its press hint.
     const label = customLabel ||
-      (isTbar ? "" : inputName || inputRole || this.settings.inputName || t("faderDefault"));
+      (all ? t("mixAll") : isTbar ? "" : inputName || inputRole || this.settings.inputName || t("faderDefault"));
     const pressHints: Partial<Record<ObsFaderPressAction, StringKey>> = {
       next_blend: "pressNextBlend",
       previous_blend: "pressPreviousBlend",
@@ -234,7 +258,9 @@ export class ObsFaderDialInstanceController {
         label,
         value,
         configured,
-        ...(!isTbar && configured && !inputName ? { problem: inputRole ? t("roleUnavailable", { role: inputRole }) : t("audioInputUnavailable") } : {}),
+        problem: mix ? mixProblem(mix) : !isTbar && configured && !inputName
+          ? inputRole ? t("roleUnavailable", { role: inputRole }) : t("audioInputUnavailable") : undefined,
+        valueLabel: mix ? t("mixDb", { db: mix.db === null ? "−∞" : formatNumber(mix.db, 1) }) : undefined,
         target: this.settings.target,
         accent: this.settings.accent,
         ...(pressHint ? { pressHint: t(pressHint) } : {}),

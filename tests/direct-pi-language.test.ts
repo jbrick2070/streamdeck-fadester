@@ -88,6 +88,22 @@ function state(language: { choice: unknown; resolved: unknown } | undefined, ext
   };
 }
 
+it.each([
+  ["obs-fade-key.html", "direct-fade-status", "obs-fade-duration-row"],
+  ["obs-fader-dial.html", "direct-target-status", "obs-fader-step-row"]
+])("shows owner availability and hides source-only settings for the whole mix on %s", (file, banner, row) => {
+  const page = openPage(file, { settings: { target: "all_inputs" } });
+  for (const [availability, key] of [["offline", "mixOffline"], ["disabled", "mixDisabled"], ["ready", "mixHint"]]) {
+    page.receive(state({ choice: "de", resolved: "de" }, { wholeMix: { availability, db: -6 } }));
+    expect(page.byId(banner).textContent).toBe(de[key]);
+    expect(page.byId(row).style.display).toBe("none");
+  }
+  if (file === "obs-fade-key.html") {
+    expect(page.byId("obs-fade-up").textContent).toBe(de.mixRestore);
+    expect(page.byId("obs-fade-down").textContent).toBe(de.mixFadeOut);
+  }
+});
+
 /**
  * Every English page text still shown that the target language (German unless
  * named) has its own word for: the elements' own text, placeholders and labels.

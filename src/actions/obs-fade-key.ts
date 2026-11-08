@@ -7,6 +7,7 @@ import {
   WillAppearEvent,
   WillDisappearEvent
 } from "@elgato/streamdeck";
+import { mixProblem } from "../obs/whole-mix.js";
 import { DirectObsClient } from "../obs/direct-obs-client.js";
 import { automaticInputRoleName, migrateAutomaticInputSettings } from "../obs/automatic-targets.js";
 import { customCaption } from "../obs/preset-captions.js";
@@ -34,6 +35,7 @@ export class ObsFadeKeyInstanceController {
   private settings: Required<ObsFadeKeySettings>;
   private visible = false;
   /** Unsubscribes this control from language changes (PLAN.md 11.1). */
+  private offMix?: () => void;
   private offLanguage: () => void = () => {};
   private readonly rateLimiter: CellRateLimiter<string>;
   private readonly onStateChanged = (): void => this.renderNow();
@@ -59,6 +61,8 @@ export class ObsFadeKeyInstanceController {
     this.offLanguage = onLanguageChanged(() => this.renderNow());
     this.client.on("statusChanged", this.onStateChanged);
     this.client.on("directStateChanged", this.onStateChanged);
+    this.client.on("wholeMixChanged", this.onStateChanged);
+    this.syncMixObserver();
     this.renderNow();
   }
 
@@ -69,21 +73,30 @@ export class ObsFadeKeyInstanceController {
     this.rateLimiter.dispose();
     this.client.off("statusChanged", this.onStateChanged);
     this.client.off("directStateChanged", this.onStateChanged);
+    this.client.off("wholeMixChanged", this.onStateChanged);
+    this.syncMixObserver();
   }
 
   public updateSettings(settings: ObsFadeKeySettings): void {
     this.settings = this.mergeSettings(settings);
+    this.syncMixObserver();
     this.renderNow();
   }
 
   public async handleKeyDown(now = Date.now()): Promise<void> {
-    if (!this.settings.inputName) {
+    const all = this.settings.target === "all_inputs";
+    if (!all && !this.settings.inputName) {
       await this.sink.showAlert();
       return;
     }
     if (!this.client.isConnected()) {
       this.client.nudgeReconnect(2000, now);
       await this.sink.showAlert();
+      return;
+    }
+    if (all) {
+      try { await this.client.wholeMix.command(this.settings.to ? "mix.restore" : "mix.fadeOut"); }
+      catch { await this.sink.showAlert(); }
       return;
     }
     void this.client
@@ -95,17 +108,27 @@ export class ObsFadeKeyInstanceController {
       .catch(async () => this.sink.showAlert());
   }
 
+  private syncMixObserver(): void {
+    if (this.visible && this.settings.target === "all_inputs") {
+      this.offMix ??= this.client.wholeMix.observe();
+    } else {
+      this.offMix?.();
+      this.offMix = undefined;
+    }
+  }
+
   private renderNow(): void {
     if (!this.visible) {
       return;
     }
-    const configured = Boolean(this.settings.inputName);
-    const inputName = this.client.resolveInputName(this.settings.inputName);
+    const all = this.settings.target === "all_inputs";
+    const configured = all || Boolean(this.settings.inputName);
+    const inputName = all ? "" : this.client.resolveInputName(this.settings.inputName);
     const role = automaticInputRoleName(this.settings.inputName);
     const customLabel = customCaption("fade", this.settings);
-    const title = customLabel || inputName || role || this.settings.inputName || t("fadeTitle");
+    const title = customLabel || (all ? t("mixAll") : inputName || role || this.settings.inputName || t("fadeTitle"));
     const up = this.settings.to === 1;
-    const subtitle = !configured
+    const subtitle = all ? t(up ? "mixRestore" : "mixFadeOut") : !configured
       ? t("keyOpenInspector")
       : this.settings.durationMs === 0
         ? t(up ? "fadeUpNow" : "fadeDownNow")
@@ -119,13 +142,15 @@ export class ObsFadeKeyInstanceController {
         icon: this.settings.to === 1 ? "volume-up" : "volume-down",
         configured,
         accent: this.settings.accent,
-        ...(!inputName && configured ? { problem: role ? t("roleUnavailable", { role }) : t("audioInputUnavailable") } : {})
+        problem: all ? mixProblem(this.client.wholeMix.state) : !inputName && configured
+          ? role ? t("roleUnavailable", { role }) : t("audioInputUnavailable") : undefined
       })
     );
   }
 
   private mergeSettings(raw?: ObsFadeKeySettings): Required<ObsFadeKeySettings> {
     return {
+      target: raw?.target === "all_inputs" ? "all_inputs" : "input_volume",
       inputName: typeof raw?.inputName === "string" ? raw.inputName.trim()
         : raw?.inputName === undefined ? DEFAULT_OBS_FADE_KEY_SETTINGS.inputName : "",
       to: Number(raw?.to) === 0 ? 0 : 1,

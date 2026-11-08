@@ -101,7 +101,7 @@ export const DEFAULT_AUTO_FADE_KEY_SETTINGS: Required<AutoFadeKeySettings> = {
 
 /** New direct controls follow automatic OBS targets. Explicit empty choices
  * remain unconfigured, and manual bindings always take precedence. */
-export type ObsFaderTarget = "unconfigured" | "input_volume" | "tbar";
+export type ObsFaderTarget = "unconfigured" | "input_volume" | "tbar" | "all_inputs";
 export type ObsFaderPressAction =
   | "finish_transition"
   | "next_blend"
@@ -136,6 +136,7 @@ export const DEFAULT_OBS_FADER_DIAL_SETTINGS: Required<ObsFaderDialSettings> = {
 
 export interface ObsFadeKeySettings {
   [key: string]: string | number | boolean | undefined;
+  target?: "input_volume" | "all_inputs";
   inputName?: string;
   to?: 0 | 1;
   durationMs?: number;
@@ -144,6 +145,7 @@ export interface ObsFadeKeySettings {
 }
 
 export const DEFAULT_OBS_FADE_KEY_SETTINGS: Required<ObsFadeKeySettings> = {
+  target: "input_volume",
   inputName: "__audio_main__",
   to: 1,
   durationMs: 1000,

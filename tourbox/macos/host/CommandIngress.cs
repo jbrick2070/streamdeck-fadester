@@ -18,7 +18,9 @@ internal sealed class CommandIngress
     static readonly HashSet<string> Rotary = new((
         "music.down music.up music.fineDown music.fineUp content.down content.up " +
         "fader.back fader.forward fader.fineBack fader.fineForward preview.previous preview.next " +
-        "media.previous media.next transition.previous transition.next transition.shorter transition.longer mix.up mix.down").Split(' '));
+        "media.previous media.next transition.previous transition.next transition.shorter transition.longer mix.up mix.down " +
+        "vjster.speed.down vjster.speed.up vjster.speed.fineDown vjster.speed.fineUp vjster.quality.down vjster.quality.up " +
+        "layer1.blend.previous layer1.blend.next layer2.blend.previous layer2.blend.next layer2.opacity.down layer2.opacity.up").Split(' '));
     internal CommandIngress(Func<long>? monotonicMs = null, Func<long>? unixMs = null)
     {
         this.monotonicMs = monotonicMs ?? (() => (long)(Stopwatch.GetTimestamp() * 1000d / Stopwatch.Frequency));

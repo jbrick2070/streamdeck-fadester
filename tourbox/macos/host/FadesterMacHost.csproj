@@ -24,6 +24,9 @@
     <Compile Include="../../bridge/MixProtocolServer.cs" Link="Shared/MixProtocolServer.cs" />
     <Compile Include="../../bridge/ObsConnection.cs" Link="Shared/ObsConnection.cs" />
     <Compile Include="../../bridge/StudioFader.cs" Link="Shared/StudioFader.cs" />
+    <Compile Include="../../bridge/VjsterLink.cs" Link="Shared/VjsterLink.cs" />
+    <Compile Include="../../bridge/VjsterDesk.cs" Link="Shared/VjsterDesk.cs" />
+    <Compile Include="../../bridge/VjsterSelfTests.cs" Link="Tests/VjsterSelfTests.cs" />
     <Compile Include="../../bridge/BridgeSelfTests.cs" Link="Tests/BridgeSelfTests.cs" />
     <Compile Include="../../bridge/MixSelfTests.cs" Link="Tests/MixSelfTests.cs" />
     <Compile Include="../../tests/StudioFaderSelfTests.cs" Link="Tests/StudioFaderSelfTests.cs" />

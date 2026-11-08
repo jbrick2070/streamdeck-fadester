@@ -14,7 +14,7 @@ internal sealed class HostSession
     readonly CancellationToken stop;
     readonly bool readOnly;
     readonly Func<Task<int>>? nativeRead;
-    static readonly HashSet<string> StatusActions = ["preview.status", "fader.status", "recording.status", "host.native.status"];
+    static readonly HashSet<string> StatusActions = ["preview.status", "fader.status", "recording.status", "mix.status", "vjster.status", "host.native.status"];
     readonly AsyncLocal<DispatchPermit?> active = new();
     internal DeskActions Desk { get; }
     internal HostSession(BridgeConfig config, CommandIngress ingress, int generation,

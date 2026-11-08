@@ -1,0 +1,98 @@
+name: Stream Deck Windows and macOS checks
+
+on:
+  push:
+    branches: [main, codex/tourbox-macos-ci]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: streamdeck-cross-platform-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  suite:
+    name: Combined suite (${{ matrix.platform }}-${{ matrix.arch }})
+    # Standard public-repository runners; no larger runners or signing secrets.
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-2025
+            platform: win32
+            arch: x64
+          - runner: macos-15
+            platform: darwin
+            arch: arm64
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          architecture: ${{ matrix.arch }}
+          package-manager-cache: false
+      - name: Confirm native host and Node runtime
+        env:
+          EXPECTED_PLATFORM: ${{ matrix.platform }}
+          EXPECTED_ARCH: ${{ matrix.arch }}
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          assert.equal(process.platform, process.env.EXPECTED_PLATFORM);
+          assert.equal(process.arch, process.env.EXPECTED_ARCH);
+          assert.equal(process.versions.node.split('.')[0], '24');
+          console.log(`Node ${process.versions.node}; ${process.platform}/${process.arch}`);
+          NODE
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Check committed suite assembly
+        run: node --import tsx scripts/suite/assemble.ts --check
+      - name: Build and validate the combined candidate
+        run: node --import tsx scripts/suite/package-candidate.ts
+      - name: Run the full test suite against the built tree
+        run: npm test
+      - name: Identify developer artifacts
+        run: |
+          node --input-type=module <<'NODE'
+          import { copyFileSync, writeFileSync } from 'node:fs';
+          const out = 'release/candidates/windows-macos';
+          writeFileSync(`${out}/SOURCE-COMMIT.txt`, `${process.env.GITHUB_SHA}\n`);
+          copyFileSync('docs/CROSS-PLATFORM-CANDIDATE.md', `${out}/DEVELOPER-CANDIDATE.md`);
+          NODE
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: Fadester-developer-candidate-${{ matrix.platform }}-${{ matrix.arch }}
+          path: release/candidates/windows-macos/*
+          retention-days: 3
+          if-no-files-found: error
+          compression-level: 0
+      - name: Report tested scope
+        if: always()
+        env:
+          TARGET: ${{ matrix.platform }}-${{ matrix.arch }}
+          RESULT: ${{ job.status }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { appendFileSync } from 'node:fs';
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY, [
+            `### Stream Deck combined-suite checks: ${process.env.TARGET}`,
+            '',
+            `Result: **${process.env.RESULT}**. Commit: \`${process.env.GITHUB_SHA}\`.`,
+            '',
+            'Builds one Windows + macOS plugin package from the current source, validates its manifests and paths, and runs the full automated suite on native Node 24.',
+            '',
+            '**Developer candidates only.** This job does not install, publish or release anything. Actual Stream Deck/OBS host integration, permissions and physical buttons, dials and touch strips require separate testing.',
+            ''
+          ].join('\n'));
+          NODE

@@ -23,6 +23,14 @@ function waitForEvent<T>(
   });
 }
 
+async function waitUntil(check: () => boolean, timeoutMs = 3000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (!check()) {
+    if (Date.now() > deadline) throw new Error("Timed out waiting for a condition");
+    await new Promise((r) => setTimeout(r, 10));
+  }
+}
+
 describe("Step 1.2 — FadesterClient & FadesterStore against FakeObsServer", () => {
   let server: FakeObsServer | null = null;
   let client: FadesterClient | null = null;
@@ -114,6 +122,28 @@ describe("Step 1.2 — FadesterClient & FadesterStore against FakeObsServer", ()
       "Midi Fadester is not installed in OBS"
     );
     expect(client.getStatus().linkUrl).toBe(MIDI_FADESTER_RELEASE_URL);
+  });
+
+  it("waits out OBS still loading (NotReady 207) on the same socket, connects, and never reports a missing plugin", async () => {
+    const fake = new FakeObsServer();
+    server = fake;
+    fake.notReady = true;
+    const port = await fake.start();
+    const c = new FadesterClient(
+      { host: "127.0.0.1", port, password: "" },
+      { baseReconnectMs: 30, notReadyRetryMs: 20 }
+    );
+    client = c;
+    const kinds: string[] = [];
+    c.on("statusChanged", (status: { kind: string }) => kinds.push(status.kind));
+    c.start();
+    await waitUntil(() => fake.notReadyRejections >= 2);
+    expect(c.getStatus().kind).not.toBe("connected");
+    const attempts = c.getConnectAttemptCount();
+    fake.notReady = false;
+    await waitUntil(() => c.getStatus().kind === "connected");
+    expect(kinds).not.toContain("missing_plugin");
+    expect(c.getConnectAttemptCount()).toBe(attempts);
   });
 
   it("reports OBS unreachable and reconnects automatically with backoff when OBS starts", async () => {

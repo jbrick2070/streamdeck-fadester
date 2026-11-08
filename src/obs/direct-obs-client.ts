@@ -11,6 +11,7 @@ import { WholeMixClient } from "./whole-mix.js";
 import { LocalText, ownText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
 import { t } from "../i18n/strings.js";
 import {
+  isObsNotReady,
   ObsVendorClient,
   ObsVendorClientOptions,
   ObsVendorError
@@ -249,7 +250,7 @@ export interface DirectObsCatalog {
 
 export type DirectObsClientOptions = Pick<
   ObsVendorClientOptions,
-  "baseReconnectMs" | "maxReconnectMs" | "requestTimeoutMs"
+  "baseReconnectMs" | "maxReconnectMs" | "requestTimeoutMs" | "notReadyRetryMs"
 > & {
   /** How long a sent PAUSE waits for an observed PAUSED before the key says "unconfirmed" (tests shorten it). */
   mediaPauseWaitMs?: number;
@@ -1010,8 +1011,10 @@ export class DirectObsClient extends ObsVendorClient {
       this.emitDirectState();
       // Every completed (re)connection, also one whose status did not change.
       this.emit("connectionReady");
-    } catch {
-      // The close handler owns reconnect and connection-error status.
+    } catch (err) {
+      // NotReady (OBS still loading) goes back to the base client, which tries again; otherwise the close handler owns
+      // reconnect and connection-error status.
+      if (isObsNotReady(err)) throw err;
     }
   }
 

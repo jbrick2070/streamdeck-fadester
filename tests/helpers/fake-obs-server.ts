@@ -526,6 +526,9 @@ export class FakeObsServer {
   public apiVersion: number;
   public profile: string;
   public missingPlugin: boolean;
+  /** Like OBS before it has finished loading: every request is answered NotReady (207) while the websocket takes clients. */
+  public notReady = false;
+  public notReadyRejections = 0;
   public studioMode: boolean;
   public screenshotDelayMs: number;
   public availableRequests: string[] | undefined;
@@ -1204,6 +1207,11 @@ export class FakeObsServer {
     requestType: string,
     requestData: Record<string, unknown>
   ): Promise<void> {
+    if (this.notReady) {
+      this.notReadyRejections++;
+      this.sendResponse(ws, requestId, requestType, false, 207, "OBS is not ready to perform the request.");
+      return;
+    }
     if (requestType === "BroadcastCustomEvent") {
       this.emitObsEvent("CustomEvent", requestData.eventData as Record<string, unknown>);
       this.sendResponse(ws, requestId, requestType, true, 100, "", {});

@@ -31,6 +31,21 @@ describe("Direct OBS client", () => {
     await server?.stop();
   });
 
+  it("waits out OBS still loading (NotReady 207) on the same socket, then connects with a catalog", async () => {
+    const fake = new FakeObsServer({ missingPlugin: true });
+    server = fake;
+    fake.notReady = true;
+    const port = await fake.start();
+    const c = new DirectObsClient({ host: "127.0.0.1", port, password: "" }, { notReadyRetryMs: 20 });
+    client = c;
+    c.start();
+    await vi.waitFor(() => expect(fake.notReadyRejections).toBeGreaterThanOrEqual(2), { timeout: 3000 });
+    expect(c.getStatus().kind).not.toBe("connected");
+    fake.notReady = false;
+    await vi.waitFor(() => expect(c.getStatus().kind).toBe("connected"), { timeout: 3000 });
+    expect(c.getCatalog().scenes.length).toBeGreaterThan(0);
+  });
+
   /** Delay an older native response while a newer discovery can finish. */
   function holdNextVolume() {
     let release!: () => void;

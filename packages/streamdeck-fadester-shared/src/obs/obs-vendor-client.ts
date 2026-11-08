@@ -44,6 +44,16 @@ export class ObsVendorError extends LocalizedError {
   }
 }
 
+/**
+ * obs-websocket's NotReady: OBS answers every request with it until OBS has finished loading (and during a scene
+ * collection change), while its websocket already takes clients. Such a request may be tried again after a delay.
+ */
+export const OBS_NOT_READY = 207;
+
+export function isObsNotReady(err: unknown): boolean {
+  return err instanceof ObsVendorError && err.code === OBS_NOT_READY;
+}
+
 export interface ObsVendorClientOptions {
   vendorName?: string;
   supportedApiVersion?: number;
@@ -53,6 +63,8 @@ export interface ObsVendorClientOptions {
   baseReconnectMs?: number;
   maxReconnectMs?: number;
   requestTimeoutMs?: number;
+  /** First wait before a first sync that met NotReady (207) is tried again; it doubles up to 2 s. */
+  notReadyRetryMs?: number;
 }
 
 export interface ObsVendorStateMeta {
@@ -122,6 +134,7 @@ export class ObsVendorClient<
   protected readonly surfaceDisplayName: string;
   protected readonly baseReconnectMs: number;
   protected readonly maxReconnectMs: number;
+  protected readonly notReadyRetryMs: number;
   protected readonly requestTimeoutMs: number;
 
   private ws: WebSocket | null = null;
@@ -154,6 +167,7 @@ export class ObsVendorClient<
     this.baseReconnectMs = options?.baseReconnectMs ?? 1000;
     this.maxReconnectMs = options?.maxReconnectMs ?? 10000;
     this.requestTimeoutMs = options?.requestTimeoutMs ?? 4000;
+    this.notReadyRetryMs = options?.notReadyRetryMs ?? 250;
   }
 
   public getStatus(): ConnectionStatusInfo {
@@ -463,7 +477,7 @@ export class ObsVendorClient<
     if (op === 2) {
       // Identified
       this.identified = true;
-      void this.initializeAfterIdentify();
+      void this.syncAfterIdentify(this.ws);
       return;
     }
 
@@ -476,6 +490,27 @@ export class ObsVendorClient<
     if (op === 7) {
       // RequestResponse
       this.handleRequestResponse(d);
+    }
+  }
+
+  /**
+   * OBS's websocket takes clients before OBS has finished loading and answers every request with NotReady (207) until it
+   * has. A first sync that meets NotReady is tried again on the same socket: otherwise the client would stay identified
+   * but never connected, and nothing would try again, because the socket stays open.
+   */
+  private async syncAfterIdentify(socket: WebSocket | null): Promise<void> {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await this.initializeAfterIdentify();
+        return;
+      } catch (err) {
+        if (!isObsNotReady(err)) return; // the close handler owns reconnect and status
+      }
+      const delay = Math.min(this.notReadyRetryMs * 2 ** Math.min(attempt, 3), 2000);
+      await new Promise<void>((resolve) => setTimeout(resolve, delay));
+      if (this.stopped || !socket || this.ws !== socket || socket.readyState !== WebSocket.OPEN || !this.identified) {
+        return;
+      }
     }
   }
 
@@ -494,11 +529,11 @@ export class ObsVendorClient<
         state = await this.callVendor<TState>("get_state", undefined, false);
       } catch (err) {
         const vendorErr = err instanceof ObsVendorError ? err : null;
+        // 600 or 604: no such vendor or request. NotReady (207) means OBS is still loading, not a missing plugin:
+        // it is rethrown below, and syncAfterIdentify tries again.
         if (
           vendorErr &&
-          (vendorErr.code === 600 ||
-            vendorErr.code === 604 ||
-            vendorErr.code === 207)
+          (vendorErr.code === 600 || vendorErr.code === 604)
         ) {
           this.haltedReason = "missing_plugin";
           this.clearReconnectTimer();
@@ -545,8 +580,10 @@ export class ObsVendorClient<
       });
       this.emit("stateChanged", state);
       await this.refreshSceneNames(state.studio_mode);
-    } catch {
-      // Socket closed or initial request failed before ready
+    } catch (err) {
+      // NotReady goes back to syncAfterIdentify, which tries again; otherwise the socket closed or a request failed
+      // before ready, and the close handler owns reconnect and status.
+      if (isObsNotReady(err)) throw err;
     }
   }
 

@@ -42,7 +42,7 @@ internal sealed class MacShortcutInput : IDisposable
                 actions.Add(action); labels.Add(label);
             }
         count = labels.Count;
-        if (count is < 1 or > 64) throw new InvalidDataException("Invalid native shortcut count.");
+        if (count is < 1 or > 128) throw new InvalidDataException("Invalid native shortcut count.");
     }
     internal static bool TryParseEvent(string line, IReadOnlySet<string> allowed, out MacShortcutEvent? result)
     {

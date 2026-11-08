@@ -2,7 +2,7 @@
 
 The [Mac workflow](https://github.com/jbrick2070/streamdeck-fadester/actions/workflows/tourbox-macos.yml) is configured to build and run the shared Fadester control logic on GitHub-hosted Macs. Its output is a **developer core-check bundle**. A usable Fadester for TourBox Mac application is still to be built.
 
-> **Status, 2026-11-07.** Everything under `tourbox/macos/` and `tourbox/presets/macos/` is experimental and was written against the Windows package at 61e77c4, before bee7115 moved VJster into the one preset and added its Ctrl+Shift and Alt+Shift chords. The Mac preset generator and the Mac preset follow the current map again. Still to port, and not buildable on the Windows PC: the Mac shortcut helper (`macos/input/Core.swift`) accepts Ctrl+Alt+Shift chords only, so it refuses the current map; the Mac host does not host the VJster link, so the video and layer actions do nothing there; the Mac panel's settings lack the VJster port, extension pin and layer fields. None of the Mac pieces has been built since the merge.
+> **Status, 2026-11-07.** Everything under `tourbox/macos/` and `tourbox/presets/macos/` is experimental and was written against the Windows package at 61e77c4, before bee7115 moved VJster into the one preset and added its Ctrl+Shift and Alt+Shift chords. The Mac preset generator, the Mac preset and the Mac shortcut helper follow the current map again (the helper's change was written on Windows and is first compiled by the macOS workflow). Still to port: the Mac host does not host the VJster link, so the video actions are refused there; the Mac panel's settings lack the VJster port, extension pin and layer fields.
 
 ## Cloud builds
 
@@ -53,7 +53,6 @@ Use the preset map from the same checkout. In an extracted developer bundle, run
 
 ## Work still needed for a Mac application
 
-- Port the Mac shortcut helper to the current map: `macos/input/Core.swift` needs a modifier set per shortcut (Ctrl → Control, Alt → Option, Shift → Shift, at least two, never Command) passed to `RegisterEventHotKey`, uniqueness by (modifiers, key) instead of key alone, the 64-chord caps in `Core.swift` and `macos/input/MacShortcutInput.cs` raised together (the map has 65), and the self-test count taken from the map instead of 47.
 - Decide how the Mac host treats the video actions: host the VJster link the way `tourbox/bridge/Program.cs` does on Windows, or refuse `vjster.*` at `macos/host/CommandIngress.cs` with a plain reason. Today they pass ingress and are refused by `DeskActions` with a message about a desk the host does not have.
 - A Mac setup and activity interface to replace the Windows Forms panel, including local settings and credential handling; the current `macos/panel` has no VJster port, extension pin or layer fields.
 - Finish validating the experimental Mac shortcut input and Mac preset, including modifier releases, menu actions, conflicts and shutdown behavior on physical hardware. Mac Console's acceptance of the Control+Shift and Option+Shift F-key chords in an imported preset is unproven, as mask 7 was before the 4 November check.

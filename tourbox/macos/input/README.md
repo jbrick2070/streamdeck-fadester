@@ -9,10 +9,11 @@ or change security settings. Registration is explicit and separate from building
 The Mac preset uses **Control+Option+Shift** for the OBS actions and
 **Control+Shift** or **Option+Shift** for the video and layer actions, with no
 Command modifier. The semantic map keeps the `Ctrl+Alt+Shift`, `Ctrl+Shift` and
-`Alt+Shift` spelling. This component still translates `Ctrl+Alt+Shift` names only,
-to native Carbon modifier flags and known ANSI/F1..F12 key codes, so it refuses the
-current `map.json` (65 chords, 18 of them Control+Shift or Option+Shift) until it is
-generalised; see `tourbox/MACOS.md`. Use the generated Mac preset, not an unchanged
+`Alt+Shift` spelling. This component translates each shortcut's own modifiers to
+native Carbon flags (Ctrl to Control, Alt to Option, Shift to Shift, at least two,
+never Command) and its key to a known ANSI/F1..F12 key code, and keeps chords apart
+by key and modifiers, so the current `map.json` registers 65 chords (18 of them
+Control+Shift or Option+Shift). Use the generated Mac preset, not an unchanged
 Windows binary preset. Non-US keyboard layouts and actual Console delivery remain
 live validation tasks.
 
@@ -28,8 +29,8 @@ python3 tests/open-pipe.py "build/Fadester Mac Shortcuts Experimental.app/Conten
 ```
 
 These commands do not register shortcuts or observe hardware. Swift tests parse
-the 47 Ctrl+Alt+Shift actions of the 2026-11-04 map and simulate old/future/pre-arm
-events; with the current map they stop at the first Ctrl+Shift binding. C# tests
+every chord in the map (one action per chord, never Command), check one sample of
+each modifier class, and simulate old/future/pre-arm events. C# tests
 compile the real transport and verify its strict event parser.
 The open-pipe check invokes a synthetic echo mode using the production bounded
 stdin reader, verifies immediate LF/CRLF responses while stdin stays open, and

@@ -151,10 +151,9 @@ retain their original callback timestamp and generation through the same ingress
 as stdin. Helper exit or protocol failure disarms the host without another input
 mechanism. A registration collision fails the whole input startup. While enabled,
 these exclusive chords are consumed; no registration occurs during build,
-`--help` or `--self-test`. The Mac preset must emit the chords the helper registers:
-today Control+Option+Shift only, so the current map's Control+Shift and Option+Shift
-chords are refused at startup (see `../../MACOS.md`); do not assume an unchanged
-Windows binary preset works.
+`--help` or `--self-test`. The Mac preset must emit the chords the helper registers
+from the same map (Control+Option+Shift, Control+Shift and Option+Shift; never
+Command); do not assume an unchanged Windows binary preset works.
 
 The queue holds at most 64 commands. Relative rotary actions across fader, audio,
 mix, preview, media and transitions expire after 180 ms; other actions expire

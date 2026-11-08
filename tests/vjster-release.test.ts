@@ -113,12 +113,13 @@ describe("the extension zip (step 6)", () => {
     expect(a.equals(b)).toBe(true);
   });
 
+  // About 30 fixture builds of the whole extension; a Windows CI runner took 10 s, twice the default.
   it("refuses a build that lacks any needed file, a manifest, or a usable version", () => {
     for (const missing of EXPECTED.filter((n) => n !== "manifest.json")) expect(() => packExtension(build({ skip: missing }))).toThrow(missing);
     expect(() => packExtension(build({ skip: "manifest.json" }))).toThrow(/no manifest\.json/);
     for (const version of ["one", "1.2.3.4.5", "x1.0", "1.0x", 1, undefined]) expect(() => packExtension(build({ version }))).toThrow(/version/);
     expect(packExtension(build({ version: "1.2.3.4" })).version).toBe("1.2.3.4");
-  });
+  }, 60_000);
 });
 
 describe("the Chrome Web Store zip", () => {

@@ -262,6 +262,23 @@ class RoundTrip(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "still holds the round-trip folder"):
                 kc.normalise(saved, short)
 
+    def test_normalise_matches_a_path_that_mixes_short_and_long_components(self):
+        # The runner's TEMP is C:/Users/RUNNER~1/AppData/Local/Temp while mkdtemp's folder keeps its long
+        # name, so OBS's saved paths mix both spellings and the checker's resolved root is all long.
+        mixed = "C:/Users/RUNNER~1/AppData/Local/Temp/tmpfwjymbag/kit"
+        long = "C:/Users/runneradmin/AppData/Local/Temp/tmpfwjymbag/kit"
+        saved = saved_like_obs(kc.draft_collection(IDS, mixed))
+        expand = lambda p: p.replace("\\", "/").replace("C:/Users/RUNNER~1/", "C:/Users/runneradmin/")
+        with mock.patch.object(kc.os.path, "realpath", expand), mock.patch.object(kc, "_short_name", lambda p: None):
+            self.assertNotIn(mixed, kc.root_spellings(long))  # no single spelling of the root matches
+            out = kc.normalise(saved, long)
+            self.assertEqual(source(out, "Kit Title")["settings"]["file"], "./media/kit-title.png")
+            self.assertEqual(source(out, "Kit Clips")["settings"]["playlist"][0]["value"], "./media/clip-hurdles.mp4")
+            self.assertEqual(kc.diff_draft(kc.draft_collection(IDS), out)["changed"], [])
+            source(saved, "Kit Title")["settings"]["file"] = "C:/Users/RUNNER~1/Elsewhere/kit-title.png"
+            self.assertEqual(source(kc.normalise(saved, long), "Kit Title")["settings"]["file"],
+                             "C:/Users/RUNNER~1/Elsewhere/kit-title.png")  # outside the root: left for the diff to report
+
     def test_a_clean_round_trip_has_no_changes(self):
         delta = kc.diff_draft(self.draft, kc.normalise(self.saved, ROOT))
         self.assertEqual((delta["changed"], delta["missing"]), ([], []))

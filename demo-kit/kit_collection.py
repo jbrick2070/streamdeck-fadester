@@ -359,12 +359,27 @@ def root_spellings(root: str) -> list[str]:
     return spellings
 
 
+_ABSOLUTE = re.compile(r"^(?:[A-Za-z]:/|//|/)")
+
+
+def _canonical(path: str) -> str | None:
+    """realpath with forward slashes and no trailing slash: on Windows it expands every 8.3
+    component of the part that exists, so mixed spellings of one folder become one."""
+    try:
+        return os.path.realpath(path).replace("\\", "/").rstrip("/")
+    except (OSError, ValueError):
+        return None
+
+
 def normalise(saved: dict, root: str) -> dict:
     """The saved collection with root paths as ./ paths and Playlister's resume state dropped.
 
     Refuses (ValueError) a string that still holds the root anywhere after that, so no
     absolute path of the round-trip machine can reach the template."""
     roots = root_spellings(root)
+    # A GitHub runner's TEMP is C:/Users/RUNNER~1/... while mkdtemp's own folder keeps its long
+    # name, so a saved path can mix short and long components that match no single spelling.
+    canonical_root = _canonical(root)
     out = copy.deepcopy(saved)
     for source in out.get("sources", []):
         if source.get("id") == "obs_playlister_source":
@@ -381,6 +396,10 @@ def normalise(saved: dict, root: str) -> dict:
             for spelling in roots:
                 if flat.lower().startswith(spelling.lower() + "/"):
                     return "./" + flat[len(spelling) + 1:]
+            if canonical_root and _ABSOLUTE.match(flat):
+                canonical = _canonical(value)
+                if canonical and canonical.lower().startswith(canonical_root.lower() + "/"):
+                    return "./" + canonical[len(canonical_root) + 1:]
             if any(spelling.lower() in flat.lower() for spelling in roots):
                 raise ValueError(f"{where} still holds the round-trip folder: {value!r}")
         return value

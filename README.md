@@ -83,6 +83,17 @@ None of these is needed for scenes, transitions, sources, audio or filters.
 
 The [Suite Demo Kit](demo-kit/README.md) is one OBS scene collection with media and two Stream Deck + profiles that show the plugins working together.
 
+## Bring your own controller or robot
+
+Fadester is not tied to the Stream Deck. Every surface in the suite drives OBS through the same few doors, and they are open to a new hardware controller, a control platform of your own, a web page, a script or a robot:
+
+1. **Plain OBS requests** over obs-websocket for scenes, transitions, sources, audio and filters. Any platform with an OBS connection has these already; if it can host Stream Deck plugins, like [OpenDeck](docs/OPENDECK.md), run Fadester as it is.
+2. **The Midi Fadester vendor API** (`CallVendorRequest`, vendor `midi-fadester`) for the 18 fader and FX slots: T-bar, crossfades, layer opacity, audio, any numeric filter setting, timed fades.
+3. **The shared whole-mix protocol** (`io.github.jbrick2070.fadester.mix.v1` over `BroadcastCustomEvent`) to ride the whole mixer as one fader.
+4. **Keystrokes to the Fadester for TourBox companion**: anything that can press `Ctrl+Alt+Shift+F3` gets the native T-bar, Preview cueing, media, overlays, the YouTube video and the VJ layers, no TourBox required.
+
+A robot (a cue list or an AI agent) uses the same doors through the API, or through an MCP server that passes obs-websocket requests through. [docs/ADD-YOUR-OWN-CONTROLLER.md](docs/ADD-YOUR-OWN-CONTROLLER.md) has the JSON for each door, the manners that keep a show safe, and a worked example.
+
 ## When something is off
 
 | The key or dial says | What to do |
@@ -109,8 +120,9 @@ When OBS goes away, the plugin reconnects by itself and every key shows the same
 - [tourbox/README.md](tourbox/README.md): Fadester for TourBox, the Windows companion that drives OBS from a TourBox controller; [tourbox/MACOS.md](tourbox/MACOS.md) covers the experimental Mac pieces.
 - [CHANGELOG.md](CHANGELOG.md): what changed in each version.
 - [demo-kit/README.md](demo-kit/README.md): the Suite Demo Kit.
+- [docs/ADD-YOUR-OWN-CONTROLLER.md](docs/ADD-YOUR-OWN-CONTROLLER.md): bring your own controller, platform or robot: the four doors into Fadester, with JSON.
 - [API-CONTRACT.md](API-CONTRACT.md): the optional `midi-fadester` vendor API.
-- [FEATURE-AUDIT.md](FEATURE-AUDIT.md): what OBS's WebSocket can and cannot do (why there is no generic layer opacity or A/B crossfade).
+- [FEATURE-AUDIT.md](FEATURE-AUDIT.md): what the Midi Fadester vendor API allows and what the plugin does with it.
 - [PUBLISHING.md](PUBLISHING.md): packaging and Marketplace checklist (for the maintainer).
 - [LICENSE](LICENSE): GNU General Public License v2.0.
 

@@ -36,4 +36,21 @@ describe("Shared direct OBS connection settings", () => {
     expect(JSON.stringify(payloads)).not.toContain("new-test-password");
     expect(JSON.stringify(payloads)).not.toContain("old-test-password");
   });
+
+  it("saves a Host typed with its port without failing, and tells the page OBS cannot be reached", async () => {
+    const client = new DirectObsClient({ host: "127.0.0.1", port: 1, password: "" }, { baseReconnectMs: 60_000 });
+    const payloads: Record<string, unknown>[] = [];
+    const bridge = new DirectObsPropertyInspectorBridge(client, {
+      sendToPropertyInspector: (payload) => payloads.push(payload),
+      persistGlobalSettings: async () => {}
+    });
+    client.start();
+    try {
+      await bridge.handleMessage({ event: "directUpdateGlobalSettings", host: "127.0.0.1:4455", port: 4455 });
+      expect(client.getStatus().kind).toBe("obs_unreachable");
+      expect(payloads.at(-1)).toMatchObject({ event: "directObsState", status: { kind: "obs_unreachable" } });
+    } finally {
+      client.stop();
+    }
+  });
 });

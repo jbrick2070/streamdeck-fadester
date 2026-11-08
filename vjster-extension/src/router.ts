@@ -89,7 +89,11 @@ export class Router {
     if (inReplyTo !== null && this.claim(inReplyTo, tabId)) {
       // An answer goes back whatever the target is now; it is what the intent did.
       this.deps.sendToLink(this.report(state, host, inReplyTo));
-      this.lastTarget = target;
+      // The plugin keeps the answer as the current state. When another tab is now the target (the answering tab paused
+      // while that one plays, or its video is gone), the target's own state follows at once (R-TGT-4). With no tab
+      // left, the answer itself says there is no video.
+      if (target !== null && target !== tabId) this.pushTarget(null);
+      else this.lastTarget = target;
       return;
     }
     if (target === tabId || target !== this.lastTarget) this.pushTarget(null);
@@ -106,6 +110,16 @@ export class Router {
     for (const [w, t] of this.activeByWindow) if (t === tabId) this.activeByWindow.delete(w);
     for (const [id, t] of this.awaited) if (t === tabId) this.awaited.delete(id);
     if (this.pinnedTabId === tabId) this.setPin(null);
+    this.pushIfTargetChanged();
+  }
+
+  /** Forget every tab whose host `drop` names (the all-sites option was turned off, D-4); push the target if it changed. */
+  forgetHosts(drop: (host: string | null) => boolean): void {
+    for (const [tabId, record] of this.tabs) {
+      if (!drop(record.host)) continue;
+      this.tabs.delete(tabId);
+      if (this.pinnedTabId === tabId) this.setPin(null);
+    }
     this.pushIfTargetChanged();
   }
 

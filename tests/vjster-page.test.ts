@@ -431,6 +431,35 @@ describe("the OBS page against the real link server (R-OBS-1..3, R-INT-4)", () =
     expect(embed.s.rate).toBe(1);
   });
 
+  it("adds up relative steps sent faster than the embed's rate getter catches up", async () => {
+    const { server, events, page, embed, answer } = await rig();
+    page.start();
+    await until(() => server.isConnected("obs"));
+    page.playerReady(embed.player);
+    await until(() => events.some((e) => e.type === "state" && e.state.rate === 1));
+    const first = server.send("obs", { type: "speed.step", delta: 0.25, direct: false, hold: false });
+    const second = server.send("obs", { type: "speed.step", delta: 0.25, direct: false, hold: false });
+    await until(() => answer(first) !== undefined && answer(second) !== undefined);
+    await until(() => embed.s.rate === 1.5);
+  });
+
+  it("answers a confirmed change once, with no unsolicited copy before it", async () => {
+    const { server, events, page, embed, answer } = await rig();
+    page.start();
+    await until(() => server.isConnected("obs"));
+    page.playerReady(embed.player);
+    await until(() => events.some((e) => e.type === "state" && e.state.rate === 1));
+    await new Promise((r) => setTimeout(r, 60)); // nothing else is on its way
+    for (const body of [{ type: "speed.set", rate: 1.5, direct: false, hold: false }, { type: "transport.toggle" }] as const) {
+      const from = events.length;
+      const id = server.send("obs", body);
+      await until(() => answer(id) !== undefined);
+      await new Promise((r) => setTimeout(r, 150));
+      const states = events.slice(from).flatMap((e) => (e.type === "state" ? [e.state.inReplyTo] : []));
+      expect(states, body.type).toEqual([id]);
+    }
+  });
+
   it("is refused with a wrong token", async () => {
     const server = new LinkServer({ port: 0, obsToken: TOKEN, pages });
     servers.push(server);
@@ -582,6 +611,46 @@ describe("the page's link client speaks as the obs target (R-INT-3)", () => {
       { v: 1, id: "o-1", target: "obs", type: "pong", t: 9 },
       expect.objectContaining({ type: "error", code: "bad-json", target: "obs" })
     ]);
+    page.stop();
+  });
+
+  it("refuses an intent addressed to the browser, and leaves the video alone (PLAN.md 3.3)", async () => {
+    const sent: string[] = [];
+    let socket!: SocketLike & { open(): void; message(d: string): void };
+    const page = new ObsPage({
+      params: readParams(`?v=${VIDEO}`, `#token=${TOKEN}`, "48150"),
+      openSocket: () => {
+        socket = {
+          readyState: 0,
+          send: (d: string) => void sent.push(d),
+          close: () => undefined,
+          onopen: null,
+          onclose: null,
+          onerror: null,
+          onmessage: null,
+          open() {
+            (this as { readyState: number }).readyState = 1;
+            this.onopen?.({});
+          },
+          message(d: string) {
+            this.onmessage?.({ data: d });
+          }
+        };
+        return socket;
+      },
+      timers: { setTimeout: () => 0, clearTimeout: () => undefined },
+      newId: () => "o-1",
+      random: () => 0
+    });
+    const embed = fakeEmbed();
+    embed.s.rate = 2;
+    page.start();
+    socket.open();
+    page.playerReady(embed.player);
+    socket.message(JSON.stringify({ v: 1, id: "i-x", target: "browser", type: "speed.reset" }));
+    expect(JSON.parse(sent.at(-1)!)).toMatchObject({ type: "error", code: "bad-message", inReplyTo: "i-x", target: "obs" });
+    await new Promise((r) => setTimeout(r, embed.s.lagMs * 3));
+    expect(embed.s.rate).toBe(2);
     page.stop();
   });
 });

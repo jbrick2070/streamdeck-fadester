@@ -7,9 +7,9 @@
 import { PROTOCOL_VERSION, errorReply, type Intent, type StateReport } from "../../src/vjster/shared/protocol.js";
 import { Adapter, type Report } from "../../vjster-extension/src/adapter-core.js";
 import { LinkClient, type SocketLike } from "../../vjster-extension/src/link-client.js";
-import { embedControl, type EmbedPlayer } from "./embed-control.js";
+import { embedControl, type AskedRate, type EmbedPlayer } from "./embed-control.js";
 import { linkUrl, type PageParams } from "./page-params.js";
-import { SettledAnswers, type SettleTimers } from "./settle.js";
+import { SETTLE_MS, SettledAnswers, type SettleTimers } from "./settle.js";
 
 export interface ObsPageDeps {
   readonly params: PageParams;
@@ -31,11 +31,26 @@ export class ObsPage {
   private player: EmbedPlayer | null = null;
   /** A new video started loading; its first play re-applies a held rate once more. */
   private rolledOver = false;
+  /** The rate last asked of the embed, until its getter shows it or SETTLE_MS passes (embed-control.ts: the getter lags). */
+  private askedRate: number | null = null;
+  private askedTimer: unknown = null;
+  private readonly asked: AskedRate = {
+    get: () => this.askedRate,
+    set: (rate) => {
+      this.forgetAskedRate();
+      this.askedRate = rate;
+      // An embed that ignores the change never reports it: stop counting from it after the settle wait.
+      this.askedTimer = this.deps.timers.setTimeout(() => {
+        this.askedTimer = null;
+        this.askedRate = null;
+      }, SETTLE_MS);
+    }
+  };
 
   constructor(private readonly deps: ObsPageDeps) {
-    this.settled = new SettledAnswers((id) => this.toLink({ kind: "state", state: this.adapter.snapshot(), inReplyTo: id, played: false }), deps.timers);
+    this.settled = new SettledAnswers((id) => this.adapter.answer(id), deps.timers);
     this.adapter = new Adapter(
-      () => (this.player ? embedControl(this.player) : null),
+      () => (this.player ? embedControl(this.player, this.asked) : null),
       (report) => {
         if (this.settled.passes(report)) this.toLink(report);
       },
@@ -60,6 +75,7 @@ export class ObsPage {
     this.link.stop();
     this.settled.dispose();
     this.adapter.dispose();
+    this.forgetAskedRate();
   }
 
   /** YouTube's player is ready: from now on intents reach it. */
@@ -70,22 +86,27 @@ export class ObsPage {
 
   /** onStateChange: play, pause, buffering, a new video of a playlist. */
   stateChanged(state: number): void {
+    // Answer a waiting play/pause first, so the adapter counts that state as sent and sends no second copy.
+    this.settled.playerEvent("state");
     // A new video of a playlist: a held rate goes back on (R-SPD-4), and again when it starts
     // playing, in case the embed resets the rate in between (not seen live yet).
     if (state === UNSTARTED) {
       this.rolledOver = true;
+      this.forgetAskedRate();
       this.adapter.elementReplaced();
     } else if (state === PLAYING && this.rolledOver) {
       this.rolledOver = false;
       this.adapter.elementReplaced();
     } else this.adapter.changed();
-    this.settled.playerEvent("state");
   }
 
   /** onPlaybackRateChange. */
   rateChanged(): void {
-    this.adapter.changed();
+    // The getter now shows the rate last asked for: relative steps count from it again.
+    if (this.askedRate !== null && this.player?.getPlaybackRate() === this.askedRate) this.forgetAskedRate();
+    // Answer first, so the adapter counts the new state as sent and sends no second copy of it.
     this.settled.playerEvent("rate");
+    this.adapter.changed();
   }
 
   /** onError: the video cannot play; the next report says what is left. */
@@ -94,8 +115,19 @@ export class ObsPage {
   }
 
   private handle(intent: Intent): void {
+    // parse does not check that a message names its receiver; each receiver does (docs/vjster/PLAN.md 3.3).
+    if (intent.target !== "obs") {
+      this.link.send(errorReply("bad-message", "this page is the obs target", intent.id, { id: this.deps.newId(), target: "obs" }));
+      return;
+    }
     this.settled.begin(intent);
     this.adapter.handle(intent);
+  }
+
+  private forgetAskedRate(): void {
+    if (this.askedTimer !== null) this.deps.timers.clearTimeout(this.askedTimer);
+    this.askedTimer = null;
+    this.askedRate = null;
   }
 
   private toLink(report: Report): void {

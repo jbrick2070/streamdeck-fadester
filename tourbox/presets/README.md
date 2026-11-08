@@ -46,7 +46,7 @@ The **General HUD** starts hidden. Open it from the top right of TourBox Console
 
 ## Reproduce the preset
 
-From the repository root, Python 3.9 or newer is sufficient. These commands operate only on the preset file in this folder.
+From the repository root, use Python 3.10 or newer. These commands operate only on the preset file in this folder.
 
 ```shell
 python tourbox/presets/build.py

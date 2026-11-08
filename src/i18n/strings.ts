@@ -322,6 +322,11 @@ export function translate(key: string, params?: TextParams): string {
   return Object.hasOwn(EN, key) ? t(key as StringKey, params) : fillTemplate(key, params);
 }
 
+/** A translator over one language's table (the active table is not changed); English for what the table lacks, as t(). */
+export function translatorFor(table: LanguageTable): (key: string, params?: TextParams) => string {
+  return (key, params) => (Object.hasOwn(EN, key) ? fillTemplate(lookupText(table, key as StringKey), params) : fillTemplate(key, params));
+}
+
 /** One/many pair: `<base>One` for 1, `<base>Many` otherwise (R-I18N-3). */
 export function tCount(base: "errorSceneIndexUnavailable", count: number, params?: TextParams): string {
   return t(count === 1 ? `${base}One` : `${base}Many`, { ...params, count });

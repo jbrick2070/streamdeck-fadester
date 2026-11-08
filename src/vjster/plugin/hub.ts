@@ -32,6 +32,8 @@ export class Hub {
   private options: LinkServerOptions;
   private readyGate: Promise<void> | null = null;
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
+  /** The stop of the server a reconfigure replaced: every start waits for it, so the port is free and the old server is never started again. */
+  private retiring: Promise<void> = Promise.resolve();
 
   constructor(
     options: LinkServerOptions,
@@ -45,7 +47,7 @@ export class Hub {
     // The lifecycle starts and stops whichever server is current, through this proxy.
     const current = (): ServerLike => this.server;
     const proxy = {
-      start: () => current().start(),
+      start: () => this.retiring.then(() => current().start(), () => current().start()),
       stop: () => current().stop().then(() => this.changed()),
       get running(): boolean {
         return current().running;
@@ -144,12 +146,17 @@ export class Hub {
       JSON.stringify([o.port ?? DEFAULT_LINK_PORT, o.obsToken ?? null, [...(o.allowedExtensionIds ?? [])].sort()]);
     if (key(options) === key(this.options)) return;
     this.options = options;
-    const wasRunning = this.server.running;
-    await this.server.stop();
+    const old = this.server;
+    const wasRunning = old.running;
+    // Swap first: from here a key that appears can only start the new server, and that start waits for the old one's
+    // stop (the proxy above), so the old server never runs again with the old port, pins or token.
     this.unsubscribe();
     this.states.clear();
     this.server = this.factory(options);
     this.unsubscribe = this.server.on((e) => this.onEvent(e));
+    this.changed();
+    this.retiring = old.stop();
+    await this.retiring;
     if (wasRunning || this.lifecycle.userCount > 0) {
       // An extra acquire starts the new server (recording a port clash, D-11);
       // the matching release leaves the count as it was.

@@ -43,6 +43,15 @@ export function isBuilt(sourceDir: string): boolean {
 }
 
 /**
+ * The PowerShell line that lists the VJster child of one suite launcher, by its parent's process id: the parity run
+ * stops only the child of the plugin it started, never one of an installed suite that Stream Deck or OpenDeck runs.
+ */
+export function vjsterChildQuery(parentPid: number): string {
+  if (!Number.isInteger(parentPid) || parentPid <= 0) throw new Error(`not a process id: ${parentPid}`);
+  return `Get-CimInstance Win32_Process -Filter "Name='node.exe' AND ParentProcessId=${parentPid}" | Where-Object { $_.CommandLine -like '*vjster*plugin.js*' } | ForEach-Object { $_.ProcessId }`;
+}
+
+/**
  * Copy a built plugin folder into OpenDeck's plugins directory, replacing an earlier copy whole (a file the new build
  * no longer ships does not linger) and leaving the Stream Deck app's logs behind. The plugin's saved settings live
  * outside its folder, so a reinstall keeps them. Returns the target.

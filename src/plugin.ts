@@ -29,19 +29,24 @@ import {
   DEFAULT_GLOBAL_SETTINGS,
   FadesterGlobalSettings
 } from "./types/settings.js";
-import { useStreamDeckLanguage } from "./i18n/load.js";
+import { readLanguageTable, useStreamDeckLanguage } from "./i18n/load.js";
+import { translatorFor } from "./i18n/strings.js";
 import { LanguageChoiceController } from "./i18n/language-choice.js";
 import { GlobalSettingsStore, START_READ_TIMEOUT_MS, connectionSaver } from "./settings/global-store.js";
 
 // Stream Deck's language, read once before any control draws (PLAN.md 8.4; 8.7 checks a language change).
 // Automatic draws never wait; a fixed choice applies when the stored settings are read (PLAN.md 11.1).
 let appLanguage: unknown = "en";
+let midiPagesLanguage = "en";
 try {
   appLanguage = streamDeck.info.application.language;
-  useStreamDeckLanguage(appLanguage);
+  midiPagesLanguage = useStreamDeckLanguage(appLanguage);
 } catch {
   useStreamDeckLanguage("en");
 }
+// The two Midi Fadester settings pages stay in Stream Deck's language until they get the Language choice (R-LANG-3,
+// PLAN.md step L.6), so what the plugin sends them is worded in that language too, whatever the choice.
+const midiPagesTranslate = translatorFor(midiPagesLanguage === "en" ? {} : readLanguageTable(midiPagesLanguage) ?? {});
 
 // Every global settings write goes through this one queue, so no save loses another's key (RL-1).
 const settingsStore = new GlobalSettingsStore({
@@ -84,7 +89,8 @@ const bridge = new PropertyInspectorBridge(store, enhancedClient, {
     void streamDeck.ui.sendToPropertyInspector(payload as JsonObject);
   },
   persistGlobalSettings: persistSharedConnection,
-  getLanguage: () => languageChoice.state()
+  getLanguage: () => languageChoice.state(),
+  translate: midiPagesTranslate
 });
 
 const directBridge = new DirectObsPropertyInspectorBridge(directClient, {

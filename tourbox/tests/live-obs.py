@@ -79,7 +79,7 @@ def run(root, source, dotnet, audio=False, mix=False, midi_plugin=None):
     bridge = Path(__file__).resolve().parent.parent / "bridge"
     project = root / "driver"
     project.mkdir()
-    sources = ["BridgeConfig.cs", "ObsConnection.cs"]
+    sources = ["BridgeConfig.cs", "ObsConnection.cs", "VjsterLink.cs"]
     if mix:
         sources += ["StudioFader.cs", "AudioDesk.cs", "DeskActions.cs", "MixDesk.cs", "MixJournal.cs", "MixProtocolServer.cs"]
     else:

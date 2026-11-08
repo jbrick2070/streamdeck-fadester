@@ -9,7 +9,7 @@
 // Skipped when the bridge is not built or no .NET runtime is found:
 //   dotnet build tourbox/bridge/FadesterTourBoxBridge.csproj -c Release
 import { spawn, type ChildProcess } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { WebSocket } from "ws";
@@ -85,6 +85,16 @@ async function startBridge(port: number): Promise<{ child: ChildProcess; lines: 
   await waitFor("VJster link listening");
   return { child, lines, waitFor };
 }
+
+describe("the live OBS fixture (tourbox/tests/live-obs.py)", () => {
+  it("copies VjsterLink.cs whenever it copies BridgeConfig.cs, which uses it", () => {
+    const text = readFileSync(join(root, "tourbox", "tests", "live-obs.py"), "utf8");
+    // Every list of C# files to copy that names BridgeConfig.cs (another `sources` list in the file holds scenes).
+    const lists = text.split(/\r?\n/).filter((l) => /^\s*sources\s*(=|\+=)\s*\[/.test(l) && l.includes("BridgeConfig.cs"));
+    expect(lists.length).toBeGreaterThan(0);
+    for (const line of lists) expect(line).toContain("VjsterLink.cs");
+  });
+});
 
 describe.skipIf(!available)("the TourBox companion hosts the VJster link for the real extension logic", () => {
   it("a dispatched TourBox action reaches the page and the page's answer reaches the panel line", async () => {

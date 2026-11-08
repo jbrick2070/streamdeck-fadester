@@ -16,6 +16,7 @@ import {
   placeLayout,
   pluginFolderName,
   selectedProfile,
+  vjsterChildQuery,
   type PluginManifest,
   type Profile
 } from "../scripts/opendeck/opendeck.js";
@@ -61,6 +62,19 @@ beforeEach(() => {
 });
 
 afterEach(() => rmSync(work, { recursive: true, force: true }));
+
+describe("vjsterChildQuery", () => {
+  it("lists only the VJster child of the given launcher, never another suite's", () => {
+    const query = vjsterChildQuery(4242);
+    expect(query).toContain("ParentProcessId=4242");
+    expect(query).toContain("*vjster*plugin.js*");
+    expect(query).not.toContain("suite-");
+  });
+  it("refuses what is not a process id", () => {
+    expect(() => vjsterChildQuery(0)).toThrow();
+    expect(() => vjsterChildQuery(Number.NaN)).toThrow();
+  });
+});
 
 describe("configDir", () => {
   it("is the OpenDeck folder of each platform", () => {

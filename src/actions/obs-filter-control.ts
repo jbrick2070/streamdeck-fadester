@@ -237,6 +237,10 @@ export class ObsFilterInstanceController {
     // The latch is the state now; a refused press is older news.
     if (state.latched && state.availability !== "unbound") return t("filterLatched");
     if (this.lastError) return wordText(this.lastError, translate);
+    // A failed read or write of this filter, OBS's own text or ours. A write fails after the turn or press returned, so
+    // this is where it shows; the next successful read or write clears it (filter-controller.ts).
+    // A filter gone from OBS keeps the deck's own localized word below, not OBS's English text.
+    if (state.error && state.availability !== "missing") return wordText(state.error, translate);
     switch (state.availability) {
       case "missing": return t("filterMissing");
       case "wrong_kind": return t("filterWrongKind");

@@ -58,8 +58,12 @@ or a video, never stale data from the previous page.
 
 1.8 **All sites (D-4).** Tick "Control videos on every site", accept Chrome's
 prompt, reload a page with a plain HTML video (for example a news site).
-Expected: its video reports `capabilities: ["speed", "transport"]`. Untick:
-the permission is removed and the page stops reporting after a reload.
+Expected: its video reports `capabilities: ["speed", "transport"]`. Untick: at
+once, without a reload, the worker ignores its reports and the `state` events
+leave it. Reopen the options page: the box is unticked, also when the status said
+Chrome kept the permission. Tick it again, reload the extension on
+`chrome://extensions`, then reload the news page: it reports again without
+touching the box.
 
 1.9 **Two tabs (R-TGT-1).** With 1.3 running, play a video in one tab, then
 another in a second tab. Expected: the `state` events follow the second; pause
@@ -186,7 +190,9 @@ Quality set to OBS page says `n/a`. Play/Pause set to OBS page toggles the
 video and its caption says `OBS PLAYING` or `OBS PAUSED`.
 
 3.3 **Both.** Set the dial to Both, with a video in Chrome too. Expected: a turn
-changes both videos to the same speed; the strip shows Chrome's state.
+changes both videos to the same speed; the strip shows Chrome's state. Then
+close Chrome: a turn and the keys still change the OBS video; the strip says
+`EXTENSION OFF`.
 
 3.4 **Studio Mode, hidden and shown.** In Studio Mode put the source in Preview
 only: it still follows the deck. Hide the source and show it again: with

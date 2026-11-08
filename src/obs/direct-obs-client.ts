@@ -11,7 +11,6 @@ import { WholeMixClient } from "./whole-mix.js";
 import { LocalText, ownText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
 import { t } from "../i18n/strings.js";
 import {
-  isObsNotReady,
   ObsVendorClient,
   ObsVendorClientOptions,
   ObsVendorError
@@ -959,14 +958,14 @@ export class DirectObsClient extends ObsVendorClient {
   ): Promise<void> {
     const previous = await this.sendObsRequest("GetSceneSceneTransitionOverride", { sceneName });
     this.requireControlGeneration(generation);
-    // A scene can override the global transition; temporarily select the
-    // requested transition on this destination to guarantee Cut/Fade/etc.
-    await this.sendObsRequest("SetSceneSceneTransitionOverride", {
-      sceneName,
-      transitionName,
-      transitionDuration: null
-    });
     try {
+      // A scene can override the global transition; temporarily select the requested transition on this destination
+      // to guarantee Cut/Fade/etc. Inside the try, so a write OBS applied but answered late is still put back.
+      await this.sendObsRequest("SetSceneSceneTransitionOverride", {
+        sceneName,
+        transitionName,
+        transitionDuration: null
+      });
       this.requireControlGeneration(generation);
       await switchScene();
     } finally {
@@ -1004,6 +1003,7 @@ export class DirectObsClient extends ObsVendorClient {
 
   protected override async initializeAfterIdentify(): Promise<void> {
     const connection = this.connectionGeneration;
+    let ready = false;
     try {
       const versionData = await this.sendObsRequest("GetVersion");
       if (connection !== this.connectionGeneration) return;
@@ -1025,13 +1025,14 @@ export class DirectObsClient extends ObsVendorClient {
         kind: "connected",
         obsVersion
       });
+      ready = true;
       this.emitDirectState();
       // Every completed (re)connection, also one whose status did not change.
       this.emit("connectionReady");
     } catch (err) {
-      // NotReady (OBS still loading) goes back to the base client, which tries again; otherwise the close handler owns
-      // reconnect and connection-error status.
-      if (isObsNotReady(err)) throw err;
+      // Before the connection is declared ready, every failure goes back to the base client (NotReady: try again on
+      // this socket; anything else: drop the socket). After that, a listener's error must not drop a working connection.
+      if (!ready) throw err;
     }
   }
 

@@ -46,6 +46,49 @@ describe("Direct OBS client", () => {
     expect(c.getCatalog().scenes.length).toBeGreaterThan(0);
   });
 
+  it("drops a connection whose first request goes unanswered, and connects again by itself", async () => {
+    const fake = new FakeObsServer({ missingPlugin: true });
+    server = fake;
+    type Handler = (ws: WebSocket, id: string, type: string, data: Record<string, unknown>) => Promise<void>;
+    const native = fake as unknown as { handleObsRequest: Handler };
+    const original = native.handleObsRequest.bind(fake);
+    let stalled = false;
+    native.handleObsRequest = async (ws, id, type, data) => {
+      if (!stalled && type === "GetVersion") {
+        stalled = true; // a stalled OBS: no answer at all, and the socket stays open
+        return;
+      }
+      await original(ws, id, type, data);
+    };
+    const port = await fake.start();
+    const c = new DirectObsClient({ host: "127.0.0.1", port, password: "" }, { requestTimeoutMs: 150, baseReconnectMs: 30 });
+    client = c;
+    c.start();
+    // No key press: the client drops the half-open connection and reconnects with backoff.
+    await vi.waitFor(() => expect(c.getStatus().kind).toBe("connected"), { timeout: 3000 });
+    expect(c.getConnectAttemptCount()).toBe(2);
+  });
+
+  it("neither throws nor connects with a Host typed with its port: OBS unreachable", async () => {
+    const fake = new FakeObsServer({ missingPlugin: true });
+    server = fake;
+    const port = await fake.start();
+    const c = new DirectObsClient({ host: "127.0.0.1:4455", port, password: "" });
+    client = c;
+    expect(() => c.start()).not.toThrow();
+    expect(() => c.nudgeReconnect(0)).not.toThrow();
+    expect(c.getStatus().kind).toBe("obs_unreachable");
+  });
+
+  it("reads OBS unreachable when a connected client is given a Host with its port, and connects again once corrected", async () => {
+    const direct = await connect();
+    const port = direct.getSettings().port;
+    expect(() => direct.updateSettings({ host: "localhost:4455", port, password: "" })).not.toThrow();
+    expect(direct.getStatus().kind).toBe("obs_unreachable");
+    direct.updateSettings({ host: "127.0.0.1", port, password: "" });
+    await vi.waitFor(() => expect(direct.getStatus().kind).toBe("connected"), { timeout: 3000 });
+  });
+
   /** Delay an older native response while a newer discovery can finish. */
   function holdNextVolume() {
     let release!: () => void;
@@ -365,6 +408,34 @@ describe("Direct OBS client", () => {
     // A failed command must not poison the action queue.
     await direct.runSceneAction("Scene 3", "cut");
     expect(server?.programSceneName).toBe("Scene 3");
+  });
+
+  it("restores the destination scene override when OBS applied the temporary one but answered too late", async () => {
+    const fake = new FakeObsServer({ missingPlugin: true });
+    server = fake;
+    const port = await fake.start();
+    const c = new DirectObsClient({ host: "127.0.0.1", port, password: "" }, { requestTimeoutMs: 150 });
+    client = c;
+    const connected = once(c, "statusChanged", { signal: AbortSignal.timeout(2000) });
+    c.start();
+    await connected;
+    fake.sceneTransitionOverrides.set("Scene 3", { transitionName: "Fade", transitionDuration: 500 });
+    type Handler = (ws: WebSocket, id: string, type: string, data: Record<string, unknown>) => Promise<void>;
+    const native = fake as unknown as { handleObsRequest: Handler };
+    const original = native.handleObsRequest.bind(fake);
+    let pending = true;
+    native.handleObsRequest = async (ws, id, type, data) => {
+      if (pending && type === "SetSceneSceneTransitionOverride") {
+        pending = false;
+        // Applied at once, answered after the client's timeout (the fake's answer only checks readyState and calls send).
+        const late = { readyState: 1, send: (text: string) => setTimeout(() => ws.send(text), 400) } as unknown as WebSocket;
+        await original(late, id, type, data);
+        return;
+      }
+      await original(ws, id, type, data);
+    };
+    await expect(c.runSceneAction("Scene 3", "cut")).rejects.toThrow();
+    await vi.waitFor(() => expect(fake.sceneTransitionOverrides.get("Scene 3")).toEqual({ transitionName: "Fade", transitionDuration: 500 }));
   });
 
   it("runs a selected transition in regular mode and reserves Preview for Studio Mode", async () => {

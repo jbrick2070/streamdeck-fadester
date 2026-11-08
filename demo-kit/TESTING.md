@@ -112,8 +112,9 @@ its address and password:
 3. PANIC (on every page) sets the looks to pass-through; Restore (on the first two pages) brings
    them back.
 4. Layers page: Scene 3 cues Kit Layers; Show / hide on Layer A (the sprint) and Layer B (the
-   hurdles); Still holds Look Prism's reactivity at 0 for 2 s; the Layer A fade and Layer B fade
-   dials; the Kit Beat dial changes the beat's volume; Scene 6 cues the Speed Page.
+   hurdles); Still takes Look Prism's reactivity to 0 over 2 s and leaves it there; the Layer A
+   fade and Layer B fade dials; the Kit Beat dial changes the beat's volume; Scene 6 cues the
+   Speed Page.
 5. Clips page: Scene 4 cues Kit Playlister; Previous, Play / pause and Next move its clips;
    Scene 5 cues Kit Playlister 50%; Restart restarts the 50 % clip; the dials are Scene blend,
    Effect mix, Layer A fade and Kit Beat.

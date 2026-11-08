@@ -614,7 +614,7 @@ export const MUTATIONS: readonly Mutation[] = [
     id: "M-V-72",
     rule: "a malformed pinned extension id is kept, so the server fails closed",
     file: "src/vjster/plugin/settings.ts",
-    from: "    .filter((id) => id.length > 0 && id.length <= 64)",
+    from: "    .filter((id) => id.length > 0)",
     to: "    .filter((id) => /^[a-p]{32}$/.test(id))",
     tests: ["tests/vjster-plugin-units.test.ts"]
   },
@@ -897,6 +897,86 @@ export const MUTATIONS: readonly Mutation[] = [
     from: "      if ((this.options.applied?.() ?? true) && \"extensionIds\" in stored) base.extensionIds = [...current.extensionIds];",
     to: "      if (false) base.extensionIds = [...current.extensionIds];",
     tests: ["tests/vjster-language.test.ts"]
+  },
+  {
+    id: "M-V-99",
+    rule: "an answer that moved the target is followed by the new target's state (R-TGT-4)",
+    file: "vjster-extension/src/router.ts",
+    from: "      if (target !== null && target !== tabId) this.pushTarget(null);\n      else this.lastTarget = target;",
+    to: "      this.lastTarget = target;",
+    tests: ["tests/vjster-ext-router.test.ts"]
+  },
+  {
+    id: "M-V-100",
+    rule: "a page on another site counts only while the all-sites option is in force (D-4)",
+    file: "vjster-extension/src/worker-core.ts",
+    from: "const allowedHost = (host: string | null): boolean => allSites || (host !== null && isYouTubeHost(host));",
+    to: "const allowedHost = (_host: string | null): boolean => true;",
+    tests: ["tests/vjster-ext-wiring.test.ts"]
+  },
+  {
+    id: "M-V-101",
+    rule: "the worker registers the all-sites scripts again after Chrome dropped them (D-4)",
+    file: "vjster-extension/src/worker-core.ts",
+    from: "      if (wanted && have.length < ALL_SITES_IDS.length) {",
+    to: "        if (false) {",
+    tests: ["tests/vjster-ext-wiring.test.ts"]
+  },
+  {
+    id: "M-V-102",
+    rule: "the options page shows every site as on only with the saved choice and the permission (D-4)",
+    file: "vjster-extension/src/settings.ts",
+    from: "  return offered && stored === true && granted;",
+    to: "  return offered && granted;",
+    tests: ["tests/vjster-ext-wiring.test.ts"]
+  },
+  {
+    id: "M-V-103",
+    rule: "a held level goes back on when an ad ends (R-QLT-7, R-BEH-1)",
+    file: "vjster-extension/src/adapter-core.ts",
+    from: "      this.reapplyHeldLevelAfterAd();",
+    to: "      void this.heldLevel;",
+    tests: ["tests/vjster-ext-adapter.test.ts"]
+  },
+  {
+    id: "M-V-104",
+    rule: "relative steps on the OBS page start from the rate last asked for while the embed's getter lags (R-SPD-1)",
+    file: "vjster-extension/src/adapter-core.ts",
+    from: "        const current = c.stepBase?.() ?? c.elementRate() ?? RESET_RATE;",
+    to: "        const current = c.elementRate() ?? RESET_RATE;",
+    tests: ["tests/vjster-page.test.ts"]
+  },
+  {
+    id: "M-V-105",
+    rule: "the OBS page answers before its own report, so a confirmed state goes out once (R-INT-4)",
+    file: "vjster-page/src/page-core.ts",
+    from: "    this.settled.playerEvent(\"rate\");\n    this.adapter.changed();",
+    to: "    this.adapter.changed();\n    this.settled.playerEvent(\"rate\");",
+    tests: ["tests/vjster-page.test.ts"]
+  },
+  {
+    id: "M-V-106",
+    rule: "the OBS page refuses an intent addressed to another target (PLAN.md 3.3)",
+    file: "vjster-page/src/page-core.ts",
+    from: "    if (intent.target !== \"obs\") {",
+    to: "    if (false) {",
+    tests: ["tests/vjster-page.test.ts"]
+  },
+  {
+    id: "M-V-107",
+    rule: "Both sends every turn and press to each chosen target that can take it, not only to the one it shows (R-OBS-3)",
+    file: "src/vjster/plugin/controllers.ts",
+    from: "    return sendTargets(this.targetChoice).filter((t) => {",
+    to: "    return [shownTarget(this.targetChoice)].filter((t) => {",
+    tests: ["tests/vjster-plugin-units.test.ts"]
+  },
+  {
+    id: "M-V-108",
+    rule: "an over-long pinned extension id is kept, cut, as a malformed pin, so the server still fails closed",
+    file: "src/vjster/plugin/settings.ts",
+    from: "    .map((id) => id.slice(0, 64))",
+    to: "    .filter((id) => id.length <= 64)",
+    tests: ["tests/vjster-plugin-units.test.ts"]
   }
 ];
 

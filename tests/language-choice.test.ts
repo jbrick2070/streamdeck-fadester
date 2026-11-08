@@ -11,7 +11,8 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { EN, PLUGIN_LANGUAGES, STREAM_DECK_LANGUAGES, currentLanguage, onLanguageChanged, setLanguage, t } from "../src/i18n/strings.js";
+import { EN, PLUGIN_LANGUAGES, STREAM_DECK_LANGUAGES, currentLanguage, onLanguageChanged, setLanguage, t, translatorFor } from "../src/i18n/strings.js";
+import { CURVE_LABELS, TARGET_MODE_LABELS } from "../src/types/contract.js";
 import { useStreamDeckLanguage } from "../src/i18n/load.js";
 import { LanguageChoiceController, normalizeChoice, resolveLanguage } from "../src/i18n/language-choice.js";
 import { GlobalSettingsPort, GlobalSettingsStore, NOT_READ_MESSAGE, NOT_SAVED_MESSAGE, START_READ_TIMEOUT_MS, connectionChange, connectionSaver } from "../src/settings/global-store.js";
@@ -647,6 +648,30 @@ describe("both page broadcasts and both savers", () => {
       persistGlobalSettings: async () => {}
     });
     expect(plain.buildStatePayload().language).toEqual({ choice: "auto", resolved: "ja" });
+  });
+
+  it("the two Midi Fadester pages are worded in Stream Deck's language when given its translator (R-LANG-3)", () => {
+    setLanguage("nl", deckTable("nl"));
+    // Keys whose Dutch differs from the English, so each page shows which table worded it.
+    for (const key of ["modeTbar", "curveEqualPower", "statusUnreachable"] as const) expect(t(key)).not.toBe(EN[key]);
+    const enhanced = new FadesterClient({ host: "127.0.0.1", port: 1, password: "" });
+    const page = (translate?: (key: string) => string) => new PropertyInspectorBridge(new FadesterStore(enhanced), enhanced, {
+      sendToPropertyInspector: () => {},
+      persistGlobalSettings: async () => {},
+      ...(translate ? { translate } : {})
+    }).buildStatePayload();
+    const modes = Object.values(TARGET_MODE_LABELS);
+    const curves = Object.values(CURVE_LABELS);
+    // An English Stream Deck: wholly English, though the plugin's own language is Dutch.
+    const english = page(translatorFor({}));
+    expect(english.targetModes.map((mode) => mode.label)).toEqual(modes.map((key) => EN[key]));
+    expect(english.curves.map((curve) => curve.label)).toEqual(curves.map((key) => EN[key]));
+    expect(english.status.sentence).toBe(EN.statusUnreachable);
+    // Without a translator of its own (as before): the plugin's language.
+    const dutch = page();
+    expect(dutch.targetModes.map((mode) => mode.label)).toEqual(modes.map((key) => t(key)));
+    expect(dutch.curves.map((curve) => curve.label)).toEqual(curves.map((key) => t(key)));
+    expect(dutch.status.sentence).toBe(t("statusUnreachable"));
   });
 
   it("a page's connection save and a language pick at once keep every key, with plugin.ts's saver", async () => {

@@ -190,6 +190,27 @@ function launch(config, password) {
     }
   };
 }
+/** Ask the native helper for one READ. Resolves the tick; rejects on refusal, timeout or the helper ending first; always ends the helper. */
+export async function readNativeOnce(helper, {timeoutMs = 5000, killAfterMs = 1000} = {}) {
+  const closed = new Promise(resolve => helper.once('close', resolve));
+  try {
+    return await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('Native READ timed out.')), timeoutMs);
+      const lines = createInterface({input: helper.stdout});
+      lines.once('line', line => { clearTimeout(timer); lines.close(); /^OK (?:[0-9]{1,4})$/.test(line) ? resolve(Number(line.slice(3))) : reject(new Error('Native READ refused.')); });
+      helper.once('error', () => { clearTimeout(timer); reject(new Error('Native reader did not launch.')); });
+      closed.then(() => { clearTimeout(timer); reject(new Error('Native reader exited before READ.')); });
+      helper.stdin.on('error', () => {});
+      helper.stdin.write('READ\n');
+    });
+  } finally {
+    helper.stdin.end();
+    const kill = setTimeout(() => helper.kill('SIGTERM'), killAfterMs);
+    let giveUp;
+    await Promise.race([closed, new Promise(resolve => { giveUp = setTimeout(resolve, killAfterMs + 2000); })]);
+    clearTimeout(kill); clearTimeout(giveUp);
+  }
+}
 async function main() {
   const [mode, receiptPath] = process.argv.slice(2);
   requireThat(['--preflight', '--execute', '--inspect'].includes(mode) && receiptPath && process.argv.length === 4,
@@ -206,21 +227,7 @@ async function main() {
       const receipt = JSON.parse(await readFile(receiptPath, 'utf8'));
       const env = {...process.env}; delete env.FADESTER_OBS_PASSWORD; delete env.FADESTER_MAC_OBS_PASSWORD;
       const helper = spawn(join(native, 'Contents/MacOS/FadesterNativeSlider'), ['--stdio', '--obs-pid', String(expected.pid), '--obs-port', String(expected.port)], {stdio: ['pipe', 'pipe', 'pipe'], env});
-      let tick;
-      try {
-        tick = await new Promise((resolve, reject) => {
-          const timer = setTimeout(() => reject(new Error('Native READ timed out.')), 5000);
-          const lines = createInterface({input: helper.stdout});
-          lines.once('line', line => { clearTimeout(timer); lines.close(); /^OK (?:[0-9]{1,4})$/.test(line) ? resolve(Number(line.slice(3))) : reject(new Error('Native READ refused.')); });
-          helper.once('error', () => { clearTimeout(timer); reject(new Error('Native reader did not launch.')); });
-          helper.stdin.on('error', () => {});
-          helper.stdin.write('READ\n');
-        });
-      } finally {
-        helper.stdin.end();
-        const timer = setTimeout(() => helper.kill('SIGTERM'), 1000);
-        await new Promise(resolve => helper.once('close', resolve)); clearTimeout(timer);
-      }
+      const tick = await readNativeOnce(helper);
       await new Promise(resolve => setTimeout(resolve, 250));
       const second = await snapshot(obs); const secondAt = new Date().toISOString(); listenerIdentity();
       const unchanged = staticState(before) === staticState(receipt.snapshot) && staticState(second) === staticState(receipt.snapshot);

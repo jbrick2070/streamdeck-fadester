@@ -15,6 +15,7 @@ import tempfile
 import unittest
 import zipfile
 from pathlib import Path
+from unittest import mock
 
 sys.dont_write_bytecode = True
 KIT = Path(__file__).resolve().parent
@@ -683,6 +684,50 @@ class Saved(unittest.TestCase):
             out = Path(tmp) / "compare.jsonl"
             self.assertEqual(ck.main(["compare-import", "--file", str(path), "--kit-dir", str(kit), "--out", str(out)]), 0)
             self.assertEqual(json.loads(out.read_text(encoding="utf-8"))["row"], "compare-import")
+
+
+class SpeedRun(unittest.TestCase):
+    """The speed run's Node process is ended and waited for however the run stops, and its output pipe is closed."""
+
+    def test_a_run_that_gives_no_address_is_ended_waited_for_and_closed(self):
+        calls: list[str] = []
+
+        class FakeNode:
+            def __init__(self):
+                self.stdout = io.StringIO('{"event": "listening"}\n')  # not the address line the run waits for
+                self.stderr = io.StringIO("")
+
+            def poll(self):
+                return None
+
+            def terminate(self):
+                calls.append("terminate")
+
+            def wait(self, timeout=None):
+                calls.append("wait")
+                return 0
+
+            def kill(self):
+                calls.append("kill")
+
+        class Obs:
+            def req(self, request, data=None):
+                return {"inputSettings": {"is_local_file": True}} if request == "GetInputSettings" else {}
+
+        nodes: list[FakeNode] = []
+
+        def popen(*args, **kwargs):
+            nodes.append(FakeNode())
+            return nodes[-1]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            check = ck.Check(Obs(), IDS, Path(tmp) / "kit", Path(tmp), Path(tmp) / "obs.log", ck.Results(None))
+            check.wait = lambda seconds: None
+            with mock.patch.object(ck.subprocess, "Popen", popen):
+                with self.assertRaisesRegex(RuntimeError, "gave no address"):
+                    check.speed_run()
+        self.assertEqual(calls[:2], ["terminate", "wait"])
+        self.assertTrue(nodes[0].stdout.closed)
 
 
 if __name__ == "__main__":

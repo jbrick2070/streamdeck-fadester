@@ -24,6 +24,8 @@ internal static class VjsterSelfTests
         Ports();
         Guards();
         await Loopback();
+        await StopRace();
+        await Oversize();
         await Layers();
     }
 
@@ -226,6 +228,46 @@ internal static class VjsterSelfTests
         await clash.StartAsync();
         Check(clash.Running, "the port is free again after a stop");
         await clash.StopAsync();
+    }
+
+    /** A connection that arrives while the link stops is never kept as the peer of a stopped link. */
+    static async Task StopRace()
+    {
+        // A fixed port, as in use (48150 by default). On port 0 a stopping link would check the late handshake's Host
+        // against port 0 and refuse it anyway, which hides the race.
+        var probe = new TcpListener(System.Net.IPAddress.Loopback, 0);
+        probe.Start();
+        int port = ((System.Net.IPEndPoint)probe.LocalEndpoint).Port;
+        probe.Stop();
+        await using var link = new VjsterLink(port, null, _ => { });
+        await link.StartAsync();
+        using var first = await Connect(port, Ext);
+        await Receive(first); // the state.get; from here on `first` never reads, so it never answers the close and the stop waits
+        var stopping = link.StopAsync();
+        await Task.Delay(200);
+        ClientWebSocket? late = null;
+        try { late = await Connect(port, Ext); } catch (WebSocketException) { }
+        await stopping;
+        Check(!link.Connected, "a connection that arrives while the link stops is not kept");
+        if (late != null)
+        {
+            Check((await Receive(late)).StartsWith("CLOSE 1001"), "a connection that arrives while the link stops is closed with 1001");
+            late.Dispose();
+        }
+    }
+
+    /** An oversized message is closed with 1009, and the disconnect is announced at once, not after the receive loop waits on itself. */
+    static async Task Oversize()
+    {
+        await using var link = new VjsterLink(0, null, _ => { });
+        var down = new TaskCompletionSource();
+        link.ConnectionChanged += up => { if (!up) down.TrySetResult(); };
+        await link.StartAsync();
+        using var ext = await Connect(link.BoundPort, Ext);
+        await Receive(ext); // the state.get
+        await SendText(ext, new string('x', VjsterLink.MaxPayloadBytes + 1));
+        Check((await Receive(ext)).StartsWith("CLOSE 1009"), "an oversized message is closed with 1009");
+        Check(await Task.WhenAny(down.Task, Task.Delay(1500)) == down.Task, "the disconnect is announced at once, not after a two-second wait");
     }
 
     static async Task<string> Raw(int port, string request)

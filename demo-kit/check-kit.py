@@ -839,6 +839,12 @@ class Check:
             watchdog.cancel()
             if node.poll() is None:
                 node.terminate()
+            try:
+                node.wait(10)
+            except subprocess.TimeoutExpired:
+                node.kill()
+                node.wait(5)
+            node.stdout.close()
         lines = [redact(line) for line in lines]
         done = lines[-1] if lines else {}
         steps = [l for l in lines if l.get("event") == "step"]
@@ -882,9 +888,10 @@ def drain(stream) -> list[str]:
     kept: list[str] = []
 
     def read() -> None:
-        for line in stream:
-            kept.append(re.sub(r"token=[0-9a-f]+", "token=<not kept>", line))
-            del kept[:-40]
+        with stream:
+            for line in stream:
+                kept.append(re.sub(r"token=[0-9a-f]+", "token=<not kept>", line))
+                del kept[:-40]
 
     threading.Thread(target=read, daemon=True).start()
     return kept

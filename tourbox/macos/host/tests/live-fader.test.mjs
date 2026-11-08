@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {waitForSettled} from './live-fader.mjs';
+import {EventEmitter} from 'node:events';
+import {PassThrough, Writable} from 'node:stream';
+import {readNativeOnce, waitForSettled} from './live-fader.mjs';
 
 function clock(timeout = 2500) {
   let time = 0;
@@ -31,4 +33,29 @@ test('a renderer that stays below target reaches a bounded deadline', async () =
   let reads = 0;
   await assert.rejects(waitForSettled(async () => { reads++; return {nativeTick: 51, cursor: .01}; }, clock(200)), /did not settle/);
   assert.equal(reads, 4);
+});
+
+/** A stand-in for the native helper process: stdout to answer on, a stdin that takes anything, a kill that does nothing. */
+function fakeHelper() {
+  const helper = new EventEmitter();
+  helper.stdout = new PassThrough();
+  helper.stdin = new Writable({write(_chunk, _encoding, done) { done(); }});
+  helper.kill = () => true;
+  return helper;
+}
+test('a native helper that ends before answering READ is reported at once, not waited for', async () => {
+  const helper = fakeHelper();
+  const started = Date.now();
+  const reading = readNativeOnce(helper);
+  helper.stdout.end();
+  helper.emit('close', 1, null);
+  await assert.rejects(reading, /exited before READ/);
+  assert.ok(Date.now() - started < 1000, 'rejected well under a second');
+});
+test('a READ answered with OK resolves its tick, and the helper is let go once it closes', async () => {
+  const helper = fakeHelper();
+  const reading = readNativeOnce(helper);
+  helper.stdout.write('OK 51\n');
+  setTimeout(() => helper.emit('close', 0, null), 10);
+  assert.equal(await reading, 51);
 });

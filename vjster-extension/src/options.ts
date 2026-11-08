@@ -4,7 +4,7 @@
 
 import { DEFAULT_LINK_PORT } from "../../src/vjster/shared/protocol.js";
 import { message, translatePage } from "./i18n.js";
-import { ALL_SITES_KEY, ALL_SITES_SCRIPTS, PORT_KEY, readPort } from "./settings.js";
+import { ALL_SITES_IDS, ALL_SITES_KEY, ALL_SITES_SCRIPTS, PORT_KEY, allSitesChecked, readPort } from "./settings.js";
 
 const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
 
@@ -15,7 +15,8 @@ async function show(): Promise<void> {
   // The Chrome Web Store build is YouTube only: with no optional all-sites permission in the manifest, the option is not offered.
   const offered = (chrome.runtime.getManifest().optional_host_permissions ?? []).includes("<all_urls>");
   $<HTMLElement>("all-sites-row").hidden = !offered;
-  $<HTMLInputElement>("all-sites").checked = offered && (await chrome.permissions.contains({ origins: ["<all_urls>"] }));
+  const granted = offered && (await chrome.permissions.contains({ origins: ["<all_urls>"] }));
+  $<HTMLInputElement>("all-sites").checked = allSitesChecked(offered, stored[ALL_SITES_KEY], granted);
 }
 
 /** Show a status line in Chrome's language (`_locales`, PLAN.md 8.5). */
@@ -36,7 +37,7 @@ $<HTMLButtonElement>("save").addEventListener("click", async () => {
 
 $<HTMLInputElement>("all-sites").addEventListener("change", async (event) => {
   const box = event.target as HTMLInputElement;
-  const ids = ALL_SITES_SCRIPTS.map((s) => s.id);
+  const ids = ALL_SITES_IDS;
   if (box.checked) {
     // The permission prompt must come from this click.
     const granted = await chrome.permissions.request({ origins: ["<all_urls>"] });

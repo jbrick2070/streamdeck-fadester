@@ -381,7 +381,15 @@ export class ObsVendorClient<
     this.cleanupSocket();
     this.connectAttemptCount++;
     const url = `ws://${this.settings.host}:${this.settings.port}`;
-    const socket = new WebSocket(url);
+    let socket: WebSocket;
+    try {
+      socket = new WebSocket(url);
+    } catch {
+      // An address ws cannot parse (a host typed with its port, "127.0.0.1:4455"; a bare IPv6 address) throws here,
+      // synchronously. No socket and no throw: the status says OBS cannot be reached; a corrected Host reconnects.
+      this.setStatus(makeUnreachableStatus());
+      return;
+    }
     this.ws = socket;
 
     socket.on("message", (raw: WebSocket.RawData) => {
@@ -504,7 +512,12 @@ export class ObsVendorClient<
         await this.initializeAfterIdentify();
         return;
       } catch (err) {
-        if (!isObsNotReady(err)) return; // the close handler owns reconnect and status
+        if (!isObsNotReady(err)) {
+          // A request of the first sync failed on a socket that is still open (a timeout, an error answer): drop it, so
+          // the close handler reports OBS unreachable and reconnects with backoff. A closed socket is the close handler's.
+          if (!this.stopped && socket !== null && this.ws === socket && socket.readyState === WebSocket.OPEN) socket.terminate();
+          return;
+        }
       }
       const delay = Math.min(this.notReadyRetryMs * 2 ** Math.min(attempt, 3), 2000);
       await new Promise<void>((resolve) => setTimeout(resolve, delay));
@@ -515,6 +528,7 @@ export class ObsVendorClient<
   }
 
   protected async initializeAfterIdentify(): Promise<void> {
+    let ready = false;
     try {
       const versionData = await this.sendObsRequest("GetVersion");
       const obsVersion =
@@ -578,12 +592,13 @@ export class ObsVendorClient<
           ? { profileTier: state.profile_tier }
           : {})
       });
+      ready = true;
       this.emit("stateChanged", state);
       await this.refreshSceneNames(state.studio_mode);
     } catch (err) {
-      // NotReady goes back to syncAfterIdentify, which tries again; otherwise the socket closed or a request failed
-      // before ready, and the close handler owns reconnect and status.
-      if (isObsNotReady(err)) throw err;
+      // Before the connection is declared ready, every failure goes back to syncAfterIdentify (NotReady: try again on
+      // this socket; anything else: drop the socket). After that, a listener's error must not drop a working connection.
+      if (!ready) throw err;
     }
   }
 

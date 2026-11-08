@@ -4,7 +4,7 @@ This is the Mac encoding of the same single **OBS Fadester for TourBox** master:
 
 The Mac shortcuts keep the key from the canonical `../map.json` and translate the modifiers bit by bit: the OBS actions' **Ctrl+Alt+Shift** becomes **Control+Option+Shift** (Windows mask 14, Mac mask 7), the video and layer actions' **Ctrl+Shift** becomes **Control+Shift** (10 to 3) and their **Alt+Shift** stays **Option+Shift** (6). **Command is absent.** Mac Console's native modifier encoding differs: Control=1, Shift=2, Option=4, Command=8. Importing the Windows file unchanged is not evidence of equivalent Mac shortcuts. The experimental Mac shortcut helper in `../../macos/input` registers the same three modifier sets from `../map.json`; the Mac host still refuses the video actions (see `../../MACOS.md`).
 
-Generate and check from the repository root:
+Generate and check from the repository root with Python 3.10 or newer (the `python3` that comes with Apple's command-line tools may be older):
 
 ```sh
 python3 tourbox/presets/build_macos.py

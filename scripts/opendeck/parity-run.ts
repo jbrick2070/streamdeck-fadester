@@ -11,7 +11,7 @@ import { existsSync, readFileSync, rmSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { WebSocket, WebSocketServer } from "ws";
-import { configDir, pluginFolderName } from "./opendeck.js";
+import { configDir, pluginFolderName, vjsterChildQuery } from "./opendeck.js";
 
 const PLUGIN_ID = "io.github.jbrick2070.fadester-for-obs";
 const FOLDER = pluginFolderName(PLUGIN_ID);
@@ -186,9 +186,24 @@ class Host {
   }
 }
 
+/** Whether something takes connections on 127.0.0.1:`port`. */
+async function listening(port: number): Promise<boolean> {
+  const net = await import("node:net");
+  return new Promise((resolve) => {
+    const socket = net.connect(port, "127.0.0.1");
+    socket.once("connect", () => {
+      socket.destroy();
+      resolve(true);
+    });
+    socket.once("error", () => resolve(false));
+  });
+}
+
 async function main(): Promise<number> {
   if (!existsSync(join(pluginDir, "bin", "plugin.js"))) throw new Error(`${pluginDir} has no bin/plugin.js; run npm run opendeck:install first`);
   if (obsRunning()) throw new Error("obs64.exe is already running; this run will not touch an OBS that is not its own");
+  // Another VJster link on the default port (an installed suite's) would pass the check that this run's own link starts there.
+  if (await listening(48150)) throw new Error("127.0.0.1:48150 is already taken (another VJster link); this run needs it to check its own VJster link");
   console.log(`plugin ${pluginDir}\nOBS    ${obsRoot} (port ${wsConfig.server_port})\n`);
 
   const obs = new Obs();
@@ -340,17 +355,6 @@ async function main(): Promise<number> {
       host.appear(VJSTER_PRESET, preset.context, device, preset.settings, preset.column);
       await until("the VJster key to draw", () => host!.of(preset.context, "setImage").length > 0, 15000);
       check("a VJster key draws an image through the suite, with no alert", host.of(preset.context, "showAlert").length === 0, `${host.of(preset.context, "setImage").length} image(s)`);
-      const listening = async (port: number): Promise<boolean> => {
-        const net = await import("node:net");
-        return new Promise((resolve) => {
-          const socket = net.connect(port, "127.0.0.1");
-          socket.once("connect", () => {
-            socket.destroy();
-            resolve(true);
-          });
-          socket.once("error", () => resolve(false));
-        });
-      };
       await until("VJster's link on its default port", () => listening(48150), 10000);
       check("VJster's link server starts on its own port, not Fadester's OBS port", true, "127.0.0.1:48150");
 
@@ -366,9 +370,9 @@ async function main(): Promise<number> {
 
       // A child that stops is started again and given the key that was showing (Windows: the child is found by its command line).
       if (process.platform === "win32") {
-        // The suite starts the VJster plugin from bin/vjster/plugin.js with a plugin id that begins "suite-".
-        const find = "Get-CimInstance Win32_Process -Filter \"Name='node.exe'\" | Where-Object { $_.CommandLine -like '*vjster*plugin.js*' -and $_.CommandLine -like '*suite-*' } | ForEach-Object { $_.ProcessId }";
-        const pids = spawnSync("powershell.exe", ["-NoProfile", "-Command", find], { encoding: "utf8" }).stdout.split(/\s+/).filter(Boolean);
+        // The suite starts the VJster plugin from bin/vjster/plugin.js; only the child of this run's launcher is stopped.
+        const launcherPid = plugin?.pid;
+        const pids = launcherPid === undefined ? [] : spawnSync("powershell.exe", ["-NoProfile", "-Command", vjsterChildQuery(launcherPid)], { encoding: "utf8" }).stdout.split(/\s+/).filter(Boolean);
         const before = host.of(preset.context, "setImage").length;
         for (const pid of pids) spawnSync("taskkill", ["/PID", pid, "/F"]);
         check("a VJster process was found to stop", pids.length > 0, `${pids.length} process(es)`);

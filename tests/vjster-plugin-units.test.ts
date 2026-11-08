@@ -214,6 +214,9 @@ describe("settings (D-7, R-LNK-1)", () => {
     expect(globalSettings({ obsAlwaysOn: false }).obsAlwaysOn).toBe(false);
     expect(globalSettings({ obsAlwaysOn: "true" }).obsAlwaysOn).toBeNull();
     expect(globalSettings({ port: 50000, obsToken: "0123456789abcdef0123456789abcdef" })).toMatchObject({ port: 50000, obsToken: "0123456789abcdef0123456789abcdef" });
+    // An over-long entry (a pasted extension page address) stays as a malformed pin, cut, so the server still refuses everyone.
+    expect(globalSettings({ extensionIds: "a".repeat(65) }).extensionIds).toEqual(["a".repeat(64)]);
+    expect(globalSettings({ extensionIds: ["a".repeat(65), "abcdefghijklmnopabcdefghijklmnop"] }).extensionIds).toHaveLength(2);
   });
 });
 
@@ -464,6 +467,72 @@ describe("keys (R-SPD-5, R-QLT-5, R-TGT-2)", () => {
   });
 });
 
+describe("Both sends to both (R-OBS-3)", () => {
+  const chromeOff = () => fakeHub({ browser: { status: "extension-off", state: null }, obs: connected(state({ target: "obs", rate: 1.5 })) });
+  /** One key of each kind, set to Both; Quality Preset asks for a level OBS's list offers. */
+  const keys = (hub: HubLike, s: ReturnType<typeof sink>) => [
+    new TransportController(hub, s, transportSettings({ target: "both" }), fakeClock()),
+    new SpeedPresetController(hub, s, speedPresetSettings({ rate: 2, target: "both" }), fakeClock()),
+    new SpeedStepController(hub, s, speedStepSettings({ direction: 1, target: "both" }), fakeClock()),
+    new QualityPresetController(hub, s, qualityPresetSettings({ level: "hd720", target: "both" }), fakeClock())
+  ];
+
+  it("sends each key's press to the OBS page alone when Chrome is off, without an alert", () => {
+    const { hub, sent } = chromeOff();
+    const s = sink();
+    for (const key of keys(hub, s)) {
+      const before = sent.length;
+      key.press();
+      expect(sent.slice(before).map((x) => x.target)).toEqual(["obs"]);
+    }
+    expect(sent.map((x) => x.body.type)).toEqual(["transport.toggle", "speed.set", "speed.step", "quality.set"]);
+    expect(s.alerts).toBe(0);
+  });
+
+  it("turns the dials from OBS's state and drives OBS when Chrome is off; the strip still shows Chrome's state", () => {
+    const { hub, sent } = chromeOff();
+    const s = sink();
+    const clock = fakeClock();
+    const speed = new SpeedDialController(hub, s, speedDialSettings({ target: "both" }), clock);
+    speed.rotate(1, false);
+    clock.advance(50);
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toMatchObject({ target: "obs", body: { type: "speed.set", rate: 1.75 } }); // 1.5 and the default 0.25 step
+    expect(words(s.last())).toContain("EXTENSION OFF");
+    speed.tap();
+    expect(sent[1]).toMatchObject({ target: "obs", body: { type: "transport.toggle" } });
+    const quality = new QualityDialController(hub, s, qualityDialSettings({ target: "both" }), clock);
+    quality.rotate(-1);
+    quality.press();
+    expect(sent.slice(2).map((x) => [x.target, x.body])).toEqual([
+      ["obs", { type: "quality.set", level: "hd720", hold: true }],
+      ["obs", { type: "quality.reset" }]
+    ]);
+    expect(s.alerts).toBe(0);
+  });
+
+  it("passes over a Chrome with no video, and alerts on every control when neither target can take it", () => {
+    const noVideo = fakeHub({ browser: connected(state({ rate: null, availableRates: [] })), obs: connected(state({ target: "obs", rate: 1.5 })) });
+    const s = sink();
+    for (const key of keys(noVideo.hub, s)) key.press();
+    expect(noVideo.sent.map((x) => x.target)).toEqual(["obs", "obs", "obs", "obs"]);
+    expect(s.alerts).toBe(0);
+    const none = fakeHub({ browser: { status: "extension-off", state: null }, obs: { status: "page-off", state: null } });
+    const off = sink();
+    const clock = fakeClock();
+    for (const key of keys(none.hub, off)) key.press();
+    const speed = new SpeedDialController(none.hub, off, speedDialSettings({ target: "both" }), clock);
+    speed.rotate(1, false);
+    speed.tap();
+    const quality = new QualityDialController(none.hub, off, qualityDialSettings({ target: "both" }), clock);
+    quality.rotate(1);
+    quality.press();
+    clock.advance(50);
+    expect(none.sent).toEqual([]);
+    expect(off.alerts).toBe(8);
+  });
+});
+
 describe("Hub (R-LNK-1, R-BEH-4, D-11)", () => {
   function fakeServer(failWith?: Error) {
     const listeners = new Set<(e: LinkEvent) => void>();
@@ -562,6 +631,53 @@ describe("Hub (R-LNK-1, R-BEH-4, D-11)", () => {
     expect(made[0].log).toEqual(["start", "stop"]);
     expect(made[1].log).toEqual(["start"]);
     expect(made[1].running).toBe(true);
+  });
+
+  it("never starts the old server again when a key appears while a reconfigure stops it", async () => {
+    // Shaped like LinkServer: a stop says "not running" at once and frees the port later; a start waits for that stop.
+    type SlowServer = ServerLike & { log: string[]; finishStop(): void };
+    const made: SlowServer[] = [];
+    const factory = (_o: LinkServerOptions): SlowServer => {
+      const log: string[] = [];
+      let running = false;
+      let stopping: Promise<void> | null = null;
+      let finish = (): void => undefined;
+      const s: SlowServer = {
+        get running() {
+          return running;
+        },
+        async start() {
+          log.push("start");
+          if (stopping) await stopping;
+          running = true;
+        },
+        stop() {
+          log.push("stop");
+          running = false;
+          stopping = new Promise<void>((resolve) => (finish = resolve));
+          return stopping;
+        },
+        on: () => () => undefined,
+        isConnected: () => false,
+        send: () => null,
+        log,
+        finishStop: () => finish()
+      };
+      made.push(s);
+      return s;
+    };
+    const hub = new Hub({ port: 1 }, factory);
+    await hub.acquire();
+    const done = hub.reconfigure({ port: 1, obsToken: "a".repeat(32) });
+    await new Promise((r) => setImmediate(r));
+    const again = hub.acquire();
+    made[0].finishStop();
+    await done;
+    await again;
+    expect(made[0].log).toEqual(["start", "stop"]);
+    expect(made[0].running).toBe(false);
+    expect(made[1].running).toBe(true);
+    expect(made[1].log).toEqual(["start"]);
   });
 });
 

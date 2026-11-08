@@ -4,6 +4,21 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 
 ## Unreleased
 
+- **OBS address with a port:** a Host typed as `127.0.0.1:4455` no longer makes Fadester stop on the next key press (and, in the suite, stop for good after a few presses). It now shows OBS unreachable until the Host holds the address alone.
+- **VJster link settings:** changing the link port or the allowed extension at the moment a key appeared could leave the old link running with the old settings, with the keys saying EXTENSION OFF until Stream Deck restarted. The old link now always stops first.
+- **Scene transitions:** when OBS answered the temporary Cut or Fade selection too late, the scene could keep that transition as its own setting. Fadester now always puts the scene's own transition back.
+- **Connecting:** when OBS answered the first request after connecting too late, Fadester stayed half-connected until a control was pressed. It now drops that connection and connects again by itself.
+- **Suite:** a settings page left open while Fadester or VJster restarted inside the suite stopped answering until it was reopened. It now keeps working.
+- **VJster Both:** a control set to Both now drives the OBS page also when Chrome is closed or has no video; the strip still shows Chrome's state. It used to refuse with an alert.
+- **Filter controls:** when OBS refuses a value, or does not answer in time, the control now says why instead of just not moving.
+- **VJster allowed extension:** an over-long entry in Only this extension (such as a pasted extension page address) no longer lets every extension connect; it now counts as an invalid id.
+- **VJster start-up:** if Stream Deck does not send VJster's stored settings, VJster goes on after 5 s with a working OBS page link instead of waiting for good.
+- **Midi Fadester settings pages:** with Fadester's Language set to a language other than Stream Deck's, these two pages mixed in words of the chosen language. They are now wholly in Stream Deck's language until they get the Language choice.
+- **VJster:** after a play/pause leaves another tab's video as the one to control, the deck shows that video at once.
+- **VJster extension:** when every-site control is turned off, VJster stops using it at once in open tabs (a page's script may run until the page reloads; VJster ignores what it reports); the option should keep working after the extension is updated or reloaded (checked by hand in docs/vjster/TESTING.md 1.8); and the options page shows its real state.
+- **TourBox panel:** the Adjust the feel hint names the current controls.
+- **VJster:** a held quality level is restored after a YouTube ad.
+- **VJster OBS page:** quick speed-step presses add up.
 - **Preparing Studio Mode** no longer replaces a Preview you had already chosen when OBS's Studio Mode notice arrives while Fadester is still reading the scenes; it decides on what OBS reports at that moment.
 - **Connecting while OBS starts:** OBS's websocket takes clients before OBS has finished loading, and answers every request "not ready" until it has. A deck or controller that connected in that moment stayed half-connected (never Connected, and never trying again) until OBS was restarted, and Midi Fadester could be reported as not installed. Fadester now waits a moment and tries again on the same connection. Large scene collections, which take longest to load, made this likely.
 - **TourBox on macOS (experimental, not a release):** the Mac development pieces are now on `main`: an action host, a shortcut-input helper, a native T-bar adapter, a setup panel, two probes, a grouped-mix host, the `tourbox-macos` core-check workflow, and a Mac encoding of the one preset (`tourbox/presets/macos`), regenerated from the current map so that the video and layer actions carry Control+Shift and Option+Shift. Nothing Mac-side has been built since the VJster layout landed; [tourbox/MACOS.md](tourbox/MACOS.md) lists what still needs porting. The Windows package is unchanged.

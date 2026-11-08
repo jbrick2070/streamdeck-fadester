@@ -15,7 +15,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { WebSocket, WebSocketServer } from "ws";
 import { VJSTER_ACTIONS, VJSTER_NAMESPACE } from "./actions.js";
-import { WATCHDOG, parseLaunchArgs } from "./launch-args.js";
+import { WATCHDOG, parseLaunchArgs, registersChild } from "./launch-args.js";
 import { SuiteMux, type Child, type Message } from "./mux.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -148,14 +148,14 @@ function main(): void {
       }, 5000);
       socket.on("error", (error) => log(`${child}: connection error: ${error.message}`));
       socket.on("message", (raw) => {
-        let message: Message;
+        let parsed: unknown;
         try {
-          message = JSON.parse(String(raw)) as Message;
+          parsed = JSON.parse(String(raw));
         } catch {
           return;
         }
         if (!registered) {
-          if (message.event !== "registerPlugin" || message.uuid !== link.uuid || link.uuid === "") {
+          if (!registersChild(parsed, link.uuid)) {
             socket.close();
             return;
           }
@@ -171,7 +171,8 @@ function main(): void {
             for (const text of link.queue.splice(0)) socket.send(text);
           }
         }
-        mux.fromChild(child, message);
+        if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return;
+        mux.fromChild(child, parsed as Message);
       });
       socket.on("close", () => {
         clearTimeout(giveUp);

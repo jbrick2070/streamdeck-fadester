@@ -316,6 +316,40 @@ describe("Adapter: ads (R-BEH-1)", () => {
     adapter.elementReplaced();
     expect(s.calls).toEqual([]);
   });
+
+  it("re-applies a held level when an ad that was showing at navigation ends (R-QLT-7)", () => {
+    const { adapter, s, clock } = setup();
+    adapter.handle(intent({ type: "quality.set", level: "large", hold: true }));
+    s.playingLevel = "large";
+    clock.advance(500);
+    s.ad = true;
+    adapter.navigated();
+    s.preferred = "auto"; // YouTube resets it on navigation (V-9)
+    s.calls.length = 0;
+    clock.advance(1000);
+    expect(s.calls).toEqual([]);
+    s.ad = false;
+    adapter.changed();
+    clock.advance(500);
+    expect(s.calls).toEqual(["setQuality large"]);
+    expect(s.preferred).toBe("large");
+  });
+
+  it("re-applies a held level after an ad that outlasts the read-back", () => {
+    const { adapter, s, clock } = setup();
+    adapter.handle(intent({ type: "quality.set", level: "large", hold: true }));
+    adapter.navigated();
+    s.preferred = "auto";
+    s.ad = true;
+    adapter.changed(); // the page reports the ad starting
+    s.calls.length = 0;
+    clock.advance(6000);
+    expect(s.calls.filter((call) => call.startsWith("setQuality"))).toEqual([]);
+    s.ad = false;
+    adapter.changed();
+    clock.advance(500);
+    expect(s.calls).toContain("setQuality large");
+  });
 });
 
 describe("Adapter: transport", () => {

@@ -23,8 +23,15 @@ const log = { info: (m: string) => streamDeck.logger.info(m), warn: (m: string) 
 // The OBS page is built into bin/obs next to this bundle (vjster-page/rollup.config.mjs) and served at /obs (Phase 2).
 // VJSTER_PAGE_DIR points the end-to-end tests at fixture files; Stream Deck never sets it.
 const pages = loadObsPage(process.env.VJSTER_PAGE_DIR || join(dirname(fileURLToPath(import.meta.url)), "obs"), log);
+/**
+ * How long the start-up read may take before the plugin goes on with what it knows (Stream Deck normally answers at
+ * once). VJSTER_START_READ_MS shortens it for the end-to-end tests; Stream Deck never sets it.
+ */
+const START_READ_MS = Number(process.env.VJSTER_START_READ_MS) || 5000;
 /** True once the start-up path has made sure an OBS token exists. */
 let startupDone = false;
+/** Stream Deck sent settings by itself; a late start-up answer must not undo them. */
+let settingsSent = false;
 let current: GlobalSettings = globalSettings({});
 const hub = new Hub({ port: DEFAULT_LINK_PORT, log, pages });
 
@@ -40,7 +47,7 @@ let settled: () => void = () => undefined;
 hub.holdUntil(
   new Promise<void>((resolve) => {
     settled = resolve;
-    setTimeout(resolve, 5000);
+    setTimeout(resolve, START_READ_MS);
   })
 );
 
@@ -79,6 +86,7 @@ function obsAddress(input: unknown): { address: string; found: boolean } {
 }
 
 streamDeck.settings.onDidReceiveGlobalSettings<JsonObject>((ev) => {
+  settingsSent = true;
   const incoming = globalSettings(ev.settings);
   if (startupDone) {
     // A write from a settings page whose copy is older than the plugin's own changes, or that was made
@@ -154,16 +162,31 @@ for (const a of [SpeedDialAction, QualityDialAction, SpeedPresetAction, SpeedSte
 }
 
 void streamDeck.connect().then(async () => {
-  const stored = await streamDeck.settings.getGlobalSettings<JsonObject>();
-  let settings = globalSettings(stored);
-  if (settings.obsToken === null) {
-    // One token per install for the Phase 2 OBS page (R-LNK-2), kept in the plugin's settings.
-    settings = { ...settings, obsToken: newObsToken() };
-    await streamDeck.settings.setGlobalSettings({ ...stored, obsToken: settings.obsToken });
+  const read = streamDeck.settings.getGlobalSettings<JsonObject>();
+  const stored = await Promise.race([read, new Promise<null>((resolve) => setTimeout(() => resolve(null), START_READ_MS))]);
+  if (stored !== null) {
+    let settings = globalSettings(stored);
+    if (settings.obsToken === null) {
+      // One token per install for the Phase 2 OBS page (R-LNK-2), kept in the plugin's settings.
+      settings = { ...settings, obsToken: newObsToken() };
+      await streamDeck.settings.setGlobalSettings({ ...stored, obsToken: settings.obsToken });
+    }
+    // apply() applies the stored Language choice too, so a fixed language is drawn from the start (R-LANG-1).
+    await apply(settings);
+  } else {
+    // No answer in time. Never write a whole object holding only the token: Stream Deck would replace every stored key
+    // with it (R-LANG-8). Keep a token in memory; when the stored settings arrive they are repaired with it and written back.
+    log.warn("global settings not read at start-up; going on with what is known");
+    await apply(current.obsToken === null ? { ...current, obsToken: newObsToken() } : current);
+    void read.then((late) => {
+      if (settingsSent) return; // the handler already took these or newer settings, repaired
+      const lateObject: JsonObject = late && typeof late === "object" && !Array.isArray(late) ? late : {};
+      const { settings: repaired, changed } = repairPageWrite(lateObject, current, newObsToken);
+      if (changed) void streamDeck.settings.setGlobalSettings(repaired).catch(() => undefined);
+      void apply(globalSettings(repaired));
+    }).catch(() => undefined);
   }
-  // apply() applies the stored Language choice too, so a fixed language is drawn from the start (R-LANG-1).
-  await apply(settings);
-  // Only now, with the stored settings and the OBS token applied, may the server start.
+  // Only now, with the settings and an OBS token applied, may the server start.
   startupDone = true;
   settled();
 });

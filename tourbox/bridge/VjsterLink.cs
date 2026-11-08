@@ -156,15 +156,16 @@ internal sealed class VjsterLink : IAsyncDisposable
             listener = null; running = null; acceptLoop = null; pingLoop = null; peer = null;
         }
         if (l == null) return;
-        // Close the extension's connection properly first: cancelling its receive would abort the socket instead.
+        // Stop taking connections first, so none arrives while the current one closes. The receive loop runs without
+        // this token, so cancelling it does not abort the extension's socket.
+        r!.Cancel();
+        l.Stop();
         if (gone != null)
         {
             await Drop(gone, (WebSocketCloseStatus)1001, "server stopping", announce: false);
             lock (gate) LastState = null;
             Raise(ConnectionChanged, false);
         }
-        r!.Cancel();
-        l.Stop();
         foreach (var t in new[] { a, p }) { try { if (t != null) await t; } catch (OperationCanceledException) { } catch (ObjectDisposedException) { } }
         foreach (var key in pending.Keys) if (pending.TryRemove(key, out var tcs)) tcs.TrySetResult((null, new VjsterError("internal", "the link stopped", null)));
         r.Dispose();
@@ -315,9 +316,14 @@ internal sealed class VjsterLink : IAsyncDisposable
 
     void Accept(Peer p, CancellationToken stop)
     {
-        if (stop.IsCancellationRequested) { _ = Drop(p, (WebSocketCloseStatus)1001, "server stopping", announce: false); return; }
-        Peer? previous;
-        lock (gate) { previous = peer; peer = p; LastState = null; }
+        Peer? previous = null; bool stopping;
+        lock (gate)
+        {
+            // Under the lock StopAsync takes: a handshake that finishes as the link stops never becomes the peer.
+            stopping = stop.IsCancellationRequested || listener == null;
+            if (!stopping) { previous = peer; peer = p; LastState = null; }
+        }
+        if (stopping) { _ = Drop(p, (WebSocketCloseStatus)1001, "server stopping", announce: false); return; }
         if (previous != null) _ = Drop(previous, (WebSocketCloseStatus)CloseReplaced, "replaced by a newer connection", announce: false);
         log("VJster: the Chrome extension connected");
         Raise(ConnectionChanged, true);
@@ -385,7 +391,10 @@ internal sealed class VjsterLink : IAsyncDisposable
                 if (message.Length > MaxPayloadBytes)
                 {
                     why = "message too big";
-                    await Drop(p, WebSocketCloseStatus.MessageTooBig, "message too big", announce: false);
+                    // Not Drop: it waits for this very loop to end. Send the close and leave; finally frees the socket.
+                    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+                    try { await p.Socket.CloseOutputAsync(WebSocketCloseStatus.MessageTooBig, "message too big", timeout.Token); }
+                    catch (Exception e) when (e is WebSocketException or IOException or OperationCanceledException or ObjectDisposedException or InvalidOperationException) { }
                     break;
                 }
                 if (!r.EndOfMessage) continue;

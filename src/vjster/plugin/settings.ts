@@ -118,7 +118,9 @@ export function globalSettings(raw: unknown): GlobalSettings {
   const ids = (Array.isArray(r.extensionIds) ? r.extensionIds : typeof r.extensionIds === "string" ? r.extensionIds.split(/[\s,]+/) : [])
     .filter((id): id is string => typeof id === "string")
     .map((id) => id.trim().toLowerCase())
-    .filter((id) => id.length > 0 && id.length <= 64)
+    .filter((id) => id.length > 0)
+    // An over-long entry is kept, cut, as a malformed pin (it can never be a valid id), so the server still fails closed.
+    .map((id) => id.slice(0, 64))
     .slice(0, 16);
   const token = typeof r.obsToken === "string" && /^[0-9a-f]{32}$/.test(r.obsToken) ? r.obsToken : null;
   return {

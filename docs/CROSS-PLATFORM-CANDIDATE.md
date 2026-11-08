@@ -19,7 +19,7 @@ node --import tsx scripts/suite/package-candidate.ts
 The last command builds current sources and bundled profiles, checks package paths with exact filename case, validates both manifests with Elgato's CLI, and produces:
 
 - `release/candidates/windows-macos/io.github.jbrick2070.fadester-for-obs.streamDeckPlugin` — one installer for both platforms, including VJster.
-- `release/candidates/windows-macos/vjster-chrome-extension-0.1.0.zip` — the freshly built Chrome companion with every current translation.
+- `release/candidates/windows-macos/vjster-chrome-extension-<version>.zip` (`<version>` is the extension's, from `vjster-extension/manifest.json`) — the freshly built Chrome companion with every current translation.
 - `release/candidates/windows-macos/CANDIDATE.json` — versions, build platform, file sizes, and SHA-256 checksums.
 
 It does not install the plugin, restart applications, change personal profiles, publish, or tag a release. `--check` runs the portability checks against an already built tree without rebuilding. Unit tests and package validation are separate from real host testing.

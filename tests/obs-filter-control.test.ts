@@ -44,6 +44,23 @@ describe("OBS Filter control", () => {
     };
   }
 
+  /** The fake answers every filter value write with OBS's refusal "Filter busy"; the returned function undoes it. */
+  function refuseFilterWrites(server: FakeObsServer, code = 500, comment = "Filter busy"): () => void {
+    type Handler = (ws: unknown, id: string, type: string, data: Record<string, unknown>) => Promise<void>;
+    const fake = server as unknown as {
+      handleObsRequest: Handler;
+      sendResponse(ws: unknown, id: string, type: string, result: boolean, code: number, comment: string): void;
+    };
+    const original = fake.handleObsRequest;
+    fake.handleObsRequest = async (ws, id, type, data) => {
+      if (type === "SetSourceFilterSettings") return fake.sendResponse(ws, id, type, false, code, comment);
+      await original.call(server, ws, id, type, data);
+    };
+    return () => {
+      fake.handleObsRequest = original;
+    };
+  }
+
   function control(filters: FilterController, dial: boolean, settings: ObsFilterSettings) {
     const view = sink();
     const controller = new ObsFilterInstanceController(filters, view.sink, dial, settings, 10);
@@ -178,6 +195,31 @@ describe("OBS Filter control", () => {
     setLanguage("de", deckTable("de"));
     const german = control(filters, false, { keyOperation: "toggle" });
     await german.waitImage((svg) => svg.includes(">Filter an/aus<") && svg.includes(">Filter wählen<"));
+  });
+
+  it("says why OBS refused a value, after the turn has returned, until a later read succeeds", async () => {
+    const { server, filters, sceneUuid, aura } = await setup();
+    const target = { sourceUuid: sceneUuid, filterName: "Aura", filterKind: VS_SHADER_KIND, setting: "vs_effect_mix_pct" };
+    const dial = control(filters, true, target);
+    await dial.waitImage((svg) => svg.includes(">40%<"));
+    const accept = refuseFilterWrites(server);
+    await dial.controller.rotate(1, Date.now());
+    await dial.waitImage((svg) => svg.includes("Filter busy"));
+    expect(aura.filterSettings.vs_effect_mix_pct).toBe(40);
+    // OBS takes writes again; the next successful read clears the reason.
+    accept();
+    await filters.refresh(target);
+    await dial.waitImage((svg) => svg.includes(">40%<") && !svg.includes("Filter busy"));
+  });
+
+  it("says the filter is gone in the deck's own words when OBS refuses a value write with not found", async () => {
+    const { server, filters, sceneUuid } = await setup();
+    const dial = control(filters, true, { sourceUuid: sceneUuid, filterName: "Aura", filterKind: VS_SHADER_KIND, setting: "vs_effect_mix_pct" });
+    await dial.waitImage((svg) => svg.includes(">40%<"));
+    refuseFilterWrites(server, 600, "No filter was found by that name.");
+    await dial.controller.rotate(1, Date.now());
+    await dial.waitImage((svg) => svg.includes(">Filter not found<"));
+    expect(dial.last()).not.toContain("No filter was found");
   });
 
   it("cancels its glide visibly when retargeted, leaving the value where it stands", async () => {

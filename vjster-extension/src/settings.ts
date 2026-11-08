@@ -37,3 +37,11 @@ export const ALL_SITES_SCRIPTS = [
     persistAcrossSessions: true
   }
 ];
+
+/** The ids of the all-sites scripts. */
+export const ALL_SITES_IDS = ALL_SITES_SCRIPTS.map((s) => s.id);
+
+/** Whether the options page shows "every site" as on: the operator's saved choice and Chrome's permission, both (D-4). */
+export function allSitesChecked(offered: boolean, stored: unknown, granted: boolean): boolean {
+  return offered && stored === true && granted;
+}

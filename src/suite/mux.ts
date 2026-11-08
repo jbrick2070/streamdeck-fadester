@@ -42,6 +42,8 @@ export class SuiteMux {
   private readonly owner = new Map<string, Child>();
   private readonly devices = new Map<string, Message>();
   private readonly appearances = new Map<string, Message>();
+  /** The settings page open now (Stream Deck shows one at a time): replayed to its child when that child starts again. */
+  private inspector: Message | null = null;
   private readonly toVjsterUuid: Readonly<Record<string, string>>;
   private readonly toHostUuid = new Map<string, string>();
 
@@ -121,7 +123,7 @@ export class SuiteMux {
     else for (const child of CHILDREN) this.options.toChild(child, message);
   }
 
-  /** What a child that starts again must be told to be where the others are: the decks, the settings, the keys and dials showing. */
+  /** What a child that starts again must be told to be where the others are: the decks, the settings, the keys and dials showing, and its open settings page. */
   replayFor(child: Child): Message[] {
     const out: Message[] = [...this.devices.values()];
     if (this.fullKnown) out.push(this.settingsReply(child));
@@ -129,6 +131,11 @@ export class SuiteMux {
       if (this.owner.get(context) !== child) continue;
       const action = typeof message.action === "string" ? message.action : "";
       out.push(child === "vjster" ? { ...message, action: this.toVjsterUuid[action] } : message);
+    }
+    const open = this.inspector;
+    if (open && typeof open.context === "string" && this.appearances.has(open.context) && this.owner.get(open.context) === child) {
+      const action = typeof open.action === "string" ? open.action : "";
+      out.push(child === "vjster" ? { ...open, action: this.toVjsterUuid[action] } : open);
     }
     return out;
   }
@@ -138,6 +145,8 @@ export class SuiteMux {
     if (message.event === "deviceDidConnect" && device) this.devices.set(device, message);
     if (message.event === "deviceDidDisconnect" && device) this.devices.delete(device);
     if (typeof message.context !== "string") return;
+    if (message.event === "propertyInspectorDidAppear") this.inspector = message;
+    if ((message.event === "propertyInspectorDidDisappear" || message.event === "willDisappear") && this.inspector?.context === message.context) this.inspector = null;
     if (message.event === "willAppear") this.appearances.set(message.context, message);
     if (message.event === "willDisappear") this.appearances.delete(message.context);
     // The key's settings as they are now, so a child that starts again is not given the ones it first appeared with.

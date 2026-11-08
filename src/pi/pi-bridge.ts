@@ -12,9 +12,9 @@ import {
 } from "../types/contract.js";
 import { FadesterClient, FadesterVendorError } from "../obs/fadester-client.js";
 import { FadesterStore } from "../state/fadester-store.js";
-import { errorText, ownText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
+import { errorText, ownText, type TextParams } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
 import { statusCellReason, statusSentence } from "../../packages/streamdeck-fadester-shared/src/status-text.js";
-import { currentLanguage, t, translate } from "../i18n/strings.js";
+import { currentLanguage, translate } from "../i18n/strings.js";
 import type { LanguageState } from "../i18n/language-choice.js";
 import {
   DEFAULT_GLOBAL_SETTINGS,
@@ -106,6 +106,8 @@ export interface PiTransport {
   persistGlobalSettings(settings: FadesterGlobalSettings): Promise<void>;
   /** The Language setting and the language the deck draws in (PLAN.md 11.1). */
   getLanguage?(): LanguageState;
+  /** Words for the two Midi Fadester pages, which stay in Stream Deck's language until they get the Language choice (R-LANG-3, PLAN.md step L.6); the plugin's own translator when absent. */
+  translate?: (key: string, params?: TextParams) => string;
 }
 
 const SET_SLOT_STRING_FIELDS = [
@@ -185,6 +187,10 @@ export class PropertyInspectorBridge {
     });
   }
 
+  private get tr(): (key: string, params?: TextParams) => string {
+    return this.transport.translate ?? translate;
+  }
+
   public buildStatePayload(): PiStatePayload {
     const status = this.store.getStatus();
     const settings = this.client.getSettings();
@@ -192,14 +198,14 @@ export class PropertyInspectorBridge {
     const slots = this.store.getSlots();
     const catalog = supportsCatalogApi(status.fadesterVersion, slots);
     const tier = this.store.getProfileTier();
-    const tierLabel = (id: string): string => PROFILE_TIER_LABELS[id] ? t(PROFILE_TIER_LABELS[id]) : id;
+    const tierLabel = (id: string): string => PROFILE_TIER_LABELS[id] ? this.tr(PROFILE_TIER_LABELS[id]) : id;
     return {
       event: "fadesterState",
-      // Worded here, in the plugin's language; the inspectors compare only `kind`.
+      // Worded here, in the pages' language (Stream Deck's until step L.6); the inspectors compare only `kind`.
       status: {
         kind: status.kind,
-        sentence: statusSentence(status, translate),
-        cellReason: statusCellReason(status, translate),
+        sentence: statusSentence(status, this.tr),
+        cellReason: statusCellReason(status, this.tr),
         linkUrl: status.linkUrl ?? "",
         obsVersion: status.obsVersion ?? "",
         fadesterVersion: status.fadesterVersion ?? "",
@@ -214,7 +220,7 @@ export class PropertyInspectorBridge {
       profile: {
         slug: this.store.getProfile(),
         // The generic profile is ours to name; the controller profiles keep their product names.
-        displayName: this.store.getProfile() === "generic" ? t("profileGeneric") : this.store.getProfileDisplayName(),
+        displayName: this.store.getProfile() === "generic" ? this.tr("profileGeneric") : this.store.getProfileDisplayName(),
         tier,
         tierLabel: tierLabel(tier)
       },
@@ -225,16 +231,16 @@ export class PropertyInspectorBridge {
       },
       knownProfiles: CONTROLLER_PROFILE_META.map((p) => ({
         slug: p.slug,
-        displayName: p.slug === "generic" ? t("profileGeneric") : p.displayName,
+        displayName: p.slug === "generic" ? this.tr("profileGeneric") : p.displayName,
         tier: p.tier,
         tierLabel: tierLabel(p.tier)
       })),
       targetModes: (Object.keys(TARGET_MODE_LABELS) as TargetMode[]).map(
-        (id) => ({ id, label: t(TARGET_MODE_LABELS[id]) })
+        (id) => ({ id, label: this.tr(TARGET_MODE_LABELS[id]) })
       ),
       curves: (Object.keys(CURVE_LABELS) as CurveType[]).map((id) => ({
         id,
-        label: t(CURVE_LABELS[id])
+        label: this.tr(CURVE_LABELS[id])
       })),
       capabilities: {
         catalog,
@@ -265,7 +271,7 @@ export class PropertyInspectorBridge {
         available: s.available,
         reason: s.reason
       })),
-      lastErrorComment: this.store.getLastErrorComment(translate),
+      lastErrorComment: this.store.getLastErrorComment(this.tr),
       language: this.transport.getLanguage?.() ?? { choice: "auto", resolved: currentLanguage() }
     };
   }
@@ -350,7 +356,7 @@ export class PropertyInspectorBridge {
       source
     };
     if (!this.client.isConnected()) {
-      reply.error = statusSentence(this.store.getStatus(), translate);
+      reply.error = statusSentence(this.store.getStatus(), this.tr);
       this.transport.sendToPropertyInspector(reply);
       return;
     }
@@ -373,13 +379,13 @@ export class PropertyInspectorBridge {
     };
     if (!slot) {
       reply.ok = false;
-      reply.error = t("piChooseSlot");
+      reply.error = this.tr("piChooseSlot");
       this.transport.sendToPropertyInspector(reply);
       return;
     }
     if (!this.client.isConnected()) {
       reply.ok = false;
-      reply.error = statusSentence(this.store.getStatus(), translate);
+      reply.error = statusSentence(this.store.getStatus(), this.tr);
       this.transport.sendToPropertyInspector(reply);
       return;
     }
@@ -410,7 +416,7 @@ export class PropertyInspectorBridge {
     };
     if (!this.client.isConnected()) {
       reply.ok = false;
-      reply.error = statusSentence(this.store.getStatus(), translate);
+      reply.error = statusSentence(this.store.getStatus(), this.tr);
       this.transport.sendToPropertyInspector(reply);
       return;
     }
@@ -426,9 +432,9 @@ export class PropertyInspectorBridge {
     this.transport.sendToPropertyInspector(reply);
   }
 
-  /** A Midi Fadester or OBS comment verbatim; our own messages in the plugin's language. */
+  /** A Midi Fadester or OBS comment verbatim; our own messages in the pages' language. */
   private errorSentence(err: unknown): string {
-    return errorText(err, { verbatim: String(err) }, translate);
+    return errorText(err, { verbatim: String(err) }, this.tr);
   }
 
   private queueConnection(run: () => Promise<void>): Promise<void> {

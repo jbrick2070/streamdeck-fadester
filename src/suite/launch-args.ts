@@ -14,5 +14,12 @@ export function parseLaunchArgs(argv: readonly string[]): { port: number; uuid: 
   return { port, uuid: value("-pluginUUID"), registerEvent: value("-registerEvent"), info: value("-info") };
 }
 
+/** The first message of a connection on a child's port registers this start's child: `{ event: "registerPlugin", uuid }` with the uuid it was given. Anything else, `null` included, is not the child. */
+export function registersChild(message: unknown, uuid: string): boolean {
+  if (typeof message !== "object" || message === null || Array.isArray(message) || uuid === "") return false;
+  const m = message as { event?: unknown; uuid?: unknown };
+  return m.event === "registerPlugin" && m.uuid === uuid;
+}
+
 /** A line for a child to run first: end when the process that started it is gone. Stream Deck and OpenDeck stop only the suite's own process. */
 export const WATCHDOG = "setInterval(()=>{try{process.kill(Number(process.env.SUITE_PARENT_PID),0)}catch{process.exit(0)}},2000).unref()";

@@ -39,6 +39,10 @@ describe("VJster plugin end to end", () => {
     await sim.stop();
   });
 
+  it("starts the plugin with the suite's parent watchdog, so a killed run leaves no plugin behind", () => {
+    expect(sim.childArgs.some((a) => a.startsWith("--import=data:text/javascript,") && a.includes("SUITE_PARENT_PID"))).toBe(true);
+  });
+
   it("draws every action, and says EXTENSION OFF before the extension connects (R-BEH-4)", async () => {
     await until(() => sim.images.size === 12);
     expect(words(sim.svg("dial-0"))).toContain("EXTENSION OFF");
@@ -146,4 +150,36 @@ describe("VJster plugin end to end", () => {
     expect(sim.globalSettings.obsToken).toMatch(/^[0-9a-f]{32}$/);
     expect(sim.globalSettings.port).toBe(port);
   });
+});
+
+describe("VJster start-up when Stream Deck does not answer the settings read (R-LANG-8)", () => {
+  const sim = new DeckSim();
+  const IDS = ["abcdefghijklmnopabcdefghijklmnop"];
+
+  afterAll(async () => {
+    await sim.stop();
+  });
+
+  it("goes on with a working OBS page link, writes no token-only object, and repairs the stored settings when they arrive", async () => {
+    const port = await freePort();
+    sim.answerGlobalReads = false;
+    sim.globalSettings.extensionIds = IDS;
+    await sim.start(true, port, { VJSTER_START_READ_MS: "300" });
+    const [dial] = livePlusLayout();
+    sim.appear(dial);
+    await sleep(500);
+    sim.pageAppeared(dial.context);
+    const address = () => sim.toPage.filter((m) => m.event === "status").map((m) => m.address).at(-1);
+    await until(() => {
+      sim.fromPage(dial.context, { event: "status" });
+      return typeof address() === "string" && address() !== "";
+    });
+    expect(sim.readsWaiting.length).toBeGreaterThan(0);
+    expect(sim.globalWrites).toEqual([]);
+    sim.answerWaitingReads();
+    await until(() => sim.globalWrites.length > 0);
+    const last = sim.globalWrites.at(-1)!;
+    expect(last).toMatchObject({ port, extensionIds: IDS });
+    expect(last.obsToken).toMatch(/^[0-9a-f]{32}$/);
+  }, 30_000);
 });

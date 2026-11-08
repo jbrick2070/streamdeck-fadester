@@ -168,7 +168,7 @@ internal static class Program
         }
         finally
         {
-            stop.Cancel(); await keys.Done;
+            stop.Cancel(); try { await keys.Done; } catch (Exception) { /* already reported through keys.Ready or the dispatch loop */ }
             vjInput.Writer.TryComplete();
             try { await vjTask; } catch (OperationCanceledException) { }
             if (vjster != null) await vjster.DisposeAsync();

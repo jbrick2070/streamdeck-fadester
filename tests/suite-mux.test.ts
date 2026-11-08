@@ -3,7 +3,7 @@
 // translated, and how the one stored settings object is shared.
 import { describe, expect, it } from "vitest";
 import { VJSTER_ACTIONS, VJSTER_KINDS, VJSTER_NAMESPACE, suiteActionId, vjsterActionId } from "../src/suite/actions.js";
-import { WATCHDOG, parseLaunchArgs } from "../src/suite/launch-args.js";
+import { WATCHDOG, parseLaunchArgs, registersChild } from "../src/suite/launch-args.js";
 import { SUITE_GLOBAL_EVENT, SuiteMux, type Child, type Message } from "../src/suite/mux.js";
 
 const PLUGIN = "io.github.jbrick2070.fadester-for-obs.sdPlugin";
@@ -236,6 +236,33 @@ describe("a child that starts again", () => {
     mux.fromHost({ event: "deviceDidDisconnect", device: "d1" });
     expect(mux.replayFor("vjster").map((m) => m.event)).toEqual(["didReceiveGlobalSettings", "willAppear"]);
   });
+
+  it("is told its settings page is open, after the key it belongs to, and only while it is open", () => {
+    const shown = (messages: Message[]) => messages.map((m) => `${m.event}:${m.context ?? ""}`);
+    const pages = (messages: Message[]) => shown(messages).filter((m) => m.startsWith("propertyInspector"));
+    const { mux } = rig();
+    mux.fromHost({ event: "willAppear", action: SPEED, context: "c2", device: "d1", payload: {} });
+    mux.fromHost({ event: "willAppear", action: FADE, context: "c1", device: "d1", payload: {} });
+    mux.fromHost({ event: "propertyInspectorDidAppear", action: SPEED, context: "c2", device: "d1" });
+    const vjster = mux.replayFor("vjster");
+    expect(shown(vjster)).toEqual(["willAppear:c2", "propertyInspectorDidAppear:c2"]);
+    expect(vjster.at(-1)?.action).toBe("com.jbrick2070.vjster.speed");
+    expect(pages(mux.replayFor("fadester"))).toEqual([]);
+    // Closed: no page event is replayed.
+    mux.fromHost({ event: "propertyInspectorDidDisappear", action: SPEED, context: "c2", device: "d1" });
+    expect(pages(mux.replayFor("vjster"))).toEqual([]);
+    // Its key went away while the page was open: not replayed, also after the key comes back.
+    mux.fromHost({ event: "propertyInspectorDidAppear", action: SPEED, context: "c2", device: "d1" });
+    mux.fromHost({ event: "willDisappear", action: SPEED, context: "c2", device: "d1", payload: {} });
+    expect(pages(mux.replayFor("vjster"))).toEqual([]);
+    mux.fromHost({ event: "willAppear", action: SPEED, context: "c2", device: "d1", payload: {} });
+    expect(pages(mux.replayFor("vjster"))).toEqual([]);
+    // A page opened on a Fadester key goes to Fadester only; a late "disappear" for another key's page leaves it open.
+    mux.fromHost({ event: "propertyInspectorDidAppear", action: FADE, context: "c1", device: "d1" });
+    mux.fromHost({ event: "propertyInspectorDidDisappear", action: SPEED, context: "c2", device: "d1" });
+    expect(shown(mux.replayFor("fadester"))).toEqual(["willAppear:c1", "propertyInspectorDidAppear:c1"]);
+    expect(pages(mux.replayFor("vjster"))).toEqual([]);
+  });
 });
 
 describe("a child's own plugin id and its alerts", () => {
@@ -277,6 +304,15 @@ describe("the launch line", () => {
     expect(() => parseLaunchArgs([])).toThrow(/-port/);
     expect(() => parseLaunchArgs(["-port", "0", "-pluginUUID", "x", "-registerEvent", "r", "-info", "{}"])).toThrow(/not a port/);
     expect(() => parseLaunchArgs(["-port", "9", "-registerEvent", "r", "-info", "{}"])).toThrow(/-pluginUUID/);
+  });
+  it("knows a child's registration from anything else on its port, without throwing", () => {
+    for (const message of [null, 7, "x", []]) expect(registersChild(message, "u")).toBe(false);
+    expect(registersChild({ event: "registerPlugin", uuid: "other" }, "u")).toBe(false);
+    expect(registersChild({ event: "x", uuid: "u" }, "u")).toBe(false);
+    // No uuid given out yet: nothing registers, not even a message carrying an empty one.
+    expect(registersChild({ event: "registerPlugin", uuid: "u" }, "")).toBe(false);
+    expect(registersChild({ event: "registerPlugin", uuid: "" }, "")).toBe(false);
+    expect(registersChild({ event: "registerPlugin", uuid: "u" }, "u")).toBe(true);
   });
   it("gives each child a line that ends it when the suite is gone", () => {
     expect(WATCHDOG).toContain("SUITE_PARENT_PID");

@@ -146,6 +146,32 @@ describe("Step 1.2 — FadesterClient & FadesterStore against FakeObsServer", ()
     expect(c.getConnectAttemptCount()).toBe(attempts);
   });
 
+  it("drops a connection whose first request goes unanswered, and connects again by itself", async () => {
+    const fake = new FakeObsServer();
+    server = fake;
+    type Handler = (ws: unknown, id: string, type: string, data: Record<string, unknown>) => Promise<void>;
+    const native = fake as unknown as { handleObsRequest: Handler };
+    const original = native.handleObsRequest.bind(fake);
+    let stalled = false;
+    native.handleObsRequest = async (ws, id, type, data) => {
+      if (!stalled && type === "GetVersion") {
+        stalled = true; // a stalled OBS: no answer at all, and the socket stays open
+        return;
+      }
+      await original(ws, id, type, data);
+    };
+    const port = await fake.start();
+    const c = new FadesterClient(
+      { host: "127.0.0.1", port, password: "" },
+      { requestTimeoutMs: 150, baseReconnectMs: 30 }
+    );
+    client = c;
+    c.start();
+    // No key press: the client drops the half-open connection and reconnects with backoff.
+    await waitUntil(() => c.getStatus().kind === "connected", 3000);
+    expect(c.getConnectAttemptCount()).toBe(2);
+  });
+
   it("reports OBS unreachable and reconnects automatically with backoff when OBS starts", async () => {
     server = new FakeObsServer();
     const port = await server.start();

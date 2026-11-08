@@ -69,10 +69,10 @@ abstract class Base {
     return t === "obs" ? fill(this.strings.captionObs, { word }) : t === "both" ? fill(this.strings.captionSync, { word }) : word;
   }
 
-  /** Send now to every chosen target; false when none is connected (R-BEH-4: the strip already says why). */
-  protected sendNow(body: IntentBody): string | null {
+  /** Send now to every chosen target, or to `targets`; false when none is connected (R-BEH-4: the strip already says why). */
+  protected sendNow(body: IntentBody, targets: Target[] = sendTargets(this.targetChoice)): string | null {
     let first: string | null = null;
-    for (const t of sendTargets(this.targetChoice)) {
+    for (const t of targets) {
       const id = this.hub.send(t, body);
       if (id !== null) {
         this.sent.add(id);
@@ -85,6 +85,20 @@ abstract class Base {
 
   protected view(): TargetView {
     return this.hub.view(shownTarget(this.targetChoice));
+  }
+
+  /** The chosen targets that can take an intent needing `need` now (R-OBS-3: Both sends to both); `accepts` adds a key's own test. */
+  protected readyTargets(need: "speed" | "quality" | "transport", accepts: (view: TargetView) => boolean = () => true): Target[] {
+    return sendTargets(this.targetChoice).filter((t) => {
+      const view = this.hub.view(t);
+      return !blocked(view, need) && accepts(view);
+    });
+  }
+
+  /** The view a turn counts from: the first chosen target that can take it (Chrome first), else the shown one. */
+  protected countFrom(need: "speed" | "quality" | "transport"): TargetView {
+    const ready = this.readyTargets(need);
+    return ready.length > 0 ? this.hub.view(ready[0]) : this.view();
   }
 
   /** A target answered one of this action's intents with an error. */
@@ -165,7 +179,7 @@ export class SpeedDialController extends Base {
     this.pending = new Pending(clock, () => this.render());
     // Last value wins, at most one per 50 ms (R-BEH-3).
     this.out = createCoalescer<number>(
-      (rate) => this.pending.sentAs(this.sendNow({ type: "speed.set", rate, direct: this.settings.extended, hold: this.settings.hold })),
+      (rate) => this.pending.sentAs(this.sendNow({ type: "speed.set", rate, direct: this.settings.extended, hold: this.settings.hold }, this.readyTargets("speed"))),
       50,
       clock
     );
@@ -180,18 +194,18 @@ export class SpeedDialController extends Base {
     this.render();
   }
 
-  private range() {
-    return rangeFor(this.view().state?.availableRates, this.settings.extended);
+  private range(view: TargetView = this.view()) {
+    return rangeFor(view.state?.availableRates, this.settings.extended);
   }
 
   /** A turn: one step per notch, the fine step while held (R-SPD-1). Counts from an unanswered request first. */
   rotate(ticks: number, pressed: boolean): void {
     if (pressed) this.turnedWhileDown = true;
-    const view = this.view();
+    const view = this.countFrom("speed");
     if (blocked(view, "speed")) return this.sink.alert();
     const step: RateStep = pressed ? this.settings.fineStep : this.settings.step;
     const base = this.pending.get(view.state) ?? view.state?.rate ?? 1;
-    const rate = nextRate(base, Math.max(-1000, Math.min(1000, Math.trunc(ticks))), step, this.range());
+    const rate = nextRate(base, Math.max(-1000, Math.min(1000, Math.trunc(ticks))), step, this.range(view));
     this.pending.set(rate);
     this.out.push(rate);
     this.render();
@@ -215,9 +229,9 @@ export class SpeedDialController extends Base {
 
   /** A tap on the strip: play or pause, when the target can (R-SPD-3). */
   tap(): void {
-    const s = this.view().state;
-    if (!s?.capabilities.includes("transport")) return this.sink.alert();
-    this.sendNow({ type: "transport.toggle" });
+    const targets = this.readyTargets("transport");
+    if (targets.length === 0) return this.sink.alert();
+    this.sendNow({ type: "transport.toggle" }, targets);
   }
 
   render(): void {
@@ -249,7 +263,7 @@ export class QualityDialController extends Base {
     super(hub, sink, clock, strings);
     this.settings = settings;
     this.pending = new Pending(clock, () => this.render());
-    this.out = createCoalescer<string>((level) => this.pending.sentAs(this.sendNow({ type: "quality.set", level, hold: this.settings.hold })), 50, clock);
+    this.out = createCoalescer<string>((level) => this.pending.sentAs(this.sendNow({ type: "quality.set", level, hold: this.settings.hold }, this.readyTargets("quality"))), 50, clock);
   }
 
   protected get targetChoice(): TargetChoice {
@@ -279,7 +293,7 @@ export class QualityDialController extends Base {
   /** A turn steps through the offered levels; clockwise is higher quality (R-QLT-1). */
   rotate(ticks: number, pressed = false): void {
     if (pressed) this.turnedWhileDown = true;
-    const view = this.view();
+    const view = this.countFrom("quality");
     if (blocked(view, "quality")) return this.sink.alert();
     const s = view.state as StateReport;
     const levels = normalizeLevels(s.availableQualities);
@@ -295,9 +309,9 @@ export class QualityDialController extends Base {
   press(): void {
     this.out.cancel();
     this.pending.clear();
-    const view = this.view();
-    if (!view.state?.capabilities.includes("quality")) return this.sink.alert();
-    this.sendNow({ type: "quality.reset" });
+    const targets = this.readyTargets("quality");
+    if (targets.length === 0) return this.sink.alert();
+    this.sendNow({ type: "quality.reset" }, targets);
   }
 
   render(): void {
@@ -330,8 +344,9 @@ export class SpeedPresetController extends Base {
     this.render();
   }
   press(): void {
-    if (blocked(this.view(), "speed")) return this.sink.alert();
-    this.sendNow({ type: "speed.set", rate: this.settings.rate, direct: this.settings.extended, hold: this.settings.hold });
+    const targets = this.readyTargets("speed");
+    if (targets.length === 0) return this.sink.alert();
+    this.sendNow({ type: "speed.set", rate: this.settings.rate, direct: this.settings.extended, hold: this.settings.hold }, targets);
   }
   render(): void {
     const view = this.view();
@@ -354,8 +369,9 @@ export class SpeedStepController extends Base {
     this.render();
   }
   press(): void {
-    if (blocked(this.view(), "speed")) return this.sink.alert();
-    this.sendNow({ type: "speed.step", delta: this.settings.direction * this.settings.step, direct: this.settings.extended, hold: true });
+    const targets = this.readyTargets("speed");
+    if (targets.length === 0) return this.sink.alert();
+    this.sendNow({ type: "speed.step", delta: this.settings.direction * this.settings.step, direct: this.settings.extended, hold: true }, targets);
   }
   render(): void {
     const view = this.view();
@@ -388,10 +404,11 @@ export class QualityPresetController extends Base {
     return this.settings.level === AUTO || (state?.availableQualities.includes(this.settings.level) ?? false);
   }
   press(): void {
-    const view = this.view();
-    if ((blocked(view, "quality")) || !this.offered(view.state)) return this.sink.alert();
+    const targets = this.readyTargets("quality", (view) => this.offered(view.state));
+    if (targets.length === 0) return this.sink.alert();
     this.sendNow(
-      this.settings.level === AUTO ? { type: "quality.reset" } : { type: "quality.set", level: this.settings.level, hold: this.settings.hold }
+      this.settings.level === AUTO ? { type: "quality.reset" } : { type: "quality.set", level: this.settings.level, hold: this.settings.hold },
+      targets
     );
   }
   render(): void {
@@ -438,9 +455,9 @@ export class TransportController extends Base {
     this.render();
   }
   press(): void {
-    const view = this.view();
-    if (blocked(view, "transport")) return this.sink.alert();
-    this.sendNow({ type: "transport.toggle" });
+    const targets = this.readyTargets("transport");
+    if (targets.length === 0) return this.sink.alert();
+    this.sendNow({ type: "transport.toggle" }, targets);
   }
   render(): void {
     const view = this.view();

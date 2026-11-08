@@ -9,7 +9,7 @@ import type { SocketLike } from "../vjster-extension/src/link-client.js";
 import { FROM_BRIDGE, FROM_PAGE } from "../vjster-extension/src/messages.js";
 import { NO_VIDEO } from "../vjster-extension/src/page-state.js";
 import { claimPage, listenToBridge, postReport, type PageWindow } from "../vjster-extension/src/page-wiring.js";
-import { ALL_SITES_SCRIPTS, linkUrl, readPort } from "../vjster-extension/src/settings.js";
+import { ALL_SITES_IDS, ALL_SITES_SCRIPTS, allSitesChecked, linkUrl, readPort } from "../vjster-extension/src/settings.js";
 import { ALARM, NO_QUALITY_NOTE, installWorker, type WorkerChrome } from "../vjster-extension/src/worker-core.js";
 import { videoControl } from "../vjster-extension/src/generic-video.js";
 import { CORE_METHODS, QUALITY_METHODS, findYouTubePlayer, hasQualityApi, isYouTubeHost, youTubeControl, type YouTubePlayerElement } from "../vjster-extension/src/youtube.js";
@@ -144,8 +144,11 @@ describe("page boundary (main world)", () => {
   });
 });
 
+/** The worker's options: the all-sites choice as stored, Chrome's permission, the scripting API, and what Chrome has registered. */
+type WorkerOpts = { port?: unknown; pinned?: unknown; allSites?: unknown; granted?: boolean; scripting?: boolean; registered?: string[]; scriptingMs?: number };
+
 /** A chrome object with just what the worker uses, driven by the test. */
-function fakeChrome(opts: { port?: unknown; pinned?: unknown } = {}) {
+function fakeChrome(opts: WorkerOpts = {}) {
   const event = <A extends unknown[]>() => {
     const fns: ((...a: A) => void)[] = [];
     return { addListener: (fn: (...a: A) => void) => void fns.push(fn), fire: (...a: A) => fns.forEach((fn) => fn(...a)) };
@@ -154,6 +157,30 @@ function fakeChrome(opts: { port?: unknown; pinned?: unknown } = {}) {
   const alarms: { name: string; info: unknown }[] = [];
   const sessionSets: Record<string, unknown>[] = [];
   const unreachable = new Set<number>([6]);
+  // Chrome's dynamically registered scripts: the ids it holds, and every register and unregister call.
+  const registered = [...(opts.registered ?? ALL_SITES_IDS)];
+  const scriptingCalls: [string, string[]][] = [];
+  const registeredScripts: unknown[] = [];
+  /** Chrome's every-site permission now; a test may take it back. */
+  const granted = { value: opts.granted ?? true };
+  // Chrome answers its scripting calls later; a test may make that take a while.
+  const later = () => new Promise((r) => setTimeout(r, opts.scriptingMs ?? 0));
+  const scripting = {
+    getRegisteredContentScripts: async (filter: { ids: string[] }) => {
+      const ids = registered.filter((id) => filter.ids.includes(id)).map((id) => ({ id }));
+      if (opts.scriptingMs) await later();
+      return ids;
+    },
+    registerContentScripts: async (scripts: { id: string }[]) => {
+      scriptingCalls.push(["register", scripts.map((s) => s.id)]);
+      registeredScripts.push(scripts);
+      for (const s of scripts) if (!registered.includes(s.id)) registered.push(s.id);
+    },
+    unregisterContentScripts: async (filter: { ids: string[] }) => {
+      scriptingCalls.push(["unregister", [...filter.ids]]);
+      for (const id of filter.ids) if (registered.includes(id)) registered.splice(registered.indexOf(id), 1);
+    }
+  };
   const c = {
     runtime: { id: "abcdefghijklmnopabcdefghijklmnop", onMessage: event<[unknown, { tab?: { id?: number; windowId: number }; frameId?: number; id?: string }]>() },
     tabs: {
@@ -168,16 +195,18 @@ function fakeChrome(opts: { port?: unknown; pinned?: unknown } = {}) {
     },
     windows: { WINDOW_ID_NONE: -1, getLastFocused: async () => ({ id: 1, focused: true }), onFocusChanged: event<[number]>() },
     storage: {
-      local: { get: async () => ({ "vjster.port": opts.port ?? 48151 }) },
+      local: { get: async () => ({ "vjster.port": opts.port ?? 48151, "vjster.allSites": opts.allSites ?? true }) },
       session: {
         get: async () => ({ "vjster.pinnedTab": opts.pinned ?? null }),
         set: async (items: Record<string, unknown>) => void sessionSets.push(items)
       },
       onChanged: event<[Record<string, { newValue?: unknown }>, string]>()
     },
-    alarms: { create: async (name: string, info: unknown) => void alarms.push({ name, info }), onAlarm: event<[{ name: string }]>() }
+    alarms: { create: async (name: string, info: unknown) => void alarms.push({ name, info }), onAlarm: event<[{ name: string }]>() },
+    permissions: { contains: async () => granted.value, onRemoved: event<[{ origins?: string[] }]>() },
+    ...(opts.scripting === false ? {} : { scripting })
   };
-  return { c, toTabs, alarms, sessionSets, unreachable };
+  return { c, toTabs, alarms, sessionSets, unreachable, registered, scriptingCalls, registeredScripts, granted };
 }
 
 function fakeSocketFactory() {
@@ -211,7 +240,7 @@ function fakeSocketFactory() {
   return { opened, openSocket };
 }
 
-async function bootWorker(opts: { port?: unknown; pinned?: unknown } = {}) {
+async function bootWorker(opts: WorkerOpts = {}) {
   const chrome = fakeChrome(opts);
   const sockets = fakeSocketFactory();
   let clock = 1000;
@@ -343,6 +372,66 @@ describe("service worker wiring (R-LNK-3, R-TGT-1..4)", () => {
     await worker.router.intent(intent({ type: "pin.set", pinned: true }));
     expect(sessionSets).toEqual([{ "vjster.pinnedTab": 5 }]);
   });
+
+  /** A playing report from a tab's top frame, on `host`. */
+  const report = (c: ReturnType<typeof fakeChrome>["c"], tab: number, host: string) =>
+    c.runtime.onMessage.fire({ kind: "page-state", state: playingState, host, inReplyTo: null, played: true }, { tab: { id: tab, windowId: 1 }, frameId: 0, id: c.runtime.id });
+
+  it("drops other sites' tabs at once when the all-sites option is turned off, and ignores their reports (D-4)", async () => {
+    const { c, worker, scriptingCalls } = await bootWorker();
+    report(c, 7, "news.example");
+    expect(worker.router.target()).toBe(7);
+    c.storage.onChanged.fire({ "vjster.allSites": { newValue: false } }, "local");
+    await flush();
+    expect(worker.router.target()).toBeNull();
+    expect(scriptingCalls).toEqual([["unregister", ALL_SITES_IDS]]);
+    report(c, 7, "news.example");
+    expect(worker.router.target()).toBeNull();
+    report(c, 5, "www.youtube.com");
+    expect(worker.router.target()).toBe(5);
+  });
+
+  it("registers the all-sites scripts again at start when the option is on but Chrome dropped them (an update or reload)", async () => {
+    const { scriptingCalls, registeredScripts } = await bootWorker({ registered: [] });
+    expect(scriptingCalls).toEqual([["register", ALL_SITES_IDS]]);
+    expect(registeredScripts).toEqual([ALL_SITES_SCRIPTS]);
+  });
+
+  it("stays YouTube only and unregisters leftovers when Chrome no longer grants every site", async () => {
+    const { c, worker, scriptingCalls } = await bootWorker({ granted: false });
+    expect(scriptingCalls).toEqual([["unregister", ALL_SITES_IDS]]);
+    report(c, 7, "a.example");
+    expect(worker.router.target()).toBeNull();
+    report(c, 5, "www.youtube.com");
+    expect(worker.router.target()).toBe(5);
+  });
+
+  it("drops other sites' tabs when Chrome takes the every-site permission back outside the options page (D-4)", async () => {
+    const { c, worker, scriptingCalls, granted } = await bootWorker();
+    report(c, 7, "news.example");
+    expect(worker.router.target()).toBe(7);
+    granted.value = false;
+    c.permissions.onRemoved.fire({ origins: ["<all_urls>"] });
+    await flush();
+    expect(worker.router.target()).toBeNull();
+    expect(scriptingCalls).toEqual([["unregister", ALL_SITES_IDS]]);
+    report(c, 7, "news.example");
+    expect(worker.router.target()).toBeNull();
+  });
+
+  it("applies overlapping changes of the option one after another, the last one winning", async () => {
+    const { c, registered } = await bootWorker({ scriptingMs: 20 });
+    c.storage.onChanged.fire({ "vjster.allSites": { newValue: false } }, "local");
+    c.storage.onChanged.fire({ "vjster.allSites": { newValue: true } }, "local");
+    await new Promise((r) => setTimeout(r, 200));
+    expect([...registered].sort()).toEqual([...ALL_SITES_IDS].sort());
+  });
+
+  it("runs without the scripting API (the Chrome Web Store build)", async () => {
+    const { c, worker } = await bootWorker({ scripting: false, allSites: false });
+    report(c, 7, "a.example");
+    expect(worker.router.target()).toBeNull();
+  });
 });
 
 describe("extension settings (R-LNK-1, D-4)", () => {
@@ -358,6 +447,13 @@ describe("extension settings (R-LNK-1, D-4)", () => {
       ["content-main.js", "MAIN", ["*://*.youtube.com/*"]],
       ["content-bridge.js", "ISOLATED", ["*://*.youtube.com/*"]]
     ]);
+  });
+
+  it("shows every site as on only with the saved choice and Chrome's permission, both (D-4)", () => {
+    expect(allSitesChecked(true, true, true)).toBe(true);
+    expect(allSitesChecked(true, false, true)).toBe(false); // Chrome kept the permission after an untick
+    expect(allSitesChecked(true, true, false)).toBe(false);
+    expect(allSitesChecked(false, true, true)).toBe(false);
   });
 });
 

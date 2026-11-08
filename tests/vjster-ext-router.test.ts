@@ -242,6 +242,38 @@ describe("Router: answers count only from the tab the intent went to (R-INT-4)",
     expect(sent.length).toBe(count);
   });
 
+  it("pushes the new target's state right after an answer that moved it (R-TGT-4)", async () => {
+    const { router, sent } = setup();
+    router.pageState(5, 1, playing(), "a.example", null);
+    router.pageState(6, 2, playing(2), "b.example", null);
+    router.pageState(5, 1, playing(), "a.example", null);
+    router.tabActivated(5, 1);
+    router.focusChanged(1);
+    const i = intent({ type: "transport.toggle" });
+    await router.intent(i);
+    router.pageState(5, 1, paused(), "a.example", i.id); // the answer: 5 paused, so 6 is the target now
+    expect(sent.slice(-2)).toMatchObject([
+      { type: "state", inReplyTo: i.id, playing: false, host: "a.example" },
+      { type: "state", inReplyTo: null, playing: true, rate: 2, host: "b.example" }
+    ]);
+  });
+
+  it("pushes the remaining tab after an answer that says the video is gone", async () => {
+    const { router, sent } = setup();
+    router.pageState(5, 1, playing(), "a.example", null);
+    router.pageState(6, 2, playing(2), "b.example", null);
+    router.pageState(5, 1, playing(), "a.example", null);
+    router.tabActivated(5, 1);
+    router.focusChanged(1);
+    const i = intent({ type: "speed.reset" });
+    await router.intent(i);
+    router.pageState(5, 1, NO_VIDEO, "a.example", i.id);
+    expect(sent.slice(-2)).toMatchObject([
+      { type: "state", inReplyTo: i.id, rate: null },
+      { type: "state", inReplyTo: null, rate: 2, host: "b.example" }
+    ]);
+  });
+
   it("forgets the oldest awaited ids beyond the limit", async () => {
     const { router, sent } = setup();
     router.pageState(5, 1, playing(), "a.example", null);
@@ -363,5 +395,16 @@ describe("Router: pins (R-TGT-2)", () => {
     router.tabRemoved(6);
     expect(router.pinned).toBeNull();
     expect(pins).toEqual([null]);
+  });
+
+  it("unpins a tab forgotten with its site when the all-sites option goes off (D-4)", () => {
+    const { router, pins } = setup();
+    router.pageState(5, 1, playing(), "www.youtube.com", null);
+    router.pageState(6, 2, playing(2), "news.example", null);
+    router.restorePin(6);
+    router.forgetHosts((host) => host !== "www.youtube.com");
+    expect(router.pinned).toBeNull();
+    expect(pins).toEqual([null]);
+    expect(router.target()).toBe(5);
   });
 });

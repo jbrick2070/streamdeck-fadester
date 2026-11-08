@@ -17,6 +17,8 @@ export interface MediaControl {
   readonly canQuality: boolean;
   /** The rate the element is playing at. */
   elementRate(): number | null;
+  /** Where a relative step starts when the rate getter lags behind the last change (the OBS embed); null or absent: elementRate. */
+  stepBase?(): number | null;
   /** Rates the player offers; empty for a plain video element. */
   availableRates(): number[];
   /** The level playing now, or null without quality control. */
@@ -132,6 +134,7 @@ export class Adapter {
     if (this.wasAd && !ad) {
       this.releaseHeld();
       this.reapplyHeldRate(false);
+      this.reapplyHeldLevelAfterAd();
     }
     this.wasAd = ad;
     this.coalescedReport.push(null);
@@ -140,6 +143,11 @@ export class Adapter {
   /** Report now, even if nothing changed (the worker restarted or the link reopened). */
   refresh(): void {
     this.report(null, true);
+  }
+
+  /** Answer an intent with the state now, for a page that answers once its player confirms (vjster-page/src/settle.ts); the state counts as sent. */
+  answer(id: string): void {
+    this.report(id);
   }
 
   /** The page navigated in place (yt-navigate-finish): re-apply a held level (R-QLT-7), then report. */
@@ -209,7 +217,7 @@ export class Adapter {
         const step = Math.abs(intent.delta);
         if (!isRateStep(step)) return false;
         const range = rangeFor(c.availableRates(), intent.direct);
-        const current = c.elementRate() ?? RESET_RATE;
+        const current = c.stepBase?.() ?? c.elementRate() ?? RESET_RATE;
         return this.setSpeed(c, nextRate(current, Math.sign(intent.delta), step, range), intent.direct, intent.hold);
       }
       case "speed.reset":
@@ -273,6 +281,13 @@ export class Adapter {
     // Under Auto the player settles on a level a moment later (F-4): read it back like a fixed one (R-QLT-3).
     if (ok) this.pollQuality({ from });
     return ok;
+  }
+
+  /** A held level skipped while an ad showed goes back on now; the read-back re-applies it only where the player's preference differs (R-QLT-7, R-BEH-1, R-BEH-3). */
+  private reapplyHeldLevelAfterAd(): void {
+    const c = this.control();
+    if (this.heldLevel === null || !c || c.kind !== "youtube" || !c.canQuality) return;
+    this.pollQuality({ held: this.heldLevel });
   }
 
   /** Re-apply a held element rate; `always` writes it even when the element already plays it. */

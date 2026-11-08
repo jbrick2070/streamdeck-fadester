@@ -6,8 +6,9 @@
 import type { Intent } from "../../src/vjster/shared/protocol.js";
 import { LinkClient, type SocketLike } from "./link-client.js";
 import { readBridgeToWorker, plainIntent } from "./messages.js";
+import { NO_VIDEO } from "./page-state.js";
 import { Router } from "./router.js";
-import { PIN_KEY, PORT_KEY, linkUrl, readPort } from "./settings.js";
+import { ALL_SITES_IDS, ALL_SITES_KEY, ALL_SITES_SCRIPTS, PIN_KEY, PORT_KEY, linkUrl, readPort } from "./settings.js";
 import { isYouTubeHost } from "./youtube.js";
 
 export const ALARM = "vjster-link";
@@ -33,13 +34,24 @@ export interface WorkerChrome {
     onFocusChanged: Listener<[number]>;
   };
   storage: {
-    local: { get(keys: string): Promise<Record<string, unknown>> };
+    local: { get(keys: string | string[]): Promise<Record<string, unknown>> };
     session: { get(keys: string): Promise<Record<string, unknown>>; set(items: Record<string, unknown>): Promise<void> };
     onChanged: Listener<[Record<string, { newValue?: unknown }>, string]>;
   };
   alarms: {
     create(name: string, info: { periodInMinutes: number }): Promise<void>;
     onAlarm: Listener<[{ name: string }]>;
+  };
+  permissions: {
+    contains(p: { origins: string[] }): Promise<boolean>;
+    /** Chrome took a permission back (the operator removed site access on chrome://extensions, say). */
+    onRemoved: Listener<[{ origins?: string[] }]>;
+  };
+  /** Absent in the Chrome Web Store build, which has no `scripting` permission and is YouTube only. */
+  scripting?: {
+    getRegisteredContentScripts(filter: { ids: string[] }): Promise<{ id: string }[]>;
+    registerContentScripts(scripts: typeof ALL_SITES_SCRIPTS): Promise<void>;
+    unregisterContentScripts(filter: { ids: string[] }): Promise<void>;
   };
 }
 
@@ -93,6 +105,39 @@ export function installWorker(env: WorkerEnv): Worker {
     newId
   });
 
+  /** The all-sites option is in force: saved on, Chrome's permission granted, the scripting API present (D-4). */
+  let allSites = false;
+  const allowedHost = (host: string | null): boolean => allSites || (host !== null && isYouTubeHost(host));
+
+  /**
+   * Follow the saved choice. When it is off, other sites' tabs are forgotten at once: scripts Chrome already injected
+   * keep running until their page reloads. Chrome's registration is kept in step either way, since Chrome drops
+   * dynamically registered scripts on an extension update or reload.
+   */
+  function applyAllSites(stored: unknown): Promise<void> {
+    // One at a time: a boot, a storage change and a permission change can overlap, and the last one must win.
+    allSitesQueue = allSitesQueue.then(() => applyAllSitesNow(stored)).catch(() => undefined);
+    return allSitesQueue;
+  }
+  let allSitesQueue: Promise<void> = Promise.resolve();
+
+  async function applyAllSitesNow(stored: unknown): Promise<void> {
+    const scripting = c.scripting;
+    const wanted = scripting !== undefined && stored === true && (await c.permissions.contains({ origins: ["<all_urls>"] }).catch(() => false));
+    allSites = wanted;
+    if (!wanted) router.forgetHosts((host) => !(host !== null && isYouTubeHost(host)));
+    if (!scripting) return;
+    try {
+      const have = (await scripting.getRegisteredContentScripts({ ids: ALL_SITES_IDS })).map((s) => s.id);
+      if (wanted && have.length < ALL_SITES_IDS.length) {
+        if (have.length > 0) await scripting.unregisterContentScripts({ ids: have });
+        await scripting.registerContentScripts(ALL_SITES_SCRIPTS);
+      } else if (!wanted && have.length > 0) await scripting.unregisterContentScripts({ ids: have });
+    } catch {
+      log("VJster: the all-sites scripts could not be brought in step with the option.");
+    }
+  }
+
   const link = new LinkClient({
     url: () => linkUrl(port),
     open: env.openSocket,
@@ -116,7 +161,9 @@ export function installWorker(env: WorkerEnv): Worker {
         notedNoQuality.add(tabId);
         log(NO_QUALITY_NOTE);
       }
-      router.pageState(tabId, sender.tab?.windowId ?? -1, s, message.host, message.inReplyTo, message.played);
+      // A page on another site counts only while the all-sites option is in force (D-4).
+      if (allowedHost(message.host)) router.pageState(tabId, sender.tab?.windowId ?? -1, s, message.host, message.inReplyTo, message.played);
+      else router.pageState(tabId, sender.tab?.windowId ?? -1, NO_VIDEO, null, message.inReplyTo, false);
     } else router.pageError(tabId, message.code, message.message, message.inReplyTo);
   });
 
@@ -129,10 +176,20 @@ export function installWorker(env: WorkerEnv): Worker {
   c.windows.onFocusChanged.addListener((windowId) => router.focusChanged(windowId === c.windows.WINDOW_ID_NONE ? null : windowId));
 
   c.storage.onChanged.addListener((changes, area) => {
-    if (area === "local" && changes[PORT_KEY]) {
+    if (area !== "local") return;
+    if (changes[PORT_KEY]) {
       port = readPort(changes[PORT_KEY].newValue);
       link.restart();
     }
+    if (changes[ALL_SITES_KEY]) void applyAllSites(changes[ALL_SITES_KEY].newValue);
+  });
+
+  // Site access taken back outside the options page: follow the stored choice again, now without the permission (D-4).
+  c.permissions.onRemoved.addListener(() => {
+    void c.storage.local
+      .get(ALL_SITES_KEY)
+      .then((local) => applyAllSites(local[ALL_SITES_KEY]))
+      .catch(() => undefined);
   });
 
   // A check every minute reconnects if the socket is gone (R-LNK-3).
@@ -141,8 +198,9 @@ export function installWorker(env: WorkerEnv): Worker {
   });
 
   async function boot(): Promise<void> {
-    const [local, session] = await Promise.all([c.storage.local.get(PORT_KEY), c.storage.session.get(PIN_KEY)]);
+    const [local, session] = await Promise.all([c.storage.local.get([PORT_KEY, ALL_SITES_KEY]), c.storage.session.get(PIN_KEY)]);
     port = readPort(local[PORT_KEY]);
+    await applyAllSites(local[ALL_SITES_KEY]);
     const pinned = session[PIN_KEY];
     router.restorePin(typeof pinned === "number" ? pinned : null);
     const focused = await c.windows.getLastFocused().catch(() => null);

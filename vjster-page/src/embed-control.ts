@@ -8,7 +8,8 @@
 //   OBS 33's browser source (CEF 150) it stopped at 2, as listed. The page
 //   reports the list as it is, so the deck's range is the one OBS plays.
 // - `getPlaybackRate` answers from a cache the iframe updates about 26 ms
-//   later, with `onPlaybackRateChange`; settle.ts waits for it.
+//   later, with `onPlaybackRateChange`; settle.ts waits for it, and relative
+//   steps start from the rate last asked for until the cache shows it.
 // - There is no quality setter: no `setPlaybackQualityRange`,
 //   `setPlaybackQuality` changes nothing, and neither the player's size nor
 //   the `vq` parameter moved the level. So the page offers speed and
@@ -38,7 +39,13 @@ export function embedRates(listed: unknown): number[] {
 /** YouTube's states: 1 playing, 3 buffering (still meant to play). */
 const PLAYING_STATES = new Set([1, 3]);
 
-export function embedControl(player: EmbedPlayer): MediaControl {
+/** The rate the page last asked the embed for, until the embed shows it (page-core.ts keeps it). */
+export interface AskedRate {
+  get(): number | null;
+  set(rate: number): void;
+}
+
+export function embedControl(player: EmbedPlayer, asked?: AskedRate): MediaControl {
   return {
     kind: "video",
     canQuality: false,
@@ -46,6 +53,7 @@ export function embedControl(player: EmbedPlayer): MediaControl {
       const r = player.getPlaybackRate();
       return typeof r === "number" && Number.isFinite(r) && r > 0 ? r : null;
     },
+    stepBase: () => asked?.get() ?? null,
     availableRates: () => embedRates(player.getAvailablePlaybackRates()),
     quality: () => null,
     preferredQuality: () => null,
@@ -57,8 +65,14 @@ export function embedControl(player: EmbedPlayer): MediaControl {
     playing: () => PLAYING_STATES.has(player.getPlayerState()),
     // The embed does not say when an ad plays; its own controls are hidden, so nothing waits on it.
     adShowing: () => false,
-    setRate: (rate) => player.setPlaybackRate(rate),
-    setElementRate: (rate) => player.setPlaybackRate(rate),
+    setRate: (rate) => {
+      asked?.set(rate);
+      player.setPlaybackRate(rate);
+    },
+    setElementRate: (rate) => {
+      asked?.set(rate);
+      player.setPlaybackRate(rate);
+    },
     setQuality: () => {
       throw new Error("the embed has no quality control");
     },

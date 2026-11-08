@@ -19,6 +19,7 @@ import { WebSocket, WebSocketServer } from "ws";
 import { Adapter, type MediaControl } from "../../vjster-extension/src/adapter-core.js";
 import { LinkClient, type SocketLike } from "../../vjster-extension/src/link-client.js";
 import { Router } from "../../vjster-extension/src/router.js";
+import { WATCHDOG } from "../../src/suite/launch-args.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 export const PLUGIN_DIR = join(root, "com.jbrick2070.vjster.sdPlugin");
@@ -91,6 +92,10 @@ export class DeckSim {
   log = "";
   /** The Stream Deck language the plugin is started with, such as "de" or "zh_CN" (PLAN.md 8.3). */
   language = "en";
+  /** Answer each getGlobalSettings at once, like Stream Deck; false keeps the reads waiting, like a host that never answers. */
+  answerGlobalReads = true;
+  /** The ids of the reads kept waiting while answerGlobalReads is false. */
+  readonly readsWaiting: string[] = [];
 
   /**
    * Start the pretend Stream Deck and launch the plugin. `fromSource` runs src
@@ -121,7 +126,12 @@ export class DeckSim {
     };
     const args = ["-port", String(port), "-pluginUUID", UUID, "-registerEvent", "registerPlugin", "-info", JSON.stringify(info)];
     const entry = fromSource ? ["--import", "tsx", join(root, "src/vjster/plugin/standalone.ts")] : [join(PLUGIN_DIR, "bin/plugin.js")];
-    this.child = spawn(process.execPath, [...entry, ...args], { cwd: PLUGIN_DIR, stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, ...env } });
+    // Like the suite's children: end when this process ends, however it ends, so no plugin is left holding its link port.
+    this.child = spawn(process.execPath, [`--import=data:text/javascript,${encodeURIComponent(WATCHDOG)}`, ...entry, ...args], {
+      cwd: PLUGIN_DIR,
+      stdio: ["ignore", "pipe", "pipe"],
+      env: { ...process.env, ...env, SUITE_PARENT_PID: String(process.pid) }
+    });
     this.child.stdout?.on("data", (d) => (this.log += d.toString()));
     this.child.stderr?.on("data", (d) => (this.log += d.toString()));
     await Promise.race([
@@ -137,7 +147,10 @@ export class DeckSim {
     else if (m.event === "sendToPropertyInspector" && m.payload) this.toPage.push(m.payload);
     // Like Stream Deck: the answer carries the request's id, so the SDK hands it to that read only and not to
     // onDidReceiveGlobalSettings (docs/vjster/PLAN.md 9, design 7).
-    else if (m.event === "getGlobalSettings") this.toPlugin({ event: "didReceiveGlobalSettings", id: m.id, payload: { settings: { ...this.globalSettings } } });
+    else if (m.event === "getGlobalSettings") {
+      if (this.answerGlobalReads) this.toPlugin({ event: "didReceiveGlobalSettings", id: m.id, payload: { settings: { ...this.globalSettings } } });
+      else this.readsWaiting.push(String(m.id));
+    }
     else if (m.event === "setGlobalSettings" && m.payload) {
       this.globalWrites.push({ ...m.payload });
       // Like Stream Deck: the plugin's write replaces what is stored, and only a settings page hears of it.
@@ -148,6 +161,16 @@ export class DeckSim {
 
   private toPlugin(message: Record<string, unknown>): void {
     this.socket?.send(JSON.stringify(message));
+  }
+
+  /** The plugin's command line, for tests. */
+  get childArgs(): readonly string[] {
+    return this.child?.spawnargs ?? [];
+  }
+
+  /** Answer every read kept waiting with the stored settings, each with its own id. */
+  answerWaitingReads(): void {
+    for (const id of this.readsWaiting.splice(0)) this.toPlugin({ event: "didReceiveGlobalSettings", id, payload: { settings: { ...this.globalSettings } } });
   }
 
   /** Put an action on the deck. */

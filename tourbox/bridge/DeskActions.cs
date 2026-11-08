@@ -151,10 +151,18 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
         var source = Bound(two ? cfg.Layer2Source : cfg.Layer1Source, two ? "layer 2 source" : "layer 1 source");
         return (scene, source, two ? "Layer 2" : "Layer 1");
     }
-    private async Task<string> Blend(string id)
+    /** The one scene item a layer names. None or several is an error, so a layer never acts on the wrong copy or on a source that left the scene. */
+    private async Task<(string Scene, string Source, string Label, int Item)> LayerItem(string id)
     {
         var (scene, source, label) = Layer(id);
-        int item = (await rpc("GetSceneItemId", new() { ["sceneName"] = scene, ["sourceName"] = source }))["sceneItemId"]!.GetValue<int>();
+        var rows = (await rpc("GetSceneItemList", new() { ["sceneName"] = scene }))["sceneItems"]!.AsArray()
+            .Where(n => n?["sourceName"]?.GetValue<string>() == source).ToArray();
+        if (rows.Length != 1) throw new InvalidOperationException($"{label}: expected exactly one {source} in {scene}; found {rows.Length}.");
+        return (scene, source, label, rows[0]!["sceneItemId"]!.GetValue<int>());
+    }
+    private async Task<string> Blend(string id)
+    {
+        var (scene, _, label, item) = await LayerItem(id);
         var current = Str(await rpc("GetSceneItemBlendMode", new() { ["sceneName"] = scene, ["sceneItemId"] = item }), "sceneItemBlendMode");
         int i = Array.IndexOf(BlendModes, current);
         string next = id.EndsWith(".reset") ? BlendModes[0] : BlendModes[(Math.Max(i, 0) + (id.EndsWith(".next") ? 1 : -1) + BlendModes.Length) % BlendModes.Length];
@@ -165,11 +173,12 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
     /**
      * Opacity rides the source's Color Correction filter: the first one it has, else a new one named OpacityFilterName
      * at the end of the chain. color_filter_v2 takes 0..1, the legacy color_filter 0..100. `overlay` keeps its other
-     * settings. A disabled filter is reported, not switched on (that could change the look someone set up).
+     * settings. A disabled filter is reported, not switched on (that could change the look someone set up). The filter
+     * belongs to the source, so it also applies wherever else that source appears, Program included.
      */
     private async Task<string> Opacity(string id)
     {
-        var (_, source, label) = Layer(id);
+        var (_, source, label, _) = await LayerItem(id);
         var filters = (await rpc("GetSourceFilterList", new() { ["sourceName"] = source }))["filters"]!.AsArray().Select(n => n!.AsObject());
         var color = filters.FirstOrDefault(f => f["filterKind"]?.GetValue<string>() is "color_filter_v2" or "color_filter");
         string name, kind;

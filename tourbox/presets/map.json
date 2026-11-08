@@ -26,7 +26,7 @@
         {"control":"Tour menu","gesture":"select","action":"mic.mute","label":"Mute microphone","hotkey":"Ctrl+Alt+Shift+M"},
         {"control":"Tour menu","gesture":"select","action":"media.play","label":"Play or pause media","hotkey":"Ctrl+Alt+Shift+I"},
         {"control":"Tour menu","gesture":"select","action":"mix.status","label":"Read whole mix level","hotkey":"Ctrl+Alt+Shift+9"},
-        {"control":"Tour menu","gesture":"select","action":"vjster.quality.reset","label":"Video quality to Auto","hotkey":"Alt+Shift+F4"},
+        {"control":"Tour menu","gesture":"select","action":"vjster.quality.reset","label":"Video quality to Auto","hotkey":"Alt+Shift+F7"},
         {"control":"Tour menu","gesture":"select","action":"layer1.blend.reset","label":"Layer 1 blend mode Normal","hotkey":"Alt+Shift+F5"},
         {"control":"Tour menu","gesture":"select","action":"layer2.blend.reset","label":"Layer 2 blend mode Normal","hotkey":"Alt+Shift+F6"}
       ],

@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Runtime.InteropServices;
 using System.Web.Script.Serialization;
 using System.Windows.Forms;
 [assembly: System.Reflection.AssemblyTitle("OBS Fadester for TourBox")]
@@ -23,6 +24,8 @@ namespace Fadester.TourBox {
       if (args.Contains("--self-test")) {
         try { PanelWindow.Test(); return 0; } catch { return 1; }
       }
+      Application.ThreadException += (s, e) => Log("window error: " + e.Exception);
+      AppDomain.CurrentDomain.UnhandledException += (s, e) => Log("fatal error: " + e.ExceptionObject);
       var text = PanelText.FromArguments(args, CultureInfo.CurrentUICulture);
       bool created;
       using (var single = new Mutex(true, @"Local\FadesterTourBoxPanel", out created)) {
@@ -31,6 +34,15 @@ namespace Fadester.TourBox {
         Application.Run(new PanelWindow(text));
       }
       return 0;
+    }
+    /** Why the panel went away, for the next time nobody saw it go: panel.log next to config.json. Never a password. */
+    internal static void Log(string line) {
+      try {
+        string dir=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"FadesterTourBox"), file=Path.Combine(dir,"panel.log");
+        Directory.CreateDirectory(dir);
+        if(File.Exists(file) && new FileInfo(file).Length>262144) File.Delete(file);
+        File.AppendAllText(file,DateTime.Now.ToString("s",CultureInfo.InvariantCulture)+"  "+line+Environment.NewLine,new UTF8Encoding(false));
+      } catch(IOException) {} catch(UnauthorizedAccessException) {}
     }
   }
   internal sealed class PanelWindow : Form {
@@ -41,7 +53,7 @@ namespace Fadester.TourBox {
     readonly Dictionary<string, ComboBox> boxes = new Dictionary<string, ComboBox>();
     readonly Dictionary<string,Image> glyphs=new Dictionary<string,Image>();
     Dictionary<string, object> config = new Dictionary<string, object>(), catalog = new Dictionary<string, object>();
-    Label state, live; TextBox password; ListBox activity; Button connect, start, save;
+    Label state, live, importNote; TextBox password; ListBox activity; Button connect, start, save;
     CheckBox enableMix, mixOnly, enableVjster;
     NumericUpDown mixStep, mixDuration, vjsterPort, opacityStep; TextBox extensionId;
     NumericUpDown port,volumeStep,duckLevel,fadeTicks,transitionStep; FlowLayoutPanel body; DataGridView controls; Process worker; Feedback hud; bool closing, refreshing, invalidConfig;
@@ -73,7 +85,7 @@ namespace Fadester.TourBox {
       head.ClientSizeChanged+=delegate { state.Width=Math.Max(1,head.ClientSize.Width-32); };
       var tabs=new TabControl {Dock=DockStyle.Fill}; grid.Controls.Add(tabs,0,1);
       body=Page(tabs,text.Get("setup")); Title(body,text.Get("importTitle")); Hint(body,text.Get("importHint"));
-      AddButton(body,text.Get("openPreset"),delegate { OpenPath(text.PresetFolder(folder)); });
+      AddButton(body,text.Get("openPreset"),delegate { ImportPreset(); }); importNote=Hint(body,"");
       Title(body,text.Get("connectTitle")); Hint(body,text.Get("connectHint"));
       var row=new FlowLayoutPanel {AutoSize=true,WrapContents=true,Margin=new Padding(0,3,0,3)};
       row.Controls.Add(new Label {Text=text.Get("port"), AutoSize=true,Margin=new Padding(4,8,4,0)});
@@ -95,6 +107,7 @@ namespace Fadester.TourBox {
       Title(body,text.Get("vjsterTitle"));
       enableVjster=Check(body,text.Get("enableVjster")); enableVjster.Checked=true;
       Hint(body,text.Get("vjsterHint"));
+      Hint(body,text.Get("vjsterChrome"));
       var vjRow=new FlowLayoutPanel {AutoSize=true,WrapContents=true,Margin=new Padding(0,3,0,3)};
       vjRow.Controls.Add(new Label {Text=text.Get("vjsterPort"),AutoSize=true,Margin=new Padding(4,8,4,0)});
       vjsterPort=new NumericUpDown {Minimum=1024,Maximum=65535,Value=48150,Width=78}; vjRow.Controls.Add(vjsterPort);
@@ -134,7 +147,7 @@ namespace Fadester.TourBox {
       AddButton(bar,text.Get("feedback"),delegate { if(hud!=null && !hud.IsDisposed) {hud.Close();return;} hud=new Feedback(text.Get("lastAction")); hud.Set(state.Text); hud.Show(); });
       AddButton(bar,text.Get("guide"),delegate { OpenPath(text.GuidePath(folder)); }); grid.Controls.Add(bar,0,2);
       Load += async delegate { ReadSettings(); ReadMap(); if(!invalidConfig) await Connect(); };
-      FormClosing+=async (s,e)=>{ if(worker==null)return; e.Cancel=true; if(closing)return; closing=true; await StopControls(); closing=false; if(worker==null)Close(); else Note(text.Get("stillClosing")); };
+      FormClosing+=async (s,e)=>{ Entry.Log("closing: "+e.CloseReason+(worker==null?"":", controls running")); if(worker==null)return; e.Cancel=true; if(closing)return; closing=true; await StopControls(); closing=false; if(worker==null)Close(); else Note(text.Get("stillClosing")); };
     }
     FlowLayoutPanel Page(TabControl t,string title) {
       var p=new TabPage(title); t.Controls.Add(p);
@@ -164,7 +177,7 @@ namespace Fadester.TourBox {
     }
     void SetNumber(NumericUpDown n,string key,bool reciprocal=false){
       object v;if(!config.TryGetValue(key,out v) || v==null)return;
-      try{decimal x=Convert.ToDecimal(v,System.Globalization.CultureInfo.InvariantCulture);if(reciprocal){if(x<=0)return;x=Decimal.Round(1m/x);}n.Value=Math.Min(n.Maximum,Math.Max(n.Minimum,x));}catch(FormatException){}catch(OverflowException){}
+      try{decimal x=Convert.ToDecimal(v,System.Globalization.CultureInfo.InvariantCulture);if(reciprocal){if(x<=0)return;x=Decimal.Round(1m/x);}n.Value=Math.Min(n.Maximum,Math.Max(n.Minimum,x));}catch(FormatException){}catch(OverflowException){}catch(InvalidCastException){}
     }
     void Fill(string k,string[] options,string initial) {
       var c=boxes[k]; c.BeginUpdate(); c.Items.Clear(); c.Items.Add("");
@@ -256,7 +269,21 @@ namespace Fadester.TourBox {
       try { File.WriteAllText(tmp,Json.Serialize(config),new UTF8Encoding(false)); if(File.Exists(settings)) File.Replace(tmp,settings,null); else File.Move(tmp,settings); }
       finally { if(File.Exists(tmp)) File.Delete(tmp); }
     }
-    void SaveRequested() { try {WriteConfig(); Note(text.Get(worker==null?"saved":"savedRestart"));}catch(Exception e){Note(e.Message);} }
+    void SaveRequested() { if(PortsClash())return; try {WriteConfig(); Note(text.Get(worker==null?"saved":"savedRestart"));}catch(Exception e){Note(e.Message);} }
+    /** Console has no way in from outside: no file type, no command line. Hand over the path, open Console, say what to do there. */
+    void ImportPreset() {
+      string path=text.PresetPath(folder);
+      try { Clipboard.SetText(path); importNote.Text=text.Get("importCopied"); }
+      catch(ExternalException) { importNote.Text=text.Get("importManual",path); }
+      try {
+        var running=Process.GetProcessesByName("TourBox Console"); bool open=running.Length>0; foreach(var one in running) one.Dispose();
+        if(!open) {
+          string exe=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),"TourBox Console","TourBox Console.exe");
+          if(File.Exists(exe)) OpenPath(exe);
+        }
+      } catch(InvalidOperationException e) { Note(e.Message); }
+    }
+    bool PortsClash() { if(!enableVjster.Checked || port.Value!=vjsterPort.Value) return false; Note(text.Get("portsClash")); return true; }
     void OpenPath(string p) { try {Process.Start(new ProcessStartInfo(p){UseShellExecute=true});} catch(Exception e){Note(e.Message);} }
     void Note(string msg) {
       if(IsDisposed || Disposing || String.IsNullOrWhiteSpace(msg))return;
@@ -267,10 +294,11 @@ namespace Fadester.TourBox {
       var exe=Path.Combine(folder,"FadesterTourBoxBridge.exe"); if(!File.Exists(exe))throw new FileNotFoundException(text.Get("bridgeMissing"));
       var pi=new ProcessStartInfo(exe,args) {UseShellExecute=false,CreateNoWindow=true,WorkingDirectory=folder,RedirectStandardOutput=true,RedirectStandardError=true,RedirectStandardInput=true,StandardOutputEncoding=Encoding.UTF8,StandardErrorEncoding=Encoding.UTF8};
       if(password.Text.Length!=0) pi.EnvironmentVariables["FADESTER_OBS_PASSWORD"]=password.Text;
+      pi.EnvironmentVariables["FADESTER_PANEL"]="1";
       return pi;
     }
     async Task Connect() {
-      if(refreshing||invalidConfig)return;
+      if(refreshing||invalidConfig||PortsClash())return;
       refreshing=true; connect.Enabled=false; start.Enabled=false; string tmp=null;
       try {
         // A read-only discovery must not overwrite the user's saved assignments.
@@ -285,16 +313,17 @@ namespace Fadester.TourBox {
           bool studioMode;
           string studio=Boolean.TryParse(Val(next,"studioMode"),out studioMode) ? text.Get(studioMode?"on":"off") : "—";
           live.Text=text.Get("sceneSummary",Val(next,"program","—"),Val(next,"preview","—"),studio);
-          Note(text.Get("obsConnected",List(next,"scenes").Length));
+          Note(text.Get(worker==null?"obsReady":"obsConnected",List(next,"scenes").Length));
         }
       }catch(Exception e){live.Text=""; Note(e.Message);}
       finally{try{if(tmp!=null && File.Exists(tmp))File.Delete(tmp);}catch(IOException){} refreshing=false; if(!IsDisposed){connect.Enabled=true; start.Enabled=true;}}
     }
     void StartControls() {
+      if(PortsClash())return;
       try{
         WriteConfig(); var p=new Process {StartInfo=Command(mixOnly.Checked?"--mix-only":"--listen"),EnableRaisingEvents=true};
         p.OutputDataReceived+=(s,e)=>Note(e.Data); p.ErrorDataReceived+=(s,e)=>Note(e.Data);
-        p.Exited+=delegate { try{BeginInvoke((Action)(()=>{if(worker==p){worker=null; start.Text=text.Get("saveStart"); Note(text.Get(p.ExitCode==0?"stopped":"bridgeFailed"));} p.Dispose();}));}catch(InvalidOperationException){} };
+        p.Exited+=delegate { try{BeginInvoke((Action)(()=>{if(worker==p){worker=null; start.Text=text.Get("saveStart"); Note(text.Get(p.ExitCode==0?"stopped":"bridgeFailed"));} Entry.Log("controls ended: "+p.ExitCode); try{p.CancelOutputRead();p.CancelErrorRead();}catch(InvalidOperationException){} p.Dispose();}));}catch(InvalidOperationException){} };
         worker=p; if(!p.Start())throw new Exception(text.Get("bridgeNotStarted")); p.BeginOutputReadLine(); p.BeginErrorReadLine(); start.Text=text.Get("stop"); Note(text.Get("starting"));
       }catch(Exception e){worker=null; start.Text=text.Get("saveStart"); Note(e.Message);}
     }

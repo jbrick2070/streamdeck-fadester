@@ -59,15 +59,31 @@ internal sealed class BridgeConfig
         return config;
     }
 
+    /** Only `--listen` hosts the VJster link; a catalog read or mix-only run has no use for its port. */
+    public void CheckPorts()
+    {
+        if (VjsterEnabled && VjsterPort == Port)
+            throw new InvalidDataException($"The OBS port and the VJster port cannot both be {Port}. The OBS port is usually 4455.");
+    }
+
     public string Password()
     {
         var supplied = Environment.GetEnvironmentVariable("FADESTER_OBS_PASSWORD");
         if (!string.IsNullOrEmpty(supplied)) return supplied;
         var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "obs-studio", "plugin_config", "obs-websocket", "config.json");
-        if (File.Exists(path))
+        return SavedPassword(File.Exists(path) ? File.ReadAllText(path) : null, Port);
+    }
+
+    /** OBS's saved password from its obs-websocket settings, when they are for this port; otherwise what to fix. */
+    internal static string SavedPassword(string? obsSettings, int port)
+    {
+        JsonObject? local = null;
+        try { if (obsSettings != null) local = JsonNode.Parse(obsSettings) as JsonObject; }
+        catch (JsonException) { } // half-written or hand-edited: ask for the password rather than show a parser error
+        if (local?["server_port"] is JsonValue portValue && portValue.TryGetValue<int>(out var obsPort) && obsPort > 0)
         {
-            var local = JsonNode.Parse(File.ReadAllText(path));
-            if (local?["server_port"]?.GetValue<int>() == Port && local["server_password"]?.GetValue<string>() is { Length: > 0 } saved) return saved;
+            if (obsPort != port) throw new InvalidOperationException($"OBS on this PC uses port {obsPort}, but the OBS port in Setup is {port}. Set it to {obsPort}, or for another OBS enter that OBS's password in Setup.");
+            if (local["server_password"] is JsonValue passwordValue && passwordValue.TryGetValue<string>(out var saved) && saved.Length > 0) return saved;
         }
         throw new InvalidOperationException("Enter the OBS password in the control panel, or set FADESTER_OBS_PASSWORD for this process.");
     }

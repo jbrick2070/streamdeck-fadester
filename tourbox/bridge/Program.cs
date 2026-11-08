@@ -53,6 +53,7 @@ internal static class Program
             if (command is "--listen" or "--mix-only")
             {
                 if (command == "--mix-only" && !config.MixEnabled) throw new ArgumentException("Enable All OBS mixer inputs in Setup first.");
+                if (command == "--listen") config.CheckPorts();
                 await Listen(config, command == "--listen" ? Binding.Load(map) : [], stop); return 0;
             }
             if (command is not ("--catalog" or "--check" or "--dispatch")) throw new ArgumentException("Unknown option " + command + ". See --help.");
@@ -113,7 +114,10 @@ internal static class Program
         {
             await keys.Ready;
             Console.WriteLine(bindings.Count > 0 ? $"Listening for {bindings.Count} TourBox shortcuts. Type quit to stop." : "Mix-only companion: no controller shortcuts registered. Type quit to stop.");
-            if (Console.IsInputRedirected) _ = Task.Run(async () => { try { while (!stop.IsCancellationRequested && await Console.In.ReadLineAsync() is { } line) Command(line); } catch (IOException) { } });
+            // Started by the panel, stdin ending means the panel is gone: nothing else could stop this process, and it would
+            // keep the shortcuts and block the next start. A launch from a script with no input is not a panel going away.
+            bool panelOwned = Environment.GetEnvironmentVariable("FADESTER_PANEL") == "1";
+            if (Console.IsInputRedirected) _ = Task.Run(async () => { try { while (!stop.IsCancellationRequested && await Console.In.ReadLineAsync() is { } line) Command(line); if (panelOwned && !stop.IsCancellationRequested) { Console.WriteLine("The control panel closed: stopping."); stop.Cancel(); } } catch (IOException) { } });
             else _ = Task.Run(() => { try { while (!stop.IsCancellationRequested && Console.ReadLine() is { } line) Command(line); } catch (IOException) { } });
             string? lastError = null;
             while (!stop.IsCancellationRequested)
@@ -131,6 +135,7 @@ internal static class Program
                     try
                     {
                         using var wait = CancellationTokenSource.CreateLinkedTokenSource(stop.Token);
+                        long lastHeldTurn = 0;
                         while (!stop.IsCancellationRequested && !obs.Disconnected.IsCompleted)
                         {
                             var readable = input.Reader.WaitToReadAsync(wait.Token).AsTask();
@@ -140,8 +145,9 @@ internal static class Program
                             if (!await readable) break;
                             if (!input.Reader.TryRead(out var ev) || ev.Generation != mine) continue;
                             if (stop.IsCancellationRequested) break;
-                            bool sweepTick = ev.Action is "fader.back" or "fader.forward" or "fader.fineBack" or "fader.fineForward";
-                            if (Stopwatch.GetElapsedTime(ev.Timestamp) > TimeSpan.FromMilliseconds(sweepTick ? 180 : 1500)) { Console.WriteLine("Discarded stale input: " + ev.Action); continue; }
+                            if (Stopwatch.GetElapsedTime(ev.Timestamp) > TimeSpan.FromMilliseconds(KeyGuards.IsTurnTick(ev.Action) ? 180 : 1500)) { Console.WriteLine("Discarded stale input: " + ev.Action); continue; }
+                            if (KeyGuards.IsStrayFaderTick(ev.Action, lastHeldTurn, ev.Timestamp)) { Console.WriteLine("Ignored a T-bar tick right after a held Dial turn: was the button still held?"); continue; }
+                            if (KeyGuards.IsHeldDialTurn(ev.Action)) lastHeldTurn = ev.Timestamp;
                             if (ev.Action == "bridge.reconnect") { Console.WriteLine("Reconnecting."); break; }
                             try { Console.WriteLine(await desk.Dispatch(ev.Action)); }
                             catch (Exception e) { Console.WriteLine("Action " + ev.Action + ": " + e.Message); }

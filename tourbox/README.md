@@ -1,6 +1,6 @@
 # OBS Fadester for TourBox
 
-Use a full-size TourBox to operate OBS Studio on Windows. The Scroll wheel cues the next scene, the flat Dial drives OBS’s native Studio Mode crossfader, and the raised Knob rides the speed of the YouTube video in Chrome (Music moved to Side + Dial). Press **Tour** for media, overlays, transition settings and capture tools.
+Use a full-size TourBox to operate OBS Studio on Windows. The Scroll wheel cues the next scene, the flat Dial drives OBS’s native Studio Mode crossfader, and the raised Knob rides the speed of the YouTube video in Chrome. Music is on Side + Dial. Press **Tour** for media, overlays, transition settings and capture tools.
 
 Open **START-HERE.html** in the extracted package for an illustrated control layout, a first-minute rehearsal, the complete preset reference and recovery steps. Its control tables are generated from the map shipped with this preset.
 
@@ -9,9 +9,9 @@ The panel, native preset labels and quick starts are available in English, Germa
 ## Connect the desk
 
 1. Extract the whole Windows x64 ZIP into a folder you want to keep. Run **Fadester for TourBox.exe** from that folder.
-2. Open OBS. In TourBox Console, use **Import** beside **Preset List** to add **OBS Fadester for TourBox.tb**. The panel’s **Open preset folder** button opens the matching language folder. Import one language only. Enable **Auto Switch** and link **OBS Fadester for TourBox** to the running OBS application. To change languages or update, select this existing preset and use its own menu’s **Import** to replace its contents.
+2. Open OBS. In TourBox Console, use **Import** beside **Preset List** to add **OBS Fadester for TourBox.tb**. The panel’s **Import into TourBox Console** button copies the matching language’s preset path and opens Console; paste it into Console’s import window. Do not double-click the `.tb` file, because Windows has no app for it. Import one language only. Enable **Auto Switch** and link **OBS Fadester for TourBox** to the running OBS application. To change languages or update, select this existing preset and use its own menu’s **Import** to replace its contents.
 3. In OBS, enable **Tools → WebSocket Server Settings** with authentication. Use **Studio Mode**, select **Fade**, and keep the main OBS window and its white T-bar visible. The manual fader targets OBS Studio **33.0.0 and 33.0.1**.
-4. In the Fadester panel, click **Read scenes and inputs from OBS**. If your server uses a different port or the saved password is unavailable, enter the port and password from OBS. A password entered in the panel lasts for that session.
+4. In the Fadester panel, click **Read scenes and inputs from OBS**. If your server uses a different port or the saved password is unavailable, enter the **OBS port** and password from OBS. OBS usually uses 4455, and while VJster is on the OBS port cannot be the same as the VJster port. A password entered in the panel lasts for that session.
 5. Select **OBS Fadester for TourBox**, click **Save & start controls**, and bring OBS to the front. Keep the Fadester panel running.
 
 ## Rehearse the first throw
@@ -63,19 +63,21 @@ For a compact assignment card, open **General HUD** at the top right of Console.
 
 ## Drive YouTube and the VJ layers
 
-Install the free **VJster** extension in Chrome (from this project’s releases, or the Chrome Web Store) and play a YouTube video. The extension connects to the companion on your own computer, on the **VJster port** in Setup (48150 unless you change it there and on the extension’s options page); OBS can be closed. Turn the **raised Knob** for the speed, press and turn it for 0.05 steps, tap it to read the video, and hold **Side** and press it to return to 1x. Press and turn **Scroll** for the quality; **Side + D-pad Up** plays or pauses; **Tour** has quality back to Auto.
+VJster controls YouTube in Chrome only. A YouTube browser source in OBS cannot be controlled, because nothing outside it can reach the page. To show the video in OBS, add a **Window Capture** of the Chrome window and keep that window open; add an **Application Audio Capture** of Chrome for its sound.
 
-In **Assignments**, set **Layer 1** and **Layer 2** to two items in your mix scene. Hold **Top** and turn the **Knob** to cycle Layer 1’s blend mode, **Scroll** for Layer 2’s, and the **Dial** to ride Layer 2’s opacity (through a Color Correction filter, added when the source has none). Tour has both blend modes back to Normal. The **Activity** tab reads back the video and each layer after every move.
+Install the free **VJster** extension in Chrome (from this project’s releases: unzip it and load it unpacked, as `docs/vjster/INSTALL.md` step 2 shows) and play a YouTube video. The extension connects to the companion on your own computer, on the **VJster port** in Setup (48150 unless you change it there and on the extension’s options page); OBS can be closed. Turn the **raised Knob** for the speed, press and turn it for 0.05 steps, tap it to read the video, and hold **Side** and press it to return to 1x. Press and turn **Scroll** for the quality; **Side + D-pad Up** plays or pauses; **Tour** has quality back to Auto. With several videos playing, the extension picks the active tab of the focused Chrome window, else the one that started last, so pause the others; the TourBox has no pin. In a YouTube playlist the speed carries to the next video, quality returns to Auto, and there is no next or previous.
+
+In **Assignments**, set **Layer 1** and **Layer 2** to two items in your mix scene, each appearing once in it. Opacity uses a filter on the source, so it also changes that source anywhere else it appears, Program included. Hold **Top** and turn the **Knob** to cycle Layer 1’s blend mode, **Scroll** for Layer 2’s, and the **Dial** to ride Layer 2’s opacity (through a Color Correction filter, added when the source has none). Tour has both blend modes back to Normal. The **Activity** tab reads back the video and each layer after every move.
 
 If the VJster actions of the Stream Deck or OpenDeck plugin are on a deck page, they hold the port and Activity says so; remove them from the deck or choose another port in both places. The companion tries the port again every 30 seconds.
 
 ## Assign your show
 
-Open **Assignments** after reading your sources. Set Music and Content to the audio inputs you want to ride. Choose a mic for mute, a media source for transport, and both a scene and an item for overlay visibility. Assign up to four scene shortcuts by name. Empty roles can stay unassigned. Save changes and restart controls to apply them.
+Open **Assignments** after reading your sources. Set Music and Content to the audio inputs you want to ride. Choose a mic for mute, a media source or OBS Playlister source for transport (**Side + Scroll** or **Side + D-pad Left / Right** for previous and next, **Side + D-pad Down** to restart, **Tour** to play or pause; there is no speed control for these, and Playlister has not been tested on the hardware yet), and both a scene and an item for overlay visibility. Assign up to four scene shortcuts by name. Empty roles can stay unassigned. Save changes and restart controls to apply them.
 
 Under **Adjust the feel**, set the dB step for level rides, the duck ceiling, ticks per full fade, and the transition timing step. The press-and-turn step on the Dial is a quarter of its normal movement; on the Knob it is a 0.05 speed step. **Opacity step** sets how far one Top + Dial detent moves Layer 2. Duck and restore take about 450 ms. Duck leaves music that is already below the ceiling at its current level. A separate mixer move can interrupt a fade and disarm its saved restore. An audio update already sent can still land while two operators move the same fader.
 
-For an interview, use **C1** to duck the bed as the guest comes up, hold **Side** and turn the Dial to trim Content, then press **C2** to restore. For a lower third, press **Tour** and select **Show overlay** or **Hide overlay**. Confirm the target item and the scene it belongs to. Shared media and overlay changes can affect Program.
+For an interview, use **C1** to duck the bed as the guest comes up, hold **Tall** and turn the **Knob** to trim Content, then press **C2** to restore. For a lower third, press **Tour** and select **Show overlay** or **Hide overlay**. Confirm the target item and the scene it belongs to. Shared media and overlay changes can affect Program.
 
 ## Read the desk and recover
 

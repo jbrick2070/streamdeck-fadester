@@ -21,6 +21,8 @@ internal static class VjsterSelfTests
     {
         Gate();
         Parser();
+        Ports();
+        Guards();
         await Loopback();
         await Layers();
     }
@@ -40,6 +42,44 @@ internal static class VjsterSelfTests
         Check(VjsterLink.ClassifyUpgrade("127.0.0.1:48150", 1, Ext, "token=0123456789abcdef0123456789abcdef", 48150, none).Reason == "token", "the OBS page token path is not served here");
         Check(VjsterLink.ClassifyUpgrade("127.0.0.1:48150", 1, Ext, "", 48150, ["abcdefghijklmnopabcdefghijklmnop"]).Ok, "pinned id matches");
         Check(VjsterLink.ClassifyUpgrade("127.0.0.1:48150", 1, OtherExt, "", 48150, ["abcdefghijklmnopabcdefghijklmnop"]).Reason == "extension-id", "pinned id differs");
+    }
+
+    static void Ports()
+    {
+        static string Fails(Action run) { try { run(); return ""; } catch (Exception e) { return e.Message; } }
+        var dir = Path.Combine(Path.GetTempPath(), "fadester-ports-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            var path = Path.Combine(dir, "config.json");
+            File.WriteAllText(path, """{"port":48150,"vjsterPort":48150}""");
+            Check(Fails(() => BridgeConfig.Load(path).CheckPorts()).Contains("cannot both be 48150"), "the OBS port on the VJster port is refused");
+            Check(BridgeConfig.Load(path).Port == 48150, "a catalog read does not care about the VJster port");
+            File.WriteAllText(path, """{"port":48150,"vjsterPort":48150,"vjsterEnabled":false}""");
+            Check(Fails(() => BridgeConfig.Load(path).CheckPorts()) == "", "with VJster off, the port is free");
+            const string obs = """{"server_port":4455,"server_password":"pw"}""";
+            Check(BridgeConfig.SavedPassword(obs, 4455) == "pw", "the saved password on the matching port");
+            Check(Fails(() => BridgeConfig.SavedPassword(obs, 48150)).Contains("uses port 4455"), "a wrong port says so instead of asking for a password");
+            Check(Fails(() => BridgeConfig.SavedPassword("""{"server_password":"pw"}""", 4455)).Contains("Enter the OBS password"), "no port in OBS's settings asks for the password");
+            Check(Fails(() => BridgeConfig.SavedPassword("""{"server_port":"4455","server_password":7}""", 4455)).Contains("Enter the OBS password"), "odd types ask for the password");
+            Check(Fails(() => BridgeConfig.SavedPassword("{half", 4455)).Contains("Enter the OBS password"), "a half-written file asks for the password");
+            Check(Fails(() => BridgeConfig.SavedPassword("[1]", 4455)).Contains("Enter the OBS password"), "a file that is not an object asks for the password");
+            Check(Fails(() => BridgeConfig.SavedPassword(null, 4455)).Contains("Enter the OBS password"), "no OBS settings asks for the password");
+            Check(Fails(() => BridgeConfig.SavedPassword("""{"server_port":4455,"server_password":""}""", 4455)).Contains("Enter the OBS password"), "an empty saved password asks for it");
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    static void Guards()
+    {
+        long t = System.Diagnostics.Stopwatch.GetTimestamp();
+        long ms(int n) => t + n * System.Diagnostics.Stopwatch.Frequency / 1000;
+        Check(KeyGuards.IsStrayFaderTick("fader.back", t, ms(100)), "a T-bar tick just after a Music turn is stray");
+        Check(!KeyGuards.IsStrayFaderTick("fader.back", t, ms(600)), "a T-bar tick well after a Music turn is real");
+        Check(!KeyGuards.IsStrayFaderTick("fader.back", 0, ms(100)), "with no Music turn yet, the T-bar works");
+        Check(!KeyGuards.IsStrayFaderTick("take", t, ms(100)), "only ticks are filtered, never a Take");
+        Check(KeyGuards.IsHeldDialTurn("music.up") && KeyGuards.IsHeldDialTurn("layer2.opacity.down") && !KeyGuards.IsHeldDialTurn("mix.up"), "held Dial turns");
+        Check(KeyGuards.IsTurnTick("layer2.opacity.up") && KeyGuards.IsTurnTick("layer1.blend.next") && KeyGuards.IsTurnTick("fader.forward") && !KeyGuards.IsTurnTick("take.cut"), "turn ticks");
     }
 
     static void Parser()
@@ -206,13 +246,17 @@ internal static class VjsterSelfTests
         string blendA = "OBS_BLEND_NORMAL", blendB = "OBS_BLEND_NORMAL";
         var filters = new List<JsonObject>();
         double opacity = 1.0; string? created = null; bool legacy = false; JsonObject? lastSet = null;
+        var items = new[] { ("Clip A", 7), ("Clip B", 8) };
         Task<JsonObject> Fake(string op, JsonObject? args)
         {
             JsonObject reply = new();
             string Arg(string k) => args![k]!.GetValue<string>();
             switch (op)
             {
-                case "GetSceneItemId": Check(Arg("sceneName") == "Mix", "scene by name"); reply["sceneItemId"] = Arg("sourceName") == "Clip A" ? 7 : 8; break;
+                case "GetSceneItemList":
+                    Check(Arg("sceneName") == "Mix", "scene by name");
+                    reply["sceneItems"] = new JsonArray(items.Select(i => (JsonNode)new JsonObject { ["sourceName"] = i.Item1, ["sceneItemId"] = i.Item2 }).ToArray());
+                    break;
                 case "GetSceneItemBlendMode": reply["sceneItemBlendMode"] = args!["sceneItemId"]!.GetValue<int>() == 7 ? blendA : blendB; break;
                 case "SetSceneItemBlendMode": if (args!["sceneItemId"]!.GetValue<int>() == 7) blendA = Arg("sceneItemBlendMode"); else blendB = Arg("sceneItemBlendMode"); break;
                 case "GetSourceFilterList": Check(Arg("sourceName") == "Clip B", "opacity rides layer 2"); reply["filters"] = new JsonArray(filters.Select(f => (JsonNode)f.DeepClone()).ToArray()); break;
@@ -235,6 +279,13 @@ internal static class VjsterSelfTests
         Check(await desk.Dispatch("layer1.blend.next") == "Layer 1 blend: Additive" && blendA == "OBS_BLEND_ADDITIVE", "blend next");
         Check(await desk.Dispatch("layer2.blend.previous") == "Layer 2 blend: Darken" && blendB == "OBS_BLEND_DARKEN" && blendA == "OBS_BLEND_ADDITIVE", "blend previous wraps, per layer");
         Check(await desk.Dispatch("layer2.blend.reset") == "Layer 2 blend: Normal", "blend reset");
+        async Task<string> Refused(string action) { try { await desk.Dispatch(action); return ""; } catch (InvalidOperationException e) { return e.Message; } }
+        var all = items;
+        items = [("Clip A", 7)];
+        Check((await Refused("layer2.opacity.up")).Contains("found 0"), "opacity refuses a source that left the layer's scene");
+        items = [("Clip A", 7), ("Clip A", 9), ("Clip B", 8)];
+        Check((await Refused("layer1.blend.next")).Contains("found 2"), "blend refuses two copies of the source");
+        items = all;
         Check(await desk.Dispatch("layer2.opacity.down") == "Layer 2 opacity 95 %" && created == DeskActions.OpacityFilterName && opacity == 0.95, "a missing Color Correction filter is created, then stepped");
         Check(lastSet!["overlay"]!.GetValue<bool>() && lastSet["filterName"]!.GetValue<string>() == DeskActions.OpacityFilterName, "settings are overlaid on the filter");
         for (int i = 0; i < 30; i++) await desk.Dispatch("layer2.opacity.down");

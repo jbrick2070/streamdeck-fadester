@@ -23,19 +23,20 @@ namespace Fadester.TourBox {
       { "lookingForObs", new[] { "Looking for OBS on this PC…", "Buscando OBS en este equipo…", "Recherche d’OBS sur ce PC…", "正在此电脑上查找 OBS…" } },
       { "setup", new[] { "Setup", "Configuración", "Configuration", "设置" } },
       { "importTitle", new[] { "1   Import the preset", "1   Importa el preajuste", "1   Importer le préréglage", "1   导入预设" } },
-      { "importHint", new[] {
-        "In TourBox Console, import OBS Fadester for TourBox.tb from the folder below. Link this preset to OBS Studio. Press Tour to open the production menu.",
-        "En TourBox Console, importa OBS Fadester for TourBox.tb desde la carpeta de abajo. Vincula el preajuste a OBS Studio. Pulsa Tour para abrir el menú de producción.",
-        "Dans TourBox Console, importez OBS Fadester for TourBox.tb depuis le dossier ci-dessous. Associez le préréglage à OBS Studio. Appuyez sur Tour pour ouvrir le menu de production.",
-        "在 TourBox Console 中，从下方文件夹导入 OBS Fadester for TourBox.tb，并将预设关联到 OBS Studio。按 Tour 键可打开制作菜单。" } },
-      { "openPreset", new[] { "Open preset folder", "Abrir carpeta del preajuste", "Ouvrir le dossier du préréglage", "打开预设文件夹" } },
+      { "importHint", new[] { "The button below copies the preset’s path and opens TourBox Console. Do not double-click the .tb file: Windows cannot open it. Link the preset to OBS Studio. Press Tour to open the production menu.", "El botón de abajo copia la ruta del preajuste y abre TourBox Console. No hagas doble clic en el archivo .tb: Windows no puede abrirlo. Vincula el preajuste a OBS Studio. Pulsa Tour para abrir el menú de producción.", "Le bouton ci-dessous copie le chemin du préréglage et ouvre TourBox Console. Ne double-cliquez pas sur le fichier .tb : Windows ne peut pas l’ouvrir. Associez le préréglage à OBS Studio. Appuyez sur Tour pour ouvrir le menu de production.", "下方按钮会复制预设路径并打开 TourBox Console。不要双击 .tb 文件：Windows 无法打开它。将预设关联到 OBS Studio。按 Tour 键可打开制作菜单。" } },
+      { "openPreset", new[] { "Import into TourBox Console", "Importar en TourBox Console", "Importer dans TourBox Console", "导入到 TourBox Console" } },
+      { "importCopied", new[] { "Path copied. In TourBox Console, click Import at the top of Preset List, press Ctrl+V, then Enter, and link the preset to OBS Studio. To update a preset you already imported, select it and use Import in its own menu instead.", "Ruta copiada. En TourBox Console, haz clic en Import arriba de Preset List, pulsa Ctrl+V y luego Intro, y vincula el preajuste a OBS Studio. Para actualizar un preajuste ya importado, selecciónalo y usa Import en su propio menú.", "Chemin copié. Dans TourBox Console, cliquez sur Import en haut de Preset List, appuyez sur Ctrl+V, puis sur Entrée, et associez le préréglage à OBS Studio. Pour mettre à jour un préréglage déjà importé, sélectionnez-le et utilisez Import dans son propre menu.", "路径已复制。在 TourBox Console 中，点击 Preset List 顶部的 Import，按 Ctrl+V，再按 Enter，然后将预设关联到 OBS Studio。要更新已导入的预设，请选中它并使用其自身菜单中的 Import。" } },
+      { "importManual", new[] { "The path could not be copied. In TourBox Console, click Import and open: {0}", "No se pudo copiar la ruta. En TourBox Console, haz clic en Import y abre: {0}", "Impossible de copier le chemin. Dans TourBox Console, cliquez sur Import et ouvrez : {0}", "无法复制路径。在 TourBox Console 中点击 Import 并打开：{0}" } },
+      { "portsClash", new[] { "The OBS port and the VJster port cannot be the same. The OBS port is usually 4455: check it in OBS under Tools → WebSocket Server Settings.", "El puerto de OBS y el de VJster no pueden ser el mismo. El de OBS suele ser 4455: compruébalo en OBS, en Herramientas → Ajustes del servidor WebSocket.", "Le port OBS et le port VJster ne peuvent pas être identiques. Le port OBS est généralement 4455 : vérifiez-le dans OBS, sous Outils → Paramètres du serveur WebSocket.", "OBS 端口和 VJster 端口不能相同。OBS 端口通常是 4455：请在 OBS 的「工具 → WebSocket 服务器设置」中查看。" } },
+      { "obsReady", new[] { "Connected to OBS. Scenes found: {0}. The TourBox does nothing until you click Save & start controls.", "Conexión con OBS establecida. Escenas encontradas: {0}. El TourBox no hará nada hasta que hagas clic en Guardar e iniciar.", "Connexion à OBS établie. Scènes trouvées : {0}. Le TourBox ne fera rien tant que vous n’aurez pas cliqué sur Enregistrer et démarrer.", "已连接 OBS。找到 {0} 个场景。点击「保存并启动控制」之前，TourBox 不会有任何反应。" } },
+      { "vjsterChrome", new[] { "VJster controls YouTube in Chrome only. A YouTube browser source in OBS cannot be controlled. To show the video in OBS, add a Window Capture of the Chrome window and keep that window open. Add an Application Audio Capture of Chrome for its sound.", "VJster solo controla YouTube en Chrome. Una fuente de navegador con YouTube en OBS no se puede controlar. Para mostrar el vídeo en OBS, añade una captura de ventana de Chrome y mantén esa ventana abierta. Añade una captura de audio de aplicación de Chrome para el sonido.", "VJster ne contrôle YouTube que dans Chrome. Une source navigateur YouTube dans OBS ne peut pas être contrôlée. Pour afficher la vidéo dans OBS, ajoutez une capture de la fenêtre Chrome et gardez cette fenêtre ouverte. Ajoutez une capture audio d’application de Chrome pour le son.", "VJster 只能控制 Chrome 中的 YouTube。OBS 中的 YouTube 浏览器源无法控制。要在 OBS 中显示视频，请添加 Chrome 窗口的窗口采集，并保持该窗口打开。请添加 Chrome 的应用程序音频采集以获取声音。" } },
       { "connectTitle", new[] { "2   Connect to OBS", "2   Conecta con OBS", "2   Se connecter à OBS", "2   连接 OBS" } },
       { "connectHint", new[] {
         "In OBS, open Tools → WebSocket Server Settings and enable the server. Keep authentication on. For the manual crossfader, turn on Studio Mode and choose Fade.",
         "En OBS, abre Herramientas → Ajustes del servidor WebSocket y actívalo. Mantén activa la autenticación. Para la transición manual, activa el modo Estudio y elige Desvanecimiento.",
         "Dans OBS, ouvrez Outils → Paramètres du serveur WebSocket et activez le serveur. Laissez l’authentification activée. Pour le fondu manuel, activez le mode Studio et choisissez Fondu.",
         "在 OBS 中，打开「工具 → WebSocket 服务器设置」并启用服务器。保持身份验证开启。若要手动淡入淡出，请启用工作室模式并选择淡入淡出转场。" } },
-      { "port", new[] { "Local port", "Puerto local", "Port local", "本地端口" } },
+      { "port", new[] { "OBS port", "Puerto de OBS", "Port OBS", "OBS 端口" } },
       { "password", new[] { "Password override", "Otra contraseña", "Autre mot de passe", "覆盖密码" } },
       { "passwordHint", new[] {
         "On this PC the bridge can use OBS’s saved password. A password typed here lasts only until you close this window.",
@@ -239,6 +240,8 @@ namespace Fadester.TourBox {
       var localized = Path.Combine(root, Locale);
       return Locale != "en" && File.Exists(Path.Combine(localized, PresetName)) ? localized : root;
     }
+
+    internal string PresetPath(string folder) { return Path.Combine(PresetFolder(folder), PresetName); }
 
     internal string MapPath(string folder) {
       var localized = Path.Combine(PresetFolder(folder), "map.json");

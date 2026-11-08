@@ -132,9 +132,18 @@ def setting_paths(settings: dict) -> list[str]:
 
 
 def inside(path: str, folder: Path) -> bool:
-    p = os.path.normcase(os.path.normpath(path))
-    f = os.path.normcase(os.path.normpath(str(folder)))
-    return p.startswith(f.rstrip("\\/") + os.sep)
+    """path lies under folder, in either spelling of a Windows path (8.3 short or long names)."""
+    pairs = [(path, str(folder))]
+    try:
+        pairs.append((os.path.realpath(path), os.path.realpath(str(folder))))
+    except (OSError, ValueError):
+        pass
+    for candidate, root in pairs:
+        p = os.path.normcase(os.path.normpath(candidate))
+        f = os.path.normcase(os.path.normpath(root))
+        if p.startswith(f.rstrip("\\/") + os.sep):
+            return True
+    return False
 
 
 def input_path_problems(name: str, settings: dict, kit_dir: Path) -> list[str]:

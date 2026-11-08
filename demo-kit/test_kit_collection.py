@@ -244,6 +244,24 @@ class RoundTrip(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "still holds the round-trip folder"):
             kc.normalise(self.saved, ROOT)
 
+    def test_normalise_matches_the_root_in_its_other_windows_spelling(self):
+        # On a GitHub runner the temp folder is an 8.3 short name (C:/Users/RUNNER~1/...); OBS writes
+        # the folder as given while the checker resolves it to the long name, or the other way round.
+        short, long = "C:/Users/RUNNER~1/Temp/kit", "C:/Users/runneradmin/Temp/kit"
+        saved = saved_like_obs(kc.draft_collection(IDS, short))
+        with mock.patch.object(kc.os.path, "realpath", lambda p: p.replace(short, long).replace("\\", "/")), \
+                mock.patch.object(kc, "_short_name", lambda p: p.replace(long, short) if long in p else None):
+            self.assertEqual(kc.root_spellings(short), [short, long])
+            self.assertEqual(kc.root_spellings(long), [long, short])
+            out = kc.normalise(saved, long)  # root given long, saved in the short spelling
+            self.assertEqual(source(out, "Kit Title")["settings"]["file"], "./media/kit-title.png")
+            source(saved, "Kit Title")["settings"]["file"] = long + "/media/kit-title.png"
+            out = kc.normalise(saved, short)  # root given short, one saved path in the long spelling
+            self.assertEqual(source(out, "Kit Title")["settings"]["file"], "./media/kit-title.png")
+            source(saved, "Kit Note")["settings"]["text"] = f"see {long}/media"
+            with self.assertRaisesRegex(ValueError, "still holds the round-trip folder"):
+                kc.normalise(saved, short)
+
     def test_a_clean_round_trip_has_no_changes(self):
         delta = kc.diff_draft(self.draft, kc.normalise(self.saved, ROOT))
         self.assertEqual((delta["changed"], delta["missing"]), ([], []))

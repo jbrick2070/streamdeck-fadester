@@ -69,7 +69,7 @@ import sys
 import threading
 import time
 import zipfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import kit_check as kk  # noqa: E402
@@ -195,6 +195,12 @@ def unzip(zip_path: Path, kit_dir: Path) -> list[str]:
         names = z.namelist()
         root = kit_dir.resolve()
         for name in names:
+            # A member name is a relative, forward-slash path. One that is absolute on
+            # either platform ("/x", "C:/x"), or climbs with "..", is refused everywhere,
+            # not only on the platform where it happens to resolve outside the folder.
+            parts = name.replace("\\", "/").split("/")
+            if PurePosixPath(name).anchor or PureWindowsPath(name).anchor or ".." in parts:
+                raise RuntimeError(f"the zip's {name!r} would land outside {kit_dir}")
             target = (kit_dir / name).resolve()
             if not target.is_relative_to(root) or target == root:
                 raise RuntimeError(f"the zip's {name!r} would land outside {kit_dir}")

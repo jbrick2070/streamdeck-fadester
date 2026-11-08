@@ -45,6 +45,7 @@ import copy
 import hashlib
 import json
 import math
+import os
 import re
 from pathlib import Path
 
@@ -324,13 +325,46 @@ def draft_collection(ids: dict, root: str | None = None) -> dict:
 
 # ---------------------------------------------------------------- after the round-trip
 
+def _short_name(path: str) -> str | None:
+    """The 8.3 spelling of an existing Windows path (GetShortPathNameW), or None."""
+    if os.name != "nt":
+        return None
+    try:
+        import ctypes
+        buffer = ctypes.create_unicode_buffer(32768)
+        return buffer.value if ctypes.windll.kernel32.GetShortPathNameW(path, buffer, 32768) else None
+    except (OSError, AttributeError, ValueError):
+        return None
+
+
+def root_spellings(root: str) -> list[str]:
+    """Every way the round-trip folder can be spelt, forward slashes, no trailing slash.
+
+    OBS writes the folder as it was given, which on Windows may be an 8.3 short name
+    (C:/Users/RUNNER~1/...) while the checker resolved it to the long name, or the other way
+    round. Both spellings, plus the one given, count as the root."""
+    candidates = [root]
+    try:
+        candidates.append(os.path.realpath(root))
+    except (OSError, ValueError):
+        pass
+    short = _short_name(root)
+    if short:
+        candidates.append(short)
+    spellings: list[str] = []
+    for candidate in candidates:
+        flat = candidate.rstrip("/\\").replace("\\", "/")
+        if flat and flat not in spellings:
+            spellings.append(flat)
+    return spellings
+
+
 def normalise(saved: dict, root: str) -> dict:
     """The saved collection with root paths as ./ paths and Playlister's resume state dropped.
 
     Refuses (ValueError) a string that still holds the root anywhere after that, so no
     absolute path of the round-trip machine can reach the template."""
-    root_n = root.rstrip("/\\").replace("\\", "/")
-    root_l = root_n.lower()
+    roots = root_spellings(root)
     out = copy.deepcopy(saved)
     for source in out.get("sources", []):
         if source.get("id") == "obs_playlister_source":
@@ -344,9 +378,10 @@ def normalise(saved: dict, root: str) -> dict:
             return [fix(v, f"{where}[{i}]") for i, v in enumerate(value)]
         if isinstance(value, str):
             flat = value.replace("\\", "/")
-            if flat.lower().startswith(root_l + "/"):
-                return "./" + flat[len(root_n) + 1:]
-            if root_l in flat.lower():
+            for spelling in roots:
+                if flat.lower().startswith(spelling.lower() + "/"):
+                    return "./" + flat[len(spelling) + 1:]
+            if any(spelling.lower() in flat.lower() for spelling in roots):
                 raise ValueError(f"{where} still holds the round-trip folder: {value!r}")
         return value
 

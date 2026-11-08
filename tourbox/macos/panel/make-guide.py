@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
 """Generate the Mac-only offline guide from the shared control map."""
 import html
 import json

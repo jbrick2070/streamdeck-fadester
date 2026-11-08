@@ -12,9 +12,9 @@ STDOUT:
   "authMethod": "claude.ai",
   "apiProvider": "firstParty",
   "analyticsDisabled": false,
-  "projectsDirectory": "C:\\Users\\jeffr\\.claude\\projects",
+  "projectsDirectory": "<home>\\.claude\\projects",
   "email": "<email>",
-  "orgId": "cff774c2-bb97-4b73-b186-daa560353c46",
-  "orgName": "<email>'s Organization",
-  "subscriptionType": "max"
+  "orgId": "<orgId>",
+  "orgName": "<orgName>",
+  "subscriptionType": "<subscriptionType>"
 }

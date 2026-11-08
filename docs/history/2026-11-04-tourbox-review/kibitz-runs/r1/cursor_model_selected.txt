@@ -1,4 +1,4 @@
 requested=cursor-grok-4.6-high
 family=grok
 mode=ask
-exe=C:\Users\jeffr\AppData\Local\cursor-agent\cursor-agent.cmd
+exe=<home>\AppData\Local\cursor-agent\cursor-agent.cmd

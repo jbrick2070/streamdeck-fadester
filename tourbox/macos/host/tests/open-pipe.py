@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-or-later
 """Real production stdin/ingress regression; no OBS, AX, shortcuts or config access.

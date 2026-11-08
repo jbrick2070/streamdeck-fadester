@@ -13,3 +13,5 @@ com.jbrick2070.vjster.sdPlugin/bin/
 com.jbrick2070.vjster.sdPlugin/logs/
 demo-kit/build/
 __pycache__/
+# dotnet publish output named in tourbox/macos/*/README.md
+/out/

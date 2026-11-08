@@ -1,6 +1,6 @@
 # TourBox preset for YouTube playback and live VJ use (Windows)
 
-Written 2026-11-04. A design, not a build. Companion to `C:\Users\jeffr\Documents\obs-playlister\docs\TOURBOX-LAYOUT.md`
+Written 2026-11-04. A design, not a build. Companion to the operator's local `TOURBOX-LAYOUT.md` (not in this repository)
 (the OBS "Show" preset); the two presets share Tour as the switch between them. Every TourBox Console
 fact below comes from that doc's sources or the pages listed in section 8. Anything marked
 **untested** was not confirmed against a primary source or on this machine and belongs in the test.
@@ -326,7 +326,7 @@ TourBox (primary):
 - Presets, HUD, haptics, control inventory: see the OBS doc's source list.
 
 Yours:
-- VJster intents, router, ad hold, ranges: `C:\streamdeck-fadester\docs\vjster\REQUIREMENTS.md`
+- VJster intents, router, ad hold, ranges: `docs/vjster/REQUIREMENTS.md` in this repository
   (R-SPD-1..4, R-QLT-1..3, R-TGT-1..4, R-BEH-1..4, R-INT-2..3, F-4, F-5, F-10) and the built
-  extension `C:\Users\jeffr\Documents\VJster-Chrome-extension\{manifest.json,background.js,content-main.js}`
-- OBS preset, Console facts, "Never disable hotkeys": `C:\Users\jeffr\Documents\obs-playlister\docs\TOURBOX-LAYOUT.md`
+  extension (the operator's local copy of `manifest.json`, `background.js`, `content-main.js`; the source is `vjster-extension/` here)
+- OBS preset, Console facts, "Never disable hotkeys": the operator's local `TOURBOX-LAYOUT.md`, not in this repository

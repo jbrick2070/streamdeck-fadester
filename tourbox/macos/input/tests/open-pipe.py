@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
 #!/usr/bin/env python3
 """Exercise the real bounded stdin reader with no shortcuts, AX, UI or OBS."""
 import selectors

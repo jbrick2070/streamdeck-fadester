@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
 """Build and check the single OBS Fadester for TourBox Console 1.9 preset. Standard library only."""
 
 import argparse

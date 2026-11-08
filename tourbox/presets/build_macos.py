@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
 """Generate the experimental macOS master without changing the Windows preset."""
 
 import argparse

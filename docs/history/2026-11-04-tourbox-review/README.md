@@ -11,4 +11,5 @@ YouTube preset is superseded. Nothing here describes the current build; see
 - `YOUTUBE-RESEARCH.txt`: the research prompt that produced it.
 - `kibitz-runs/`: the review-round receipts (r1 to r4) from the kibitz pass
   over the Windows TourBox controls, including the reviewers' quota and
-  model records.
+  model records. Account identifiers and home-folder paths in these receipts
+  were replaced with placeholders before they were committed here.

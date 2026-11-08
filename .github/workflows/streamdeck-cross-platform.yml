@@ -2,7 +2,7 @@ name: Stream Deck Windows and macOS checks
 
 on:
   push:
-    branches: [main, codex/tourbox-macos-ci]
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:

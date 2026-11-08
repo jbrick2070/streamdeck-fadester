@@ -6,11 +6,15 @@ global keyboard recording, HID ownership or an Accessibility injection API. It
 does not inspect arbitrary keys, touch TourBox USB/forwarding state, connect to OBS,
 or change security settings. Registration is explicit and separate from building.
 
-The intended Mac preset uses **Control+Option+Shift**, with no Command modifier.
-The semantic map retains `Ctrl+Alt+Shift` spelling; this component translates those
-names to native Carbon modifier flags and known ANSI/F1..F12 key codes. Use the
-verified Mac preset, not an unchanged Windows binary preset. Non-US keyboard
-layouts and actual Console delivery remain live validation tasks.
+The Mac preset uses **Control+Option+Shift** for the OBS actions and
+**Control+Shift** or **Option+Shift** for the video and layer actions, with no
+Command modifier. The semantic map keeps the `Ctrl+Alt+Shift`, `Ctrl+Shift` and
+`Alt+Shift` spelling. This component still translates `Ctrl+Alt+Shift` names only,
+to native Carbon modifier flags and known ANSI/F1..F12 key codes, so it refuses the
+current `map.json` (65 chords, 18 of them Control+Shift or Option+Shift) until it is
+generalised; see `tourbox/MACOS.md`. Use the generated Mac preset, not an unchanged
+Windows binary preset. Non-US keyboard layouts and actual Console delivery remain
+live validation tasks.
 
 ## Build and synthetic checks
 
@@ -24,7 +28,8 @@ python3 tests/open-pipe.py "build/Fadester Mac Shortcuts Experimental.app/Conten
 ```
 
 These commands do not register shortcuts or observe hardware. Swift tests parse
-all 47 unique canonical actions and simulate old/future/pre-arm events. C# tests
+the 47 Ctrl+Alt+Shift actions of the 2026-11-04 map and simulate old/future/pre-arm
+events; with the current map they stop at the first Ctrl+Shift binding. C# tests
 compile the real transport and verify its strict event parser.
 The open-pipe check invokes a synthetic echo mode using the production bounded
 stdin reader, verifies immediate LF/CRLF responses while stdin stays open, and

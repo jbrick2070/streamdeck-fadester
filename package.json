@@ -23,6 +23,7 @@
     "build:vjster": "npm run build:vjster-page && rollup -c vjster-plugin/rollup.config.mjs",
     "build:vjster-page": "rollup -c vjster-page/rollup.config.mjs",
     "test": "vitest run",
+    "test:tourbox-node": "node --test tourbox/macos/host/tests/live-fader.test.mjs",
     "test:mutation": "node --import tsx scripts/run-mutation-checks.ts",
     "test:obs-live": "node --import tsx tests/obs-live-conformance.ts",
     "pi:harness": "node --import tsx scripts/pi-harness.ts",

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import { once } from "node:events";
+import type { WebSocket } from "ws";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DIRECT_SCENE_NEXT, DIRECT_SCENE_PREVIOUS, DIRECT_SCENE_RANDOM,
@@ -99,6 +100,52 @@ describe("dynamic scene targets over OBS WebSocket", () => {
     server!.sceneNames = ["Scene 3", "Scene Live", "Scene Preview"];
     expect(await direct.runSceneAction("__scene_index_0__", "preview")).toBe("Scene 3");
     expect(direct.getCatalog().scenes).toEqual(server!.sceneNames);
+  });
+
+  it("uses a Preview reply newer than an event received during the preceding Program query", async () => {
+    const direct = await connect();
+    type Handler = (ws: WebSocket, id: string, type: string, data: Record<string, unknown>) => Promise<void>;
+    const native = server! as unknown as { handleObsRequest: Handler };
+    const original = native.handleObsRequest.bind(server);
+    let pending = true;
+    native.handleObsRequest = async (ws, id, type, data) => {
+      if (pending && type === "GetCurrentProgramScene") {
+        pending = false;
+        // The previous key's event can arrive while the next key reads Program.
+        // OBS's subsequent Preview reply is fresher than that queued event.
+        server!.emitObsEvent("CurrentPreviewSceneChanged", { sceneName: "Scene Preview" });
+        server!.previewSceneName = "Scene 3";
+      }
+      await original(ws, id, type, data);
+    };
+    expect(await direct.runSceneAction(DIRECT_SCENE_NEXT, "preview")).toBe("Scene Live");
+    expect(server!.previewSceneName).toBe("Scene Live");
+    expect(server!.programSceneName).toBe("Scene Live");
+  });
+
+  it("keeps a Preview event newer than the Preview request over its delayed reply", async () => {
+    const direct = await connect();
+    type Handler = (ws: WebSocket, id: string, type: string, data: Record<string, unknown>) => Promise<void>;
+    const native = server! as unknown as { handleObsRequest: Handler };
+    const original = native.handleObsRequest.bind(server);
+    let pending = true;
+    native.handleObsRequest = async (ws, requestId, requestType, requestData) => {
+      if (pending && requestType === "GetCurrentPreviewScene") {
+        pending = false;
+        const previous = server!.previewSceneName;
+        server!.previewSceneName = "Scene 3";
+        server!.emitObsEvent("CurrentPreviewSceneChanged", { sceneName: "Scene 3" });
+        ws.send(JSON.stringify({ op: 7, d: {
+          requestType, requestId, requestStatus: { result: true, code: 100 },
+          responseData: { currentPreviewSceneName: previous, sceneName: previous }
+        } }));
+        return;
+      }
+      await original(ws, requestId, requestType, requestData);
+    };
+    expect(await direct.runSceneAction(DIRECT_SCENE_NEXT, "preview")).toBe("Scene Live");
+    expect(server!.previewSceneName).toBe("Scene Live");
+    expect(server!.programSceneName).toBe("Scene Live");
   });
 
   it("reports unavailable scene positions without writing or substituting another scene", async () => {

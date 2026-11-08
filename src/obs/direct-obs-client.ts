@@ -956,16 +956,19 @@ export class DirectObsClient extends ObsVendorClient {
 
   private async refreshCurrentSceneNames(): Promise<void> {
     const generation = this.controlGeneration;
-    const revisions = { ...this.catalogEventRevisions };
+    const programRevision = this.catalogEventRevisions.program;
     const program = await this.sendObsRequest("GetCurrentProgramScene");
     this.requireControlGeneration(generation);
     const name = program.currentProgramSceneName ?? program.sceneName;
-    if (typeof name === "string" && revisions.program === this.catalogEventRevisions.program) this.catalog.currentProgramScene = name;
+    if (typeof name === "string" && programRevision === this.catalogEventRevisions.program) this.catalog.currentProgramScene = name;
     if (this.catalog.studioMode) {
+      // A Preview event received during the Program query is older than this
+      // request. Only an event arriving after this request can supersede it.
+      const previewRevision = this.catalogEventRevisions.preview;
       const preview = await this.sendObsRequest("GetCurrentPreviewScene");
       this.requireControlGeneration(generation);
       const previewName = preview.currentPreviewSceneName ?? preview.sceneName;
-      if (typeof previewName === "string" && revisions.preview === this.catalogEventRevisions.preview) this.catalog.currentPreviewScene = previewName;
+      if (typeof previewName === "string" && previewRevision === this.catalogEventRevisions.preview) this.catalog.currentPreviewScene = previewName;
     }
   }
 

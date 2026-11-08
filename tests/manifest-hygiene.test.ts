@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import { profilePathForSlug, READY_LAYOUTS } from "../src/types/layouts.js";
 import { Preset, presetPages } from "../scripts/profile-checks.js";
 
@@ -11,6 +11,10 @@ const PLUGIN_DIR = join(ROOT, "io.github.jbrick2070.fadester-for-obs.sdPlugin");
 function walkFiles(dir: string): string[] {
   const results: string[] = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    const tourboxRoot = join(ROOT, "tourbox");
+    if (entry.isDirectory() && (full === join(tourboxRoot, "dist") ||
+        (entry.name === "obj" && full.startsWith(tourboxRoot + sep)))) continue;
     if (
       entry.name === "node_modules" ||
       entry.name === ".git" ||
@@ -19,7 +23,6 @@ function walkFiles(dir: string): string[] {
     ) {
       continue;
     }
-    const full = join(dir, entry.name);
     if (entry.isDirectory()) {
       results.push(...walkFiles(full));
     } else {

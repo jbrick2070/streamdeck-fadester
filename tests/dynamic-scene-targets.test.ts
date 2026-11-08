@@ -183,6 +183,28 @@ describe("dynamic scene targets over OBS WebSocket", () => {
     ]);
   });
 
+  it("keeps a distinct Preview when the Studio Mode event lands during the refresh after the reply", async () => {
+    const direct = await connect(false, (obs) => { obs.deferStudioModeEvents = true; });
+    const fake = server!;
+    type Handler = (ws: WebSocket, id: string, type: string, data: Record<string, unknown>) => Promise<void>;
+    const native = fake as unknown as { handleObsRequest: Handler };
+    const original = native.handleObsRequest.bind(fake);
+    native.handleObsRequest = async (ws, id, type, data) => {
+      // OBS's StudioModeStateChanged reaches the client after the reply, while the refresh that followed it is in
+      // flight: the event clears Preview and starts a newer refresh, so the first one gives way without applying.
+      if (type === "GetStudioModeEnabled") fake.flushStudioModeEvents();
+      return original(ws, id, type, data);
+    };
+    const before = [fake.programSceneName, fake.previewSceneName];
+    const catalog = await direct.prepareStudioLayout();
+    expect(fake.studioMode).toBe(true);
+    expect([fake.programSceneName, fake.previewSceneName]).toEqual(before);
+    expect(catalog.currentPreviewScene).toBe(before[1]);
+    expect(fake.directCallLog).toEqual([
+      { requestType: "SetStudioModeEnabled", requestData: { studioModeEnabled: true } }
+    ]);
+  });
+
   it("preserves an already distinct Preview while preparing Studio Mode", async () => {
     const direct = await connect(false);
     const before = [server!.programSceneName, server!.previewSceneName];

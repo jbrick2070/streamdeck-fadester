@@ -642,11 +642,28 @@ export class DirectObsClient extends ObsVendorClient {
       await this.refreshCatalog();
       this.requireControlGeneration(generation);
       if (!this.catalog.studioMode) throw new DirectObsError(ownText("errorStudioNotEnabled"), 400);
-      if (!this.catalog.currentPreviewScene || this.catalog.currentPreviewScene === this.catalog.currentProgramScene) {
+      // The refresh above can give way, without applying, to a newer one that OBS's StudioModeStateChanged started
+      // after clearing Preview. Decide on what OBS reports now, so a distinct Preview is never replaced.
+      // A read that fails falls back to the catalog, as before.
+      const [programReply, previewReply] = await Promise.allSettled([
+        this.sendObsRequest("GetCurrentProgramScene"),
+        this.sendObsRequest("GetCurrentPreviewScene")
+      ]);
+      this.requireControlGeneration(generation);
+      const sceneName = (reply: PromiseSettledResult<Record<string, unknown>>, key: string): string | undefined => {
+        if (reply.status !== "fulfilled") return undefined;
+        const value = reply.value[key] ?? reply.value.sceneName;
+        return typeof value === "string" ? value : "";
+      };
+      const program = sceneName(programReply, "currentProgramSceneName") || this.catalog.currentProgramScene;
+      const preview = sceneName(previewReply, "currentPreviewSceneName") ?? this.catalog.currentPreviewScene;
+      if (preview && preview !== program) {
+        this.catalog.currentPreviewScene = preview;
+      } else {
         const scenes = this.catalog.scenes;
-        const index = scenes.indexOf(this.catalog.currentProgramScene);
+        const index = scenes.indexOf(program);
         const next = scenes[(index + 1) % scenes.length];
-        if (next && next !== this.catalog.currentProgramScene) {
+        if (next && next !== program) {
           await this.sendObsRequest("SetCurrentPreviewScene", { sceneName: next });
           this.requireControlGeneration(generation);
           this.catalog.currentPreviewScene = next;

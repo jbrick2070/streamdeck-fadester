@@ -44,6 +44,10 @@ npm test                 # includes tests/suite-*.test.ts
 npm run opendeck:parity  # drives the suite like OpenDeck does, against a real OBS 33 (see OPENDECK.md)
 ```
 
+## The test OBS
+
+The live runs (`npm run test:obs-live`, `npm run opendeck:parity`, `tests/vj-rig-live-check.ts`, `tests/playlister-live-check.ts`) and Midi Fadester's and Visual Sidechain's own live runs use this machine's one test OBS, `C:\Users\jeffr\OBS-Studio-33-Portable`. It holds only settings. Its `bin`, `core` and `data` are directory links to the installed OBS 33, and `plugins\midi-fadester`, `plugins\obs-playlister` and `plugins\visual-sidechain` are links into the one plugin folder, `C:\ProgramData\obs-studio\plugins`, which the operator's OBS loads too. So there is one OBS and one set of plugins, and a run never changes the operator's own OBS settings. Every run refuses while any OBS is open. Remove a link with `rmdir`; never delete the folder with a recursive delete, which can follow a link and empty the installed OBS or the plugin folder.
+
 ## Not done yet
 
 - VJster's Stream Deck profiles in the suite.

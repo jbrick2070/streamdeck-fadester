@@ -7,12 +7,14 @@ import { FadesterStore } from "../src/state/fadester-store.js";
 import { renderDialCellSvg } from "../src/gfx/svg-renderer.js";
 import { FaderChangedEvent } from "../src/types/contract.js";
 import { statusSentence } from "../packages/streamdeck-fadester-shared/src/status-text.js";
-
-const OBS_ROOT = "C:\\Users\\jeffr\\OBS-Studio-33-Portable-StreamDeckFadester";
+// The one test OBS on this machine: settings only; bin, core and data link to the installed OBS 33, plugins to the one plugin folder.
+const OBS_ROOT = "C:\\Users\\jeffr\\OBS-Studio-33-Portable";
 const OBS_BIN_DIR = `${OBS_ROOT}\\bin\\64bit`;
 const OBS_EXE = `${OBS_BIN_DIR}\\obs64.exe`;
 const OBS_WS_CONFIG_PATH = `${OBS_ROOT}\\config\\obs-studio\\plugin_config\\obs-websocket\\config.json`;
 const DEFAULT_ISOLATED_PORT = 4457;
+/** The Midi Fadester this OBS loads: the one plugin set's own manifest, so the test checks the build that is installed. */
+const EXPECTED_MFD_VERSION = (JSON.parse(readFileSync(`${OBS_ROOT}\\plugins\\midi-fadester\\data\\manifest.json`, "utf8")) as { version: string }).version;
 
 interface ObsWsConfig {
   alerts_enabled: boolean;
@@ -140,7 +142,7 @@ async function closePortableObs(child: ChildProcess | null): Promise<void> {
 }
 
 async function runLiveConformance(): Promise<void> {
-  console.log("=== Live Isolated Portable OBS 33 + Midi Fadester 0.3.0 Conformance Test ===");
+  console.log(`=== Live OBS 33 (isolated test settings) + Midi Fadester ${EXPECTED_MFD_VERSION} Conformance Test ===`);
   assertNoObsRunning();
 
   const wsCfg = ensureObsWebSocketEnabled();
@@ -208,7 +210,7 @@ async function runLiveConformance(): Promise<void> {
     console.log("[STEP 2 PASS] Close 4009 detected, exact sentence shown, retries stopped at 1.");
 
     // -------------------------------------------------------------------------
-    // STEP 3: Password auth connect & get_state (0.3.0 + build + profile fields)
+    // STEP 3: Password auth connect & get_state (installed version + build + profile fields)
     // -------------------------------------------------------------------------
     console.log("\n[STEP 3] Connecting with valid password & calling get_state...");
     const client = new FadesterClient(
@@ -247,18 +249,18 @@ async function runLiveConformance(): Promise<void> {
     if (!statusSentence(connectedStatus).startsWith("Connected: OBS 33.")) {
       throw new Error(`Unexpected connected sentence: ${statusSentence(connectedStatus)}`);
     }
-    if (state.version !== "0.3.0") {
-      throw new Error(`Expected Midi Fadester 0.3.0, got ${state.version}`);
+    if (state.version !== EXPECTED_MFD_VERSION) {
+      throw new Error(`Expected Midi Fadester ${EXPECTED_MFD_VERSION} (the installed plugin), got ${state.version}`);
     }
     if (!state.profile || !state.profile_tier) {
       throw new Error(
         `Expected get_state to include profile and profile_tier, got profile=${state.profile}, profile_tier=${state.profile_tier}`
       );
     }
-    console.log("[STEP 3 PASS] Authenticated and received 0.3.0 get_state with build, profile, and profile_tier.");
+    console.log(`[STEP 3 PASS] Authenticated and received ${state.version} get_state with build, profile, and profile_tier.`);
 
     // -------------------------------------------------------------------------
-    // STEP 4: Ensure apc40mk2 + Studio Mode active (2 scenes) so crossfader T-bar is writable in 0.3.0
+    // STEP 4: Ensure apc40mk2 + Studio Mode active (2 scenes) so the crossfader T-bar is writable
     // -------------------------------------------------------------------------
     console.log("\n[STEP 4] Loading apc40mk2 profile & enabling Studio Mode (2 scenes) for T-bar writability...");
     await client.loadProfile({ name: "apc40mk2" });
@@ -357,7 +359,7 @@ async function runLiveConformance(): Promise<void> {
     );
 
     // -------------------------------------------------------------------------
-    // STEP 7: Live 0.3.0 profile switch (nanokontrol2 -> no crossfader, no master)
+    // STEP 7: Live profile switch (nanokontrol2 -> no crossfader, no master)
     // -------------------------------------------------------------------------
     console.log(
       "\n[STEP 7] Switching live to 'nanokontrol2' (no crossfader, no master) and checking state_changed & SVG..."
@@ -485,7 +487,7 @@ async function runLiveConformance(): Promise<void> {
     );
 
     client.stop();
-    console.log("\n=== ALL LIVE OBS 33 + MIDI FADESTER 0.3.0 CONFORMANCE CHECKS PASSED ===");
+    console.log(`\n=== ALL LIVE OBS 33 + MIDI FADESTER ${EXPECTED_MFD_VERSION} CONFORMANCE CHECKS PASSED ===`);
   } finally {
     await closePortableObs(obsProc);
   }

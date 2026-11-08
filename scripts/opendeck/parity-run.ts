@@ -21,7 +21,7 @@ function arg(name: string): string | undefined {
   return at >= 0 ? process.argv[at + 1] : undefined;
 }
 
-const obsRoot = arg("--obs-root") ?? process.env.FADESTER_TEST_OBS ?? "C:\\Users\\jeffr\\OBS-Studio-33-Portable-StreamDeckFadester";
+const obsRoot = arg("--obs-root") ?? process.env.FADESTER_TEST_OBS ?? "C:\\Users\\jeffr\\OBS-Studio-33-Portable";
 const pluginDir = arg("--plugin") ?? join(configDir(process.platform, process.env, homedir()), "plugins", FOLDER);
 const wsConfig = JSON.parse(readFileSync(join(obsRoot, "config", "obs-studio", "plugin_config", "obs-websocket", "config.json"), "utf8")) as {
   server_port: number;

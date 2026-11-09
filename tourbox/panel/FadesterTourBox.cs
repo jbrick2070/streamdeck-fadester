@@ -54,7 +54,7 @@ namespace Fadester.TourBox {
     readonly Dictionary<string,Image> glyphs=new Dictionary<string,Image>();
     Dictionary<string, object> config = new Dictionary<string, object>(), catalog = new Dictionary<string, object>();
     Label state, live, importNote; TextBox password; ListBox activity; Button connect, start, save;
-    CheckBox enableMix, mixOnly, enableVjster;
+    CheckBox enableMix, mixOnly, enableVjster, enableGamepad;
     NumericUpDown mixStep, mixDuration, vjsterPort, opacityStep; TextBox extensionId;
     NumericUpDown port,volumeStep,duckLevel,fadeTicks,transitionStep; FlowLayoutPanel body; DataGridView controls; Process worker; Feedback hud; bool closing, refreshing, invalidConfig;
     readonly Color navy = Color.FromArgb(26,34,51), accent = Color.FromArgb(38,90,158);
@@ -114,6 +114,9 @@ namespace Fadester.TourBox {
       vjRow.Controls.Add(new Label {Text=text.Get("vjsterExtensionId"),AutoSize=true,Margin=new Padding(10,8,4,0)});
       extensionId=new TextBox {Width=290}; vjRow.Controls.Add(extensionId); body.Controls.Add(vjRow);
       Hint(body,text.Get("vjsterIdHint"));
+      Title(body,text.Get("gamepadTitle"));
+      enableGamepad=Check(body,text.Get("enableGamepad"));
+      Hint(body,text.Get("gamepadHint"));
       var assign=Page(tabs,text.Get("assignments")); Title(assign,text.Get("assignTitle"));
       Hint(assign,text.Get("assignHint"));
       foreach (var field in new[] { "musicInput", "contentInput", "micInput", "mediaInput", "overlayScene", "overlaySource" })
@@ -220,6 +223,7 @@ namespace Fadester.TourBox {
       enableVjster.Checked=!String.Equals(Val(config,"vjsterEnabled"),"false",StringComparison.OrdinalIgnoreCase);
       int vp; if(Int32.TryParse(Val(config,"vjsterPort"),out vp) && vp>=1024 && vp<=65535) vjsterPort.Value=vp;
       extensionId.Text=Val(config,"vjsterExtensionId");
+      enableGamepad.Checked=String.Equals(Val(config,"gamepadEnabled"),"true",StringComparison.OrdinalIgnoreCase);
       object os; if(config.TryGetValue("opacityStep",out os) && os!=null) {
         try { decimal x=Decimal.Round(Convert.ToDecimal(os,CultureInfo.InvariantCulture)*100m); opacityStep.Value=Math.Min(opacityStep.Maximum,Math.Max(opacityStep.Minimum,x)); }
         catch(FormatException){} catch(OverflowException){} catch(InvalidCastException){}
@@ -261,6 +265,7 @@ namespace Fadester.TourBox {
       foreach(string k in new[]{"musicInput","contentInput","micInput","mediaInput","overlayScene","overlaySource","layer1Scene","layer1Source","layer2Scene","layer2Source"}) config[k]=boxes[k].Text;
       config["vjsterEnabled"]=enableVjster.Checked; config["vjsterPort"]=(int)vjsterPort.Value; config["vjsterExtensionId"]=extensionId.Text.Trim();
       config["opacityStep"]=(double)opacityStep.Value/100.0;
+      config["gamepadEnabled"]=enableGamepad.Checked;
       config["anchors"]=Enumerable.Range(0,4).Select(i=>boxes["anchor"+i].Text).ToArray();
       config["mixEnabled"]=enableMix.Checked; config["mixOnly"]=mixOnly.Checked; config["mixStepDb"]=mixStep.Value; config["mixFadeMs"]=(int)mixDuration.Value;
       config["volumeStepDb"]=volumeStep.Value;config["duckDb"]=duckLevel.Value;config["faderStep"]=1m/fadeTicks.Value;config["transitionStepMs"]=(int)transitionStep.Value;

@@ -44,8 +44,8 @@ internal static class Program
             }
             if (command == "--self-test")
             {
-                var bindings = Binding.Load(map); await BridgeSelfTests.RunAsync(); await StudioFaderSelfTests.RunAsync();
-                Console.WriteLine($"PASS: dispatcher, Studio T-bar and {bindings.Count} mapped shortcuts. No live OBS commands sent."); return 0;
+                var bindings = Binding.Load(map); await BridgeSelfTests.RunAsync(); await StudioFaderSelfTests.RunAsync(); GamepadSelfTests.Run();
+                Console.WriteLine($"PASS: dispatcher, Studio T-bar, game controller and {bindings.Count} mapped shortcuts. No live OBS commands sent."); return 0;
             }
             var config = BridgeConfig.Load(configPath);
             using var stop = new CancellationTokenSource();
@@ -98,6 +98,29 @@ internal static class Program
         }
         var keys = new Hotkeys(bindings, Enqueue);
         keys.Start(stop.Token);
+        // The game controller: buttons go through the same queue as the shortcuts; the trigger T-bar posts its newest
+        // position to a mailbox and queues one marker, so the dispatch loop always moves to where the trigger is now.
+        var tbarMail = new TbarMailbox();
+        void PostTbar()
+        {
+            int g = Volatile.Read(ref current);
+            if (g == 0 || !input.Writer.TryWrite(new("pad.tbar", g, Stopwatch.GetTimestamp()))) { tbarMail.Take(); tbarMail.Fail(); }
+        }
+        // A held stick repeats every 200 ms: say once that its target is missing, not five times a second.
+        bool toldVjsterOff = false;
+        void PadEnqueue(string action)
+        {
+            if (action.StartsWith("vjster.") && vjster == null)
+            {
+                if (!toldVjsterOff) { toldVjsterOff = true; Console.WriteLine("VJster is off: the controller's video actions do nothing."); }
+                return;
+            }
+            if (Volatile.Read(ref current) == 0 && !action.StartsWith("vjster.")) return; // offline: the connection line already says so
+            Enqueue(action);
+        }
+        Task padTask = cfg.GamepadEnabled && bindings.Count > 0
+            ? new GamepadLoop(new XInputPadSource(), new PadReader(PadControls.Build(cfg.GamepadMap)), tbarMail, PadEnqueue, PostTbar, Console.WriteLine).Run(stop.Token)
+            : Task.CompletedTask;
         // The panel and the tests can type "dispatch <action>" on stdin; it runs exactly as the hotkey would.
         void Command(string line)
         {
@@ -132,6 +155,7 @@ internal static class Program
                     desk.StartMixMonitor();
                     var protocol = new MixProtocolServer(obs,desk);
                     Volatile.Write(ref current, mine); Console.WriteLine($"Connected to OBS at {cfg.Host}:{cfg.Port}.");
+                    tbarMail.Fail(); // a trigger held across a reconnect must return to rest before it can throw on the new connection
                     try
                     {
                         using var wait = CancellationTokenSource.CreateLinkedTokenSource(stop.Token);
@@ -143,7 +167,22 @@ internal static class Program
                             if (completed == keys.Done) { await keys.Done; stop.Cancel(); break; }
                             if (completed != readable) { wait.Cancel(); break; }
                             if (!await readable) break;
-                            if (!input.Reader.TryRead(out var ev) || ev.Generation != mine) continue;
+                            if (!input.Reader.TryRead(out var ev)) continue;
+                            if (ev.Action == "pad.tbar")
+                            {
+                                // Never stale: it carries no value of its own and reads the trigger's newest position.
+                                var target = tbarMail.Take();
+                                if (ev.Generation != mine || target is not double t || stop.IsCancellationRequested) continue;
+                                try { var said = await desk.TbarTo(t); if (said.Length > 0) Console.WriteLine(said); }
+                                catch (Exception e)
+                                {
+                                    tbarMail.Fail(); Console.WriteLine("Controller T-bar: " + e.Message);
+                                    // The pad is disarmed, so its spring return will not cancel: leave nothing half thrown.
+                                    try { await desk.CancelOwnedAsync(); } catch (Exception c) { Console.WriteLine("Could not cancel T-bar: " + c.Message); }
+                                }
+                                continue;
+                            }
+                            if (ev.Generation != mine) continue;
                             if (stop.IsCancellationRequested) break;
                             if (Stopwatch.GetElapsedTime(ev.Timestamp) > TimeSpan.FromMilliseconds(KeyGuards.IsTurnTick(ev.Action) ? 180 : 1500)) { Console.WriteLine("Discarded stale input: " + ev.Action); continue; }
                             if (KeyGuards.IsStrayFaderTick(ev.Action, lastHeldTurn, ev.Timestamp)) { Console.WriteLine("Ignored a T-bar tick right after a held Dial turn: was the button still held?"); continue; }
@@ -151,11 +190,17 @@ internal static class Program
                             if (ev.Action == "bridge.reconnect") { Console.WriteLine("Reconnecting."); break; }
                             try { Console.WriteLine(await desk.Dispatch(ev.Action)); }
                             catch (Exception e) { Console.WriteLine("Action " + ev.Action + ": " + e.Message); }
+                            // A take, cancel or dial move from any surface owns the T-bar now: a trigger held meanwhile
+                            // must return to rest before it throws, or it would throw back towards the scene just taken.
+                            // A Preview or anchor cue cancels a manual sweep first (DeskActions.Cue), so it disarms too.
+                            if (ev.Action is "take" or "take.cut" or "fader.cancel" or "preview.previous" or "preview.next" or "preview.sync" ||
+                                ev.Action.StartsWith("anchor.") || KeyGuards.IsFaderTick(ev.Action)) tbarMail.Fail();
                         }
                     }
                     finally
                     {
                         Volatile.Write(ref current, 0);
+                        tbarMail.Fail();
                         await protocol.DisposeAsync();
                         await desk.StopAudioAsync();
                         if (!obs.Disconnected.IsCompleted) { try { await desk.CancelOwnedAsync(); } catch (Exception e) { Console.WriteLine("Could not cancel T-bar: " + e.Message); } }
@@ -169,6 +214,7 @@ internal static class Program
         finally
         {
             stop.Cancel(); try { await keys.Done; } catch (Exception) { /* already reported through keys.Ready or the dispatch loop */ }
+            try { await padTask; } catch (Exception e) when (e is not OperationCanceledException) { Console.WriteLine("Game controller stopped: " + e.Message); } catch (OperationCanceledException) { }
             vjInput.Writer.TryComplete();
             try { await vjTask; } catch (OperationCanceledException) { }
             if (vjster != null) await vjster.DisposeAsync();

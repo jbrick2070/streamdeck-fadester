@@ -34,6 +34,10 @@ internal sealed class BridgeConfig
     public string Layer2Scene { get; set; } = "";
     public string Layer2Source { get; set; } = "";
     public double OpacityStep { get; set; } = 0.05;
+    /** A game controller read through XInput (docs/gamepad/DESIGN.md): off by default. */
+    public bool GamepadEnabled { get; set; }
+    /** Changes to the controller's default map: control name to action id; "" leaves a control free. */
+    public Dictionary<string, string> GamepadMap { get; set; } = new();
     [JsonIgnore] public string MixStateDirectory { get; set; } = Path.Combine(Path.GetDirectoryName(DefaultPath)!, "mix-state");
     public static readonly JsonSerializerOptions Options = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true };
     public static string DefaultPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FadesterTourBox", "config.json");
@@ -55,6 +59,8 @@ internal sealed class BridgeConfig
         if (config.VjsterExtensionId.Length > 0 && !System.Text.RegularExpressions.Regex.IsMatch(config.VjsterExtensionId, "^[a-p]{32}$"))
             throw new InvalidDataException("The VJster extension id is 32 letters a to p, as the extension's options page shows it.");
         foreach (var layer in new[] { config.Layer1Scene, config.Layer1Source, config.Layer2Scene, config.Layer2Source }) if (layer == null) throw new InvalidDataException("Layer assignments must be text.");
+        config.GamepadMap ??= new();
+        if (config.GamepadEnabled) PadControls.Build(config.GamepadMap); // refuses an unknown control or action now, not at the first press
         config.MixStateDirectory = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(path))!, "mix-state");
         return config;
     }

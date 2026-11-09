@@ -2,6 +2,10 @@
 
 What changed in Fadester for OBS and, where it says so, in VJster. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are the plugin's own (`manifest.json`). There is no change control here: the newest entry is the version.
 
+## Unreleased
+
+- **Fadester for TourBox: game controller (Windows).** An Xbox or XInput controller can drive OBS through the companion, with or without a TourBox: the right trigger is a spring-loaded T-bar (pull to mix, all the way to take, let go early to go back), A takes, B cuts, the D-pad cues Preview and rides Music, the left trigger ducks Music while held, and the sticks ride Layer 2 opacity and VJster's speed. It keeps working while OBS is in front, which a browser page cannot do. Off by default: tick **Use an Xbox or XInput game controller** in the panel. The map can be changed in `config.json`. See [docs/gamepad/README.md](docs/gamepad/README.md).
+
 ## 0.10.1 - 2026-11-08
 
 - **OBS address with a port:** a Host typed as `127.0.0.1:4455` no longer makes Fadester stop on the next key press (and, in the suite, stop for good after a few presses). It now shows OBS unreachable until the Host holds the address alone.

@@ -141,7 +141,7 @@ Say you have a USB box with four endless knobs and four LEDs, and a small progra
 4. Update the LEDs from `fader_changed`, not from the values you sent: another surface or the operator may have moved the same slot.
 5. Press-and-hold on knob 3 first remembers the slot's current value (the last `fader_changed` you received before the hold began), then calls `auto_fade` to `0.0` over 800 ms. The ramp keeps emitting `fader_changed` with `origin: "auto_fade"`, so leave the remembered value alone while the hold lasts. Release calls `auto_fade` back to it.
 
-That is the whole program. The same shape works for a web page, a MIDI desk Midi Fadester does not know, a game controller or a cue list.
+That is the whole program. The same shape works for a web page, a MIDI desk Midi Fadester does not know, or a cue list. A game controller is already built in: the companion reads Xbox and XInput pads natively ([docs/gamepad/README.md](gamepad/README.md)), because a browser page only gets pad input while it has focus.
 
 ## Where to read the code
 

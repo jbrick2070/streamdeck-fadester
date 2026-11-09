@@ -117,7 +117,7 @@ When OBS goes away, the plugin reconnects by itself and every key shows the same
 - [docs/vjster/README.md](docs/vjster/README.md) and [docs/vjster/INSTALL.md](docs/vjster/INSTALL.md): VJster.
 - [docs/SUITE.md](docs/SUITE.md): the one plugin that carries Fadester and VJster, and how it is built.
 - [docs/OPENDECK.md](docs/OPENDECK.md): running the plugin with OpenDeck, the free open-source alternative to Stream Deck software.
-- [tourbox/README.md](tourbox/README.md): Fadester for TourBox, the Windows companion that drives OBS from a TourBox controller; [tourbox/MACOS.md](tourbox/MACOS.md) covers the experimental Mac pieces.
+- [tourbox/README.md](tourbox/README.md): Fadester for TourBox, the Windows companion that drives OBS from a TourBox controller; [tourbox/MACOS.md](tourbox/MACOS.md) covers the experimental Mac pieces; [docs/gamepad/README.md](docs/gamepad/README.md) drives the same companion from an Xbox controller.
 - [CHANGELOG.md](CHANGELOG.md): what changed in each version.
 - [demo-kit/README.md](demo-kit/README.md): the Suite Demo Kit.
 - [docs/ADD-YOUR-OWN-CONTROLLER.md](docs/ADD-YOUR-OWN-CONTROLLER.md): bring your own controller, platform or robot: the four doors into Fadester, with JSON.

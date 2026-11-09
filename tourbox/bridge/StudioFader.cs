@@ -31,6 +31,28 @@ public sealed class StudioFader
 
     public Task CancelAsync() => DispatchAsync("fader.cancel");
 
+    /// <summary>
+    /// Moves to an absolute position for a spring-loaded control (the game controller's trigger): 0 cancels, 1 takes, and
+    /// anything between is a throw from the current Program towards Preview. Unlike the dial, the turn direction never
+    /// swaps after a take: a trigger always pulls from 0 towards 1.
+    /// </summary>
+    /// <returns>False when the move was ignored as a second take right after a take.</returns>
+    public async Task<bool> MoveToAsync(double target)
+    {
+        if (!double.IsFinite(target)) throw new ArgumentOutOfRangeException(nameof(target));
+        target = Math.Clamp(target, 0, 1);
+        await serial.WaitAsync();
+        try
+        {
+            if (needsReset) throw new InvalidOperationException("The previous transition changed or could not be confirmed. Check OBS and cancel/reset the fader before using it again.");
+            // Like a second Take press: a full pull from rest right after a take must not take straight back.
+            if (target == 1 && sweep == null && takeAt != 0 && Stopwatch.GetElapsedTime(takeAt).TotalMilliseconds < 450) return false;
+            await MoveAsync(target - Position);
+            return true;
+        }
+        finally { serial.Release(); }
+    }
+
     public async Task DispatchAsync(string action)
     {
         await serial.WaitAsync();

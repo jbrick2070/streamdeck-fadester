@@ -325,5 +325,36 @@ internal static class StudioFaderSelfTests
         obs = new(){IgnoreModeWrite=true}; fader = new(obs.Call, 0.5); await fader.DispatchAsync("fader.forward");
         await Blocked(() => fader.DispatchAsync("fader.forward"));
         Check(obs.Program == "b" && obs.Cursor > 0 && obs.Commits == 0, "reported destination alone is not proof the manual mix finished");
+
+        // Absolute moves for the game controller's spring-loaded trigger.
+        obs = new(); fader = new(obs.Call);
+        await fader.MoveToAsync(0.4);
+        Check(fader.Position == 0.4 && obs.Cursor == 0.4, "an absolute move throws to that position");
+        await fader.MoveToAsync(0.2);
+        Check(fader.Position == 0.2 && obs.Cursor == 0.2, "an absolute move back eases without taking");
+        await fader.MoveToAsync(0);
+        Check(fader.Position == 0 && obs.Program == "a" && obs.Releases == 1 && obs.Commits == 0, "zero cancels to the original Program");
+        await fader.MoveToAsync(0);
+        Check(obs.Releases == 1, "zero at rest does nothing");
+        await fader.MoveToAsync(0.5); await fader.MoveToAsync(1);
+        Check(obs.Program == "b" && obs.Preview == "a" && obs.Commits == 1 && fader.Position == 0, "one takes");
+        await fader.MoveToAsync(0.5);
+        Check(fader.Position == 0.5 && obs.Cursor == 0.5, "after a take the trigger still pulls from 0 towards 1");
+        await fader.MoveToAsync(1);
+        Check(obs.Program == "a" && obs.Preview == "b" && obs.Commits == 2, "and takes back to the other scene");
+        obs = new(); fader = new(obs.Call); await fader.MoveToAsync(1);
+        Check(obs.Program == "b" && obs.Commits == 1, "a full pull in one sample takes once");
+        await fader.MoveToAsync(1);
+        Check(obs.Program == "b" && obs.Commits == 1, "a second full pull from rest right after a take does not take back");
+        obs = new(); fader = new(obs.Call); await fader.DispatchAsync("take"); await fader.MoveToAsync(1);
+        Check(obs.Program == "b" && obs.Takes == 1 && obs.Commits == 0, "nor right after a Take from another surface");
+        obs = new(){Studio=false}; fader = new(obs.Call);
+        await Blocked(() => fader.MoveToAsync(0.3));
+        Check(obs.Writes.Count == 0, "Studio Mode off: an absolute move changes nothing");
+        obs = new(); fader = new(obs.Call, 0.5); await fader.MoveToAsync(0.3);
+        obs.Preview = "c";
+        await Blocked(() => fader.MoveToAsync(0.4)); await Blocked(() => fader.MoveToAsync(0.5));
+        await fader.DispatchAsync("fader.cancel"); await fader.MoveToAsync(0);
+        Check(obs.Commits == 0, "a changed Preview disarms absolute moves until an explicit cancel");
     }
 }

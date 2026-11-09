@@ -60,8 +60,8 @@ describe("VJster plugin end to end", () => {
     sim.connectExtension(port);
     await until(() => words(sim.svg("dial-0")).includes("1x"));
     expect(words(sim.svg("dial-0"))).toContain("Big Buck Bunny 60fps 4K - Offici...");
-    expect(words(sim.svg("dial-2"))).toContain("1080p");
-    expect(words(sim.svg("key-2-0"))).toContain("1x");
+    await until(() => words(sim.svg("dial-2")).includes("1080p")); // each control draws on its own clock
+    await until(() => words(sim.svg("key-2-0")).includes("1x"));
   });
 
   it("speeds up one step per notch, finer while held, and shows what the page reports (R-SPD-1, R-SPD-6)", async () => {

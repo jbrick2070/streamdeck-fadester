@@ -69,6 +69,62 @@ describe("Direct OBS client", () => {
     expect(c.getConnectAttemptCount()).toBe(2);
   });
 
+  it("drops a link that went dead without a close, and connects again by itself", async () => {
+    const fake = new FakeObsServer({ missingPlugin: true });
+    server = fake;
+    const port = await fake.start();
+    const c = new DirectObsClient({ host: "127.0.0.1", port, password: "" }, { requestTimeoutMs: 150, baseReconnectMs: 30, keepaliveMs: 60 });
+    client = c;
+    c.start();
+    await vi.waitFor(() => expect(c.getStatus().kind).toBe("connected"), { timeout: 3000 });
+    // Sleep or a pulled cable: the socket stays open and the other end reads nothing, so no pong ever comes back.
+    const sockets = (fake as unknown as { clients: Set<{ _socket: { pause(): void } }> }).clients;
+    for (const ws of sockets) ws._socket.pause();
+    await vi.waitFor(() => expect(c.getConnectAttemptCount()).toBe(2), { timeout: 3000 });
+    await vi.waitFor(() => expect(c.getStatus().kind).toBe("connected"), { timeout: 3000 });
+  });
+
+  it("keeps a quiet link that still answers a ping, also when a request goes unanswered", async () => {
+    const fake = new FakeObsServer({ missingPlugin: true });
+    server = fake;
+    const port = await fake.start();
+    const c = new DirectObsClient({ host: "127.0.0.1", port, password: "" }, { requestTimeoutMs: 400, keepaliveMs: 150 });
+    client = c;
+    c.start();
+    await vi.waitFor(() => expect(c.getStatus().kind).toBe("connected"), { timeout: 3000 });
+    type Handler = (ws: WebSocket, id: string, type: string, data: Record<string, unknown>) => Promise<void>;
+    const native = fake as unknown as { handleObsRequest: Handler };
+    const original = native.handleObsRequest.bind(fake);
+    native.handleObsRequest = async (ws, id, type, data) => {
+      if (type === "GetInputVolume") return; // OBS busy with one slow request: the link itself is alive
+      await original(ws, id, type, data);
+    };
+    await expect(c.getInputVolume("Desktop Audio")).rejects.toThrow();
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    expect(c.getStatus().kind).toBe("connected");
+    expect(c.getConnectAttemptCount()).toBe(1);
+  });
+
+  it("leaves a boost set in OBS alone: a nudge starts from it and never adds to it", async () => {
+    const direct = await connect();
+    server!.inputVolumes.set("Desktop Audio", 2);
+    expect(await direct.nudgeInputVolume("Desktop Audio", -0.1)).toBeCloseTo(1.9);
+    expect(server!.inputVolumes.get("Desktop Audio")).toBeCloseTo(1.9);
+    expect(await direct.nudgeInputVolume("Desktop Audio", 0.5)).toBeCloseTo(1.9);
+    server!.inputVolumes.set("Desktop Audio", 0.95);
+    expect(await direct.nudgeInputVolume("Desktop Audio", 0.1)).toBe(1);
+    // A fade down from a boost starts at the boost; it does not jump to 0 dB first.
+    server!.inputVolumes.set("Desktop Audio", 2);
+    const before = server!.directCallLog.length;
+    const seen: number[] = [];
+    const watch = setInterval(() => seen.push(server!.inputVolumes.get("Desktop Audio") ?? 0), 10);
+    await direct.fadeInputVolume("Desktop Audio", 0.5, 600);
+    clearInterval(watch);
+    expect(seen.some((volume) => volume > 1 && volume < 2)).toBe(true);
+    expect(server!.directCallLog.length).toBeGreaterThan(before);
+    expect(server!.inputVolumes.get("Desktop Audio")).toBeCloseTo(0.5);
+  });
+
   it("neither throws nor connects with a Host typed with its port: OBS unreachable", async () => {
     const fake = new FakeObsServer({ missingPlugin: true });
     server = fake;

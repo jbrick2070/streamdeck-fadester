@@ -138,7 +138,10 @@ streamDeck.ui.onSendToPlugin<JsonObject>((ev) => {
       return;
     }
     await bridge.handleMessage(payload);
-  })();
+  })().catch((error: unknown) => {
+    // A page's message that fails (a save Stream Deck refuses, most often) must not end the plugin's process.
+    streamDeck.logger.warn(`A settings page message failed: ${error instanceof Error ? error.message : String(error)}`);
+  });
 });
 
 streamDeck.actions.registerAction(new FaderDialAction(store));

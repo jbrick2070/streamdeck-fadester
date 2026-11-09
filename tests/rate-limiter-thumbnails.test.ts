@@ -41,6 +41,27 @@ describe("Step 1.3 — Per-Cell 10 FPS Rate Limiter & 1–2 FPS Thumbnail Fetche
     limiter.dispose();
   });
 
+  it("survives a draw that throws or rejects, at once and from the trailing timer", async () => {
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown): void => { unhandled.push(reason); };
+    process.on("unhandledRejection", onUnhandled);
+    try {
+      let calls = 0;
+      const rejecting = new CellRateLimiter<number>(async () => { calls++; throw new Error("draw failed"); }, 20);
+      const throwing = new CellRateLimiter<number>(() => { calls++; throw new Error("draw failed"); }, 20);
+      const start = Date.now();
+      expect(() => { rejecting.push(1, start); rejecting.push(2, start + 1); }).not.toThrow();
+      expect(() => { throwing.push(1, start); throwing.push(2, start + 1); }).not.toThrow();
+      await new Promise((r) => setTimeout(r, 80));
+      expect(calls).toBe(4);
+      expect(unhandled).toEqual([]);
+      rejecting.dispose();
+      throwing.dispose();
+    } finally {
+      process.off("unhandledRejection", onUnhandled);
+    }
+  });
+
   it("fetches 96x54 thumbnails at 1-2 FPS with single-flight deduplication and stops on disappear", async () => {
     server = new FakeObsServer({ screenshotDelayMs: 60 });
     const port = await server.start();

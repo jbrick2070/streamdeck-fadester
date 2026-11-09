@@ -22,7 +22,7 @@ export class CellRateLimiter<TPayload> {
       this.lastFlushTime = now;
       this.hasPending = false;
       this.pendingPayload = undefined;
-      void this.onFlush(payload);
+      this.flush(payload);
       return;
     }
 
@@ -37,9 +37,18 @@ export class CellRateLimiter<TPayload> {
           this.pendingPayload = undefined;
           this.hasPending = false;
           this.lastFlushTime = Date.now();
-          void this.onFlush(toSend);
+          this.flush(toSend);
         }
       }, waitMs);
+    }
+  }
+
+  /** A draw that fails is dropped: the next push draws again, and a throw from the timer would end the process. */
+  private flush(payload: TPayload): void {
+    try {
+      Promise.resolve(this.onFlush(payload)).catch(() => undefined);
+    } catch {
+      // dropped
     }
   }
 

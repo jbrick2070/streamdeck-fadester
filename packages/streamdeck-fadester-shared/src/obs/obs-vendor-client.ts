@@ -65,6 +65,8 @@ export interface ObsVendorClientOptions {
   requestTimeoutMs?: number;
   /** First wait before a first sync that met NotReady (207) is tried again; it doubles up to 2 s. */
   notReadyRetryMs?: number;
+  /** How often the link to OBS is checked with a ping. 0 turns the check off. */
+  keepaliveMs?: number;
 }
 
 export interface ObsVendorStateMeta {
@@ -148,6 +150,11 @@ export class ObsVendorClient<
   protected status: ConnectionStatusInfo = makeUnreachableStatus();
   private connectAttemptCount = 0;
   private lastNudgeAt = 0;
+  protected readonly keepaliveMs: number;
+  /** Counts every message and pong from OBS: a count that has not moved means OBS said nothing meanwhile. */
+  private heard = 0;
+  private keepaliveTimer: ReturnType<typeof setInterval> | null = null;
+  private probeTimer: ReturnType<typeof setTimeout> | null = null;
 
   public constructor(
     initialSettings?: GlobalConnectionSettings,
@@ -168,6 +175,7 @@ export class ObsVendorClient<
     this.maxReconnectMs = options?.maxReconnectMs ?? 10000;
     this.requestTimeoutMs = options?.requestTimeoutMs ?? 4000;
     this.notReadyRetryMs = options?.notReadyRetryMs ?? 250;
+    this.keepaliveMs = options?.keepaliveMs ?? 20000;
   }
 
   public getStatus(): ConnectionStatusInfo {
@@ -391,12 +399,18 @@ export class ObsVendorClient<
       return;
     }
     this.ws = socket;
+    this.watchLink(socket);
 
     socket.on("message", (raw: WebSocket.RawData) => {
       if (this.ws !== socket) {
         return;
       }
+      this.heard++;
       this.handleMessage(raw.toString("utf8"));
+    });
+
+    socket.on("pong", () => {
+      if (this.ws === socket) this.heard++;
     });
 
     socket.on("error", () => {
@@ -409,6 +423,7 @@ export class ObsVendorClient<
       }
       this.ws = null;
       this.identified = false;
+      this.clearLinkWatch();
       this.rejectAllPending(ownText("errorDisconnected"));
 
       if (this.stopped) {
@@ -705,8 +720,12 @@ export class ObsVendorClient<
       }
 
       const requestId = `req_${this.nextRequestId++}`;
+      const socket = this.ws;
+      const heardWhenSent = this.heard;
       const timer = setTimeout(() => {
         this.pending.delete(requestId);
+        // Not one word from OBS since the request left: the link itself may be dead.
+        if (this.heard === heardWhenSent) this.probeLink(socket);
         reject(
           this.createVendorError(
             ownText("errorRequestTimeout", { request: requestType, ms: this.requestTimeoutMs }),
@@ -768,7 +787,46 @@ export class ObsVendorClient<
     this.pending.clear();
   }
 
+  /**
+   * A connection can die without a close (sleep, a pulled cable, a frozen OBS): the socket stays open, every request
+   * times out, and nothing reconnects. Every `keepaliveMs` the link is checked with one ping.
+   */
+  private watchLink(socket: WebSocket): void {
+    this.clearLinkWatch();
+    if (this.keepaliveMs <= 0) return;
+    this.keepaliveTimer = setInterval(() => this.probeLink(socket), this.keepaliveMs);
+    this.keepaliveTimer.unref?.();
+  }
+
+  /**
+   * One ping. OBS's websocket answers it from its own thread, also while OBS is busy with a slow request, so a link
+   * with no pong and no message is dropped; the close handler then reports OBS unreachable and reconnects.
+   */
+  private probeLink(socket: WebSocket): void {
+    if (this.stopped || this.ws !== socket || socket.readyState !== WebSocket.OPEN || this.probeTimer !== null) return;
+    const heardWhenAsked = this.heard;
+    try {
+      socket.ping();
+    } catch {
+      socket.terminate();
+      return;
+    }
+    this.probeTimer = setTimeout(() => {
+      this.probeTimer = null;
+      if (this.ws === socket && socket.readyState === WebSocket.OPEN && this.heard === heardWhenAsked) socket.terminate();
+    }, Math.min(this.requestTimeoutMs, 3000));
+    this.probeTimer.unref?.();
+  }
+
+  private clearLinkWatch(): void {
+    if (this.keepaliveTimer !== null) clearInterval(this.keepaliveTimer);
+    if (this.probeTimer !== null) clearTimeout(this.probeTimer);
+    this.keepaliveTimer = null;
+    this.probeTimer = null;
+  }
+
   private cleanupSocket(): void {
+    this.clearLinkWatch();
     this.rejectAllPending(ownText("errorConnectionReset"));
     this.identified = false;
     if (this.ws) {

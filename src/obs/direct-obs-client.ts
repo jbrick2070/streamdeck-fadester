@@ -249,7 +249,7 @@ export interface DirectObsCatalog {
 
 export type DirectObsClientOptions = Pick<
   ObsVendorClientOptions,
-  "baseReconnectMs" | "maxReconnectMs" | "requestTimeoutMs" | "notReadyRetryMs"
+  "baseReconnectMs" | "maxReconnectMs" | "requestTimeoutMs" | "notReadyRetryMs" | "keepaliveMs"
 > & {
   /** How long a sent PAUSE waits for an observed PAUSED before the key says "unconfirmed" (tests shorten it). */
   mediaPauseWaitMs?: number;
@@ -285,6 +285,9 @@ function readVolume(data: Record<string, unknown>): number | undefined {
   const value = data.inputVolumeMul;
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
+
+/** OBS's own top of an input's fader: +26 dB. */
+const MAX_INPUT_VOLUME_MUL = 20;
 
 function clampUnit(value: number): number {
   return Math.max(0, Math.min(1, value));
@@ -566,7 +569,8 @@ export class DirectObsClient extends ObsVendorClient {
     this.cancelInputFade(name);
     return this.queueInput(name, async (generation) => {
       const current = await this.getInputVolume(name);
-      return this.writeInputVolume(name, current + delta, generation);
+      // A source boosted above 0 dB in OBS keeps its boost: a turn up leaves it, a turn down starts from it.
+      return this.writeInputVolume(name, current + delta, generation, Math.max(1, current));
     });
   }
 
@@ -603,7 +607,7 @@ export class DirectObsClient extends ObsVendorClient {
       const progress = Math.min(1, (Date.now() - startedAt) / ms);
       await this.queueInput(name, async () => {
         if (this.inputFadeTokens.get(name) === token) {
-          await this.writeInputVolume(name, from + (target - from) * progress);
+          await this.writeInputVolume(name, from + (target - from) * progress, undefined, Math.max(1, from));
         }
       });
       if (progress >= 1) return;
@@ -1242,9 +1246,10 @@ export class DirectObsClient extends ObsVendorClient {
     this.emit("directStateChanged", this.getCatalog());
   }
 
-  private async writeInputVolume(inputName: string, value: number, generation = this.controlGeneration): Promise<number> {
+  /** `ceiling` is 1 (0 dB) unless the source already stood higher: Fadester never adds boost of its own. */
+  private async writeInputVolume(inputName: string, value: number, generation = this.controlGeneration, ceiling = 1): Promise<number> {
     this.requireControlGeneration(generation);
-    const volume = clampUnit(value);
+    const volume = Math.max(0, Math.min(Math.max(1, Math.min(ceiling, MAX_INPUT_VOLUME_MUL)), value));
     await this.sendObsRequest("SetInputVolume", {
       inputName,
       inputVolumeMul: volume

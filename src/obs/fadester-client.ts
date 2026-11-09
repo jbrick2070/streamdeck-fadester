@@ -68,7 +68,7 @@ export class FadesterVendorError extends ObsVendorError {
 
 export type FadesterClientOptions = Pick<
   ObsVendorClientOptions,
-  "baseReconnectMs" | "maxReconnectMs" | "requestTimeoutMs" | "notReadyRetryMs"
+  "baseReconnectMs" | "maxReconnectMs" | "requestTimeoutMs" | "notReadyRetryMs" | "keepaliveMs"
 >;
 
 export class FadesterClient extends ObsVendorClient<GetStateResponse> {

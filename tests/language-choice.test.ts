@@ -356,6 +356,23 @@ describe("the global settings store", () => {
     expect(told.map((list) => list.length)).toEqual([1, 1]);
   });
 
+  it("the saver still tells the clients when Stream Deck refuses the write, and reports the refusal", async () => {
+    const port = new FakeSettingsPort({ language: "nl" });
+    const store = new GlobalSettingsStore(port);
+    await store.start();
+    port.setGlobalSettings = async () => { throw new Error("refused"); };
+    const told: FadesterGlobalSettings[] = [];
+    const save = connectionSaver(store, [{ updateSettings: (settings: FadesterGlobalSettings) => { told.push(settings); } }]);
+    await expect(save({ ...CONNECTION } as FadesterGlobalSettings)).rejects.toThrow("refused");
+    expect(told).toHaveLength(1);
+    expect(store.snapshot()).toMatchObject(CONNECTION);
+  });
+
+  it("plugin.ts answers a failed settings page message with a log line, not an unhandled rejection", () => {
+    const source = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "../src/plugin.ts"), "utf8");
+    expect(source).toMatch(/await bridge\.handleMessage\(payload\);\s*\}\)\(\)\.catch\(/);
+  });
+
   it("plugin.ts writes global settings only through the store's port and saves connections with the saver", () => {
     const source = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "../src/plugin.ts"), "utf8");
     // The one whole-object write is the store's own port; any other would bypass the merge (RL-1).

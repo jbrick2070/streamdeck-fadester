@@ -179,13 +179,24 @@ export interface ConnectionSettingsListener {
 /**
  * The pages' connection saver (`persistGlobalSettings` of both bridges, PLAN.md 11.1, RL-1): it saves
  * through the store's merged queue, never with a whole-object write of its own, then tells the clients.
+ * The clients are told also when Stream Deck refuses the write: the store holds the change for the next
+ * write, and the address the page shows must be the one in use. The refusal still reaches the caller.
  */
 export function connectionSaver(
   store: Pick<GlobalSettingsStore, "patch">,
   listeners: readonly ConnectionSettingsListener[]
 ): (settings: FadesterGlobalSettings) => Promise<void> {
   return async (settings) => {
-    await store.patch(connectionChange(settings));
-    for (const listener of listeners) listener.updateSettings(settings);
+    try {
+      await store.patch(connectionChange(settings));
+    } finally {
+      for (const listener of listeners) {
+        try {
+          listener.updateSettings(settings);
+        } catch {
+          // one client's failure must not hide the save's own result, nor keep the address from the next client
+        }
+      }
+    }
   };
 }

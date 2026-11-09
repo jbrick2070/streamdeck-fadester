@@ -45,6 +45,9 @@ internal static class Program
             if (command == "--self-test")
             {
                 var bindings = Binding.Load(map); await BridgeSelfTests.RunAsync(); await StudioFaderSelfTests.RunAsync(); GamepadSelfTests.Run();
+                // The packaged panel reads the controller map from here; a source checkout without it skips the check.
+                var padFile = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(map))!, "gamepad.json");
+                if (File.Exists(padFile)) GamepadSelfTests.CheckPresetFile(padFile);
                 Console.WriteLine($"PASS: dispatcher, Studio T-bar, game controller and {bindings.Count} mapped shortcuts. No live OBS commands sent."); return 0;
             }
             var config = BridgeConfig.Load(configPath);
@@ -118,8 +121,18 @@ internal static class Program
             if (Volatile.Read(ref current) == 0 && !action.StartsWith("vjster.")) return; // offline: the connection line already says so
             Enqueue(action);
         }
-        Task padTask = cfg.GamepadEnabled && bindings.Count > 0
-            ? new GamepadLoop(new XInputPadSource(), new PadReader(PadControls.Build(cfg.GamepadMap)), tbarMail, PadEnqueue, PostTbar, Console.WriteLine).Run(stop.Token)
+        bool padOn = cfg.GamepadEnabled && bindings.Count > 0;
+        var padMap = padOn ? PadControls.Build(cfg.GamepadMap) : null;
+        if (padMap != null)
+        {
+            Console.WriteLine(cfg.GamepadEasy
+                ? "Game controller: easy mode on. Hold a button 0.4 s for take, cut and other live actions (0.7 s for fade out and mic mute); the right trigger takes as usual."
+                : "Game controller: easy mode off. Every button acts on press.");
+            if (padMap.Keys.Any(k => k.StartsWith(PadControls.ShiftPrefix, StringComparison.OrdinalIgnoreCase)))
+                Console.WriteLine("Game controller: LB is the shift button and does nothing on its own.");
+        }
+        Task padTask = padMap != null
+            ? new GamepadLoop(new XInputPadSource(), new PadReader(padMap, cfg.GamepadEasy), tbarMail, PadEnqueue, PostTbar, Console.WriteLine).Run(stop.Token)
             : Task.CompletedTask;
         // The panel and the tests can type "dispatch <action>" on stdin; it runs exactly as the hotkey would.
         void Command(string line)
@@ -193,8 +206,7 @@ internal static class Program
                             // A take, cancel or dial move from any surface owns the T-bar now: a trigger held meanwhile
                             // must return to rest before it throws, or it would throw back towards the scene just taken.
                             // A Preview or anchor cue cancels a manual sweep first (DeskActions.Cue), so it disarms too.
-                            if (ev.Action is "take" or "take.cut" or "fader.cancel" or "preview.previous" or "preview.next" or "preview.sync" ||
-                                ev.Action.StartsWith("anchor.") || KeyGuards.IsFaderTick(ev.Action)) tbarMail.Fail();
+                            if (PadControls.StopsThrow(ev.Action)) tbarMail.Fail();
                         }
                     }
                     finally

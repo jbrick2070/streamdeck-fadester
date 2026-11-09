@@ -40,6 +40,7 @@ $paneltest=Start-Process -WindowStyle Hidden -FilePath $panel -ArgumentList '--s
 if($paneltest.ExitCode){throw 'Panel self-test failed.'}
 $null=New-Item -ItemType Directory -Force $presets
 Copy-Item -LiteralPath (Join-Path $presetDir 'map.json') -Destination $presets
+Copy-Item -LiteralPath (Join-Path $presetDir 'gamepad.json') -Destination $presets
 foreach($bank in $map.presets.PSObject.Properties.Value){Copy-Item -LiteralPath (Join-Path $presetDir $bank.file) -Destination $presets}
 & (Join-Path $bundle 'FadesterTourBoxBridge.exe') --self-test --map (Join-Path $presets 'map.json')
 if($LASTEXITCODE){throw 'Packaged bridge self-test failed.'}

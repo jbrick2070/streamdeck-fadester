@@ -38,6 +38,12 @@ internal sealed class BridgeConfig
     public bool GamepadEnabled { get; set; }
     /** Changes to the controller's default map: control name to action id; "" leaves a control free. */
     public Dictionary<string, string> GamepadMap { get; set; } = new();
+    /** Easy mode: take, cut and other actions that change the live picture need a short hold on the controller. On by default. */
+    public bool GamepadEasy { get; set; } = true;
+    /** The controller's speed presets (vjster.speed.fast / vjster.speed.slow), one of YouTube's own rates. */
+    public double GamepadFastSpeed { get; set; } = 2.0;
+    public double GamepadSlowSpeed { get; set; } = 0.5;
+    public static readonly double[] PresetSpeeds = [0.25, 0.5, 0.75, 1.25, 1.5, 1.75, 2.0];
     [JsonIgnore] public string MixStateDirectory { get; set; } = Path.Combine(Path.GetDirectoryName(DefaultPath)!, "mix-state");
     public static readonly JsonSerializerOptions Options = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true };
     public static string DefaultPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FadesterTourBox", "config.json");
@@ -60,6 +66,8 @@ internal sealed class BridgeConfig
             throw new InvalidDataException("The VJster extension id is 32 letters a to p, as the extension's options page shows it.");
         foreach (var layer in new[] { config.Layer1Scene, config.Layer1Source, config.Layer2Scene, config.Layer2Source }) if (layer == null) throw new InvalidDataException("Layer assignments must be text.");
         config.GamepadMap ??= new();
+        if (!PresetSpeeds.Contains(config.GamepadFastSpeed) || !PresetSpeeds.Contains(config.GamepadSlowSpeed))
+            throw new InvalidDataException("The controller's speed presets must each be one of " + string.Join(", ", PresetSpeeds.Select(r => r.ToString(System.Globalization.CultureInfo.InvariantCulture))) + ".");
         if (config.GamepadEnabled) PadControls.Build(config.GamepadMap); // refuses an unknown control or action now, not at the first press
         config.MixStateDirectory = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(path))!, "mix-state");
         return config;

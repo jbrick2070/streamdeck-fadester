@@ -173,6 +173,16 @@ internal static class VjsterSelfTests
         Check(intent["delta"]!.GetValue<double>() == -0.05, "fine step is 0.05");
         await SendText(ext, StateJson(intent["id"]!.GetValue<string>(), 1.2));
         Check((await fine).StartsWith("Video 1.2x"), "fine reply");
+        var fast = desk.Dispatch("vjster.speed.fast");
+        intent = JsonNode.Parse(await Receive(ext))!.AsObject();
+        Check(intent["type"]!.GetValue<string>() == "speed.set" && intent["rate"]!.GetValue<double>() == 2.0 && intent["direct"]!.GetValue<bool>() == false, "the controller's fast preset sets 2x");
+        await SendText(ext, StateJson(intent["id"]!.GetValue<string>(), 2));
+        Check((await fast).StartsWith("Video 2x"), "fast preset reply");
+        var slow = desk.Dispatch("vjster.speed.slow");
+        intent = JsonNode.Parse(await Receive(ext))!.AsObject();
+        Check(intent["type"]!.GetValue<string>() == "speed.set" && intent["rate"]!.GetValue<double>() == 0.5, "the slow preset sets 0.5x");
+        await SendText(ext, StateJson(intent["id"]!.GetValue<string>(), 0.5));
+        Check((await slow).StartsWith("Video 0.5x"), "slow preset reply");
         var status = desk.Dispatch("vjster.status");
         intent = JsonNode.Parse(await Receive(ext))!.AsObject();
         Check(intent["type"]!.GetValue<string>() == "state.get", "status asks for state");

@@ -54,7 +54,16 @@ namespace Fadester.TourBox {
     readonly Dictionary<string,Image> glyphs=new Dictionary<string,Image>();
     Dictionary<string, object> config = new Dictionary<string, object>(), catalog = new Dictionary<string, object>();
     Label state, live, importNote; TextBox password; ListBox activity; Button connect, start, save;
-    CheckBox enableMix, mixOnly, enableVjster, enableGamepad;
+    CheckBox enableMix, mixOnly, enableVjster, enableGamepad, easyMode;
+    // The game controller tab, from presets/gamepad.json (checked against the bridge by its self-test).
+    DataGridView padGrid; ComboBox fastSpeed, slowSpeed;
+    string[] padControls = new string[0], padOnly = new string[0];
+    Dictionary<string,string> padDefaults = new Dictionary<string,string>();
+    Dictionary<string,int> padHolds = new Dictionary<string,int>();
+    double[] padSpeeds = new double[0];
+    readonly Dictionary<string,string> actionLabels = new Dictionary<string,string>();
+    List<Choice> padChoices = new List<Choice>(), releaseChoices = new List<Choice>();
+    sealed class Choice { public string Id { get; set; } public string Label { get; set; } }
     NumericUpDown mixStep, mixDuration, vjsterPort, opacityStep; TextBox extensionId;
     NumericUpDown port,volumeStep,duckLevel,fadeTicks,transitionStep; FlowLayoutPanel body; DataGridView controls; Process worker; Feedback hud; bool closing, refreshing, invalidConfig;
     readonly Color navy = Color.FromArgb(26,34,51), accent = Color.FromArgb(38,90,158);
@@ -116,6 +125,7 @@ namespace Fadester.TourBox {
       Hint(body,text.Get("vjsterIdHint"));
       Title(body,text.Get("gamepadTitle"));
       enableGamepad=Check(body,text.Get("enableGamepad"));
+      easyMode=Check(body,text.Get("gamepadEasy")); easyMode.Checked=true;
       Hint(body,text.Get("gamepadHint"));
       var assign=Page(tabs,text.Get("assignments")); Title(assign,text.Get("assignTitle"));
       Hint(assign,text.Get("assignHint"));
@@ -135,6 +145,14 @@ namespace Fadester.TourBox {
       transitionStep=Number(assign,text.Get("timingStep"),10m,1000m,50m,10m,0);
       opacityStep=Number(assign,text.Get("opacityStep"),1m,50m,5m,1m,0);
       Hint(assign,text.Get("adjustHint"));
+      var padPage=Page(tabs,text.Get("gamepadTitle")); Title(padPage,text.Get("padMapTitle")); Hint(padPage,text.Get("padMapHint"));
+      fastSpeed=Choose(padPage,text.Get("padFast")); slowSpeed=Choose(padPage,text.Get("padSlow"));
+      padGrid=new DataGridView {Width=640,Height=600,AllowUserToAddRows=false,AllowUserToDeleteRows=false,RowHeadersVisible=false,AutoSizeColumnsMode=DataGridViewAutoSizeColumnsMode.Fill,BackgroundColor=Color.White,EditMode=DataGridViewEditMode.EditOnEnter,Margin=new Padding(3,6,3,6)};
+      padGrid.DataError+=(s,e)=>{e.ThrowException=false;};
+      padGrid.CurrentCellDirtyStateChanged+=delegate{if(padGrid.IsCurrentCellDirty)padGrid.CommitEdit(DataGridViewDataErrorContexts.Commit);};
+      padGrid.CellValueChanged+=(s,e)=>{ if(e.RowIndex<0 || padControls.Length==0) return; PairDuck(); ShowShift(); };
+      padPage.Controls.Add(padGrid); padPage.ClientSizeChanged+=delegate{padGrid.Width=Math.Max(300,padPage.ClientSize.Width-42);};
+      AddButton(padPage,text.Get("padReset"),delegate{ if(padControls.Length==0)return; FillPadGrid(new Dictionary<string,object>()); Note(text.Get("padResetDone")); });
       var keypage=new TabPage(text.Get("controlMap")); tabs.Controls.Add(keypage); controls=new DataGridView {Dock=DockStyle.Fill,ReadOnly=true,AllowUserToAddRows=false,AllowUserToDeleteRows=false,RowHeadersVisible=false,AutoSizeColumnsMode=DataGridViewAutoSizeColumnsMode.Fill,SelectionMode=DataGridViewSelectionMode.FullRowSelect,BackgroundColor=Color.White};
       controls.DefaultCellStyle.WrapMode=DataGridViewTriState.True;
       controls.AutoSizeRowsMode=DataGridViewAutoSizeRowsMode.AllCells;
@@ -149,7 +167,7 @@ namespace Fadester.TourBox {
       save=AddButton(bar,text.Get("save"),delegate { SaveRequested(); });
       AddButton(bar,text.Get("feedback"),delegate { if(hud!=null && !hud.IsDisposed) {hud.Close();return;} hud=new Feedback(text.Get("lastAction")); hud.Set(state.Text); hud.Show(); });
       AddButton(bar,text.Get("guide"),delegate { OpenPath(text.GuidePath(folder)); }); grid.Controls.Add(bar,0,2);
-      Load += async delegate { ReadSettings(); ReadMap(); if(!invalidConfig) await Connect(); };
+      Load += async delegate { ReadSettings(); ReadMap(); ReadPad(); if(!invalidConfig) await Connect(); };
       FormClosing+=async (s,e)=>{ Entry.Log("closing: "+e.CloseReason+(worker==null?"":", controls running")); if(worker==null)return; e.Cancel=true; if(closing)return; closing=true; await StopControls(); closing=false; if(worker==null)Close(); else Note(text.Get("stillClosing")); };
     }
     FlowLayoutPanel Page(TabControl t,string title) {
@@ -172,6 +190,11 @@ namespace Fadester.TourBox {
       var r=new FlowLayoutPanel {AutoSize=true,WrapContents=false,Margin=new Padding(0)};
       r.Controls.Add(FieldLabel(name));
       var c=new ComboBox {Width=270,DropDownStyle=ComboBoxStyle.DropDownList}; r.Controls.Add(c); c.Items.Add(""); c.SelectedIndex=0; boxes[id]=c; p.Controls.Add(r);
+    }
+    ComboBox Choose(FlowLayoutPanel p,string label) {
+      var r=new FlowLayoutPanel {AutoSize=true,WrapContents=false,Margin=new Padding(0)};
+      r.Controls.Add(FieldLabel(label));
+      var c=new ComboBox {Width=105,DropDownStyle=ComboBoxStyle.DropDownList}; r.Controls.Add(c); p.Controls.Add(r); return c;
     }
     NumericUpDown Number(FlowLayoutPanel p,string label,decimal min,decimal max,decimal defaultValue,decimal increment,int digits) {
       var r=new FlowLayoutPanel {AutoSize=true,WrapContents=false,Margin=new Padding(0)};
@@ -224,6 +247,7 @@ namespace Fadester.TourBox {
       int vp; if(Int32.TryParse(Val(config,"vjsterPort"),out vp) && vp>=1024 && vp<=65535) vjsterPort.Value=vp;
       extensionId.Text=Val(config,"vjsterExtensionId");
       enableGamepad.Checked=String.Equals(Val(config,"gamepadEnabled"),"true",StringComparison.OrdinalIgnoreCase);
+      easyMode.Checked=!String.Equals(Val(config,"gamepadEasy"),"false",StringComparison.OrdinalIgnoreCase);
       object os; if(config.TryGetValue("opacityStep",out os) && os!=null) {
         try { decimal x=Decimal.Round(Convert.ToDecimal(os,CultureInfo.InvariantCulture)*100m); opacityStep.Value=Math.Min(opacityStep.Maximum,Math.Max(opacityStep.Minimum,x)); }
         catch(FormatException){} catch(OverflowException){} catch(InvalidCastException){}
@@ -238,10 +262,96 @@ namespace Fadester.TourBox {
         foreach(var bank in presets) {
           var def=(Dictionary<string,object>)bank.Value;
           foreach(var listKey in new[]{"bindings","nativeBindings","menuBindings"}) {object rows;if(!def.TryGetValue(listKey,out rows))continue;
-            foreach(var o in (IEnumerable)rows) {var b=(Dictionary<string,object>)o; controls.Rows.Add(Glyph(Val(b,"action",Val(b,"function"))),text.Control(Val(b,"control")),text.Gesture(Val(b,"gesture")),Val(b,"label"));}
+            foreach(var o in (IEnumerable)rows) {var b=(Dictionary<string,object>)o; string id=Val(b,"action",Val(b,"function")); controls.Rows.Add(Glyph(id),text.Control(Val(b,"control")),text.Gesture(Val(b,"gesture")),Val(b,"label"));
+              if(Val(b,"action").Length>0 && !actionLabels.ContainsKey(id)) actionLabels[id]=Val(b,"label");}
           }
         }
       } catch { Note(text.Get("mapUnreadable")); }
+    }
+    void ReadPad() {
+      try {
+        var root=Decode(File.ReadAllText(Path.Combine(folder,"presets","gamepad.json"),Encoding.UTF8));
+        padControls=List(root,"controls"); padOnly=List(root,"padOnly");
+        padDefaults=((Dictionary<string,object>)root["defaults"]).ToDictionary(kv=>kv.Key,kv=>Convert.ToString(kv.Value,CultureInfo.InvariantCulture));
+        padHolds=((Dictionary<string,object>)root["holdMs"]).ToDictionary(kv=>kv.Key,kv=>Convert.ToInt32(kv.Value,CultureInfo.InvariantCulture));
+        padSpeeds=((IEnumerable)root["speeds"]).Cast<object>().Select(x=>Convert.ToDouble(x,CultureInfo.InvariantCulture)).ToArray();
+        if(padControls.Length==0 || padSpeeds.Length==0) throw new FormatException();
+        // Without the action names (map.json unreadable, already reported) the tab would offer nothing to choose.
+        if(actionLabels.Count==0) throw new FormatException();
+      } catch { padControls=new string[0]; padGrid.Enabled=fastSpeed.Enabled=slowSpeed.Enabled=false; Note(text.Get("padMapMissing")); return; }
+      foreach(var c in new[]{fastSpeed,slowSpeed}){c.Items.Clear(); foreach(var r in padSpeeds) c.Items.Add(r.ToString("0.##",CultureInfo.CurrentCulture)+"x");}
+      fastSpeed.SelectedIndex=SpeedIndex("gamepadFastSpeed",2.0); slowSpeed.SelectedIndex=SpeedIndex("gamepadSlowSpeed",0.5);
+      padChoices=new List<Choice>{new Choice{Id="",Label=text.Get("padFree")}};
+      foreach(var kv in actionLabels) if(kv.Key!="bridge.reconnect") padChoices.Add(new Choice{Id=kv.Key,Label=kv.Value});
+      foreach(var id in padOnly) padChoices.Add(new Choice{Id=id,Label=id=="vjster.speed.fast"?text.Get("speedFast"):id=="vjster.speed.slow"?text.Get("speedSlow"):id});
+      object saved; FillPadGrid(config.TryGetValue("gamepadMap",out saved)?saved as Dictionary<string,object>:null);
+    }
+    int SpeedIndex(string key,double fallback){
+      double want=fallback; object v;
+      if(config.TryGetValue(key,out v) && v!=null) try{want=Convert.ToDouble(v,CultureInfo.InvariantCulture);}catch(FormatException){}catch(InvalidCastException){}catch(OverflowException){}
+      int i=Array.IndexOf(padSpeeds,want); if(i<0)i=Array.IndexOf(padSpeeds,fallback); return Math.Max(0,i);
+    }
+    string PadName(string c){
+      switch(c){
+        case "DpadUp":return text.Get("up"); case "DpadDown":return text.Get("down"); case "DpadLeft":return text.Get("left"); case "DpadRight":return text.Get("right");
+        case "LS": case "RS": return c+" · "+text.Get("press");
+        case "LTRelease": return "LT · "+text.Get("padRelease");
+      }
+      foreach(var stick in new[]{"Left","Right"}) if(c.StartsWith(stick,StringComparison.Ordinal)){
+        string dir=c.Substring(stick.Length), arrow=dir=="Up"?"↑":dir=="Down"?"↓":dir=="Left"?"←":"→";
+        return (stick=="Left"?"LS ":"RS ")+arrow;
+      }
+      return c;
+    }
+    List<Choice> WithId(List<Choice> list,string id){
+      if(String.IsNullOrEmpty(id) || list.Any(x=>x.Id==id)) return list;
+      var more=new List<Choice>(list); more.Add(new Choice{Id=id,Label=id}); return more;
+    }
+    void FillPadGrid(Dictionary<string,object> saved){
+      var map=new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);
+      if(saved!=null) foreach(var kv in saved) map[kv.Key]=Convert.ToString(kv.Value,CultureInfo.InvariantCulture)??"";
+      // A release fires when the trigger is let go: nothing there may need a hold (the bridge refuses it too).
+      releaseChoices=padChoices.Where(x=>!padHolds.ContainsKey(x.Id)).ToList();
+      padGrid.Rows.Clear(); padGrid.Columns.Clear();
+      padGrid.Columns.Add(new DataGridViewTextBoxColumn{Name="control",HeaderText=text.Get("control"),ReadOnly=true,FillWeight=60});
+      foreach(var name in new[]{"action","shift"})
+        padGrid.Columns.Add(new DataGridViewComboBoxColumn{Name=name,HeaderText=text.Get(name=="action"?"action":"padShift"),DisplayMember="Label",ValueMember="Id",FlatStyle=FlatStyle.Flat,FillWeight=120});
+      foreach(var c in padControls){
+        string a, d, s;
+        if(!map.TryGetValue(c,out a)) a=padDefaults.TryGetValue(c,out d)?d:"";
+        if(!map.TryGetValue("LB+"+c,out s)) s="";
+        var choices=c=="LTRelease"?releaseChoices:padChoices;
+        int i=padGrid.Rows.Add(); var row=padGrid.Rows[i]; row.Tag=c; row.Cells[0].Value=PadName(c);
+        var actionCell=(DataGridViewComboBoxCell)row.Cells[1]; actionCell.DataSource=WithId(choices,a); actionCell.Value=a;
+        var shiftCell=(DataGridViewComboBoxCell)row.Cells[2]; shiftCell.DataSource=WithId(choices,s); shiftCell.Value=s;
+        if(c=="LB"){shiftCell.ReadOnly=true; shiftCell.Style.BackColor=Color.Gainsboro;}
+      }
+      ShowShift();
+    }
+    DataGridViewRow PadRow(string control){ foreach(DataGridViewRow r in padGrid.Rows) if((string)r.Tag==control) return r; return null; }
+    /** With any "With LB held" action LB is only the shift (the bridge drops its own action): show that, and keep it from being edited. */
+    void ShowShift(){
+      var lb=PadRow("LB"); if(lb==null) return;
+      bool shift=padGrid.Rows.Cast<DataGridViewRow>().Any(r=>(string)r.Tag!="LB" && (Convert.ToString(r.Cells[2].Value)??"").Length>0);
+      lb.Cells[1].ReadOnly=shift; lb.Cells[1].Style.BackColor=shift?Color.Gainsboro:Color.Empty;
+    }
+    /** A left trigger that ducks Music must bring it back on the same layer, or the bridge refuses the map: pair it. */
+    void PairDuck(){
+      var lt=PadRow("LT"); var release=PadRow("LTRelease"); if(lt==null || release==null) return;
+      for(int col=1;col<=2;col++)
+        if(Convert.ToString(lt.Cells[col].Value)=="music.duck" && (Convert.ToString(release.Cells[col].Value)??"").Length==0){
+          var cell=(DataGridViewComboBoxCell)release.Cells[col]; cell.DataSource=WithId(releaseChoices,"music.restore"); cell.Value="music.restore";
+        }
+    }
+    Dictionary<string,object> PadChanges(){
+      padGrid.EndEdit(); PairDuck();
+      var m=new Dictionary<string,object>();
+      foreach(DataGridViewRow row in padGrid.Rows){
+        string c=(string)row.Tag, a=Convert.ToString(row.Cells[1].Value)??"", s=Convert.ToString(row.Cells[2].Value)??"", d;
+        if(a!=(padDefaults.TryGetValue(c,out d)?d:"")) m[c]=a;
+        if(c!="LB" && s.Length>0) m["LB+"+c]=s;
+      }
+      return m;
     }
     Image Glyph(string action){
       string category;
@@ -265,7 +375,11 @@ namespace Fadester.TourBox {
       foreach(string k in new[]{"musicInput","contentInput","micInput","mediaInput","overlayScene","overlaySource","layer1Scene","layer1Source","layer2Scene","layer2Source"}) config[k]=boxes[k].Text;
       config["vjsterEnabled"]=enableVjster.Checked; config["vjsterPort"]=(int)vjsterPort.Value; config["vjsterExtensionId"]=extensionId.Text.Trim();
       config["opacityStep"]=(double)opacityStep.Value/100.0;
-      config["gamepadEnabled"]=enableGamepad.Checked;
+      config["gamepadEnabled"]=enableGamepad.Checked; config["gamepadEasy"]=easyMode.Checked;
+      if(padControls.Length>0){
+        var changes=PadChanges(); if(changes.Count==0) config.Remove("gamepadMap"); else config["gamepadMap"]=changes;
+        config["gamepadFastSpeed"]=padSpeeds[fastSpeed.SelectedIndex]; config["gamepadSlowSpeed"]=padSpeeds[slowSpeed.SelectedIndex];
+      }
       config["anchors"]=Enumerable.Range(0,4).Select(i=>boxes["anchor"+i].Text).ToArray();
       config["mixEnabled"]=enableMix.Checked; config["mixOnly"]=mixOnly.Checked; config["mixStepDb"]=mixStep.Value; config["mixFadeMs"]=(int)mixDuration.Value;
       config["volumeStepDb"]=volumeStep.Value;config["duckDb"]=duckLevel.Value;config["faderStep"]=1m/fadeTicks.Value;config["transitionStepMs"]=(int)transitionStep.Value;

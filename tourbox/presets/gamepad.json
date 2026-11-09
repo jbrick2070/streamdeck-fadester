@@ -1,0 +1,25 @@
+{
+  "comment": "The game controller's controls, default map, hold times and speed presets for the panel. The bridge self-test checks this file against tourbox/bridge/Gamepad.cs.",
+  "controls": ["DpadUp", "DpadDown", "DpadLeft", "DpadRight", "Menu", "View", "LS", "RS", "LB", "RB", "A", "B", "X", "Y",
+    "LT", "LTRelease", "LeftUp", "LeftDown", "LeftLeft", "LeftRight", "RightUp", "RightDown", "RightLeft", "RightRight"],
+  "defaults": {
+    "A": "take", "B": "take.cut", "X": "media.next", "Y": "media.play",
+    "LB": "layer1.blend.previous", "RB": "layer1.blend.next",
+    "DpadLeft": "preview.previous", "DpadRight": "preview.next", "DpadUp": "music.up", "DpadDown": "music.down",
+    "View": "fader.cancel", "Menu": "preview.sync", "LS": "vjster.speed.reset", "RS": "vjster.playPause",
+    "LT": "music.duck", "LTRelease": "music.restore",
+    "LeftUp": "layer2.opacity.up", "LeftDown": "layer2.opacity.down",
+    "LeftLeft": "layer2.blend.previous", "LeftRight": "layer2.blend.next",
+    "RightLeft": "vjster.speed.down", "RightRight": "vjster.speed.up",
+    "RightUp": "vjster.speed.fast", "RightDown": "vjster.speed.slow"
+  },
+  "padOnly": ["vjster.speed.fast", "vjster.speed.slow"],
+  "holdMs": {
+    "take": 400, "take.cut": 400, "overlay.show": 400, "overlay.hide": 400,
+    "media.previous": 400, "media.next": 400, "media.restart": 400, "media.play": 400, "vjster.playPause": 400,
+    "layer1.blend.previous": 400, "layer1.blend.next": 400, "layer2.blend.previous": 400, "layer2.blend.next": 400,
+    "fader.back": 400, "fader.forward": 400, "fader.fineBack": 400, "fader.fineForward": 400,
+    "mix.fadeOut": 700, "mic.mute": 700
+  },
+  "speeds": [0.25, 0.5, 0.75, 1.25, 1.5, 1.75, 2.0]
+}

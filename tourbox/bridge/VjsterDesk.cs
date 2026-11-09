@@ -29,9 +29,10 @@ internal static class KeyGuards
     public static bool IsStrayFaderTick(string action, long lastHeldTurn, long at) => IsFaderTick(action) && lastHeldTurn != 0 && Stopwatch.GetElapsedTime(lastHeldTurn, at) < AfterHeldTurn;
 }
 
-internal sealed class VjsterDesk(VjsterLink link)
+internal sealed class VjsterDesk(VjsterLink link, double fastSpeed = 2.0, double slowSpeed = 0.5)
 {
-    public static readonly HashSet<string> Actions = new(("vjster.speed.down vjster.speed.up vjster.speed.fineDown vjster.speed.fineUp vjster.speed.reset " +
+    // vjster.speed.fast and vjster.speed.slow are game-controller presets: not on the TourBox, so not in DeskActions.Supported.
+    public static readonly HashSet<string> Actions = new(("vjster.speed.down vjster.speed.up vjster.speed.fineDown vjster.speed.fineUp vjster.speed.reset vjster.speed.fast vjster.speed.slow " +
         "vjster.quality.down vjster.quality.up vjster.quality.reset vjster.playPause vjster.status").Split(' '));
     /** Turn actions: a detent that arrives late is dropped rather than applied (Program.Listen's sweep rule). */
     public static readonly HashSet<string> Ticks = new(["vjster.speed.down", "vjster.speed.up", "vjster.speed.fineDown", "vjster.speed.fineUp", "vjster.quality.down", "vjster.quality.up"]);
@@ -54,6 +55,8 @@ internal sealed class VjsterDesk(VjsterLink link)
             case "vjster.speed.fineDown": type = "speed.step"; fill = Step(-0.05); break;
             case "vjster.speed.fineUp": type = "speed.step"; fill = Step(0.05); break;
             case "vjster.speed.reset": type = "speed.reset"; break;
+            case "vjster.speed.fast": type = "speed.set"; fill = Rate(fastSpeed); break;
+            case "vjster.speed.slow": type = "speed.set"; fill = Rate(slowSpeed); break;
             case "vjster.quality.down": type = "quality.step"; fill = o => { o["direction"] = -1; o["hold"] = false; }; break;
             case "vjster.quality.up": type = "quality.step"; fill = o => { o["direction"] = 1; o["hold"] = false; }; break;
             case "vjster.quality.reset": type = "quality.reset"; break;
@@ -67,6 +70,8 @@ internal sealed class VjsterDesk(VjsterLink link)
         if (state == null) return $"VJster: sent {id["vjster.".Length..]}; no reply from the extension yet.";
         return Describe(state, id == "vjster.status");
     }
+
+    static Action<JsonObject> Rate(double rate) => o => { o["rate"] = rate; o["direct"] = false; o["hold"] = false; };
 
     static Action<JsonObject> Step(double delta) => o => { o["delta"] = delta; o["direct"] = false; o["hold"] = false; };
 
@@ -99,7 +104,7 @@ internal sealed class VjsterHost : IAsyncDisposable
     {
         this.log = log;
         Link = new VjsterLink(cfg.VjsterPort, cfg.VjsterExtensionId.Length == 0 ? null : [cfg.VjsterExtensionId], log);
-        Desk = new VjsterDesk(Link);
+        Desk = new VjsterDesk(Link, cfg.GamepadFastSpeed, cfg.GamepadSlowSpeed);
         // The extension's own reports (a new video, play, pause): without the title, which only a status press shows (R-BEH-5).
         Link.StateReceived += s => { if (s.InReplyTo == null) log(VjsterDesk.Describe(s, false)); };
     }

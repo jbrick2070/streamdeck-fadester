@@ -421,5 +421,53 @@ internal static class StudioFaderSelfTests
         await Blocked(() => fader.MoveToAsync(0.4)); await Blocked(() => fader.MoveToAsync(0.5));
         await fader.DispatchAsync("fader.cancel"); await fader.MoveToAsync(0);
         Check(obs.Commits == 0, "a changed Preview disarms absolute moves until an explicit cancel");
+
+        // Each connection gets a new fader; the old one's memory crosses the reconnect.
+        obs = new(); fader = new(obs.Call); await fader.DispatchAsync("take.cut");
+        obs.Transition = "Coupe"; // OBS went back to Cut, then the connection dropped
+        fader = new(obs.Call, resume: fader.Leave());
+        Check(await fader.ResumeAsync() == "" && obs.Transition == "Fondu", "a cut's borrowed transition goes back right after a reconnect");
+        obs = new(); fader = new(obs.Call); await fader.MoveToAsync(0.4);
+        fader = new(obs.Call, resume: fader.Leave());
+        Check((await fader.ResumeAsync()).Length > 0 && fader.Position == 0 && obs.Program == "a" && obs.Cursor == 0 &&
+            obs.Releases == 1 && obs.Commits == 0, "a sweep left part-thrown by a lost connection returns to Program");
+        await fader.MoveToAsync(0.3);
+        Check(fader.Position == 0.3 && obs.Cursor == 0.3, "and the T-bar throws again on the new connection");
+        nativeObs = new(); native = new(nativeObs.Call, 0.5, nativeObs.NativeMove); await native.DispatchAsync("fader.forward");
+        native = new(nativeObs.Call, 0.5, nativeObs.NativeMove, native.Leave());
+        await native.ResumeAsync();
+        Check(native.Position == 0 && nativeObs.Slider == 0 && nativeObs.Program == "a" && nativeObs.Commits == 0 &&
+            nativeObs.NativeCalls.SequenceEqual([(0d, 0.5), (0.5, 0d), (0d, 0d)]), "the native widget is walked back from where the old connection left it");
+        obs = new(); fader = new(obs.Call); await fader.MoveToAsync(0.4);
+        var left = fader.Leave();
+        obs = new(); fader = new(obs.Call, resume: left); // OBS itself restarted: nothing is part-way any more
+        Check(await fader.ResumeAsync() == "" && fader.Position == 0 && obs.Writes.Count == 0, "a carried sweep is dropped quietly when OBS is idle");
+        await fader.MoveToAsync(0.3);
+        Check(fader.Position == 0.3, "and a new throw starts from rest");
+        obs = new(); fader = new(obs.Call); await fader.MoveToAsync(0.4);
+        obs.Preview = "c"; // the operator cued something else while the connection was down
+        fader = new(obs.Call, resume: fader.Leave());
+        Check((await fader.ResumeAsync()).Contains("could not") && fader.Position == 0 && obs.Releases == 0, "a carried sweep that is no longer ours is not released on its own");
+
+        // A T-bar stuck part-way with no memory of it (the companion was restarted): Cancel releases it.
+        obs = new(); fader = new(obs.Call); await fader.MoveToAsync(0.4);
+        fader = new(obs.Call);
+        await Blocked(() => fader.MoveToAsync(0.5));
+        await fader.DispatchAsync("fader.cancel");
+        Check(obs.Cursor == 0 && obs.Program == "a" && obs.Releases == 1 && obs.Commits == 0, "Cancel releases a stalled T-bar back to Program");
+        await fader.MoveToAsync(0.3);
+        Check(fader.Position == 0.3, "and the T-bar is usable again");
+        int moving = 0;
+        obs = new(); fader = new((action, data) =>
+        {
+            if (action == "GetCurrentSceneTransitionCursor") obs.Cursor = 0.35 + 0.1 * moving++;
+            return obs.Call(action, data);
+        });
+        await fader.DispatchAsync("fader.cancel");
+        Check(obs.Writes.Count == 0, "a transition OBS is running itself is never released");
+        obs = new(){Cursor=0.35}; fader = new((action, data) =>
+            action == "SetTBarPosition" ? Task.FromResult(new JsonObject()) : obs.Call(action, data));
+        await Blocked(() => fader.DispatchAsync("fader.cancel"));
+        Check(obs.Cursor == 0.35, "a T-bar that will not release says so");
     }
 }

@@ -6,10 +6,11 @@ using System.Text.Json.Nodes;
 namespace Fadester.TourBox;
 
 /// <summary>Serializes individual mixer updates, leaving the input loop free between steps of a fade.</summary>
-internal sealed class AudioDesk(Func<string, JsonObject?, Task<JsonObject>> rpc, Func<CancellationToken, IAsyncEnumerable<double>>? steps = null)
+internal sealed class AudioDesk(Func<string, JsonObject?, Task<JsonObject>> rpc, Func<CancellationToken, IAsyncEnumerable<double>>? steps = null,
+    AudioDesk.Duck? resume = null)
 {
     private sealed record Edit(string Source, double Start, double Last, long At, bool Ride, long Id);
-    private sealed record Duck(string Source, double Start, double Last);
+    internal sealed record Duck(string Source, double Start, double Last);
     private sealed class Ramp(string source, double start, double target, bool restore)
     {
         public string Source { get; } = source;
@@ -45,7 +46,9 @@ internal sealed class AudioDesk(Func<string, JsonObject?, Task<JsonObject>> rpc,
     }
     private readonly SemaphoreSlim gate = new(1);
     private volatile Ramp? active;
-    private Duck? duck;
+    private Duck? duck = resume;
+    /// <summary>The duck to hand to the next connection's desk. Restore still refuses if the level changed meanwhile.</summary>
+    public Duck? Leave() => duck;
     private Edit? undo;
     private long nextId;
     private const int BurstMs = 450, RampMs = 450;

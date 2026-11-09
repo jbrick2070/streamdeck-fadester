@@ -128,6 +128,15 @@ internal static class BridgeSelfTests
         Check(writes == before + 1 && levels["Music"] == -8.5, "an in-flight overlap stops further writes and disarms stale restore");
         SetActual(-24); await desk.Dispatch("music.duck"); await desk.Dispatch("music.restore");
         Check(levels["Music"] == -24, "duck never raises an already quiet channel");
+        // Each connection gets a new desk; the duck crosses the reconnect so Restore still knows where to go back to.
+        SetActual(-5); await desk.Dispatch("music.duck"); await timing.Tick(1);
+        desk = new DeskActions(cfg, Fake, timing.Steps, resume: desk.Leave());
+        await desk.Dispatch("music.restore"); await timing.Tick(1);
+        Check(levels["Music"] == -5, "restore after a reconnect returns to the pre-duck level");
+        SetActual(-5); await desk.Dispatch("music.duck"); await timing.Tick(1);
+        desk = new DeskActions(cfg, Fake, timing.Steps, resume: desk.Leave());
+        SetActual(-9); await desk.Dispatch("music.restore");
+        Check(levels["Music"] == -9, "a level changed while offline is left alone after a reconnect");
         await desk.Dispatch("preview.previous"); Check(preview == "Three", "wrap to last OBS scene");
         await desk.Dispatch("preview.next"); Check(preview == "One", "wrap to first OBS scene");
         await desk.Dispatch("anchor.1"); Check(preview == "Two" && program == "Three", "anchor cues preview only");

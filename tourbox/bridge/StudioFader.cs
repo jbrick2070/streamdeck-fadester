@@ -4,20 +4,23 @@ using System.Text.Json.Nodes;
 
 namespace Fadester.TourBox;
 
-/// <summary>One relative T-bar for one authenticated OBS connection. Recreate it on reconnect.</summary>
+/// <summary>
+/// One relative T-bar for one authenticated OBS connection. Recreate it on reconnect, handing the old one's
+/// <see cref="Leave"/> to the new one and running <see cref="ResumeAsync"/> once.
+/// </summary>
 public sealed class StudioFader
 {
     private readonly Func<string, JsonObject?, Task<JsonObject>> rpc;
     private readonly Func<double, double, Task>? nativeMove;
     private readonly SemaphoreSlim serial = new(1);
     private readonly double step;
-    private sealed record Scenes(string Program, string Preview);
-    private sealed record Sweep(Scenes Scenes, string Transition);
+    internal sealed record Scenes(string Program, string Preview);
+    internal sealed record Sweep(Scenes Scenes, string Transition);
     private Sweep? sweep;
     private bool needsReset, supportedVersion;
     // After every Cut the original selection stays owed for a while: OBS may ignore the restore, or apply it and then
     // switch back to Cut once the cut finishes (seen on hardware on 2026-11-09 after a confirmed read-back).
-    private sealed record Owed(string Cut, string Original, long At);
+    internal sealed record Owed(string Cut, string Original, long At);
     private Owed? owed;
     private const double OwedForMs = 30_000;
     private int direction = 1;
@@ -25,13 +28,72 @@ public sealed class StudioFader
 
     public double Position { get; private set; }
 
+    /// <summary>
+    /// What a fader leaves for the next connection's fader: a part-thrown sweep, the transition a Cut still owes, and
+    /// the dial's direction. The "check OBS" latch and the verified OBS version are not carried: the new connection
+    /// reads OBS afresh.
+    /// </summary>
+    public sealed class Memory
+    {
+        internal Owed? Owed;
+        internal Sweep? Sweep;
+        internal double Position;
+        internal int Direction = 1;
+        internal long TakeAt;
+    }
+
+    public Memory Leave() => new() { Owed = owed, Sweep = sweep, Position = Position, Direction = direction, TakeAt = takeAt };
+
     public StudioFader(Func<string, JsonObject?, Task<JsonObject>> rpc, double step = 0.05,
-        Func<double, double, Task>? nativeMove = null)
+        Func<double, double, Task>? nativeMove = null, Memory? resume = null)
     {
         if (!double.IsFinite(step) || step <= 0 || step > 1) throw new ArgumentOutOfRangeException(nameof(step));
         this.rpc = rpc;
         this.nativeMove = nativeMove;
         this.step = step;
+        if (resume == null) return;
+        owed = resume.Owed; sweep = resume.Sweep; direction = resume.Direction; takeAt = resume.TakeAt;
+        Position = sweep != null ? resume.Position : 0;
+    }
+
+    /// <summary>
+    /// Run once on a new connection, before any action: a sweep the last connection left part-thrown goes back to
+    /// Program (its trigger or dial is no longer holding it), and a transition a Cut still owes goes back at once.
+    /// </summary>
+    /// <returns>A line for the log, or an empty string when there was nothing to say.</returns>
+    public async Task<string> ResumeAsync()
+    {
+        await serial.WaitAsync();
+        try
+        {
+            string said = "";
+            if (sweep != null)
+            {
+                double cursor = await ReadCursorAsync();
+                bool still = cursor is not (0 or 1);
+                if (still)
+                {
+                    // A cursor that moves is a transition OBS runs itself (someone clicked Transition meanwhile): not ours.
+                    await Task.Delay(150);
+                    still = await ReadCursorAsync() == cursor;
+                }
+                if (!still) { sweep = null; Position = 0; } // OBS restarted, ended it itself, or runs its own
+                else
+                {
+                    try { await CancelSweepAsync(); said = "T-bar: back to Program after the reconnect."; }
+                    catch (InvalidOperationException e)
+                    {
+                        // Not ours any more, or OBS would not confirm: nothing is replayed on its own. No latch is set,
+                        // so one Cancel press is enough to release a T-bar that still sits part-way.
+                        sweep = null; Position = 0;
+                        said = "T-bar: could not go back to Program after the reconnect. " + e.Message + " Check OBS, then press Cancel.";
+                    }
+                }
+            }
+            await RepayAsync();
+            return said;
+        }
+        finally { serial.Release(); }
     }
 
     public Task CancelAsync() => DispatchAsync("fader.cancel");
@@ -67,6 +129,8 @@ public sealed class StudioFader
             if (action == "fader.cancel")
             {
                 if (sweep != null) await CancelSweepAsync();
+                // With the latch set, this press only clears it: an unconfirmed write is never replayed for the operator.
+                else if (!needsReset) await ReleaseStalledAsync();
                 needsReset = false;
                 await RepayAsync();
                 return;
@@ -105,7 +169,28 @@ public sealed class StudioFader
     {
         double cursor = await ReadCursorAsync();
         if (cursor is not (0 or 1))
-            throw new InvalidOperationException("OBS already has a transition in progress.");
+            throw new InvalidOperationException("OBS already has a transition in progress. If the T-bar is stuck part-way, press Cancel.");
+    }
+
+    /// <summary>
+    /// Cancel with no sweep of our own: a T-bar that sits part-way and does not move was left by an earlier run or a
+    /// lost connection, and nothing else here could ever clear it. A transition OBS is running itself moves, and is
+    /// left alone. The release returns to the Program the throw started from; it cannot take.
+    /// </summary>
+    private async Task ReleaseStalledAsync()
+    {
+        double cursor = await ReadCursorAsync();
+        if (cursor is 0 or 1) return;
+        await Task.Delay(150);
+        if (await ReadCursorAsync() != cursor) return;
+        await rpc("SetTBarPosition", new() { ["position"] = 0d, ["release"] = true });
+        for (int i = 0; i < 12; i++)
+        {
+            if (await ReadCursorAsync() is 0 or 1) return;
+            await Task.Delay(25);
+        }
+        // OBS only releases at a rail: its own slider is still part-way, and only a hand can move that one safely.
+        throw new InvalidOperationException("The T-bar in OBS is part-way and did not release. Drag it to either end in OBS.");
     }
 
     private async Task<double> ReadCursorAsync() =>

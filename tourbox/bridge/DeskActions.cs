@@ -4,8 +4,13 @@ using System.Text.Json.Nodes;
 namespace Fadester.TourBox;
 
 internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Task<JsonObject>> rpc,
-    Func<CancellationToken, IAsyncEnumerable<double>>? rampSteps = null, Func<double, double, Task>? nativeMove = null)
+    Func<CancellationToken, IAsyncEnumerable<double>>? rampSteps = null, Func<double, double, Task>? nativeMove = null,
+    DeskActions.Memory? resume = null)
 {
+    /// <summary>What one connection's desk hands to the next: see StudioFader.Memory and AudioDesk.Leave.</summary>
+    public sealed record Memory(StudioFader.Memory Fader, AudioDesk.Duck? Duck);
+    public Memory Leave() => new(fader.Leave(), audio.Leave());
+    public Task<string> ResumeAsync() => fader.ResumeAsync();
     public static readonly HashSet<string> Supported = new(("music.down music.up music.fineDown music.fineUp content.down content.up music.duck music.restore undo " +
         "fader.back fader.forward fader.fineBack fader.fineForward fader.cancel fader.status take take.cut preview.previous preview.next preview.sync preview.status anchor.1 anchor.2 anchor.3 anchor.4 " +
         "media.previous media.next media.play media.restart overlay.show overlay.hide mic.mute transition.previous transition.next " +
@@ -16,8 +21,8 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
     /** OBS scene-item blend modes in the order the Layer rotaries cycle them (obs-websocket SetSceneItemBlendMode). */
     public static readonly string[] BlendModes = ["OBS_BLEND_NORMAL", "OBS_BLEND_ADDITIVE", "OBS_BLEND_SUBTRACT", "OBS_BLEND_SCREEN", "OBS_BLEND_MULTIPLY", "OBS_BLEND_LIGHTEN", "OBS_BLEND_DARKEN"];
     public const string OpacityFilterName = "Fadester opacity";
-    private readonly StudioFader fader = new(rpc, cfg.FaderStep, nativeMove);
-    private readonly AudioDesk audio = new(rpc, rampSteps);
+    private readonly StudioFader fader = new(rpc, cfg.FaderStep, nativeMove, resume?.Fader);
+    private readonly AudioDesk audio = new(rpc, rampSteps, resume?.Duck);
     private readonly MixDesk mix = new(cfg, rpc);
     public bool MixEnabled => cfg.MixEnabled;
     public double MixDb => mix.Db;

@@ -110,7 +110,7 @@ internal static class Program
             if (g == 0 || !input.Writer.TryWrite(new("pad.tbar", g, Stopwatch.GetTimestamp()))) { tbarMail.Take(); tbarMail.Fail(); }
         }
         // A held stick repeats every 200 ms: say once that its target is missing, not five times a second.
-        bool toldVjsterOff = false;
+        bool toldVjsterOff = false, toldPadOffline = false;
         void PadEnqueue(string action)
         {
             if (action.StartsWith("vjster.") && vjster == null)
@@ -118,7 +118,16 @@ internal static class Program
                 if (!toldVjsterOff) { toldVjsterOff = true; Console.WriteLine("VJster is off: the controller's video actions do nothing."); }
                 return;
             }
-            if (Volatile.Read(ref current) == 0 && !action.StartsWith("vjster.")) return; // offline: the connection line already says so
+            if (!action.StartsWith("vjster."))
+            {
+                // A held stick repeats, so say it once for each stretch without OBS.
+                if (Volatile.Read(ref current) == 0)
+                {
+                    if (!toldPadOffline) { toldPadOffline = true; Console.WriteLine("Not connected to OBS: the controller's OBS actions do nothing until it is back."); }
+                    return;
+                }
+                toldPadOffline = false;
+            }
             Enqueue(action);
         }
         bool padOn = cfg.GamepadEnabled && bindings.Count > 0;
@@ -156,18 +165,25 @@ internal static class Program
             if (Console.IsInputRedirected) _ = Task.Run(async () => { try { while (!stop.IsCancellationRequested && await Console.In.ReadLineAsync() is { } line) Command(line); if (panelOwned && !stop.IsCancellationRequested) { Console.WriteLine("The control panel closed: stopping."); stop.Cancel(); } } catch (IOException) { } });
             else _ = Task.Run(() => { try { while (!stop.IsCancellationRequested && Console.ReadLine() is { } line) Command(line); } catch (IOException) { } });
             string? lastError = null;
+            // A duck, a cut's owed transition and a part-thrown T-bar outlive a dropped connection.
+            DeskActions.Memory? memory = null;
             while (!stop.IsCancellationRequested)
             {
                 try
                 {
                     using var obs = await ObsConnection.Connect(cfg, stop.Token); lastError = null;
                     using var native = new NativeTBar(cfg.Port);
-                    var desk = new DeskActions(cfg, obs.Call, nativeMove: native.MoveAsync); int mine = ++generation;
+                    var desk = new DeskActions(cfg, obs.Call, nativeMove: native.MoveAsync, resume: memory); int mine = ++generation;
                     obs.InputVolumeChanged += desk.OnVolumeChanged;
                     obs.InputLevelChangedById += desk.OnMixInputLevelChanged;
                     desk.StartMixMonitor();
                     var protocol = new MixProtocolServer(obs,desk);
-                    Volatile.Write(ref current, mine); Console.WriteLine($"Connected to OBS at {cfg.Host}:{cfg.Port}.");
+                    Console.WriteLine($"Connected to OBS at {cfg.Host}:{cfg.Port}.");
+                    // Before any input is accepted: finish what the last connection left behind.
+                    try { var said = await desk.ResumeAsync(); if (said.Length > 0) Console.WriteLine(said); }
+                    catch (Exception e) when (!stop.IsCancellationRequested) { Console.WriteLine("After reconnecting: " + e.Message); }
+                    finally { memory = desk.Leave(); } // what could not be finished now is tried again on the next connection
+                    Volatile.Write(ref current, mine);
                     tbarMail.Fail(); // a trigger held across a reconnect must return to rest before it can throw on the new connection
                     try
                     {
@@ -213,9 +229,11 @@ internal static class Program
                     {
                         Volatile.Write(ref current, 0);
                         tbarMail.Fail();
-                        await protocol.DisposeAsync();
-                        await desk.StopAudioAsync();
+                        // Each step on its own: a failure in one must not skip the T-bar cancel or lose the memory.
+                        try { await protocol.DisposeAsync(); } catch (Exception e) { Console.WriteLine("Closing the mixer link: " + e.Message); }
+                        try { await desk.StopAudioAsync(); } catch (Exception e) { Console.WriteLine("Stopping fades: " + e.Message); }
                         if (!obs.Disconnected.IsCompleted) { try { await desk.CancelOwnedAsync(); } catch (Exception e) { Console.WriteLine("Could not cancel T-bar: " + e.Message); } }
+                        memory = desk.Leave();
                     }
                 }
                 catch (OperationCanceledException) when (stop.IsCancellationRequested) { break; }

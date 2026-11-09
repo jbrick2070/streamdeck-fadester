@@ -233,6 +233,8 @@ internal static class Program
                         try { await protocol.DisposeAsync(); } catch (Exception e) { Console.WriteLine("Closing the mixer link: " + e.Message); }
                         try { await desk.StopAudioAsync(); } catch (Exception e) { Console.WriteLine("Stopping fades: " + e.Message); }
                         if (!obs.Disconnected.IsCompleted) { try { await desk.CancelOwnedAsync(); } catch (Exception e) { Console.WriteLine("Could not cancel T-bar: " + e.Message); } }
+                        // A transition still owed (a Fade the T-bar lent, a cut's) goes back while OBS can still take it.
+                        if (!obs.Disconnected.IsCompleted) { try { await desk.SettleAsync(); } catch (Exception e) { Console.WriteLine("Could not put the transition back: " + e.Message); } }
                         memory = desk.Leave();
                     }
                 }

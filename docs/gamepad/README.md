@@ -55,7 +55,7 @@ The action fires the moment the hold is long enough, not when you let go. On a b
 - If the controller is unplugged in the middle of a throw, the throw goes back to Program.
 - A cut (**B**) borrows OBS's Cut transition and puts your transition back. OBS sometimes switches back to Cut as the cut ends, so for 30 s after a cut the companion checks before each take, cut, T-bar move or Cancel and puts your transition back if OBS is on Cut. If you want Cut selected in OBS yourself, wait 30 s after a cut from the controller or the TourBox before choosing it.
 - Letting the trigger spring back before the end returns to Program at once: the picture snaps back. Easing it back with your finger eases the mix back.
-- The T-bar needs OBS 33.0.0 or 33.0.1 with its main window open, Studio Mode, a Preview different from Program, and the Fade transition with no conflicting scene override. If something is missing before the T-bar moves, the **Activity** tab says what, and letting go of the trigger is enough. If a throw is interrupted, or the **Activity** tab asks you to cancel or reset the fader, press **View**.
+- The T-bar needs OBS 33.0.0 or 33.0.1 with its main window open, Studio Mode and a Preview different from Program. It always mixes with a Fade: with Cut or another transition selected in OBS, it selects a Fade for the throw and puts yours back when you let go or take. A transition override on the Preview scene must be that Fade or none. If something is missing before the T-bar moves, the **Activity** tab says what, and letting go of the trigger is enough. If a throw is interrupted, or the **Activity** tab asks you to cancel or reset the fader, press **View**.
 
 ## Make it yours
 

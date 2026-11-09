@@ -16,6 +16,9 @@ internal static class StudioFaderSelfTests
         public List<(double From, double To)> NativeCalls = [];
         public int Commits, Releases, Takes, StaleTransitionReads;
         public string? TransitionAtTake;
+        // OBS lists transitions in hash order, so the Fade is not first. A Stinger is neither a Cut nor a Fade.
+        public string[] Listed = ["Coupe", "Stinger", "Fondu"];
+        public static string Kind(string name) => name switch { "Fondu" => "fade_transition", "Stinger" => "obs_stinger_transition", _ => "cut_transition" };
         private readonly Queue<string> queuedTransitions = new();
         private int readsRemaining;
         public List<string> Writes = [];
@@ -55,10 +58,10 @@ internal static class StudioFaderSelfTests
                         readsRemaining = StaleTransitionReads;
                     }
                     result["transitionName"] = Transition; result["transitionUuid"] = Transition + "-id";
-                    result["transitionKind"] = Transition == "Fondu" ? "fade_transition" : "cut_transition"; break;
+                    result["transitionKind"] = Kind(Transition); break;
                 case "GetSceneTransitionList":
                     result["currentSceneTransitionName"] = Transition;
-                    result["transitions"] = new JsonArray(new JsonObject { ["transitionName"] = "Coupe", ["transitionKind"] = "cut_transition" });
+                    result["transitions"] = new JsonArray(Listed.Select(name => (JsonNode)new JsonObject { ["transitionName"] = name, ["transitionKind"] = Kind(name) }).ToArray());
                     break;
                 case "SetCurrentSceneTransition":
                     var requested = (string)data!["transitionName"]!;
@@ -348,8 +351,10 @@ internal static class StudioFaderSelfTests
         await Task.Delay(500);
         await Blocked(() => fader.DispatchAsync("take.cut"));
         obs.Transition = "Stinger"; ignoreRestore = false;
-        await Blocked(() => fader.DispatchAsync("fader.forward"));
-        Check(obs.Transition == "Stinger", "an operator's own choice after a failed restore is never overwritten");
+        await fader.DispatchAsync("fader.forward");
+        Check(obs.Transition == "Fondu" && fader.Position > 0, "an operator's own choice after a failed restore is not repaid over; the T-bar lends a Fade");
+        await fader.DispatchAsync("fader.cancel");
+        Check(obs.Transition == "Stinger", "and Cancel puts the operator's choice back, not the cut's original");
         // An unconfirmed Cut that lands only after the next action has started.
         bool ignoreCut = true;
         obs = new(); fader = new((action, data) =>
@@ -422,6 +427,126 @@ internal static class StudioFaderSelfTests
         await fader.DispatchAsync("fader.cancel"); await fader.MoveToAsync(0);
         Check(obs.Commits == 0, "a changed Preview disarms absolute moves until an explicit cancel");
 
+        // With any transition but a Fade selected, the T-bar selects a Fade for the sweep and puts the operator's back.
+        obs = new(){Transition="Coupe"}; fader = new(obs.Call);
+        await fader.MoveToAsync(0.4);
+        Check(obs.Transition == "Fondu" && fader.Position == 0.4 && obs.Cursor == 0.4, "with Cut selected the trigger mixes with a Fade");
+        await fader.MoveToAsync(0);
+        Check(obs.Transition == "Coupe" && obs.Program == "a" && obs.Releases == 1 && obs.Commits == 0, "letting go puts Cut back");
+        await fader.MoveToAsync(0.5); await fader.MoveToAsync(1);
+        Check(obs.Transition == "Coupe" && obs.Program == "b" && obs.Commits == 1, "a take puts Cut back too");
+        obs = new(){Transition="Coupe"}; fader = new(obs.Call); await fader.MoveToAsync(1);
+        Check(obs.Transition == "Coupe" && obs.Program == "b" && obs.Commits == 1, "a full pull in one sample lends, takes and puts back");
+        obs = new(){Transition="Stinger"}; fader = new(obs.Call);
+        await fader.DispatchAsync("fader.forward");
+        Check(obs.Transition == "Fondu" && fader.Position > 0, "the dial lends a Fade over a Stinger");
+        await fader.DispatchAsync("fader.cancel");
+        Check(obs.Transition == "Stinger" && obs.Program == "a", "and Cancel puts the Stinger back");
+        obs = new(){Transition="Coupe"}; fader = new(obs.Call);
+        await fader.DispatchAsync("fader.forward"); await fader.DispatchAsync("take");
+        Check(obs.Program == "b" && obs.Commits == 1 && obs.Transition == "Coupe", "a Take during a lent throw takes, then puts Cut back");
+        obs = new(){Transition="Coupe", Listed=["Coupe", "Stinger"]}; fader = new(obs.Call);
+        await Blocked(() => fader.MoveToAsync(0.4));
+        Check(obs.Writes.Count == 0 && obs.Transition == "Coupe", "with no Fade in OBS nothing changes");
+        obs = new(){Transition="Coupe", Override="Stinger"}; fader = new(obs.Call);
+        await Blocked(() => fader.MoveToAsync(0.4));
+        Check(obs.Writes.Count == 0 && obs.Transition == "Coupe", "a Preview override other than the Fade stops it before anything changes");
+        obs = new(){Transition="Coupe", Override="Fondu"}; fader = new(obs.Call);
+        await fader.MoveToAsync(0.4);
+        Check(obs.Transition == "Fondu" && fader.Position == 0.4, "a Preview override naming that Fade is fine");
+        // OBS drops a selection while its transition is still active: a Fade that never lands moves nothing.
+        obs = new(){Transition="Coupe"}; fader = new((action, data) =>
+            action == "SetCurrentSceneTransition" && (string?)data?["transitionName"] == "Fondu" ? Task.FromResult(new JsonObject()) : obs.Call(action, data));
+        await Blocked(() => fader.MoveToAsync(0.4));
+        Check(obs.Transition == "Coupe" && fader.Position == 0 && obs.Cursor == 0 && !obs.Writes.Contains("SetTBarPosition"),
+            "a Fade OBS will not select moves nothing and leaves Cut");
+        obs.Transition = "Fondu"; // the operator then picks the Fade in OBS
+        await fader.DispatchAsync("take");
+        Check(obs.TransitionAtTake == "Fondu", "a lend OBS refused owes nothing afterwards: a Fade the operator picks next is theirs");
+        obs = new(){Transition="Coupe"}; fader = new((action, data) =>
+        {
+            if (action == "SetCurrentSceneTransition" && (string?)data?["transitionName"] == "Fondu") obs.Preview = "c"; // cued while the Fade was being selected
+            return obs.Call(action, data);
+        });
+        await Blocked(() => fader.MoveToAsync(0.4));
+        Check(obs.Transition == "Coupe" && obs.Cursor == 0, "a Preview cued while the Fade is selected stops the throw and puts Cut back at once");
+        obs = new(){Transition="Coupe", StaleTransitionReads=50}; fader = new(obs.Call);
+        await Blocked(() => fader.MoveToAsync(0.4));
+        for (int i = 0; i < 1000; i++) await obs.Call("GetCurrentSceneTransition", null);
+        Check(obs.Transition == "Coupe" && obs.Cursor == 0, "a Fade selection OBS answers late is followed by Cut, so Cut stays");
+        int fadeSends = 0;
+        obs = new(){Transition="Coupe"}; fader = new((action, data) =>
+            action == "SetCurrentSceneTransition" && (string?)data?["transitionName"] == "Fondu" && ++fadeSends == 1 ? Task.FromResult(new JsonObject()) : obs.Call(action, data));
+        await fader.MoveToAsync(0.4);
+        Check(obs.Transition == "Fondu" && fader.Position == 0.4 && fadeSends > 1, "a Fade selection OBS drops right after a cut is sent again");
+        // A restore OBS drops right after the sweep is retried, then reported and owed to the next action.
+        bool dropRestore = true; int restores = 0;
+        obs = new(){Transition="Coupe"}; fader = new((action, data) =>
+        {
+            if (action == "SetCurrentSceneTransition" && (string?)data?["transitionName"] == "Coupe" && dropRestore)
+            { restores++; return Task.FromResult(new JsonObject()); }
+            return obs.Call(action, data);
+        });
+        await fader.MoveToAsync(0.4);
+        await Blocked(() => fader.MoveToAsync(0));
+        Check(restores > 1 && obs.Program == "a" && obs.Transition == "Fondu", "a dropped restore is retried, then reported");
+        dropRestore = false;
+        await fader.DispatchAsync("fader.cancel");
+        Check(obs.Transition == "Coupe", "Cancel puts Cut back once OBS takes it");
+        dropRestore = true;
+        await fader.MoveToAsync(0.4); await Blocked(() => fader.MoveToAsync(0));
+        obs.Transition = "Coupe"; dropRestore = false; // one of the dropped restores lands late after all
+        await fader.DispatchAsync("fader.cancel");
+        obs.Transition = "Fondu"; // then the operator picks the Fade
+        await fader.DispatchAsync("take");
+        Check(obs.TransitionAtTake == "Fondu", "once Cut reads back the lent Fade is not owed: a Fade picked later is the operator's");
+        // A slow restore after a take must not let a held trigger take straight back.
+        obs = new(){Transition="Coupe"}; fader = new(async (action, data) =>
+        {
+            if (action == "SetCurrentSceneTransition" && (string?)data?["transitionName"] == "Coupe") await Task.Delay(500);
+            return await obs.Call(action, data);
+        });
+        await fader.MoveToAsync(1); await fader.MoveToAsync(1);
+        Check(obs.Program == "b" && obs.Commits == 1 && obs.Transition == "Coupe", "the second-take guard counts from after the restore");
+        // The native slider is checked before a Fade is lent.
+        nativeObs = new(){Transition="Coupe"}; native = new(nativeObs.Call, 0.5, nativeObs.NativeMove);
+        await native.DispatchAsync("fader.forward");
+        Check(nativeObs.Transition == "Fondu" && nativeObs.NativeCalls.SequenceEqual([(0d, 0d), (0d, 0.5)]), "a usable slider: check, lend, then move");
+        nativeObs = new(){Transition="Coupe", SliderOffscreen=true}; native = new(nativeObs.Call, 0.5, nativeObs.NativeMove);
+        await Blocked(() => native.DispatchAsync("fader.forward"));
+        Check(nativeObs.Transition == "Coupe" && nativeObs.Writes.Count == 0, "an unusable slider stops before the selection changes");
+        // While a sweep runs, a cut's owed transition is never swapped under it.
+        obs = new(); fader = new(obs.Call); await fader.DispatchAsync("take.cut");
+        await fader.MoveToAsync(0.3);
+        obs.Transition = "Coupe"; // OBS went back to Cut in the middle of the mix
+        int selections = obs.Writes.Count(w => w == "SetCurrentSceneTransition");
+        await Blocked(() => fader.MoveToAsync(0.4));
+        Check(obs.Writes.Count(w => w == "SetCurrentSceneTransition") == selections, "a running sweep stops instead of switching the transition under it");
+        await fader.DispatchAsync("fader.cancel");
+        Check(obs.Transition == "Fondu", "and Cancel then puts the cut's original back");
+        // A lent Fade outlives a failed sweep: it goes back once OBS's T-bar is idle, on Cancel or when the connection ends.
+        obs = new(){Transition="Coupe"}; fader = new(obs.Call); await fader.MoveToAsync(0.4);
+        obs.Preview = "c"; // the operator cued another scene in OBS mid-throw
+        await Blocked(() => fader.MoveToAsync(0.5));
+        await Blocked(() => fader.DispatchAsync("fader.cancel"));
+        Check(obs.Transition == "Fondu" && obs.Cursor > 0, "while OBS's T-bar is part-way the lent Fade cannot go back, and Cancel says so");
+        obs.Program = "a"; obs.Origin = null; obs.Cursor = 0; // the operator drags OBS's T-bar back
+        await fader.DispatchAsync("fader.cancel");
+        Check(obs.Transition == "Coupe", "once OBS is idle Cancel puts Cut back");
+        obs = new(){Transition="Coupe"}; fader = new(obs.Call); await fader.MoveToAsync(0.4);
+        obs.Program = "a"; obs.Origin = null; obs.Cursor = 0; // OBS ended the throw by itself
+        await Blocked(() => fader.MoveToAsync(0.5));
+        await fader.SettleAsync();
+        Check(obs.Transition == "Coupe", "a clean stop puts a lent Fade back even with the fader latched");
+        // A cut's watch that a lend replaced carries on after the throw.
+        obs = new(){Transition="Stinger"}; fader = new(obs.Call); await fader.DispatchAsync("take.cut");
+        await fader.MoveToAsync(0.4); await fader.MoveToAsync(0);
+        Check(obs.Transition == "Stinger", "a throw after a cut lends a Fade over the Stinger and puts it back");
+        obs.Transition = "Coupe"; // OBS goes back to Cut within the cut's 30 s
+        await Task.Delay(500);
+        await fader.DispatchAsync("take");
+        Check(obs.TransitionAtTake == "Stinger", "and the cut's watch still puts the Stinger back before the next take");
+
         // Each connection gets a new fader; the old one's memory crosses the reconnect.
         obs = new(); fader = new(obs.Call); await fader.DispatchAsync("take.cut");
         obs.Transition = "Coupe"; // OBS went back to Cut, then the connection dropped
@@ -448,6 +573,20 @@ internal static class StudioFaderSelfTests
         obs.Preview = "c"; // the operator cued something else while the connection was down
         fader = new(obs.Call, resume: fader.Leave());
         Check((await fader.ResumeAsync()).Contains("could not") && fader.Position == 0 && obs.Releases == 0, "a carried sweep that is no longer ours is not released on its own");
+        await fader.DispatchAsync("fader.cancel");
+        Check(obs.Releases == 1 && obs.Cursor == 0, "and one Cancel releases it, as the reconnect line says");
+        obs = new(){Transition="Coupe"}; fader = new(obs.Call); await fader.MoveToAsync(0.4);
+        fader = new(obs.Call, resume: fader.Leave());
+        Check((await fader.ResumeAsync()).Length > 0 && obs.Program == "a" && obs.Cursor == 0 && obs.Transition == "Coupe",
+            "a sweep that lent a Fade returns to Program and puts Cut back after a reconnect");
+        obs = new(){Transition="Coupe"}; fader = new(obs.Call); await fader.MoveToAsync(0.4);
+        dropRestore = true;
+        fader = new((action, data) => action == "SetCurrentSceneTransition" && (string?)data?["transitionName"] == "Coupe" && dropRestore
+            ? Task.FromResult(new JsonObject()) : obs.Call(action, data), resume: fader.Leave());
+        string? resumed = null;
+        try { await fader.ResumeAsync(); } catch (InvalidOperationException e) { resumed = e.Message; }
+        Check(resumed?.StartsWith("T-bar: back to Program after the reconnect.") == true && obs.Program == "a" && obs.Transition == "Fondu",
+            "a restore OBS drops after a reconnect is added to the reconnect line, not put in its place");
 
         // A T-bar stuck part-way with no memory of it (the companion was restarted): Cancel releases it.
         obs = new(); fader = new(obs.Call); await fader.MoveToAsync(0.4);

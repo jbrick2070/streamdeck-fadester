@@ -11,6 +11,7 @@ After the first hands-on run the operator asked for every control to be usable, 
 - **Speed presets:** controller-only `vjster.speed.fast` / `vjster.speed.slow` (`speed.set`, one of `BridgeConfig.PresetSpeeds` 0.25 to 2 without 1, default 2x and 0.5x). Not in `DeskActions.Supported`, which must match the TourBox map exactly.
 - **Panel:** a Game controller tab built from `presets/gamepad.json`, which the bridge self-test checks against the code. Action labels come from the localized `map.json`, the two speed presets' from `PanelText`.
 - **Cut restore:** the hardware run left OBS on Cut once while buttons were mashed. `StudioFader` now owes the original transition for 30 s and puts it back before its next take, T-bar move or cancel.
+- **Fade lend:** a later run still found OBS on Cut minutes after a cut, past those 30 s, and the trigger was refused. A throw that finds any transition but a Fade selected now selects the first Fade in OBS's list, after every other check and before its first write, and owes the operator's transition back from the moment the throw ends: it goes back at once on release, take, Cancel, reconnect or a clean stop, its 30 s watch starts only once OBS's T-bar is idle, and a confirmed return ends the debt.
 - **Not done:** the right trigger as an ordinary button (more ways to misfire for few users), the T-bar on the left trigger (two springs on one fader), hold or double-tap actions in general (they delay every press), the Guide button (Windows takes it for the Game Bar).
 
 ## Draft 3 (2026-11-08): measured on hardware, the page is out
@@ -78,7 +79,7 @@ Deferred: stick rate controls, LB/RB blend modes (they need `sceneName` + `scene
 
 States: **Disarmed → Armed → Throwing → Taking → Disarmed-until-rest**, and **Throwing → Cancelling → Armed**.
 
-- **Arm** only when the trigger reads at most 0.03, Studio Mode is on, Preview differs from Program, and the current transition can be driven manually (Fade with no conflicting override; a Cut cannot). Snapshot Program and Preview at arm time: OBS 33 reports the destination as Program as soon as a manual transition starts.
+- **Arm** only when the trigger reads at most 0.03, Studio Mode is on, Preview differs from Program, and OBS has a Fade to mix with (the selected one, or the first in its list, lent for the throw) with no conflicting override. Snapshot Program and Preview at arm time: OBS 33 reports the destination as Program as soon as a manual transition starts.
 - **Throwing**: writes coalesced at 50 ms. The first write waits for OBS to report the cursor between 0 and 1 before more are sent.
 - **Take** at 0.97 or more, or on A during a throw: Fadester's take (leave and re-enter Studio Mode). Samples during the take and the spring-back are discarded at the pad, never queued. Stay disarmed until the trigger reads at most 0.03.
 - **Cancel** when the trigger returns to 0.03 or less without a take, or on pad loss: one `SetTBarPosition {position 0, release true}` (as `tourbox/bridge/StudioFader.cs`), then confirm Program is unchanged and the cursor parked. With a fast spring the last write may be 30 to 50 %, so the audience sees a snap back, not an ease. B or a D-pad cue during a throw cancels first.

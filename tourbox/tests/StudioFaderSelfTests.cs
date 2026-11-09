@@ -262,6 +262,30 @@ internal static class StudioFaderSelfTests
             "waits for queued Cut and restore before returning");
         await fader.DispatchAsync("fader.forward");
         Check(fader.Position > 0, "the manual fade works immediately after a delayed Cut");
+        // The second 2026-11-09 hardware finding: the restore reads back, then OBS returns to Cut as the cut ends.
+        obs = new(); fader = new(obs.Call); await fader.DispatchAsync("take.cut");
+        Check(obs.Transition == "Fondu", "a confirmed restore reads back the original");
+        obs.Transition = "Coupe";
+        await fader.MoveToAsync(0.5);
+        Check(obs.Transition == "Fondu" && fader.Position == 0.5, "OBS returning to Cut after a confirmed restore is put back before the T-bar");
+        obs = new(); fader = new(obs.Call); await fader.DispatchAsync("take.cut");
+        await Task.Delay(500); obs.Transition = "Coupe";
+        await fader.DispatchAsync("take");
+        Check(obs.Transition == "Fondu" && obs.Takes == 2 && obs.TransitionAtTake == "Fondu", "and before a take, so it fades instead of cutting");
+        obs = new(); fader = new(obs.Call); await fader.DispatchAsync("take.cut");
+        await Task.Delay(500); obs.Transition = "Coupe";
+        await fader.DispatchAsync("take.cut");
+        Check(obs.Transition == "Fondu" && obs.Takes == 2, "a second cut while OBS went back to Cut still ends on the original");
+        obs = new(); fader = new(async (action, data) =>
+        {
+            var reply = await obs.Call(action, data);
+            if (action == "TriggerStudioModeTransition") obs.Transition = "Fondu"; // OBS put the original back by itself
+            return reply;
+        });
+        await fader.DispatchAsync("take.cut");
+        obs.Transition = "Coupe";
+        await fader.MoveToAsync(0.5);
+        Check(obs.Transition == "Fondu" && fader.Position == 0.5, "a cut that found the original already back still watches for Cut");
         int restoreRequests = 0;
         obs = new(); fader = new((action, data) =>
         {

@@ -2,7 +2,7 @@
 
 What changed in Fadester for OBS and, where it says so, in VJster. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are the plugin's own (`manifest.json`). There is no change control here: the newest entry is the version.
 
-## Unreleased
+## 0.10.1 - 2026-11-08
 
 - **OBS address with a port:** a Host typed as `127.0.0.1:4455` no longer makes Fadester stop on the next key press (and, in the suite, stop for good after a few presses). It now shows OBS unreachable until the Host holds the address alone.
 - **VJster link settings:** changing the link port or the allowed extension at the moment a key appeared could leave the old link running with the old settings, with the keys saying EXTENSION OFF until Stream Deck restarted. The old link now always stops first.

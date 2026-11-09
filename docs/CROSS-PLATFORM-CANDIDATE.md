@@ -1,6 +1,6 @@
 # Windows and macOS candidate
 
-The same `io.github.jbrick2070.fadester-for-obs.streamDeckPlugin` contains all 17 Fadester and VJster actions for both Windows and macOS. The existing UUID and version 0.10.0 are preserved. The standalone VJster manifest has the same platform declarations, for people who use it separately.
+The same `io.github.jbrick2070.fadester-for-obs.streamDeckPlugin` contains all 17 Fadester and VJster actions for both Windows and macOS. The existing UUID is preserved. The standalone VJster manifest has the same platform declarations, for people who use it separately.
 
 Requirements: Stream Deck 7.6 or later for the suite, Windows 10 or later, or macOS 13.5 or later. The plugin asks Stream Deck to run Node 24; [Node 24's macOS minimum is 13.5](https://nodejs.org/en/blog/migrations/v22-to-v24). One shared JavaScript entry point is used on both operating systems, as supported by the [Stream Deck manifest](https://docs.elgato.com/streamdeck/sdk/references/manifest/).
 

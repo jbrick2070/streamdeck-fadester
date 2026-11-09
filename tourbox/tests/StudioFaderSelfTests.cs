@@ -299,6 +299,47 @@ internal static class StudioFaderSelfTests
         await Blocked(() => fader.DispatchAsync("take.cut"));
         Check(obs.Takes == 0 && obs.Transition == "Stinger" && obs.Writes.Count == 1,
             "an operator transition change before Cut is preserved");
+        // The 2026-11-09 hardware finding: OBS ignores every restore during a busy Cut, so the cut ends on Cut.
+        bool ignoreRestore = true; restoreRequests = 0;
+        obs = new(); fader = new((action, data) =>
+        {
+            if (action == "SetCurrentSceneTransition" && (string?)data?["transitionName"] == "Fondu" && ignoreRestore)
+            { restoreRequests++; return Task.FromResult(new JsonObject()); }
+            return obs.Call(action, data);
+        });
+        await Blocked(() => fader.DispatchAsync("take.cut"));
+        Check(obs.Takes == 1 && obs.Transition == "Coupe" && restoreRequests > 1, "an ignored restore leaves Cut selected and says so");
+        await Blocked(() => fader.MoveToAsync(0.5));
+        Check(obs.Transition == "Coupe" && obs.Takes == 1 && fader.Position == 0, "while OBS still ignores it, the next action stops without moving");
+        ignoreRestore = false;
+        await fader.MoveToAsync(0.5);
+        Check(obs.Transition == "Fondu" && fader.Position == 0.5, "the next action puts Fade back first, then mixes");
+        await fader.DispatchAsync("fader.cancel");
+        ignoreRestore = true;
+        await Task.Delay(500); // clear the 450 ms second-take guard on purpose, not by the restore loop's length
+        obs.Preview = "a"; obs.Program = "b"; await Blocked(() => fader.DispatchAsync("take.cut"));
+        ignoreRestore = false; await fader.DispatchAsync("fader.cancel");
+        Check(obs.Transition == "Fondu" && obs.Takes == 2, "Cancel also puts the owed transition back");
+        ignoreRestore = true;
+        await Task.Delay(500);
+        await Blocked(() => fader.DispatchAsync("take.cut"));
+        obs.Transition = "Stinger"; ignoreRestore = false;
+        await Blocked(() => fader.DispatchAsync("fader.forward"));
+        Check(obs.Transition == "Stinger", "an operator's own choice after a failed restore is never overwritten");
+        // An unconfirmed Cut that lands only after the next action has started.
+        bool ignoreCut = true;
+        obs = new(); fader = new((action, data) =>
+        {
+            if (action == "SetCurrentSceneTransition" && (string?)data?["transitionName"] == "Coupe" && ignoreCut)
+                return Task.FromResult(new JsonObject());
+            return obs.Call(action, data);
+        });
+        await Blocked(() => fader.DispatchAsync("take.cut"));
+        Check(obs.Takes == 0 && obs.Transition == "Fondu", "an unconfirmed Cut never takes");
+        await fader.MoveToAsync(0.3); await fader.DispatchAsync("fader.cancel");
+        obs.Transition = "Coupe"; // the queued Cut lands late
+        await fader.MoveToAsync(0.4);
+        Check(obs.Transition == "Fondu" && fader.Position == 0.4, "a Cut that lands after the next action is still put back");
         obs = new(){RejectTrigger=true}; fader = new(obs.Call); await Blocked(() => fader.DispatchAsync("take.cut"));
         Check(obs.Transition == "Fondu" && obs.Program == "a", "failed cut restores selected transition");
         obs = new(){Override="Stinger"}; fader = new(obs.Call);

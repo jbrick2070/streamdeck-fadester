@@ -15,6 +15,10 @@ public sealed class StudioFader
     private sealed record Sweep(Scenes Scenes, string Transition);
     private Sweep? sweep;
     private bool needsReset, supportedVersion;
+    // A Cut whose restoration OBS did not confirm (or may still apply late): the original selection is owed back.
+    private sealed record Owed(string Cut, string Original, bool Unconfirmed, long At);
+    private Owed? owed;
+    private const double OwedForMs = 30_000, UnconfirmedSettleMs = 2_000;
     private int direction = 1;
     private long takeAt;
 
@@ -45,6 +49,7 @@ public sealed class StudioFader
         try
         {
             if (needsReset) throw new InvalidOperationException("The previous transition changed or could not be confirmed. Check OBS and cancel/reset the fader before using it again.");
+            await RepayAsync();
             // Like a second Take press: a full pull from rest right after a take must not take straight back.
             if (target == 1 && sweep == null && takeAt != 0 && Stopwatch.GetElapsedTime(takeAt).TotalMilliseconds < 450) return false;
             await MoveAsync(target - Position);
@@ -62,9 +67,11 @@ public sealed class StudioFader
             {
                 if (sweep != null) await CancelSweepAsync();
                 needsReset = false;
+                await RepayAsync();
                 return;
             }
             if (needsReset) throw new InvalidOperationException("The previous transition changed or could not be confirmed. Check OBS and cancel/reset the fader before using it again.");
+            await RepayAsync();
             switch (action)
             {
                 case "fader.forward": await MoveAsync(direction * step); break;
@@ -306,7 +313,7 @@ public sealed class StudioFader
         if (scenes.Program == scenes.Preview) return;
         await RequireIdleAsync();
         string? previous = null, replacement = null;
-        bool requestedCut = false, confirmedCut = false;
+        bool requestedCut = false, confirmedCut = false, triggered = false;
         try
         {
             if (cut)
@@ -332,18 +339,60 @@ public sealed class StudioFader
                 throw new InvalidOperationException("The selected OBS transition changed before Cut.");
             takeAt = Stopwatch.GetTimestamp();
             await rpc("TriggerStudioModeTransition", null);
+            triggered = true;
             await ConfirmProgramAsync(scenes.Preview);
         }
         finally
         {
             if (requestedCut)
             {
+                owed = new(replacement!, previous!, !confirmedCut, Stopwatch.GetTimestamp());
                 var selected = await ReadTransitionNameAsync();
                 // An unconfirmed Cut may still be queued behind the stale read. Queue our
                 // original selection after it, but leave a third-party selection alone.
                 if (selected == replacement || (!confirmedCut && selected == previous))
-                    await SelectTransitionAsync(replacement!, previous!, restoring: true);
+                {
+                    try { await SelectTransitionAsync(replacement!, previous!, restoring: true); }
+                    catch (InvalidOperationException e)
+                    {
+                        if (await ReadTransitionNameAsync() != replacement) { owed = null; throw; }
+                        // Say whether the cut was sent, so nobody presses it again to "retry".
+                        throw new InvalidOperationException((triggered ? "Cut sent, but " : "No cut sent: ") +
+                            $"OBS stayed on {replacement}. {previous} goes back before your next action, or choose it in OBS.", e);
+                    }
+                    finally
+                    {
+                        // The settle time for a late Cut starts when our restore attempt ends, not before its retries.
+                        if (owed != null) owed = owed with { At = Stopwatch.GetTimestamp() };
+                    }
+                    // A confirmed Cut was undone and read back. An unconfirmed one may still land: the next action checks.
+                    if (confirmedCut) owed = null;
+                }
+                else owed = null;
             }
         }
+    }
+
+    /// <summary>Puts back the transition a Cut borrowed when OBS did not confirm its restoration in time.</summary>
+    private async Task RepayAsync()
+    {
+        if (owed is not var (cut, original, unconfirmed, at)) return;
+        double age = Stopwatch.GetElapsedTime(at).TotalMilliseconds;
+        // After half a minute a Cut selection is more likely the operator's own choice than our leftover.
+        if (age > OwedForMs) { owed = null; return; }
+        var selected = await ReadTransitionNameAsync();
+        // An unconfirmed Cut may still land behind this read: keep watching for it a little longer.
+        if (selected == original && unconfirmed && age < UnconfirmedSettleMs) return;
+        if (selected == cut)
+        {
+            try { await SelectTransitionAsync(cut, original, restoring: true); }
+            catch (InvalidOperationException e)
+            {
+                // The operator chose another transition meanwhile: theirs stands.
+                if (await ReadTransitionNameAsync() == cut)
+                    throw new InvalidOperationException($"OBS is still on {cut} after the last cut. Choose {original} in OBS, or press Cancel to try again.", e);
+            }
+        }
+        owed = null;
     }
 }

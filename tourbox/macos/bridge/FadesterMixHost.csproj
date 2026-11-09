@@ -13,6 +13,7 @@
     <Compile Include="Program.cs" />
     <Compile Include="../../bridge/AudioDesk.cs" Link="Shared/AudioDesk.cs" />
     <Compile Include="../../bridge/BridgeConfig.cs" Link="Shared/BridgeConfig.cs" />
+    <Compile Include="../../bridge/Gamepad.cs" Link="Shared/Gamepad.cs" />
     <Compile Include="../../bridge/DeskActions.cs" Link="Shared/DeskActions.cs" />
     <Compile Include="../../bridge/MixDesk.cs" Link="Shared/MixDesk.cs" />
     <Compile Include="../../bridge/MixJournal.cs" Link="Shared/MixJournal.cs" />

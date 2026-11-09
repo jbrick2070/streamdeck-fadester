@@ -19,6 +19,8 @@
     <Compile Include="../../bridge/AudioDesk.cs" Link="Shared/AudioDesk.cs" />
     <Compile Include="../../bridge/BridgeConfig.cs" Link="Shared/BridgeConfig.cs" />
     <Compile Include="../../bridge/DeskActions.cs" Link="Shared/DeskActions.cs" />
+    <!-- The controller map is checked by BridgeConfig; XInput itself is only called by the Windows companion. -->
+    <Compile Include="../../bridge/Gamepad.cs" Link="Shared/Gamepad.cs" />
     <Compile Include="../../bridge/MixDesk.cs" Link="Shared/MixDesk.cs" />
     <Compile Include="../../bridge/MixJournal.cs" Link="Shared/MixJournal.cs" />
     <Compile Include="../../bridge/MixProtocolServer.cs" Link="Shared/MixProtocolServer.cs" />

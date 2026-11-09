@@ -1,5 +1,18 @@
 # Fadester Pad: a game controller as a Fadester surface
 
+## Draft 4 (2026-11-09): every control usable, easy mode
+
+After the first hands-on run the operator asked for every control to be usable, for speed options, and for an easy mode because a game controller is bumped far more often than a TourBox or a Stream Deck. Reviewed by agy (Gemini 4 Argon), Claude Fable and Codex (given a self-contained problem statement); where they split, the evidence decided.
+
+- **Easy mode** (`gamepadEasy`, default on): three tiers in `PadControls.HoldMs`. Instant for cues, steps, speed and blend resets; 400 ms for take, cut, overlay, media, VJster play / pause, blend-mode cycling and T-bar ticks; 700 ms for whole-mix fade out and mic mute. A hold fires when its time is up (never on release): once on a button or LT, and on a stick then every 200 ms for an action that `PadControls.Repeats`. It ends on disconnect or a shift change. The right trigger is not guarded.
+- **Shift layer:** `LB+<control>` keys. With any of them LB is only the shift. The shift picks the action, never its tier (Codex's case: a thumb brushing A while LB is held for a blend change must not cut). Controls held across a shift change wait to be let go.
+- **Sticks:** dominant axis, locked until the stick is centred. One-shot actions (presets, resets, duck) fire once per push.
+- **Disarm:** every action the pad emits goes through `PadControls.StopsThrow`, the same rule the dispatch loop uses.
+- **Speed presets:** controller-only `vjster.speed.fast` / `vjster.speed.slow` (`speed.set`, one of `BridgeConfig.PresetSpeeds` 0.25 to 2 without 1, default 2x and 0.5x). Not in `DeskActions.Supported`, which must match the TourBox map exactly.
+- **Panel:** a Game controller tab built from `presets/gamepad.json`, which the bridge self-test checks against the code. Action labels come from the localized `map.json`, the two speed presets' from `PanelText`.
+- **Cut restore:** the hardware run left OBS on Cut once while buttons were mashed. `StudioFader` now owes the original transition for 30 s and puts it back before its next take, T-bar move or cancel.
+- **Not done:** the right trigger as an ordinary button (more ways to misfire for few users), the T-bar on the left trigger (two springs on one fader), hold or double-tap actions in general (they delay every press), the Guide button (Windows takes it for the Game Bar).
+
 ## Draft 3 (2026-11-08): measured on hardware, the page is out
 
 Measured with the operator's Xbox Series controller (USB) on Windows 11, OBS 33.0.1:

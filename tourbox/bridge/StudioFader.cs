@@ -133,9 +133,10 @@ public sealed class StudioFader
             await RequireIdleAsync();
             var transition = await rpc("GetCurrentSceneTransition", null);
             var sceneOverride = await SceneOverrideAsync(scenes.Preview);
-            if (Field(transition, "transitionKind") != "fade_transition" ||
-                (!string.IsNullOrEmpty(sceneOverride) && sceneOverride != Field(transition, "transitionName")))
-                throw new InvalidOperationException("Select Fade with no conflicting Preview scene transition override for a manual mix.");
+            if (Field(transition, "transitionKind") != "fade_transition")
+                throw new InvalidOperationException($"OBS has the {transition["transitionName"]?.GetValue<string>() ?? "current"} transition selected. Select Fade in OBS for a manual mix.");
+            if (!string.IsNullOrEmpty(sceneOverride) && sceneOverride != Field(transition, "transitionName"))
+                throw new InvalidOperationException($"The Preview scene has its own transition, {sceneOverride}. Set its transition override to {Field(transition, "transitionName")} or none for a manual mix.");
             sweep = new Sweep(scenes, Field(transition, "transitionUuid"));
         }
         if (next == 0) { await CancelSweepAsync(); return; }

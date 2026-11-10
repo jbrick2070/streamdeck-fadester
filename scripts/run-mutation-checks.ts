@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import { readFileSync, writeFileSync } from "node:fs";
-import { spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { resolve } from "node:path";
+
+/* A hung test run must not leave a mutated file behind: each run is bounded, as in the VJster runner. */
+const VITEST_TIMEOUT_MS = 180_000;
 
 interface MutationCheck {
   id: string;
@@ -2351,7 +2354,7 @@ const MUTATIONS: MutationCheck[] = [
   }
 ];
 
-function runVitest(testFile?: string): { status: number; output: string } {
+function runVitest(testFile?: string, timeoutMs: number = VITEST_TIMEOUT_MS): { status: number; output: string } {
   const vitestEntry = resolve(ROOT, "node_modules/vitest/vitest.mjs");
   const args = [vitestEntry, "run", "--reporter=basic"];
   if (testFile) {
@@ -2359,16 +2362,48 @@ function runVitest(testFile?: string): { status: number; output: string } {
   }
   const res = spawnSync(process.execPath, args, {
     cwd: ROOT,
-    encoding: "utf8"
+    encoding: "utf8",
+    timeout: timeoutMs
   });
+  const timedOut = res.error && (res.error as NodeJS.ErrnoException).code === "ETIMEDOUT";
   return {
     status: res.status ?? 1,
-    output: `${res.stdout ?? ""}\n${res.stderr ?? ""}`
+    output: `${res.stdout ?? ""}\n${res.stderr ?? ""}${timedOut ? `\n(timed out after ${timeoutMs} ms)` : ""}`
   };
+}
+
+/* The runner rewrites tracked files one at a time. The file being mutated is put back on a normal end, a thrown
+ * error and process.exit. */
+let active: { path: string; original: Buffer } | null = null;
+function restoreActive(): void {
+  if (active) {
+    writeFileSync(active.path, active.original);
+    active = null;
+  }
+}
+
+/* Uncommitted edits in a file the runner rewrites could be lost if the process is killed hard: refuse, unless --here
+ * says this checkout holds no one else's work. */
+function filesWithLocalChanges(): string[] {
+  const files = [...new Set(MUTATIONS.map((m) => m.filePath))];
+  const out = execFileSync("git", ["status", "--porcelain", "--", ...files], { cwd: ROOT, encoding: "utf8" });
+  return out.split(/\r?\n/).filter((line) => line.trim() !== "");
 }
 
 function main(): void {
   console.log("=== Phase 1 Mutation Check Runner ===");
+  const changed = filesWithLocalChanges();
+  if (changed.length > 0 && !process.argv.includes("--here")) {
+    console.error("Refusing to run: files the runner rewrites have uncommitted changes:");
+    for (const line of changed) console.error(`  ${line}`);
+    console.error("Commit or stash them first, or pass --here (npm run test:mutation -- --here).");
+    process.exit(2);
+  }
+  // The loop is synchronous (spawnSync), so signal handlers would never get a turn; a thrown error and a normal end
+  // restore through the finally below, and this hook covers process.exit. A hard kill can still leave one file
+  // mutated, which is why files with uncommitted changes are refused above.
+  process.on("exit", restoreActive);
+
   for (const m of MUTATIONS) {
     const originalBytes = readFileSync(m.filePath);
     const originalText = originalBytes.toString("utf8");
@@ -2387,6 +2422,7 @@ function main(): void {
       : mutatedNormalized;
 
     try {
+      active = { path: m.filePath, original: originalBytes };
       writeFileSync(m.filePath, Buffer.from(mutatedText, "utf8"));
       const result = runVitest(m.testFile);
       if (result.status === 0) {
@@ -2407,12 +2443,15 @@ function main(): void {
         `[KILLED] ${m.id} (${m.step}): ${m.description} -> ${m.testFile} exited with code ${result.status}`
       );
     } finally {
-      writeFileSync(m.filePath, originalBytes);
+      restoreActive();
+      if (!readFileSync(m.filePath).equals(originalBytes)) {
+        throw new Error(`[${m.id}] ${m.filePath} was not restored byte for byte`);
+      }
     }
   }
 
   console.log("\nRe-running full test suite after restoring all files...");
-  const finalRun = runVitest();
+  const finalRun = runVitest(undefined, 0); // the whole suite, with nothing mutated: no time limit (0 = none)
   if (finalRun.status !== 0) {
     console.error(finalRun.output);
     throw new Error("Post-mutation full test suite failed!");

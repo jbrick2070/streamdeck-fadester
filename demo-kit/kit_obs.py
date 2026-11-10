@@ -141,9 +141,12 @@ def assemble(obs: Path, core: Path = DEFAULT_CORE, plugins: dict[str, Path] | No
 # ---------------------------------------------------------------- the OBS lock
 
 def obs_pids() -> list[int]:
-    out = subprocess.run(["tasklist", "/FI", "IMAGENAME eq obs64.exe", "/FO", "CSV", "/NH"],
-                         capture_output=True, text=True).stdout
-    return [int(line.split('","')[1]) for line in out.splitlines() if line.startswith('"obs64.exe"')]
+    res = subprocess.run(["tasklist", "/FI", "IMAGENAME eq obs64.exe", "/FO", "CSV", "/NH"],
+                         capture_output=True, text=True)
+    # a failed tasklist is "cannot tell", never "no OBS": the lock treats it as busy
+    if res.returncode != 0 or res.stdout is None:
+        raise LockBusy(f"cannot tell whether an obs64 runs (tasklist exit {res.returncode})")
+    return [int(line.split('","')[1]) for line in res.stdout.splitlines() if line.startswith('"obs64.exe"')]
 
 
 def take_lock(lock: Path, owner: str, pids=obs_pids) -> str:
@@ -218,8 +221,10 @@ def run_obs(obs: Path, collection: str, events: list, settle_s: float = 8, start
 
     The caller holds the OBS lock. events gets one dict per step (start, close, kill)."""
     proc, log = start_obs(obs, collection, events, start_s, close_s)
-    time.sleep(settle_s)
-    stop_obs(proc, events, close_s)
+    try:
+        time.sleep(settle_s)
+    finally:
+        stop_obs(proc, events, close_s)  # also on Ctrl+C: never leave the portable OBS running
     return log
 
 
@@ -234,18 +239,26 @@ def start_obs(obs: Path, collection: str, events: list, start_s: float = 180,
     proc = subprocess.Popen(args, cwd=str(exe.parent))
     events.append({"event": "start", "pid": proc.pid, "args": args, "time": time.time()})
     log = None
-    deadline = time.monotonic() + start_s
-    while time.monotonic() < deadline:
-        if proc.poll() is not None:
-            raise RuntimeError(f"OBS exited early with {proc.returncode}")
-        log = newest_log(obs)
-        if log is not None and log != before and STARTUP_LINE in log.read_text(encoding="utf-8", errors="replace") \
-                and any(t.startswith("OBS ") for _, t in windows(proc.pid)):
-            break
-        time.sleep(0.5)
-    else:
-        stop_obs(proc, events, close_s)
-        raise RuntimeError(f"OBS did not finish starting in {start_s} s")
+    started = False
+    try:
+        deadline = time.monotonic() + start_s
+        while time.monotonic() < deadline:
+            if proc.poll() is not None:
+                raise RuntimeError(f"OBS exited early with {proc.returncode}")
+            log = newest_log(obs)
+            if log is not None and log != before \
+                    and STARTUP_LINE in log.read_text(encoding="utf-8", errors="replace") \
+                    and any(t.startswith("OBS ") for _, t in windows(proc.pid)):
+                started = True
+                break
+            time.sleep(0.5)
+        if not started:
+            raise RuntimeError(f"OBS did not finish starting in {start_s} s")
+    except BaseException:
+        # any way out while waiting (timeout, an error reading the log, Ctrl+C) closes the OBS it started
+        if proc.poll() is None:
+            stop_obs(proc, events, close_s)
+        raise
     return proc, log
 
 

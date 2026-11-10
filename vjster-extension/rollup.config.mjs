@@ -35,6 +35,17 @@ function copyStatic() {
   };
 }
 
+// The packer zips every file in bin (scripts/vjster/pack-extension.ts), so a build starts from an empty bin: a file
+// left there by hand or by an older build can never reach the Chrome Web Store zip.
+function cleanOut() {
+  return {
+    name: "vjster-clean-out",
+    buildStart() {
+      rmSync(out, { recursive: true, force: true });
+    }
+  };
+}
+
 const plugins = () => [
   typescript({ tsconfig: resolve(here, "tsconfig.json"), noEmit: false, include: [`${here}/src/**/*.ts`, `${resolve(here, "../src/vjster/shared")}/**/*.ts`] }),
   nodeResolve({ browser: true, preferBuiltins: false }),
@@ -48,7 +59,7 @@ const bundle = (name, format, extra = []) => ({
 });
 
 export default [
-  bundle("background", "es"),
+  bundle("background", "es", [cleanOut()]), // the first bundle: rollup builds this list in order
   bundle("content-main", "iife"),
   bundle("content-bridge", "iife"),
   bundle("options", "iife", [copyStatic()])

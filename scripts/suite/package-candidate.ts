@@ -3,7 +3,7 @@
 // node --import tsx scripts/suite/package-candidate.ts [--check]
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { packExtension } from "../vjster/pack-extension.js";
 
@@ -101,6 +101,9 @@ export function packageCandidate(root: string): string {
   run(root, [cli, "validate", VJSTER]);
 
   const out = join(root, "release", "candidates", "windows-macos");
+  // a generated folder: emptied first, so an artifact or CANDIDATE.json left by an earlier or failed run never
+  // passes for this candidate
+  rmSync(out, { recursive: true, force: true });
   mkdirSync(out, { recursive: true });
   run(root, [cli, "pack", SUITE, "--output", out, "--force"]);
   const extension = packExtension(join(root, "vjster-extension", "bin"));

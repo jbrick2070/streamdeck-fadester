@@ -65,19 +65,41 @@ export function installPlugin(sourceDir: string, config: string, uuid: string): 
     throw new Error(`${sourceDir} and ${target} overlap; the plugin cannot be installed over itself`);
   }
   mkdirSync(join(config, "plugins"), { recursive: true });
-  // Copy beside the old folder and swap, so a copy that fails (a locked file) leaves the old install whole.
+  // Copy beside the old folder and swap, so a copy that fails (a locked file) leaves the old install whole. The old
+  // folder is renamed aside before the new one moves in and deleted only after, so a failed delete or rename (a file
+  // OpenDeck still holds) never leaves the deck with no plugin: on failure the old folder is put back.
   const fresh = `${target}.new`;
+  const old = `${target}.old`;
   rmSync(fresh, { recursive: true, force: true });
+  rmSync(old, { recursive: true, force: true });
   try {
     cpSync(sourceDir, fresh, {
       recursive: true,
-      filter: (path) => relative(from, resolve(path)).split(/[\/]/)[0] !== "logs"
+      filter: (path) => relative(from, resolve(path)).split(/[\\/]/)[0] !== "logs"
     });
-    rmSync(target, { recursive: true, force: true });
-    renameSync(fresh, target);
+    const hadOld = existsSync(target);
+    if (hadOld) renameSync(target, old);
+    try {
+      renameSync(fresh, target);
+    } catch (error) {
+      if (hadOld) {
+        try {
+          renameSync(old, target);
+        } catch (restoreError) {
+          throw new Error(`${String(error)}; and the old plugin could not be put back from ${old}: ${String(restoreError)}`);
+        }
+      }
+      throw error;
+    }
   } catch (error) {
     rmSync(fresh, { recursive: true, force: true });
     throw error;
+  }
+  try {
+    rmSync(old, { recursive: true, force: true });
+  } catch (error) {
+    // the new plugin is in place; only the cleanup failed (a file OpenDeck still holds): the next install removes it
+    console.warn(`Installed, but ${old} could not be removed yet (${String(error)}); close OpenDeck and delete it.`);
   }
   return target;
 }
@@ -193,13 +215,18 @@ export function applyLayout(
   }
   const result = placeLayout(profile, manifest, pluginDir, layout, device, profileName);
   if (result.placed.length + result.refreshed.length > 0) {
+    // One backup, the file as it was before any run, under a flat name (a profile in a folder is "Folder/Name",
+    // which made the copy fail after the plugin was already replaced). The profile is written through a temporary
+    // file and a rename, so a failed write never cuts the user's profile short. The temporary file is kept in the
+    // backups folder: OpenDeck reads every file in a profile folder as a profile.
     const backups = join(config, "backups", manifest.UUID);
-    const backup = join(backups, `${device}-${profileName}.json`);
-    if (!existsSync(backup)) {
-      mkdirSync(backups, { recursive: true });
-      copyFileSync(file, backup);
-    }
-    writeFileSync(file, JSON.stringify(profile, null, 2));
+    const flat = `${device}-${profileName}`.replace(/[\\/:*?"<>|]/g, "_");
+    const backup = join(backups, `${flat}.json`);
+    mkdirSync(backups, { recursive: true });
+    if (!existsSync(backup)) copyFileSync(file, backup);
+    const temp = join(backups, `${flat}.writing`);
+    writeFileSync(temp, JSON.stringify(profile, null, 2));
+    renameSync(temp, file);
   }
   return { ...result, file };
 }

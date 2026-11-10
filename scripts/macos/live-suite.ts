@@ -4,7 +4,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir, release } from "node:os";
-import { join, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { WebSocket, WebSocketServer } from "ws";
 import { checkedCall, liveConfig, ObsRequestFailure, removeOwnedInput, requireExpectedView, requireIdle, requireOnlyFixtureInputs, requireUnchangedFixtures, silentWav, type ExpectedView, type Json, type ObservedInput, type Owned, type SceneItem, type View } from "./live-safety.js";
 
@@ -263,7 +263,10 @@ export async function main(): Promise<void> {
     await mutate("SetCurrentPreviewScene", { sceneUuid: b.uuid });
 
     const copy = join(temp, `${PLUGIN}.sdPlugin`);
-    cpSync(source, copy, { recursive: true, filter: (path) => !/(?:^|[\\/])logs(?:[\\/]|$)/.test(path) });
+    // Only the plugin's own top-level logs folder is left out: testing the whole path would copy nothing when the
+    // repository itself lies under a folder named logs.
+    cpSync(source, copy, { recursive: true, filter: (path) => relative(resolve(source), resolve(path)).split(/[\\/]/)[0] !== "logs" });
+    if (!existsSync(join(copy, "bin", "plugin.js"))) throw new Error(`${copy} has no bin/plugin.js; build the plugin first`);
     const vjsterPort = await unusedPort();
     host = new SimulatedHost({ host: "127.0.0.1", port: config.port, password: config.password, vjster: { port: vjsterPort } });
     const info = { application: { font: "Arial", language: "en", platform: "mac", platformVersion: release(), version: "7.6.1" },

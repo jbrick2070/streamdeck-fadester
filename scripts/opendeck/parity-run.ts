@@ -47,7 +47,12 @@ async function until<T>(what: string, probe: () => Promise<T | undefined | false
 
 // ---- OBS: launch the isolated copy and speak obs-websocket 5 to it
 function obsRunning(): boolean {
-  return spawnSync("tasklist", ["/FI", "IMAGENAME eq obs64.exe", "/NH"], { encoding: "utf8" }).stdout.toLowerCase().includes("obs64.exe");
+  const res = spawnSync("tasklist", ["/FI", "IMAGENAME eq obs64.exe", "/NH"], { encoding: "utf8" });
+  /* a failed tasklist is "cannot tell", never "not running": the run would otherwise start a second OBS */
+  if (res.error || res.status !== 0 || typeof res.stdout !== "string") {
+    throw new Error("Could not tell whether OBS is running (tasklist failed); close OBS and try again.");
+  }
+  return res.stdout.toLowerCase().includes("obs64.exe");
 }
 
 function launchObs(): ChildProcess {

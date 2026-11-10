@@ -129,7 +129,7 @@ const MUTATIONS: MutationCheck[] = [
       ROOT,
       "packages/streamdeck-fadester-shared/src/cell-rate-limiter.ts"
     ),
-    target: "void this.onFlush(toSend);",
+    target: "          this.flush(toSend);",
     mutated: "void toSend;",
     testFile: "tests/rate-limiter-thumbnails.test.ts"
   },

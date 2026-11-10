@@ -4,7 +4,7 @@
 
 ![Photo of a Stream Deck + running Fadester for OBS in Dutch: scene keys, two Playlister keys, the red PANIEK (Panic) key, a crossfader strip and a Desktop Audio dial on the touch strip. Several keys still ask for Studio Mode or a Playlister to be picked.](docs/images/streamdeck-fadester-hero.jpg)
 
-Needs Stream Deck 7.6 or later on Windows 10 or later (Stream Deck 6.x is not supported), and OBS Studio with its WebSocket server on (tested with OBS 33). Works on a Stream Deck, Stream Deck +, Stream Deck Mini and Stream Deck Neo.
+Needs Stream Deck 7.6 or later on Windows 10 or later or macOS 13.5 or later (Stream Deck 6.x is not supported), and OBS Studio with its WebSocket server on (tested with OBS 33). Works on a Stream Deck, Stream Deck +, Stream Deck Mini and Stream Deck Neo.
 
 **One plugin, two products.** From 0.9.0 this plugin also carries [VJster](docs/vjster/README.md): speed and quality dials and keys that ride the video playing in Chrome or in an OBS browser source. Its seven actions sit in the same action list, named **VJster Speed** and so on. How it is built is in [docs/SUITE.md](docs/SUITE.md); VJster is still released on its own for decks with no OBS. It also runs in [OpenDeck](docs/OPENDECK.md), the free open-source alternative to Stream Deck software.
 

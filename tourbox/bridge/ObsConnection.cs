@@ -13,6 +13,23 @@ internal sealed class ObsError(string request, int code, string comment) : Excep
     public int Code { get; } = code;
 }
 
+/// <summary>
+/// One of the four ways OBS can refuse a connection that the user fixes in OBS. The message ends with its code in
+/// brackets, for example "(obs-no-answer)": the panel shows its own translated text for that code.
+/// </summary>
+internal sealed class ObsSetupException(string code, string message) : InvalidOperationException($"{message} ({code})")
+{
+    public string Code { get; } = code;
+    public static ObsSetupException NotAnswering(int port) => new("obs-no-answer",
+        $"OBS is not answering on port {port}. Start OBS. In OBS, open Tools → WebSocket Server Settings and turn on Enable WebSocket server.");
+    public static ObsSetupException NoPassword() => new("obs-no-password",
+        "OBS has no WebSocket password saved on this PC. In OBS, open Tools → WebSocket Server Settings, turn on Enable WebSocket server and Enable Authentication, and click OK. Or type the password in the panel's Setup tab (or set FADESTER_OBS_PASSWORD).");
+    public static ObsSetupException AuthenticationOff() => new("obs-auth-off",
+        "Authentication is off in OBS. In OBS, open Tools → WebSocket Server Settings and turn on Enable Authentication.");
+    public static ObsSetupException PasswordRejected() => new("obs-bad-password",
+        "OBS did not accept the password. In OBS, open Tools → WebSocket Server Settings and click Show Connect Info to see the password.");
+}
+
 internal sealed class ObsConnection : IDisposable
 {
     private readonly ClientWebSocket socket = new();
@@ -44,7 +61,7 @@ internal sealed class ObsConnection : IDisposable
             await client.socket.ConnectAsync(endpoint, timeout.Token);
             var hello = await client.Receive(timeout.Token);
             if (hello["op"]?.GetValue<int>() != 0 || hello["d"]?["authentication"] is not JsonObject auth)
-                throw new InvalidOperationException("Expected OBS WebSocket v5 with authentication enabled.");
+                throw ObsSetupException.AuthenticationOff();
             static string Hash(string s) => Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(s)));
             string signature = Hash(Hash(password + auth["salt"]!.GetValue<string>()) + auth["challenge"]!.GetValue<string>());
             await client.Send(new() { ["op"] = 1, ["d"] = new JsonObject { ["rpcVersion"] = 1, ["eventSubscriptions"] = Subscriptions(transitionEvents), ["authentication"] = signature } }, timeout.Token);
@@ -52,6 +69,9 @@ internal sealed class ObsConnection : IDisposable
             _ = client.Listen();
             return client;
         }
+        // Nothing listens on the port (OBS closed, or its server off), or OBS did not answer in 6 s.
+        catch (WebSocketException) { client.Dispose(); throw ObsSetupException.NotAnswering(cfg.Port); }
+        catch (OperationCanceledException) when (!stop.IsCancellationRequested) { client.Dispose(); throw ObsSetupException.NotAnswering(cfg.Port); }
         catch { client.Dispose(); throw; }
     }
 
@@ -61,7 +81,7 @@ internal sealed class ObsConnection : IDisposable
         while (true)
         {
             var message = await socket.ReceiveAsync(buffer.GetMemory(8192), token);
-            if (message.MessageType == WebSocketMessageType.Close) throw new IOException(socket.CloseStatus == (WebSocketCloseStatus)4009 ? "OBS rejected the password." : "OBS disconnected.");
+            if (message.MessageType == WebSocketMessageType.Close) throw socket.CloseStatus == (WebSocketCloseStatus)4009 ? ObsSetupException.PasswordRejected() : new IOException("OBS disconnected.");
             if (message.MessageType != WebSocketMessageType.Text || buffer.WrittenCount + message.Count > 16 * 1024 * 1024) throw new InvalidDataException("Invalid OBS packet.");
             buffer.Advance(message.Count);
             if (message.EndOfMessage) return JsonNode.Parse(buffer.WrittenSpan)?.AsObject() ?? throw new InvalidDataException("Empty OBS packet.");

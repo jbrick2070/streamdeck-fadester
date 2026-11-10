@@ -81,7 +81,9 @@ namespace Fadester.TourBox {
     readonly Dictionary<string, ComboBox> boxes = new Dictionary<string, ComboBox>();
     readonly Dictionary<string,Image> glyphs=new Dictionary<string,Image>();
     Dictionary<string, object> config = new Dictionary<string, object>(), catalog = new Dictionary<string, object>();
-    Label state, live, importNote; TextBox password; ListBox activity; Button connect, start, save, openSettings;
+    Label state, status, live, importNote; TextBox password;
+    // The status line: what is true now, never a log line. OBS from the last scan or the running controls' own lines.
+    bool obsConnected; string padState="stPadOff"; ListBox activity; Button connect, start, save, openSettings;
     // A bridge that a Stop or Close already waited for in vain: the next Stop or Close ends it if it still does not exit.
     // Ending: the bridge the panel is ending, so whichever sees it exit first says so in the same words.
     Process stopTimedOut, ending;
@@ -111,6 +113,12 @@ namespace Fadester.TourBox {
       var d=Decode("{\"scenes\":[\"🎬 Studio\",\"Act II\"],\"anchors\":[\"a\",\"\",\"b\",\"\"],\"port\":4455}");
       if (List(d,"scenes")[0]!="🎬 Studio" || Val(d,"port")!="4455" || List(d,"anchors").Length!=4) throw new Exception();
       if (List(d,"missing").Length!=0 || Decode(Json.Serialize(d)).Count!=3) throw new Exception();
+      // The status line follows the bridge's own lines.
+      if (!ObsState("Connected to OBS at 127.0.0.1:4455.",false) || ObsState("Offline: OBS is not answering on port 4455. (obs-no-answer)",true) ||
+          ObsState("OBS is not connected. Cut preview live was not sent.",true) || !ObsState("Music up",true) ||
+          PadState("Game controller connected.","stPadMissing")!="stPadOn" ||
+          PadState("Game controller not found. Plug it in or turn it on.","stPadOn")!="stPadMissing" ||
+          PadState("Game controller disconnected.","stPadOn")!="stPadMissing" || PadState("Music up","stPadOn")!="stPadOn") throw new Exception();
       // Outside a package the settings are where the panel asks for them; a Store install's are in its LocalCache.
       var probe=Path.Combine(Path.GetTempPath(),"fadester-panel-test-"+Guid.NewGuid().ToString("N"),"config.json");
       if (SettingsFolder.Holding(probe)!=Path.GetDirectoryName(probe)) throw new Exception();
@@ -125,12 +133,13 @@ namespace Fadester.TourBox {
       try { Icon=Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch (Exception e) { Entry.Log("icon: "+e.Message); }
       Font=new Font("Segoe UI",10); BackColor=Color.White; StartPosition=FormStartPosition.CenterScreen;
       var grid=new TableLayoutPanel {Dock=DockStyle.Fill,ColumnCount=1,RowCount=3, Padding=new Padding(14)};
-      grid.RowStyles.Add(new RowStyle(SizeType.Absolute,82)); grid.RowStyles.Add(new RowStyle(SizeType.Percent,100)); grid.RowStyles.Add(new RowStyle(SizeType.Absolute,86));
+      grid.RowStyles.Add(new RowStyle(SizeType.Absolute,104)); grid.RowStyles.Add(new RowStyle(SizeType.Percent,100)); grid.RowStyles.Add(new RowStyle(SizeType.Absolute,86));
       Controls.Add(grid);
       var head=new Panel {Dock=DockStyle.Fill,BackColor=navy,Padding=new Padding(12)};
       head.Controls.Add(new Label {Text="Fadester Companion",Location=new Point(14,7),Font=new Font("Segoe UI",17,FontStyle.Bold),ForeColor=Color.White,AutoSize=true});
-      state=new Label {Text=text.Get("lookingForObs"),Location=new Point(16,47),AutoEllipsis=true,UseMnemonic=false,ForeColor=Color.White, Width=680,Anchor=AnchorStyles.Left|AnchorStyles.Right|AnchorStyles.Top}; head.Controls.Add(state); grid.Controls.Add(head,0,0);
-      head.ClientSizeChanged+=delegate { state.Width=Math.Max(1,head.ClientSize.Width-32); };
+      status=new Label {Location=new Point(16,47),AutoEllipsis=true,UseMnemonic=false,ForeColor=Color.White,Font=new Font("Segoe UI",10,FontStyle.Bold),Width=680,Anchor=AnchorStyles.Left|AnchorStyles.Right|AnchorStyles.Top}; head.Controls.Add(status);
+      state=new Label {Text=text.Get("lookingForObs"),Location=new Point(16,70),AutoEllipsis=true,UseMnemonic=false,ForeColor=Color.White, Width=680,Anchor=AnchorStyles.Left|AnchorStyles.Right|AnchorStyles.Top}; head.Controls.Add(state); grid.Controls.Add(head,0,0);
+      head.ClientSizeChanged+=delegate { state.Width=status.Width=Math.Max(1,head.ClientSize.Width-32); };
       var tabs=new TabControl {Dock=DockStyle.Fill}; grid.Controls.Add(tabs,0,1);
       body=Page(tabs,text.Get("setup")); Title(body,text.Get("importTitle")); Hint(body,text.Get("importHint"));
       AddButton(body,text.Get("openPreset"),delegate { ImportPreset(); }); importNote=Hint(body,"");
@@ -166,12 +175,13 @@ namespace Fadester.TourBox {
       enableGamepad=Check(body,text.Get("enableGamepad"));
       easyMode=Check(body,text.Get("gamepadEasy")); easyMode.Checked=true;
       Hint(body,text.Get("gamepadHint"));
+      Hint(body,text.Get("keepOpen"));
       var assign=Page(tabs,text.Get("assignments")); Title(assign,text.Get("assignTitle"));
       Hint(assign,text.Get("assignHint"));
       foreach (var field in new[] { "musicInput", "contentInput", "micInput", "mediaInput", "overlayScene", "overlaySource" })
         Field(assign,text.Get(field),field);
       boxes["overlayScene"].SelectedIndexChanged += delegate { PopulateOverlay(); };
-      string[] dirs={"up","right","down","left"}; for(int i=0;i<4;i++) Field(assign,text.Get(dirs[i]),"anchor"+i);
+      string[] dirs={"up","right","down","left"}; for(int i=0;i<4;i++) Field(assign,text.Get("anchorField",i+1,text.Get(dirs[i])),"anchor"+i);
       AddButton(assign,text.Get("assignFirstFour"),delegate {var sc=List(catalog,"scenes"); if(sc.Length==0){Note(text.Get("discoverFirst"));return;} for(int i=0;i<4;i++)boxes["anchor"+i].SelectedItem=i<sc.Length?sc[i]:""; Note(text.Get("assignPreviewed"));});
       Title(assign,text.Get("layersTitle")); Hint(assign,text.Get("layersHint"));
       foreach (var field in new[] { "layer1Scene", "layer1Source", "layer2Scene", "layer2Source" }) Field(assign,text.Get(field),field);
@@ -209,6 +219,7 @@ namespace Fadester.TourBox {
       // Shown only when config.json cannot be read, so the file can be found and repaired (a Store install keeps it elsewhere).
       openSettings=AddButton(bar,text.Get("openSettings"),delegate { OpenPath(SettingsFolder.Holding(settings)); }); openSettings.Visible=false;
       grid.Controls.Add(bar,0,2);
+      ShowStatus();
       Load += async delegate { ReadSettings(); ReadMap(); ReadPad(); if(!invalidConfig) await Connect(); };
       FormClosing+=async (s,e)=>{
         Entry.Log("closing: "+e.CloseReason+(worker==null?"":", controls running")); if(worker==null)return;
@@ -474,25 +485,28 @@ namespace Fadester.TourBox {
         using(var proc=Process.Start(Command("--catalog --config \""+tmp+"\""))){
           var output=proc.StandardOutput.ReadToEndAsync(); var error=proc.StandardError.ReadToEndAsync();
           bool done=await Task.Run(()=>proc.WaitForExit(25000)); if(!done){proc.Kill(); throw new Exception(text.Get("obsTimeout"));}
-          var s=await output; var err=await error; if(proc.ExitCode!=0)throw new Exception(String.IsNullOrWhiteSpace(err)?text.Get("obsUnavailable"):err.Trim());
+          var s=await output; var err=await error; if(proc.ExitCode!=0)throw new Exception(String.IsNullOrWhiteSpace(err)?text.Get("obsUnavailable"):text.Explain(err.Trim()));
           var next=Decode(s); if(next==null || !next.ContainsKey("scenes"))throw new Exception(text.Get("noScenes"));
           catalog=next; LoadChoices(true);
           bool studioMode;
           string studio=Boolean.TryParse(Val(next,"studioMode"),out studioMode) ? text.Get(studioMode?"on":"off") : "—";
           live.Text=text.Get("sceneSummary",Val(next,"program","—"),Val(next,"preview","—"),studio);
+          obsConnected=true; ShowStatus();
           Note(text.Get(worker==null?"obsReady":"obsConnected",List(next,"scenes").Length));
         }
-      }catch(Exception e){live.Text=""; Note(e.Message);}
+      }catch(Exception e){live.Text=""; if(worker==null){obsConnected=false; ShowStatus();} Note(e.Message);}
       finally{try{if(tmp!=null && File.Exists(tmp))File.Delete(tmp);}catch(IOException){} refreshing=false; if(!IsDisposed){connect.Enabled=true; start.Enabled=true;}}
     }
     void StartControls() {
       if(PortsClash())return;
       try{
         WriteConfig(); var p=new Process {StartInfo=Command(mixOnly.Checked?"--mix-only":"--listen"),EnableRaisingEvents=true};
-        p.OutputDataReceived+=(s,e)=>Note(e.Data); p.ErrorDataReceived+=(s,e)=>Note(e.Data);
-        p.Exited+=delegate { try{BeginInvoke((Action)(()=>{if(worker==p){worker=null; start.Text=text.Get("saveStart"); Note(text.Get(ending==p?"bridgeEnded":p.ExitCode==0?"stopped":"bridgeFailed"));} Entry.Log("controls ended: "+p.ExitCode); try{p.CancelOutputRead();p.CancelErrorRead();}catch(InvalidOperationException){} p.Dispose();}));}catch(InvalidOperationException){} };
-        worker=p; if(!p.Start())throw new Exception(text.Get("bridgeNotStarted")); p.BeginOutputReadLine(); p.BeginErrorReadLine(); start.Text=text.Get("stop"); Note(text.Get("starting"));
-      }catch(Exception e){worker=null; start.Text=text.Get("saveStart"); Note(e.Message);}
+        p.OutputDataReceived+=(s,e)=>BridgeLine(p,e.Data); p.ErrorDataReceived+=(s,e)=>BridgeLine(p,e.Data);
+        p.Exited+=delegate { try{BeginInvoke((Action)(()=>{if(worker==p){worker=null; start.Text=text.Get("saveStart"); padState="stPadOff"; ShowStatus(); Note(text.Get(ending==p?"bridgeEnded":p.ExitCode==0?"stopped":"bridgeFailed"));} Entry.Log("controls ended: "+p.ExitCode); try{p.CancelOutputRead();p.CancelErrorRead();}catch(InvalidOperationException){} p.Dispose();}));}catch(InvalidOperationException){} };
+        worker=p; if(!p.Start())throw new Exception(text.Get("bridgeNotStarted")); p.BeginOutputReadLine(); p.BeginErrorReadLine(); start.Text=text.Get("stop");
+        // Until the bridge says it found one, a controller that is switched on counts as not found.
+        padState=enableGamepad.Checked && !mixOnly.Checked ? "stPadMissing" : "stPadOff"; ShowStatus(); Note(text.Get("starting"));
+      }catch(Exception e){worker=null; start.Text=text.Get("saveStart"); padState="stPadOff"; ShowStatus(); Note(e.Message);}
     }
     async Task StopControls() {
       var p=worker; if(p==null)return; start.Enabled=false;
@@ -502,8 +516,35 @@ namespace Fadester.TourBox {
         bool done=await Task.Run(()=>WaitForBridge(p,again?3000:8000));
         if(!done && again){ ended=true; ending=p; done=await Task.Run(()=>EndBridge(p,3000)); }
         if(!done){ stopTimedOut=p; Note(text.Get("finishing")); }
-        else if(worker==p){worker=null; stopTimedOut=null; start.Text=text.Get("saveStart"); Note(text.Get(ended?"bridgeEnded":"stopped"));}
+        else if(worker==p){worker=null; stopTimedOut=null; start.Text=text.Get("saveStart"); padState="stPadOff"; ShowStatus(); Note(text.Get(ended?"bridgeEnded":"stopped"));}
       }catch(InvalidOperationException){}finally{if(!IsDisposed)start.Enabled=true;}
+    }
+    /** One line from the running controls: update the status line from the lines the bridge prints for it, then show the line. */
+    void BridgeLine(Process p,string line) {
+      if(line==null || IsDisposed || Disposing) return;
+      if(InvokeRequired){try{BeginInvoke((Action)(()=>BridgeLine(p,line)));}catch(InvalidOperationException){}return;}
+      if(worker==p){
+        string padNow=PadState(line,padState); bool obsNow=ObsState(line,obsConnected);
+        if(padNow!=padState || obsNow!=obsConnected){padState=padNow; obsConnected=obsNow; ShowStatus();}
+      }
+      Note(text.Explain(line));
+    }
+    /** Whether OBS is connected after this bridge line (Program.cs prints these). */
+    internal static bool ObsState(string line,bool now) {
+      if(line.StartsWith("Connected to OBS at ",StringComparison.Ordinal)) return true;
+      if(line.StartsWith("Offline: ",StringComparison.Ordinal) || line.StartsWith("OBS is not connected.",StringComparison.Ordinal) ||
+         line.StartsWith("Not connected to OBS",StringComparison.Ordinal)) return false;
+      return now;
+    }
+    /** The game controller's state after this bridge line (GamepadLoop prints these). */
+    internal static string PadState(string line,string now) {
+      if(line=="Game controller connected.") return "stPadOn";
+      if(line=="Game controller disconnected." || line.StartsWith("Game controller not found.",StringComparison.Ordinal) ||
+         line.StartsWith("Game controller: XInput is not available",StringComparison.Ordinal)) return "stPadMissing";
+      return now;
+    }
+    void ShowStatus() {
+      status.Text=text.Get("statusLine",text.Get(obsConnected?"stObsOn":"stObsOff"),text.Get(worker!=null?"stCtlOn":"stCtlOff"),text.Get(padState));
     }
     /** The bridge's own clean stop. A bridge that has just exited by itself has closed its input: the wait that follows then finds it stopped. */
     static void AskToStop(Process p) { try { p.StandardInput.WriteLine("quit"); p.StandardInput.Flush(); } catch(IOException) {} }

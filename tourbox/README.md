@@ -1,17 +1,29 @@
-# OBS Fadester for TourBox
+# Fadester Companion: a game controller or a TourBox for OBS Studio
 
-Use a full-size TourBox to operate OBS Studio on Windows. The Scroll wheel cues the next scene, the flat Dial drives OBS’s native Studio Mode crossfader, and the raised Knob rides the speed of the YouTube video in Chrome. Music is on Side + Dial. Press **Tour** for media, overlays, transition settings and capture tools.
+Fadester Companion lets you mix OBS Studio scenes on Windows with an Xbox or other XInput game controller, a full-size TourBox, or both. The right trigger of the controller, or the flat Dial of the TourBox, drives OBS’s own Studio Mode T-bar.
 
-Open **START-HERE.html** in the extracted package for an illustrated control layout, a first-minute rehearsal, the complete preset reference and recovery steps. Its control tables are generated from the map shipped with this preset.
+## First five minutes (game controller)
 
-The panel, native preset labels and quick starts are available in English, German, Spanish, French, Italian, Japanese, Korean, Russian, Simplified Chinese and Traditional Chinese. The panel follows the Windows display language. To choose a language explicitly, pass `--language` and the locale code to **Fadester for TourBox.exe**, for example `--language fr`. The panel’s **Quick guide** button opens the matching offline guide. The full operator reference and bridge diagnostic messages are in English.
+1. Install **Fadester Companion** from the Microsoft Store and open it from the Start menu. If you use the ZIP, extract all of it into a folder you want to keep and open **Fadester for TourBox.exe**.
+2. In OBS, open **Tools → WebSocket Server Settings**, turn on **Enable WebSocket server**, keep **Enable Authentication** on, and click **OK**. The companion connects by itself with the password OBS saved on this PC: the header says it is connected and how many scenes it found. If it names a problem instead, do what it says, then click **Read scenes and inputs from OBS**.
+3. On the **Setup** tab, tick **Use an Xbox or XInput game controller** (under **Game controller**, at the end of the tab) and keep **Easy mode** ticked. You do not need the TourBox steps.
+4. Click **Save & start controls**. The status line at the top says *Controls: on* and *Game controller: connected*. Keep the window open: closing it stops the controls.
+5. In OBS 33.0.0 or 33.0.1, turn on **Studio Mode**, select the **Fade** transition, and keep the main OBS window open with its T-bar visible.
+6. Press D-pad down to put the next scene in Preview.
+7. Pull the right trigger: OBS’s T-bar follows. Pull it all the way and Preview goes to Program; let go early and it goes back.
 
-## Connect the desk
+Every control, Easy mode and the safety rules are in the [game controller guide](https://github.com/jbrick2070/streamdeck-fadester/blob/main/docs/gamepad/README.md).
 
-1. Extract the whole Windows x64 ZIP into a folder you want to keep. Run **Fadester for TourBox.exe** from that folder.
+The panel, native preset labels and quick guides are available in English, German, Spanish, French, Italian, Japanese, Korean, Russian, Simplified Chinese and Traditional Chinese. The panel follows the Windows display language. To choose a language explicitly, pass `--language` and the locale code to **Fadester for TourBox.exe**, for example `--language fr`. The panel’s **Quick guide** button opens the matching offline guide (**START-HERE.html** in English, with an illustrated control layout, a first-minute rehearsal, the complete preset reference and recovery steps). The full operator reference and most messages in the **Activity** tab are in English; the panel shows the OBS connection problems in your language.
+
+## Connect a TourBox
+
+With a full-size TourBox, the Scroll wheel cues the next scene, the flat Dial drives the T-bar, and the raised Knob rides the speed of the YouTube video in Chrome. Music is on Side + Dial. Press **Tour** for media, overlays, transition settings and capture tools.
+
+1. Open Fadester Companion (step 1 above).
 2. Open OBS. In TourBox Console, use **Import** beside **Preset List** to add **OBS Fadester for TourBox.tb**. The panel’s **Import into TourBox Console** button copies the matching language’s preset path and opens Console; paste it into Console’s import window. Do not double-click the `.tb` file, because Windows has no app for it. Import one language only. Enable **Auto Switch** and link **OBS Fadester for TourBox** to the running OBS application. To change languages or update, select this existing preset and use its own menu’s **Import** to replace its contents.
 3. In OBS, enable **Tools → WebSocket Server Settings** with authentication. Use **Studio Mode**, select **Fade**, and keep the main OBS window and its white T-bar visible. The manual fader targets OBS Studio **33.0.0 and 33.0.1**.
-4. In the Fadester panel, click **Read scenes and inputs from OBS**. If your server uses a different port or the saved password is unavailable, enter the **OBS port** and password from OBS. OBS usually uses 4455, and while VJster is on the OBS port cannot be the same as the VJster port. A password entered in the panel lasts for that session.
+4. In the Fadester panel, click **Read scenes and inputs from OBS**. If your server uses a different port, set the **OBS port** (OBS usually uses 4455; while VJster is on, the OBS port cannot be the same as the VJster port). Leave **OBS password (optional)** empty: the panel uses the password OBS saved on this PC. Type one only if the connection fails; it is not saved.
 5. Select **OBS Fadester for TourBox**, click **Save & start controls**, and bring OBS to the front. Keep the Fadester panel running.
 
 ## Rehearse the first throw
@@ -28,7 +40,7 @@ From rest, **Tall** takes Preview using the selected transition. **Top** cuts di
 
 The group scales each public, non-composite OBS audio input in this scene collection from its own starting volume. New eligible inputs join while it is active. Muted inputs stay muted. Editing a source’s level by hand releases that input from the current group until the next fade cycle. Restore brings the untouched faders back to their original levels. Stopping the companion does not raise the sound: restart with the same config and select Restore. This controls the input faders feeding every track and monitor, not a separate post-processing or stream-only master. A newly created source can be heard briefly before it is discovered; use OBS mute when adding a source that must enter silently.
 
-Stream Deck, OpenDeck and MIDI users can select **Run for Stream Deck, OpenDeck or MIDI only** in Setup and start the companion without TourBox hardware or global shortcuts. Use a compatible plugin build with the all-inputs target. All controllers share one gain setting through the authenticated local OBS connection.
+Stream Deck, OpenDeck and MIDI users can tick **Use only Stream Deck, OpenDeck or MIDI (no TourBox, no game controller, no VJster)** in Setup and start the companion without TourBox hardware or global shortcuts. In this mode the game controller and VJster are off too. Use a compatible plugin build with the all-inputs target. All controllers share one gain setting through the authenticated local OBS connection.
 
 | Control | Action |
 | --- | --- |
@@ -84,16 +96,16 @@ For an interview, use **C1** to duck the bed as the guest comes up, hold **Tall*
 - **OBS** shows the actual Program, Preview, slider and mixer. **TourBox Console** identifies the active preset and physical assignments. The panel’s **Activity** tab lists action results and refusals. Its Setup scene names are a snapshot from the last scan. The optional last-action strip can appear in a desktop capture.
 - **A dial changed the wrong thing.** Focus OBS, confirm the active preset and release any held modifier. With Auto Switch enabled, bringing another application forward can select a different preset.
 - **The manual fade will not start.** Check the supported OBS version, two different scenes, Studio Mode, a Fade among OBS's scene transitions, and a visible native T-bar. The Dial mixes with that Fade even while Cut is selected. Clear a conflicting transition override on Preview. If someone moved the cue or slider independently, settle the handle in OBS, verify Program and Preview, then use Side + Dial press to reset.
-- **The selected transition changes and you did not change it.** Stop controls in the panel, open a terminal in the package folder and run `FadesterTourBoxBridge.exe --trace-transitions`. The controls work as usual, and each change of OBS's selected transition is printed with the time, next to the companion's own requests. A line that says `NOT asked by the companion` is a change something else made: OBS itself, a click in OBS, another plugin, a script or another controller. Started this way, the companion connects with the password OBS has saved on this PC; if OBS runs on another computer, set `FADESTER_OBS_PASSWORD` in that terminal first. Type `quit` to stop, then start controls in the panel again.
+- **The selected transition changes and you did not change it.** Stop controls in the panel, open a terminal in the package folder and run `FadesterTourBoxBridge.exe --trace-transitions`. The controls work as usual, and each change of OBS's selected transition is printed with the time, next to the companion's own requests. A line that says `NOT asked by the companion` is a change something else made: OBS itself, a click in OBS, another plugin, a script or another controller. Started this way, the companion connects with the password OBS has saved on this PC. Type `quit` to stop, then start controls in the panel again.
 - **The transition did not change.** Right after a take or cut OBS ignores a change of transition for about a second. **Previous / next transition** keeps asking for up to three seconds, and **Activity** names the transition OBS really has. After a cut, the companion also puts your transition back by itself if OBS returns to Cut.
 - **Stop controls says the bridge is still finishing.** Click **Stop controls** again (or close the panel again): if the bridge still has not stopped after 3 more seconds, the panel ends it and says so. Then check the T-bar and the selected transition in OBS.
 - **A source or scene was renamed.** Read the current list from OBS, select the role again under Assignments, and restart controls. Check the selected media source’s transport support. Recording chapters require an active, supported recording; saving a replay requires an active replay buffer.
-- **No shortcut responds.** Check Activity for a connection error, another listener or a keyboard shortcut conflict. Stop competing shortcut handlers and restart controls. Focus OBS and tap Scroll to read the two scene names.
-- **End the session.** Stop controls and close the panel to release the Windows shortcuts. To uninstall, remove **OBS Fadester for TourBox** in Console and delete the extracted package. Optional saved preferences are in `%LOCALAPPDATA%\FadesterTourBox\config.json` (a Microsoft Store install keeps them in its own package folder). If the panel cannot read that file, it leaves the file as it is, names the folder that holds it and shows **Open settings folder**.
+- **No shortcut responds.** Check Activity for a connection error, another listener or a keyboard shortcut conflict. A shortcut that another app already uses is skipped, and Activity names it; the other controls still work. Stop competing shortcut handlers and restart controls. Focus OBS and tap Scroll to read the two scene names.
+- **End the session.** Stop controls and close the panel to release the Windows shortcuts. To uninstall, remove **OBS Fadester for TourBox** in Console, then uninstall **Fadester Companion** in Windows Settings (Store) or delete the extracted package (ZIP). Optional saved preferences are in `%LOCALAPPDATA%\FadesterTourBox\config.json` (a Microsoft Store install keeps them in its own package folder). If the panel cannot read that file, it leaves the file as it is, names the folder that holds it and shows **Open settings folder**.
 
 ## Package and source
 
-This edition targets Windows x64. The native preset requires TourBox Console and a full-size desktop TourBox with three pushable rotaries, Side, Tour, C1/C2 and a D-pad. The shared mixer companion includes its runtime, runs on the OBS computer and needs neither TourBox Console nor TourBox hardware in mix-only mode. See the rehearsal notes for hardware and software checks.
+This edition targets Windows x64. The native preset requires TourBox Console and a full-size desktop TourBox with three pushable rotaries, Side, Tour, C1/C2 and a D-pad. The shared mixer companion includes its runtime, runs on the OBS computer and needs neither TourBox Console nor TourBox hardware with **Use only Stream Deck, OpenDeck or MIDI** ticked. See the rehearsal notes for hardware and software checks.
 
 macOS support is in development ([MACOS.md](MACOS.md) describes the experimental pieces and what they still lack); this package is for Windows.
 

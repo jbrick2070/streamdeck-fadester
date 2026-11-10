@@ -138,7 +138,7 @@ internal static class GamepadSelfTests
         Check(ReleaseMailbox.CutOff(new IOException("OBS disconnected."), disconnected: false) &&
             ReleaseMailbox.CutOff(new InvalidDataException("Invalid OBS packet."), disconnected: true) &&
             !ReleaseMailbox.CutOff(new ObsError("GetInputVolume", 600, "No source was found"), disconnected: true) &&
-            !ReleaseMailbox.CutOff(new InvalidOperationException("Set music input in the control panel first."), disconnected: false),
+            !ReleaseMailbox.CutOff(new InvalidOperationException("Choose Music / bed on the Assignments tab first."), disconnected: false),
             "a release runs again only when the connection dropped, never after OBS refused it or a setting is missing");
         reader = new PadReader(PadControls.Build(null)); reader.Step(Pad(), 0);
         reader.Step(Pad(lt: 0.8), 10); Check(reader.LeftTriggerHeld, "the reader says when LT is held");
@@ -180,7 +180,7 @@ internal static class GamepadSelfTests
         (acts, _) = reader.Step(Pad(buttons: Mask("A")), 1000);
         Check(acts.Count == 0, "easy mode: A does not take on press");
         (acts, _) = reader.Step(Pad(), 1200);
-        Check(acts.Count == 0 && reader.Notes.Count == 1 && reader.Notes[0].Contains("hold it 0.15 s"), "a tap takes nothing and says how");
+        Check(acts.Count == 0 && reader.Notes.Count == 1 && reader.Notes[0].Contains("Hold it for 0.15 s"), "a tap takes nothing and says how");
         reader.Notes.Clear();
         reader.Step(Pad(buttons: Mask("A")), 2000); reader.Step(Pad(), 2100);
         Check(reader.Notes.Count == 0, "the note is not repeated within five seconds");

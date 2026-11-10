@@ -1,13 +1,13 @@
 # Game controller
 
-Drive OBS from an Xbox controller (or any XInput-compatible pad): the right trigger is a real T-bar, the buttons cue and take scenes. It runs inside the Fadester for TourBox companion on Windows, so you need no TourBox, Stream Deck or MIDI desk, and it keeps working while OBS is in front.
+Drive OBS from an Xbox controller (or any XInput-compatible pad): the right trigger is a real T-bar, the buttons cue and take scenes. It runs inside Fadester Companion on Windows, so you need no TourBox, Stream Deck or MIDI desk, and it keeps working while OBS is in front.
 
 ## First five minutes
 
 1. Plug in the controller (USB or Xbox Wireless). Windows needs no extra driver.
 2. In OBS, open **Tools → WebSocket Server Settings**, tick **Enable WebSocket server**, keep **Enable Authentication** ticked, and click **OK**.
-3. Open **Fadester for TourBox** ([setup guide](../../tourbox/README.md); without a TourBox, skip **1 Import the preset**). Click **Read scenes and inputs from OBS** on the **Setup** tab, and tick **Use an Xbox or XInput game controller** under **Game controller**. Leave **Easy mode** ticked.
-4. Press **Save & start controls** and keep the companion window open (minimised is fine; closing it stops the controls). The **Activity** tab says *Game controller connected.*
+3. Open **Fadester Companion** from the Start menu ([setup guide](../../tourbox/README.md); without a TourBox, skip **1 Import the preset**). It connects to OBS by itself; if the header names a problem, do what it says and click **Read scenes and inputs from OBS** on the **Setup** tab. Tick **Use an Xbox or XInput game controller** under **Game controller**. Leave **Easy mode** ticked.
+4. Press **Save & start controls** and keep the companion window open (minimised is fine; closing it stops the controls). The status line at the top says *Game controller: connected*.
 5. In OBS 33.0.0 or 33.0.1, with the main window open, turn on **Studio Mode**, select the **Fade** transition, and choose a different scene for Preview.
 6. Pull the right trigger halfway: OBS's T-bar follows. Let go: it goes back. Pull it all the way: Preview goes to Program.
 7. Press D-pad down to cue the next scene in OBS's list, then hold **A**. After 0.15 s (easy mode) OBS's T-bar starts moving, as if your hand pushed it, and keeps moving while you hold A. When it reaches the end it takes. Let go before then and it stays where it is; hold A again to carry on. From one end to the other takes the **Duration** set in OBS's **Scene Transitions** dock: about 650 ms gives you room to stop halfway.
@@ -36,7 +36,7 @@ Drive OBS from an Xbox controller (or any XInput-compatible pad): the right trig
 
 **· hold** marks a control that easy mode guards (below). A stick locks to the axis you push it along first (up/down or left/right) until it is back in the centre, so a diagonal thumb does not do two things.
 
-Pick **Music / bed**, **Media / Playlister**, and the **Layer 1** and **Layer 2** scene and source on the **Assignments** tab, then start the controls again. (The **D-pad** fields there are TourBox scene anchors; the controller uses them only if you give a control **Preview anchor 1** to **4**.) VJster's controls need **Enable VJster** ticked on **Setup** and the VJster Chrome extension with a YouTube video open in Chrome itself (capture the Chrome window in OBS; VJster cannot control an OBS Browser Source).
+Pick **Music / bed**, **Media / Playlister**, and the **Layer 1** and **Layer 2** scene and source on the **Assignments** tab, then start the controls again. (The **Preview anchor 1** to **4** fields there are the TourBox D-pad's scenes; the controller uses them only if you give a control **Preview anchor 1** to **4**.) VJster's controls need **Enable VJster** ticked on **Setup** and the VJster Chrome extension with a YouTube video open in Chrome itself (capture the Chrome window in OBS; VJster cannot control an OBS Browser Source).
 
 ## Easy mode
 
@@ -47,7 +47,7 @@ A game controller is easy to bump. Easy mode, on by default, makes sudden switch
 - **Hold 0.7 s:** fade out the whole mix and mute the mic (neither is on a control by default).
 - **At once:** Preview cues, Music duck and restore, volume steps, Layer 2 opacity, blend mode back to Normal, video speed and quality, Cancel, and everything else.
 
-The action fires the moment the hold is long enough, not when you let go. On a button or the left trigger it fires once per press; a repeating stick action, such as the Layer 2 blend mode, then repeats every 0.2 s while you hold the stick. A tap on a guarded button does nothing, and the **Activity** tab says *Game controller: A tapped; hold it 0.15 s for take (easy mode).* (at most once every 5 s for each control). The right trigger is not guarded: pulling it all the way is already deliberate. To make every control act at once, untick **Easy mode** on the **Setup** tab and start the controls again.
+The action fires the moment the hold is long enough, not when you let go. On a button or the left trigger it fires once per press; a repeating stick action, such as the Layer 2 blend mode, then repeats every 0.2 s while you hold the stick. A tap on a guarded button does nothing, and the **Activity** tab says *Game controller: A was pressed too briefly. Hold it for 0.15 s for Take preview live (easy mode).* (at most once every 5 s for each control). The right trigger is not guarded: pulling it all the way is already deliberate. To make every control act at once, untick **Easy mode** on the **Setup** tab and start the controls again.
 
 ## Safety
 

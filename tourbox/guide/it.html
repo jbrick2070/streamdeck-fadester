@@ -4,20 +4,30 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Guida rapida · OBS Fadester for TourBox</title>
+  <title>Guida rapida · Fadester Companion</title>
   <link rel="stylesheet" href="quickstart.css">
 </head>
 <body>
   <main>
     <header>
       <p>Guida rapida · Windows x64</p>
-      <h1>OBS Fadester for TourBox</h1>
-      <p>Prepara le scene, esegui dissolvenze manuali e regola l’audio di OBS Studio con TourBox.</p>
+      <h1>Fadester Companion</h1>
+      <p>Prepara le scene, esegui dissolvenze manuali e regola l’audio di OBS Studio con un controller di gioco o con TourBox.</p>
     </header>
+
+    <h2>Niente TourBox? Usa un controller di gioco</h2>
+    <ol>
+      <li>Apri OBS. In <strong>Strumenti → Impostazioni del server WebSocket</strong>, abilita il server e lascia attiva l’autenticazione. Poi apri <strong>Fadester Companion</strong>: si connette da solo e, se non ci riesce, la sua finestra dice cosa fare. Il T-bar richiede OBS 33.0.0 o 33.0.1, con la finestra principale di OBS aperta e il T-bar visibile.</li>
+      <li>Nella scheda <strong>Configurazione</strong> seleziona <strong>Usa un controller Xbox o XInput</strong>, lascia attiva la <strong>Modalità facile</strong> e fai clic su <strong>Salva &amp; avvia controlli</strong>. Puoi saltare l’importazione del preset.</li>
+      <li>In OBS attiva la <strong>Modalità studio</strong> e scegli <strong>Dissolvenza (Fade)</strong>. Premi giù sul D-pad per mettere in anteprima la scena successiva dell’elenco di OBS, su per quella precedente.</li>
+      <li>Tira il grilletto destro: il T-bar di OBS lo segue e, tirato fino in fondo, passa al Programma. Oppure tieni premuto <strong>A</strong>: dopo 0,15 s il T-bar avanza finché lo tieni premuto e passa al Programma alla fine. Rilascialo per lasciarlo a metà; tieni di nuovo premuto A per continuare.</li>
+      <li><strong>B</strong> taglia, <strong>View</strong> torna al Programma, il grilletto sinistro abbassa la musica finché lo tieni premuto e il D-pad a sinistra e a destra regola la musica. Cambia qualsiasi pulsante nella scheda <strong>Controller di gioco</strong>.</li>
+    </ol>
+    <p>Tieni aperta questa finestra mentre lavori. Chiudendola, i controlli si fermano.</p>
 
     <h2>Collega TourBox a OBS</h2>
     <ol>
-      <li>Estrai l’intero archivio ZIP per Windows e avvia <strong>Fadester for TourBox.exe</strong> dalla cartella estratta. Installato da Microsoft Store? Apri <strong>Fadester Companion</strong> dal menu Start.</li>
+      <li>Apri <strong>Fadester Companion</strong> dal menu Start. Se usi lo ZIP, estrailo per intero e avvia <strong>Fadester for TourBox.exe</strong>.</li>
       <li>Apri OBS. In TourBox Console, usa il comando di importazione accanto all’elenco dei preset per caricare <code>presets/it/OBS Fadester for TourBox.tb</code>. Associa il preset a OBS e attiva il cambio automatico (<strong>Auto Switch</strong>). Importa una sola versione linguistica. Usa il pulsante <strong>Importa in TourBox Console</strong> di Fadester; non fare doppio clic sul file <code>.tb</code>.</li>
       <li>In OBS, apri <strong>Strumenti → Impostazioni del server WebSocket</strong> e abilita il server con l’autenticazione attiva. Per la dissolvenza manuale in OBS Studio <strong>33.0.0 o 33.0.1</strong>, attiva la <strong>Modalità studio</strong>, scegli <strong>Dissolvenza (Fade)</strong> e lascia visibile il cursore bianco tra Anteprima e Programma.</li>
       <li>In Fadester, leggi le scene e gli ingressi da OBS. Se necessario, inserisci la porta e la password impostate in OBS. Seleziona <strong>OBS Fadester for TourBox</strong> in TourBox Console, salva e avvia i controlli in Fadester, poi torna a OBS. Lascia Fadester aperto.</li>
@@ -32,14 +42,6 @@
       <li>VJster controlla YouTube solo in Chrome, non una sorgente browser con YouTube in OBS. Mostra il video in OBS con una cattura finestra di Chrome. Per il suono, aggiungi una cattura audio applicazione di Chrome.</li>
       <li>Assegna un ingresso musicale nel pannello di Fadester. Tieni premuto <strong>Side</strong> e gira il <strong>Dial</strong> piatto per regolarne il volume. Con <strong>Top</strong> premuto, Knob, Scroll e Dial controllano i livelli VJ (metodo di fusione e opacità).</li>
     </ul>
-
-    <h2>Niente TourBox? Usa un controller di gioco</h2>
-    <ol>
-      <li>Nella scheda <strong>Configurazione</strong> seleziona <strong>Usa un controller Xbox o XInput</strong>, lascia attiva la <strong>Modalità facile</strong> e fai clic su <strong>Salva &amp; avvia controlli</strong>. Puoi saltare l’importazione del preset.</li>
-      <li>In OBS attiva la <strong>Modalità studio</strong> e scegli <strong>Dissolvenza (Fade)</strong>. Premi giù sul D-pad per mettere in anteprima la scena successiva dell’elenco di OBS, su per quella precedente.</li>
-      <li>Tira il grilletto destro: il T-bar di OBS lo segue e, tirato fino in fondo, passa al Programma. Oppure tieni premuto <strong>A</strong>: dopo 0,15 s il T-bar avanza finché lo tieni premuto e passa al Programma alla fine. Rilascialo per lasciarlo a metà; tieni di nuovo premuto A per continuare.</li>
-      <li><strong>B</strong> taglia, <strong>View</strong> torna al Programma, il grilletto sinistro abbassa la musica finché lo tieni premuto e il D-pad a sinistra e a destra regola la musica. Cambia qualsiasi pulsante nella scheda <strong>Controller di gioco</strong>.</li>
-    </ol>
 
     <h2>Regola tutto il mix</h2>
     <p>Nella configurazione, abilita il controllo di tutti gli ingressi del mixer OBS, quindi salva e avvia i controlli. Tieni premuto <strong>Side</strong> e gira <strong>Knob</strong> per regolare il livello del gruppo. Dal menu <strong>Tour</strong> puoi sfumare il mix fino al silenzio o ripristinare i livelli precedenti. Gli ingressi silenziati restano tali.</p>

@@ -4,20 +4,30 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Schnellstart · OBS Fadester for TourBox</title>
+  <title>Schnellstart · Fadester Companion</title>
   <link rel="stylesheet" href="quickstart.css">
 </head>
 <body>
   <main>
     <header>
       <p>Schnellstart · Windows x64</p>
-      <h1>OBS Fadester for TourBox</h1>
-      <p>Wählen Sie Szenen vor, blenden Sie manuell über und regeln Sie den Ton in OBS Studio mit Ihrer TourBox.</p>
+      <h1>Fadester Companion</h1>
+      <p>Wählen Sie Szenen vor, blenden Sie manuell über und regeln Sie den Ton in OBS Studio mit einem Gamecontroller oder Ihrer TourBox.</p>
     </header>
+
+    <h2>Keine TourBox? Nehmen Sie einen Gamecontroller</h2>
+    <ol>
+      <li>Öffnen Sie OBS. Aktivieren Sie unter <strong>Werkzeuge → WebSocket-Servereinstellungen</strong> den Server und lassen Sie die Authentifizierung eingeschaltet. Öffnen Sie dann <strong>Fadester Companion</strong>: Es verbindet sich von selbst, und das Fenster sagt, was zu tun ist, wenn das nicht gelingt. Der T-Bar braucht OBS 33.0.0 oder 33.0.1 und das geöffnete OBS-Hauptfenster mit sichtbarem T-Bar.</li>
+      <li>Aktivieren Sie auf der Registerkarte <strong>Einrichtung</strong> die Option <strong>Einen Xbox- oder XInput-Controller verwenden</strong>, lassen Sie <strong>Einfacher Modus</strong> aktiviert und klicken Sie auf <strong>Speichern &amp; Steuerung starten</strong>. Den Preset-Import können Sie überspringen.</li>
+      <li>Aktivieren Sie in OBS den <strong>Studiomodus</strong> und wählen Sie <strong>Überblenden (Fade)</strong>. Drücken Sie das Steuerkreuz nach unten, um die nächste Szene aus der OBS-Liste in die Vorschau zu holen, nach oben für die vorherige.</li>
+      <li>Ziehen Sie den rechten Trigger: Der T-Bar von OBS folgt, und ganz durchgezogen übernimmt er. Oder halten Sie <strong>A</strong>: Nach 0,15 s bewegt sich der T-Bar, solange Sie halten, und übernimmt am Ende. Lassen Sie los, um ihn auf halbem Weg stehen zu lassen; halten Sie A erneut, um weiterzumachen.</li>
+      <li><strong>B</strong> schneidet hart, <strong>View</strong> geht zurück zum Programm, der linke Trigger senkt die Musik, solange Sie ihn halten, und das Steuerkreuz links und rechts regelt die Musik. Jede Taste können Sie auf der Registerkarte <strong>Gamecontroller</strong> ändern.</li>
+    </ol>
+    <p>Lassen Sie dieses Fenster während der Arbeit geöffnet. Wenn Sie es schließen, stoppt die Steuerung.</p>
 
     <h2>TourBox mit OBS verbinden</h2>
     <ol>
-      <li>Entpacken Sie das gesamte Windows-ZIP und starten Sie <strong>Fadester for TourBox.exe</strong> im entpackten Ordner. Aus dem Microsoft Store installiert? Öffnen Sie <strong>Fadester Companion</strong> über das Startmenü.</li>
+      <li>Öffnen Sie <strong>Fadester Companion</strong> über das Startmenü. Wenn Sie das ZIP nutzen, entpacken Sie es vollständig und starten Sie <strong>Fadester for TourBox.exe</strong>.</li>
       <li>Öffnen Sie OBS. Importieren Sie in TourBox Console über die Schaltfläche neben der Preset-Liste <code>presets/de/OBS Fadester for TourBox.tb</code>. Verknüpfen Sie das Preset mit OBS und aktivieren Sie den automatischen Wechsel (<strong>Auto Switch</strong>). Importieren Sie nur eine Sprachversion. Nutzen Sie die Schaltfläche <strong>In TourBox Console importieren</strong> im Fadester-Fenster; doppelklicken Sie die <code>.tb</code>-Datei nicht.</li>
       <li>Öffnen Sie in OBS <strong>Werkzeuge → WebSocket-Servereinstellungen</strong> und aktivieren Sie den Server mit Authentifizierung. Für die manuelle Überblendung in OBS Studio <strong>33.0.0 oder 33.0.1</strong> aktivieren Sie den <strong>Studiomodus</strong>, wählen <strong>Überblenden (Fade)</strong> und lassen den weißen Schieberegler zwischen Vorschau und Programm sichtbar.</li>
       <li>Lesen Sie in Fadester die Szenen und Eingänge aus OBS ein. Geben Sie bei Bedarf den in OBS eingestellten Port und das Passwort ein. Wählen Sie <strong>OBS Fadester for TourBox</strong> in TourBox Console, speichern und starten Sie die Steuerung in Fadester und wechseln Sie zurück zu OBS. Lassen Sie Fadester geöffnet.</li>
@@ -32,14 +42,6 @@
       <li>VJster steuert YouTube nur in Chrome, nicht eine YouTube-Browserquelle in OBS. Zeigen Sie das Video in OBS mit einer Fensteraufnahme von Chrome. Für den Ton fügen Sie eine Anwendungs-Audioaufnahme von Chrome hinzu.</li>
       <li>Weisen Sie in Fadester einen Musikeingang zu. Halten Sie <strong>Side</strong> gedrückt und drehen Sie das flache <strong>Dial</strong>, um dessen Lautstärke zu regeln. Mit gedrücktem <strong>Top</strong> steuern Knob, Scroll und Dial die VJ-Ebenen (Mischmodus und Deckkraft).</li>
     </ul>
-
-    <h2>Keine TourBox? Nehmen Sie einen Gamecontroller</h2>
-    <ol>
-      <li>Aktivieren Sie auf der Registerkarte <strong>Einrichtung</strong> die Option <strong>Einen Xbox- oder XInput-Controller verwenden</strong>, lassen Sie <strong>Einfacher Modus</strong> aktiviert und klicken Sie auf <strong>Speichern &amp; Steuerung starten</strong>. Den Preset-Import können Sie überspringen.</li>
-      <li>Aktivieren Sie in OBS den <strong>Studiomodus</strong> und wählen Sie <strong>Überblenden (Fade)</strong>. Drücken Sie das Steuerkreuz nach unten, um die nächste Szene aus der OBS-Liste in die Vorschau zu holen, nach oben für die vorherige.</li>
-      <li>Ziehen Sie den rechten Trigger: Der T-Bar von OBS folgt, und ganz durchgezogen übernimmt er. Oder halten Sie <strong>A</strong>: Nach 0,15 s bewegt sich der T-Bar, solange Sie halten, und übernimmt am Ende. Lassen Sie los, um ihn auf halbem Weg stehen zu lassen; halten Sie A erneut, um weiterzumachen.</li>
-      <li><strong>B</strong> schneidet hart, <strong>View</strong> geht zurück zum Programm, der linke Trigger senkt die Musik, solange Sie ihn halten, und das Steuerkreuz links und rechts regelt die Musik. Jede Taste können Sie auf der Registerkarte <strong>Gamecontroller</strong> ändern.</li>
-    </ol>
 
     <h2>Gesamte Mischung regeln</h2>
     <p>Aktivieren Sie in der Einrichtung die Steuerung aller OBS-Mixereingänge und speichern und starten Sie die Steuerung. Halten Sie <strong>Side</strong> gedrückt und drehen Sie den <strong>Knob</strong>, um den Gruppenpegel zu ändern. Im <strong>Tour</strong>-Menü können Sie die Mischung bis zur Stille ausblenden und die vorherigen Pegel wiederherstellen. Stummgeschaltete Eingänge bleiben stumm.</p>

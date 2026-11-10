@@ -4,6 +4,17 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 
 ## Unreleased
 
+- **Fadester Companion: clearer words in the app.** These changes reach Store users with the next package (0.1.2.0 or later).
+  - When OBS is not ready, the header says what is wrong and what to do in OBS, in your language: OBS is not answering, has no WebSocket password yet, has authentication off, or did not accept the password.
+  - A new status line under the title always shows whether OBS is connected, whether the controls are on, and whether the game controller is connected, not found or off. When no controller answers at start, the Activity tab says so.
+  - The password field is now **OBS password (optional)**, and its hint says to leave it empty: the app reads the password OBS saved on this PC.
+  - The connect hint lists everything the T-bar needs: OBS 33.0.0 or 33.0.1, Studio Mode, the Fade transition and the main OBS window with its T-bar visible. The T-bar messages for another OBS version or a hidden T-bar say what to do.
+  - The Activity tab names actions and controls as the app shows them, for example *Cut preview live · T-bar 0%*, *B was pressed too briefly* and *Choose Music / bed on the Assignments tab first*.
+  - The four scene fields on the Assignments tab are now **Preview anchor 1 (TourBox D-pad Up)** to **4**, so they are not mistaken for the game controller's D-pad.
+  - **Use only Stream Deck, OpenDeck or MIDI** now says that it also turns off the game controller and VJster.
+  - A TourBox shortcut that another app already uses no longer stops the controls from starting: it is skipped, the Activity tab names it, and every other control works.
+  - The README and the Quick guide in all ten languages now start with Fadester Companion and the game controller. The privacy page now says exactly what the app keeps: the OBS password is never saved, and the app connects only to OBS on this PC.
+
 - **Fadester Companion: Music comes back when you let go of the left trigger.** If the connection to OBS dropped while you held the trigger, or the companion was still busy with a cut when you let go, the restore was dropped and Music stayed ducked on air. Letting go now brings Music back as soon as the companion can, on the new connection if needed. If you hold the trigger again before that, Music stays ducked until you let go.
 - **Fadester Companion: the T-bar no longer locks up after a refusal that changed nothing.** After Studio Mode was turned off and on (a Stream Deck T-bar take does this), the next pull of the trigger or held A could fail, and then every take, cut and T-bar move was refused until you pressed View. The companion now checks OBS's T-bar before every throw and finds it again when OBS has rebuilt it. When it can tell that nothing was written, nothing locks: the next try works. View is still needed after a move OBS may or may not have made.
 - **Fadester Companion: your transition comes back after a cut without waiting.** OBS can switch back to Cut as a cut ends. The companion now looks again about 1.5 s after each cut and puts your transition back, instead of waiting for your next take, cut, T-bar move or Cancel, which could come after its 30 s watch and cut on air.

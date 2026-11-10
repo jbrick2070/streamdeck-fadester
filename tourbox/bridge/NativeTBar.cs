@@ -63,7 +63,7 @@ internal sealed class NativeTBar(int port) : IDisposable
         // Hold the OS handle for this connection; a recycled PID is not the same process.
         _ = target.Handle;
         string exe = Path.Combine(AppContext.BaseDirectory, "FadesterNativeSlider.exe");
-        if (!File.Exists(exe)) throw new FileNotFoundException("Extract the full TourBox package to use the OBS slider.", exe);
+        if (!File.Exists(exe)) throw new FileNotFoundException("A file of the app is missing: FadesterNativeSlider.exe. Install Fadester Companion again, or extract the whole ZIP again, to use the T-bar.", exe);
         var start = new ProcessStartInfo(exe)
         {
             UseShellExecute = false, CreateNoWindow = true, RedirectStandardInput = true,

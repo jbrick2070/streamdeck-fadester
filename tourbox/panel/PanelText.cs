@@ -28,21 +28,13 @@ namespace Fadester.TourBox {
       { "importCopied", new[] { "Path copied. In TourBox Console, click Import at the top of Preset List, press Ctrl+V, then Enter, and link the preset to OBS Studio. To update a preset you already imported, select it and use Import in its own menu instead.", "Ruta copiada. En TourBox Console, haz clic en Import arriba de Preset List, pulsa Ctrl+V y luego Intro, y vincula el preajuste a OBS Studio. Para actualizar un preajuste ya importado, selecciónalo y usa Import en su propio menú.", "Chemin copié. Dans TourBox Console, cliquez sur Import en haut de Preset List, appuyez sur Ctrl+V, puis sur Entrée, et associez le préréglage à OBS Studio. Pour mettre à jour un préréglage déjà importé, sélectionnez-le et utilisez Import dans son propre menu.", "路径已复制。在 TourBox Console 中，点击 Preset List 顶部的 Import，按 Ctrl+V，再按 Enter，然后将预设关联到 OBS Studio。要更新已导入的预设，请选中它并使用其自身菜单中的 Import。" } },
       { "importManual", new[] { "The path could not be copied. In TourBox Console, click Import and open: {0}", "No se pudo copiar la ruta. En TourBox Console, haz clic en Import y abre: {0}", "Impossible de copier le chemin. Dans TourBox Console, cliquez sur Import et ouvrez : {0}", "无法复制路径。在 TourBox Console 中点击 Import 并打开：{0}" } },
       { "portsClash", new[] { "The OBS port and the VJster port cannot be the same. The OBS port is usually 4455: check it in OBS under Tools → WebSocket Server Settings.", "El puerto de OBS y el de VJster no pueden ser el mismo. El de OBS suele ser 4455: compruébalo en OBS, en Herramientas → Ajustes del servidor WebSocket.", "Le port OBS et le port VJster ne peuvent pas être identiques. Le port OBS est généralement 4455 : vérifiez-le dans OBS, sous Outils → Paramètres du serveur WebSocket.", "OBS 端口和 VJster 端口不能相同。OBS 端口通常是 4455：请在 OBS 的「工具 → WebSocket 服务器设置」中查看。" } },
-      { "obsReady", new[] { "Connected to OBS. Scenes found: {0}. The TourBox does nothing until you click Save & start controls.", "Conexión con OBS establecida. Escenas encontradas: {0}. El TourBox no hará nada hasta que hagas clic en Guardar e iniciar.", "Connexion à OBS établie. Scènes trouvées : {0}. Le TourBox ne fera rien tant que vous n’aurez pas cliqué sur Enregistrer et démarrer.", "已连接 OBS。找到 {0} 个场景。点击「保存并启动控制」之前，TourBox 不会有任何反应。" } },
+      { "obsReady", new[] { "Connected to OBS. Scenes found: {0}. Your controller does nothing until you click Save & start controls.", "Conexión con OBS establecida. Escenas encontradas: {0}. Tu controlador no hará nada hasta que hagas clic en Guardar e iniciar.", "Connexion à OBS établie. Scènes trouvées : {0}. Votre contrôleur ne fera rien tant que vous n’aurez pas cliqué sur Enregistrer et démarrer.", "已连接 OBS。找到 {0} 个场景。点击「保存并启动控制」之前，控制器不会有任何反应。" } },
       { "vjsterChrome", new[] { "VJster controls YouTube in Chrome only. A YouTube browser source in OBS cannot be controlled. To show the video in OBS, add a Window Capture of the Chrome window and keep that window open. Add an Application Audio Capture of Chrome for its sound.", "VJster solo controla YouTube en Chrome. Una fuente de navegador con YouTube en OBS no se puede controlar. Para mostrar el vídeo en OBS, añade una captura de ventana de Chrome y mantén esa ventana abierta. Añade una captura de audio de aplicación de Chrome para el sonido.", "VJster ne contrôle YouTube que dans Chrome. Une source navigateur YouTube dans OBS ne peut pas être contrôlée. Pour afficher la vidéo dans OBS, ajoutez une capture de la fenêtre Chrome et gardez cette fenêtre ouverte. Ajoutez une capture audio d’application de Chrome pour le son.", "VJster 只能控制 Chrome 中的 YouTube。OBS 中的 YouTube 浏览器源无法控制。要在 OBS 中显示视频，请添加 Chrome 窗口的窗口采集，并保持该窗口打开。请添加 Chrome 的应用程序音频采集以获取声音。" } },
       { "connectTitle", new[] { "2   Connect to OBS", "2   Conecta con OBS", "2   Se connecter à OBS", "2   连接 OBS" } },
-      { "connectHint", new[] {
-        "In OBS, open Tools → WebSocket Server Settings and enable the server. Keep authentication on. For the manual crossfader, turn on Studio Mode and choose Fade.",
-        "En OBS, abre Herramientas → Ajustes del servidor WebSocket y actívalo. Mantén activa la autenticación. Para la transición manual, activa el modo Estudio y elige Desvanecimiento.",
-        "Dans OBS, ouvrez Outils → Paramètres du serveur WebSocket et activez le serveur. Laissez l’authentification activée. Pour le fondu manuel, activez le mode Studio et choisissez Fondu.",
-        "在 OBS 中，打开「工具 → WebSocket 服务器设置」并启用服务器。保持身份验证开启。若要手动淡入淡出，请启用工作室模式并选择淡入淡出转场。" } },
+      { "connectHint", new[] { "In OBS, open Tools → WebSocket Server Settings and turn on Enable WebSocket server. Keep authentication on. The T-bar needs OBS 33.0.0 or 33.0.1. Turn on Studio Mode, choose the Fade transition, and keep the main OBS window open with its T-bar visible.", "En OBS, abre Herramientas → Ajustes del servidor WebSocket y activa Habilitar servidor WebSocket. Mantén activa la autenticación. El T-bar necesita OBS 33.0.0 o 33.0.1. Activa el modo Estudio, elige la transición Desvanecimiento y mantén abierta la ventana principal de OBS con su T-bar visible.", "Dans OBS, ouvrez Outils → Paramètres du serveur WebSocket et cochez Activer le serveur WebSocket. Laissez l’authentification activée. Le T-bar nécessite OBS 33.0.0 ou 33.0.1. Activez le mode Studio, choisissez la transition Fondu et gardez la fenêtre principale d’OBS ouverte avec son T-bar visible.", "在 OBS 中打开「工具 → WebSocket 服务器设置」，勾选「启用 WebSocket 服务器」。保持身份验证开启。T-bar 需要 OBS 33.0.0 或 33.0.1。请启用工作室模式，选择「淡入淡出」转场，并保持 OBS 主窗口打开且 T-bar 可见。" } },
       { "port", new[] { "OBS port", "Puerto de OBS", "Port OBS", "OBS 端口" } },
-      { "password", new[] { "Password override", "Otra contraseña", "Autre mot de passe", "覆盖密码" } },
-      { "passwordHint", new[] {
-        "On this PC the bridge can use OBS’s saved password. A password typed here lasts only until you close this window.",
-        "El puente puede usar la contraseña que OBS guarda en este equipo. Si escribes otra aquí, se usará solo hasta que cierres esta ventana.",
-        "Le pont peut utiliser le mot de passe enregistré par OBS sur ce PC. Tout mot de passe saisi ici est oublié à la fermeture de cette fenêtre.",
-        "桥接程序可以使用这台电脑上 OBS 保存的密码。在此处输入的密码只在本窗口打开期间有效。" } },
+      { "password", new[] { "OBS password (optional)", "Contraseña de OBS (opcional)", "Mot de passe OBS (facultatif)", "OBS 密码（可选）" } },
+      { "passwordHint", new[] { "Leave this empty. The app reads the password that OBS saved on this PC. Type a password here only if the connection fails. You find it in OBS under Tools → WebSocket Server Settings → Show Connect Info. A password typed here is not saved.", "Deja este campo vacío. La aplicación lee la contraseña que OBS guardó en este equipo. Escribe una contraseña aquí solo si la conexión falla. La encontrarás en OBS, en Herramientas → Ajustes del servidor WebSocket → Mostrar información de conexión. Una contraseña escrita aquí no se guarda.", "Laissez ce champ vide. L’application lit le mot de passe enregistré par OBS sur ce PC. Saisissez un mot de passe ici seulement si la connexion échoue. Vous le trouverez dans OBS sous Outils → Paramètres du serveur WebSocket → Afficher les informations de connexion. Un mot de passe saisi ici n’est pas enregistré.", "请留空。本应用会读取 OBS 在这台电脑上保存的密码。只有连接失败时才需要在此输入密码。密码可在 OBS 的「工具 → WebSocket 服务器设置 → 显示连接信息」中找到。在此输入的密码不会被保存。" } },
       { "discover", new[] { "Read scenes and inputs from OBS", "Leer escenas y entradas de OBS", "Lire les scènes et entrées d’OBS", "从 OBS 读取场景和输入" } },
       { "cueTitle", new[] { "3   Try a cue", "3   Prueba una escena", "3   Essayer une scène", "3   试切一个场景" } },
       { "cueHint", new[] {
@@ -63,7 +55,7 @@ namespace Fadester.TourBox {
         "Aplica un fundido relativo a las entradas de audio de la colección de escenas, incluidas las nuevas, y conserva su equilibrio. Se ajustan todas las pistas y salidas de monitorización que reciben esas entradas. El silencio y el enrutamiento se mantienen.",
         "Un même fondu relatif pour les entrées audio publiques de cette collection de scènes, y compris les nouvelles. Leur équilibre est préservé. Les pistes et retours alimentés par ces entrées suivent le fondu. Les coupures et le routage restent tels quels.",
         "对场景集合中所有公开的音频输入（包括新添加的输入）应用同一相对音量渐变，保持原有平衡。由这些输入供给的音轨和监听都会随之渐变，静音状态和路由保持原样。" } },
-      { "mixOnly", new[] { "Use only Stream Deck, OpenDeck or MIDI (no TourBox shortcuts)", "Usar solo Stream Deck, OpenDeck o MIDI (sin atajos de TourBox)", "Utiliser Stream Deck, OpenDeck ou MIDI seuls (sans raccourcis TourBox)", "仅使用 Stream Deck、OpenDeck 或 MIDI（不启用 TourBox 快捷键）" } },
+      { "mixOnly", new[] { "Use only Stream Deck, OpenDeck or MIDI (no TourBox, no game controller, no VJster)", "Usar solo Stream Deck, OpenDeck o MIDI (sin TourBox, sin mando de juego, sin VJster)", "Utiliser Stream Deck, OpenDeck ou MIDI seuls (sans TourBox, sans manette de jeu, sans VJster)", "仅使用 Stream Deck、OpenDeck 或 MIDI（不使用 TourBox、游戏手柄和 VJster）" } },
       { "mixStep", new[] { "Group step (dB)", "Paso del grupo (dB)", "Pas du groupe (dB)", "组音量步长 (dB)" } },
       { "mixFade", new[] { "Group fade (ms)", "Fundido del grupo (ms)", "Fondu du groupe (ms)", "组渐变时长 (ms)" } },
       { "vjsterTitle", new[] { "Optional   VJster: YouTube from the TourBox", "Opcional   VJster: YouTube desde el TourBox", "Facultatif   VJster : YouTube depuis le TourBox", "可选   VJster：用 TourBox 控制 YouTube" } },
@@ -116,9 +108,9 @@ namespace Fadester.TourBox {
       { "right", new[] { "D-pad Right", "Cruceta →", "Pavé →", "方向键 →" } },
       { "down", new[] { "D-pad Down", "Cruceta ↓", "Pavé ↓", "方向键 ↓" } },
       { "left", new[] { "D-pad Left", "Cruceta ←", "Pavé ←", "方向键 ←" } },
-      { "assignFirstFour", new[] { "Assign first four OBS scenes to D-pad", "Asignar las primeras cuatro escenas a la cruceta", "Affecter les quatre premières scènes au pavé", "将 OBS 的前四个场景分配给方向键" } },
+      { "assignFirstFour", new[] { "Assign the first four OBS scenes to anchors 1 to 4", "Asignar las primeras cuatro escenas de OBS a las anclas 1 a 4", "Affecter les quatre premières scènes OBS aux ancres 1 à 4", "将 OBS 的前四个场景分配给锚点 1 至 4" } },
       { "discoverFirst", new[] { "Read the scene list from OBS first.", "Primero lee la lista de escenas de OBS.", "Lisez d’abord la liste des scènes d’OBS.", "请先从 OBS 读取场景列表。" } },
-      { "assignPreviewed", new[] { "D-pad assignments previewed. Save to keep them.", "Asignaciones de la cruceta listas. Guárdalas para conservarlas.", "Affectations du pavé préparées. Enregistrez-les pour les conserver.", "方向键分配已预填。保存后即可保留。" } },
+      { "assignPreviewed", new[] { "Anchors 1 to 4 are filled in. Save to keep them.", "Anclas 1 a 4 rellenadas. Guarda para conservarlas.", "Ancres 1 à 4 remplies. Enregistrez-les pour les conserver.", "锚点 1 至 4 已填入。保存后即可保留。" } },
       { "adjust", new[] { "Adjust the feel", "Ajusta la respuesta", "Ajuster la réponse", "调整控制手感" } },
       { "musicStep", new[] { "Music step (dB)", "Paso de música (dB)", "Pas de la musique (dB)", "音乐音量步长 (dB)" } },
       { "duckCeiling", new[] { "Duck ceiling (dB)", "Límite de atenuación (dB)", "Plafond d’atténuation (dB)", "闪避音量上限 (dB)" } },
@@ -153,11 +145,7 @@ namespace Fadester.TourBox {
         "No se puede leer config.json. Haz una copia de seguridad o repara el archivo en {0}.",
         "Impossible de lire config.json. Sauvegardez ou réparez le fichier dans {0}.",
         "无法读取 config.json。请备份或修复 {0} 中的文件。" } },
-      { "mapUnreadable", new[] {
-        "Could not read the control map. Extract the entire ZIP before running Fadester.",
-        "No se pudo leer el mapa de controles. Extrae todo el archivo ZIP antes de ejecutar Fadester.",
-        "Impossible de lire le plan des commandes. Extrayez tout le fichier ZIP avant de lancer Fadester.",
-        "无法读取控制映射。请解压整个 ZIP 文件后再运行 Fadester。" } },
+      { "mapUnreadable", new[] { "Cannot read the control map. Install Fadester Companion again, or extract the whole ZIP again.", "No se puede leer el mapa de controles. Vuelve a instalar Fadester Companion o vuelve a extraer todo el archivo ZIP.", "Impossible de lire le plan des commandes. Réinstallez Fadester Companion ou extrayez à nouveau tout le fichier ZIP.", "无法读取控制映射。请重新安装 Fadester Companion，或重新解压整个 ZIP 文件。" } },
       { "cannotWrite", new[] { "Existing config could not be read.", "No se pudo leer la configuración existente.", "Impossible de lire la configuration existante.", "无法读取现有配置。" } },
       { "saved", new[] { "Assignments saved.", "Asignaciones guardadas.", "Affectations enregistrées.", "分配已保存。" } },
       { "savedRestart", new[] {
@@ -165,11 +153,7 @@ namespace Fadester.TourBox {
         "Asignaciones guardadas. Detén y reinicia los controles para aplicarlas.",
         "Affectations enregistrées. Arrêtez puis redémarrez les commandes pour les appliquer.",
         "分配已保存。请停止并重启控制以应用更改。" } },
-      { "bridgeMissing", new[] {
-        "Extract the whole ZIP: FadesterTourBoxBridge.exe is missing.",
-        "Extrae todo el archivo ZIP. Falta FadesterTourBoxBridge.exe.",
-        "Extrayez tout le fichier ZIP. FadesterTourBoxBridge.exe est introuvable.",
-        "请解压整个 ZIP 文件。未找到 FadesterTourBoxBridge.exe。" } },
+      { "bridgeMissing", new[] { "A file of the app is missing: FadesterTourBoxBridge.exe. Install Fadester Companion again, or extract the whole ZIP again.", "Falta un archivo de la aplicación: FadesterTourBoxBridge.exe. Vuelve a instalar Fadester Companion o vuelve a extraer todo el archivo ZIP.", "Un fichier de l’application est introuvable : FadesterTourBoxBridge.exe. Réinstallez Fadester Companion ou extrayez à nouveau tout le fichier ZIP.", "缺少应用文件：FadesterTourBoxBridge.exe。请重新安装 Fadester Companion，或重新解压整个 ZIP 文件。" } },
       { "obsTimeout", new[] {
         "OBS did not answer. Check the port and password.",
         "OBS no responde. Comprueba el puerto y la contraseña.",
@@ -197,7 +181,7 @@ namespace Fadester.TourBox {
         "无法启动或继续控制。请在「活动」中查看快捷键或连接错误。" } },
       { "bridgeNotStarted", new[] { "Bridge did not start.", "El puente no se inició.", "Le pont n’a pas démarré.", "桥接程序未启动。" } },
       { "stop", new[] { "Stop controls", "Detener controles", "Arrêter les commandes", "停止控制" } },
-      { "starting", new[] { "Starting controller…", "Iniciando el controlador…", "Démarrage du contrôleur…", "正在启动控制器…" } },
+      { "starting", new[] { "Starting the controls…", "Iniciando los controles…", "Démarrage des commandes…", "正在启动控制…" } },
       { "finishing", new[] {
         "The bridge is still finishing its current action. Click Stop controls again to end it.",
         "El puente aún está terminando la acción actual. Haz clic de nuevo en Detener controles para cerrarlo.",
@@ -210,6 +194,20 @@ namespace Fadester.TourBox {
         "桥接程序未能及时停止，面板已将其结束。请在 OBS 中检查 T-bar 和所选的转场。" } },
       { "openSettings", new[] { "Open settings folder", "Abrir la carpeta de configuración", "Ouvrir le dossier des paramètres", "打开设置文件夹" } },
       { "lastAction", new[] { "Fadester · last action", "Fadester · última acción", "Fadester · dernière action", "Fadester · 最近操作" } },
+      { "obsNoAnswer", new[] { "OBS is not answering. Start OBS. In OBS, open Tools → WebSocket Server Settings and turn on Enable WebSocket server. Then click Read scenes and inputs from OBS.", "OBS no responde. Inicia OBS. En OBS, abre Herramientas → Ajustes del servidor WebSocket y activa Habilitar servidor WebSocket. Después haz clic en Leer escenas y entradas de OBS.", "OBS ne répond pas. Démarrez OBS. Dans OBS, ouvrez Outils → Paramètres du serveur WebSocket et cochez Activer le serveur WebSocket. Cliquez ensuite sur Lire les scènes et entrées d’OBS.", "OBS 没有响应。请启动 OBS。在 OBS 中打开「工具 → WebSocket 服务器设置」，勾选「启用 WebSocket 服务器」。然后点击「从 OBS 读取场景和输入」。" } },
+      { "obsNoPassword", new[] { "OBS has no WebSocket password yet. In OBS, open Tools → WebSocket Server Settings. Turn on Enable WebSocket server and Enable Authentication, then click OK. Then click Read scenes and inputs from OBS.", "OBS aún no tiene contraseña de WebSocket. En OBS, abre Herramientas → Ajustes del servidor WebSocket. Activa Habilitar servidor WebSocket y Habilitar autenticación, y haz clic en Aceptar. Después haz clic en Leer escenas y entradas de OBS.", "OBS n’a pas encore de mot de passe WebSocket. Dans OBS, ouvrez Outils → Paramètres du serveur WebSocket. Cochez Activer le serveur WebSocket et Activer l’authentification, puis cliquez sur OK. Cliquez ensuite sur Lire les scènes et entrées d’OBS.", "OBS 还没有 WebSocket 密码。在 OBS 中打开「工具 → WebSocket 服务器设置」，勾选「启用 WebSocket 服务器」和「启用身份验证」，然后点击「确定」。再点击「从 OBS 读取场景和输入」。" } },
+      { "obsAuthOff", new[] { "Authentication is off in OBS. In OBS, open Tools → WebSocket Server Settings and turn on Enable Authentication. Then click Read scenes and inputs from OBS.", "La autenticación está desactivada en OBS. En OBS, abre Herramientas → Ajustes del servidor WebSocket y activa Habilitar autenticación. Después haz clic en Leer escenas y entradas de OBS.", "L’authentification est désactivée dans OBS. Dans OBS, ouvrez Outils → Paramètres du serveur WebSocket et cochez Activer l’authentification. Cliquez ensuite sur Lire les scènes et entrées d’OBS.", "OBS 中的身份验证已关闭。在 OBS 中打开「工具 → WebSocket 服务器设置」，勾选「启用身份验证」。然后点击「从 OBS 读取场景和输入」。" } },
+      { "obsBadPassword", new[] { "OBS did not accept the password. In OBS, open Tools → WebSocket Server Settings and click Show Connect Info. Type that password in OBS password (optional) on the Setup tab.", "OBS no aceptó la contraseña. En OBS, abre Herramientas → Ajustes del servidor WebSocket y haz clic en Mostrar información de conexión. Escribe esa contraseña en Contraseña de OBS (opcional), en la pestaña Configuración.", "OBS n’a pas accepté le mot de passe. Dans OBS, ouvrez Outils → Paramètres du serveur WebSocket et cliquez sur Afficher les informations de connexion. Saisissez ce mot de passe dans Mot de passe OBS (facultatif), dans l’onglet Configuration.", "OBS 不接受该密码。在 OBS 中打开「工具 → WebSocket 服务器设置」，点击「显示连接信息」。在「设置」标签页的「OBS 密码（可选）」中输入该密码。" } },
+      { "statusLine", new[] { "OBS: {0}   •   Controls: {1}   •   Game controller: {2}", "OBS: {0}   •   Controles: {1}   •   Mando de juego: {2}", "OBS : {0}   •   Commandes : {1}   •   Manette de jeu : {2}", "OBS：{0}   •   控制：{1}   •   游戏手柄：{2}" } },
+      { "stObsOn", new[] { "connected", "conectado", "connecté", "已连接" } },
+      { "stObsOff", new[] { "not connected", "no conectado", "non connecté", "未连接" } },
+      { "stCtlOn", new[] { "on", "activos", "actives", "已开启" } },
+      { "stCtlOff", new[] { "off", "detenidos", "arrêtées", "已关闭" } },
+      { "stPadOn", new[] { "connected", "conectado", "connectée", "已连接" } },
+      { "stPadMissing", new[] { "not found", "no encontrado", "introuvable", "未找到" } },
+      { "stPadOff", new[] { "off", "desactivado", "désactivée", "已关闭" } },
+      { "keepOpen", new[] { "Keep this window open while you work. Closing it stops the controls.", "Mantén esta ventana abierta mientras trabajas. Si la cierras, los controles se detienen.", "Gardez cette fenêtre ouverte pendant que vous travaillez. La fermer arrête les commandes.", "工作时请保持此窗口打开。关闭窗口会停止控制。" } },
+      { "anchorField", new[] { "Preview anchor {0} (TourBox {1})", "Ancla vista previa {0} (TourBox {1})", "Ancre d’aperçu {0} (TourBox {1})", "预览锚点 {0}（TourBox {1}）" } },
     };
 
     internal PanelText(string requestedLocale) {
@@ -246,6 +244,18 @@ namespace Fadester.TourBox {
       if (builtIn >= 0) text = translations[builtIn];
       else if (extra == null || !extra.TryGetValue(key, out text)) text = translations[0];
       return values.Length == 0 ? text : String.Format(CultureInfo.CurrentCulture, text, values);
+    }
+
+    // The bridge ends the message of each way OBS can refuse a connection with its code (ObsSetupException).
+    static readonly Regex ObsProblem = new Regex(@"\((obs-no-answer|obs-no-password|obs-auth-off|obs-bad-password)\)");
+    static readonly Dictionary<string,string> ObsProblemKeys = new Dictionary<string,string> {
+      { "obs-no-answer", "obsNoAnswer" }, { "obs-no-password", "obsNoPassword" },
+      { "obs-auth-off", "obsAuthOff" }, { "obs-bad-password", "obsBadPassword" } };
+
+    /** A bridge line in this language when it is one of the OBS connection problems; otherwise the line itself. */
+    internal string Explain(string line) {
+      var match = ObsProblem.Match(line ?? "");
+      return match.Success ? Get(ObsProblemKeys[match.Groups[1].Value]) : line;
     }
 
     internal string Control(string control) {
@@ -292,6 +302,10 @@ namespace Fadester.TourBox {
           new PanelText("de-DE").Locale != "de" || new PanelText("zh-Hant-HK").Locale != "zh-TW" ||
           !chinese.Get("obsConnected", 14).Contains("14"))
         throw new InvalidOperationException("Panel language selection failed.");
+      if (chinese.Explain("ERROR: OBS did not accept the password. (obs-bad-password)") != chinese.Get("obsBadPassword") ||
+          english.Explain("Offline: OBS is not answering on port 4455. (obs-no-answer)") != english.Get("obsNoAnswer") ||
+          english.Explain("Offline: OBS disconnected.") != "Offline: OBS disconnected.")
+        throw new InvalidOperationException("Panel OBS problem texts failed.");
       var folder = Path.Combine(Path.GetTempPath(), "fadester-panel-test-" + Guid.NewGuid().ToString("N"));
       if (chinese.PresetFolder(folder) != Path.Combine(folder, "presets") ||
           chinese.GuidePath(folder) != Path.Combine(folder, "START-HERE.html") ||

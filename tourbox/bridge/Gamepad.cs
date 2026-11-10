@@ -364,7 +364,7 @@ internal sealed class PadReader(IReadOnlyDictionary<string, string> map, bool ea
             if (!Active(s, ordinaryControl))
             {
                 string seconds = (PadControls.OrdinaryTakeMs / 1000.0).ToString("0.0#", System.Globalization.CultureInfo.InvariantCulture);
-                Notes.Add($"Game controller: {ordinaryControl} let go too soon. OBS plays its own transition here, so a take needs a {seconds} s hold (easy mode).");
+                Notes.Add($"Game controller: {ActionNames.Control(ordinaryControl)} was let go too soon. OBS plays its own transition here, so a take needs a {seconds} s hold (easy mode).");
                 ordinaryControl = null;
             }
             else if (nowMs >= ordinaryDue) { ordinaryControl = null; actions.Add(PadControls.TakeNow); }
@@ -394,7 +394,8 @@ internal sealed class PadReader(IReadOnlyDictionary<string, string> map, bool ea
         $"Hold {ControlFor("take", "the take")} to carry on, press {ControlFor("take.cut", "a cut")} to finish at once or {ControlFor("fader.cancel", "Cancel")} to go back to Program.";
 
     private string ControlFor(string action, string otherwise) =>
-        map.FirstOrDefault(kv => kv.Value == action && !kv.Key.StartsWith(PadControls.ShiftPrefix, StringComparison.OrdinalIgnoreCase)).Key ?? otherwise;
+        map.FirstOrDefault(kv => kv.Value == action && !kv.Key.StartsWith(PadControls.ShiftPrefix, StringComparison.OrdinalIgnoreCase)).Key is { } control
+            ? ActionNames.Control(control) : otherwise;
 
     private string Key(string control) => shiftHeld ? PadControls.ShiftPrefix + control : control;
 
@@ -428,7 +429,7 @@ internal sealed class PadReader(IReadOnlyDictionary<string, string> map, bool ea
         if (toldTap.TryGetValue(control, out var told) && nowMs - told < TapNoteEveryMs) return;
         toldTap[control] = nowMs;
         string seconds = (PadControls.HoldMs(action) / 1000.0).ToString("0.0#", System.Globalization.CultureInfo.InvariantCulture);
-        Notes.Add($"Game controller: {control} tapped; hold it {seconds} s for {action} (easy mode).");
+        Notes.Add($"Game controller: {ActionNames.Control(control)} was pressed too briefly. Hold it for {seconds} s for {ActionNames.Of(action)} (easy mode).");
     }
 
     private void LeftTrigger(double lt, long nowMs, List<string> actions)
@@ -570,7 +571,8 @@ internal sealed class GamepadLoop(IPadSource source, PadReader reader, TbarMailb
 {
     public Task Run(CancellationToken stop) => Task.Run(async () =>
     {
-        bool connected = false;
+        // The panel reads these three lines for its status line: keep them as they are.
+        bool connected = false, told = false;
         while (!stop.IsCancellationRequested)
         {
             try
@@ -587,6 +589,8 @@ internal sealed class GamepadLoop(IPadSource source, PadReader reader, TbarMailb
                     connected = s.Connected;
                     log(connected ? "Game controller connected." : "Game controller disconnected.");
                 }
+                else if (!told && !connected) log("Game controller not found. Plug it in or turn it on.");
+                told = true;
                 long now = Environment.TickCount64;
                 if (mailbox.ConsumeFailure()) reader.Disarm();
                 if (mailbox.TakeSlide() is { } slide) reader.Tbar.Slide(slide.From, slide.Ms, now);

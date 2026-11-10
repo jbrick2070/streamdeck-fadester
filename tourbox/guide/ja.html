@@ -4,20 +4,30 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>クイックスタート · OBS Fadester for TourBox</title>
+  <title>クイックスタート · Fadester Companion</title>
   <link rel="stylesheet" href="quickstart.css">
 </head>
 <body>
   <main>
     <header>
       <p>クイックスタート · Windows x64</p>
-      <h1>OBS Fadester for TourBox</h1>
-      <p>TourBox で OBS Studio のシーンを選び、手動でフェードし、音量を調整できます。</p>
+      <h1>Fadester Companion</h1>
+      <p>ゲームコントローラーまたは TourBox で OBS Studio のシーンを選び、手動でフェードし、音量を調整できます。</p>
     </header>
+
+    <h2>TourBox がなければゲームコントローラーで</h2>
+    <ol>
+      <li>OBS を開きます。<strong>ツール → WebSocket サーバー設定</strong>でサーバーをオンにし、認証はオンのままにします。次に <strong>Fadester Companion</strong> を開きます。自動で接続し、接続できない場合はウィンドウに対処方法が表示されます。T バーには OBS 33.0.0 または 33.0.1 が必要です。OBS のメインウィンドウを開き、T バーが見えるようにしておいてください。</li>
+      <li><strong>セットアップ</strong>タブで<strong>Xbox または XInput 対応のコントローラーを使う</strong>にチェックを入れ、<strong>かんたんモード</strong>はオンのまま、<strong>保存 &amp; 開始</strong>をクリックします。プリセットの読み込みは不要です。</li>
+      <li>OBS で<strong>スタジオモード</strong>を有効にし、<strong>フェード（Fade）</strong>を選びます。十字キーの下で OBS の一覧の次のシーンを、上で前のシーンをプレビューに送ります。</li>
+      <li>右トリガーを引くと OBS の T バーが追従し、奥まで引くとプログラムに切り替わります。または <strong>A</strong> を押し続けると、0.15 秒後から押している間だけ T バーが進み、端まで行くと切り替わります。途中で離すとその位置で止まり、もう一度 A を押し続けると続きから進みます。</li>
+      <li><strong>B</strong> でカット、<strong>View</strong> でプログラムに戻り、左トリガーを押している間は音楽を下げ、十字キーの左右で音楽を調整します。どのボタンも<strong>ゲームコントローラー</strong>タブで変更できます。</li>
+    </ol>
+    <p>作業中はこのウィンドウを開いたままにしてください。閉じるとコントロールが停止します。</p>
 
     <h2>TourBox を OBS に接続する</h2>
     <ol>
-      <li>Windows 用 ZIP ファイル全体を展開し、展開先のフォルダーで <strong>Fadester for TourBox.exe</strong> を起動します。Microsoft Store からインストールした場合は、スタート メニューから <strong>Fadester Companion</strong> を開きます。</li>
+      <li>スタート メニューから <strong>Fadester Companion</strong> を開きます。ZIP を使う場合は、ZIP 全体を展開して <strong>Fadester for TourBox.exe</strong> を起動します。</li>
       <li>OBS を開きます。TourBox Console のプリセットリスト横のインポートボタンから <code>presets/ja/OBS Fadester for TourBox.tb</code> を読み込みます。プリセットを OBS に関連付け、自動切り替え（<strong>Auto Switch</strong>）を有効にします。読み込むプリセットは、使用する言語のもの一つだけです。 Fadester の <strong>TourBox Console にインポート</strong> ボタンを使ってください。<code>.tb</code> ファイルはダブルクリックしないでください。</li>
       <li>OBS の <strong>ツール → WebSocket サーバー設定</strong>で、認証を有効にした状態でサーバーをオンにします。OBS Studio <strong>33.0.0 または 33.0.1</strong> で手動フェードを使うには、<strong>スタジオモード</strong>を有効にし、<strong>フェード（Fade）</strong>を選び、プレビューとプログラムの間にある白いスライダーを表示したままにします。</li>
       <li>Fadester で OBS のシーンと入力を読み込みます。必要に応じて OBS に設定したポートとパスワードを入力します。TourBox Console で <strong>OBS Fadester for TourBox</strong> を選び、Fadester で設定を保存して操作を開始します。Fadester を開いたまま OBS を前面に戻します。</li>
@@ -32,14 +42,6 @@
       <li>VJster が操作できるのは Chrome の YouTube だけで、OBS の YouTube ブラウザソースは操作できません。OBS には Chrome のウィンドウキャプチャで表示してください。 音声には Chrome のアプリケーション音声キャプチャを追加してください。</li>
       <li>Fadester で音楽に使う入力を割り当てます。<strong>Side</strong> を押したまま平たい <strong>Dial</strong> を回すと音量を調整できます。<strong>Top</strong> を押したままの Knob、Scroll、Dial は VJ レイヤー（ブレンドモードと不透明度）を操作します。</li>
     </ul>
-
-    <h2>TourBox がなければゲームコントローラーで</h2>
-    <ol>
-      <li><strong>セットアップ</strong>タブで<strong>Xbox または XInput 対応のコントローラーを使う</strong>にチェックを入れ、<strong>かんたんモード</strong>はオンのまま、<strong>保存 &amp; 開始</strong>をクリックします。プリセットの読み込みは不要です。</li>
-      <li>OBS で<strong>スタジオモード</strong>を有効にし、<strong>フェード（Fade）</strong>を選びます。十字キーの下で OBS の一覧の次のシーンを、上で前のシーンをプレビューに送ります。</li>
-      <li>右トリガーを引くと OBS の T バーが追従し、奥まで引くとプログラムに切り替わります。または <strong>A</strong> を押し続けると、0.15 秒後から押している間だけ T バーが進み、端まで行くと切り替わります。途中で離すとその位置で止まり、もう一度 A を押し続けると続きから進みます。</li>
-      <li><strong>B</strong> でカット、<strong>View</strong> でプログラムに戻り、左トリガーを押している間は音楽を下げ、十字キーの左右で音楽を調整します。どのボタンも<strong>ゲームコントローラー</strong>タブで変更できます。</li>
-    </ol>
 
     <h2>ミックス全体を調整する</h2>
     <p>セットアップ画面で OBS ミキサーの全入力をまとめて操作する設定を有効にし、設定を保存して操作を開始します。<strong>Side</strong> を押したまま <strong>Knob</strong> を回すとグループ全体の音量が変わります。<strong>Tour</strong> メニューから、ミックス全体を無音までフェードアウトしたり、前の音量に戻したりできます。ミュート済みの入力はそのままです。</p>

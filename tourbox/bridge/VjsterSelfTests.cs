@@ -62,12 +62,12 @@ internal static class VjsterSelfTests
             const string obs = """{"server_port":4455,"server_password":"pw"}""";
             Check(BridgeConfig.SavedPassword(obs, 4455) == "pw", "the saved password on the matching port");
             Check(Fails(() => BridgeConfig.SavedPassword(obs, 48150)).Contains("uses port 4455"), "a wrong port says so instead of asking for a password");
-            Check(Fails(() => BridgeConfig.SavedPassword("""{"server_password":"pw"}""", 4455)).Contains("Enter the OBS password"), "no port in OBS's settings asks for the password");
-            Check(Fails(() => BridgeConfig.SavedPassword("""{"server_port":"4455","server_password":7}""", 4455)).Contains("Enter the OBS password"), "odd types ask for the password");
-            Check(Fails(() => BridgeConfig.SavedPassword("{half", 4455)).Contains("Enter the OBS password"), "a half-written file asks for the password");
-            Check(Fails(() => BridgeConfig.SavedPassword("[1]", 4455)).Contains("Enter the OBS password"), "a file that is not an object asks for the password");
-            Check(Fails(() => BridgeConfig.SavedPassword(null, 4455)).Contains("Enter the OBS password"), "no OBS settings asks for the password");
-            Check(Fails(() => BridgeConfig.SavedPassword("""{"server_port":4455,"server_password":""}""", 4455)).Contains("Enter the OBS password"), "an empty saved password asks for it");
+            Check(Fails(() => BridgeConfig.SavedPassword("""{"server_password":"pw"}""", 4455)).Contains("(obs-no-password)"), "no port in OBS's settings asks for the password");
+            Check(Fails(() => BridgeConfig.SavedPassword("""{"server_port":"4455","server_password":7}""", 4455)).Contains("(obs-no-password)"), "odd types ask for the password");
+            Check(Fails(() => BridgeConfig.SavedPassword("{half", 4455)).Contains("(obs-no-password)"), "a half-written file asks for the password");
+            Check(Fails(() => BridgeConfig.SavedPassword("[1]", 4455)).Contains("(obs-no-password)"), "a file that is not an object asks for the password");
+            Check(Fails(() => BridgeConfig.SavedPassword(null, 4455)).Contains("(obs-no-password)"), "no OBS settings asks for the password");
+            Check(Fails(() => BridgeConfig.SavedPassword("""{"server_port":4455,"server_password":""}""", 4455)).Contains("(obs-no-password)"), "an empty saved password asks for it");
         }
         finally { Directory.Delete(dir, true); }
     }
@@ -352,7 +352,7 @@ internal static class VjsterSelfTests
         Check(await desk.Dispatch("layer2.opacity.up") == "Layer 2 opacity 55 %" && Convert.ToInt32(lastSet!["filterSettings"]!["opacity"]!.GetValue<object>()) == 55, "the legacy filter takes 0..100");
         var bare = new DeskActions(new BridgeConfig(), Fake);
         try { await bare.Dispatch("layer1.blend.next"); throw new Exception("VJster self-test: an unassigned layer was driven"); }
-        catch (InvalidOperationException e) { Check(e.Message.Contains("layer 1 scene"), "an unassigned layer says what to set"); }
+        catch (InvalidOperationException e) { Check(e.Message.Contains("Choose Layer 1 scene on the Assignments tab"), "an unassigned layer says what to set and where"); }
         try { await desk.Dispatch("vjster.speed.up"); throw new Exception("VJster self-test: OBS desk took a VJster action"); }
         catch (InvalidOperationException) { }
         Check(DeskActions.BlendName("OBS_BLEND_SCREEN") == "Screen", "blend names");

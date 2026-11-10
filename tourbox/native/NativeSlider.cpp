@@ -149,7 +149,7 @@ private:
             root = candidate;
             mainWindow = window;
         }
-        if (!root) throw std::runtime_error("OBS main window unavailable on this desktop");
+        if (!root) throw std::runtime_error("Cannot find the main OBS window. Keep it open on this desktop, with Studio Mode on and the T-bar visible.");
         VARIANT id{};
         id.vt = VT_BSTR;
         id.bstrVal = SysAllocString(sliderId);
@@ -161,7 +161,7 @@ private:
         ComPtr<IUIAutomationElementArray> found;
         check(root->FindAll(TreeScope_Descendants, match.Get(), &found), "native Studio Mode T-bar unavailable");
         int count = 0;
-        if (!found || FAILED(found->get_Length(&count)) || count != 1) throw std::runtime_error("expected one native Studio Mode T-bar");
+        if (!found || FAILED(found->get_Length(&count)) || count != 1) throw std::runtime_error("Cannot find the T-bar in OBS. Keep the main OBS window open, with Studio Mode on and the T-bar visible.");
         check(found->GetElement(0, &slider), "native Studio Mode T-bar unavailable");
         int owner = 0; CONTROLTYPEID type = 0;
         if (!slider || FAILED(slider->get_CurrentProcessId(&owner)) || owner != pid ||

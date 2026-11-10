@@ -370,7 +370,7 @@ public sealed class StudioFader
         if (sweep == null)
         {
             if (!await VersionSupportedAsync())
-                throw new InvalidOperationException("Manual T-bar support is verified for OBS 33.0.0/33.0.1. Use the ordinary Take with this OBS version.");
+                throw new InvalidOperationException("The T-bar works only with OBS 33.0.0 and 33.0.1. With this OBS version, use Take and Cut.");
             var scenes = await ReadScenesAsync();
             if (scenes.Program == scenes.Preview) throw new InvalidOperationException("Choose a different Preview scene first.");
             await RequireIdleAsync();

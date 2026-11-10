@@ -34,7 +34,7 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
     public Task StopMixAsync() => mix.Stop();
     public void OnVolumeChanged(string source, double level) => audio.OnVolumeChanged(source, level);
     public Task StopAudioAsync() => Task.WhenAll(audio.Stop(), mix.Stop());
-    private static string Bound(string? value, string field) => !string.IsNullOrWhiteSpace(value) ? value : throw new InvalidOperationException($"Set {field} in the control panel first.");
+    private static string Bound(string? value, string field) => !string.IsNullOrWhiteSpace(value) ? value : throw new InvalidOperationException($"Choose {field} on the Assignments tab first.");
     private Task<JsonObject> Get(string name) => rpc(name, null);
     private static string Str(JsonObject obj, string field) => obj[field]?.GetValue<string>() ?? throw new InvalidDataException($"OBS did not return {field}.");
     public async Task CancelOwnedAsync() { if (fader.Position > 0) await fader.CancelAsync(); }
@@ -83,12 +83,12 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
             case "music.fineUp":
             case "content.up":
             case "content.down":
-                var input = id.StartsWith("music") ? Bound(cfg.MusicInput, "music input") : Bound(cfg.ContentInput, "content input");
+                var input = id.StartsWith("music") ? Bound(cfg.MusicInput, "Music / bed") : Bound(cfg.ContentInput, "Content / guest");
                 double step = cfg.VolumeStepDb * (id.Contains(".fine") ? 0.25 : 1);
                 return await audio.Ride(input, id.EndsWith("up", StringComparison.OrdinalIgnoreCase) ? step : -step);
             case "music.duck":
             case "music.restore":
-                return await audio.Fade(Bound(cfg.MusicInput, "music input"), cfg.DuckDb, id == "music.restore");
+                return await audio.Fade(Bound(cfg.MusicInput, "Music / bed"), cfg.DuckDb, id == "music.restore");
             case "undo":
                 return await audio.Undo();
             case "fader.back":
@@ -101,7 +101,7 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
                 {
                     // A take or cut that sent nothing says so, so nobody mistakes it for one that went out.
                     string ignored = await fader.DispatchAsync(id, pressedAt);
-                    return ignored.Length > 0 ? ignored : $"{id} · T-bar {fader.Position:P0}";
+                    return ignored.Length > 0 ? ignored : $"{ActionNames.Of(id)} · T-bar {fader.Position:P0}";
                 }
             case "fader.status":
                 {
@@ -127,7 +127,7 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
             case "media.restart":
                 return await Media(id);
             case "mic.mute":
-                input = Bound(cfg.MicInput, "microphone input"); await rpc("SetInputMute", new() { ["inputName"] = input, ["inputMuted"] = true }); return "Muted " + input;
+                input = Bound(cfg.MicInput, "Microphone"); await rpc("SetInputMute", new() { ["inputName"] = input, ["inputMuted"] = true }); return "Muted " + input;
             case "overlay.show":
             case "overlay.hide":
                 return await Overlay(id.EndsWith(".show"));
@@ -173,8 +173,8 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
     private (string Scene, string Source, string Label) Layer(string id)
     {
         bool two = id.StartsWith("layer2");
-        var scene = Bound(two ? cfg.Layer2Scene : cfg.Layer1Scene, two ? "layer 2 scene" : "layer 1 scene");
-        var source = Bound(two ? cfg.Layer2Source : cfg.Layer1Source, two ? "layer 2 source" : "layer 1 source");
+        var scene = Bound(two ? cfg.Layer2Scene : cfg.Layer1Scene, two ? "Layer 2 scene" : "Layer 1 scene");
+        var source = Bound(two ? cfg.Layer2Source : cfg.Layer1Source, two ? "Layer 2 source" : "Layer 1 source");
         return (scene, source, two ? "Layer 2" : "Layer 1");
     }
     /** The one scene item a layer names. None or several is an error, so a layer never acts on the wrong copy or on a source that left the scene. */
@@ -229,7 +229,7 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
     private async Task<string> Cue(string id)
     {
         if (!(await Get("GetStudioModeEnabled"))["studioModeEnabled"]!.GetValue<bool>()) throw new InvalidOperationException("Enable Studio Mode to cue Preview; Program was not changed.");
-        string? anchor = id.StartsWith("anchor.") ? Bound(cfg.Anchors[id[^1] - '1'], "anchor " + id[^1]) : null;
+        string? anchor = id.StartsWith("anchor.") ? Bound(cfg.Anchors[id[^1] - '1'], "Preview anchor " + id[^1]) : null;
         // OBS may report the destination as Program during a manual sweep. Cancel before reading either scene.
         await CancelOwnedAsync();
         var list = await Get("GetSceneList");
@@ -250,7 +250,7 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
     }
     private async Task<string> Media(string id)
     {
-        var name = Bound(cfg.MediaInput, "media input");
+        var name = Bound(cfg.MediaInput, "Media / Playlister");
         var command = id.Split('.')[1].ToUpperInvariant();
         if (command == "PLAY")
         {
@@ -262,7 +262,7 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
     }
     private async Task<string> Overlay(bool visible)
     {
-        var scene = Bound(cfg.OverlayScene, "overlay scene"); var source = Bound(cfg.OverlaySource, "overlay source");
+        var scene = Bound(cfg.OverlayScene, "Overlay scene"); var source = Bound(cfg.OverlaySource, "Overlay source");
         var rows = (await rpc("GetSceneItemList", new() { ["sceneName"] = scene }))["sceneItems"]!.AsArray()
             .Where(n => n?["sourceName"]?.GetValue<string>() == source).ToArray();
         if (rows.Length != 1) throw new InvalidOperationException($"Expected exactly one {source} in {scene}; found {rows.Length}.");

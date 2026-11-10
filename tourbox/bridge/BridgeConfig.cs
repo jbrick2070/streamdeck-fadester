@@ -99,6 +99,6 @@ internal sealed class BridgeConfig
             if (obsPort != port) throw new InvalidOperationException($"OBS on this PC uses port {obsPort}, but the OBS port in Setup is {port}. Set it to {obsPort}, or for another OBS enter that OBS's password in Setup.");
             if (local["server_password"] is JsonValue passwordValue && passwordValue.TryGetValue<string>(out var saved) && saved.Length > 0) return saved;
         }
-        throw new InvalidOperationException("Enter the OBS password in the control panel, or set FADESTER_OBS_PASSWORD for this process.");
+        throw ObsSetupException.NoPassword();
     }
 }

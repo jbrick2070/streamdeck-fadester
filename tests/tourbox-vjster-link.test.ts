@@ -164,7 +164,7 @@ describe.skipIf(!available)("the TourBox companion hosts the VJster link for the
     expect(status).toContain("Video 1x");
     // An OBS action while OBS is offline is still refused, as before.
     from = dispatch("music.up");
-    await bridge.waitFor("Offline: ignored music.up", from);
+    await bridge.waitFor("OBS is not connected. Music up was not sent.", from);
 
     client.stop();
     adapter.dispose();

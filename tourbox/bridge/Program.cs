@@ -61,6 +61,7 @@ internal static class Program
                 Console.WriteLine($"PASS: dispatcher, Studio T-bar, game controller and {bindings.Count} mapped shortcuts. No live OBS commands sent."); return 0;
             }
             var config = BridgeConfig.Load(configPath);
+            ActionNames.Load(map);
             using var stop = new CancellationTokenSource();
             Console.CancelKeyPress += (_, eventArgs) => { eventArgs.Cancel = true; stop.Cancel(); };
             if (command is "--listen" or "--mix-only")
@@ -103,15 +104,16 @@ internal static class Program
         {
             if (action.StartsWith("vjster."))
             {
-                if (vjster == null) Console.WriteLine("VJster is off: ignored " + action);
-                else if (!vjInput.Writer.TryWrite(new(action, 1, Stopwatch.GetTimestamp()))) Console.WriteLine("VJster queue closed: ignored " + action);
+                if (vjster == null) Console.WriteLine("VJster is off: ignored " + ActionNames.Of(action));
+                else if (!vjInput.Writer.TryWrite(new(action, 1, Stopwatch.GetTimestamp()))) Console.WriteLine("VJster queue closed: ignored " + ActionNames.Of(action));
                 return;
             }
             int g = Volatile.Read(ref current);
-            if (g == 0) { Console.WriteLine("Offline: ignored " + action); return; }
-            if (!input.Writer.TryWrite(new(action, g, Stopwatch.GetTimestamp()))) Console.WriteLine("Input queue full: ignored " + action);
+            // The panel reads "OBS is not connected." for its status line.
+            if (g == 0) { Console.WriteLine($"OBS is not connected. {ActionNames.Of(action == PadTake ? "take" : action)} was not sent."); return; }
+            if (!input.Writer.TryWrite(new(action, g, Stopwatch.GetTimestamp()))) Console.WriteLine("Input queue full: ignored " + ActionNames.Of(action));
         }
-        var keys = new Hotkeys(bindings, Enqueue);
+        var keys = new Hotkeys(bindings, Enqueue, Console.WriteLine);
         keys.Start(stop.Token);
         // The game controller: buttons go through the same queue as the shortcuts; the trigger T-bar posts its newest
         // position to a mailbox and queues one marker, so the dispatch loop always moves to where the trigger is now.
@@ -138,8 +140,8 @@ internal static class Program
                 releases.Post(action);
                 int g = Volatile.Read(ref current);
                 // The marker only wakes the dispatch loop; offline, the next connection runs the release once it is up.
-                if (g == 0) Console.WriteLine("Not connected to OBS: " + action + " runs as soon as OBS is back.");
-                else if (!input.Writer.TryWrite(new(PadRelease, g, Stopwatch.GetTimestamp()))) Console.WriteLine("Input queue full: " + action + " runs after the next reconnect or LT release.");
+                if (g == 0) Console.WriteLine("Not connected to OBS: " + ActionNames.Of(action) + " runs as soon as OBS is back.");
+                else if (!input.Writer.TryWrite(new(PadRelease, g, Stopwatch.GetTimestamp()))) Console.WriteLine("Input queue full: " + ActionNames.Of(action) + " runs after the next reconnect or LT release.");
                 return;
             }
             if (!action.StartsWith("vjster."))
@@ -176,12 +178,12 @@ internal static class Program
             try { Console.WriteLine(await desk.Dispatch(action)); }
             catch (Exception e)
             {
-                Console.WriteLine("Action " + action + ": " + e.Message);
+                Console.WriteLine(ActionNames.Of(action) + ": " + e.Message);
                 // Cut off by a dropped connection, not refused: it waits again and runs on the next connection.
                 if (!stop.IsCancellationRequested && ReleaseMailbox.CutOff(e, obs.Disconnected.IsCompleted))
                 {
                     releases.Return(action);
-                    Console.WriteLine("Not connected to OBS: " + action + " runs as soon as OBS is back.");
+                    Console.WriteLine("Not connected to OBS: " + ActionNames.Of(action) + " runs as soon as OBS is back.");
                 }
             }
             if (PadControls.StopsThrow(action)) tbarMail.Fail();
@@ -204,10 +206,12 @@ internal static class Program
         try
         {
             await keys.Ready;
-            Console.WriteLine(bindings.Count > 0 ? $"Listening for {bindings.Count} TourBox shortcuts. Type quit to stop." : "Mix-only companion: no controller shortcuts registered. Type quit to stop.");
             // Started by the panel, stdin ending means the panel is gone: nothing else could stop this process, and it would
             // keep the shortcuts and block the next start. A launch from a script with no input is not a panel going away.
             bool panelOwned = Environment.GetEnvironmentVariable("FADESTER_PANEL") == "1";
+            string quit = panelOwned ? "" : " Type quit to stop.";
+            Console.WriteLine(bindings.Count > 0 ? $"The controls are on. TourBox shortcuts: {keys.Count}.{quit}"
+                : $"The controls are on for Stream Deck, OpenDeck and MIDI only: no TourBox shortcuts, game controller or VJster.{quit}");
             if (Console.IsInputRedirected) _ = Task.Run(async () => { try { while (!stop.IsCancellationRequested && await Console.In.ReadLineAsync() is { } line) Command(line); if (panelOwned && !stop.IsCancellationRequested) { Console.WriteLine("The control panel closed: stopping."); stop.Cancel(); } } catch (IOException) { } });
             else _ = Task.Run(() => { try { while (!stop.IsCancellationRequested && Console.ReadLine() is { } line) Command(line); } catch (IOException) { } });
             string? lastError = null;
@@ -230,7 +234,7 @@ internal static class Program
                     obs.InputLevelChangedById += desk.OnMixInputLevelChanged;
                     desk.StartMixMonitor();
                     var protocol = new MixProtocolServer(obs,desk);
-                    Console.WriteLine($"Connected to OBS at {cfg.Host}:{cfg.Port}.");
+                    Console.WriteLine($"Connected to OBS at {cfg.Host}:{cfg.Port}."); // the panel reads this line for its status line
                     if (trace != null) await trace.StartAsync();
                     // Before any input is accepted: finish what the last connection left behind.
                     try { var said = await desk.ResumeAsync(); if (said.Length > 0) Console.WriteLine(said); }
@@ -281,7 +285,7 @@ internal static class Program
                                 catch (Exception e) { Console.WriteLine("After the cut: " + e.Message); }
                                 continue;
                             }
-                            if (Stopwatch.GetElapsedTime(ev.Timestamp) > TimeSpan.FromMilliseconds(KeyGuards.IsTurnTick(ev.Action) ? 180 : 1500)) { Console.WriteLine("Discarded stale input: " + ev.Action); continue; }
+                            if (Stopwatch.GetElapsedTime(ev.Timestamp) > TimeSpan.FromMilliseconds(KeyGuards.IsTurnTick(ev.Action) ? 180 : 1500)) { Console.WriteLine("Discarded stale input: " + ActionNames.Of(ev.Action)); continue; }
                             if (KeyGuards.IsStrayFaderTick(ev.Action, lastHeldTurn, ev.Timestamp)) { Console.WriteLine("Ignored a T-bar tick right after a held Dial turn: was the button still held?"); continue; }
                             if (KeyGuards.IsHeldDialTurn(ev.Action)) lastHeldTurn = ev.Timestamp;
                             if (ev.Action == "bridge.reconnect") { Console.WriteLine("Reconnecting."); break; }
@@ -304,7 +308,7 @@ internal static class Program
                                 }
                                 catch (Exception e)
                                 {
-                                    Console.WriteLine("Action take: " + e.Message);
+                                    Console.WriteLine(ActionNames.Of("take") + ": " + e.Message);
                                     // The press already stopped a slide or throw in progress: leave nothing half thrown.
                                     try { await desk.CancelOwnedAsync(); } catch (Exception c) { Console.WriteLine("Could not cancel T-bar: " + c.Message); }
                                 }
@@ -315,12 +319,12 @@ internal static class Program
                             {
                                 // Measured from the take's first moment, so a double press stays a double press.
                                 try { Console.WriteLine(await desk.Dispatch("take", ordinaryPressedAt != 0 ? ordinaryPressedAt : ev.Timestamp)); }
-                                catch (Exception e) { Console.WriteLine("Action take: " + e.Message); }
+                                catch (Exception e) { Console.WriteLine(ActionNames.Of("take") + ": " + e.Message); }
                                 tbarMail.Fail();
                                 continue;
                             }
                             try { Console.WriteLine(await desk.Dispatch(ev.Action, ev.Timestamp)); }
-                            catch (Exception e) { Console.WriteLine("Action " + ev.Action + ": " + e.Message); }
+                            catch (Exception e) { Console.WriteLine(ActionNames.Of(ev.Action) + ": " + e.Message); }
                             // A take, cancel or dial move from any surface owns the T-bar now: a trigger held meanwhile
                             // must return to rest before it throws, or it would throw back towards the scene just taken.
                             // A Preview or anchor cue cancels a manual sweep first (DeskActions.Cue), so it disarms too.
@@ -342,6 +346,7 @@ internal static class Program
                     }
                 }
                 catch (OperationCanceledException) when (stop.IsCancellationRequested) { break; }
+                // The panel reads "Offline:" for its status line, and shows its own text for an ObsSetupException's code.
                 catch (Exception e) { if (e.Message != lastError) { Console.WriteLine("Offline: " + e.Message); lastError = e.Message; } }
                 if (!stop.IsCancellationRequested) { try { await Task.Delay(1200, stop.Token); } catch (OperationCanceledException) { break; } }
             }

@@ -15,7 +15,10 @@ internal static class StudioFaderSelfTests
         public string? Override, Origin;
         public bool Studio = true, LoseLeaveReply, RejectTrigger, IgnoreModeWrite;
         public double Cursor, Slider;
-        public bool SliderOffscreen;
+        public bool SliderOffscreen, LoseTriggerReply;
+        // The native call (1-based) that the helper refuses, writing nothing; 0 for none.
+        public int RefuseCall;
+        public ObsError? TriggerRefusal;
         public List<(double From, double To)> NativeCalls = [];
         public int Commits, Releases, Takes, StaleTransitionReads;
         public string? TransitionAtTake;
@@ -28,6 +31,7 @@ internal static class StudioFaderSelfTests
         public Task NativeMove(double expected, double target)
         {
             NativeCalls.Add((expected, target));
+            if (NativeCalls.Count == RefuseCall) throw new NativeRefusal("native T-bar disabled or range changed");
             if (SliderOffscreen || Slider != expected) throw new InvalidOperationException("OBS slider is unavailable or changed.");
             if (expected != target)
             {
@@ -94,8 +98,11 @@ internal static class StudioFaderSelfTests
                     break;
                 case "TriggerStudioModeTransition":
                     if (RejectTrigger) throw new InvalidOperationException("Take failed");
+                    if (TriggerRefusal != null) throw TriggerRefusal;
                     TransitionAtTake = Transition;
-                    (Preview, Program) = (Program, Preview); Takes++; break;
+                    (Preview, Program) = (Program, Preview); Takes++;
+                    if (LoseTriggerReply) { LoseTriggerReply = false; throw new IOException("TriggerStudioModeTransition timed out or disconnected"); }
+                    break;
                 default: throw new InvalidOperationException("Unexpected request " + action);
             }
             return Task.FromResult(result);
@@ -110,7 +117,7 @@ internal static class StudioFaderSelfTests
     private static async Task Blocked(Func<Task> f)
     {
         try { await f(); }
-        catch (Exception e) when (e is InvalidOperationException or IOException) { return; }
+        catch (Exception e) when (e is InvalidOperationException or IOException or ObsError) { return; }
         throw new Exception("Studio fader test expected the operation to stop.");
     }
 
@@ -142,12 +149,12 @@ internal static class StudioFaderSelfTests
         var lagging = new StudioFader(LaggingRpc, 0.05, laggingObs.NativeMove);
         await lagging.DispatchAsync("fader.forward");
         Check(partialCursorReads == 3 && lagging.Position == 0.05 && laggingObs.Slider == 0.05 &&
-            laggingObs.NativeCalls.SequenceEqual([(0d, 0.05)]) && laggingObs.Writes.Count == 0,
+            laggingObs.NativeCalls.SequenceEqual([(0d, 0d), (0d, 0.05)]) && laggingObs.Writes.Count == 0,
             "a nonterminal renderer confirms one native move without waiting for or replaying its target");
         await lagging.DispatchAsync("fader.cancel");
         Check(partialCursorReads == 4 && laggingObs.Program == "a" && laggingObs.Preview == "b" &&
             laggingObs.Cursor == 0 && laggingObs.Slider == 0 && laggingObs.Commits == 0 && laggingObs.Releases == 1 &&
-            laggingObs.NativeCalls.SequenceEqual([(0d, 0.05), (0.05, 0d), (0d, 0d)]) &&
+            laggingObs.NativeCalls.SequenceEqual([(0d, 0d), (0d, 0.05), (0.05, 0d), (0d, 0d)]) &&
             laggingObs.Writes.SequenceEqual(["SetTBarPosition"]),
             "a lagging first blend can be cancelled once through native zero and frontend release");
 
@@ -174,7 +181,7 @@ internal static class StudioFaderSelfTests
             await Blocked(() => uncertainCancel.DispatchAsync("take"));
             // Explicitly clearing the latch must not replay an uncertain release.
             await uncertainCancel.DispatchAsync("fader.cancel");
-            Check(uncertainCancelObs.NativeCalls.SequenceEqual([(0d, 0.05), (0.05, 0d)]) &&
+            Check(uncertainCancelObs.NativeCalls.SequenceEqual([(0d, 0d), (0d, 0.05), (0.05, 0d)]) &&
                 uncertainCancelObs.Slider == 0 && uncertainCancelObs.Commits == 0 && uncertainCancelObs.Takes == 0 &&
                 uncertainCancelObs.Releases == (loseNativeZeroReply ? 0 : 1) &&
                 uncertainCancelObs.Writes.SequenceEqual(loseNativeZeroReply ? Array.Empty<string>() : ["SetTBarPosition"]),
@@ -561,6 +568,22 @@ internal static class StudioFaderSelfTests
         nativeObs = new(){Transition="Coupe", SliderOffscreen=true}; native = new(nativeObs.Call, 0.5, nativeObs.NativeMove);
         await Blocked(() => native.DispatchAsync("fader.forward"));
         Check(nativeObs.Transition == "Coupe" && nativeObs.Writes.Count == 0, "an unusable slider stops before the selection changes");
+        // With a Fade selected the slider is checked before every sweep too. When the helper answers that it wrote nothing
+        // (OBS rebuilt its T-bar after Studio Mode went off and on, say), nothing is latched: the next pull works, no View.
+        nativeObs = new() { RefuseCall = 1 }; native = new(nativeObs.Call, 0.5, nativeObs.NativeMove);
+        await Blocked(() => native.MoveToAsync(0.4));
+        Check(native.Position == 0 && nativeObs.Cursor == 0 && nativeObs.Writes.Count == 0 && nativeObs.NativeCalls.SequenceEqual([(0d, 0d)]),
+            "with a Fade selected a refused check before the first move changes nothing in OBS");
+        await native.MoveToAsync(0.4);
+        Check(native.Position == 0.4 && nativeObs.Slider == 0.4 && nativeObs.Cursor == 0.4, "and the next pull works without a Cancel first");
+        nativeObs = new() { Transition = "Coupe", RefuseCall = 2 }; native = new(nativeObs.Call, 0.5, nativeObs.NativeMove);
+        await Blocked(() => native.MoveToAsync(0.4));
+        Check(native.Position == 0 && nativeObs.Cursor == 0 && nativeObs.Transition == "Coupe" && !nativeObs.Writes.Contains("SetTBarPosition"),
+            "a first move the helper refuses writes nothing and puts a lent Fade back at once");
+        await native.MoveToAsync(0.4);
+        Check(native.Position == 0.4 && nativeObs.Transition == "Fondu" && nativeObs.Cursor == 0.4, "and the next pull lends the Fade again and mixes");
+        await native.MoveToAsync(0);
+        Check(nativeObs.Transition == "Coupe" && nativeObs.Program == "a", "letting go then puts Cut back as usual");
         // While a sweep runs, a cut's owed transition is never swapped under it.
         obs = new(); fader = new(obs.Call); await fader.DispatchAsync("take.cut");
         await fader.MoveToAsync(0.3);
@@ -608,7 +631,7 @@ internal static class StudioFaderSelfTests
         native = new(nativeObs.Call, 0.5, nativeObs.NativeMove, native.Leave());
         await native.ResumeAsync();
         Check(native.Position == 0 && nativeObs.Slider == 0 && nativeObs.Program == "a" && nativeObs.Commits == 0 &&
-            nativeObs.NativeCalls.SequenceEqual([(0d, 0.5), (0.5, 0d), (0d, 0d)]), "the native widget is walked back from where the old connection left it");
+            nativeObs.NativeCalls.SequenceEqual([(0d, 0d), (0d, 0.5), (0.5, 0d), (0d, 0d)]), "the native widget is walked back from where the old connection left it");
         obs = new(); fader = new(obs.Call); await fader.MoveToAsync(0.4);
         var left = fader.Leave();
         obs = new(); fader = new(obs.Call, resume: left); // OBS itself restarted: nothing is part-way any more
@@ -689,5 +712,49 @@ internal static class StudioFaderSelfTests
         obs = new(); fader = new(obs.Call); await fader.DispatchAsync("take.cut");
         await Task.Delay(500); obs.Transition = "Coupe"; // OBS went back to Cut after the cut
         Check(await fader.SlidePlanAsync() is { Ms: 300 } && obs.Transition == "Fondu", "OBS back on Cut after a cut: the Fade goes back first, then the take slides");
+
+        // About 1.5 s after a cut the companion looks again (Program.cs), so a Cut OBS went back to does not wait for the
+        // next fader action, which could be a take more than 30 s later.
+        obs = new(); fader = new(obs.Call); await fader.DispatchAsync("take.cut");
+        int sentBefore = obs.Writes.Count;
+        Check(await fader.RecheckAsync() == "" && obs.Writes.Count == sentBefore, "a re-check that finds the original changes nothing");
+        obs.Transition = "Coupe";
+        string rechecked = await fader.RecheckAsync();
+        Check(obs.Transition == "Fondu" && rechecked.Contains("Coupe") && rechecked.Contains("Fondu"),
+            "OBS back on Cut after the cut: the re-check puts Fade back and says so");
+        Check(await fader.RecheckAsync() == "", "and says it once");
+        obs = new(); fader = new(obs.Call);
+        Check(await fader.RecheckAsync() == "" && obs.Writes.Count == 0, "with nothing owed a re-check sends nothing");
+
+        // A take or cut that sent nothing says so; a take OBS refused does not count towards a double press.
+        obs = new(); fader = new(obs.Call);
+        Check(await fader.DispatchAsync("take") == "" && obs.Takes == 1, "a take that went out has nothing to add");
+        Check((await fader.DispatchAsync("take", Stopwatch.GetTimestamp())).StartsWith("take ignored: a double press") && obs.Takes == 1,
+            "a double press says it was ignored");
+        await Task.Delay(500); obs.Preview = obs.Program;
+        Check((await fader.DispatchAsync("take.cut")).StartsWith("take.cut ignored: Preview is the same scene as Program") &&
+            obs.Takes == 1 && obs.Transition == "Fondu", "a cut with nothing to take says so and changes nothing");
+        obs = new() { TriggerRefusal = new ObsError("TriggerStudioModeTransition", 207, "OBS is not ready") }; fader = new(obs.Call);
+        await Blocked(() => fader.DispatchAsync("take"));
+        obs.TriggerRefusal = null;
+        Check(await fader.DispatchAsync("take", Stopwatch.GetTimestamp()) == "" && obs.Takes == 1, "a take OBS refused sent nothing, so pressing again at once takes");
+        obs = new() { LoseTriggerReply = true }; fader = new(obs.Call);
+        await Blocked(() => fader.DispatchAsync("take"));
+        Check((await fader.DispatchAsync("take", Stopwatch.GetTimestamp())).Contains("double press") && obs.Takes == 1,
+            "a take that got no answer may have gone out, so pressing again at once is still a double press");
+
+        // Transition previous / next right after a take or cut: OBS drops a selection while it counts a transition as
+        // running, so the choice is sent again until OBS shows it, and the line names what OBS really holds.
+        int stingerSends = 0;
+        obs = new(); fader = new((action, data) =>
+            action == "SetCurrentSceneTransition" && (string?)data?["transitionName"] == "Stinger" && ++stingerSends == 1 ? Task.FromResult(new JsonObject()) : obs.Call(action, data));
+        Check(await fader.ChooseTransitionAsync("Fondu", "Stinger") == "Stinger" && obs.Transition == "Stinger" && stingerSends > 1,
+            "a choice OBS drops is sent again until OBS shows it");
+        obs = new(); fader = new((action, data) => action == "SetCurrentSceneTransition" ? Task.FromResult(new JsonObject()) : obs.Call(action, data)) { SelectPolls = 8 };
+        Check(await fader.ChooseTransitionAsync("Fondu", "Stinger") == "Fondu", "a choice OBS never takes reports the transition OBS kept");
+        obs = new(); fader = new(obs.Call); await fader.DispatchAsync("take.cut");
+        Check(await fader.ChooseTransitionAsync("Fondu", "Coupe") == "Coupe", "Cut can be chosen on purpose right after a cut");
+        await Task.Delay(500); await fader.DispatchAsync("take");
+        Check(obs.TransitionAtTake == "Coupe" && obs.Transition == "Coupe", "and that choice is the operator's: it is not put back");
     }
 }

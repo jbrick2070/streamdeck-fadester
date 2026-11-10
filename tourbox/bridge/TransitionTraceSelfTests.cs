@@ -52,6 +52,21 @@ internal static class TransitionTraceSelfTests
         public string[] Said() => Raw().Select(line => line[(line.IndexOf(" trace: ", StringComparison.Ordinal) + 8)..]).ToArray();
     }
 
+    /// <summary>A console that takes no line until it is told to, and fails on the line "two".</summary>
+    private sealed class StuckConsole(ManualResetEventSlim taking) : TextWriter
+    {
+        public readonly List<string> Written = [];
+        public readonly TaskCompletionSource All = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public override System.Text.Encoding Encoding => System.Text.Encoding.UTF8;
+        public override void Write(string? value)
+        {
+            taking.Wait();
+            string line = (value ?? "").TrimEnd('\r', '\n');
+            lock (Written) { Written.Add(line); if (Written.Count == 3) All.TrySetResult(); }
+            if (line == "two") throw new IOException("The console is closed.");
+        }
+    }
+
     public static async Task RunAsync()
     {
         // The reading at the start, and the stamp on every line.
@@ -283,24 +298,20 @@ internal static class TransitionTraceSelfTests
             "OBS refused SetCurrentSceneTransition: OBS is not ready (207)",
             "OBS selected Cut (the companion asked 110 ms earlier).");
 
-        // The log the companion gives the trace never holds up its caller. While nothing can be written the lines
-        // wait; they come out in order, and one that cannot be written does not stop the next.
+        // Every line the running companion prints, the trace's included, goes through one queue (ConsoleQueue), so a
+        // console that has stopped taking lines never holds up its caller. While nothing can be written the lines wait;
+        // they come out in order, output and errors alike, and one that cannot be written does not stop the next.
         using (var taking = new ManualResetEventSlim(false))
         {
-            var written = new List<string>();
-            var all = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            var queued = TransitionTrace.Queued(line =>
-            {
-                taking.Wait();
-                lock (written) { written.Add(line); if (written.Count == 3) all.TrySetResult(); }
-                if (line == "two") throw new IOException("The log is closed.");
-            });
-            Check(Task.Run(() => { queued("one"); queued("two"); queued("three"); }).Wait(TimeSpan.FromSeconds(5)),
-                "a log that has stopped taking lines does not hold up the caller");
-            lock (written) Check(written.Count == 0, "nothing is written while the log takes no lines");
+            var console = new StuckConsole(taking);
+            var queue = new ConsoleQueue(console, console);
+            Check(Task.Run(() => { queue.Out.WriteLine("one"); queue.Error.WriteLine("two"); queue.Out.WriteLine("three"); }).Wait(TimeSpan.FromSeconds(5)),
+                "a console that has stopped taking lines does not hold up the caller");
+            lock (console.Written) Check(console.Written.Count == 0, "nothing is written while the console takes no lines");
             taking.Set();
-            await all.Task.WaitAsync(TimeSpan.FromSeconds(5));
-            lock (written) Same([.. written], "queued lines are written in order, past one that fails", "one", "two", "three");
+            await console.All.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            lock (console.Written) Same([.. console.Written], "queued lines are written in order, past one that fails", "one", "two", "three");
+            queue.Dispose();
         }
 
         // A log that cannot be written changes nothing for the desk: the request goes out, OBS's answer or error

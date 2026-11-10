@@ -76,6 +76,8 @@ $tmpZip=Join-Path $stage 'candidate.zip'
 [IO.File]::Copy($tmpZip,$zip,$true)
 $hash=(Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
 [IO.File]::WriteAllText($zip+'.sha256',"$hash  $([IO.Path]::GetFileName($zip))"+[Environment]::NewLine,[Text.UTF8Encoding]::new($false))
+# Last step: the stage is complete. store\make-msix.ps1 packages only a stage that has this file, never one a failed run left.
+[IO.File]::WriteAllText((Join-Path $stage 'build-complete.txt'),"$Version"+[Environment]::NewLine,[Text.UTF8Encoding]::new($false))
 Write-Host "ZIP: $zip"
 Write-Host "Runnable: $panel"
 Write-Host "SHA256: $hash"

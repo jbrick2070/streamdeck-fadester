@@ -22,6 +22,8 @@ struct RuntimePaths {
     private var input: Pipe?
     private var secret = ""
     private var armed = false
+    // READY was seen once for the child this controller owns: a later DISARMED (a reconnect, OBS lost) is not a failed start.
+    private var reachedReady = false
     var changed: ((String, Bool) -> Void)?
     var line: ((String) -> Void)?
     var exited: (() -> Void)?
@@ -43,7 +45,7 @@ struct RuntimePaths {
         if !password.isEmpty { environment["FADESTER_OBS_PASSWORD"] = password }
         child.environment = environment; child.executableURL = executable; child.arguments = arguments
         child.standardInput = commands; child.standardOutput = output; child.standardError = output
-        secret = password; armed = false; process = child; input = commands
+        secret = password; armed = false; reachedReady = false; process = child; input = commands
         child.terminationHandler = { [weak self] owned in
             DispatchQueue.global(qos: .utility).async {
                 _ = drained.wait(timeout: .now() + 2)
@@ -80,6 +82,7 @@ struct RuntimePaths {
                             self.line?(text)
                             if ready && child.isRunning {
                                 self.armed = true
+                                self.reachedReady = true
                                 self.changed?("Connected — controls armed. Keep OBS in front.", true)
                             } else if disarmed {
                                 self.armed = false
@@ -94,7 +97,7 @@ struct RuntimePaths {
             try? output.fileHandleForReading.close()
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 30) { [weak self, weak child] in
-            guard let self, let child, self.process === child, child.isRunning, !self.armed else { return }
+            guard let self, let child, self.process === child, child.isRunning, !self.reachedReady else { return }
             self.line?("Startup did not reach Connected within 30 seconds. Stopping this host; check OBS, permission and Activity.")
             self.stop()
         }

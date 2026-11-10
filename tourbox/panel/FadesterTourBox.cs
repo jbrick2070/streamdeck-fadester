@@ -45,6 +45,34 @@ namespace Fadester.TourBox {
       } catch(IOException) {} catch(UnauthorizedAccessException) {}
     }
   }
+  /** Where the settings really are. A Store (MSIX) install keeps a file it created under %LOCALAPPDATA% in its own package storage. */
+  internal static class SettingsFolder {
+    [DllImport("kernel32.dll", CharSet=CharSet.Unicode)]
+    static extern int GetCurrentPackageFamilyName(ref int length, StringBuilder name);
+    /** The package family name, or null when the panel does not run from a package (the ZIP build). */
+    static string PackageFamily() {
+      try {
+        int length=0;
+        if(GetCurrentPackageFamilyName(ref length,null)!=122) return null; // 122: here is the length; 15700: no package
+        var name=new StringBuilder(length);
+        return GetCurrentPackageFamilyName(ref length,name)==0 ? name.ToString() : null;
+      } catch(EntryPointNotFoundException) { return null; } // Windows 7 has no packages
+    }
+    /** Where Windows keeps, for a package, a folder the app asked for under %LOCALAPPDATA%; null for a folder elsewhere. */
+    internal static string Redirected(string dir,string localAppData,string family) {
+      string local=localAppData.TrimEnd('\\');
+      if(!dir.StartsWith(local+"\\",StringComparison.OrdinalIgnoreCase)) return null;
+      return Path.Combine(local,"Packages",family,"LocalCache","Local",dir.Substring(local.Length+1));
+    }
+    /** The folder that really holds file (config.json), as Explorer must be shown it. */
+    internal static string Holding(string file) {
+      string dir=Path.GetDirectoryName(file), family=PackageFamily();
+      string redirected=family==null ? null : Redirected(dir,Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),family);
+      if(redirected==null) return dir;
+      // A file the ZIP build made earlier stays where it was, and the Store build keeps using it there.
+      return File.Exists(Path.Combine(redirected,Path.GetFileName(file))) || !File.Exists(file) ? redirected : dir;
+    }
+  }
   internal sealed class PanelWindow : Form {
     static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = 16000000 };
     readonly PanelText text;
@@ -53,7 +81,10 @@ namespace Fadester.TourBox {
     readonly Dictionary<string, ComboBox> boxes = new Dictionary<string, ComboBox>();
     readonly Dictionary<string,Image> glyphs=new Dictionary<string,Image>();
     Dictionary<string, object> config = new Dictionary<string, object>(), catalog = new Dictionary<string, object>();
-    Label state, live, importNote; TextBox password; ListBox activity; Button connect, start, save;
+    Label state, live, importNote; TextBox password; ListBox activity; Button connect, start, save, openSettings;
+    // A bridge that a Stop or Close already waited for in vain: the next Stop or Close ends it if it still does not exit.
+    // Ending: the bridge the panel is ending, so whichever sees it exit first says so in the same words.
+    Process stopTimedOut, ending;
     CheckBox enableMix, mixOnly, enableVjster, enableGamepad, easyMode;
     // The game controller tab, from presets/gamepad.json (checked against the bridge by its self-test).
     DataGridView padGrid; ComboBox fastSpeed, slowSpeed;
@@ -80,6 +111,12 @@ namespace Fadester.TourBox {
       var d=Decode("{\"scenes\":[\"🎬 Studio\",\"Act II\"],\"anchors\":[\"a\",\"\",\"b\",\"\"],\"port\":4455}");
       if (List(d,"scenes")[0]!="🎬 Studio" || Val(d,"port")!="4455" || List(d,"anchors").Length!=4) throw new Exception();
       if (List(d,"missing").Length!=0 || Decode(Json.Serialize(d)).Count!=3) throw new Exception();
+      // Outside a package the settings are where the panel asks for them; a Store install's are in its LocalCache.
+      var probe=Path.Combine(Path.GetTempPath(),"fadester-panel-test-"+Guid.NewGuid().ToString("N"),"config.json");
+      if (SettingsFolder.Holding(probe)!=Path.GetDirectoryName(probe)) throw new Exception();
+      if (SettingsFolder.Redirected(@"C:\Users\A\AppData\Local\FadesterTourBox",@"C:\Users\A\AppData\Local","Fluxxuuss.FadesterCompanion_x1")!=
+          @"C:\Users\A\AppData\Local\Packages\Fluxxuuss.FadesterCompanion_x1\LocalCache\Local\FadesterTourBox" ||
+          SettingsFolder.Redirected(@"D:\Elsewhere",@"C:\Users\A\AppData\Local","F_x1")!=null) throw new Exception();
     }
     internal PanelWindow(PanelText text) {
       this.text = text;
@@ -168,9 +205,18 @@ namespace Fadester.TourBox {
       start=AddButton(bar,text.Get("saveStart"),async delegate { if(worker==null) StartControls(); else await StopControls(); }); start.BackColor=accent; start.ForeColor=Color.White; start.FlatStyle=FlatStyle.Flat;
       save=AddButton(bar,text.Get("save"),delegate { SaveRequested(); });
       AddButton(bar,text.Get("feedback"),delegate { if(hud!=null && !hud.IsDisposed) {hud.Close();return;} hud=new Feedback(text.Get("lastAction")); hud.Set(state.Text); hud.Show(); });
-      AddButton(bar,text.Get("guide"),delegate { OpenPath(text.GuidePath(folder)); }); grid.Controls.Add(bar,0,2);
+      AddButton(bar,text.Get("guide"),delegate { OpenPath(text.GuidePath(folder)); });
+      // Shown only when config.json cannot be read, so the file can be found and repaired (a Store install keeps it elsewhere).
+      openSettings=AddButton(bar,text.Get("openSettings"),delegate { OpenPath(SettingsFolder.Holding(settings)); }); openSettings.Visible=false;
+      grid.Controls.Add(bar,0,2);
       Load += async delegate { ReadSettings(); ReadMap(); ReadPad(); if(!invalidConfig) await Connect(); };
-      FormClosing+=async (s,e)=>{ Entry.Log("closing: "+e.CloseReason+(worker==null?"":", controls running")); if(worker==null)return; e.Cancel=true; if(closing)return; closing=true; await StopControls(); closing=false; if(worker==null)Close(); else Note(text.Get("stillClosing")); };
+      FormClosing+=async (s,e)=>{
+        Entry.Log("closing: "+e.CloseReason+(worker==null?"":", controls running")); if(worker==null)return;
+        // Windows is shutting down or signing out: hold that up for a second at most. The bridge is asked to stop, so it can
+        // put OBS's transition back, and is ended if it has not stopped by then, so it cannot keep the shortcuts or the OBS port.
+        if(e.CloseReason==CloseReason.WindowsShutDown){ var p=worker; worker=null; AskToStop(p); if(!WaitForBridge(p,1000)) EndBridge(p,0); return; }
+        e.Cancel=true; if(closing)return; closing=true; await StopControls(); closing=false; if(worker==null)Close(); else Note(text.Get("stillClosing"));
+      };
     }
     FlowLayoutPanel Page(TabControl t,string title) {
       var p=new TabPage(title); t.Controls.Add(p);
@@ -240,7 +286,7 @@ namespace Fadester.TourBox {
     }
     void ReadSettings() {
       if(File.Exists(settings)) try {config=Decode(File.ReadAllText(settings,Encoding.UTF8)); if(config==null)throw new FormatException();}
-      catch { invalidConfig=true; start.Enabled=connect.Enabled=save.Enabled=false; Note(text.Get("configUnreadable",Path.GetDirectoryName(settings))); return; }
+      catch { invalidConfig=true; start.Enabled=connect.Enabled=save.Enabled=false; openSettings.Visible=true; Note(text.Get("configUnreadable",SettingsFolder.Holding(settings))); return; }
       int n; if(Int32.TryParse(Val(config,"port"),out n) && n>0 && n<=65535) port.Value=n;
       enableMix.Checked=String.Equals(Val(config,"mixEnabled"),"true",StringComparison.OrdinalIgnoreCase);
       mixOnly.Checked=enableMix.Checked && String.Equals(Val(config,"mixOnly"),"true",StringComparison.OrdinalIgnoreCase);
@@ -444,17 +490,30 @@ namespace Fadester.TourBox {
       try{
         WriteConfig(); var p=new Process {StartInfo=Command(mixOnly.Checked?"--mix-only":"--listen"),EnableRaisingEvents=true};
         p.OutputDataReceived+=(s,e)=>Note(e.Data); p.ErrorDataReceived+=(s,e)=>Note(e.Data);
-        p.Exited+=delegate { try{BeginInvoke((Action)(()=>{if(worker==p){worker=null; start.Text=text.Get("saveStart"); Note(text.Get(p.ExitCode==0?"stopped":"bridgeFailed"));} Entry.Log("controls ended: "+p.ExitCode); try{p.CancelOutputRead();p.CancelErrorRead();}catch(InvalidOperationException){} p.Dispose();}));}catch(InvalidOperationException){} };
+        p.Exited+=delegate { try{BeginInvoke((Action)(()=>{if(worker==p){worker=null; start.Text=text.Get("saveStart"); Note(text.Get(ending==p?"bridgeEnded":p.ExitCode==0?"stopped":"bridgeFailed"));} Entry.Log("controls ended: "+p.ExitCode); try{p.CancelOutputRead();p.CancelErrorRead();}catch(InvalidOperationException){} p.Dispose();}));}catch(InvalidOperationException){} };
         worker=p; if(!p.Start())throw new Exception(text.Get("bridgeNotStarted")); p.BeginOutputReadLine(); p.BeginErrorReadLine(); start.Text=text.Get("stop"); Note(text.Get("starting"));
       }catch(Exception e){worker=null; start.Text=text.Get("saveStart"); Note(e.Message);}
     }
     async Task StopControls() {
       var p=worker; if(p==null)return; start.Enabled=false;
-      try { p.StandardInput.WriteLine("quit"); p.StandardInput.Flush();
-        bool done=await Task.Run(()=>{ try{return p.WaitForExit(8000);}catch(InvalidOperationException){return true;} });
-        if(!done) Note(text.Get("finishing"));
-        else if(worker==p){worker=null; start.Text=text.Get("saveStart"); Note(text.Get("stopped"));}
-      }catch(InvalidOperationException){}catch(IOException){}finally{if(!IsDisposed)start.Enabled=true;}
+      try {
+        bool again=stopTimedOut==p, ended=false;
+        AskToStop(p);
+        bool done=await Task.Run(()=>WaitForBridge(p,again?3000:8000));
+        if(!done && again){ ended=true; ending=p; done=await Task.Run(()=>EndBridge(p,3000)); }
+        if(!done){ stopTimedOut=p; Note(text.Get("finishing")); }
+        else if(worker==p){worker=null; stopTimedOut=null; start.Text=text.Get("saveStart"); Note(text.Get(ended?"bridgeEnded":"stopped"));}
+      }catch(InvalidOperationException){}finally{if(!IsDisposed)start.Enabled=true;}
+    }
+    /** The bridge's own clean stop. A bridge that has just exited by itself has closed its input: the wait that follows then finds it stopped. */
+    static void AskToStop(Process p) { try { p.StandardInput.WriteLine("quit"); p.StandardInput.Flush(); } catch(IOException) {} }
+    static bool WaitForBridge(Process p,int ms) { try{return p.WaitForExit(ms);}catch(InvalidOperationException){return true;} }
+    /** The bridge did not stop when asked: end it, so its shortcuts and its OBS port are free for the next start. */
+    static bool EndBridge(Process p,int waitMs) {
+      try { if(!p.HasExited) p.Kill(); }
+      catch(InvalidOperationException) { return true; } // it has exited meanwhile
+      catch(System.ComponentModel.Win32Exception) {} // it is already exiting, or cannot be ended: the wait says which
+      return WaitForBridge(p,waitMs);
     }
   }
   internal sealed class Feedback : Form {

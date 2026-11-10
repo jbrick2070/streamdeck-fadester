@@ -88,6 +88,20 @@ internal static class PadControls
     public const int OrdinaryTakeMs = 400;
     public const string TakeNow = "take.now";
 
+    /**
+     * Letting go of LT sends its action tagged as a release, so the dispatch loop never drops it as offline or late and a
+     * ducked Music always comes back (ReleaseMailbox).
+     */
+    private const string ReleasePrefix = "release:";
+    public static string Release(string action) => ReleasePrefix + action;
+    /** True for a tagged release; <paramref name="action"/> is the action itself either way. */
+    public static bool IsRelease(string id, out string action)
+    {
+        bool release = id.StartsWith(ReleasePrefix, StringComparison.Ordinal);
+        action = release ? id[ReleasePrefix.Length..] : id;
+        return release;
+    }
+
     public static bool Known(string id) => (DeskActions.Supported.Contains(id) || PadOnly.Contains(id)) && id != "bridge.reconnect";
 
     /** A take, cancel, fader tick or Preview cue: the trigger T-bar must return to rest before it throws again. */
@@ -276,6 +290,8 @@ internal sealed class PadReader(IReadOnlyDictionary<string, string> map, bool ea
     public PadTbar Tbar { get; } = new();
     /** Lines for the Activity log (a tapped guarded control); the loop prints and clears them. */
     public List<string> Notes { get; } = [];
+    /** Whether LT's press was accepted and LT is still held. Read from the dispatch loop's thread (ReleaseMailbox). */
+    public bool LeftTriggerHeld => Volatile.Read(ref leftHeld);
 
     /** OBS refused, or a take, cancel or cue came from elsewhere: no throw, push or ordinary take carries on. */
     public void Disarm() { Tbar.Disarm(); ordinaryControl = null; }
@@ -298,7 +314,7 @@ internal sealed class PadReader(IReadOnlyDictionary<string, string> map, bool ea
         if (!s.Connected)
         {
             // Nothing half-held survives: a hold in progress fires nothing, a ducked Music comes back.
-            if (last.Connected && leftHeld && leftRelease != null) Emit(leftRelease, actions);
+            if (last.Connected && leftHeld && leftRelease != null) Emit(leftRelease, actions, release: true);
             leftHeld = false; leftBlocked = false; leftRelease = null; shiftHeld = false; pushSource = null;
             takeControl = null; ordinaryControl = null;
             holds.Clear(); nextRepeat.Clear(); stickAxis.Clear(); last = PadState.Disconnected;
@@ -382,10 +398,13 @@ internal sealed class PadReader(IReadOnlyDictionary<string, string> map, bool ea
 
     private string Key(string control) => shiftHeld ? PadControls.ShiftPrefix + control : control;
 
-    /** Control: the button, LT or stick direction that fired the action, for a take that pushes while it is held. */
-    private void Emit(string action, List<string> actions, string? control = null)
+    /**
+     * Control: the button, LT or stick direction that fired the action, for a take that pushes while it is held.
+     * Release: letting go of LT, sent tagged (PadControls.Release).
+     */
+    private void Emit(string action, List<string> actions, string? control = null, bool release = false)
     {
-        actions.Add(action);
+        actions.Add(release ? PadControls.Release(action) : action);
         if (PadControls.StopsThrow(action)) { Tbar.Disarm(); ordinaryControl = null; }
         if (action == "take" && control != null) { pushSource = takeControl = control; takeFiredAt = now; }
     }
@@ -430,7 +449,7 @@ internal sealed class PadReader(IReadOnlyDictionary<string, string> map, bool ea
             else if (leftHeld)
             {
                 leftHeld = false;
-                if (leftRelease != null) Emit(leftRelease, actions);
+                if (leftRelease != null) Emit(leftRelease, actions, release: true);
                 leftRelease = null;
             }
         }
@@ -518,7 +537,35 @@ internal sealed class TbarMailbox
     public bool ConsumeFailure() { lock (gate) { var f = failed; failed = false; return f; } }
 }
 
+/// <summary>
+/// Letting go of LT (Music back up) on its way from the pad to the dispatch loop. A release is never dropped as offline,
+/// late or from an earlier connection: the newest one waits here until the dispatch loop runs it, on this connection or
+/// the next. One that has not run by the time LT is held again is dropped, since the trigger is down again.
+/// </summary>
+internal sealed class ReleaseMailbox
+{
+    private string? waiting;
+
+    /** The pad let go of LT: keep its action (only the newest). */
+    public void Post(string action) => Interlocked.Exchange(ref waiting, action);
+
+    /** The release to run now, once; null when there is none, or when LT is held again. */
+    public string? Take(bool leftHeld)
+    {
+        var action = Interlocked.Exchange(ref waiting, null);
+        return leftHeld ? null : action;
+    }
+
+    /** A release the dropped connection cut off waits again, unless a newer one is already waiting. */
+    public void Return(string action) => Interlocked.CompareExchange(ref waiting, action, null);
+
+    /** Whether a release failed because the connection to OBS dropped, not because OBS refused it: then it runs again. */
+    public static bool CutOff(Exception e, bool disconnected) =>
+        e is not ObsError && (disconnected || e is IOException or System.Net.WebSockets.WebSocketException);
+}
+
 /// <summary>Polls the pad about 60 times a second on its own task and feeds the companion's queue.</summary>
+/// <remarks>A release of LT reaches <paramref name="enqueue"/> tagged (PadControls.IsRelease).</remarks>
 internal sealed class GamepadLoop(IPadSource source, PadReader reader, TbarMailbox mailbox, Action<string> enqueue, Action postTbar, Action<string> log)
 {
     public Task Run(CancellationToken stop) => Task.Run(async () =>

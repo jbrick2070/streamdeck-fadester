@@ -41,6 +41,8 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
     /** Where the companion's own T-bar move has the T-bar (0 at rest). */
     public double TbarPosition => fader.Position;
     public Task SettleAsync() => fader.SettleAsync();
+    /** About 1.5 s after a cut: OBS can switch back to Cut as the cut ends (StudioFader.RecheckAsync). */
+    public Task<string> RecheckTransitionAsync() => fader.RecheckAsync();
 
     /** The game controller's trigger T-bar. Only a take or a cancel is worth a log line; a throw in progress is quiet. */
     public async Task<string> TbarTo(double target)
@@ -96,7 +98,11 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
             case "fader.cancel":
             case "take":
             case "take.cut":
-                await fader.DispatchAsync(id, pressedAt); return $"{id} · T-bar {fader.Position:P0}";
+                {
+                    // A take or cut that sent nothing says so, so nobody mistakes it for one that went out.
+                    string ignored = await fader.DispatchAsync(id, pressedAt);
+                    return ignored.Length > 0 ? ignored : $"{id} · T-bar {fader.Position:P0}";
+                }
             case "fader.status":
                 {
                     bool enabled = (await Get("GetStudioModeEnabled"))["studioModeEnabled"]!.GetValue<bool>();
@@ -274,10 +280,14 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
             await rpc("SetCurrentSceneTransitionDuration", new() { ["transitionDuration"] = duration }); return $"Transition: {duration} ms";
         }
         var choices = (await Get("GetSceneTransitionList"))["transitions"]!.AsArray().Select(n => n!["transitionName"]!.GetValue<string>()).ToList();
-        int i = choices.IndexOf(Str(current, "transitionName"));
+        string selected = Str(current, "transitionName");
+        int i = choices.IndexOf(selected);
         if (i < 0 || choices.Count == 0) throw new InvalidOperationException("Current transition missing from OBS list.");
         var name = choices[(i + (id.EndsWith("next") ? 1 : -1) + choices.Count) % choices.Count];
-        await rpc("SetCurrentSceneTransition", new() { ["transitionName"] = name }); return "Transition: " + name;
+        // Right after a take or cut OBS drops a selection: it is sent again until OBS shows it, and the line says
+        // what OBS really holds.
+        string held = await fader.ChooseTransitionAsync(selected, name);
+        return held == name ? "Transition: " + name : $"Transition: OBS kept {held}, not {name}. Try again, or choose it in OBS.";
     }
 
     public async Task<JsonObject> Catalog()

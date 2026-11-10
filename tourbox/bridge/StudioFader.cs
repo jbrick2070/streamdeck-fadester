@@ -5,6 +5,12 @@ using System.Text.Json.Nodes;
 namespace Fadester.TourBox;
 
 /// <summary>
+/// The native slider helper answered that it wrote nothing: the T-bar was hidden, had been moved, or could not be read.
+/// OBS is as it was, so a fader that gets this needs no Cancel before it is used again.
+/// </summary>
+internal sealed class NativeRefusal(string message) : InvalidOperationException(message);
+
+/// <summary>
 /// One relative T-bar for one authenticated OBS connection. Recreate it on reconnect, handing the old one's
 /// <see cref="Leave"/> to the new one and running <see cref="ResumeAsync"/> once.
 /// </summary>
@@ -120,6 +126,42 @@ public sealed class StudioFader
     }
 
     /// <summary>
+    /// Run about 1.5 s after a cut, once OBS has stopped counting the cut as running. OBS can switch back to Cut as a cut
+    /// ends, so the operator's transition goes back now, not only with the next take, cut, T-bar move or Cancel.
+    /// </summary>
+    /// <returns>A line for the log, or an empty string when OBS still had the operator's transition.</returns>
+    public async Task<string> RecheckAsync()
+    {
+        await serial.WaitAsync();
+        try
+        {
+            var debt = owed;
+            return await RepayAsync() && debt != null ? $"Transition: OBS went back to {debt.Borrowed} after the cut; {debt.Original} is selected again." : "";
+        }
+        finally { serial.Release(); }
+    }
+
+    /// <summary>
+    /// Selects a transition the operator chose (transition previous or next). OBS drops a selection while it counts a
+    /// transition as running, which lasts past a take or cut, so the request is sent again until OBS shows it, as for
+    /// the companion's own selections. The operator's choice ends any transition a cut still owes.
+    /// </summary>
+    /// <returns>The transition OBS holds afterwards: <paramref name="to"/>, or what OBS kept.</returns>
+    public async Task<string> ChooseTransitionAsync(string from, string to)
+    {
+        await serial.WaitAsync();
+        try
+        {
+            try { await SelectTransitionAsync(from, to); }
+            catch (InvalidOperationException) { } // what OBS holds is read and reported below
+            string held = await ReadTransitionNameAsync();
+            if (held == to) owed = null;
+            return held;
+        }
+        finally { serial.Release(); }
+    }
+
+    /// <summary>
     /// Moves to an absolute position for a spring-loaded control (the game controller's trigger): 0 cancels, 1 takes, and
     /// anything between is a throw from the current Program towards Preview. Unlike the dial, the turn direction never
     /// swaps after a take: a trigger always pulls from 0 towards 1.
@@ -195,7 +237,8 @@ public sealed class StudioFader
 
     /// <param name="pressedAt">When the control was pressed (a Stopwatch timestamp), if known. A take or cut pressed while an
     /// earlier one still waited for OBS is then caught as a double press, though it runs only afterwards.</param>
-    public async Task DispatchAsync(string action, long pressedAt = 0)
+    /// <returns>An empty string, or for a take or cut that sent nothing, the line that says why.</returns>
+    public async Task<string> DispatchAsync(string action, long pressedAt = 0)
     {
         await serial.WaitAsync();
         try
@@ -207,7 +250,7 @@ public sealed class StudioFader
                 else if (!needsReset) await ReleaseStalledAsync();
                 needsReset = false;
                 await RepayAsync();
-                return;
+                return "";
             }
             if (needsReset) throw new InvalidOperationException("The previous transition changed or could not be confirmed. Check OBS and cancel/reset the fader before using it again.");
             await RepayAsync();
@@ -220,12 +263,14 @@ public sealed class StudioFader
                 case "take": case "take.cut":
                     // A second take within 450 ms of the last is a double press, and so is one pressed before the last
                     // went out (a cut can wait about 1 s for OBS). Measured from the press when it is known.
-                    if (DoublePress(pressedAt)) return;
+                    if (DoublePress(pressedAt)) return $"{action} ignored: a double press, within 0.45 s of the last take or cut.";
                     if (sweep != null) await FinishAndReturnAsync();
-                    else await TakeAsync(action == "take.cut");
+                    else if (!await TakeAsync(action == "take.cut"))
+                        return $"{action} ignored: Preview is the same scene as Program. Cue another scene first.";
                     break;
                 default: throw new ArgumentException("Unknown Studio fader action: " + action, nameof(action));
             }
+            return "";
         }
         finally { serial.Release(); }
     }
@@ -293,8 +338,6 @@ public sealed class StudioFader
             ?? throw new InvalidOperationException($"OBS has {original} selected and no Fade transition for the T-bar to mix with. Add a Fade in OBS's Scene Transitions.");
         if (!string.IsNullOrEmpty(sceneOverride) && sceneOverride != fade)
             throw new InvalidOperationException(OverrideRefusal(sceneOverride, fade));
-        // A slider that cannot move would only fail at the first write: find out before the selection changes.
-        if (nativeMove != null) await nativeMove(0, 0);
         var watch = owed is { Lent: false } cut && cut.Original == original ? cut : null; // a cut's watch resumes afterwards
         owed = new(fade, original, 0, Lent: true, Resume: watch); // owed before the request: an unanswered selection may still land
         bool confirmed = false;
@@ -333,17 +376,30 @@ public sealed class StudioFader
             await RequireIdleAsync();
             var transition = await rpc("GetCurrentSceneTransition", null);
             var sceneOverride = await SceneOverrideAsync(scenes.Preview);
-            if (Field(transition, "transitionKind") != "fade_transition")
-                transition = await LendFadeAsync(scenes, Field(transition, "transitionName"), sceneOverride);
-            else if (!string.IsNullOrEmpty(sceneOverride) && sceneOverride != Field(transition, "transitionName"))
+            bool fade = Field(transition, "transitionKind") == "fade_transition";
+            if (fade && !string.IsNullOrEmpty(sceneOverride) && sceneOverride != Field(transition, "transitionName"))
                 throw new InvalidOperationException(OverrideRefusal(sceneOverride, Field(transition, "transitionName")));
+            // Before every sweep, and before a Fade is lent: a slider the helper cannot read would only fail at the
+            // first write. This read writes nothing, so a failure here needs no Cancel; the next try finds the slider
+            // again (OBS rebuilds it when Studio Mode is turned off and on).
+            if (nativeMove != null) await nativeMove(0, 0);
+            if (!fade) transition = await LendFadeAsync(scenes, Field(transition, "transitionName"), sceneOverride);
             sweep = new Sweep(scenes, Field(transition, "transitionUuid"));
         }
-        if (next == 0) { await CancelSweepAsync(); await RepayAsync(); return; }
-        if (next == 1) { await FinishAndReturnAsync(); return; }
-        await CheckOwnershipAsync();
         bool firstMove = Position == 0;
-        await WritePositionAsync(next, false);
+        try
+        {
+            if (next == 0) { await CancelSweepAsync(); await RepayAsync(); return; }
+            if (next == 1) { await FinishAndReturnAsync(); return; }
+            await CheckOwnershipAsync();
+            await WritePositionAsync(next, false);
+        }
+        catch (NativeRefusal) when (firstMove && !needsReset)
+        {
+            // The helper wrote nothing (no latch was set), so a Fade lent for this sweep goes back at once.
+            try { await RepayAsync(); } catch (Exception) { } // the refusal is the one to report
+            throw;
+        }
         Position = next;
         if (firstMove)
         {
@@ -378,17 +434,26 @@ public sealed class StudioFader
     private void Disarm() { sweep = null; Position = 0; needsReset = true; }
     private async Task WritePositionAsync(double value, bool release)
     {
+        bool sent = false;
         try
         {
             // Setting the actual Qt slider drives OBS's TBarChanged signal and moves the visible handle.
             if (nativeMove != null) await nativeMove(Position, value);
+            sent = true;
             if (nativeMove == null || release)
                 await rpc("SetTBarPosition", new() { ["position"] = value, ["release"] = release });
             // OBS-WebSocket has no release-only request. At a rail its release resets the real
             // slider to zero. Equal arguments ask the native adapter to verify without moving it.
             if (nativeMove != null && release) await nativeMove(0, 0);
         }
-        catch { Disarm(); throw; } // An unanswered write might have reached OBS; never replay it.
+        catch (NativeRefusal) when (!sent)
+        {
+            // The helper wrote nothing: OBS is as it was, so the sweep ends without the latch and the next move or a
+            // Cancel works at once. A T-bar left part-way by an earlier move stays there, as after any refusal.
+            sweep = null; Position = 0;
+            throw;
+        }
+        catch { Disarm(); throw; } // An unanswered or unconfirmed write might have reached OBS; never replay it.
     }
 
     private async Task CancelSweepAsync()
@@ -518,10 +583,11 @@ public sealed class StudioFader
         throw new InvalidOperationException("OBS did not confirm the transition " + to + ".");
     }
 
-    private async Task TakeAsync(bool cut)
+    /// <returns>False when there was nothing to take: Preview is the same scene as Program.</returns>
+    private async Task<bool> TakeAsync(bool cut)
     {
         var scenes = await ReadScenesAsync();
-        if (scenes.Program == scenes.Preview) return;
+        if (scenes.Program == scenes.Preview) return false;
         await RequireIdleAsync();
         string? previous = null, replacement = null;
         bool requestedCut = false, confirmedCut = false, triggered = false;
@@ -548,10 +614,14 @@ public sealed class StudioFader
             await RequireIdleAsync();
             if (cut && await ReadTransitionNameAsync() != replacement)
                 throw new InvalidOperationException("The selected OBS transition changed before Cut.");
+            // The double-press guard counts from a take that went out. One OBS refused sent nothing, so a retry goes;
+            // one that got no answer may have gone out, so a retry within 0.45 s is still a double press.
+            try { await rpc("TriggerStudioModeTransition", null); }
+            catch (Exception e) when (e is not ObsError) { takeAt = Stopwatch.GetTimestamp(); throw; }
             takeAt = Stopwatch.GetTimestamp();
-            await rpc("TriggerStudioModeTransition", null);
             triggered = true;
             await ConfirmProgramAsync(scenes.Preview);
+            return true;
         }
         finally
         {
@@ -594,10 +664,11 @@ public sealed class StudioFader
     }
 
     /// <summary>Puts back the transition a recent Cut, or a finished sweep, borrowed if OBS is still on it.</summary>
-    private async Task RepayAsync()
+    /// <returns>True when OBS was on the borrowed transition and the original went back.</returns>
+    private async Task<bool> RepayAsync()
     {
         // A running sweep still uses what it borrowed: never swap the transition under a mix.
-        if (sweep != null || owed is not var (borrowed, original, at, lent, resume)) return;
+        if (sweep != null || owed is not var (borrowed, original, at, lent, resume)) return false;
         if (at == 0)
         {
             // The sweep is over, but OBS drops every selection while its T-bar still sits part-way: the watch starts
@@ -607,14 +678,15 @@ public sealed class StudioFader
             owed = new(borrowed, original, at = Stopwatch.GetTimestamp(), lent, resume);
         }
         // After half a minute a borrowed selection is more likely the operator's own choice than our leftover.
-        if (Stopwatch.GetElapsedTime(at).TotalMilliseconds > OwedForMs) { owed = null; return; }
+        if (Stopwatch.GetElapsedTime(at).TotalMilliseconds > OwedForMs) { owed = null; return false; }
         var selected = await ReadTransitionNameAsync();
         // Still on the original: after a cut keep watching, since OBS (or a late, unconfirmed Cut) may switch to Cut
         // afterwards. A Fade the T-bar lent is simply back.
-        if (selected == original) { if (lent) owed = resume; return; }
+        if (selected == original) { if (lent) owed = resume; return false; }
+        bool putBack = false;
         if (selected == borrowed)
         {
-            try { await SelectTransitionAsync(borrowed, original); }
+            try { await SelectTransitionAsync(borrowed, original); putBack = true; }
             catch (InvalidOperationException e)
             {
                 // The operator chose another transition meanwhile: theirs stands.
@@ -623,5 +695,6 @@ public sealed class StudioFader
             }
         }
         owed = lent ? resume : null;
+        return putBack;
     }
 }

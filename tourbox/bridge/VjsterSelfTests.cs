@@ -102,6 +102,8 @@ internal static class VjsterSelfTests
         Check(VjsterLink.ParseReport(null).Code == "bad-message", "binary");
         Check(VjsterLink.ParseReport(new string('{', 20000)).Code == "too-long", "too long");
         Check(VjsterLink.ParseReport("{nope").Code == "bad-json", "bad json");
+        // .NET reads a JSON object's properties on first use, and a repeated name throws only then: still bad JSON, never a dropped link.
+        Check(VjsterLink.ParseReport("""{"v":1,"v":1,"id":"a","target":"browser","type":"ping","t":1}""").Code == "bad-json", "a repeated property name");
         Check(VjsterLink.ParseReport("[1]").Code == "bad-message", "not an object");
         Check(VjsterLink.ParseReport("""{"v":2,"id":"a","target":"browser","type":"ping","t":1}""").Code == "bad-version", "wrong version");
         Check(VjsterLink.ParseReport("""{"v":1,"id":"a","target":"browser","type":"speed.step","delta":0.25}""").Code == "unexpected-type", "an intent is not accepted from the extension");

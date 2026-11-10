@@ -67,7 +67,8 @@ internal static class HostSelfTests
 
         // Exercise the real DeskActions + StudioFader path, not a copied fader.
         time = 1000; unix = 100000; int generation = ingress.Activate();
-        var calls = new List<string>(); int nativeCalls = 0;
+        // Writes and reads are counted apart: before every sweep the fader reads the slider once (an equal-value call).
+        var calls = new List<string>(); int nativeCalls = 0, nativeWrites = 0;
         bool expireOnScenes = true, failNative = false, changeGeneration = false;
         Task<JsonObject> Rpc(string method, JsonObject? args)
         {
@@ -88,33 +89,34 @@ internal static class HostSelfTests
         Task Native(double from, double to)
         {
             nativeCalls++;
+            if (from != to) nativeWrites++;
             return failNative ? Task.FromException(new IOException("Synthetic native refusal")) : Task.CompletedTask;
         }
         var config = new BridgeConfig();
         var session = new HostSession(config, ingress, generation, Rpc, Native, () => true, CancellationToken.None);
         Check(ingress.SubmitLine("action fader.forward", out _), "fader admitted before slow preflight");
         await Refused(() => session.Dispatch(Pop(ingress)));
-        Check(nativeCalls == 0 && calls.All(c => c.StartsWith("Get", StringComparison.Ordinal)), "late first native write blocked after OBS reads");
-        expireOnScenes = false; failNative = true; calls.Clear();
+        Check(nativeWrites == 0 && calls.All(c => c.StartsWith("Get", StringComparison.Ordinal)), "late first native write blocked after OBS reads");
+        expireOnScenes = false; failNative = true; calls.Clear(); int seen = nativeCalls;
         session = new HostSession(config, ingress, generation, Rpc, Native, () => true, CancellationToken.None);
         Check(ingress.SubmitLine("action fader.forward", out _), "native refusal fixture admitted");
         await Refused(() => session.Dispatch(Pop(ingress)));
-        Check(nativeCalls == 1 && calls.All(c => c.StartsWith("Get", StringComparison.Ordinal)), "native failure has no WebSocket-only fading fallback");
-        failNative = false; changeGeneration = true; calls.Clear();
+        Check(nativeCalls == seen + 1 && nativeWrites == 0 && calls.All(c => c.StartsWith("Get", StringComparison.Ordinal)), "native failure has no WebSocket-only fading fallback");
+        failNative = false; changeGeneration = true; calls.Clear(); seen = nativeCalls;
         session = new HostSession(config, ingress, generation, Rpc, Native, () => true, CancellationToken.None);
         Check(ingress.SubmitLine("action fader.forward", out _), "generation fixture admitted");
         await Refused(() => session.Dispatch(Pop(ingress)));
-        Check(nativeCalls == 1 && !calls.Contains("GetCurrentSceneTransition"), "disconnect/generation change during preflight halts dispatch");
+        Check(nativeCalls == seen && !calls.Contains("GetCurrentSceneTransition"), "disconnect/generation change during preflight halts dispatch");
         generation = ingress.Activate(); calls.Clear();
         session = new HostSession(config, ingress, generation, Rpc, Native, () => false, CancellationToken.None);
         Check(ingress.SubmitLine("action fader.forward", out _), "input failure fixture admitted");
         await Refused(() => session.Dispatch(Pop(ingress)));
-        Check(calls.Count == 0 && nativeCalls == 1, "failed input helper prevents subsequent OBS/native access");
+        Check(calls.Count == 0 && nativeCalls == seen, "failed input helper prevents subsequent OBS/native access");
 
         changeGeneration = false; calls.Clear(); config.MicInput = "Synthetic Mic";
         var readOnly = new HostSession(config, ingress, generation, Rpc, Native, () => true, CancellationToken.None, readOnly: true, nativeRead: () => Task.FromResult(51));
         Check(ingress.SubmitLine("action host.native.status", out _), "host native readback input admitted");
-        Check(await readOnly.Dispatch(Pop(ingress)) == "Native slider: 51 / 1023" && nativeCalls == 1, "native readback is independent of local fader position and does not move");
+        Check(await readOnly.Dispatch(Pop(ingress)) == "Native slider: 51 / 1023" && nativeCalls == seen, "native readback is independent of local fader position and does not move");
         Check(ingress.SubmitLine("action preview.status", out _), "read-only status input admitted");
         Check((await readOnly.Dispatch(Pop(ingress))).Contains("Fixture A"), "read-only status uses production getter");
         int reads = calls.Count;
@@ -124,7 +126,7 @@ internal static class HostSelfTests
         // Even an internal call bypassing Dispatch's whitelist cannot write.
         await Refused(() => readOnly.Desk.Dispatch("mic.mute"));
         await Refused(() => readOnly.Desk.Dispatch("fader.forward"));
-        Check(nativeCalls == 1 && calls.All(c => c.StartsWith("Get", StringComparison.Ordinal)), "read-only backend refuses OBS and native writes independently");
+        Check(nativeCalls == seen && nativeWrites == 0 && calls.All(c => c.StartsWith("Get", StringComparison.Ordinal)), "read-only backend refuses OBS and native writes independently");
 
         LogPass();
     }

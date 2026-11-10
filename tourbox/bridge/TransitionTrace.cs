@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-using System.Collections.Concurrent;
 using System.Globalization;
 using System.Text.Json.Nodes;
 
@@ -48,17 +47,6 @@ internal sealed class TransitionTrace(Func<string, JsonObject?, Task<JsonObject>
         moving = false;
         // A log that fails must not stop a request, replace OBS's error or cost the connection.
         try { log(at.ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture) + " trace: " + text); } catch (Exception) { }
-    }
-
-    /// <summary>A log that never holds up its caller: lines are queued and one thread writes them in order. The trace
-    /// speaks on the path of the desk's requests and of OBS's replies, and a terminal whose text is being selected can
-    /// stop taking lines for as long as the selection lasts.</summary>
-    internal static Action<string> Queued(Action<string> write)
-    {
-        var lines = new BlockingCollection<string>();
-        new Thread(() => { foreach (string line in lines.GetConsumingEnumerable()) try { write(line); } catch (Exception) { } })
-            { IsBackground = true, Name = "transition trace log" }.Start();
-        return lines.Add;
     }
 
     private static long Ms(DateTime from, DateTime to) => (long)Math.Round((to - from).TotalMilliseconds);

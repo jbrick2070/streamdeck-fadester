@@ -523,6 +523,13 @@ internal sealed class VjsterLink : IAsyncDisposable
         try { node = JsonNode.Parse(text); }
         catch (Exception e) when (e is JsonException or ArgumentException) { return VjsterParse.Fail("bad-json", "the message is not valid JSON"); }
         if (node is not JsonObject data) return VjsterParse.Fail("bad-message", "a message must be a JSON object");
+        // A JsonObject reads its properties on first use, and a repeated property name throws only then.
+        try { return ReadReport(data); }
+        catch (ArgumentException) { return VjsterParse.Fail("bad-json", "the message is not valid JSON"); }
+    }
+
+    static VjsterParse ReadReport(JsonObject data)
+    {
         string? id = Str(data, "id") is { } rawId && IdPattern.IsMatch(rawId) ? rawId : null;
         if (!(data["v"] is JsonValue v && v.TryGetValue<int>(out var version) && version == ProtocolVersion)) return VjsterParse.Fail("bad-version", $"this side speaks protocol version {ProtocolVersion}", id);
         var type = Str(data, "type");

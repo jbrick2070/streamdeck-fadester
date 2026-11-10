@@ -10,6 +10,10 @@ internal static class Program
 {
     /** The game controller's take, queued under its own name: it may slide the T-bar (see Listen). Not a mappable action. */
     private const string PadTake = "pad.take";
+    /** Queue markers, not actions: a release of LT waits in its mailbox (ReleaseMailbox), and a look at the transition after a cut. */
+    private const string PadRelease = "pad.release", CutRecheck = "fader.recheck";
+    /** OBS counts a cut as running for about a second after it (StudioFader); look again once it has stopped. */
+    private const int CutRecheckMs = 1500;
 
     static string DefaultMap()
     {
@@ -63,7 +67,9 @@ internal static class Program
             {
                 if (command == "--mix-only" && !config.MixEnabled) throw new ArgumentException("Enable All OBS mixer inputs in Setup first.");
                 if (command == "--listen") config.CheckPorts();
-                await Listen(config, command == "--listen" ? Binding.Load(map) : [], stop, traceTransitions); return 0;
+                // Every line of the run goes through one queue: a console that stops taking lines never holds up the controls.
+                using (ConsoleQueue.Install()) await Listen(config, command == "--listen" ? Binding.Load(map) : [], stop, traceTransitions);
+                return 0;
             }
             if (command is not ("--catalog" or "--check" or "--dispatch")) throw new ArgumentException("Unknown option " + command + ". See --help.");
             using var obs = await ObsConnection.Connect(config, stop.Token);
@@ -117,11 +123,23 @@ internal static class Program
         }
         // A held stick repeats every 200 ms: say once that its target is missing, not five times a second.
         bool toldVjsterOff = false, toldPadOffline = false;
-        void PadEnqueue(string action)
+        // Letting go of LT is never lost (a ducked Music must come back): it waits here for the dispatch loop.
+        var releases = new ReleaseMailbox();
+        void PadEnqueue(string id)
         {
+            bool release = PadControls.IsRelease(id, out var action);
             if (action.StartsWith("vjster.") && vjster == null)
             {
                 if (!toldVjsterOff) { toldVjsterOff = true; Console.WriteLine("VJster is off: the controller's video actions do nothing."); }
+                return;
+            }
+            if (release && !action.StartsWith("vjster."))
+            {
+                releases.Post(action);
+                int g = Volatile.Read(ref current);
+                // The marker only wakes the dispatch loop; offline, the next connection runs the release once it is up.
+                if (g == 0) Console.WriteLine("Not connected to OBS: " + action + " runs as soon as OBS is back.");
+                else if (!input.Writer.TryWrite(new(PadRelease, g, Stopwatch.GetTimestamp()))) Console.WriteLine("Input queue full: " + action + " runs after the next reconnect or LT release.");
                 return;
             }
             if (!action.StartsWith("vjster."))
@@ -139,6 +157,7 @@ internal static class Program
         }
         bool padOn = cfg.GamepadEnabled && bindings.Count > 0;
         var padMap = padOn ? PadControls.Build(cfg.GamepadMap) : null;
+        var padReader = padMap != null ? new PadReader(padMap, cfg.GamepadEasy) : null;
         if (padMap != null)
         {
             Console.WriteLine(cfg.GamepadEasy
@@ -147,9 +166,29 @@ internal static class Program
             if (padMap.Keys.Any(k => k.StartsWith(PadControls.ShiftPrefix, StringComparison.OrdinalIgnoreCase)))
                 Console.WriteLine("Game controller: LB is the shift button and does nothing on its own.");
         }
-        Task padTask = padMap != null
-            ? new GamepadLoop(new XInputPadSource(), new PadReader(padMap, cfg.GamepadEasy), tbarMail, PadEnqueue, PostTbar, Console.WriteLine).Run(stop.Token)
+        Task padTask = padReader != null
+            ? new GamepadLoop(new XInputPadSource(), padReader, tbarMail, PadEnqueue, PostTbar, Console.WriteLine).Run(stop.Token)
             : Task.CompletedTask;
+        // The newest release of LT, unless LT is held again; run on the dispatch loop only.
+        async Task RunReleaseAsync(DeskActions desk, ObsConnection obs)
+        {
+            if (releases.Take(padReader?.LeftTriggerHeld == true) is not { } action) return;
+            try { Console.WriteLine(await desk.Dispatch(action)); }
+            catch (Exception e)
+            {
+                Console.WriteLine("Action " + action + ": " + e.Message);
+                // Cut off by a dropped connection, not refused: it waits again and runs on the next connection.
+                if (!stop.IsCancellationRequested && ReleaseMailbox.CutOff(e, obs.Disconnected.IsCompleted))
+                {
+                    releases.Return(action);
+                    Console.WriteLine("Not connected to OBS: " + action + " runs as soon as OBS is back.");
+                }
+            }
+            if (PadControls.StopsThrow(action)) tbarMail.Fail();
+        }
+        // After a cut OBS can switch back to Cut as the cut ends: look again once it has stopped counting it as running.
+        void RecheckAfterCut(int g) => _ = Task.Delay(CutRecheckMs, stop.Token).ContinueWith(
+            t => { if (t.IsCompletedSuccessfully) input.Writer.TryWrite(new(CutRecheck, g, Stopwatch.GetTimestamp())); }, TaskScheduler.Default);
         // The panel and the tests can type "dispatch <action>" on stdin; it runs exactly as the hotkey would.
         void Command(string line)
         {
@@ -174,8 +213,8 @@ internal static class Program
             string? lastError = null;
             // A duck, a cut's owed transition and a part-thrown T-bar outlive a dropped connection.
             DeskActions.Memory? memory = null;
-            // One queue for the whole run, so a console that stops taking lines never holds up a request or a reply.
-            Action<string>? traceLog = traceTransitions ? TransitionTrace.Queued(Console.WriteLine) : null;
+            // Console.WriteLine is queued for the whole run (ConsoleQueue), so the trace never holds up a request or a reply.
+            Action<string>? traceLog = traceTransitions ? Console.WriteLine : null;
             while (!stop.IsCancellationRequested)
             {
                 try
@@ -201,6 +240,8 @@ internal static class Program
                     tbarMail.Fail(); // a trigger held across a reconnect must return to rest before it can throw on the new connection
                     try
                     {
+                        // LT let go while OBS was away: its release runs now, after the duck it ends was carried over.
+                        await RunReleaseAsync(desk, obs);
                         using var wait = CancellationTokenSource.CreateLinkedTokenSource(stop.Token);
                         long lastHeldTurn = 0, ordinaryPressedAt = 0;
                         while (!stop.IsCancellationRequested && !obs.Disconnected.IsCompleted)
@@ -225,8 +266,21 @@ internal static class Program
                                 }
                                 continue;
                             }
+                            if (ev.Action == PadRelease)
+                            {
+                                // Never stale and never from the wrong connection: the release itself waits in its mailbox.
+                                if (!stop.IsCancellationRequested) await RunReleaseAsync(desk, obs);
+                                continue;
+                            }
                             if (ev.Generation != mine) continue;
                             if (stop.IsCancellationRequested) break;
+                            if (ev.Action == CutRecheck)
+                            {
+                                // Never stale: it was queued on purpose, 1.5 s after the cut.
+                                try { var said = await desk.RecheckTransitionAsync(); if (said.Length > 0) Console.WriteLine(said); }
+                                catch (Exception e) { Console.WriteLine("After the cut: " + e.Message); }
+                                continue;
+                            }
                             if (Stopwatch.GetElapsedTime(ev.Timestamp) > TimeSpan.FromMilliseconds(KeyGuards.IsTurnTick(ev.Action) ? 180 : 1500)) { Console.WriteLine("Discarded stale input: " + ev.Action); continue; }
                             if (KeyGuards.IsStrayFaderTick(ev.Action, lastHeldTurn, ev.Timestamp)) { Console.WriteLine("Ignored a T-bar tick right after a held Dial turn: was the button still held?"); continue; }
                             if (KeyGuards.IsHeldDialTurn(ev.Action)) lastHeldTurn = ev.Timestamp;
@@ -271,6 +325,7 @@ internal static class Program
                             // must return to rest before it throws, or it would throw back towards the scene just taken.
                             // A Preview or anchor cue cancels a manual sweep first (DeskActions.Cue), so it disarms too.
                             if (PadControls.StopsThrow(ev.Action)) tbarMail.Fail();
+                            if (ev.Action == "take.cut") RecheckAfterCut(mine);
                         }
                     }
                     finally

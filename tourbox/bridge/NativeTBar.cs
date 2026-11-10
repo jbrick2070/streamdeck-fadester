@@ -89,7 +89,14 @@ internal sealed class NativeTBar(int port) : IDisposable
             await helper.StandardInput.FlushAsync();
             string? line = await helper.StandardOutput.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(3));
             if (target!.HasExited || line == null) throw new IOException("Lost the OBS slider connection.");
-            if (line.StartsWith("ERR ", StringComparison.Ordinal)) throw new InvalidOperationException(line[4..]);
+            if (line.StartsWith("ERR ", StringComparison.Ordinal))
+            {
+                // The helper says when a write may have landed; any other refusal wrote nothing.
+                string why = line[4..];
+                if (why.StartsWith("write unconfirmed", StringComparison.Ordinal) || why.StartsWith("prior write unconfirmed", StringComparison.Ordinal))
+                    throw new InvalidOperationException(why);
+                throw new NativeRefusal(why);
+            }
             if (!line.StartsWith("OK ", StringComparison.Ordinal) ||
                 !int.TryParse(line.AsSpan(3), NumberStyles.None, CultureInfo.InvariantCulture, out int result) ||
                 result is < 0 or > 1023) throw new IOException("Unexpected OBS slider response.");

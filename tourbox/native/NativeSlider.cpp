@@ -81,8 +81,18 @@ public:
             return "ERR expected READ or two integers 0..1023";
         bool invoked = false;
         try {
-            locate();
-            int before = read();
+            bool reused = locate();
+            int before = 0;
+            try {
+                before = read();
+            } catch (const std::exception &) {
+                // OBS can rebuild its T-bar (Studio Mode turned off and on), so a slider found earlier may be gone.
+                // Nothing has been written yet: look it up once more before giving up.
+                if (!reused) throw;
+                forget();
+                locate();
+                before = read();
+            }
             if (readOnly) return "OK " + std::to_string(before);
             if (before != expected) return "ERR T-bar moved; actual " + std::to_string(before);
             if (before == desired) return "OK " + std::to_string(before);
@@ -93,14 +103,18 @@ public:
             return "OK " + std::to_string(actual);
         } catch (const std::exception &e) {
             uncertain = invoked; // An in-flight failed write may have taken effect. Never replay it.
-            range.Reset();
-            slider.Reset();
-            mainWindow = nullptr;
+            forget();
             return std::string(invoked ? "ERR write unconfirmed: " : "ERR ") + e.what();
         }
     }
 
 private:
+    void forget()
+    {
+        range.Reset();
+        slider.Reset();
+        mainWindow = nullptr;
+    }
     bool running() const { return WaitForSingleObject(process.get(), 0) == WAIT_TIMEOUT; }
     bool owns(HWND hwnd) const
     {
@@ -115,10 +129,11 @@ private:
         return TRUE;
     }
 
-    void locate()
+    // Returns true when the slider found earlier was kept rather than looked up again.
+    bool locate()
     {
         if (!running()) throw std::runtime_error("OBS process exited");
-        if (range && owns(mainWindow)) return;
+        if (range && owns(mainWindow)) return true;
         WindowSearch search{this, {}};
         EnumWindows(collect, reinterpret_cast<LPARAM>(&search));
         ComPtr<IUIAutomationElement> root;
@@ -156,6 +171,7 @@ private:
             throw std::runtime_error("native Studio Mode slider identity mismatch");
         check(slider->GetCurrentPatternAs(UIA_RangeValuePatternId, IID_PPV_ARGS(&range)), "native T-bar range provider unavailable");
         if (!range) throw std::runtime_error("native T-bar range provider unavailable");
+        return false;
     }
 
     int read()

@@ -198,7 +198,17 @@ namespace Fadester.TourBox {
       { "bridgeNotStarted", new[] { "Bridge did not start.", "El puente no se inició.", "Le pont n’a pas démarré.", "桥接程序未启动。" } },
       { "stop", new[] { "Stop controls", "Detener controles", "Arrêter les commandes", "停止控制" } },
       { "starting", new[] { "Starting controller…", "Iniciando el controlador…", "Démarrage du contrôleur…", "正在启动控制器…" } },
-      { "finishing", new[] { "Bridge is still finishing its current action.", "El puente aún está terminando la acción actual.", "Le pont termine encore l’action en cours.", "桥接程序仍在完成当前操作。" } },
+      { "finishing", new[] {
+        "The bridge is still finishing its current action. Click Stop controls again to end it.",
+        "El puente aún está terminando la acción actual. Haz clic de nuevo en Detener controles para cerrarlo.",
+        "Le pont termine encore l’action en cours. Cliquez de nouveau sur Arrêter les commandes pour le fermer.",
+        "桥接程序仍在完成当前操作。再次点击「停止控制」即可结束它。" } },
+      { "bridgeEnded", new[] {
+        "The bridge did not stop in time, so the panel ended it. Check the T-bar and the selected transition in OBS.",
+        "El puente no se detuvo a tiempo, así que el panel lo cerró. Comprueba en OBS el T-bar y la transición seleccionada.",
+        "Le pont ne s’est pas arrêté à temps : le panneau l’a donc fermé. Vérifiez dans OBS le T-bar et la transition sélectionnée.",
+        "桥接程序未能及时停止，面板已将其结束。请在 OBS 中检查 T-bar 和所选的转场。" } },
+      { "openSettings", new[] { "Open settings folder", "Abrir la carpeta de configuración", "Ouvrir le dossier des paramètres", "打开设置文件夹" } },
       { "lastAction", new[] { "Fadester · last action", "Fadester · última acción", "Fadester · dernière action", "Fadester · 最近操作" } },
     };
 

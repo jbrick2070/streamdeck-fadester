@@ -25,6 +25,7 @@
     <Compile Include="../../bridge/ObsConnection.cs" Link="Shared/ObsConnection.cs" />
     <Compile Include="../../bridge/StudioFader.cs" Link="Shared/StudioFader.cs" />
     <Compile Include="../../bridge/TransitionTrace.cs" Link="Shared/TransitionTrace.cs" />
+    <Compile Include="../../bridge/ConsoleQueue.cs" Link="Shared/ConsoleQueue.cs" />
     <Compile Include="../../bridge/VjsterLink.cs" Link="Shared/VjsterLink.cs" />
     <Compile Include="../../bridge/VjsterDesk.cs" Link="Shared/VjsterDesk.cs" />
     <Compile Include="../../bridge/VjsterSelfTests.cs" Link="Tests/VjsterSelfTests.cs" />

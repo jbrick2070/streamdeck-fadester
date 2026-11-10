@@ -92,7 +92,7 @@ internal static class GamepadSelfTests
         reader.Step(Pad(), 900);
         (acts, _) = reader.Step(Pad(lt: 0.6), 1000); Check(acts.SequenceEqual(["music.duck"]), "left trigger past half ducks Music");
         (acts, _) = reader.Step(Pad(lt: 0.3), 1010); Check(acts.Count == 0, "between the thresholds nothing changes");
-        (acts, _) = reader.Step(Pad(lt: 0.1), 1020); Check(acts.SequenceEqual(["music.restore"]), "released, it restores Music");
+        (acts, _) = reader.Step(Pad(lt: 0.1), 1020); Check(acts.SequenceEqual([PadControls.Release("music.restore")]), "released, it restores Music, tagged as a release");
         (acts, _) = reader.Step(Pad(ly: 0.9), 2000); Check(acts.SequenceEqual(["layer2.opacity.up"]), "left stick up rides Layer 2 opacity");
         (acts, _) = reader.Step(Pad(ly: 0.9), 2100); Check(acts.Count == 0, "no repeat before 200 ms");
         (acts, _) = reader.Step(Pad(ly: 0.9), 2200); Check(acts.SequenceEqual(["layer2.opacity.up"]), "it repeats while held");
@@ -113,9 +113,36 @@ internal static class GamepadSelfTests
         reader = new PadReader(PadControls.Build(null)); reader.Step(Pad(), 0);
         reader.Step(Pad(lt: 0.8, rt: 0.5), 10);
         (acts, t) = reader.Step(PadState.Disconnected, 20);
-        Check(acts.SequenceEqual(["music.restore"]) && t == 0, "a lost pad restores Music and cancels the throw");
+        Check(acts.SequenceEqual([PadControls.Release("music.restore")]) && t == 0, "a lost pad restores Music and cancels the throw");
         (acts, t) = reader.Step(PadState.Disconnected, 30);
         Check(acts.Count == 0 && t == null, "and says it once");
+
+        // Letting go of LT is never lost: it is tagged, and the dispatch loop runs it from its mailbox even when OBS was
+        // away or the loop was busy (Program.cs).
+        Check(PadControls.IsRelease(PadControls.Release("music.restore"), out var released) && released == "music.restore" &&
+            !PadControls.IsRelease("music.restore", out var plain) && plain == "music.restore", "a release is tagged, and the tag comes off again");
+        var releases = new ReleaseMailbox();
+        Check(releases.Take(leftHeld: false) == null, "an empty mailbox runs nothing");
+        releases.Post("music.restore");
+        Check(releases.Take(leftHeld: false) == "music.restore" && releases.Take(leftHeld: false) == null, "a release waits until it runs, then runs once");
+        releases.Post("music.restore"); releases.Post("mix.restore");
+        Check(releases.Take(leftHeld: false) == "mix.restore", "only the newest release waits");
+        releases.Post("music.restore");
+        Check(releases.Take(leftHeld: true) == null && releases.Take(leftHeld: false) == null, "a release that has not run when LT is held again is dropped");
+        releases.Post("music.restore"); var cut = releases.Take(leftHeld: false)!; releases.Return(cut);
+        Check(releases.Take(leftHeld: false) == "music.restore", "a release a dropped connection cut off waits again");
+        releases.Post("music.restore"); cut = releases.Take(leftHeld: false)!; releases.Post("mix.restore"); releases.Return(cut);
+        Check(releases.Take(leftHeld: false) == "mix.restore" && releases.Take(leftHeld: false) == null, "but never over a newer release");
+        releases.Post("music.restore"); cut = releases.Take(leftHeld: false)!; releases.Return(cut);
+        Check(releases.Take(leftHeld: true) == null, "and it is dropped too if LT is held again before it runs");
+        Check(ReleaseMailbox.CutOff(new IOException("OBS disconnected."), disconnected: false) &&
+            ReleaseMailbox.CutOff(new InvalidDataException("Invalid OBS packet."), disconnected: true) &&
+            !ReleaseMailbox.CutOff(new ObsError("GetInputVolume", 600, "No source was found"), disconnected: true) &&
+            !ReleaseMailbox.CutOff(new InvalidOperationException("Set music input in the control panel first."), disconnected: false),
+            "a release runs again only when the connection dropped, never after OBS refused it or a setting is missing");
+        reader = new PadReader(PadControls.Build(null)); reader.Step(Pad(), 0);
+        reader.Step(Pad(lt: 0.8), 10); Check(reader.LeftTriggerHeld, "the reader says when LT is held");
+        reader.Step(Pad(), 20); Check(!reader.LeftTriggerHeld, "and when it is let go");
 
         // The operator's own map.
         var map = PadControls.Build(new Dictionary<string, string> { ["y"] = "mix.fadeOut", ["X"] = "", ["LeftUp"] = "music.up" });
@@ -167,7 +194,7 @@ internal static class GamepadSelfTests
         Check(acts.Count == 0 && t == null, "a pad lost during a hold fires nothing");
         reader.Step(Pad(), 6000); reader.Step(Pad(lt: 0.8), 6100);
         (acts, _) = reader.Step(Pad(lt: 0.8), 6500); Check(acts.SequenceEqual(["take"]), "a guarded left trigger also needs the hold");
-        (acts, _) = reader.Step(Pad(), 6600); Check(acts.SequenceEqual(["music.restore"]), "and its release follows the accepted press");
+        (acts, _) = reader.Step(Pad(), 6600); Check(acts.SequenceEqual([PadControls.Release("music.restore")]), "and its release follows the accepted press");
         reader = new PadReader(PadControls.Build(new Dictionary<string, string> { ["Y"] = "mic.mute" }), easy: true); reader.Step(Pad(), 0);
         reader.Step(Pad(buttons: Mask("Y")), 100);
         (acts, _) = reader.Step(Pad(buttons: Mask("Y")), 500); Check(acts.Count == 0, "mic mute is not a 0.4 s action");

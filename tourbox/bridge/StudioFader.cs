@@ -26,6 +26,12 @@ public sealed class StudioFader
     internal sealed record Owed(string Borrowed, string Original, long At, bool Lent = false, Owed? Resume = null);
     private Owed? owed;
     private const double OwedForMs = 30_000;
+    // OBS counts a Cut as running about 1 s (measured on 33.0.1 with audio buffering at its 960 ms maximum) and drops
+    // every selection until it ends. A selection that may follow a transition (a put-back, or a Fade lent right after a
+    // cut) keeps being sent for well past that: 120 polls 25 ms apart, 3 s or more. A cut's own first selection keeps the
+    // shorter wait. The self-tests shorten ResendPolls where they run the whole wait on purpose.
+    private const int SelectPolls = 40;
+    internal int ResendPolls { get; init; } = 120;
     private int direction = 1;
     private long takeAt;
 
@@ -239,7 +245,7 @@ public sealed class StudioFader
         bool confirmed = false;
         try
         {
-            // Right after a cut OBS still drops selections for a moment: re-send until it takes it.
+            // Right after a cut OBS drops selections until the Cut ends (about 1 s): re-send until it takes it.
             await SelectTransitionAsync(original, fade, resend: true);
             confirmed = true;
             // Selecting takes a moment: nothing else may change meanwhile.
@@ -448,7 +454,8 @@ public sealed class StudioFader
     {
         await rpc("SetCurrentSceneTransition", new() { ["transitionName"] = to });
         // The OBS frontend queues the selection on its UI thread. The RPC can return first.
-        for (int attempt = 0; attempt < 40; attempt++)
+        int polls = resend ? ResendPolls : SelectPolls;
+        for (int attempt = 0; attempt < polls; attempt++)
         {
             var selected = await ReadTransitionNameAsync();
             if (selected == to) return;

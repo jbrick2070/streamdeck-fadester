@@ -11,7 +11,7 @@
   <Identity Name="Fluxxuuss.FadesterCompanion" Publisher="CN=AD3CC3A6-B1BD-42E3-837E-9A5147EE1AAE" Version="$VERSION$" ProcessorArchitecture="x64" />
   <Properties>
     <DisplayName>Fadester Companion</DisplayName>
-    <PublisherDisplayName>Fluxxuuss</PublisherDisplayName>
+    <PublisherDisplayName>Jeffrey A Brick</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
     <Description>Your game controller or TourBox as a hands-on vision mixer for OBS Studio.</Description>
   </Properties>

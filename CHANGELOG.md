@@ -4,7 +4,7 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 
 ## Unreleased
 
-- **Fadester Companion is on the Microsoft Store.** Install it from [its Store page](https://apps.microsoft.com/detail/9PN7D3P2X7F4), and Windows keeps it up to date. The README, the game controller guide and the VJster install page link to it.
+- **Fadester Companion is on the Microsoft Store.** Install it from [its Store page](https://apps.microsoft.com/detail/9PN7D3P2X7F4), and Windows keeps it up to date. The README, the VJster install page and the Companion and game controller guides link to it; the two guides open with a "Get it from Microsoft" badge.
 
 ## 0.11.0 - 2026-11-10
 

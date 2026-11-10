@@ -2,6 +2,8 @@
 
 Drive OBS from an Xbox controller (or any XInput-compatible pad): the right trigger is a real T-bar, the buttons cue and take scenes. It runs inside Fadester Companion on Windows, so you need no TourBox, Stream Deck or MIDI desk, and it keeps working while OBS is in front.
 
+<a href="https://apps.microsoft.com/detail/9PN7D3P2X7F4?mode=direct"><img src="https://get.microsoft.com/images/en-us%20dark.svg" alt="Get Fadester Companion from Microsoft" width="200"></a>
+
 ## First five minutes
 
 1. Plug in the controller (USB or Xbox Wireless). Windows needs no extra driver.

@@ -12,8 +12,8 @@ using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Web.Script.Serialization;
 using System.Windows.Forms;
-[assembly: System.Reflection.AssemblyTitle("OBS Fadester for TourBox")]
-[assembly: System.Reflection.AssemblyProduct("OBS Fadester for TourBox")]
+[assembly: System.Reflection.AssemblyTitle("Fadester Companion")]
+[assembly: System.Reflection.AssemblyProduct("Fadester Companion")]
 [assembly: System.Reflection.AssemblyCompany("Jeffrey Brick")]
 [assembly: System.Reflection.AssemblyVersion("0.1.0.0")]
 
@@ -83,14 +83,16 @@ namespace Fadester.TourBox {
     }
     internal PanelWindow(PanelText text) {
       this.text = text;
-      Text="OBS Fadester for TourBox"; ClientSize=new Size(780,700); MinimumSize=new Size(620,540);
+      Text="Fadester Companion"; ClientSize=new Size(780,700); MinimumSize=new Size(620,540);
+      // The window and taskbar show the exe's own icon, not WinForms' default one.
+      try { Icon=Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch (Exception e) { Entry.Log("icon: "+e.Message); }
       Font=new Font("Segoe UI",10); BackColor=Color.White; StartPosition=FormStartPosition.CenterScreen;
       var grid=new TableLayoutPanel {Dock=DockStyle.Fill,ColumnCount=1,RowCount=3, Padding=new Padding(14)};
       grid.RowStyles.Add(new RowStyle(SizeType.Absolute,82)); grid.RowStyles.Add(new RowStyle(SizeType.Percent,100)); grid.RowStyles.Add(new RowStyle(SizeType.Absolute,86));
       Controls.Add(grid);
       var head=new Panel {Dock=DockStyle.Fill,BackColor=navy,Padding=new Padding(12)};
-      head.Controls.Add(new Label {Text="OBS Fadester for TourBox",Location=new Point(14,7),Font=new Font("Segoe UI",17,FontStyle.Bold),ForeColor=Color.White,AutoSize=true});
-      state=new Label {Text=text.Get("lookingForObs"),Location=new Point(16,47),AutoEllipsis=true,ForeColor=Color.White, Width=680,Anchor=AnchorStyles.Left|AnchorStyles.Right|AnchorStyles.Top}; head.Controls.Add(state); grid.Controls.Add(head,0,0);
+      head.Controls.Add(new Label {Text="Fadester Companion",Location=new Point(14,7),Font=new Font("Segoe UI",17,FontStyle.Bold),ForeColor=Color.White,AutoSize=true});
+      state=new Label {Text=text.Get("lookingForObs"),Location=new Point(16,47),AutoEllipsis=true,UseMnemonic=false,ForeColor=Color.White, Width=680,Anchor=AnchorStyles.Left|AnchorStyles.Right|AnchorStyles.Top}; head.Controls.Add(state); grid.Controls.Add(head,0,0);
       head.ClientSizeChanged+=delegate { state.Width=Math.Max(1,head.ClientSize.Width-32); };
       var tabs=new TabControl {Dock=DockStyle.Fill}; grid.Controls.Add(tabs,0,1);
       body=Page(tabs,text.Get("setup")); Title(body,text.Get("importTitle")); Hint(body,text.Get("importHint"));

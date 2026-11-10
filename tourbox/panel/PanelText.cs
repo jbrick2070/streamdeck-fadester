@@ -16,10 +16,10 @@ namespace Fadester.TourBox {
     // bridge protocol values outside the catalog; placeholders hold runtime values.
     static readonly Dictionary<string, string[]> Messages = new Dictionary<string, string[]> {
       { "alreadyOpen", new[] {
-        "OBS Fadester for TourBox is already open. Check the taskbar.",
-        "OBS Fadester for TourBox ya está abierto. Comprueba la barra de tareas.",
-        "OBS Fadester for TourBox est déjà ouvert. Vérifiez la barre des tâches.",
-        "OBS Fadester for TourBox 已打开。请查看任务栏。" } },
+        "Fadester Companion is already open. Check the taskbar.",
+        "Fadester Companion ya está abierto. Comprueba la barra de tareas.",
+        "Fadester Companion est déjà ouvert. Vérifiez la barre des tâches.",
+        "Fadester Companion 已打开。请查看任务栏。" } },
       { "lookingForObs", new[] { "Looking for OBS on this PC…", "Buscando OBS en este equipo…", "Recherche d’OBS sur ce PC…", "正在此电脑上查找 OBS…" } },
       { "setup", new[] { "Setup", "Configuración", "Configuration", "设置" } },
       { "importTitle", new[] { "1   Import the preset", "1   Importa el preajuste", "1   Importer le préréglage", "1   导入预设" } },
@@ -90,7 +90,7 @@ namespace Fadester.TourBox {
       { "padRelease", new[] { "let go", "al soltar", "relâchement", "松开" } },
       { "speedFast", new[] { "Video speed: fast preset", "Velocidad del vídeo: rápida predefinida", "Vitesse vidéo : rapide prédéfinie", "视频速度：快速预设" } },
       { "speedSlow", new[] { "Video speed: slow preset", "Velocidad del vídeo: lenta predefinida", "Vitesse vidéo : lente prédéfinie", "视频速度：慢速预设" } },
-      { "padMapMissing", new[] { "The controller map file is missing, so the Game controller tab is off. Reinstall Fadester for TourBox.", "Falta el archivo del mapa del mando, así que la pestaña Mando de juego está desactivada. Reinstala Fadester for TourBox.", "Le fichier d’affectation de la manette est introuvable : l’onglet Manette de jeu est désactivé. Réinstallez Fadester for TourBox.", "缺少手柄映射文件，「游戏手柄」标签页已停用。请重新安装 Fadester for TourBox。" } },
+      { "padMapMissing", new[] { "The controller map file is missing, so the Game controller tab is off. Reinstall Fadester Companion.", "Falta el archivo del mapa del mando, así que la pestaña Mando de juego está desactivada. Reinstala Fadester Companion.", "Le fichier d’affectation de la manette est introuvable : l’onglet Manette de jeu est désactivé. Réinstallez Fadester Companion.", "缺少手柄映射文件，「游戏手柄」标签页已停用。请重新安装 Fadester Companion。" } },
       { "vjsterIdHint", new[] { "Leave empty to accept any VJster extension. The extension's options page shows its id.", "Déjalo vacío para aceptar cualquier extensión VJster. La página de opciones de la extensión muestra su id.", "Laissez vide pour accepter toute extension VJster. La page d’options de l’extension affiche son identifiant.", "留空则接受任何 VJster 扩展程序。扩展程序的选项页面会显示其 ID。" } },
       { "layersTitle", new[] { "VJ layers: blend modes and opacity", "Capas VJ: modos de fusión y opacidad", "Calques VJ : modes de fusion et opacité", "VJ 图层：混合模式与不透明度" } },
       { "layersHint", new[] { "Two sources in your mix scene. Hold Top and turn the Knob to cycle Layer 1's blend mode, Scroll for Layer 2's, and the Dial to ride Layer 2's opacity through a Color Correction filter (added when the source has none).", "Dos fuentes de tu escena de mezcla. Mantén Top y gira el mando para recorrer el modo de fusión de la capa 1, Scroll para la capa 2 y Dial para la opacidad de la capa 2 mediante un filtro de corrección de color (se añade si la fuente no tiene).", "Deux sources de votre scène de mixage. Maintenez Top et tournez le bouton pour faire défiler le mode de fusion du calque 1, Scroll pour le calque 2 et Dial pour l’opacité du calque 2 via un filtre de correction colorimétrique (ajouté si la source n’en a pas).", "混合场景中的两个来源。按住 Top 转动旋钮可循环切换图层 1 的混合模式，转动 Scroll 切换图层 2 的混合模式，转动 Dial 通过色彩校正滤镜调整图层 2 的不透明度（来源没有该滤镜时会自动添加）。" } },

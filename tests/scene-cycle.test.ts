@@ -42,6 +42,27 @@ describe("Scene mixer take on OBS 33.0.1, and the optional queue-next cycle", ()
     await new Promise((resolve) => setTimeout(resolve, 35));
   }
 
+  // Waits until the client has gone quiet: no directStateChanged for `quietMs` (at most `maxMs`). A take's own
+  // trailing events (the fake announces the new Preview after answering) can land after takeTbar resolves, later
+  // on a slow runner, and must not be counted as something a later event did.
+  async function quiet(quietMs = 80, maxMs = 400): Promise<void> {
+    let last = Date.now();
+    const seen = (): void => { last = Date.now(); };
+    client.on("directStateChanged", seen);
+    const start = Date.now();
+    try {
+      while (Date.now() - last < quietMs && Date.now() - start < maxMs) await new Promise((resolve) => setTimeout(resolve, 10));
+    } finally {
+      client.off("directStateChanged", seen);
+    }
+  }
+
+  // The client handles messages in the order they arrive, so an event the fake sent before this request's
+  // answer has been handled when it returns, however slow the machine.
+  async function roundTrip(): Promise<void> {
+    await client.sendObsRequest("GetStudioModeEnabled");
+  }
+
   afterEach(async () => {
     client?.stop();
     await server?.stop();
@@ -329,16 +350,19 @@ describe("Scene mixer take on OBS 33.0.1, and the optional queue-next cycle", ()
     await connect({ deferStudioModeEvents: true });
     await client.nudgeTbar(0.4);
     await client.takeTbar();
+    await quiet(); // well inside the take's grace for its own Studio Mode events (TBAR_STUDIO_EVENT_GRACE_MS)
     expect(client.getCatalog().currentPreviewScene).toBe("Scene Live");
     const states: boolean[] = [];
     client.on("directStateChanged", () => states.push(client.getCatalog().studioMode));
     server.flushStudioModeEvents();
+    await roundTrip();
     await settle();
     expect(states).toEqual([]);
     expect(client.getCatalog().studioMode).toBe(true);
     expect(client.getCatalog().currentPreviewScene).toBe("Scene Live");
     // A stray repeat of the known state later changes nothing either.
     server.emitObsEvent("StudioModeStateChanged", { studioModeEnabled: true });
+    await roundTrip();
     await settle();
     expect(states).toEqual([]);
     expect(client.getCatalog().currentPreviewScene).toBe("Scene Live");

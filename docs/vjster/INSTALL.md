@@ -13,7 +13,7 @@ VJster has three parts. The keys and dials (in Fadester for OBS, or in the VJste
 | `com.jbrick2070.vjster.streamDeckPlugin` | The VJster plugin for decks without Fadester for OBS, with the OBS page and four bundled profiles inside |
 | `vjster-chrome-extension-<version>.zip` | The Chrome extension for developers, to load unpacked (see below) |
 
-The Chrome extension is on the [Chrome Web Store](https://chromewebstore.google.com/detail/daohboebokfmamkblejcpbblfnaijgnb). The VJster plugin has no Elgato Marketplace listing. Fadester Companion (`tourbox/`) hosts the same link, so the extension also works from a TourBox without any deck software; see `tourbox/README.md`.
+The Chrome extension is on the [Chrome Web Store](https://chromewebstore.google.com/detail/daohboebokfmamkblejcpbblfnaijgnb). The VJster plugin has no Elgato Marketplace listing. Fadester Companion (`tourbox/`, on the [Microsoft Store](https://apps.microsoft.com/detail/9PN7D3P2X7F4)) hosts the same link, so the extension also works from a TourBox without any deck software; see `tourbox/README.md`.
 
 ## Install
 

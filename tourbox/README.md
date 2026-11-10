@@ -4,7 +4,7 @@ Fadester Companion lets you mix OBS Studio scenes on Windows with an Xbox or oth
 
 ## First five minutes (game controller)
 
-1. Install **Fadester Companion** from the Microsoft Store and open it from the Start menu. If you use the ZIP, extract all of it into a folder you want to keep and open **Fadester for TourBox.exe**.
+1. Install **Fadester Companion** from the [Microsoft Store](https://apps.microsoft.com/detail/9PN7D3P2X7F4) and open it from the Start menu. If you use the ZIP, extract all of it into a folder you want to keep and open **Fadester for TourBox.exe**.
 2. In OBS, open **Tools → WebSocket Server Settings**, turn on **Enable WebSocket server**, keep **Enable Authentication** on, and click **OK**. The companion connects by itself with the password OBS saved on this PC: the header says it is connected and how many scenes it found. If it names a problem instead, do what it says, then click **Read scenes and inputs from OBS**.
 3. On the **Setup** tab, tick **Use an Xbox or XInput game controller** (under **Game controller**, at the end of the tab) and keep **Easy mode** ticked. You do not need the TourBox steps.
 4. Click **Save & start controls**. The status line at the top says *Controls: on* and *Game controller: connected*. Keep the window open: closing it stops the controls.

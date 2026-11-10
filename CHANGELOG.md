@@ -2,6 +2,10 @@
 
 What changed in Fadester for OBS and, where it says so, in VJster. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are the plugin's own (`manifest.json`). There is no change control here: the newest entry is the version.
 
+## Unreleased
+
+- **Fadester Companion is on the Microsoft Store.** Install it from [its Store page](https://apps.microsoft.com/detail/9PN7D3P2X7F4), and Windows keeps it up to date. The README, the game controller guide and the VJster install page link to it.
+
 ## 0.11.0 - 2026-11-10
 
 - **Fadester Companion: clearer words in the app.** These changes reach Store users with the next package (0.1.2.0 or later).

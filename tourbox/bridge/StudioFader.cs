@@ -142,6 +142,56 @@ public sealed class StudioFader
         finally { serial.Release(); }
     }
 
+    /// <summary>
+    /// The game controller's take moves the T-bar like a hand would when OBS would play a Fade anyway: from where the
+    /// T-bar is to the end, over the Fade's Duration (the controller then drives <see cref="MoveToAsync"/>). Null means
+    /// OBS's own take instead: another transition or a scene override, an OBS version without T-bar support, the same
+    /// Preview as Program, a double press, or a fader that needs a Cancel first. The ordinary take then acts or says why.
+    /// </summary>
+    /// <param name="pressedAt">When the control was pressed (a Stopwatch timestamp), if known; see DispatchAsync.</param>
+    public async Task<(double From, int Ms)?> SlidePlanAsync(long pressedAt = 0)
+    {
+        await serial.WaitAsync();
+        try
+        {
+            if (needsReset || DoublePress(pressedAt) || !await VersionSupportedAsync()) return null;
+            // After a cut OBS can be back on Cut: put the operator's Fade back first, as any take does.
+            await RepayAsync();
+            var transition = await rpc("GetCurrentSceneTransition", null);
+            if (Field(transition, "transitionKind") != "fade_transition") return null;
+            double ms = Milliseconds(transition["transitionDuration"]);
+            if (sweep == null)
+            {
+                var scenes = await ReadScenesAsync();
+                if (scenes.Program == scenes.Preview) return null;
+                var sceneOverride = await rpc("GetSceneSceneTransitionOverride", new() { ["sceneUuid"] = scenes.Preview });
+                if (sceneOverride["transitionName"]?.GetValue<string>() is { Length: > 0 } name)
+                {
+                    if (name != Field(transition, "transitionName")) return null;
+                    // The same Fade as the Preview scene's override: OBS's own take would run for the override's Duration.
+                    if (Milliseconds(sceneOverride["transitionDuration"]) is > 0 and var own) ms = own;
+                }
+            }
+            // A fixed-length transition has no Duration; a Fade always has one.
+            if (!double.IsFinite(ms) || ms <= 0) return null;
+            return (Position, (int)Math.Ceiling(ms * (1 - Position)));
+        }
+        finally { serial.Release(); }
+    }
+
+    private static double Milliseconds(JsonNode? node) =>
+        node is not JsonValue value ? 0 : value.TryGetValue<double>(out var d) ? d : value.TryGetValue<int>(out var i) ? i : 0;
+
+    /// <summary>A second take within 450 ms of the last, or one pressed before the last went out.</summary>
+    private bool DoublePress(long pressedAt) =>
+        takeAt != 0 && Stopwatch.GetElapsedTime(takeAt, pressedAt != 0 ? pressedAt : Stopwatch.GetTimestamp()).TotalMilliseconds < 450;
+
+    private async Task<bool> VersionSupportedAsync()
+    {
+        if (!supportedVersion) supportedVersion = Field(await rpc("GetVersion", null), "obsVersion") is "33.0.0" or "33.0.1";
+        return supportedVersion;
+    }
+
     /// <param name="pressedAt">When the control was pressed (a Stopwatch timestamp), if known. A take or cut pressed while an
     /// earlier one still waited for OBS is then caught as a double press, though it runs only afterwards.</param>
     public async Task DispatchAsync(string action, long pressedAt = 0)
@@ -169,7 +219,7 @@ public sealed class StudioFader
                 case "take": case "take.cut":
                     // A second take within 450 ms of the last is a double press, and so is one pressed before the last
                     // went out (a cut can wait about 1 s for OBS). Measured from the press when it is known.
-                    if (takeAt != 0 && Stopwatch.GetElapsedTime(takeAt, pressedAt != 0 ? pressedAt : Stopwatch.GetTimestamp()).TotalMilliseconds < 450) return;
+                    if (DoublePress(pressedAt)) return;
                     if (sweep != null) await FinishAndReturnAsync();
                     else await TakeAsync(action == "take.cut");
                     break;
@@ -275,13 +325,8 @@ public sealed class StudioFader
         if (next == Position) return; // Repeated ticks towards a parked rail cannot start a second take.
         if (sweep == null)
         {
-            if (!supportedVersion)
-            {
-                string version = Field(await rpc("GetVersion", null), "obsVersion");
-                if (version != "33.0.0" && version != "33.0.1")
-                    throw new InvalidOperationException("Manual T-bar support is verified for OBS 33.0.0/33.0.1. Use the ordinary Take with this OBS version.");
-                supportedVersion = true;
-            }
+            if (!await VersionSupportedAsync())
+                throw new InvalidOperationException("Manual T-bar support is verified for OBS 33.0.0/33.0.1. Use the ordinary Take with this OBS version.");
             var scenes = await ReadScenesAsync();
             if (scenes.Program == scenes.Preview) throw new InvalidOperationException("Choose a different Preview scene first.");
             await RequireIdleAsync();

@@ -48,6 +48,9 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
         return target >= 1 ? "Controller T-bar: take" : target <= 0 && moving ? "Controller T-bar: back to Program" : "";
     }
 
+    /** The game controller's take: how to move the T-bar for it, or null for OBS's own take (StudioFader.SlidePlanAsync). */
+    public Task<(double From, int Ms)?> SlidePlan(long pressedAt = 0) => fader.SlidePlanAsync(pressedAt);
+
     /// <param name="pressedAt">When the control was pressed (a Stopwatch timestamp), if known; see StudioFader.DispatchAsync.</param>
     public async Task<string> Dispatch(string id, long pressedAt = 0)
     {

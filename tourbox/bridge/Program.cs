@@ -8,6 +8,9 @@ namespace Fadester.TourBox;
 
 internal static class Program
 {
+    /** The game controller's take, queued under its own name: it may slide the T-bar (see Listen). Not a mappable action. */
+    private const string PadTake = "pad.take";
+
     static string DefaultMap()
     {
         var packaged = Path.Combine(AppContext.BaseDirectory, "presets", "map.json");
@@ -131,7 +134,8 @@ internal static class Program
                 }
                 toldPadOffline = false;
             }
-            Enqueue(action);
+            // The controller's take slides OBS's T-bar when it can (PadTake below), so the operator sees it move.
+            Enqueue(action == "take" ? PadTake : action);
         }
         bool padOn = cfg.GamepadEnabled && bindings.Count > 0;
         var padMap = padOn ? PadControls.Build(cfg.GamepadMap) : null;
@@ -227,6 +231,29 @@ internal static class Program
                             if (KeyGuards.IsStrayFaderTick(ev.Action, lastHeldTurn, ev.Timestamp)) { Console.WriteLine("Ignored a T-bar tick right after a held Dial turn: was the button still held?"); continue; }
                             if (KeyGuards.IsHeldDialTurn(ev.Action)) lastHeldTurn = ev.Timestamp;
                             if (ev.Action == "bridge.reconnect") { Console.WriteLine("Reconnecting."); break; }
+                            if (ev.Action == PadTake)
+                            {
+                                // When OBS would play a Fade, the pad slides the T-bar over its Duration like the trigger,
+                                // and its last step takes. Anything else is OBS's own take, as from any other surface.
+                                bool slid = false;
+                                try
+                                {
+                                    if (await desk.SlidePlan(ev.Timestamp) is { } slide)
+                                    {
+                                        tbarMail.Slide(slide.From, slide.Ms); slid = true;
+                                        Console.WriteLine($"Controller: take with the T-bar ({slide.Ms} ms)");
+                                    }
+                                    else Console.WriteLine(await desk.Dispatch("take", ev.Timestamp));
+                                }
+                                catch (Exception e)
+                                {
+                                    Console.WriteLine("Action take: " + e.Message);
+                                    // The press already stopped a slide or throw in progress: leave nothing half thrown.
+                                    try { await desk.CancelOwnedAsync(); } catch (Exception c) { Console.WriteLine("Could not cancel T-bar: " + c.Message); }
+                                }
+                                if (!slid) tbarMail.Fail();
+                                continue;
+                            }
                             try { Console.WriteLine(await desk.Dispatch(ev.Action, ev.Timestamp)); }
                             catch (Exception e) { Console.WriteLine("Action " + ev.Action + ": " + e.Message); }
                             // A take, cancel or dial move from any surface owns the T-bar now: a trigger held meanwhile

@@ -10,6 +10,8 @@ internal static class StudioFaderSelfTests
     private sealed class Obs
     {
         public string Program = "a", Preview = "b", Transition = "Fondu", Version = "33.0.1";
+        public int Duration = 300;
+        public int? OverrideDuration;
         public string? Override, Origin;
         public bool Studio = true, LoseLeaveReply, RejectTrigger, IgnoreModeWrite;
         public double Cursor, Slider;
@@ -51,7 +53,9 @@ internal static class StudioFaderSelfTests
                 case "GetCurrentProgramScene": result["sceneUuid"] = Program; break;
                 case "GetCurrentSceneTransitionCursor": result["transitionCursor"] = Cursor; break;
                 case "GetVersion": result["obsVersion"] = Version; break;
-                case "GetSceneSceneTransitionOverride": result["transitionName"] = Override; break;
+                case "GetSceneSceneTransitionOverride":
+                    result["transitionName"] = Override;
+                    result["transitionDuration"] = OverrideDuration is int own ? JsonValue.Create(own) : null; break;
                 case "GetCurrentSceneTransition":
                     if (queuedTransitions.Count > 0 && readsRemaining-- == 0)
                     {
@@ -59,7 +63,8 @@ internal static class StudioFaderSelfTests
                         readsRemaining = StaleTransitionReads;
                     }
                     result["transitionName"] = Transition; result["transitionUuid"] = Transition + "-id";
-                    result["transitionKind"] = Kind(Transition); break;
+                    result["transitionKind"] = Kind(Transition);
+                    result["transitionDuration"] = Kind(Transition) == "cut_transition" ? null : JsonValue.Create(Duration); break;
                 case "GetSceneTransitionList":
                     result["currentSceneTransitionName"] = Transition;
                     result["transitions"] = new JsonArray(Listed.Select(name => (JsonNode)new JsonObject { ["transitionName"] = name, ["transitionKind"] = Kind(name) }).ToArray());
@@ -649,5 +654,40 @@ internal static class StudioFaderSelfTests
             action == "SetTBarPosition" ? Task.FromResult(new JsonObject()) : obs.Call(action, data));
         await Blocked(() => fader.DispatchAsync("fader.cancel"));
         Check(obs.Cursor == 0.35, "a T-bar that will not release says so");
+
+        // The game controller's take slides the T-bar when OBS would play a Fade anyway, over that Fade's Duration.
+        obs = new(); fader = new(obs.Call);
+        Check(await fader.SlidePlanAsync() is { From: 0, Ms: 300 }, "with Fade selected the controller's take slides over its Duration");
+        obs.Duration = 1200;
+        Check(await fader.SlidePlanAsync() is { Ms: 1200 } && obs.Writes.Count == 0, "a longer Duration is a slower slide, and planning changes nothing in OBS");
+        obs.Transition = "Coupe";
+        Check(await fader.SlidePlanAsync() == null, "with Cut selected it is OBS's own take, a cut");
+        obs.Transition = "Stinger";
+        Check(await fader.SlidePlanAsync() == null, "with a Stinger selected it is OBS's own take");
+        obs.Transition = "Fondu"; obs.Override = "Stinger";
+        Check(await fader.SlidePlanAsync() == null, "a Preview scene with its own transition is OBS's own take");
+        obs.Override = "Fondu"; obs.OverrideDuration = 2000;
+        Check(await fader.SlidePlanAsync() is { Ms: 2000 }, "an override with the same Fade slides over the override's own Duration, as OBS's take would");
+        obs.Override = null; obs.OverrideDuration = null; obs.Preview = obs.Program;
+        Check(await fader.SlidePlanAsync() == null, "nothing to slide to when Preview is Program");
+        obs = new(); fader = new(obs.Call); await fader.MoveToAsync(0.4);
+        obs.Preview = "c"; await Blocked(() => fader.MoveToAsync(0.5));
+        Check(await fader.SlidePlanAsync() == null, "a fader that needs a Cancel first is OBS's own take, which says so");
+        await Blocked(() => fader.DispatchAsync("take"));
+        obs = new(){Version="32.0.3"}; fader = new(obs.Call);
+        Check(await fader.SlidePlanAsync() == null, "an OBS without T-bar support is OBS's own take");
+        obs = new(); fader = new(obs.Call, 0.25); await fader.DispatchAsync("fader.forward");
+        Check(await fader.SlidePlanAsync() is { From: 0.25, Ms: 225 }, "a take during a throw slides on from where the T-bar is, for the rest of the Duration");
+        // The slide itself is the trigger's path: steps, then the end takes.
+        obs = new(); fader = new(obs.Call);
+        foreach (var step in new[] { 0.01, 0.34, 0.67, 0.99, 1 }) await fader.MoveToAsync(step);
+        Check(obs.Program == "b" && obs.Preview == "a" && obs.Commits == 1 && obs.Takes == 0 && fader.Position == 0, "a slide's last step takes once");
+        Check(await fader.SlidePlanAsync(Stopwatch.GetTimestamp()) == null, "a take pressed right after the slide ended is a double press");
+        obs = new(){Transition="Coupe"}; fader = new(obs.Call); await fader.DispatchAsync("take.cut");
+        await Task.Delay(500);
+        Check(await fader.SlidePlanAsync() == null && obs.Transition == "Coupe", "after a cut with Cut selected the take stays OBS's own");
+        obs = new(); fader = new(obs.Call); await fader.DispatchAsync("take.cut");
+        await Task.Delay(500); obs.Transition = "Coupe"; // OBS went back to Cut after the cut
+        Check(await fader.SlidePlanAsync() is { Ms: 300 } && obs.Transition == "Fondu", "OBS back on Cut after a cut: the Fade goes back first, then the take slides");
     }
 }

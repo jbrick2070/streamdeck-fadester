@@ -47,6 +47,23 @@ internal static class GamepadSelfTests
         tbar = new PadTbar(); tbar.Next(0); tbar.Next(0.4); tbar.Disarm();
         Check(tbar.Next(0.5) == null && tbar.Next(0) == null && tbar.Next(0.5) is > 0 and < 1, "after a refusal the trigger must return to rest first");
 
+        // A take that slides the T-bar over the Fade's Duration, like a hand.
+        var slide = new PadTbar(); slide.Next(0, 0);
+        slide.Slide(0, 300, 1000);
+        Check(slide.Sliding && slide.Next(0, 1000) == 0.01, "a slide starts at once, just off Program");
+        Check(slide.Next(0.8, 1150) == 0.5, "halfway through the time it is halfway, whatever the trigger does");
+        Check(slide.Next(0, 1150) == null, "the same position is not sent twice");
+        Check(slide.Next(1.0, 1299) == 0.99, "full trigger travel does not take early");
+        Check(slide.Next(0, 1300) == 1 && !slide.Sliding, "at the Duration it takes");
+        Check(slide.Next(0.5, 1400) == null && slide.Next(0, 1500) == null && slide.Next(0.5, 1600) is > 0 and < 1,
+            "after a slide the trigger must be back at rest before it throws");
+        slide = new PadTbar(); slide.Slide(0.6, 200, 0);
+        Check(slide.Next(0, 0) == 0.6 && slide.Next(0, 100) == 0.8 && slide.Next(0, 200) == 1, "a slide from part-way goes on from there");
+        slide = new PadTbar(); slide.Slide(0, 300, 0); slide.Next(0, 0); slide.Disarm();
+        Check(slide.Next(0, 100) == null && slide.Next(0, 400) == null, "a cancel or cue stops a slide");
+        slide = new PadTbar(); slide.Slide(0, 300, 0); slide.Next(0, 0);
+        Check(slide.Lost() == 0, "losing the pad mid-slide goes back to Program");
+
         // Buttons, the left trigger and the sticks.
         var reader = new PadReader(PadControls.Build(null));
         var (acts, t) = reader.Step(Pad(buttons: Mask("A"), lt: 0.9, rx: 0.9), 0);
@@ -207,6 +224,16 @@ internal static class GamepadSelfTests
         Check(mail.ConsumeFailure() && !mail.ConsumeFailure(), "a failure is reported to the pad once");
         Check(mail.Post(1) && !mail.Post(0.3, out bool dropped) && dropped, "a value refused behind a pending take is reported as dropped");
         mail.Take();
+        mail.Slide(0, 300);
+        Check(mail.TakeSlide() is { From: 0, Ms: 300 } && mail.TakeSlide() == null, "a slide request reaches the pad once");
+        mail.Slide(0, 300); mail.Fail();
+        Check(mail.TakeSlide() == null && mail.ConsumeFailure(), "a failure after a slide request cancels it");
+        // A Preview cue during a slide stops it, like a throw.
+        reader = new PadReader(PadControls.Build(null)); reader.Step(Pad(), 0);
+        reader.Tbar.Slide(0, 300, 10);
+        (_, t) = reader.Step(Pad(rt: 0.9), 10); Check(t == 0.01, "the slide moves on the pad's own clock and ignores the trigger");
+        (acts, t) = reader.Step(Pad(buttons: Mask("DpadRight")), 100);
+        Check(acts.SequenceEqual(["preview.next"]) && t == null && !reader.Tbar.Sliding, "a Preview cue during a slide stops it");
         var resend = new PadTbar(); resend.Next(0); resend.Next(0.5);
         Check(resend.Next(0.5) == null, "an unchanged trigger sends nothing");
         resend.Resend();

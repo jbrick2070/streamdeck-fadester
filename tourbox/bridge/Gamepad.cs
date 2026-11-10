@@ -149,19 +149,39 @@ internal static class PadControls
 /// <summary>
 /// The right trigger as a spring-loaded T-bar. It arms only from rest, takes at full travel and then stays disarmed until the
 /// trigger is back at rest, so the spring's return never starts a throw back. A pull released before the end cancels.
+/// A take button can also slide it to the end over a set time (<see cref="Slide"/>), as a hand on a real T-bar would.
 /// </summary>
 internal sealed class PadTbar
 {
     public const double Rest = 0.03, Full = 0.97;
-    private enum Phase { Disarmed, Armed, Throwing }
+    private enum Phase { Disarmed, Armed, Throwing, Sliding }
     private Phase phase = Phase.Disarmed;
-    private double sent;
+    private double sent, slideFrom;
+    private long slideStart;
+    private int slideMs;
 
     public bool Throwing => phase == Phase.Throwing;
+    public bool Sliding => phase == Phase.Sliding;
+
+    /**
+     * Slides from where the T-bar is to the end over the given time, starting now, then takes. The trigger is ignored
+     * meanwhile. A cancel, cue, take or refusal stops the slide like a throw (Disarm), and afterwards the trigger must be
+     * back at rest before it throws.
+     */
+    public void Slide(double from, int ms, long nowMs)
+    {
+        phase = Phase.Sliding; slideFrom = Math.Clamp(from, 0, 0.99); slideStart = nowMs; slideMs = Math.Max(1, ms); sent = 0;
+    }
 
     /** The T-bar position to move to (0 cancels, 1 takes), or null for no change. */
-    public double? Next(double trigger)
+    public double? Next(double trigger, long nowMs = 0)
     {
+        if (phase == Phase.Sliding)
+        {
+            long elapsed = nowMs - slideStart;
+            if (elapsed >= slideMs) { phase = Phase.Disarmed; sent = 0; return 1; }
+            return Send(slideFrom + (1 - slideFrom) * elapsed / slideMs);
+        }
         if (phase == Phase.Disarmed)
         {
             if (trigger <= Rest) phase = Phase.Armed;
@@ -174,15 +194,20 @@ internal sealed class PadTbar
         }
         if (trigger >= Full) { phase = Phase.Disarmed; sent = 0; return 1; }
         if (trigger <= Rest) { phase = Phase.Armed; sent = 0; return 0; }
+        return Send((trigger - Rest) / (Full - Rest));
+    }
+
+    private double? Send(double position)
+    {
         // 0 and 1 are reserved for cancel and take, so a throw in progress stays strictly between them.
-        double target = Math.Round(Math.Clamp((trigger - Rest) / (Full - Rest), 0.01, 0.99), 2);
+        double target = Math.Round(Math.Clamp(position, 0.01, 0.99), 2);
         if (Math.Abs(target - sent) < 0.01) return null;
         sent = target;
         return target;
     }
 
-    /** The pad went away: cancel a throw in progress, then wait for rest. */
-    public double? Lost() { bool was = phase == Phase.Throwing; Disarm(); return was ? 0 : null; }
+    /** The pad went away: cancel a throw or slide in progress, then wait for rest. */
+    public double? Lost() { bool was = phase is Phase.Throwing or Phase.Sliding; Disarm(); return was ? 0 : null; }
 
     /** A take or cancel came from a button, or OBS refused the throw: ignore the trigger until it is back at rest. */
     public void Disarm() { phase = Phase.Disarmed; sent = 0; }
@@ -235,7 +260,7 @@ internal sealed class PadReader(IReadOnlyDictionary<string, string> map, bool ea
             shiftHeld = shiftLayer && (s.Buttons & shiftMask) != 0;
             leftBlocked = s.LeftTrigger / 255.0 > LeftTriggerRelease;
             foreach (var stick in Sticks) if (Deflected(s, stick)) stickAxis[stick] = 'B';
-            return (actions, Tbar.Next(s.RightTrigger / 255.0));
+            return (actions, Tbar.Next(s.RightTrigger / 255.0, nowMs));
         }
         bool shiftNow = shiftLayer && (s.Buttons & shiftMask) != 0;
         if (shiftNow != shiftHeld)
@@ -268,7 +293,7 @@ internal sealed class PadReader(IReadOnlyDictionary<string, string> map, bool ea
         Stick("Left", s.LeftX / 32767.0, s.LeftY / 32767.0, nowMs, actions);
         Stick("Right", s.RightX / 32767.0, s.RightY / 32767.0, nowMs, actions);
         last = s;
-        return (actions, Tbar.Next(s.RightTrigger / 255.0));
+        return (actions, Tbar.Next(s.RightTrigger / 255.0, nowMs));
     }
 
     private string Key(string control) => shiftHeld ? PadControls.ShiftPrefix + control : control;
@@ -359,6 +384,11 @@ internal sealed class TbarMailbox
     private readonly object gate = new();
     private double? target;
     private bool pending, failed;
+    private (double From, int Ms)? slide;
+
+    /** The dispatch loop asks the pad to take by sliding the T-bar (PadTbar.Slide). A failure posted after it cancels it. */
+    public void Slide(double from, int ms) { lock (gate) slide = (from, ms); }
+    public (double From, int Ms)? TakeSlide() { lock (gate) { var s = slide; slide = null; return s; } }
 
     /** True when the caller must queue a marker for the dispatch loop. Dropped: the value was not kept, so send it again. */
     public bool Post(double value) => Post(value, out _);
@@ -380,7 +410,7 @@ internal sealed class TbarMailbox
     }
 
     public double? Take() { lock (gate) { pending = false; var t = target; target = null; return t; } }
-    public void Fail() { lock (gate) { failed = true; target = null; } }
+    public void Fail() { lock (gate) { failed = true; target = null; slide = null; } }
     public bool ConsumeFailure() { lock (gate) { var f = failed; failed = false; return f; } }
 }
 
@@ -406,8 +436,10 @@ internal sealed class GamepadLoop(IPadSource source, PadReader reader, TbarMailb
                     connected = s.Connected;
                     log(connected ? "Game controller connected." : "Game controller disconnected.");
                 }
+                long now = Environment.TickCount64;
                 if (mailbox.ConsumeFailure()) reader.Tbar.Disarm();
-                var (actions, tbar) = reader.Step(s, Environment.TickCount64);
+                if (mailbox.TakeSlide() is { } slide) reader.Tbar.Slide(slide.From, slide.Ms, now);
+                var (actions, tbar) = reader.Step(s, now);
                 foreach (var note in reader.Notes) log(note);
                 reader.Notes.Clear();
                 foreach (var action in actions) enqueue(action);

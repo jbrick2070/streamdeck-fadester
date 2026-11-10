@@ -10,14 +10,14 @@ Drive OBS from an Xbox controller (or any XInput-compatible pad): the right trig
 4. Press **Save & start controls** and keep the companion window open (minimised is fine; closing it stops the controls). The **Activity** tab says *Game controller connected.*
 5. In OBS 33.0.0 or 33.0.1, with the main window open, turn on **Studio Mode**, select the **Fade** transition, and choose a different scene for Preview.
 6. Pull the right trigger halfway: OBS's T-bar follows. Let go: it goes back. Pull it all the way: Preview goes to Program.
-7. Press D-pad right to cue the next scene, then hold **A**: it takes as soon as you have held it for 0.4 s (easy mode). Like OBS's **Transition** button, A plays the transition selected in OBS's **Scene Transitions** dock, at the **Duration** set there, and OBS's T-bar does not move. Only the right trigger moves the T-bar.
+7. Press D-pad right to cue the next scene, then hold **A**. As soon as you have held it for 0.4 s (easy mode), OBS's T-bar slides across and takes, as if a hand pushed it, over the **Duration** set in OBS's **Scene Transitions** dock. Set a longer Duration there for a slower slide.
 
 ## The controls
 
 | Control | Does |
 |---|---|
 | Right trigger | **T-bar.** Pull to mix, all the way to take, let go before the end to go back to Program. |
-| A | Take (the selected transition) · hold |
+| A | Take · hold. With a Fade selected in OBS, the T-bar slides across over the Fade's **Duration**; with Cut or another transition, OBS plays that one and the T-bar stays put |
 | B | Cut · hold |
 | D-pad left / right | Previous / next scene into Preview |
 | D-pad up / down | Music up / down one step |
@@ -52,7 +52,9 @@ The action fires the moment the hold is long enough, not when you let go. On a b
 
 - The trigger only starts a manual fade (a throw) from rest. A trigger that is already pulled when the controller connects, when OBS reconnects, or after a take, cut, cancel, Preview cue or T-bar step from the controller or the TourBox does nothing until you let it go. (A take made in OBS itself or from a Stream Deck is not seen by the companion: let go of the trigger before taking there.)
 - After a take the spring brings the trigger back without throwing back.
-- If the controller is unplugged in the middle of a throw, the throw goes back to Program.
+- A take slides the T-bar only when OBS would play a Fade anyway: a Fade selected in the **Scene Transitions** dock and no other transition override on the Preview scene. Otherwise it is OBS's own take, like OBS's **Transition** button, and the T-bar stays put. Any control you set to **Take** does the same. Takes from the TourBox, a Stream Deck or OBS itself do not slide the T-bar.
+- While a take slides the T-bar, the right trigger does nothing. **View** (Cancel) or a Preview cue stops the slide and goes back to Program, and a T-bar step stops it where the step puts it. **B** finishes it at once, and pressing **A** again lets it carry on.
+- If the controller is unplugged in the middle of a throw or a slide, it goes back to Program.
 - A cut (**B**) borrows OBS's Cut transition and puts your transition back. OBS will not change transition until the last one has finished, which can be about a second after the picture is done, so a cut right after a take, or a take right after a cut, can wait up to a second before it goes out; a take pressed right after a cut then fades. Pressing take or cut again before the first has gone out counts as a double press and does nothing. OBS sometimes switches back to Cut as the cut ends, so for 30 s after a cut the companion checks before each take, cut, T-bar move or Cancel and puts your transition back if OBS is on Cut. If you want Cut selected in OBS yourself, wait 30 s after a cut from the controller or the TourBox before choosing it.
 - Letting the trigger spring back before the end returns to Program at once: the picture snaps back. Easing it back with your finger eases the mix back.
 - The T-bar needs OBS 33.0.0 or 33.0.1 with its main window open, Studio Mode and a Preview different from Program. It always mixes with a Fade: with Cut or another transition selected in OBS, it selects a Fade for the throw and puts yours back when you let go or take. A transition override on the Preview scene must be that Fade or none. If something is missing before the T-bar moves, the **Activity** tab says what, and letting go of the trigger is enough. If a throw is interrupted, or the **Activity** tab asks you to cancel or reset the fader, press **View**.

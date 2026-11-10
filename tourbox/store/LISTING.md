@@ -62,6 +62,6 @@ Fadester Companion controls OBS Studio, which must run on the same PC. To test:
 
 Without OBS running, the app opens and says it is looking for OBS; the controls do nothing. No account or sign-in is needed, and the app makes no internet connection.
 
-## Restricted capability: runFullTrust (justification)
+## Restricted capability: runFullTrust (justification, 500 characters at most)
 
-Fadester Companion is a Win32 desktop app packaged as MSIX. It runs a background process that reads the game controller through XInput while other apps are in front, registers global hotkeys for the TourBox, and drives OBS Studio's T-bar through a helper process. These need full trust.
+Fadester Companion is a Win32 desktop app (.NET WinForms panel, .NET 8 background process, small C++ helper) packaged as MSIX. Full trust lets it read an Xbox/XInput controller while OBS Studio is in front, register global hotkeys for a TourBox, drive OBS Studio's T-bar through a helper that moves OBS's own slider, and connect to OBS's WebSocket server on the same PC. No internet connection, no data collected. Source: https://github.com/jbrick2070/streamdeck-fadester

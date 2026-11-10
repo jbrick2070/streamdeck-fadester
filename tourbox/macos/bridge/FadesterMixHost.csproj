@@ -11,6 +11,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
+    <Compile Include="../../bridge/ActionNames.cs" Link="Shared/ActionNames.cs" />
     <Compile Include="../../bridge/AudioDesk.cs" Link="Shared/AudioDesk.cs" />
     <Compile Include="../../bridge/BridgeConfig.cs" Link="Shared/BridgeConfig.cs" />
     <Compile Include="../../bridge/Gamepad.cs" Link="Shared/Gamepad.cs" />

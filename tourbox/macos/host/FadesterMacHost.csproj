@@ -16,6 +16,7 @@
     <Compile Include="HostSelfTests.cs" />
     <Compile Include="../native/MacNativeTBar.cs" Link="Native/MacNativeTBar.cs" />
     <Compile Include="../input/MacShortcutInput.cs" Link="Input/MacShortcutInput.cs" />
+    <Compile Include="../../bridge/ActionNames.cs" Link="Shared/ActionNames.cs" />
     <Compile Include="../../bridge/AudioDesk.cs" Link="Shared/AudioDesk.cs" />
     <Compile Include="../../bridge/BridgeConfig.cs" Link="Shared/BridgeConfig.cs" />
     <Compile Include="../../bridge/DeskActions.cs" Link="Shared/DeskActions.cs" />

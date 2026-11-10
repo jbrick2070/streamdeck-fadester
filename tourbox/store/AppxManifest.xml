@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Microsoft Store package of the companion, as Fadester Companion. make-msix.ps1 fills in the version.
+     Identity and publisher come from Partner Center (Product identity); they must stay exactly as reserved there.
+     Only en-us is declared: Partner Center asks for a Store listing in every language a package declares. The panel
+     still follows the Windows display language by itself. -->
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap rescap">
+  <Identity Name="Fluxxuuss.FadesterCompanion" Publisher="CN=AD3CC3A6-B1BD-42E3-837E-9A5147EE1AAE" Version="$VERSION$" ProcessorArchitecture="x64" />
+  <Properties>
+    <DisplayName>Fadester Companion</DisplayName>
+    <PublisherDisplayName>Fluxxuuss</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+    <Description>Your game controller or TourBox as a hands-on vision mixer for OBS Studio.</Description>
+  </Properties>
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+  <Resources>
+    <Resource Language="en-us" />
+  </Resources>
+  <Applications>
+    <Application Id="App" Executable="Fadester for TourBox.exe" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements DisplayName="Fadester Companion" Description="Your game controller or TourBox as a hands-on vision mixer for OBS Studio."
+        BackgroundColor="transparent" Square150x150Logo="Assets\Square150x150Logo.png" Square44x44Logo="Assets\Square44x44Logo.png" />
+    </Application>
+  </Applications>
+  <Capabilities>
+    <!-- A Win32 desktop app: the companion reads the game controller and global hotkeys while other apps are in front,
+         and drives OBS's T-bar through a helper process. -->
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+</Package>

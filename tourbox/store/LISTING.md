@@ -36,7 +36,7 @@ First release in the Microsoft Store.
 
 ## Search terms
 
-OBS · T-bar · vision mixer · game controller · Xbox controller · TourBox · live streaming
+OBS · VJ · vision mixer · game controller · Xbox controller · TourBox · live streaming
 
 ## Additional system requirements
 

@@ -16,13 +16,19 @@
       p.callout { margin: 0 0 1rem; padding: 0.6rem 0.8rem; border-radius: 8px; background: rgba(127, 127, 127, 0.12); }
       p.callout a { margin-right: 1rem; }
       #status { margin-top: 1.25rem; min-height: 1.5em; font-weight: 600; }
+      #link-status { margin: 0 0 1rem; font-weight: 600; }
+      #link-status:empty { display: none; }
+      #link-status.up { color: #1a7f37; }
+      #link-status.down { color: #c62828; }
+      @media (prefers-color-scheme: dark) { #link-status.up { color: #3fb950; } #link-status.down { color: #ff7b72; } }
     </style>
   </head>
   <body>
     <h1>VJster</h1>
+    <p id="link-status" role="status"></p>
 
     <p class="callout">
-      <span data-i18n="companionNote">VJster needs a free companion on this computer: the VJster plugin for Stream Deck or OpenDeck, or Fadester for TourBox. On its own, this extension does nothing.</span><br />
+      <span data-i18n="companionNote">VJster needs one free program on this computer: Fadester for OBS or the VJster plugin (for Stream Deck or OpenDeck), or Fadester Companion. Alone, this extension does nothing.</span><br />
       <a href="https://github.com/jbrick2070/streamdeck-fadester/releases" target="_blank" rel="noopener noreferrer" data-i18n="linkGet">Downloads</a>
       <a href="https://github.com/jbrick2070/streamdeck-fadester/blob/main/docs/vjster/INSTALL.md" target="_blank" rel="noopener noreferrer" data-i18n="linkHelp">Install steps</a>
       <a href="https://github.com/jbrick2070/streamdeck-fadester/blob/main/docs/vjster/PRIVACY.md" target="_blank" rel="noopener noreferrer" data-i18n="linkPrivacy">Privacy policy</a>
@@ -30,11 +36,11 @@
 
     <label for="port" data-i18n="portLabel">Link port</label>
     <input id="port" type="number" min="1024" max="65535" /><button id="save" data-i18n="save">Save</button>
-    <p class="note" data-i18n="portNote">The port VJster listens on in your Stream Deck or OpenDeck plugin or in Fadester for TourBox, on this computer only. Change it only if you changed it there.</p>
+    <p class="note" data-i18n="portNote">The port VJster uses in Fadester for OBS, the VJster plugin or Fadester Companion, on this computer only. Change it only if you changed it there.</p>
 
     <label data-i18n="idLabel">This extension's id</label>
     <code id="ext-id"></code>
-    <p class="note" data-i18n="idNote">To let only this extension connect, paste the id into the VJster settings in your Stream Deck or OpenDeck plugin, or in Fadester for TourBox.</p>
+    <p class="note" data-i18n="idNote">To let only this extension connect, paste the id into the VJster settings of Fadester for OBS, the VJster plugin or Fadester Companion.</p>
 
     <div id="all-sites-row">
       <label><input id="all-sites" type="checkbox" /> <span data-i18n="allSites">Control videos on every site, not only YouTube</span></label>

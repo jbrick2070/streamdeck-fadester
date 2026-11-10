@@ -14,6 +14,10 @@ import {
   FadesterGlobalSettings
 } from "../types/settings.js";
 
+/** How long Save & test waits for a new connection attempt to end, and how often it looks. */
+export const CONNECTION_TEST_LIMIT_MS = 5000;
+const CONNECTION_TEST_POLL_MS = 100;
+
 export interface DirectPiIncomingMessage {
   [key: string]: unknown;
   event?: string;
@@ -247,9 +251,13 @@ export class DirectObsPropertyInspectorBridge {
         this.broadcast();
         return true;
       case "directActivateLayout": {
-        if (this.transport.getOpenDeckStarter?.()) return true;
         const layout = READY_LAYOUTS.find((entry) => entry.slug === msg.slug);
-        if (layout && layout.deviceType === this.transport.getDeviceType?.() && this.transport.activateLayout) {
+        // OpenDeck has its own starter, and a layout for another deck cannot open here: the page still gets an
+        // answer, so its "Preparing…" never stays.
+        if (this.transport.getOpenDeckStarter?.() || !layout || layout.deviceType !== this.transport.getDeviceType?.() ||
+          !this.transport.activateLayout) {
+          this.sendSetupError(undefined);
+        } else {
           try {
             if (layout.obsMode === "studio") {
               if (msg.prepareStudio === true) await this.client.prepareStudioLayout();
@@ -302,13 +310,31 @@ export class DirectObsPropertyInspectorBridge {
     this.broadcast();
   }
 
+  /**
+   * Save & test: a fresh read when connected, else a new connection attempt, waited for until OBS answers or the
+   * socket closes (at most `CONNECTION_TEST_LIMIT_MS`). Then the state, and `directTestDone`, so the page can show
+   * that a test ran even when its result is the sentence it showed before.
+   */
   private async testConnection(): Promise<void> {
-    if (this.client.isConnected()) {
-      await this.client.refreshCatalog();
-    } else {
-      this.client.reconnectNow();
+    try {
+      if (this.client.isConnected()) {
+        await this.client.refreshCatalog();
+      } else {
+        this.client.reconnectNow();
+        await this.settleConnectAttempt();
+      }
+    } finally {
+      this.broadcast();
+      this.transport.sendToPropertyInspector({ event: "directTestDone" });
     }
-    this.broadcast();
+  }
+
+  /** Waits while the attempt's socket is open and OBS has neither connected nor refused it. */
+  private async settleConnectAttempt(): Promise<void> {
+    const start = Date.now();
+    while (this.client.hasLiveSocket() && !this.client.isConnected() && Date.now() - start < CONNECTION_TEST_LIMIT_MS) {
+      await new Promise((resolve) => setTimeout(resolve, CONNECTION_TEST_POLL_MS));
+    }
   }
 
   private queueConnection(run: () => Promise<void>): Promise<void> {

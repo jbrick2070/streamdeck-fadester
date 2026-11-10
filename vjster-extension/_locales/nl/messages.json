@@ -9,7 +9,7 @@
     "message": "VJster-opties"
   },
   "companionNote": {
-    "message": "VJster heeft een gratis begeleidend programma op deze computer nodig: de VJster-plug-in voor Stream Deck of OpenDeck, of Fadester for TourBox. Op zichzelf doet deze extensie niets."
+    "message": "VJster heeft één gratis programma op deze computer nodig: Fadester for OBS of de VJster-plug-in (voor Stream Deck of OpenDeck), of Fadester Companion. Op zichzelf doet deze extensie niets."
   },
   "linkGet": {
     "message": "Downloads"
@@ -27,19 +27,33 @@
     "message": "Opslaan"
   },
   "portNote": {
-    "message": "De poort waarop VJster luistert in je Stream Deck- of OpenDeck-plug-in of in Fadester for TourBox, alleen op deze computer. Wijzig hem alleen als je hem daar hebt gewijzigd."
+    "message": "De poort die VJster gebruikt in Fadester for OBS, de VJster-plug-in of Fadester Companion, alleen op deze computer. Wijzig hem alleen als je hem daar hebt gewijzigd."
   },
   "idLabel": {
     "message": "De id van deze extensie"
   },
   "idNote": {
-    "message": "Zodat alleen deze extensie verbinding kan maken: plak de id in de VJster-instellingen van je Stream Deck- of OpenDeck-plug-in, of in Fadester for TourBox."
+    "message": "Zodat alleen deze extensie verbinding kan maken: plak de id in de VJster-instellingen van Fadester for OBS, de VJster-plug-in of Fadester Companion."
   },
   "allSites": {
     "message": "Video's bedienen op elke site, niet alleen op YouTube"
   },
   "allSitesNote": {
     "message": "Alleen het tempo: voor kwaliteit is de speler van YouTube nodig. Chrome vraagt toestemming om elke site te lezen en te wijzigen."
+  },
+  "statusLinkUp": {
+    "message": "Verbonden met VJster op poort $PORT$.",
+    "placeholders": {
+      "port": {
+        "content": "$1"
+      }
+    }
+  },
+  "statusLinkDown": {
+    "message": "Niet verbonden. Start Stream Deck, OpenDeck of Fadester Companion op deze computer. De poort hier moet gelijk zijn aan de poort in de VJster-instellingen."
+  },
+  "statusLinkChecking": {
+    "message": "Verbinden met VJster…"
   },
   "statusBadPort": {
     "message": "Gebruik een geheel getal van 1024 tot 65535; $DEFAULT$ is de standaardwaarde.",

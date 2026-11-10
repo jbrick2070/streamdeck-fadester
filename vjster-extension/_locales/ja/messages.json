@@ -9,7 +9,7 @@
     "message": "VJster のオプション"
   },
   "companionNote": {
-    "message": "VJster を使うには、このパソコンに無料の連携ソフトが必要です。Stream Deck または OpenDeck 用の VJster プラグイン、または Fadester for TourBox です。この拡張機能だけでは何も動作しません。"
+    "message": "VJster を使うには、このパソコンに無料のソフトが 1 つ必要です。Fadester for OBS、VJster プラグイン (Stream Deck または OpenDeck 用)、または Fadester Companion です。この拡張機能だけでは何も動作しません。"
   },
   "linkGet": {
     "message": "ダウンロード"
@@ -27,19 +27,33 @@
     "message": "保存"
   },
   "portNote": {
-    "message": "Stream Deck または OpenDeck のプラグイン、または Fadester for TourBox で VJster が待ち受けるポートです (このパソコン内のみ)。そちらで変更した場合にだけ変更してください。"
+    "message": "Fadester for OBS、VJster プラグイン、または Fadester Companion で VJster が使うポートです (このパソコン内のみ)。そちらで変更した場合にだけ変更してください。"
   },
   "idLabel": {
     "message": "この拡張機能の ID"
   },
   "idNote": {
-    "message": "この拡張機能だけが接続できるようにするには、この ID を Stream Deck または OpenDeck のプラグインの VJster 設定、または Fadester for TourBox に貼り付けてください。"
+    "message": "この拡張機能だけが接続できるようにするには、この ID を Fadester for OBS、VJster プラグイン、または Fadester Companion の VJster 設定に貼り付けてください。"
   },
   "allSites": {
     "message": "YouTube だけでなく、すべてのサイトの動画を操作する"
   },
   "allSitesNote": {
     "message": "速度のみ: 画質の変更には YouTube のプレーヤーが必要です。Chrome から、すべてのサイトのデータの読み取りと変更の許可を求められます。"
+  },
+  "statusLinkUp": {
+    "message": "ポート $PORT$ で VJster に接続済みです。",
+    "placeholders": {
+      "port": {
+        "content": "$1"
+      }
+    }
+  },
+  "statusLinkDown": {
+    "message": "接続されていません。このパソコンで Stream Deck、OpenDeck、または Fadester Companion を起動してください。ここのポートは VJster 設定のポートと同じにする必要があります。"
+  },
+  "statusLinkChecking": {
+    "message": "VJster に接続中…"
   },
   "statusBadPort": {
     "message": "1024～65535 の整数を入力してください。デフォルトは $DEFAULT$ です。",

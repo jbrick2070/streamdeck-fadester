@@ -20,7 +20,7 @@ export type LocalText =
 
 export const SHARED_EN = {
   statusUnreachable: "OBS is not running or the websocket is off (Tools > WebSocket Server Settings)",
-  statusUnreachableShort: "OBS is not running or websocket is off",
+  statusUnreachableShort: "OBS not connected",
   statusWrongPassword: "Wrong password. Check OBS Tools > WebSocket Server Settings > Show Connect Info.",
   statusWrongPasswordShort: "Wrong password",
   statusMissingPlugin: "{plugin} is not installed in OBS",

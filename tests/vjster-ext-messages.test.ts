@@ -3,7 +3,7 @@
 // (docs/vjster/PLAN.md 3.3 "What senders must do", 3.7; REQUIREMENTS.md R-TGT-3, R-LNK-5).
 import { describe, expect, it } from "vitest";
 import { parse } from "../src/vjster/shared/protocol.js";
-import { FROM_BRIDGE, FROM_PAGE, readBridgeMessage, readBridgeToWorker, readIntent, readPageMessage, readWorkerToBridge, selfOrigin } from "../vjster-extension/src/messages.js";
+import { FROM_BRIDGE, FROM_PAGE, LINK_STATUS_REQUEST, isLinkStatusRequest, linkLine, readBridgeMessage, readBridgeToWorker, readIntent, readLinkStatus, readPageMessage, readWorkerToBridge, selfOrigin } from "../vjster-extension/src/messages.js";
 import { NO_VIDEO, cleanHost, cleanLevel, cleanLevels, cleanMessage, cleanPageState, cleanRate, cleanRates, cleanTitle } from "../vjster-extension/src/page-state.js";
 import { chooseVideo, type VideoLike } from "../vjster-extension/src/video-choice.js";
 
@@ -193,5 +193,33 @@ describe("after the step 4 review: cleaning and the new messages", () => {
     expect(selfOrigin("https://www.youtube.com")).toBe("https://www.youtube.com");
     expect(selfOrigin("http://127.0.0.1:8080")).toBe("http://127.0.0.1:8080");
     for (const o of ["null", "", "file://", "https://a.example/path"]) expect(selfOrigin(o)).toBe("*");
+  });
+});
+
+describe("the options page and the link status", () => {
+  it("asks with one message kind and takes only a well-formed answer", () => {
+    expect(isLinkStatusRequest(LINK_STATUS_REQUEST)).toBe(true);
+    for (const other of [{ kind: "refresh" }, "link-status", null, [LINK_STATUS_REQUEST]]) expect(isLinkStatusRequest(other)).toBe(false);
+    expect(readLinkStatus({ state: "up", port: 48150 })).toEqual({ state: "up", port: 48150 });
+    expect(readLinkStatus({ state: "down", port: 50123, extra: 1 })).toEqual({ state: "down", port: 50123 });
+    // No answer (an older worker, or none at all), an unknown state or a port that is not one: nothing to show.
+    for (const bad of [undefined, null, {}, { state: "open", port: 48150 }, { state: "up", port: "48150" }, { state: "up", port: 0 }, { state: "up", port: 70000 }, { state: "up", port: 1.5 }]) {
+      expect(readLinkStatus(bad)).toBeNull();
+    }
+  });
+
+  it("shows up and down at once, says it is connecting only on an empty line, and keeps the line for no answer", () => {
+    const up = { state: "up", port: 48150 } as const;
+    const down = { state: "down", port: 48150 } as const;
+    const connecting = { state: "connecting", port: 48150 } as const;
+    for (const empty of [true, false]) {
+      expect(linkLine(up, empty)).toEqual({ name: "statusLinkUp", state: "up" });
+      expect(linkLine(down, empty)).toEqual({ name: "statusLinkDown", state: "down" });
+      expect(linkLine(null, empty)).toBeNull();
+    }
+    // The page just opened while the worker's socket is still opening: the line is never missing.
+    expect(linkLine(connecting, true)).toEqual({ name: "statusLinkChecking", state: "connecting" });
+    // A line that already says up or down keeps it through a reconnect attempt; the next check tells.
+    expect(linkLine(connecting, false)).toBeNull();
   });
 });

@@ -9,7 +9,7 @@
     "message": "Параметры VJster"
   },
   "companionNote": {
-    "message": "Для работы VJster нужна бесплатная программа-компаньон на этом компьютере: плагин VJster для Stream Deck или OpenDeck либо Fadester for TourBox. Само по себе это расширение ничего не делает."
+    "message": "Для работы VJster нужна одна бесплатная программа на этом компьютере: Fadester for OBS или плагин VJster (для Stream Deck или OpenDeck) либо Fadester Companion. Само по себе это расширение ничего не делает."
   },
   "linkGet": {
     "message": "Загрузки"
@@ -27,19 +27,33 @@
     "message": "Сохранить"
   },
   "portNote": {
-    "message": "Порт (только на этом компьютере), который слушает VJster в плагине Stream Deck или OpenDeck либо в Fadester for TourBox. Меняйте его, только если изменили там."
+    "message": "Порт (только на этом компьютере), который VJster использует в Fadester for OBS, в плагине VJster или в Fadester Companion. Меняйте его, только если изменили там."
   },
   "idLabel": {
     "message": "Идентификатор этого расширения"
   },
   "idNote": {
-    "message": "Чтобы подключаться могло только это расширение, вставьте идентификатор в настройки VJster в плагине Stream Deck или OpenDeck либо в Fadester for TourBox."
+    "message": "Чтобы подключаться могло только это расширение, вставьте идентификатор в настройки VJster в Fadester for OBS, в плагине VJster или в Fadester Companion."
   },
   "allSites": {
     "message": "Управлять видео на всех сайтах, а не только на YouTube"
   },
   "allSitesNote": {
     "message": "Только скорость: для качества нужен проигрыватель YouTube. Chrome запросит разрешение на просмотр и изменение данных на всех сайтах."
+  },
+  "statusLinkUp": {
+    "message": "Подключено к VJster на порту $PORT$.",
+    "placeholders": {
+      "port": {
+        "content": "$1"
+      }
+    }
+  },
+  "statusLinkDown": {
+    "message": "Нет подключения. Запустите Stream Deck, OpenDeck или Fadester Companion на этом компьютере. Порт здесь должен совпадать с портом в настройках VJster."
+  },
+  "statusLinkChecking": {
+    "message": "Подключение к VJster…"
   },
   "statusBadPort": {
     "message": "Введите целое число от 1024 до 65535; по умолчанию $DEFAULT$.",

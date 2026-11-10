@@ -21,6 +21,8 @@ const langs = readdirSync(LOCALES).sort();
 const en = read("en");
 const html = readFileSync(join(EXT, "options.html"), "utf8");
 const options = readFileSync(join(EXT, "src", "options.ts"), "utf8");
+/** messages.ts names the options page's link line messages (linkLine). */
+const messagesSource = readFileSync(join(EXT, "src", "messages.ts"), "utf8");
 const manifest = readFileSync(join(EXT, "manifest.json"), "utf8");
 
 /** The `$NAME$` placeholders a message uses, sorted. */
@@ -76,6 +78,8 @@ describe("Chrome extension languages (R-I18N-5)", () => {
     for (const m of html.matchAll(/data-i18n="([^"]+)"/g)) used.add(m[1]);
     for (const m of options.matchAll(/status\(\s*"([A-Za-z0-9_]+)"/g)) used.add(m[1]);
     for (const m of options.matchAll(/\? "([A-Za-z0-9_]+)" : "([A-Za-z0-9_]+)"/g)) used.add(m[1]).add(m[2]);
+    for (const m of messagesSource.matchAll(/\bname: "([A-Za-z0-9_]+)"/g)) used.add(m[1]);
+    expect(options).toContain("linkLine(");
     used.add("htmlLang");
     expect([...used].filter((k) => !(k in en))).toEqual([]);
     expect(Object.keys(en).filter((k) => !used.has(k))).toEqual([]);

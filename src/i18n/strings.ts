@@ -16,8 +16,8 @@ import {
 
 const PLUGIN_EN = {
   mixAll: "All OBS mixer inputs",
-  mixDisabled: "Whole mix disabled",
-  mixOffline: "Mix controller offline",
+  mixDisabled: "Whole mix is off",
+  mixOffline: "Companion offline",
   mixFadeOut: "Fade out mix",
   mixRestore: "Restore mix",
   mixDb: "{db} dB",
@@ -239,7 +239,7 @@ const PLUGIN_EN = {
   holdCleanFx: "HOLD CLEAN FX",
   holdFinish: "HOLD FINISH",
   // Texts the plugin sends to the property inspectors
-  setupErrorStudio: "Use Enable Studio Mode & open layout to prepare this desk.",
+  setupErrorStudio: "Press Enable Studio Mode & open current starter layout.",
   setupErrorFallback: "Could not prepare this OBS layout.",
   piChooseSlot: "Choose a slot first.",
   piEnabledNotApplied: "Midi Fadester did not apply the enabled state. Update Midi Fadester to a build that supports slot enable controls.",

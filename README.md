@@ -12,15 +12,16 @@ Needs Stream Deck 7.6 or later on Windows 10 or later (Stream Deck 6.x is not su
 
 **Using OpenDeck?** Follow the [OpenDeck quick start](docs/OPENDECK.md#first-five-minutes). The packaged plugin supplies a starter for the Plus, 15-key deck and Mini. The steps below are for Elgato’s Stream Deck software.
 
-**Upgrading from 0.9.x or earlier?** Fadester 0.10 uses a new plugin ID. Install it alongside the old version, enter the OBS password once for the new plugin, and open a fresh starter or replace old Fadester actions in a copy of your custom profile. Keep the old plugin until you’ve checked the new controls. The standalone VJster ID has not changed.
-
-1. **Turn on OBS's WebSocket server.** In OBS: **Tools > WebSocket Server Settings**, tick **Enable WebSocket server**, keep **Enable Authentication** on, and press **Show Connect Info** to see the password.
-2. **Add one Fadester key.** In Stream Deck, drag **Scene & Transition** (category *Fadester for OBS*) onto a key and click it to open its settings. It starts as **Next scene**, so it is ready to press.
-3. **Paste the password once.** Under **OBS connection**, paste the password and press **Save for all controls & test**. On the same computer keep host `127.0.0.1` and port `4455`. It answers *Connected: OBS 33...*; press the key and OBS moves to the next scene. Every Fadester key and dial on every layout now uses this connection; you never type it again.
-4. **Open a ready-made layout.** In the same settings page, expand **Ready-made layouts**, pick one for your deck (**Scene Desk +** on a Stream Deck +, **Scene Desk 15 Keys** on a 15-key deck, **Source Desk Mini** on a Mini) and press **Open current starter layout**. The layout installs itself as an editable profile and your deck switches to it; your other profiles stay. A Studio Mode layout offers **Enable Studio Mode & open current starter layout** instead and prepares Preview for you.
-5. **Press the keys.** Previous, Next and Random already follow your OBS scene list; audio keys and dials already found your main audio and microphone. Change any key in its settings page whenever you like.
+1. **Install the plugin.** Download the Fadester for OBS plugin file from the [Releases page](https://github.com/jbrick2070/streamdeck-fadester/releases/latest). Its name ends in `.streamDeckPlugin`. Double-click it. Stream Deck asks to install it: press **Install**.
+2. **Turn on OBS's WebSocket server.** In OBS: **Tools > WebSocket Server Settings**, tick **Enable WebSocket server**, keep **Enable Authentication** on, and press **Show Connect Info** to see the password.
+3. **Add one Fadester key.** In Stream Deck, drag **Scene & Transition** (category *Fadester for OBS*) onto a key and click it to open its settings. It starts as **Next scene**, so it is ready to press.
+4. **Paste the password once.** Under **OBS connection**, paste the password and press **Save for all controls & test**. On the same computer keep host `127.0.0.1` and port `4455`. The status line under **OBS connection** says *Testing the connection…*, then *Connected: OBS 33...*; press the key and OBS moves to the next scene. Every Fadester key and dial on every layout now uses this connection; you never type it again.
+5. **Open a ready-made layout.** In the same settings page, expand **Ready-made layouts**, pick one for your deck (**Scene Desk +** on a Stream Deck +, **Scene Desk 15 Keys** on a 15-key deck, **Source Desk Mini** on a Mini) and press **Open current starter layout**. The layout installs itself as an editable profile and your deck switches to it; your other profiles stay. A Studio Mode layout offers **Enable Studio Mode & open current starter layout** instead and prepares Preview for you; its button works once OBS is connected.
+6. **Press the keys.** Previous, Next and Random already follow your OBS scene list; audio keys and dials already found your main audio and microphone. Change any key in its settings page whenever you like.
 
 Stream Deck installs no profile by itself when it installs the plugin: a layout arrives the first time you open it, so your profile list stays yours. You can also import any layout's `.streamDeckProfile` file by double-clicking it ([profile library](profiles/README.md)).
+
+**Upgrading from 0.9.x or earlier?** Fadester 0.10 uses a new plugin ID. Install it alongside the old version, enter the OBS password once for the new plugin, and open a fresh starter or replace old Fadester actions in a copy of your custom profile. Keep the old plugin until you’ve checked the new controls. The standalone VJster ID has not changed.
 
 ## Ready-made layouts
 
@@ -49,7 +50,7 @@ Each control lives in the *Fadester for OBS* category of Stream Deck's action li
 
 **OBS Fade** (key). Fade one audio input to 0 % or to 100 % over a chosen time, or instantly. A later move of that input cancels its running fade.
 
-For a whole-show fade, choose **All OBS mixer inputs** under **Control** on either **OBS Fade** or **OBS Fader**. In the [Windows companion](tourbox/README.md), enable **All OBS mixer inputs**, choose mix-only mode if you do not use a TourBox, then **Save & start controls**. The key fades out or restores the mix, and the dial adjusts it in the companion’s configured steps. Restore returns each managed input to its own level. Normal source controls do not need this companion.
+For a whole-show fade, choose **All OBS mixer inputs** under **Control** on either **OBS Fade** or **OBS Fader**. In [Fadester Companion](tourbox/README.md) (Windows), enable **All OBS mixer inputs**, choose mix-only mode if you do not use a TourBox, then **Save & start controls**. The key fades out or restores the mix, and the dial adjusts it in the steps set in Fadester Companion. Restore returns each managed input to its own level. Normal source controls do not need Fadester Companion.
 
 **Source & Layer** (key or dial). Browse the sources of the current scene with a dial or Previous/Next keys, and show or hide the selected one. The selection is shared by every Fadester control on that scene. In Studio Mode it follows Preview; otherwise it follows the live scene; you can pin it to a fixed scene. Optional creative controls cycle blend modes (Normal, Additive, Subtract, Screen, Multiply, Lighten, Darken) and move a layer up or down; reordering stays off until you turn it on. To fade a layer, put a Color Correction filter on it and ride its opacity with **OBS Filter**.
 
@@ -57,7 +58,7 @@ For a whole-show fade, choose **All OBS mixer inputs** under **Control** on eith
 
 **Playlister Transport** (key). **Previous**, **Next**, **Play/pause**, **Stop**, **Restart** or **Status** for one [Playlister](https://github.com/jbrick2070/obs-playlister) source. The key shows what OBS reports (Playing, Paused, Stopped, with the time), not just that a press was sent. Needs Playlister 0.5 or later in OBS; choose the source in the key's settings page.
 
-**Visual Panic** (key). [Visual Sidechain](https://github.com/jbrick2070/visual-sidechain)'s own **Panic** (instant) and **Restore** (hold 0.8 s), sent through OBS's hotkeys. After Panic the key reads **PANIC SENT** until a Restore is accepted or the OBS connection drops; meanwhile no Visual Sidechain filter is written from the deck. Needs Visual Sidechain in OBS.
+**Visual Panic** (key). [Visual Sidechain](https://github.com/jbrick2070/visual-sidechain)'s own **Panic** (instant) and **Restore** (hold 0.8 s), sent through OBS's hotkeys. After Panic the key reads **PANIC SENT** until a Restore is accepted or the OBS connection drops; meanwhile no Visual Sidechain filter is written from the deck. Needs Visual Sidechain in OBS, and the key looks the same without it. So try it once before the show: hold **Restore**, which changes nothing when no Panic is on. If the key then says **Visual Sidechain missing**, OBS has no Visual Sidechain.
 
 **OBS Scene Info Bar** (Stream Deck Neo). Shows the connection, the live scene and, in Studio Mode, the preview scene. Display only.
 
@@ -90,7 +91,7 @@ Fadester is not tied to the Stream Deck. Every surface in the suite drives OBS t
 1. **Plain OBS requests** over obs-websocket for scenes, transitions, sources, audio and filters. Any platform with an OBS connection has these already; if it can host Stream Deck plugins, like [OpenDeck](docs/OPENDECK.md), run Fadester as it is.
 2. **The Midi Fadester vendor API** (`CallVendorRequest`, vendor `midi-fadester`) for the 18 fader and FX slots: T-bar, crossfades, layer opacity, audio, any numeric filter setting, timed fades.
 3. **The shared whole-mix protocol** (`io.github.jbrick2070.fadester.mix.v1` over `BroadcastCustomEvent`) to ride the whole mixer as one fader.
-4. **Keystrokes to the Fadester for TourBox companion**: anything that can press `Ctrl+Alt+Shift+F3` gets the native T-bar, Preview cueing, media, overlays, the YouTube video and the VJ layers, no TourBox required.
+4. **Keystrokes to Fadester Companion**: anything that can press `Ctrl+Alt+Shift+F3` gets the native T-bar, Preview cueing, media, overlays, the YouTube video and the VJ layers, no TourBox required.
 
 A robot (a cue list or an AI agent) uses the same doors through the API, or through an MCP server that passes obs-websocket requests through. [docs/ADD-YOUR-OWN-CONTROLLER.md](docs/ADD-YOUR-OWN-CONTROLLER.md) has the JSON for each door, the manners that keep a show safe, and a worked example.
 
@@ -98,12 +99,13 @@ A robot (a cue list or an AI agent) uses the same doors through the API, or thro
 
 | The key or dial says | What to do |
 |---|---|
-| **OBS is not running or websocket is off** | Start OBS. In **Tools > WebSocket Server Settings** tick **Enable WebSocket server**. Check the port is 4455 (or the one you saved under **Edit shared connection**). |
+| **OBS not connected** | Start OBS. In **Tools > WebSocket Server Settings** tick **Enable WebSocket server**. Check the port is 4455 (or the one you saved under **Edit shared connection**). The settings page names the cause in full. |
 | **Wrong password** | In OBS, **Tools > WebSocket Server Settings > Show Connect Info**; paste the password into any Fadester control's **OBS connection** and press **Save for all controls & test**. The plugin stops retrying until you do, so OBS's log stays clean. |
 | **Scene T-bar needs OBS Studio Mode**, **Preview selection needs OBS Studio Mode** | Turn on Studio Mode in OBS (**View > Studio Mode**), or open the layout again with **Enable Studio Mode & open current starter layout**. The Regular Mode layouts have no Preview or T-bar. |
 | **Choose a different Next scene** | The scene mixer needs Preview and Program to be two different scenes. Pick another scene in Preview. |
 | **Choose a source**, **Choose a filter**, **Choose a Playlister** | That key or dial is not bound yet. Open its settings page and pick the source, filter or Playlister. VJ Rig and Playlister Transport keys ship unbound on purpose. |
 | **Visual Sidechain missing**, **Playlister missing** | Install that OBS plugin, or switch to the scene collection that has the source. |
+| **Companion offline**, **Whole mix is off** | An **All OBS mixer inputs** key or dial needs Fadester Companion. Start it, connect it to the same OBS, and turn on **All OBS mixer inputs** there. |
 | **PANIC SENT** | Visual Sidechain's Panic is on. Hold **Restore** for 0.8 s to bring the effects back. |
 | A key moved the live output in Studio Mode | A scene's content is shared: when Preview and Program show the same scene, layer edits change both. The dial labels that scene LIVE. |
 | A numbered scene key does nothing | OBS has fewer scenes than the number. Add a scene, or pin the key to a named scene in its settings page. |
@@ -117,7 +119,7 @@ When OBS goes away, the plugin reconnects by itself and every key shows the same
 - [docs/vjster/README.md](docs/vjster/README.md) and [docs/vjster/INSTALL.md](docs/vjster/INSTALL.md): VJster.
 - [docs/SUITE.md](docs/SUITE.md): the one plugin that carries Fadester and VJster, and how it is built.
 - [docs/OPENDECK.md](docs/OPENDECK.md): running the plugin with OpenDeck, the free open-source alternative to Stream Deck software.
-- [tourbox/README.md](tourbox/README.md): Fadester for TourBox, the Windows companion that drives OBS from a TourBox controller; [tourbox/MACOS.md](tourbox/MACOS.md) covers the experimental Mac pieces; [docs/gamepad/README.md](docs/gamepad/README.md) drives the same companion from an Xbox controller.
+- [tourbox/README.md](tourbox/README.md): Fadester Companion, the Windows app that drives OBS from a TourBox controller; [tourbox/MACOS.md](tourbox/MACOS.md) covers the experimental Mac pieces; [docs/gamepad/README.md](docs/gamepad/README.md) drives the same companion from an Xbox controller.
 - [CHANGELOG.md](CHANGELOG.md): what changed in each version.
 - [demo-kit/README.md](demo-kit/README.md): the Suite Demo Kit.
 - [docs/ADD-YOUR-OWN-CONTROLLER.md](docs/ADD-YOUR-OWN-CONTROLLER.md): bring your own controller, platform or robot: the four doors into Fadester, with JSON.

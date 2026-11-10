@@ -44,7 +44,12 @@ function openPage(page: string, options: PageOptions = {}) {
   const localStorage = options.storageThrows
     ? { getItem: () => { throw new Error("blocked"); }, setItem: () => { throw new Error("blocked"); } }
     : { getItem: (key: string) => memory.get(key) ?? null, setItem: (key: string, value: string) => { memory.set(key, String(value)); } };
-  const context: Record<string, unknown> = { document, WebSocket: FakeSocket, console, localStorage };
+  // The page's timers, run by the test when it says so.
+  const timers = new Map<number, () => void>();
+  let nextTimer = 1;
+  const setTimeout = (fn: () => void): number => { timers.set(nextTimer, fn); return nextTimer++; };
+  const clearTimeout = (id: number): void => { timers.delete(id); };
+  const context: Record<string, unknown> = { document, WebSocket: FakeSocket, console, localStorage, setTimeout, clearTimeout };
   context.window = context;
   createContext(context);
   sockets = [];
@@ -65,6 +70,12 @@ function openPage(page: string, options: PageOptions = {}) {
   };
   return {
     document, socket, memory, byId,
+    /** Runs every timer the page has waiting. */
+    runTimers(): void {
+      const due = [...timers.values()];
+      timers.clear();
+      for (const fn of due) fn();
+    },
     i18n: context.FadesterI18n as { language(): string; t(key: string): string },
     /** A message from the plugin, as Stream Deck relays it. */
     receive(payload: Record<string, unknown>): void {
@@ -346,5 +357,85 @@ describe("first paint from the remembered language (D-L5, no hold)", () => {
     expect(h.i18n.language()).toBe("de");
     h.receive(state({ choice: "fr", resolved: "fr" }));
     expect(h.i18n.language()).toBe("fr");
+  });
+});
+
+describe("the shared sections say what happened", () => {
+  const offline = { status: { kind: "obs_unreachable", sentence: "OBS is off", cellReason: "" } };
+  const studioLayout = { slug: "plus-scene-desk", name: "[Studio Mode] Scene Desk +", obsMode: "studio", deviceType: 7 };
+  const regularLayout = { slug: "plus-scene-regular", name: "[Regular Mode] Scene Desk +", obsMode: "regular", deviceType: 7 };
+
+  it("Save & test says a test runs until the plugin reports it done, even when the result is the same sentence", () => {
+    const h = openPage("obs-fade-key.html");
+    h.receive(state({ choice: "auto", resolved: "en" }, offline));
+    expect(h.byId("direct-conn-status").textContent).toBe("OBS is off");
+    h.byId("direct-conn-test").onclick?.();
+    expect(h.toPlugin().map((payload) => payload.event)).toEqual(["directPiReady", "directUpdateGlobalSettings", "directTestConnection"]);
+    expect(h.byId("direct-conn-status").textContent).toBe(en.connTesting);
+    // The button stays usable: a test never blocks the page.
+    expect(h.byId("direct-conn-test").disabled).toBe(false);
+    // The state the save sends back, before the test has ended, keeps the line.
+    h.receive(state({ choice: "auto", resolved: "en" }, offline));
+    expect(h.byId("direct-conn-status").textContent).toBe(en.connTesting);
+    // A language change meanwhile words the line anew.
+    h.receive(state({ choice: "de", resolved: "de" }, offline));
+    expect(h.byId("direct-conn-status").textContent).toBe(de.connTesting);
+    h.receive({ event: "directTestDone" });
+    expect(h.byId("direct-conn-status").textContent).toBe("OBS is off");
+  });
+
+  it("a test the plugin never reports done ends after the page's limit", () => {
+    const h = openPage("obs-fade-key.html");
+    h.receive(state({ choice: "auto", resolved: "en" }, offline));
+    h.byId("direct-conn-test").onclick?.();
+    expect(h.byId("direct-conn-status").textContent).toBe(en.connTesting);
+    h.runTimers();
+    expect(h.byId("direct-conn-status").textContent).toBe("OBS is off");
+    // A late report changes nothing.
+    h.receive({ event: "directTestDone" });
+    expect(h.byId("direct-conn-status").textContent).toBe("OBS is off");
+  });
+
+  it("a Studio Mode layout's button says why it is off while OBS is not connected", () => {
+    const h = openPage("obs-fade-key.html");
+    h.receive(state({ choice: "auto", resolved: "en" }, { ...offline, layouts: [studioLayout, regularLayout] }));
+    const picker = h.byId("direct-layout");
+    const hint = h.byId("direct-layout-hint");
+    picker.value = studioLayout.slug;
+    picker.onchange?.();
+    expect(h.byId("direct-layout-open").disabled).toBe(true);
+    expect(hint.textContent).toBe(en.layoutNeedsObs);
+    expect(hint.style.display).toBe("");
+    // A regular layout needs no OBS to open: no reason line.
+    picker.value = regularLayout.slug;
+    picker.onchange?.();
+    expect(h.byId("direct-layout-open").disabled).toBe(false);
+    expect(hint.style.display).toBe("none");
+    // Connected, the Studio layout's button is on and the line goes.
+    picker.value = studioLayout.slug;
+    h.receive(state({ choice: "auto", resolved: "en" }, { layouts: [studioLayout, regularLayout] }));
+    expect(h.byId("direct-layout-open").disabled).toBe(false);
+    expect(hint.textContent).toBe("");
+    expect(hint.style.display).toBe("none");
+  });
+
+  it("opening a layout and preparing Studio Mode each say what was done", () => {
+    const h = openPage("obs-fader-dial.html", { settings: { target: "tbar" } });
+    h.receive(state({ choice: "auto", resolved: "en" }, { layouts: [regularLayout] }));
+    const picker = h.byId("direct-layout");
+    picker.value = regularLayout.slug;
+    picker.onchange?.();
+    h.byId("direct-layout-open").onclick?.();
+    expect(h.toPlugin().at(-1)).toEqual({ event: "directActivateLayout", slug: regularLayout.slug, prepareStudio: false });
+    h.receive({ event: "directSetupResult", ok: true });
+    expect(h.byId("direct-setup-status").textContent).toBe(en.setupDone);
+    h.byId("direct-studio-prepare").onclick?.();
+    expect(h.toPlugin().at(-1)).toEqual({ event: "directPrepareStudio" });
+    h.receive({ event: "directSetupResult", ok: true });
+    expect(h.byId("direct-setup-status").textContent).toBe(en.studioPrepared);
+    // A failure shows the plugin's own sentence.
+    h.byId("direct-layout-open").onclick?.();
+    h.receive({ event: "directSetupResult", ok: false, error: "Could not prepare this OBS layout." });
+    expect(h.byId("direct-setup-status").textContent).toBe("Could not prepare this OBS layout.");
   });
 });

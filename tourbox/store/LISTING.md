@@ -1,6 +1,6 @@
 # Fadester Companion: Microsoft Store listing (English)
 
-Paste each block into the matching field in Partner Center (Submission → Store listings → English). Images are in `listing/`.
+Paste each block into the matching field in Partner Center (Submission → Store listings → English). Images are in `listing/`. The same listing in nine more languages is in [LISTING-translations.md](LISTING-translations.md).
 
 ## Description
 

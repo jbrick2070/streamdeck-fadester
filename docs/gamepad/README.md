@@ -8,7 +8,7 @@ Drive OBS from an Xbox controller (or any XInput-compatible pad): the right trig
 
 1. Plug in the controller (USB or Xbox Wireless). Windows needs no extra driver.
 2. In OBS, open **Tools → WebSocket Server Settings**, tick **Enable WebSocket server**, keep **Enable Authentication** ticked, and click **OK**.
-3. Install **Fadester Companion** from the [Microsoft Store](https://apps.microsoft.com/detail/9PN7D3P2X7F4) and open it from the Start menu ([setup guide](../../tourbox/README.md); without a TourBox, skip **1 Import the preset**). It connects to OBS by itself; if the header names a problem, do what it says and click **Read scenes and inputs from OBS** on the **Setup** tab. Tick **Use an Xbox or XInput game controller** under **Game controller**. Leave **Easy mode** ticked.
+3. Install **Fadester Companion** from the [Microsoft Store](https://apps.microsoft.com/detail/9PN7D3P2X7F4) and open it from the Start menu ([setup guide](../../tourbox/README.md)). It connects to OBS by itself; if the header names a problem, do what it says and click **Read scenes and inputs from OBS** on the **Setup** tab. Under **2 Choose your controller**, tick **Use an Xbox or XInput game controller** and leave **Easy mode** ticked. Without a TourBox, skip the TourBox part.
 4. Press **Save & start controls** and keep the companion window open (minimised is fine; closing it stops the controls). The status line at the top says *Game controller: connected*.
 5. In OBS 33.0.0 or 33.0.1, with the main window open, turn on **Studio Mode**, select the **Fade** transition, and choose a different scene for Preview.
 6. Pull the right trigger halfway: OBS's T-bar follows. Let go: it goes back. Pull it all the way: Preview goes to Program.

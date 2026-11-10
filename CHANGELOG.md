@@ -5,6 +5,7 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 ## Unreleased
 
 - **Fadester Companion is on the Microsoft Store.** Install it from [its Store page](https://apps.microsoft.com/detail/9PN7D3P2X7F4), and Windows keeps it up to date. The README, the VJster install page and the Companion and game controller guides link to it; the two guides open with a "Get it from Microsoft" badge.
+- **Fadester Companion 0.1.3: the Setup tab starts with your controller.** It now reads in the order you act: **1 Connect to OBS**, **2 Choose your controller** (tick the game controller, or import the TourBox preset), **3 Try a cue**, which says what to press on either. The game controller checkbox used to sit at the end of the tab, after the cue step, and was easy to miss.
 
 ## 0.11.0 - 2026-11-10
 

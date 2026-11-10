@@ -141,8 +141,8 @@ namespace Fadester.TourBox {
       state=new Label {Text=text.Get("lookingForObs"),Location=new Point(16,70),AutoEllipsis=true,UseMnemonic=false,ForeColor=Color.White, Width=680,Anchor=AnchorStyles.Left|AnchorStyles.Right|AnchorStyles.Top}; head.Controls.Add(state); grid.Controls.Add(head,0,0);
       head.ClientSizeChanged+=delegate { state.Width=status.Width=Math.Max(1,head.ClientSize.Width-32); };
       var tabs=new TabControl {Dock=DockStyle.Fill}; grid.Controls.Add(tabs,0,1);
-      body=Page(tabs,text.Get("setup")); Title(body,text.Get("importTitle")); Hint(body,text.Get("importHint"));
-      AddButton(body,text.Get("openPreset"),delegate { ImportPreset(); }); importNote=Hint(body,"");
+      // Setup reads in the order a newcomer acts: OBS, then the controller in hand, then a first cue with it.
+      body=Page(tabs,text.Get("setup"));
       Title(body,text.Get("connectTitle")); Hint(body,text.Get("connectHint"));
       var row=new FlowLayoutPanel {AutoSize=true,WrapContents=true,Margin=new Padding(0,3,0,3)};
       row.Controls.Add(new Label {Text=text.Get("port"), AutoSize=true,Margin=new Padding(4,8,4,0)});
@@ -151,7 +151,16 @@ namespace Fadester.TourBox {
       password=new TextBox {UseSystemPasswordChar=true,Width=142}; row.Controls.Add(password); body.Controls.Add(row);
       Hint(body,text.Get("passwordHint"));
       connect=AddButton(body,text.Get("discover"),async delegate { await Connect(); });
-      live=Hint(body,""); Title(body,text.Get("cueTitle"));
+      live=Hint(body,"");
+      Title(body,text.Get("controllerTitle"));
+      SubTitle(body,text.Get("gamepadTitle"));
+      enableGamepad=Check(body,text.Get("enableGamepad"));
+      easyMode=Check(body,text.Get("gamepadEasy")); easyMode.Checked=true;
+      Hint(body,text.Get("gamepadHint"));
+      SubTitle(body,"TourBox");
+      Hint(body,text.Get("importHint"));
+      AddButton(body,text.Get("openPreset"),delegate { ImportPreset(); }); importNote=Hint(body,"");
+      Title(body,text.Get("cueTitle"));
       Hint(body,text.Get("cueHint"));
       Title(body,text.Get("inputsTitle")); Hint(body,text.Get("inputsHint"));
       Title(body,text.Get("mixTitle"));
@@ -171,10 +180,6 @@ namespace Fadester.TourBox {
       vjRow.Controls.Add(new Label {Text=text.Get("vjsterExtensionId"),AutoSize=true,Margin=new Padding(10,8,4,0)});
       extensionId=new TextBox {Width=290}; vjRow.Controls.Add(extensionId); body.Controls.Add(vjRow);
       Hint(body,text.Get("vjsterIdHint"));
-      Title(body,text.Get("gamepadTitle"));
-      enableGamepad=Check(body,text.Get("enableGamepad"));
-      easyMode=Check(body,text.Get("gamepadEasy")); easyMode.Checked=true;
-      Hint(body,text.Get("gamepadHint"));
       Hint(body,text.Get("keepOpen"));
       var assign=Page(tabs,text.Get("assignments")); Title(assign,text.Get("assignTitle"));
       Hint(assign,text.Get("assignHint"));
@@ -234,11 +239,20 @@ namespace Fadester.TourBox {
       var f=new FlowLayoutPanel {Dock=DockStyle.Fill,AutoScroll=true,WrapContents=false,FlowDirection=FlowDirection.TopDown,Padding=new Padding(12),BackColor=Color.White}; p.Controls.Add(f); return f;
     }
     void Title(FlowLayoutPanel f,string s) { f.Controls.Add(new Label {Text=s,AutoSize=true,Font=new Font(Font,FontStyle.Bold),ForeColor=navy,Margin=new Padding(3,10,3,2)}); }
+    /** A part of a numbered step, such as the game controller or the TourBox in step 2. */
+    void SubTitle(FlowLayoutPanel f,string s) { f.Controls.Add(new Label {Text=s,AutoSize=true,UseMnemonic=false,Font=new Font(Font,FontStyle.Bold),ForeColor=accent,Margin=new Padding(3,6,3,0)}); }
     Label Hint(FlowLayoutPanel f,string s) { var l=new Label {Text=s,UseMnemonic=false,AutoSize=true,MaximumSize=new Size(650,0),Margin=new Padding(3,2,3,5)}; f.Controls.Add(l); f.ClientSizeChanged+=delegate {l.MaximumSize=new Size(Math.Max(235,f.ClientSize.Width-42),0);}; return l; }
     CheckBox Check(FlowLayoutPanel f,string label) {
-      var check=new CheckBox {Text=label,AutoSize=true,UseMnemonic=false,MaximumSize=new Size(650,0)};
+      // An auto-sized check box never wraps its text (a long one ran off the page), so it is sized to the page and wraps.
+      var check=new CheckBox {Text=label,AutoSize=false,UseMnemonic=false,TextAlign=ContentAlignment.TopLeft,CheckAlign=ContentAlignment.TopLeft};
       f.Controls.Add(check);
-      f.ClientSizeChanged+=delegate {check.MaximumSize=new Size(Math.Max(235,f.ClientSize.Width-42),0);};
+      Action fit=delegate {
+        int width=Math.Max(235,f.ClientSize.Width-42);
+        int box=Math.Max(0,check.GetPreferredSize(Size.Empty).Width-TextRenderer.MeasureText(label,check.Font).Width);
+        var text=TextRenderer.MeasureText(label,check.Font,new Size(Math.Max(1,width-box),0),TextFormatFlags.WordBreak);
+        check.Size=new Size(Math.Min(width,text.Width+box),text.Height+6);
+      };
+      fit(); f.ClientSizeChanged+=delegate { fit(); };
       return check;
     }
     Label FieldLabel(string label) {

@@ -1,6 +1,6 @@
 {
   "extDescription": {
-    "message": "Chrome에서 재생 중인 동영상의 속도와 화질을 Stream Deck, OpenDeck, TourBox에서 조절합니다. 이 컴퓨터의 VJster와만 통신합니다."
+    "message": "Chrome 동영상의 속도와 화질을 Stream Deck, OpenDeck, TourBox, Xbox 컨트롤러로 조절합니다. 이 컴퓨터 안에서만 통신합니다."
   },
   "htmlLang": {
     "message": "ko"

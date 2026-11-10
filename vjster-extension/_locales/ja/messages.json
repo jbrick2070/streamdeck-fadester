@@ -1,6 +1,6 @@
 {
   "extDescription": {
-    "message": "Chrome で再生中の動画の速度と画質を Stream Deck、OpenDeck、TourBox から操作します。通信するのはこのパソコン上の VJster だけです。"
+    "message": "Chrome の動画の速度と画質を Stream Deck、OpenDeck、TourBox、Xbox コントローラーから操作します。通信はこのパソコン内だけです。"
   },
   "htmlLang": {
     "message": "ja"

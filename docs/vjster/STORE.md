@@ -29,9 +29,9 @@ The zip has no `key`: the store refuses one on a first upload and gives the exte
 
 **Detailed description:**
 
-> VJster lets the VJster dials, keys and knobs on your Stream Deck, OpenDeck or TourBox change the speed and picture quality of a YouTube video: slow it for a beat-match, speed it up, nudge it in small steps, set the quality, play or pause. The deck shows the video's title and speed.
+> VJster lets your own controls change the speed and picture quality of a YouTube video in Chrome: slow it for a beat-match, speed it up, nudge it in small steps, set the quality, play or pause. Use the dials and keys of a Stream Deck or OpenDeck, the knobs of a TourBox, or the sticks of an Xbox controller. A Stream Deck shows the video's title and speed.
 >
-> VJster needs a free companion on this computer: the VJster plugin for Stream Deck or OpenDeck, or Fadester for TourBox (from github.com/jbrick2070/streamdeck-fadester). On its own, this extension does nothing.
+> VJster needs one free program on this computer: Fadester for OBS (the Stream Deck and OpenDeck plugin, with VJster included) or Fadester Companion (for an Xbox controller or a TourBox). Both are at github.com/jbrick2070/streamdeck-fadester. On its own, this extension does nothing.
 >
 > It talks only to your own computer. No account, no tracking, nothing sent to any server.
 >
@@ -39,7 +39,7 @@ The zip has no `key`: the store refuses one on a first upload and gives the exte
 
 **Category:** Productivity. **Language:** English (the listing; the extension itself has 12).
 
-**Single purpose:** Let the VJster plugin for the user's Stream Deck or OpenDeck, or Fadester for TourBox, change the speed and quality of the YouTube video in a tab.
+**Single purpose:** Let the user's Stream Deck, OpenDeck, TourBox or Xbox controller, through Fadester for OBS or Fadester Companion on the same computer, change the speed and quality of the YouTube video in a tab.
 
 **Privacy policy URL:** https://github.com/jbrick2070/streamdeck-fadester/blob/main/docs/vjster/PRIVACY.md
 

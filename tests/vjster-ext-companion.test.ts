@@ -31,7 +31,7 @@ describe("the extension says it needs the VJster plugin", () => {
       const messages = JSON.parse(readFileSync(join(localeDir, language, "messages.json"), "utf8")) as Record<string, { message: string }>;
       const description = messages.extDescription.message;
       expect(description.length, language).toBeLessThanOrEqual(132);
-      for (const name of ["Stream Deck", "OpenDeck", "TourBox"]) expect(description, `${language} description`).toContain(name);
+      for (const name of ["Stream Deck", "OpenDeck", "TourBox", "Xbox"]) expect(description, `${language} description`).toContain(name);
       // The three programs that host VJster's link, by the names they have now; the notice also says where the plugins run.
       for (const key of ["companionNote", "portNote", "idNote"]) {
         const text = messages[key].message;

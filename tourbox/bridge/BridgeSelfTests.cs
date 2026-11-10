@@ -86,6 +86,8 @@ internal static class BridgeSelfTests
         }
         desk = new DeskActions(cfg, Fake, timing.Steps);
         static void Check(bool ok, string msg) { if (!ok) throw new Exception("Self-test: " + msg); }
+        Check(ActionNames.Of("pad.take") == ActionNames.Of("take") && ActionNames.Of("take.now") == ActionNames.Of("take"),
+            "the controller's take ids print as the take, not as internal ids");
         await desk.Dispatch("music.down"); await desk.Dispatch("content.up");
         Check(levels["Music"] == -5 && levels["Clips"] == -19, "independent music/content bindings");
         await desk.Dispatch("music.fineUp"); Check(levels["Music"] == -4.75, "fine detent is quarter normal step");

@@ -23,7 +23,7 @@ internal sealed class ObsSetupException(string code, string message) : InvalidOp
     public static ObsSetupException NotAnswering(int port) => new("obs-no-answer",
         $"OBS is not answering on port {port}. Start OBS. In OBS, open Tools → WebSocket Server Settings and turn on Enable WebSocket server.");
     public static ObsSetupException NoPassword() => new("obs-no-password",
-        "OBS has no WebSocket password saved on this PC. In OBS, open Tools → WebSocket Server Settings, turn on Enable WebSocket server and Enable Authentication, and click OK. Or type the password in the panel's Setup tab (or set FADESTER_OBS_PASSWORD).");
+        "OBS has no WebSocket password saved on this PC. In OBS, open Tools → WebSocket Server Settings, turn on Enable WebSocket server and Enable Authentication, and click OK. Or type the password in the panel's Setup tab.");
     public static ObsSetupException AuthenticationOff() => new("obs-auth-off",
         "Authentication is off in OBS. In OBS, open Tools → WebSocket Server Settings and turn on Enable Authentication.");
     public static ObsSetupException PasswordRejected() => new("obs-bad-password",

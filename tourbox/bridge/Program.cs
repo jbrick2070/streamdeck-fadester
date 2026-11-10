@@ -110,7 +110,7 @@ internal static class Program
             }
             int g = Volatile.Read(ref current);
             // The panel reads "OBS is not connected." for its status line.
-            if (g == 0) { Console.WriteLine($"OBS is not connected. {ActionNames.Of(action == PadTake ? "take" : action)} was not sent."); return; }
+            if (g == 0) { Console.WriteLine($"OBS is not connected. {ActionNames.Of(action)} was not sent."); return; }
             if (!input.Writer.TryWrite(new(action, g, Stopwatch.GetTimestamp()))) Console.WriteLine("Input queue full: ignored " + ActionNames.Of(action));
         }
         var keys = new Hotkeys(bindings, Enqueue, Console.WriteLine);

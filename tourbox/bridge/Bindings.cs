@@ -56,6 +56,8 @@ internal static class ActionNames
     {
         "vjster.speed.fast" => "Video speed: fast preset",
         "vjster.speed.slow" => "Video speed: slow preset",
+        // The controller's own queue ids for its take: name them as the take they run.
+        "pad.take" or "take.now" => Of("take"),
         _ => id,
     };
 

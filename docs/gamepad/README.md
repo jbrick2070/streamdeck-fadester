@@ -86,5 +86,5 @@ Control names: `A B X Y LB RB View Menu LS RS DpadUp DpadDown DpadLeft DpadRight
 
 - Windows only for now. macOS will use Apple's GameController framework through the Mac host.
 - XInput pads only (Xbox and compatibles). The companion uses the first connected XInput pad: if another pad or a virtual controller comes first, unplug or turn it off. A DualSense or Switch Pro pad needs Steam Input or a similar XInput layer.
-- Not in mix-only mode (**Use only Stream Deck, OpenDeck or MIDI (no TourBox shortcuts)**).
+- Not in mix-only mode (**Use only Stream Deck, OpenDeck or MIDI (no TourBox, no game controller, no VJster)**).
 - Why not a web page: a browser only gives pad input to the window in focus, so a page or an OBS dock stops responding the moment you click OBS. The measurements are in [DESIGN.md](DESIGN.md).

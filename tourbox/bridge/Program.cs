@@ -227,7 +227,7 @@ internal static class Program
                             if (KeyGuards.IsStrayFaderTick(ev.Action, lastHeldTurn, ev.Timestamp)) { Console.WriteLine("Ignored a T-bar tick right after a held Dial turn: was the button still held?"); continue; }
                             if (KeyGuards.IsHeldDialTurn(ev.Action)) lastHeldTurn = ev.Timestamp;
                             if (ev.Action == "bridge.reconnect") { Console.WriteLine("Reconnecting."); break; }
-                            try { Console.WriteLine(await desk.Dispatch(ev.Action)); }
+                            try { Console.WriteLine(await desk.Dispatch(ev.Action, ev.Timestamp)); }
                             catch (Exception e) { Console.WriteLine("Action " + ev.Action + ": " + e.Message); }
                             // A take, cancel or dial move from any surface owns the T-bar now: a trigger held meanwhile
                             // must return to rest before it throws, or it would throw back towards the scene just taken.

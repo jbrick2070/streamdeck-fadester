@@ -48,7 +48,8 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
         return target >= 1 ? "Controller T-bar: take" : target <= 0 && moving ? "Controller T-bar: back to Program" : "";
     }
 
-    public async Task<string> Dispatch(string id)
+    /// <param name="pressedAt">When the control was pressed (a Stopwatch timestamp), if known; see StudioFader.DispatchAsync.</param>
+    public async Task<string> Dispatch(string id, long pressedAt = 0)
     {
         if (!Supported.Contains(id)) throw new ArgumentException("Unknown action: " + id);
         if (id.StartsWith("vjster.")) throw new InvalidOperationException("VJster actions go to the Chrome extension, not to OBS; they run on the VJster desk.");
@@ -90,7 +91,7 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
             case "fader.cancel":
             case "take":
             case "take.cut":
-                await fader.DispatchAsync(id); return $"{id} · T-bar {fader.Position:P0}";
+                await fader.DispatchAsync(id, pressedAt); return $"{id} · T-bar {fader.Position:P0}";
             case "fader.status":
                 {
                     bool enabled = (await Get("GetStudioModeEnabled"))["studioModeEnabled"]!.GetValue<bool>();

@@ -314,10 +314,10 @@ internal static class StudioFaderSelfTests
         await Blocked(() => fader.DispatchAsync("take.cut"));
         Check(restoreRequests == 1 && obs.Takes == 1 && obs.Transition == "Stinger",
             "restoration stops without retrying over an operator selection");
-        obs = new(){StaleTransitionReads=50}; fader = new(obs.Call);
+        obs = new(){StaleTransitionReads=50}; fader = new(obs.Call) { SelectPolls = 40 };
         await Blocked(() => fader.DispatchAsync("take.cut"));
-        for (int i = 0; i < 110; i++) await obs.Call("GetCurrentSceneTransition", null);
-        Check(obs.Takes == 0 && obs.Transition == "Fondu" && obs.Writes.Count == 2,
+        for (int i = 0; i < 2000; i++) await obs.Call("GetCurrentSceneTransition", null);
+        Check(obs.Takes == 0 && obs.Transition == "Fondu" && obs.Writes.All(w => w == "SetCurrentSceneTransition"),
             "unconfirmed Cut is followed by the original selection even when readback still shows Fade");
         obs = new(); fader = new((action, data) =>
         {
@@ -334,7 +334,7 @@ internal static class StudioFaderSelfTests
             if (action == "SetCurrentSceneTransition" && (string?)data?["transitionName"] == "Fondu" && ignoreRestore)
             { restoreRequests++; return Task.FromResult(new JsonObject()); }
             return obs.Call(action, data);
-        }) { ResendPolls = 40 };
+        }) { SelectPolls = 40 };
         await Blocked(() => fader.DispatchAsync("take.cut"));
         Check(obs.Takes == 1 && obs.Transition == "Coupe" && restoreRequests > 1, "an ignored restore leaves Cut selected and says so");
         await Blocked(() => fader.MoveToAsync(0.5));
@@ -356,28 +356,42 @@ internal static class StudioFaderSelfTests
         Check(obs.Transition == "Fondu" && fader.Position > 0, "an operator's own choice after a failed restore is not repaid over; the T-bar lends a Fade");
         await fader.DispatchAsync("fader.cancel");
         Check(obs.Transition == "Stinger", "and Cancel puts the operator's choice back, not the cut's original");
-        // OBS counts a Cut as running about 1 s and drops every selection until it ends (measured on 33.0.1, 2026-11-09).
-        // Here it drops the Fade for 1.5 s after the cut, longer than the old 40-poll wait could outlast.
-        long cutAt = 0; int fadeRequests = 0;
-        Task<JsonObject> SlowCut(string action, JsonObject? data)
+        // OBS counts a transition as running about 1 s past its picture and drops every selection until it ends (measured
+        // on 33.0.1, 2026-11-09). Here it drops them for busyMs after each take, longer than the old 40-poll wait.
+        long tookAt = 0; int fadeRequests = 0; double busyMs = 1500;
+        Task<JsonObject> SlowObs(string action, JsonObject? data)
         {
-            if (action == "SetCurrentSceneTransition" && (string?)data?["transitionName"] == "Fondu")
+            if (action == "SetCurrentSceneTransition")
             {
-                fadeRequests++;
-                if (cutAt != 0 && Stopwatch.GetElapsedTime(cutAt).TotalMilliseconds < 1500) return Task.FromResult(new JsonObject());
+                if ((string?)data?["transitionName"] == "Fondu") fadeRequests++;
+                if (tookAt != 0 && Stopwatch.GetElapsedTime(tookAt).TotalMilliseconds < busyMs) return Task.FromResult(new JsonObject());
             }
             var reply = obs.Call(action, data);
-            if (action == "TriggerStudioModeTransition") cutAt = Stopwatch.GetTimestamp();
+            if (action == "TriggerStudioModeTransition") tookAt = Stopwatch.GetTimestamp();
             return reply;
         }
-        obs = new(); fader = new(SlowCut);
+        obs = new(); fader = new(SlowObs);
         await fader.DispatchAsync("take.cut");
         Check(obs.Takes == 1 && obs.Transition == "Fondu" && fadeRequests > 1,
             "a put-back OBS drops for the whole Cut lands once the Cut ends, without repeating the cut");
         await fader.DispatchAsync("take");
         Check(obs.Takes == 2 && obs.TransitionAtTake == "Fondu", "and a Take pressed right after fades");
-        cutAt = 0; fadeRequests = 0;
-        obs = new(){Transition="Coupe"}; fader = new(SlowCut);
+        // Seen live: B about 1.3 s after A, the Fade's picture done but OBS still counting it as running.
+        tookAt = 0; busyMs = 800;
+        obs = new(); fader = new(SlowObs);
+        await fader.DispatchAsync("take");
+        await Task.Delay(500); // past the 450 ms second-take guard
+        var firstCut = fader.DispatchAsync("take.cut", Stopwatch.GetTimestamp());
+        await Task.Delay(100); long againAt = Stopwatch.GetTimestamp(); // B pressed again while nothing seemed to happen
+        await firstCut;
+        Check(obs.Takes == 2 && obs.TransitionAtTake == "Coupe" && obs.Transition == "Fondu",
+            "a cut pressed while OBS still finishes a Fade waits for it, cuts once and puts Fade back");
+        await fader.DispatchAsync("take.cut", againAt);
+        Check(obs.Takes == 2, "a second cut pressed while the first waited is a double press, though it runs only afterwards");
+        await fader.DispatchAsync("take", Stopwatch.GetTimestamp());
+        Check(obs.Takes == 3 && obs.TransitionAtTake == "Fondu", "while a take pressed after the cut went out fades");
+        tookAt = 0; fadeRequests = 0; busyMs = 1500;
+        obs = new(){Transition="Coupe"}; fader = new(SlowObs);
         await fader.DispatchAsync("take.cut"); await fader.MoveToAsync(0.4);
         Check(obs.Takes == 1 && obs.Transition == "Fondu" && fader.Position == 0.4 && fadeRequests > 1,
             "a throw started while the Cut still runs waits for it to end, then mixes with a Fade");
@@ -388,7 +402,7 @@ internal static class StudioFaderSelfTests
             if (action == "SetCurrentSceneTransition" && (string?)data?["transitionName"] == "Coupe" && ignoreCut)
                 return Task.FromResult(new JsonObject());
             return obs.Call(action, data);
-        });
+        }) { SelectPolls = 40 };
         await Blocked(() => fader.DispatchAsync("take.cut"));
         Check(obs.Takes == 0 && obs.Transition == "Fondu", "an unconfirmed Cut never takes");
         await fader.MoveToAsync(0.3); await fader.DispatchAsync("fader.cancel");
@@ -483,7 +497,7 @@ internal static class StudioFaderSelfTests
         // OBS drops a selection while its transition is still active: a Fade that never lands moves nothing.
         obs = new(){Transition="Coupe"}; fader = new((action, data) =>
             action == "SetCurrentSceneTransition" && (string?)data?["transitionName"] == "Fondu" ? Task.FromResult(new JsonObject()) : obs.Call(action, data))
-            { ResendPolls = 40 };
+            { SelectPolls = 40 };
         await Blocked(() => fader.MoveToAsync(0.4));
         Check(obs.Transition == "Coupe" && fader.Position == 0 && obs.Cursor == 0 && !obs.Writes.Contains("SetTBarPosition"),
             "a Fade OBS will not select moves nothing and leaves Cut");
@@ -497,9 +511,9 @@ internal static class StudioFaderSelfTests
         });
         await Blocked(() => fader.MoveToAsync(0.4));
         Check(obs.Transition == "Coupe" && obs.Cursor == 0, "a Preview cued while the Fade is selected stops the throw and puts Cut back at once");
-        obs = new(){Transition="Coupe", StaleTransitionReads=50}; fader = new(obs.Call) { ResendPolls = 40 };
+        obs = new(){Transition="Coupe", StaleTransitionReads=50}; fader = new(obs.Call) { SelectPolls = 40 };
         await Blocked(() => fader.MoveToAsync(0.4));
-        for (int i = 0; i < 1000; i++) await obs.Call("GetCurrentSceneTransition", null);
+        for (int i = 0; i < 2000; i++) await obs.Call("GetCurrentSceneTransition", null);
         Check(obs.Transition == "Coupe" && obs.Cursor == 0, "a Fade selection OBS answers late is followed by Cut, so Cut stays");
         int fadeSends = 0;
         obs = new(){Transition="Coupe"}; fader = new((action, data) =>
@@ -513,7 +527,7 @@ internal static class StudioFaderSelfTests
             if (action == "SetCurrentSceneTransition" && (string?)data?["transitionName"] == "Coupe" && dropRestore)
             { restores++; return Task.FromResult(new JsonObject()); }
             return obs.Call(action, data);
-        }) { ResendPolls = 40 };
+        }) { SelectPolls = 40 };
         await fader.MoveToAsync(0.4);
         await Blocked(() => fader.MoveToAsync(0));
         Check(restores > 1 && obs.Program == "a" && obs.Transition == "Fondu", "a dropped restore is retried, then reported");
@@ -609,7 +623,7 @@ internal static class StudioFaderSelfTests
         obs = new(){Transition="Coupe"}; fader = new(obs.Call); await fader.MoveToAsync(0.4);
         dropRestore = true;
         fader = new((action, data) => action == "SetCurrentSceneTransition" && (string?)data?["transitionName"] == "Coupe" && dropRestore
-            ? Task.FromResult(new JsonObject()) : obs.Call(action, data), resume: fader.Leave()) { ResendPolls = 40 };
+            ? Task.FromResult(new JsonObject()) : obs.Call(action, data), resume: fader.Leave()) { SelectPolls = 40 };
         string? resumed = null;
         try { await fader.ResumeAsync(); } catch (InvalidOperationException e) { resumed = e.Message; }
         Check(resumed?.StartsWith("T-bar: back to Program after the reconnect.") == true && obs.Program == "a" && obs.Transition == "Fondu",

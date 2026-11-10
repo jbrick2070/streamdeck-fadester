@@ -26,12 +26,12 @@ public sealed class StudioFader
     internal sealed record Owed(string Borrowed, string Original, long At, bool Lent = false, Owed? Resume = null);
     private Owed? owed;
     private const double OwedForMs = 30_000;
-    // OBS counts a Cut as running about 1 s (measured on 33.0.1 with audio buffering at its 960 ms maximum) and drops
-    // every selection until it ends. A selection that may follow a transition (a put-back, or a Fade lent right after a
-    // cut) keeps being sent for well past that: 120 polls 25 ms apart, 3 s or more. A cut's own first selection keeps the
-    // shorter wait. The self-tests shorten ResendPolls where they run the whole wait on purpose.
-    private const int SelectPolls = 40;
-    internal int ResendPolls { get; init; } = 120;
+    // OBS drops every selection while a transition runs, and it counts one as running well after the picture is done
+    // (measured on 33.0.1 with audio buffering at its 960 ms maximum: a Cut about 1.0 s, a 300 ms Fade about 1.3 s), when
+    // its T-bar cursor already reads idle. Any selection can follow a transition (a cut pressed just after a take, its
+    // put-back, a Fade lent right after a cut), so each keeps being sent for well past that: 120 polls 25 ms apart, 3 s or
+    // more. The self-tests shorten SelectPolls where they run the whole wait on purpose.
+    internal int SelectPolls { get; init; } = 120;
     private int direction = 1;
     private long takeAt;
 
@@ -142,7 +142,9 @@ public sealed class StudioFader
         finally { serial.Release(); }
     }
 
-    public async Task DispatchAsync(string action)
+    /// <param name="pressedAt">When the control was pressed (a Stopwatch timestamp), if known. A take or cut pressed while an
+    /// earlier one still waited for OBS is then caught as a double press, though it runs only afterwards.</param>
+    public async Task DispatchAsync(string action, long pressedAt = 0)
     {
         await serial.WaitAsync();
         try
@@ -165,7 +167,9 @@ public sealed class StudioFader
                 case "fader.fineForward": await MoveAsync(direction * step / 4); break;
                 case "fader.fineBack": await MoveAsync(-direction * step / 4); break;
                 case "take": case "take.cut":
-                    if (takeAt != 0 && Stopwatch.GetElapsedTime(takeAt).TotalMilliseconds < 450) return;
+                    // A second take within 450 ms of the last is a double press, and so is one pressed before the last
+                    // went out (a cut can wait about 1 s for OBS). Measured from the press when it is known.
+                    if (takeAt != 0 && Stopwatch.GetElapsedTime(takeAt, pressedAt != 0 ? pressedAt : Stopwatch.GetTimestamp()).TotalMilliseconds < 450) return;
                     if (sweep != null) await FinishAndReturnAsync();
                     else await TakeAsync(action == "take.cut");
                     break;
@@ -245,8 +249,8 @@ public sealed class StudioFader
         bool confirmed = false;
         try
         {
-            // Right after a cut OBS drops selections until the Cut ends (about 1 s): re-send until it takes it.
-            await SelectTransitionAsync(original, fade, resend: true);
+            // Right after a take or cut OBS drops selections for about a second: re-send until it takes it.
+            await SelectTransitionAsync(original, fade);
             confirmed = true;
             // Selecting takes a moment: nothing else may change meanwhile.
             if (await ReadScenesAsync() != scenes) throw new InvalidOperationException("Program or Preview changed before the T-bar moved.");
@@ -450,19 +454,18 @@ public sealed class StudioFader
     private async Task<string> ReadTransitionNameAsync() =>
         Field(await rpc("GetCurrentSceneTransition", null), "transitionName");
 
-    private async Task SelectTransitionAsync(string from, string to, bool resend = false)
+    private async Task SelectTransitionAsync(string from, string to)
     {
         await rpc("SetCurrentSceneTransition", new() { ["transitionName"] = to });
         // The OBS frontend queues the selection on its UI thread. The RPC can return first.
-        int polls = resend ? ResendPolls : SelectPolls;
-        for (int attempt = 0; attempt < polls; attempt++)
+        for (int attempt = 0; attempt < SelectPolls; attempt++)
         {
             var selected = await ReadTransitionNameAsync();
             if (selected == to) return;
             if (selected != from) throw new InvalidOperationException("The selected OBS transition changed to " + selected + ".");
-            // OBS also silently ignores SetTransition while its transition is still active, as in the tail of a
-            // Cut; Program can change before that ends. A selection is safe to send again, a Take never.
-            if (resend && attempt > 0 && attempt % 4 == 0)
+            // OBS also silently ignores SetTransition while it counts a transition as running, which outlasts the
+            // picture (the tail of a Cut or a Fade). A selection is safe to send again, a Take never.
+            if (attempt > 0 && attempt % 4 == 0)
                 await rpc("SetCurrentSceneTransition", new() { ["transitionName"] = to });
             await Task.Delay(25);
         }
@@ -523,7 +526,7 @@ public sealed class StudioFader
         // original after it, but leave a third-party selection alone.
         if (selected == borrowed || (!confirmed && selected == original))
         {
-            try { await SelectTransitionAsync(borrowed, original, resend: true); }
+            try { await SelectTransitionAsync(borrowed, original); }
             catch (InvalidOperationException e)
             {
                 if (await ReadTransitionNameAsync() != borrowed) { owed = null; throw; }
@@ -565,7 +568,7 @@ public sealed class StudioFader
         if (selected == original) { if (lent) owed = resume; return; }
         if (selected == borrowed)
         {
-            try { await SelectTransitionAsync(borrowed, original, resend: true); }
+            try { await SelectTransitionAsync(borrowed, original); }
             catch (InvalidOperationException e)
             {
                 // The operator chose another transition meanwhile: theirs stands.

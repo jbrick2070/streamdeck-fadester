@@ -35,6 +35,7 @@ export const MIN_BACKOFF_MS = 1000;
 export const MAX_BACKOFF_MS = 30_000;
 /** The server closed this socket because a newer one for the same target took over (R-LNK-4). */
 export const CLOSE_REPLACED = 4000;
+const CONNECTING = 0;
 const OPEN = 1;
 
 export class LinkClient {
@@ -52,6 +53,11 @@ export class LinkClient {
 
   get connected(): boolean {
     return this.socket?.readyState === OPEN;
+  }
+
+  /** A socket is opening now: neither connected nor refused yet. */
+  get connecting(): boolean {
+    return this.socket?.readyState === CONNECTING;
   }
 
   /** The delay before the next attempt, for tests and the options page. */

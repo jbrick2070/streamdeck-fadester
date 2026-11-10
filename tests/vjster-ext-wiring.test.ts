@@ -182,7 +182,10 @@ function fakeChrome(opts: WorkerOpts = {}) {
     }
   };
   const c = {
-    runtime: { id: "abcdefghijklmnopabcdefghijklmnop", onMessage: event<[unknown, { tab?: { id?: number; windowId: number }; frameId?: number; id?: string }]>() },
+    runtime: {
+      id: "abcdefghijklmnopabcdefghijklmnop",
+      onMessage: event<[unknown, { tab?: { id?: number; windowId: number }; frameId?: number; id?: string; url?: string }, ((response: unknown) => void)?]>()
+    },
     tabs: {
       query: async (info: { active?: boolean }) => (info.active ? [{ id: 5, windowId: 1 }] : [{ id: 5, windowId: 1 }, { id: 6, windowId: 2 }, { windowId: 3 }]),
       sendMessage: async (tabId: number, message: unknown, options: unknown) => {
@@ -298,6 +301,31 @@ describe("service worker wiring (R-LNK-3, R-TGT-1..4)", () => {
     c.storage.onChanged.fire({ "vjster.port": { newValue: 48160 } }, "local");
     c.storage.onChanged.fire({ "vjster.port": { newValue: 48170 } }, "sync");
     expect(opened.map((o) => o.url)).toEqual(["ws://127.0.0.1:48151/", "ws://127.0.0.1:48160/"]);
+  });
+
+  it("tells this extension's own options page how the link is, and nobody else", async () => {
+    const { c, opened } = await bootWorker();
+    const answers: unknown[] = [];
+    const ask = (sender: { tab?: { id?: number; windowId: number }; frameId?: number; id?: string; url?: string }) =>
+      c.runtime.onMessage.fire({ kind: "link-status" }, sender, (answer) => answers.push(answer));
+    const options = { id: c.runtime.id, url: `chrome-extension://${c.runtime.id}/options.html`, tab: { id: 9, windowId: 1 }, frameId: 0 };
+    ask(options);
+    await flush();
+    expect(answers).toEqual([{ state: "connecting", port: 48151 }]);
+    opened[0].socket.open();
+    ask(options);
+    await flush();
+    expect(answers.at(-1)).toEqual({ state: "up", port: 48151 });
+    opened[0].socket.drop();
+    ask(options);
+    await flush();
+    expect(answers.at(-1)).toEqual({ state: "down", port: 48151 });
+    // A YouTube tab's bridge, another extension, or another extension's page: no answer.
+    ask({ id: c.runtime.id, url: "https://www.youtube.com/watch?v=x", tab: { id: 5, windowId: 1 }, frameId: 0 });
+    ask({ id: "ponmlkjihgfedcbaponmlkjihgfedcba", url: "chrome-extension://ponmlkjihgfedcbaponmlkjihgfedcba/options.html" });
+    ask({ id: c.runtime.id, url: "chrome-extension://ponmlkjihgfedcbaponmlkjihgfedcba/options.html" });
+    await flush();
+    expect(answers).toHaveLength(3);
   });
 
   it("reconnects on its own alarm only", async () => {

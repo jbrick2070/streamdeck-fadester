@@ -189,7 +189,7 @@ describe("OBS Filter control", () => {
     const offline = once(client, "statusChanged", { signal: AbortSignal.timeout(3000) });
     await server.stop();
     await offline;
-    await dial.waitImage((svg) => svg.includes(">OBS is not running or websocket is off<") || svg.includes("not running"));
+    await dial.waitImage((svg) => svg.includes(">OBS not connected<"));
 
     // German words on the deck.
     setLanguage("de", deckTable("de"));

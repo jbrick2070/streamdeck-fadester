@@ -10,6 +10,13 @@
   let bindControls = null;
   let connectionEditorInitialized = false;
   let layoutBusy = false;
+  // What the last layout or Studio request was ("layout" or "studio"): its result says what was done.
+  let setupAction = "layout";
+  // A connection test is running: the status line says so until the plugin reports the test done.
+  let connectionTesting = false;
+  let connectionTestTimer = null;
+  // The longest the line waits for that report (a plugin restarted meanwhile never sends it).
+  const CONNECTION_TEST_LIMIT_MS = 10000;
   // Texts come from ui/i18n.js (loaded first), in the plugin's language: Stream Deck's, or the Language choice (R-LANG-3).
   const T = function (key, params) { return window.FadesterI18n.t(key, params); };
   // The Language choice (PLAN.md 11.1): Automatic, then the nine languages by their own names, never translated (D-L3).
@@ -142,6 +149,7 @@
       '<p class="muted" data-i18n="layoutsInstallNote">The current starter installs as an editable profile once. Any older layouts you customized stay available.</p>',
       '<div class="row"><label for="direct-layout" data-i18n="layoutLabel">Layout</label><select id="direct-layout"></select></div>',
       '<div class="row"><label></label><button id="direct-layout-open" class="btn" type="button">Open current starter layout</button></div>',
+      '<p class="muted" id="direct-layout-hint" style="display:none"></p>',
       '<p class="muted" data-i18n="layoutsOrderNote">Everyday Source Desks keep layer order fixed. Creative Layer Lab enables its labelled reorder controls.</p>',
       '</details>',
       '<details class="editor direct-optional"><summary data-i18n="optionalSummary">Optional: Midi Fadester integration</summary>',
@@ -173,6 +181,11 @@
     if (port) port.onchange = pushConnection;
     if (test) test.onclick = function () {
       pushConnection();
+      // Feedback that the test runs, also when its result is the same sentence as before; the button stays usable.
+      connectionTesting = true;
+      window.clearTimeout(connectionTestTimer);
+      connectionTestTimer = window.setTimeout(endConnectionTest, CONNECTION_TEST_LIMIT_MS);
+      setBanner($("direct-conn-status"), T("connTesting"), "info");
       sendToPlugin({ event: "directTestConnection" });
     };
     const languagePicker = $("direct-language");
@@ -186,6 +199,7 @@
       const layout = currentState && (currentState.layouts || []).find(function (item) { return item.slug === (select && select.value); });
       if (layout && !layoutBusy) {
         layoutBusy = true;
+        setupAction = "layout";
         updateLayoutButton();
         setBanner($("direct-setup-status"), T("layoutPreparing"), "info");
         sendToPlugin({ event: "directActivateLayout", slug: layout.slug, prepareStudio: layout.obsMode === "studio" });
@@ -197,6 +211,7 @@
     if (prepareStudio) prepareStudio.onclick = function () {
       if (layoutBusy) return;
       layoutBusy = true;
+      setupAction = "studio";
       updateStudioSetup();
       setBanner($("direct-setup-status"), T("studioPreparing"), "info");
       sendToPlugin({ event: "directPrepareStudio" });
@@ -210,10 +225,27 @@
     const layout = (state.layouts || []).find(function (item) { return item.slug === (picker && picker.value); });
     if (!button) return;
     const studio = layout && layout.obsMode === "studio";
+    const needsObs = Boolean(studio && (!state.status || state.status.kind !== "connected"));
     button.textContent = T(layoutBusy ? "preparing" : studio
       ? (state.catalog && state.catalog.studioMode ? "layoutOpenPrepare" : "layoutOpenEnable")
       : "layoutOpen");
-    button.disabled = layoutBusy || !layout || (studio && (!state.status || state.status.kind !== "connected"));
+    button.disabled = layoutBusy || !layout || needsObs;
+    // A Studio Mode layout waits for OBS: say why its button is off.
+    const hint = $("direct-layout-hint");
+    if (hint) {
+      const show = needsObs && !layoutBusy;
+      hint.textContent = show ? T("layoutNeedsObs") : "";
+      hint.style.display = show ? "" : "none";
+    }
+  }
+
+  /** The connection test is over (or never answered): the status line shows the plugin's state again. */
+  function endConnectionTest() {
+    window.clearTimeout(connectionTestTimer);
+    connectionTestTimer = null;
+    if (!connectionTesting) return;
+    connectionTesting = false;
+    if (currentState) updateConnection(currentState);
   }
 
   function updateStudioSetup() {
@@ -257,8 +289,10 @@
       connectionEditorInitialized = true;
     }
     const kind = status.kind === "connected" ? "ok" : "err";
-    // The status sentence arrives worded in the plugin's language (the same as this page's).
-    setBanner($("direct-conn-status"), status.sentence || T("connWaiting"), kind);
+    // The status sentence arrives worded in the plugin's language (the same as this page's). While a test
+    // runs, the line keeps saying so (in the page's current language).
+    if (connectionTesting) setBanner($("direct-conn-status"), T("connTesting"), "info");
+    else setBanner($("direct-conn-status"), status.sentence || T("connWaiting"), kind);
     const layouts = state.layouts || [];
     const openDeck = state.openDeckStarter;
     const hostHint = $("direct-opendeck-starter");
@@ -394,9 +428,14 @@
           updateConnection(currentState);
           refreshControls();
         }
+        if (message.event === "sendToPropertyInspector" && message.payload && message.payload.event === "directTestDone") {
+          endConnectionTest();
+        }
         if (message.event === "sendToPropertyInspector" && message.payload && message.payload.event === "directSetupResult") {
           layoutBusy = false;
-          setBanner($("direct-setup-status"), message.payload.ok ? T("setupDone") : message.payload.error || T("setupFailed"), message.payload.ok ? "ok" : "err");
+          // Each request says what it did: a layout opened, or Studio Mode and Preview made ready.
+          const done = setupAction === "studio" ? T("studioPrepared") : T("setupDone");
+          setBanner($("direct-setup-status"), message.payload.ok ? done : message.payload.error || T("setupFailed"), message.payload.ok ? "ok" : "err");
           updateLayoutButton();
           updateStudioSetup();
         }

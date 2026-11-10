@@ -126,7 +126,7 @@ describe("Playlister transport key", () => {
 
     // OBS gone: the connection reason, as every direct key draws it.
     await server.stop();
-    await waitImage((svg) => svg.includes("websocket is off"));
+    await waitImage((svg) => svg.includes(">OBS not connected<"));
     expect(last()).not.toContain("Stopped");
   }, 15000);
 

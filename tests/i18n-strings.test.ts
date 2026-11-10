@@ -221,7 +221,7 @@ describe("German on the deck", () => {
     expect(statusSentence(status)).toBe("Connected: OBS 33.0.0, Midi Fadester 0.4.0 (abc1234)");
     useLanguage("de");
     expect(statusSentence(status, translate)).toBe("Verbunden: OBS 33.0.0, Midi Fadester 0.4.0 (abc1234)");
-    expect(statusCellReason({ kind: "obs_unreachable" }, translate)).toBe("OBS läuft nicht oder WebSocket ist aus");
+    expect(statusCellReason({ kind: "obs_unreachable" }, translate)).toBe("OBS nicht verbunden");
     expect(statusCellReason(status, translate)).toBe("");
   });
 });

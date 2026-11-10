@@ -9,7 +9,7 @@
     "message": "VJster options"
   },
   "companionNote": {
-    "message": "VJster needs a free companion on this computer: the VJster plugin for Stream Deck or OpenDeck, or Fadester for TourBox. On its own, this extension does nothing."
+    "message": "VJster needs one free program on this computer: Fadester for OBS or the VJster plugin (for Stream Deck or OpenDeck), or Fadester Companion. Alone, this extension does nothing."
   },
   "linkGet": {
     "message": "Downloads"
@@ -27,19 +27,33 @@
     "message": "Save"
   },
   "portNote": {
-    "message": "The port VJster listens on in your Stream Deck or OpenDeck plugin or in Fadester for TourBox, on this computer only. Change it only if you changed it there."
+    "message": "The port VJster uses in Fadester for OBS, the VJster plugin or Fadester Companion, on this computer only. Change it only if you changed it there."
   },
   "idLabel": {
     "message": "This extension's id"
   },
   "idNote": {
-    "message": "To let only this extension connect, paste the id into the VJster settings in your Stream Deck or OpenDeck plugin, or in Fadester for TourBox."
+    "message": "To let only this extension connect, paste the id into the VJster settings of Fadester for OBS, the VJster plugin or Fadester Companion."
   },
   "allSites": {
     "message": "Control videos on every site, not only YouTube"
   },
   "allSitesNote": {
     "message": "Speed only: quality needs YouTube's player. Chrome asks for permission to read and change every site."
+  },
+  "statusLinkUp": {
+    "message": "Connected to VJster on port $PORT$.",
+    "placeholders": {
+      "port": {
+        "content": "$1"
+      }
+    }
+  },
+  "statusLinkDown": {
+    "message": "Not connected. Start Stream Deck, OpenDeck or Fadester Companion on this computer. The port here must be the same as the port in the VJster settings."
+  },
+  "statusLinkChecking": {
+    "message": "Connecting to VJster…"
   },
   "statusBadPort": {
     "message": "Use a whole number from 1024 to 65535; $DEFAULT$ is the default.",

@@ -9,7 +9,7 @@ The standalone VJster plugin (`com.jbrick2070.vjster`) is still built and releas
 - **One install, one settings home.** Fadester's connection settings (OBS host, port, password, language) and VJster's (link port, Chrome extension ids, the OBS page key, language) are stored side by side without touching each other: VJster's sit under their own key.
 - **VJster's settings page** is the same page as the standalone plugin's. It saves through the plugin, never straight over the stored settings.
 - **VJster's Stream Deck profiles** (Live +, Dual +, Live 15, Mini) belong to the standalone plugin; the suite does not carry copies yet. In OpenDeck, `npm run opendeck:install -- --layout` puts VJster's starter keys and dials on the deck from the suite.
-- **The Chrome extension** is the same one; it talks to the VJster half of the suite on the same port, 48150 by default.
+- **The Chrome extension** is the same one, from the [Chrome Web Store](https://chromewebstore.google.com/detail/daohboebokfmamkblejcpbblfnaijgnb); it talks to the VJster half of the suite on the same port, 48150 by default. Fadester Companion can host the same link, so keep only one program with VJster running: the suite, the VJster plugin or Fadester Companion.
 
 ## How it is built
 

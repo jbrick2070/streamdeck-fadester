@@ -244,7 +244,7 @@ describe("malformed page texts show English (R-LANG-5)", () => {
     expect(page.byId("obs-copy").textContent).toBe("Copy address");
     expect(page.all.find((e) => e.getAttribute("data-i18n") === "port")!.textContent).toBe("Port");
     page.toPage({ event: "status", port: 50123, portInUse: true, browser: "extension-off", extensionIds: [], badIds: 0, obsPage: true, obs: "page-off" });
-    expect(page.byId("status").textContent).toBe("Port 50123 is in use by another program");
+    expect(page.byId("status").textContent).toBe("Port 50123 is in use. Another program with VJster may be running: Fadester for OBS, the VJster plugin or Fadester Companion. Keep only one.");
     // A good German text still shows.
     expect(page.byId("obs-status").textContent).toBe("Keine OBS-Seite verbunden");
   });

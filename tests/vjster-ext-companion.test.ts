@@ -32,13 +32,15 @@ describe("the extension says it needs the VJster plugin", () => {
       const description = messages.extDescription.message;
       expect(description.length, language).toBeLessThanOrEqual(132);
       for (const name of ["Stream Deck", "OpenDeck", "TourBox"]) expect(description, `${language} description`).toContain(name);
+      // The three programs that host VJster's link, by the names they have now; the notice also says where the plugins run.
       for (const key of ["companionNote", "portNote", "idNote"]) {
         const text = messages[key].message;
-        // German writes the plugins as compounds: "Stream-Deck-".
-        expect(text.replace("Stream-Deck", "Stream Deck"), `${language} ${key}`).toContain("Stream Deck");
-        expect(text, `${language} ${key}`).toContain("OpenDeck");
-        expect(text, `${language} ${key}`).toContain("Fadester for TourBox");
+        for (const name of ["Fadester for OBS", "VJster", "Fadester Companion"]) expect(text, `${language} ${key}`).toContain(name);
+        expect(text, `${language} ${key}`).not.toContain("Fadester for TourBox");
       }
+      for (const name of ["Stream Deck", "OpenDeck"]) expect(messages.companionNote.message, `${language} companionNote`).toContain(name);
+      // The link line names the same programs the operator can start.
+      for (const name of ["Stream Deck", "OpenDeck", "Fadester Companion"]) expect(messages.statusLinkDown.message, `${language} statusLinkDown`).toContain(name);
     }
   });
 

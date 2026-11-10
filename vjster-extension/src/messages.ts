@@ -118,6 +118,38 @@ export function readWorkerToBridge(data: unknown): WorkerToBridge | null {
   return intent ? { kind: "intent", intent } : null;
 }
 
+/** The options page asks the service worker how the link to VJster is, by chrome.runtime.sendMessage. */
+export const LINK_STATUS_REQUEST = { kind: "link-status" } as const;
+
+/** The worker's answer: the link's state and the port it uses. */
+export type LinkStatus = { readonly state: "up" | "connecting" | "down"; readonly port: number };
+
+export function isLinkStatusRequest(data: unknown): boolean {
+  return isRecord(data) && data.kind === LINK_STATUS_REQUEST.kind;
+}
+
+/** A worker answer the options page accepts; null for anything else (no answer, an older worker). */
+export function readLinkStatus(data: unknown): LinkStatus | null {
+  if (!isRecord(data) || (data.state !== "up" && data.state !== "connecting" && data.state !== "down")) return null;
+  const port = data.port;
+  if (typeof port !== "number" || !Number.isInteger(port) || port < 1 || port > 65535) return null;
+  return { state: data.state, port };
+}
+
+/** What the options page's link line shows: a message name and the line's class (its colour). */
+export type LinkLine = { readonly name: "statusLinkUp" | "statusLinkDown" | "statusLinkChecking"; readonly state: LinkStatus["state"] };
+
+/**
+ * The link line for one answer, or null to keep the line as it is. Up and down always show. While the link is
+ * opening, an empty line (the page just opened) says it is connecting; a line that already says up or down keeps
+ * that until the next check tells. No answer (an older worker) changes nothing.
+ */
+export function linkLine(answer: LinkStatus | null, lineEmpty: boolean): LinkLine | null {
+  if (!answer) return null;
+  if (answer.state === "connecting") return lineEmpty ? { name: "statusLinkChecking", state: "connecting" } : null;
+  return answer.state === "up" ? { name: "statusLinkUp", state: "up" } : { name: "statusLinkDown", state: "down" };
+}
+
 /** Plain-object copy of an intent for postMessage (structured clone drops nothing, but keeps it explicit). */
 export function plainIntent(intent: Intent): Intent {
   return JSON.parse(serialize(intent)) as Intent;

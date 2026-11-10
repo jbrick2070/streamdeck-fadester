@@ -5,7 +5,7 @@
 
 import type { Intent } from "../../src/vjster/shared/protocol.js";
 import { LinkClient, type SocketLike } from "./link-client.js";
-import { readBridgeToWorker, plainIntent } from "./messages.js";
+import { isLinkStatusRequest, readBridgeToWorker, plainIntent, type LinkStatus } from "./messages.js";
 import { NO_VIDEO } from "./page-state.js";
 import { Router } from "./router.js";
 import { ALL_SITES_IDS, ALL_SITES_KEY, ALL_SITES_SCRIPTS, PIN_KEY, PORT_KEY, linkUrl, readPort } from "./settings.js";
@@ -15,11 +15,20 @@ export const ALARM = "vjster-link";
 
 type Listener<A extends unknown[]> = { addListener(fn: (...args: A) => void): void };
 
+/** Who sent a runtime message: a tab's frame (a content script) or one of this extension's own pages (`url`). */
+export interface MessageSender {
+  tab?: { id?: number; windowId: number };
+  frameId?: number;
+  id?: string;
+  url?: string;
+}
+
 /** The part of the chrome object the worker uses. */
 export interface WorkerChrome {
   runtime: {
     readonly id: string;
-    onMessage: Listener<[unknown, { tab?: { id?: number; windowId: number }; frameId?: number; id?: string }, ...unknown[]]>;
+    /** A listener that answers later calls `sendResponse` and returns true (Chrome's rule). */
+    onMessage: { addListener(fn: (data: unknown, sender: MessageSender, sendResponse?: (response: unknown) => void) => boolean | void): void };
   };
   tabs: {
     query(info: { active?: boolean }): Promise<{ id?: number; windowId: number }[]>;
@@ -149,7 +158,16 @@ export function installWorker(env: WorkerEnv): Worker {
     random: env.random
   });
 
-  c.runtime.onMessage.addListener((data, sender) => {
+  // This extension's own pages (the options page) start with this address; a content script's sender has the web page's.
+  const ownPages = `chrome-extension://${c.runtime.id}/`;
+
+  c.runtime.onMessage.addListener((data, sender, sendResponse) => {
+    // The options page's status line asks how the link is: answered once settings are read and the link has started.
+    if (isLinkStatusRequest(data)) {
+      if (sender.id !== c.runtime.id || !sender.url?.startsWith(ownPages) || !sendResponse) return;
+      void booted.catch(() => undefined).then(() => sendResponse(linkStatus()));
+      return true;
+    }
     const tabId = sender.tab?.id;
     // Only this extension's own bridge, and only the top frame of a tab, speaks for it.
     if (sender.id !== c.runtime.id || tabId === undefined || sender.frameId !== 0) return;
@@ -222,5 +240,11 @@ export function installWorker(env: WorkerEnv): Worker {
       .catch(() => undefined);
   }
 
-  return { router, link, booted: boot() };
+  /** The link as the options page shows it. */
+  function linkStatus(): LinkStatus {
+    return { state: link.connected ? "up" : link.connecting ? "connecting" : "down", port };
+  }
+
+  const booted = boot();
+  return { router, link, booted };
 }

@@ -9,7 +9,7 @@
     "message": "VJster 选项"
   },
   "companionNote": {
-    "message": "VJster 需要这台电脑上有一个免费的配套程序：适用于 Stream Deck 或 OpenDeck 的 VJster 插件，或 Fadester for TourBox。单独使用，此扩展程序不会执行任何操作。"
+    "message": "VJster 需要这台电脑上有一个免费程序：Fadester for OBS 或 VJster 插件（适用于 Stream Deck 或 OpenDeck），或 Fadester Companion。单独使用，此扩展程序不会执行任何操作。"
   },
   "linkGet": {
     "message": "下载"
@@ -27,19 +27,33 @@
     "message": "保存"
   },
   "portNote": {
-    "message": "VJster 在 Stream Deck 或 OpenDeck 插件或 Fadester for TourBox 中监听的端口，仅限这台电脑。只有在那里修改了该端口后才需要更改。"
+    "message": "VJster 在 Fadester for OBS、VJster 插件或 Fadester Companion 中使用的端口，仅限这台电脑。只有在那里修改了该端口后才需要更改。"
   },
   "idLabel": {
     "message": "此扩展程序的 ID"
   },
   "idNote": {
-    "message": "如果只允许此扩展程序连接，请将此 ID 粘贴到 Stream Deck 或 OpenDeck 插件的 VJster 设置中，或粘贴到 Fadester for TourBox 中。"
+    "message": "如果只允许此扩展程序连接，请将此 ID 粘贴到 Fadester for OBS、VJster 插件或 Fadester Companion 的 VJster 设置中。"
   },
   "allSites": {
     "message": "控制所有网站上的视频，而不仅仅是 YouTube"
   },
   "allSitesNote": {
     "message": "仅限速度：画质需要 YouTube 的播放器。Chrome 会请求读取和更改所有网站上数据的权限。"
+  },
+  "statusLinkUp": {
+    "message": "已通过端口 $PORT$ 连接到 VJster。",
+    "placeholders": {
+      "port": {
+        "content": "$1"
+      }
+    }
+  },
+  "statusLinkDown": {
+    "message": "未连接。请在这台电脑上启动 Stream Deck、OpenDeck 或 Fadester Companion。此处的端口必须与 VJster 设置中的端口相同。"
+  },
+  "statusLinkChecking": {
+    "message": "正在连接 VJster…"
   },
   "statusBadPort": {
     "message": "请使用 1024 到 65535 之间的整数；默认值为 $DEFAULT$。",

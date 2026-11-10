@@ -9,7 +9,7 @@
     "message": "VJster 옵션"
   },
   "companionNote": {
-    "message": "VJster를 사용하려면 이 컴퓨터에 무료 연동 프로그램이 필요합니다. Stream Deck 또는 OpenDeck용 VJster 플러그인이나 Fadester for TourBox입니다. 이 확장 프로그램만으로는 아무 기능도 하지 않습니다."
+    "message": "VJster를 사용하려면 이 컴퓨터에 무료 프로그램 하나가 필요합니다. Fadester for OBS나 VJster 플러그인(Stream Deck 또는 OpenDeck용), 또는 Fadester Companion입니다. 이 확장 프로그램만으로는 아무 기능도 하지 않습니다."
   },
   "linkGet": {
     "message": "다운로드"
@@ -27,19 +27,33 @@
     "message": "저장"
   },
   "portNote": {
-    "message": "Stream Deck 또는 OpenDeck 플러그인이나 Fadester for TourBox에서 VJster가 이 컴퓨터 내부에서만 수신 대기하는 포트입니다. 그곳에서 변경한 경우에만 변경하세요."
+    "message": "Fadester for OBS, VJster 플러그인 또는 Fadester Companion에서 VJster가 이 컴퓨터 내부에서만 사용하는 포트입니다. 그곳에서 변경한 경우에만 변경하세요."
   },
   "idLabel": {
     "message": "이 확장 프로그램의 ID"
   },
   "idNote": {
-    "message": "이 확장 프로그램만 연결되게 하려면 Stream Deck 또는 OpenDeck 플러그인의 VJster 설정이나 Fadester for TourBox에 이 ID를 붙여 넣으세요."
+    "message": "이 확장 프로그램만 연결되게 하려면 Fadester for OBS, VJster 플러그인 또는 Fadester Companion의 VJster 설정에 이 ID를 붙여 넣으세요."
   },
   "allSites": {
     "message": "YouTube뿐 아니라 모든 사이트의 동영상 조절"
   },
   "allSitesNote": {
     "message": "속도만 해당: 화질은 YouTube 플레이어가 있어야 합니다. Chrome에서 모든 사이트의 데이터를 읽고 변경할 권한을 요청합니다."
+  },
+  "statusLinkUp": {
+    "message": "포트 $PORT$에서 VJster에 연결되었습니다.",
+    "placeholders": {
+      "port": {
+        "content": "$1"
+      }
+    }
+  },
+  "statusLinkDown": {
+    "message": "연결되지 않았습니다. 이 컴퓨터에서 Stream Deck, OpenDeck 또는 Fadester Companion을 시작하세요. 여기의 포트는 VJster 설정의 포트와 같아야 합니다."
+  },
+  "statusLinkChecking": {
+    "message": "VJster에 연결하는 중…"
   },
   "statusBadPort": {
     "message": "1024에서 65535 사이의 정수를 사용하세요. 기본값은 $DEFAULT$입니다.",

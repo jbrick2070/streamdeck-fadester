@@ -10,6 +10,7 @@ declare namespace chrome {
       tab?: { id?: number; windowId: number };
       frameId?: number;
       id?: string;
+      url?: string;
     }
     const id: string;
     function getManifest(): { optional_host_permissions?: string[] };

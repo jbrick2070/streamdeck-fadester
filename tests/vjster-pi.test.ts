@@ -53,7 +53,7 @@ describe("the settings page's texts (PLAN.md 8.4)", () => {
     const keys = new Set(Object.keys(tables.en.pi));
     expect([...texts, ...page.all.map((e) => e.textContent)].filter((x) => keys.has(x))).toEqual([]);
     page.toPage({ event: "status", port: 48151, portInUse: true, browser: "extension-off", extensionIds: [], badIds: 0, obsPage: true, obs: "page-off" });
-    expect(page.byId("status").textContent).toBe("Port 48151 wird von einem anderen Programm belegt");
+    expect(page.byId("status").textContent).toBe("Port 48151 ist belegt. Vielleicht läuft schon ein anderes Programm mit VJster: Fadester for OBS, das VJster-Plugin oder Fadester Companion. Nur eines laufen lassen.");
     expect(page.byId("obs-status").textContent).toBe("Keine OBS-Seite verbunden");
     page.toPage({ event: "status", port: 1, browser: "connected", extensionIds: ["a", "b"], badIds: 1, obsPage: false });
     expect(page.byId("status").textContent).toBe("1 Eintrag ignoriert: keine Chrome-Erweiterungs-ID");

@@ -1,31 +1,33 @@
 # VJster: install
 
-On a TourBox you do not need the Stream Deck plugin: use Fadester for TourBox with the Chrome extension, and follow `tourbox/README.md`. The TourBox controls YouTube in Chrome only, not the OBS page.
+**Do you have Fadester for OBS 0.9.0 or later?** Then you already have the seven VJster actions. Install only the Chrome extension (step 2). Do not install the VJster plugin too: both would want the same link port.
 
-VJster has three parts. The Stream Deck plugin holds the keys and dials and serves the OBS page. The Chrome extension controls the video in a Chrome tab. The OBS page is a browser source for OBS. They talk over one local socket on this computer (port 48150 by default); nothing goes to the internet except what YouTube's own player loads. What VJster is and what each control does: [README.md](README.md).
+With a TourBox or a game controller you do not need Stream Deck: use Fadester Companion with the Chrome extension, and follow `tourbox/README.md`. Fadester Companion controls YouTube in Chrome only, not the OBS page.
+
+VJster has three parts. The keys and dials (in Fadester for OBS, or in the VJster plugin) also serve the OBS page. The Chrome extension controls the video in a Chrome tab. The OBS page is a browser source for OBS. They talk over one local socket on this computer (port 48150 by default); nothing goes to the internet except what YouTube's own player loads. What VJster is and what each control does: [README.md](README.md).
 
 ## What a release holds
 
 | File | What it is |
 |---|---|
-| `com.jbrick2070.vjster.streamDeckPlugin` | The Stream Deck plugin, with the OBS page and four bundled profiles inside |
-| `vjster-chrome-extension-<version>.zip` | The Chrome extension, to unzip and load unpacked |
+| `com.jbrick2070.vjster.streamDeckPlugin` | The VJster plugin for decks without Fadester for OBS, with the OBS page and four bundled profiles inside |
+| `vjster-chrome-extension-<version>.zip` | The Chrome extension for developers, to load unpacked (see below) |
 
-There is no Elgato Marketplace listing and no Chrome Web Store listing yet, so the extension is loaded unpacked for now. The TourBox package (`tourbox/`, OBS Fadester for TourBox) hosts the same link, so the extension also works from a TourBox without any deck software; see `tourbox/README.md`.
+The Chrome extension is on the [Chrome Web Store](https://chromewebstore.google.com/detail/daohboebokfmamkblejcpbblfnaijgnb). The VJster plugin has no Elgato Marketplace listing. Fadester Companion (`tourbox/`) hosts the same link, so the extension also works from a TourBox without any deck software; see `tourbox/README.md`.
 
 ## Install
 
-**1. The Stream Deck plugin.** Needs Stream Deck 7.1 or later on Windows 10 or later. Double-click `com.jbrick2070.vjster.streamDeckPlugin`; Stream Deck asks to install it. The VJster category then lists seven actions. Stream Deck may also ask whether to install the bundled profiles; say yes and they appear in your profile list without switching to them: **VJster Live +** and **VJster Dual +** for the Stream Deck +, **VJster Live** for the 15-key Stream Deck, **VJster Mini** for the Mini. A profile may only appear once a deck of its kind is connected.
+**1. The keys and dials.** With Fadester for OBS 0.9.0 or later, skip this step: its action list already has **VJster Speed**, **VJster Quality** and the other five. Otherwise install the VJster plugin. It needs Stream Deck 7.1 or later on Windows 10 or later. Double-click `com.jbrick2070.vjster.streamDeckPlugin`; Stream Deck asks to install it. The VJster category then lists seven actions. Stream Deck may also ask whether to install the bundled profiles; say yes and they appear in your profile list without switching to them: **VJster Live +** and **VJster Dual +** for the Stream Deck +, **VJster Live** for the 15-key Stream Deck, **VJster Mini** for the Mini. A profile may only appear once a deck of its kind is connected.
 
-**2. The Chrome extension.** Needs Chrome 116 or later. Unzip `vjster-chrome-extension-<version>.zip` into a folder that stays put. In Chrome open `chrome://extensions`, turn on **Developer mode**, press **Load unpacked** and pick that folder. The extension asks for access to YouTube and to a socket on this computer (`ws://127.0.0.1`), and for the storage, alarms and scripting permissions; Chrome may also warn about extensions in developer mode. Its options page has an all-sites option, which Chrome asks you about before adding every site. The Chrome Web Store version has the id `daohboebokfmamkblejcpbblfnaijgnb`; an unpacked copy has its own id. Either way, the extension's options page shows the id it has: to let only that extension connect, paste it into the plugin's **Only this extension** field.
+**2. The Chrome extension.** Needs Chrome 116 or later. Add [VJster from the Chrome Web Store](https://chromewebstore.google.com/detail/daohboebokfmamkblejcpbblfnaijgnb). It asks for access to YouTube and to a socket on this computer (`ws://127.0.0.1`), and for the storage and alarms permissions. Its options page opens once. The page shows the extension's id (`daohboebokfmamkblejcpbblfnaijgnb` for the store version): to let only this extension connect, paste it into the **Only this extension** field on VJster's settings page.
 
-**3. First check.** Switch to a VJster profile (or put a VJster action on the deck) and play a YouTube video in Chrome. Within a few seconds the SPEED strip (Stream Deck +) or the 1x key (other decks) shows the video playing. Turn the dial: the video follows.
+**3. First check.** Put a VJster action on the deck (or switch to a VJster profile) and play a YouTube video in Chrome. Within a few seconds the SPEED strip (Stream Deck +) or the 1x key (other decks) shows the video playing. Turn the dial: the video follows.
 
 **4. The OBS page (optional).** This plays a YouTube video inside OBS at the speed the deck sets.
 
 1. Open any VJster action's settings in Stream Deck and find **OBS page**. Paste a YouTube link and press **Copy address**.
 2. In OBS add a **Browser** source, untick **Local file**, and paste the address as its URL.
-3. Set an action's **Target** to **OBS page**, or **Both** to drive Chrome and OBS together (the deck then shows Chrome's state). The **VJster Dual +** profile has keys for each side by side.
+3. Set an action's **Control** to **OBS page**, or **Both** to drive Chrome and OBS together (the deck then shows Chrome's state). The **VJster Dual +** profile has keys for each side by side.
 
 Good to know about the OBS page:
 
@@ -38,8 +40,8 @@ Good to know about the OBS page:
 
 | The strip or key says | What to do |
 |---|---|
-| **EXTENSION OFF** | Check that Chrome is open with the extension loaded; that the extension's options page and the plugin's settings page name the same port; and that the plugin's **Only this extension** field is empty or holds the id the extension's options page shows. |
-| **PORT IN USE** | Port 48150 is taken by another program. Choose another port on the plugin's settings page and the same port in the extension's options. |
+| **EXTENSION OFF** | Check that Chrome is open with the extension added; that the extension's options page and VJster's settings page name the same port; and that the **Only this extension** field is empty or holds the id the extension's options page shows. |
+| **PORT IN USE** | Port 48150 is in use. Another program with VJster may be running: Fadester for OBS, the VJster plugin or Fadester Companion. Keep only one. If no other VJster runs, choose another port on VJster's settings page and the same port in the extension's options. |
 | **NO PAGE** | The target is the OBS page but none is connected. Check that the browser source's URL is the address you copied and that Stream Deck is running; refresh the source. |
 | **N/A** on the quality dial | That video or target offers no quality control (the OBS page never does). |
 | **AD PLAYING** | An ad is playing; your turns are held and applied when the video resumes. |
@@ -61,7 +63,11 @@ The English texts were written with Claude Opus 5.5, an AI model. Every other la
 
 ## Uninstall
 
-Uninstall the plugin from the Plugins page of Stream Deck's preferences, and delete the VJster profiles you do not want. Remove the extension on `chrome://extensions` and delete the folder it was unzipped into. Delete the OBS browser source. What is left is the release files you downloaded.
+Uninstall the VJster plugin from the Plugins page of Stream Deck's preferences, and delete the VJster profiles you do not want. Remove the extension on `chrome://extensions` (for an unpacked copy, also delete the folder it was unzipped into). Delete the OBS browser source. What is left is the release files you downloaded.
+
+## For developers: the unpacked extension
+
+The release's `vjster-chrome-extension-<version>.zip` is the same extension with one more option: control videos on every site, not only YouTube. Remove the store version first, so only one copy connects. Unzip the file into a folder that stays put. In Chrome open `chrome://extensions`, turn on **Developer mode**, press **Load unpacked** and pick that folder. This copy also asks for the scripting permission, and Chrome may warn about extensions in developer mode. Its options page has the all-sites option, which Chrome asks you about before adding every site. An unpacked copy has its own id; its options page shows it.
 
 ## For developers: building a release
 

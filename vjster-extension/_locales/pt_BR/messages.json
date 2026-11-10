@@ -9,7 +9,7 @@
     "message": "Opções do VJster"
   },
   "companionNote": {
-    "message": "O VJster precisa de um programa complementar gratuito neste computador: o plugin do VJster para Stream Deck ou OpenDeck, ou o Fadester for TourBox. Sozinha, esta extensão não faz nada."
+    "message": "O VJster precisa de um programa gratuito neste computador: o Fadester for OBS ou o plugin do VJster (para Stream Deck ou OpenDeck), ou o Fadester Companion. Sozinha, esta extensão não faz nada."
   },
   "linkGet": {
     "message": "Downloads"
@@ -27,19 +27,33 @@
     "message": "Salvar"
   },
   "portNote": {
-    "message": "A porta em que o VJster escuta no seu plugin do Stream Deck ou OpenDeck ou no Fadester for TourBox, somente neste computador. Altere-a apenas se você a alterou lá."
+    "message": "A porta que o VJster usa no Fadester for OBS, no plugin do VJster ou no Fadester Companion, somente neste computador. Altere-a apenas se você a alterou lá."
   },
   "idLabel": {
     "message": "ID desta extensão"
   },
   "idNote": {
-    "message": "Para permitir que somente esta extensão se conecte, cole o ID nas configurações do VJster no seu plugin do Stream Deck ou OpenDeck, ou no Fadester for TourBox."
+    "message": "Para permitir que somente esta extensão se conecte, cole o ID nas configurações do VJster no Fadester for OBS, no plugin do VJster ou no Fadester Companion."
   },
   "allSites": {
     "message": "Controlar vídeos em todos os sites, não só no YouTube"
   },
   "allSitesNote": {
     "message": "Só a velocidade: a qualidade precisa do player do YouTube. O Chrome pede permissão para ler e alterar todos os sites."
+  },
+  "statusLinkUp": {
+    "message": "Conectado ao VJster na porta $PORT$.",
+    "placeholders": {
+      "port": {
+        "content": "$1"
+      }
+    }
+  },
+  "statusLinkDown": {
+    "message": "Não conectado. Abra o Stream Deck, o OpenDeck ou o Fadester Companion neste computador. A porta aqui deve ser a mesma das configurações do VJster."
+  },
+  "statusLinkChecking": {
+    "message": "Conectando ao VJster…"
   },
   "statusBadPort": {
     "message": "Use um número inteiro de 1024 a 65535; $DEFAULT$ é o padrão.",

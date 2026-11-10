@@ -9,7 +9,7 @@
     "message": "VJster seçenekleri"
   },
   "companionNote": {
-    "message": "VJster, bu bilgisayarda ücretsiz bir yardımcı uygulamaya ihtiyaç duyar: Stream Deck veya OpenDeck için VJster eklentisi ya da Fadester for TourBox. Bu uzantı tek başına hiçbir şey yapmaz."
+    "message": "VJster, bu bilgisayarda ücretsiz bir programa ihtiyaç duyar: Fadester for OBS veya VJster eklentisi (Stream Deck ya da OpenDeck için) ya da Fadester Companion. Bu uzantı tek başına hiçbir şey yapmaz."
   },
   "linkGet": {
     "message": "İndirmeler"
@@ -27,19 +27,33 @@
     "message": "Kaydet"
   },
   "portNote": {
-    "message": "VJster'in Stream Deck veya OpenDeck eklentinizde ya da Fadester for TourBox'ta yalnızca bu bilgisayarda dinlediği bağlantı noktası. Yalnızca orada değiştirdiyseniz değiştirin."
+    "message": "VJster'in Fadester for OBS'de, VJster eklentisinde ya da Fadester Companion'da yalnızca bu bilgisayarda kullandığı bağlantı noktası. Yalnızca orada değiştirdiyseniz değiştirin."
   },
   "idLabel": {
     "message": "Bu uzantının kimliği"
   },
   "idNote": {
-    "message": "Yalnızca bu uzantının bağlanmasına izin vermek için kimliği Stream Deck veya OpenDeck eklentinizdeki VJster ayarlarına ya da Fadester for TourBox'a yapıştırın."
+    "message": "Yalnızca bu uzantının bağlanmasına izin vermek için kimliği Fadester for OBS'deki, VJster eklentisindeki ya da Fadester Companion'daki VJster ayarlarına yapıştırın."
   },
   "allSites": {
     "message": "Yalnızca YouTube'da değil, tüm sitelerde videoları kontrol et"
   },
   "allSitesNote": {
     "message": "Yalnızca hız: kalite için YouTube oynatıcısı gerekir. Chrome, tüm sitelerdeki verileri okuma ve değiştirme izni ister."
+  },
+  "statusLinkUp": {
+    "message": "VJster'e $PORT$ numaralı bağlantı noktasından bağlanıldı.",
+    "placeholders": {
+      "port": {
+        "content": "$1"
+      }
+    }
+  },
+  "statusLinkDown": {
+    "message": "Bağlı değil. Bu bilgisayarda Stream Deck, OpenDeck ya da Fadester Companion'ı başlatın. Buradaki bağlantı noktası, VJster ayarlarındakiyle aynı olmalıdır."
+  },
+  "statusLinkChecking": {
+    "message": "VJster'e bağlanılıyor…"
   },
   "statusBadPort": {
     "message": "1024 ile 65535 arasında bir tam sayı kullanın; varsayılan değer $DEFAULT$.",

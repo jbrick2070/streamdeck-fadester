@@ -10,7 +10,7 @@ Drive OBS from an Xbox controller (or any XInput-compatible pad): the right trig
 4. Press **Save & start controls** and keep the companion window open (minimised is fine; closing it stops the controls). The **Activity** tab says *Game controller connected.*
 5. In OBS 33.0.0 or 33.0.1, with the main window open, turn on **Studio Mode**, select the **Fade** transition, and choose a different scene for Preview.
 6. Pull the right trigger halfway: OBS's T-bar follows. Let go: it goes back. Pull it all the way: Preview goes to Program.
-7. Press D-pad right to cue the next scene, then hold **A**. After 0.15 s (easy mode) OBS's T-bar starts moving, as if your hand pushed it, and keeps moving while you hold A. When it reaches the end it takes. Let go before then and it stays where it is; hold A again to carry on. From one end to the other takes the **Duration** set in OBS's **Scene Transitions** dock: about 650 ms gives you room to stop halfway.
+7. Press D-pad down to cue the next scene in OBS's list, then hold **A**. After 0.15 s (easy mode) OBS's T-bar starts moving, as if your hand pushed it, and keeps moving while you hold A. When it reaches the end it takes. Let go before then and it stays where it is; hold A again to carry on. From one end to the other takes the **Duration** set in OBS's **Scene Transitions** dock: about 650 ms gives you room to stop halfway.
 
 ## The controls
 
@@ -19,8 +19,8 @@ Drive OBS from an Xbox controller (or any XInput-compatible pad): the right trig
 | Right trigger | **T-bar.** Pull to mix, all the way to take, let go before the end to go back to Program. |
 | A | Take · hold. With a Fade selected in OBS, it pushes the T-bar while you hold it and takes at the end; with Cut or another transition, OBS plays that one and the T-bar stays put |
 | B | Cut · hold |
-| D-pad left / right | Previous / next scene into Preview |
-| D-pad up / down | Music up / down one step |
+| D-pad up / down | The scene above / below in OBS's list into Preview |
+| D-pad left / right | Music down / up one step |
 | Left trigger (hold) | Ducks Music; let go to bring it back |
 | X | Next item of the media source · hold |
 | Y | Play / pause the media source · hold |
@@ -75,7 +75,7 @@ The panel writes to the companion's `config.json` (in `%LOCALAPPDATA%\FadesterTo
 ```json
 "gamepadEnabled": true,
 "gamepadEasy": true,
-"gamepadMap": { "Y": "mix.fadeOut", "X": "", "LB+DpadUp": "music.fineUp", "LB+DpadDown": "music.fineDown" },
+"gamepadMap": { "Y": "mix.fadeOut", "X": "", "LB+DpadRight": "music.fineUp", "LB+DpadLeft": "music.fineDown" },
 "gamepadFastSpeed": 1.5
 ```
 

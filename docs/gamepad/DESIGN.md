@@ -62,7 +62,7 @@ Standard mapping: buttons 0 to 16; triggers read from `buttons[6]` and `buttons[
 
 | Control | Action | How |
 |---|---|---|
-| D-pad left / right | Previous / next scene into Preview | `SetCurrentPreviewScene` |
+| D-pad up / down | The scene above / below in OBS's list into Preview (left / right ride Music) | `SetCurrentPreviewScene` |
 | A | Take | Fadester's take |
 | B | Cut | `performSceneAction` (temporary Cut override on the destination) |
 | X | Playlister Next on the chosen Playlister | `TriggerMediaInputAction` NEXT by `inputUuid` |

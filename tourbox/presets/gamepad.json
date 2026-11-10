@@ -5,7 +5,7 @@
   "defaults": {
     "A": "take", "B": "take.cut", "X": "media.next", "Y": "media.play",
     "LB": "layer1.blend.previous", "RB": "layer1.blend.next",
-    "DpadLeft": "preview.previous", "DpadRight": "preview.next", "DpadUp": "music.up", "DpadDown": "music.down",
+    "DpadUp": "preview.previous", "DpadDown": "preview.next", "DpadLeft": "music.down", "DpadRight": "music.up",
     "View": "fader.cancel", "Menu": "preview.sync", "LS": "vjster.speed.reset", "RS": "vjster.playPause",
     "LT": "music.duck", "LTRelease": "music.restore",
     "LeftUp": "layer2.opacity.up", "LeftDown": "layer2.opacity.down",

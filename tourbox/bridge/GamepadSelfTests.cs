@@ -87,7 +87,7 @@ internal static class GamepadSelfTests
         Check(acts.Count == 0, "holding A does not repeat");
         reader.Step(Pad(), 430); (acts, _) = reader.Step(Pad(buttons: Mask("A")), 450);
         Check(acts.Count == 0, "a bounce within 150 ms is ignored");
-        reader.Step(Pad(), 600); (acts, _) = reader.Step(Pad(buttons: Masks("A", "DpadRight")), 700);
+        reader.Step(Pad(), 600); (acts, _) = reader.Step(Pad(buttons: Masks("A", "DpadDown")), 700);
         Check(acts.SequenceEqual(["preview.next", "take"]), "two buttons in one sample both act");
         reader.Step(Pad(), 900);
         (acts, _) = reader.Step(Pad(lt: 0.6), 1000); Check(acts.SequenceEqual(["music.duck"]), "left trigger past half ducks Music");
@@ -106,7 +106,7 @@ internal static class GamepadSelfTests
         Check(acts.SequenceEqual(["take"]) && t == null, "A during a throw takes and the trigger stops sending");
         (_, t) = reader.Step(Pad(rt: 0.3), 30); Check(t == null, "the held trigger cannot start a throw back after A");
         reader.Step(Pad(), 40); reader.Step(Pad(rt: 0.5), 50);
-        (acts, t) = reader.Step(Pad(buttons: Mask("DpadRight"), rt: 0.6), 60);
+        (acts, t) = reader.Step(Pad(buttons: Mask("DpadDown"), rt: 0.6), 60);
         Check(acts.SequenceEqual(["preview.next"]) && t == null, "a Preview cue during a throw (which cancels it) disarms the trigger too");
 
         // The pad going away.
@@ -161,7 +161,7 @@ internal static class GamepadSelfTests
         (acts, _) = reader.Step(Pad(buttons: Mask("A")), 3149); Check(acts.Count == 0, "not before 0.15 s");
         (acts, _) = reader.Step(Pad(buttons: Mask("A")), 3150); Check(acts.SequenceEqual(["take"]), "held 0.15 s: take, at once");
         (acts, _) = reader.Step(Pad(buttons: Mask("A")), 4500); Check(acts.Count == 0, "held on: no second take");
-        (acts, _) = reader.Step(Pad(buttons: Mask("DpadRight")), 4600); Check(acts.SequenceEqual(["preview.next"]), "Preview cues stay instant");
+        (acts, _) = reader.Step(Pad(buttons: Mask("DpadDown")), 4600); Check(acts.SequenceEqual(["preview.next"]), "Preview cues stay instant");
         reader.Step(Pad(), 4700); reader.Step(Pad(buttons: Mask("B")), 5000);
         (acts, t) = reader.Step(PadState.Disconnected, 5300);
         Check(acts.Count == 0 && t == null, "a pad lost during a hold fires nothing");
@@ -174,16 +174,16 @@ internal static class GamepadSelfTests
         (acts, _) = reader.Step(Pad(buttons: Mask("Y")), 800); Check(acts.SequenceEqual(["mic.mute"]), "it needs 0.7 s");
 
         // The shift layer: LB picks the action, never the hold time.
-        map = PadControls.Build(new Dictionary<string, string> { ["LB+DpadUp"] = "music.fineUp", ["LB+X"] = "overlay.show" });
-        Check(!map.ContainsKey("LB") && map["DpadUp"] == "music.up", "with a shift layer LB is only the shift");
+        map = PadControls.Build(new Dictionary<string, string> { ["LB+DpadRight"] = "music.fineUp", ["LB+X"] = "overlay.show" });
+        Check(!map.ContainsKey("LB") && map["DpadRight"] == "music.up", "with a shift layer LB is only the shift");
         reader = new PadReader(map, easy: true); reader.Step(Pad(), 0);
         (acts, _) = reader.Step(Pad(buttons: Mask("LB")), 100); Check(acts.Count == 0, "LB alone does nothing");
-        (acts, _) = reader.Step(Pad(buttons: Masks("LB", "DpadUp")), 200); Check(acts.SequenceEqual(["music.fineUp"]), "LB + D-pad up: the shifted action");
+        (acts, _) = reader.Step(Pad(buttons: Masks("LB", "DpadRight")), 200); Check(acts.SequenceEqual(["music.fineUp"]), "LB + D-pad right: the shifted action");
         (acts, _) = reader.Step(Pad(buttons: Masks("LB", "X")), 300); Check(acts.Count == 0, "a shifted live action still needs the hold");
         (acts, _) = reader.Step(Pad(buttons: Mask("X")), 500); Check(acts.Count == 0, "letting go of LB mid-hold ends the hold");
         (acts, _) = reader.Step(Pad(buttons: Mask("X")), 900); Check(acts.Count == 0, "and it never fires on the other layer");
         reader.Step(Pad(), 1000);
-        (acts, _) = reader.Step(Pad(buttons: Mask("DpadUp")), 1100); Check(acts.SequenceEqual(["music.up"]), "without LB the normal action");
+        (acts, _) = reader.Step(Pad(buttons: Mask("DpadRight")), 1100); Check(acts.SequenceEqual(["music.up"]), "without LB the normal action");
         reader.Step(Pad(), 1200); reader.Step(Pad(ly: 0.9), 1300);
         (acts, _) = reader.Step(Pad(buttons: Mask("LB"), ly: 0.9), 1600);
         Check(acts.Count == 0, "a stick held when LB goes down waits for the centre");
@@ -193,8 +193,11 @@ internal static class GamepadSelfTests
         Check(acts.Count == 0, "pressing LB during a hold ends it too");
         reader = new PadReader(map, easy: true);
         reader.Step(Pad(buttons: Mask("LB")), 0);
-        (acts, _) = reader.Step(Pad(buttons: Masks("LB", "DpadUp")), 100);
+        (acts, _) = reader.Step(Pad(buttons: Masks("LB", "DpadRight")), 100);
         Check(acts.SequenceEqual(["music.fineUp"]), "a pad that connects with LB held is already on the shift layer");
+        map = PadControls.Build(null);
+        Check(map["DpadUp"] == "preview.previous" && map["DpadDown"] == "preview.next" && map["DpadLeft"] == "music.down" && map["DpadRight"] == "music.up",
+            "the D-pad walks OBS's scene list up and down, and rides Music left and right");
         Check(PadControls.Build(new Dictionary<string, string> { ["lb+a"] = "undo" })["LB+A"] == "undo", "shifted names are case-insensitive");
         foreach (var bad in new Dictionary<string, string>[] { new() { ["LTRelease"] = "" }, new() { ["LB+LT"] = "music.duck" } })
         {
@@ -258,7 +261,7 @@ internal static class GamepadSelfTests
         (acts, t) = reader.Step(Pad(buttons: Mask("A")), 750); Check(acts.SequenceEqual(["take"]) && t == null, "then asks again");
         reader.Tbar.Slide(0.5, 300, 760);
         (_, t) = reader.Step(Pad(buttons: Mask("A")), 760); Check(t == 0.5, "and pushes on from where it stopped");
-        (acts, t) = reader.Step(Pad(buttons: Masks("A", "DpadRight")), 800);
+        (acts, t) = reader.Step(Pad(buttons: Masks("A", "DpadDown")), 800);
         Check(acts.SequenceEqual(["preview.next"]) && t == null && !reader.Tbar.Sliding, "a Preview cue during a push stops it");
         // A take OBS plays by itself (Cut selected) is all at once, so in easy mode it still needs 0.4 s.
         reader = new PadReader(PadControls.Build(null), easy: true); reader.Step(Pad(), 0);

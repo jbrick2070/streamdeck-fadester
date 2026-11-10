@@ -71,7 +71,8 @@ internal static class PadControls
     {
         ["A"] = "take", ["B"] = "take.cut", ["X"] = "media.next", ["Y"] = "media.play",
         ["LB"] = "layer1.blend.previous", ["RB"] = "layer1.blend.next",
-        ["DpadLeft"] = "preview.previous", ["DpadRight"] = "preview.next", ["DpadUp"] = "music.up", ["DpadDown"] = "music.down",
+        // Up and down walk OBS's scene list as it is drawn, top to bottom; left and right are a volume slider.
+        ["DpadUp"] = "preview.previous", ["DpadDown"] = "preview.next", ["DpadLeft"] = "music.down", ["DpadRight"] = "music.up",
         ["View"] = "fader.cancel", ["Menu"] = "preview.sync", ["LS"] = "vjster.speed.reset", ["RS"] = "vjster.playPause",
         ["LT"] = "music.duck", ["LTRelease"] = "music.restore",
         ["LeftUp"] = "layer2.opacity.up", ["LeftDown"] = "layer2.opacity.down",

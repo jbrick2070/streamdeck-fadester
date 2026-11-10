@@ -144,7 +144,8 @@ public sealed class StudioFader
 
     /// <summary>
     /// The game controller's take moves the T-bar like a hand would when OBS would play a Fade anyway: from where the
-    /// T-bar is to the end, over the Fade's Duration (the controller then drives <see cref="MoveToAsync"/>). Null means
+    /// T-bar is towards the end while the take is held, end to end in the Fade's Duration (Ms; the controller then drives
+    /// <see cref="MoveToAsync"/>). Null means
     /// OBS's own take instead: another transition or a scene override, an OBS version without T-bar support, the same
     /// Preview as Program, a double press, or a fader that needs a Cancel first. The ordinary take then acts or says why.
     /// </summary>
@@ -174,7 +175,7 @@ public sealed class StudioFader
             }
             // A fixed-length transition has no Duration; a Fade always has one.
             if (!double.IsFinite(ms) || ms <= 0) return null;
-            return (Position, (int)Math.Ceiling(ms * (1 - Position)));
+            return (Position, (int)Math.Ceiling(ms));
         }
         finally { serial.Release(); }
     }

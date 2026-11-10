@@ -15,7 +15,7 @@
   },
   "padOnly": ["vjster.speed.fast", "vjster.speed.slow"],
   "holdMs": {
-    "take": 400, "take.cut": 400, "overlay.show": 400, "overlay.hide": 400,
+    "take": 150, "take.cut": 400, "overlay.show": 400, "overlay.hide": 400,
     "media.previous": 400, "media.next": 400, "media.restart": 400, "media.play": 400, "vjster.playPause": 400,
     "layer1.blend.previous": 400, "layer1.blend.next": 400, "layer2.blend.previous": 400, "layer2.blend.next": 400,
     "fader.back": 400, "fader.forward": 400, "fader.fineBack": 400, "fader.fineForward": 400,

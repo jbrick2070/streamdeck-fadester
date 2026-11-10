@@ -38,6 +38,8 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
     private Task<JsonObject> Get(string name) => rpc(name, null);
     private static string Str(JsonObject obj, string field) => obj[field]?.GetValue<string>() ?? throw new InvalidDataException($"OBS did not return {field}.");
     public async Task CancelOwnedAsync() { if (fader.Position > 0) await fader.CancelAsync(); }
+    /** Where the companion's own T-bar move has the T-bar (0 at rest). */
+    public double TbarPosition => fader.Position;
     public Task SettleAsync() => fader.SettleAsync();
 
     /** The game controller's trigger T-bar. Only a take or a cancel is worth a log line; a throw in progress is quiet. */

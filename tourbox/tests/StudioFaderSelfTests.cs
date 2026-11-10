@@ -655,7 +655,7 @@ internal static class StudioFaderSelfTests
         await Blocked(() => fader.DispatchAsync("fader.cancel"));
         Check(obs.Cursor == 0.35, "a T-bar that will not release says so");
 
-        // The game controller's take slides the T-bar when OBS would play a Fade anyway, over that Fade's Duration.
+        // The game controller's take pushes the T-bar when OBS would play a Fade anyway, end to end in that Fade's Duration.
         obs = new(); fader = new(obs.Call);
         Check(await fader.SlidePlanAsync() is { From: 0, Ms: 300 }, "with Fade selected the controller's take slides over its Duration");
         obs.Duration = 1200;
@@ -677,8 +677,8 @@ internal static class StudioFaderSelfTests
         obs = new(){Version="32.0.3"}; fader = new(obs.Call);
         Check(await fader.SlidePlanAsync() == null, "an OBS without T-bar support is OBS's own take");
         obs = new(); fader = new(obs.Call, 0.25); await fader.DispatchAsync("fader.forward");
-        Check(await fader.SlidePlanAsync() is { From: 0.25, Ms: 225 }, "a take during a throw slides on from where the T-bar is, for the rest of the Duration");
-        // The slide itself is the trigger's path: steps, then the end takes.
+        Check(await fader.SlidePlanAsync() is { From: 0.25, Ms: 300 }, "a take during a throw pushes on from where the T-bar is, at the Duration's speed");
+        // The push itself is the trigger's path: steps, then the end takes.
         obs = new(); fader = new(obs.Call);
         foreach (var step in new[] { 0.01, 0.34, 0.67, 0.99, 1 }) await fader.MoveToAsync(step);
         Check(obs.Program == "b" && obs.Preview == "a" && obs.Commits == 1 && obs.Takes == 0 && fader.Position == 0, "a slide's last step takes once");

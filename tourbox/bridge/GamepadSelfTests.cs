@@ -47,22 +47,31 @@ internal static class GamepadSelfTests
         tbar = new PadTbar(); tbar.Next(0); tbar.Next(0.4); tbar.Disarm();
         Check(tbar.Next(0.5) == null && tbar.Next(0) == null && tbar.Next(0.5) is > 0 and < 1, "after a refusal the trigger must return to rest first");
 
-        // A take that slides the T-bar over the Fade's Duration, like a hand.
+        // A held take pushes the T-bar like a hand, end to end in the Fade's Duration; let go and it stays there.
         var slide = new PadTbar(); slide.Next(0, 0);
         slide.Slide(0, 300, 1000);
-        Check(slide.Sliding && slide.Next(0, 1000) == 0.01, "a slide starts at once, just off Program");
-        Check(slide.Next(0.8, 1150) == 0.5, "halfway through the time it is halfway, whatever the trigger does");
-        Check(slide.Next(0, 1150) == null, "the same position is not sent twice");
-        Check(slide.Next(1.0, 1299) == 0.99, "full trigger travel does not take early");
-        Check(slide.Next(0, 1300) == 1 && !slide.Sliding, "at the Duration it takes");
-        Check(slide.Next(0.5, 1400) == null && slide.Next(0, 1500) == null && slide.Next(0.5, 1600) is > 0 and < 1,
-            "after a slide the trigger must be back at rest before it throws");
+        Check(slide.Sliding && slide.Next(0, 1000, pushing: true) == 0.01, "a push starts at once, just off Program");
+        Check(slide.Next(0.8, 1150, pushing: true) == 0.5, "held for half the Duration it is halfway, whatever the trigger does");
+        Check(slide.Next(0, 1150, pushing: true) == null, "the same position is not sent twice");
+        Check(slide.Next(0, 1400, pushing: false) == null && slide.Sliding, "let go: it stays where it is");
+        Check(slide.Next(1.0, 2000, pushing: false) == null, "parked, it ignores the trigger and the time");
+        Check(slide.Next(0, 2000, pushing: true) == null && slide.Next(0, 2149, pushing: true) == 0.99, "pushed again it carries on from there");
+        Check(slide.Next(0, 2150, pushing: true) == 1 && !slide.Sliding, "the full Duration of pushing takes");
+        Check(slide.Next(0.5, 2200) == null && slide.Next(0, 2300) == null && slide.Next(0.5, 2400) is > 0 and < 1,
+            "after a push the trigger must be back at rest before it throws");
         slide = new PadTbar(); slide.Slide(0.6, 200, 0);
-        Check(slide.Next(0, 0) == 0.6 && slide.Next(0, 100) == 0.8 && slide.Next(0, 200) == 1, "a slide from part-way goes on from there");
-        slide = new PadTbar(); slide.Slide(0, 300, 0); slide.Next(0, 0); slide.Disarm();
-        Check(slide.Next(0, 100) == null && slide.Next(0, 400) == null, "a cancel or cue stops a slide");
-        slide = new PadTbar(); slide.Slide(0, 300, 0); slide.Next(0, 0);
-        Check(slide.Lost() == 0, "losing the pad mid-slide goes back to Program");
+        Check(slide.Next(0, 0, pushing: true) == 0.6 && slide.Next(0, 40, pushing: true) == 0.8 && slide.Next(0, 80, pushing: true) == 1,
+            "a push from part-way goes on from there at the same speed");
+        slide = new PadTbar(); slide.Slide(0, 300, 0);
+        Check(slide.Next(0, 10, pushing: false) == null && !slide.Sliding, "let go before it moved, nothing happens and nothing is parked");
+        slide = new PadTbar(); slide.Slide(0, 300, 0); slide.Next(0, 0, pushing: true); slide.Disarm();
+        Check(slide.Next(0, 100, pushing: true) == null && slide.Next(0, 400, pushing: true) == null, "a cancel or cue stops a push");
+        slide = new PadTbar(); slide.Slide(0, 300, 0); slide.Next(0, 0, pushing: true); slide.Next(0, 90, pushing: true);
+        Check(slide.Next(0, 100, pushing: false) == null && slide.Parked && slide.Position == 0.3, "let go at 30%, it is parked there");
+        Check(slide.Lost() == 0 && !slide.Parked, "losing the pad with the T-bar parked goes back to Program");
+        slide = new PadTbar(); slide.Slide(0, 300, 0);
+        Check(slide.Next(0, 0, pushing: true) == 0.01 && slide.Next(0, 10, pushing: false) == 0 && !slide.Sliding,
+            "a push let go before 5% goes back to Program instead of leaving a sliver on air");
 
         // Buttons, the left trigger and the sticks.
         var reader = new PadReader(PadControls.Build(null));
@@ -144,13 +153,13 @@ internal static class GamepadSelfTests
         (acts, _) = reader.Step(Pad(buttons: Mask("A")), 1000);
         Check(acts.Count == 0, "easy mode: A does not take on press");
         (acts, _) = reader.Step(Pad(), 1200);
-        Check(acts.Count == 0 && reader.Notes.Count == 1 && reader.Notes[0].Contains("hold it 0.4 s"), "a tap takes nothing and says how");
+        Check(acts.Count == 0 && reader.Notes.Count == 1 && reader.Notes[0].Contains("hold it 0.15 s"), "a tap takes nothing and says how");
         reader.Notes.Clear();
         reader.Step(Pad(buttons: Mask("A")), 2000); reader.Step(Pad(), 2100);
         Check(reader.Notes.Count == 0, "the note is not repeated within five seconds");
         reader.Step(Pad(buttons: Mask("A")), 3000);
-        (acts, _) = reader.Step(Pad(buttons: Mask("A")), 3399); Check(acts.Count == 0, "not before 0.4 s");
-        (acts, _) = reader.Step(Pad(buttons: Mask("A")), 3400); Check(acts.SequenceEqual(["take"]), "held 0.4 s: take, at once");
+        (acts, _) = reader.Step(Pad(buttons: Mask("A")), 3149); Check(acts.Count == 0, "not before 0.15 s");
+        (acts, _) = reader.Step(Pad(buttons: Mask("A")), 3150); Check(acts.SequenceEqual(["take"]), "held 0.15 s: take, at once");
         (acts, _) = reader.Step(Pad(buttons: Mask("A")), 4500); Check(acts.Count == 0, "held on: no second take");
         (acts, _) = reader.Step(Pad(buttons: Mask("DpadRight")), 4600); Check(acts.SequenceEqual(["preview.next"]), "Preview cues stay instant");
         reader.Step(Pad(), 4700); reader.Step(Pad(buttons: Mask("B")), 5000);
@@ -198,8 +207,8 @@ internal static class GamepadSelfTests
         reader = new PadReader(PadControls.Build(new Dictionary<string, string> { ["LeftUp"] = "take" }), easy: true); reader.Step(Pad(), 0);
         (acts, _) = reader.Step(Pad(ly: 0.9), 100); Check(acts.Count == 0, "a guarded stick action waits");
         reader.Step(Pad(ly: 0.3), 300); (acts, _) = reader.Step(Pad(ly: 0.9), 400);
-        (acts, _) = reader.Step(Pad(ly: 0.9), 700); Check(acts.Count == 0, "a bounce through the centre restarts the wait");
-        (acts, _) = reader.Step(Pad(ly: 0.9), 800); Check(acts.SequenceEqual(["take"]), "held long enough, it fires");
+        (acts, _) = reader.Step(Pad(ly: 0.9), 540); Check(acts.Count == 0, "a bounce through the centre restarts the wait");
+        (acts, _) = reader.Step(Pad(ly: 0.9), 550); Check(acts.SequenceEqual(["take"]), "held long enough, it fires");
         (acts, _) = reader.Step(Pad(ly: 0.9), 1600); Check(acts.Count == 0, "a take on a held stick never repeats");
         Check(PadControls.Repeats("music.up") && PadControls.Repeats("layer2.blend.next") && PadControls.Repeats("fader.forward") &&
             !PadControls.Repeats("take") && !PadControls.Repeats("media.play") && !PadControls.Repeats("vjster.playPause") &&
@@ -228,12 +237,53 @@ internal static class GamepadSelfTests
         Check(mail.TakeSlide() is { From: 0, Ms: 300 } && mail.TakeSlide() == null, "a slide request reaches the pad once");
         mail.Slide(0, 300); mail.Fail();
         Check(mail.TakeSlide() == null && mail.ConsumeFailure(), "a failure after a slide request cancels it");
-        // A Preview cue during a slide stops it, like a throw.
-        reader = new PadReader(PadControls.Build(null)); reader.Step(Pad(), 0);
-        reader.Tbar.Slide(0, 300, 10);
-        (_, t) = reader.Step(Pad(rt: 0.9), 10); Check(t == 0.01, "the slide moves on the pad's own clock and ignores the trigger");
-        (acts, t) = reader.Step(Pad(buttons: Mask("DpadRight")), 100);
-        Check(acts.SequenceEqual(["preview.next"]) && t == null && !reader.Tbar.Sliding, "a Preview cue during a slide stops it");
+        mail.Ordinary();
+        Check(mail.TakeOrdinary() && !mail.TakeOrdinary(), "an ordinary-take request reaches the pad once");
+        mail.Ordinary(); mail.Fail();
+        Check(!mail.TakeOrdinary() && mail.ConsumeFailure(), "a failure cancels it too");
+        // A held A pushes the T-bar; let go and it stays; held again it carries on; a Preview cue stops it.
+        reader = new PadReader(PadControls.Build(null), easy: true); reader.Step(Pad(), 0);
+        reader.Step(Pad(buttons: Mask("A")), 100);
+        (acts, _) = reader.Step(Pad(buttons: Mask("A")), 250); Check(acts.SequenceEqual(["take"]), "held 0.15 s, A asks to push the T-bar");
+        reader.Tbar.Slide(0, 300, 260); // the dispatch loop's plan arrives
+        (_, t) = reader.Step(Pad(buttons: Mask("A"), rt: 0.9), 260); Check(t == 0.01, "while A is held the T-bar moves, and the trigger is ignored");
+        (_, t) = reader.Step(Pad(buttons: Mask("A")), 410); Check(t == 0.5, "on the pad's own clock");
+        reader.Notes.Clear();
+        (_, t) = reader.Step(Pad(), 420); Check(t == null && reader.Tbar.Sliding, "let go of A: the T-bar stays where it is");
+        Check(reader.Notes.Count == 1 && reader.Notes[0].Contains("left at 50%") && reader.Notes[0].Contains("Hold A") &&
+            reader.Notes[0].Contains("press B") && reader.Notes[0].Contains("View"), "and the Activity log says where and what to do");
+        reader.Step(Pad(rt: 0.5), 450); reader.Step(Pad(rt: 0.6), 460); reader.Step(Pad(), 470);
+        Check(reader.Notes.Count == 2 && reader.Notes[1].Contains("right trigger waits"), "a trigger pulled meanwhile is told why it waits, once");
+        (_, t) = reader.Step(Pad(buttons: Mask("A")), 600); Check(t == null, "pressed again, it waits the 0.15 s first");
+        (acts, t) = reader.Step(Pad(buttons: Mask("A")), 750); Check(acts.SequenceEqual(["take"]) && t == null, "then asks again");
+        reader.Tbar.Slide(0.5, 300, 760);
+        (_, t) = reader.Step(Pad(buttons: Mask("A")), 760); Check(t == 0.5, "and pushes on from where it stopped");
+        (acts, t) = reader.Step(Pad(buttons: Masks("A", "DpadRight")), 800);
+        Check(acts.SequenceEqual(["preview.next"]) && t == null && !reader.Tbar.Sliding, "a Preview cue during a push stops it");
+        // A take OBS plays by itself (Cut selected) is all at once, so in easy mode it still needs 0.4 s.
+        reader = new PadReader(PadControls.Build(null), easy: true); reader.Step(Pad(), 0);
+        reader.Step(Pad(buttons: Mask("A")), 100); reader.Step(Pad(buttons: Mask("A")), 250);
+        reader.HoldForOrdinaryTake(); // the dispatch loop found no push
+        reader.Step(Pad(buttons: Mask("A")), 300);
+        (_, t) = reader.Step(Pad(buttons: Mask("A"), rt: 0.6), 400); Check(t == null, "the trigger cannot start a throw while the take waits");
+        (acts, _) = reader.Step(Pad(buttons: Mask("A")), 499); Check(acts.Count == 0, "an ordinary take does not go before 0.4 s");
+        (acts, _) = reader.Step(Pad(buttons: Mask("A")), 500); Check(acts.SequenceEqual([PadControls.TakeNow]), "held 0.4 s, it goes");
+        (acts, _) = reader.Step(Pad(buttons: Mask("A")), 900); Check(acts.Count == 0, "once");
+        reader.Step(Pad(), 1000); reader.Notes.Clear();
+        reader.Step(Pad(buttons: Mask("A")), 2000); reader.Step(Pad(buttons: Mask("A")), 2150); reader.HoldForOrdinaryTake();
+        (acts, _) = reader.Step(Pad(), 2300);
+        Check(acts.Count == 0 && reader.Notes.Count == 1 && reader.Notes[0].Contains("0.4 s hold"), "let go before 0.4 s: no take, and it says why");
+        reader.Step(Pad(buttons: Mask("A")), 3000); reader.Step(Pad(buttons: Mask("A")), 3150); reader.HoldForOrdinaryTake();
+        (acts, _) = reader.Step(Pad(buttons: Masks("A", "View")), 3200);
+        var (later, _) = reader.Step(Pad(buttons: Mask("A")), 3500);
+        Check(acts.SequenceEqual(["fader.cancel"]) && later.Count == 0, "a Cancel while it waits stops the take");
+        reader.Step(Pad(buttons: Mask("A")), 4000); reader.Step(Pad(buttons: Mask("A")), 4150); reader.HoldForOrdinaryTake(); reader.Disarm();
+        (acts, _) = reader.Step(Pad(buttons: Mask("A")), 4500); Check(acts.Count == 0, "so does a refusal or a take from elsewhere");
+        reader = new PadReader(PadControls.Build(new Dictionary<string, string> { ["LT"] = "take" })); reader.Step(Pad(), 0);
+        reader.Step(Pad(lt: 0.8), 100); reader.Tbar.Slide(0, 300, 100);
+        (_, t) = reader.Step(Pad(lt: 0.8), 100); Check(t == 0.01, "a take on the left trigger pushes while the trigger is held");
+        (_, t) = reader.Step(Pad(lt: 0.8), 190); Check(t == 0.3, "on and on");
+        (_, t) = reader.Step(Pad(lt: 0.1), 200); Check(t == null && reader.Tbar.Parked, "and parks when it is let go");
         var resend = new PadTbar(); resend.Next(0); resend.Next(0.5);
         Check(resend.Next(0.5) == null, "an unchanged trigger sends nothing");
         resend.Resend();

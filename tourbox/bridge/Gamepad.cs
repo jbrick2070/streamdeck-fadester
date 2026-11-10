@@ -80,6 +80,13 @@ internal static class PadControls
         ["RightUp"] = "vjster.speed.fast", ["RightDown"] = "vjster.speed.slow",
     };
 
+    /**
+     * A take that cannot push the T-bar (OBS plays its own transition: Cut or another selected) is all or nothing, so in
+     * easy mode it keeps the 0.4 s hold; the pad then sends TakeNow, which the dispatch loop runs as the ordinary take.
+     */
+    public const int OrdinaryTakeMs = 400;
+    public const string TakeNow = "take.now";
+
     public static bool Known(string id) => (DeskActions.Supported.Contains(id) || PadOnly.Contains(id)) && id != "bridge.reconnect";
 
     /** A take, cancel, fader tick or Preview cue: the trigger T-bar must return to rest before it throws again. */
@@ -94,7 +101,10 @@ internal static class PadControls
     public static int HoldMs(string action) => action switch
     {
         "mix.fadeOut" or "mic.mute" => 700,
-        "take" or "take.cut" or "overlay.show" or "overlay.hide" or "media.previous" or "media.next" or "media.restart" or
+        // A take that pushes the T-bar moves it only while held (PadTbar.Slide), so a short wait is enough to ignore a
+        // bump; one OBS plays by itself waits for OrdinaryTakeMs.
+        "take" => 150,
+        "take.cut" or "overlay.show" or "overlay.hide" or "media.previous" or "media.next" or "media.restart" or
             "media.play" or "vjster.playPause" or "layer1.blend.previous" or "layer1.blend.next" or "layer2.blend.previous" or
             "layer2.blend.next" => 400,
         _ when KeyGuards.IsFaderTick(action) => 400,
@@ -149,7 +159,7 @@ internal static class PadControls
 /// <summary>
 /// The right trigger as a spring-loaded T-bar. It arms only from rest, takes at full travel and then stays disarmed until the
 /// trigger is back at rest, so the spring's return never starts a throw back. A pull released before the end cancels.
-/// A take button can also slide it to the end over a set time (<see cref="Slide"/>), as a hand on a real T-bar would.
+/// A held take button can also push it towards the end like a hand on a real T-bar (<see cref="Slide"/>).
 /// </summary>
 internal sealed class PadTbar
 {
@@ -157,30 +167,50 @@ internal sealed class PadTbar
     private enum Phase { Disarmed, Armed, Throwing, Sliding }
     private Phase phase = Phase.Disarmed;
     private double sent, slideFrom;
-    private long slideStart;
+    private long slideTick, pushedMs, slideNeed;
     private int slideMs;
+    private bool slideMoved;
 
     public bool Throwing => phase == Phase.Throwing;
     public bool Sliding => phase == Phase.Sliding;
+    /** A push let go part-way: the T-bar stays at Position until a take, a cancel or a cue. */
+    public bool Parked { get; private set; }
+    /** Where a push has the T-bar now. */
+    public double Position => phase == Phase.Sliding ? slideFrom + (double)pushedMs / slideMs : 0;
 
     /**
-     * Slides from where the T-bar is to the end over the given time, starting now, then takes. The trigger is ignored
-     * meanwhile. A cancel, cue, take or refusal stops the slide like a throw (Disarm), and afterwards the trigger must be
-     * back at rest before it throws.
+     * Pushes the T-bar from where it is towards the end while the take is held (Next's pushing), at full travel per
+     * <paramref name="ms"/>, and takes at the end. Let go and it parks where it is; push again to carry on. The trigger is
+     * ignored meanwhile. A cancel, cue, take or refusal ends it like a throw (Disarm), and afterwards the trigger must be
+     * back at rest before it throws. Let go of a push from rest before it has gone 5% and it goes back to Program.
      */
     public void Slide(double from, int ms, long nowMs)
     {
-        phase = Phase.Sliding; slideFrom = Math.Clamp(from, 0, 0.99); slideStart = nowMs; slideMs = Math.Max(1, ms); sent = 0;
+        phase = Phase.Sliding; slideFrom = Math.Clamp(from, 0, 0.99); slideMs = Math.Max(1, ms);
+        slideNeed = Math.Max(1, (long)Math.Ceiling(Math.Round((1 - slideFrom) * slideMs, 6)));
+        slideTick = nowMs; pushedMs = 0; slideMoved = false; sent = 0; Parked = false;
     }
 
-    /** The T-bar position to move to (0 cancels, 1 takes), or null for no change. */
-    public double? Next(double trigger, long nowMs = 0)
+    /** The T-bar position to move to (0 cancels, 1 takes), or null for no change. Pushing: the take is still held. */
+    public double? Next(double trigger, long nowMs = 0, bool pushing = true)
     {
         if (phase == Phase.Sliding)
         {
-            long elapsed = nowMs - slideStart;
-            if (elapsed >= slideMs) { phase = Phase.Disarmed; sent = 0; return 1; }
-            return Send(slideFrom + (1 - slideFrom) * elapsed / slideMs);
+            long elapsed = Math.Max(0, nowMs - slideTick);
+            slideTick = nowMs;
+            if (pushing) pushedMs += elapsed;
+            else if (slideFrom == 0 && Position < 0.05)
+            {
+                // A push from rest let go almost at once was a slip: nothing stays on air part-mixed.
+                bool moved = slideMoved;
+                Disarm();
+                return moved ? 0 : null;
+            }
+            if (pushedMs >= slideNeed) { Disarm(); return 1; }
+            Parked = !pushing;
+            var next = Send(Position);
+            if (next != null) slideMoved = true;
+            return next;
         }
         if (phase == Phase.Disarmed)
         {
@@ -210,7 +240,7 @@ internal sealed class PadTbar
     public double? Lost() { bool was = phase is Phase.Throwing or Phase.Sliding; Disarm(); return was ? 0 : null; }
 
     /** A take or cancel came from a button, or OBS refused the throw: ignore the trigger until it is back at rest. */
-    public void Disarm() { phase = Phase.Disarmed; sent = 0; }
+    public void Disarm() { phase = Phase.Disarmed; sent = 0; Parked = false; }
 
     /** The last value was not delivered: send the next sample even if the trigger has not moved. */
     public void Resend() => sent = 0;
@@ -237,19 +267,39 @@ internal sealed class PadReader(IReadOnlyDictionary<string, string> map, bool ea
     private readonly Dictionary<string, long> nextRepeat = new(StringComparer.Ordinal);
     private readonly Dictionary<string, long> toldTap = new(StringComparer.Ordinal);
     private readonly Dictionary<string, char> stickAxis = new(StringComparer.Ordinal); // 'X' or 'Y' until centred; 'B' blocked
+    private string? pushSource; // the control whose take is still held: it pushes the T-bar (PadTbar.Slide) until let go
+    private string? takeControl, ordinaryControl; // the last take's control; one waiting to hold out for an ordinary take
+    private long now, takeFiredAt, ordinaryDue, toldParked = long.MinValue / 2;
+    private bool toldParkedTrigger;
 
     public PadTbar Tbar { get; } = new();
     /** Lines for the Activity log (a tapped guarded control); the loop prints and clears them. */
     public List<string> Notes { get; } = [];
 
+    /** OBS refused, or a take, cancel or cue came from elsewhere: no throw, push or ordinary take carries on. */
+    public void Disarm() { Tbar.Disarm(); ordinaryControl = null; }
+
+    /**
+     * The dispatch loop found that the last take cannot push the T-bar (OBS plays its own transition): in easy mode it is
+     * sent as TakeNow only if its control is still held when the full OrdinaryTakeMs hold is up.
+     */
+    public void HoldForOrdinaryTake()
+    {
+        if (takeControl == null) return;
+        ordinaryControl = takeControl;
+        ordinaryDue = takeFiredAt + PadControls.OrdinaryTakeMs - PadControls.HoldMs("take");
+    }
+
     public (List<string> Actions, double? Tbar) Step(PadState s, long nowMs)
     {
         var actions = new List<string>();
+        now = nowMs;
         if (!s.Connected)
         {
             // Nothing half-held survives: a hold in progress fires nothing, a ducked Music comes back.
             if (last.Connected && leftHeld && leftRelease != null) Emit(leftRelease, actions);
-            leftHeld = false; leftBlocked = false; leftRelease = null; shiftHeld = false;
+            leftHeld = false; leftBlocked = false; leftRelease = null; shiftHeld = false; pushSource = null;
+            takeControl = null; ordinaryControl = null;
             holds.Clear(); nextRepeat.Clear(); stickAxis.Clear(); last = PadState.Disconnected;
             return (actions, Tbar.Lost());
         }
@@ -260,7 +310,7 @@ internal sealed class PadReader(IReadOnlyDictionary<string, string> map, bool ea
             shiftHeld = shiftLayer && (s.Buttons & shiftMask) != 0;
             leftBlocked = s.LeftTrigger / 255.0 > LeftTriggerRelease;
             foreach (var stick in Sticks) if (Deflected(s, stick)) stickAxis[stick] = 'B';
-            return (actions, Tbar.Next(s.RightTrigger / 255.0, nowMs));
+            return (actions, Tbar.Next(s.RightTrigger / 255.0, nowMs, pushing: false));
         }
         bool shiftNow = shiftLayer && (s.Buttons & shiftMask) != 0;
         if (shiftNow != shiftHeld)
@@ -280,7 +330,7 @@ internal sealed class PadReader(IReadOnlyDictionary<string, string> map, bool ea
             if (pressedAt.TryGetValue(name, out var at) && nowMs - at < RepeatGuardMs) continue;
             pressedAt[name] = nowMs;
             int hold = easy ? PadControls.HoldMs(action) : 0;
-            if (hold > 0) holds[name] = new(action, nowMs + hold); else Emit(action, actions);
+            if (hold > 0) holds[name] = new(action, nowMs + hold); else Emit(action, actions, name);
         }
         LeftTrigger(s.LeftTrigger / 255.0, nowMs, actions);
         foreach (var (control, hold) in holds.ToList())
@@ -288,27 +338,76 @@ internal sealed class PadReader(IReadOnlyDictionary<string, string> map, bool ea
             if (nowMs < hold.Due) continue;
             holds.Remove(control);
             if (control == "LT") { leftHeld = true; leftRelease = hold.Release; }
-            Emit(hold.Action, actions);
+            Emit(hold.Action, actions, control);
         }
         Stick("Left", s.LeftX / 32767.0, s.LeftY / 32767.0, nowMs, actions);
         Stick("Right", s.RightX / 32767.0, s.RightY / 32767.0, nowMs, actions);
+        if (ordinaryControl != null)
+        {
+            if (!Active(s, ordinaryControl))
+            {
+                string seconds = (PadControls.OrdinaryTakeMs / 1000.0).ToString("0.0#", System.Globalization.CultureInfo.InvariantCulture);
+                Notes.Add($"Game controller: {ordinaryControl} let go too soon. OBS plays its own transition here, so a take needs a {seconds} s hold (easy mode).");
+                ordinaryControl = null;
+            }
+            else if (nowMs >= ordinaryDue) { ordinaryControl = null; actions.Add(PadControls.TakeNow); }
+        }
         last = s;
-        return (actions, Tbar.Next(s.RightTrigger / 255.0, nowMs));
+        bool pushing = pushSource != null && Active(s, pushSource);
+        if (!pushing) pushSource = null; // let go once: a new push needs a new press and its hold
+        double trigger = s.RightTrigger / 255.0;
+        if (ordinaryControl != null) Tbar.Disarm(); // a take is about to go: the trigger must not start a throw meanwhile
+        bool wasParked = Tbar.Parked;
+        var next = Tbar.Next(trigger, nowMs, pushing);
+        if (Tbar.Parked && !wasParked && nowMs - toldParked >= TapNoteEveryMs)
+        {
+            toldParked = nowMs; // a stick wobbling round its threshold must not flood the log
+            Notes.Add($"Game controller: T-bar left at {Math.Round(Tbar.Position * 100)}%. {ParkedWays()}");
+        }
+        if (!Tbar.Parked) toldParkedTrigger = false;
+        else if (trigger > PadTbar.Rest && !toldParkedTrigger)
+        {
+            toldParkedTrigger = true;
+            Notes.Add("Game controller: the right trigger waits while the T-bar is left part-way. " + ParkedWays());
+        }
+        return (actions, next);
     }
+
+    private string ParkedWays() =>
+        $"Hold {ControlFor("take", "the take")} to carry on, press {ControlFor("take.cut", "a cut")} to finish at once or {ControlFor("fader.cancel", "Cancel")} to go back to Program.";
+
+    private string ControlFor(string action, string otherwise) =>
+        map.FirstOrDefault(kv => kv.Value == action && !kv.Key.StartsWith(PadControls.ShiftPrefix, StringComparison.OrdinalIgnoreCase)).Key ?? otherwise;
 
     private string Key(string control) => shiftHeld ? PadControls.ShiftPrefix + control : control;
 
-    private void Emit(string action, List<string> actions)
+    /** Control: the button, LT or stick direction that fired the action, for a take that pushes while it is held. */
+    private void Emit(string action, List<string> actions, string? control = null)
     {
         actions.Add(action);
-        if (PadControls.StopsThrow(action)) Tbar.Disarm();
+        if (PadControls.StopsThrow(action)) { Tbar.Disarm(); ordinaryControl = null; }
+        if (action == "take" && control != null) { pushSource = takeControl = control; takeFiredAt = now; }
+    }
+
+    /** Whether a control is still held: a button down, LT past its release point, a stick still pushed that way. */
+    private static bool Active(PadState s, string control)
+    {
+        foreach (var (name, mask) in PadControls.Buttons) if (name == control) return (s.Buttons & mask) != 0;
+        if (control == "LT") return s.LeftTrigger / 255.0 > LeftTriggerRelease;
+        double value = control switch
+        {
+            "LeftUp" => s.LeftY, "LeftDown" => -s.LeftY, "LeftRight" => s.LeftX, "LeftLeft" => -s.LeftX,
+            "RightUp" => s.RightY, "RightDown" => -s.RightY, "RightRight" => s.RightX, "RightLeft" => -s.RightX,
+            _ => 0,
+        };
+        return value / 32767.0 >= StickThreshold;
     }
 
     private void TapNote(string control, string action, long nowMs)
     {
         if (toldTap.TryGetValue(control, out var told) && nowMs - told < TapNoteEveryMs) return;
         toldTap[control] = nowMs;
-        string seconds = (PadControls.HoldMs(action) / 1000.0).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
+        string seconds = (PadControls.HoldMs(action) / 1000.0).ToString("0.0#", System.Globalization.CultureInfo.InvariantCulture);
         Notes.Add($"Game controller: {control} tapped; hold it {seconds} s for {action} (easy mode).");
     }
 
@@ -322,7 +421,7 @@ internal sealed class PadReader(IReadOnlyDictionary<string, string> map, bool ea
             int hold = easy ? PadControls.HoldMs(press) : 0;
             if (hold > 0) { holds["LT"] = new(press, nowMs + hold, release); return; }
             leftHeld = true; leftRelease = release;
-            Emit(press, actions);
+            Emit(press, actions, "LT");
         }
         else if (lt <= LeftTriggerRelease)
         {
@@ -371,7 +470,7 @@ internal sealed class PadReader(IReadOnlyDictionary<string, string> map, bool ea
             return;
         }
         nextRepeat[direction] = PadControls.Repeats(action) ? nowMs + StickRepeatMs : long.MaxValue;
-        Emit(action, actions);
+        Emit(action, actions, direction);
     }
 }
 
@@ -385,10 +484,14 @@ internal sealed class TbarMailbox
     private double? target;
     private bool pending, failed;
     private (double From, int Ms)? slide;
+    private bool ordinary;
 
-    /** The dispatch loop asks the pad to take by sliding the T-bar (PadTbar.Slide). A failure posted after it cancels it. */
+    /** The dispatch loop asks the pad to push the T-bar for a take (PadTbar.Slide). A failure posted after it cancels it. */
     public void Slide(double from, int ms) { lock (gate) slide = (from, ms); }
     public (double From, int Ms)? TakeSlide() { lock (gate) { var s = slide; slide = null; return s; } }
+    /** Or, in easy mode, to send the take only after the full hold (PadReader.HoldForOrdinaryTake). A failure cancels it. */
+    public void Ordinary() { lock (gate) ordinary = true; }
+    public bool TakeOrdinary() { lock (gate) { var o = ordinary; ordinary = false; return o; } }
 
     /** True when the caller must queue a marker for the dispatch loop. Dropped: the value was not kept, so send it again. */
     public bool Post(double value) => Post(value, out _);
@@ -410,7 +513,7 @@ internal sealed class TbarMailbox
     }
 
     public double? Take() { lock (gate) { pending = false; var t = target; target = null; return t; } }
-    public void Fail() { lock (gate) { failed = true; target = null; slide = null; } }
+    public void Fail() { lock (gate) { failed = true; target = null; slide = null; ordinary = false; } }
     public bool ConsumeFailure() { lock (gate) { var f = failed; failed = false; return f; } }
 }
 
@@ -437,8 +540,9 @@ internal sealed class GamepadLoop(IPadSource source, PadReader reader, TbarMailb
                     log(connected ? "Game controller connected." : "Game controller disconnected.");
                 }
                 long now = Environment.TickCount64;
-                if (mailbox.ConsumeFailure()) reader.Tbar.Disarm();
+                if (mailbox.ConsumeFailure()) reader.Disarm();
                 if (mailbox.TakeSlide() is { } slide) reader.Tbar.Slide(slide.From, slide.Ms, now);
+                if (mailbox.TakeOrdinary()) reader.HoldForOrdinaryTake();
                 var (actions, tbar) = reader.Step(s, now);
                 foreach (var note in reader.Notes) log(note);
                 reader.Notes.Clear();

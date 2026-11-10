@@ -142,7 +142,7 @@ internal static class Program
         if (padMap != null)
         {
             Console.WriteLine(cfg.GamepadEasy
-                ? "Game controller: easy mode on. Hold a button 0.4 s for take, cut and other live actions (0.7 s for fade out and mic mute); the right trigger takes as usual."
+                ? "Game controller: easy mode on. Hold a button 0.4 s for take, cut and other live actions (0.7 s for fade out and mic mute); a take that pushes the T-bar starts after 0.15 s, and the right trigger takes as usual."
                 : "Game controller: easy mode off. Every button acts on press.");
             if (padMap.Keys.Any(k => k.StartsWith(PadControls.ShiftPrefix, StringComparison.OrdinalIgnoreCase)))
                 Console.WriteLine("Game controller: LB is the shift button and does nothing on its own.");
@@ -202,7 +202,7 @@ internal static class Program
                     try
                     {
                         using var wait = CancellationTokenSource.CreateLinkedTokenSource(stop.Token);
-                        long lastHeldTurn = 0;
+                        long lastHeldTurn = 0, ordinaryPressedAt = 0;
                         while (!stop.IsCancellationRequested && !obs.Disconnected.IsCompleted)
                         {
                             var readable = input.Reader.WaitToReadAsync(wait.Token).AsTask();
@@ -233,16 +233,19 @@ internal static class Program
                             if (ev.Action == "bridge.reconnect") { Console.WriteLine("Reconnecting."); break; }
                             if (ev.Action == PadTake)
                             {
-                                // When OBS would play a Fade, the pad slides the T-bar over its Duration like the trigger,
-                                // and its last step takes. Anything else is OBS's own take, as from any other surface.
+                                // When OBS would play a Fade, the pad pushes the T-bar while the take is held, end to end in
+                                // the Fade's Duration, and reaching the end takes. Anything else is OBS's own take, all at
+                                // once, so in easy mode one from rest waits for the full hold (the pad then sends TakeNow).
+                                // With the T-bar already part-way it goes at once: it finishes the mix or says what is wrong.
                                 bool slid = false;
                                 try
                                 {
                                     if (await desk.SlidePlan(ev.Timestamp) is { } slide)
                                     {
                                         tbarMail.Slide(slide.From, slide.Ms); slid = true;
-                                        Console.WriteLine($"Controller: take with the T-bar ({slide.Ms} ms)");
+                                        Console.WriteLine($"Controller: pushing the T-bar while the take is held ({slide.Ms} ms end to end)");
                                     }
+                                    else if (cfg.GamepadEasy && desk.TbarPosition == 0) { tbarMail.Ordinary(); slid = true; ordinaryPressedAt = ev.Timestamp; }
                                     else Console.WriteLine(await desk.Dispatch("take", ev.Timestamp));
                                 }
                                 catch (Exception e)
@@ -252,6 +255,14 @@ internal static class Program
                                     try { await desk.CancelOwnedAsync(); } catch (Exception c) { Console.WriteLine("Could not cancel T-bar: " + c.Message); }
                                 }
                                 if (!slid) tbarMail.Fail();
+                                continue;
+                            }
+                            if (ev.Action == PadControls.TakeNow)
+                            {
+                                // Measured from the take's first moment, so a double press stays a double press.
+                                try { Console.WriteLine(await desk.Dispatch("take", ordinaryPressedAt != 0 ? ordinaryPressedAt : ev.Timestamp)); }
+                                catch (Exception e) { Console.WriteLine("Action take: " + e.Message); }
+                                tbarMail.Fail();
                                 continue;
                             }
                             try { Console.WriteLine(await desk.Dispatch(ev.Action, ev.Timestamp)); }

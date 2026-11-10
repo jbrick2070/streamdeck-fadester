@@ -2,7 +2,7 @@
 
 What changed in Fadester for OBS and, where it says so, in VJster. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are the plugin's own (`manifest.json`). There is no change control here: the newest entry is the version.
 
-## Unreleased
+## 0.11.0 - 2026-11-10
 
 - **Fadester Companion: clearer words in the app.** These changes reach Store users with the next package (0.1.2.0 or later).
   - When OBS is not ready, the header says what is wrong and what to do in OBS, in your language: OBS is not answering, has no WebSocket password yet, has authentication off, or did not accept the password.

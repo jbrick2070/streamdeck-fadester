@@ -158,7 +158,7 @@ const page = `<!doctype html>
 <a class="skip" href="#surface">Skip to controls</a><main>
 <header><p class="eyebrow">Operator guide <span>/</span> Windows x64</p><h1>OBS Fadester for TourBox</h1>
 <p>Cue, mix and take scenes with one preset. Open Tour for media, overlays, transition settings and capture tools.</p></header>
-<nav aria-label="Guide sections"><a href="#surface">Desk layout</a><a href="#setup">First minute</a><a href="#master">All controls</a><a href="#vj">YouTube and VJ layers</a><a href="#recovery">At the desk</a></nav>
+<nav aria-label="Guide sections"><a href="#surface">Desk layout</a><a href="#setup">First minute</a><a href="#gamepad">Game controller</a><a href="#master">All controls</a><a href="#vj">YouTube and VJ layers</a><a href="#recovery">At the desk</a></nav>
 <nav aria-label="Quick starts in other languages">${languageLinks}</nav>
 <section class="sheet" id="surface" aria-labelledby="surface-heading"><p class="eyebrow">Orientation <span>/</span> 01</p>
 <h2 id="surface-heading">Find the controls by touch</h2>
@@ -175,7 +175,7 @@ const page = `<!doctype html>
 </section>
 <section class="sheet" id="setup" aria-labelledby="setup-title"><p class="eyebrow">Setup and rehearsal <span>/</span> 02</p><h2 id="setup-title">Your first minute at the desk</h2>
 <h3>Set up once</h3><ol class="step-list">
-<li>Extract the entire Windows ZIP and open <strong>Fadester for TourBox.exe</strong>. Keep its companion files together.</li>
+<li>Extract the entire Windows ZIP and open <strong>Fadester for TourBox.exe</strong>. Keep its companion files together. Installed from the Microsoft Store? Open <strong>Fadester Companion</strong> from the Start menu instead.</li>
 <li>Open OBS. In TourBox Console, use <b>Import</b> beside <b>Preset List</b> to add <b>OBS Fadester for TourBox.tb</b> from <b>presets</b>. Link it to <b>obs64</b>, enable <b>Auto Switch</b>, and select <b>OBS Fadester for TourBox</b>. For later updates, select this preset and use its own menu’s <b>Import</b> to replace its contents.</li>
 <li>In OBS, enable <b>Tools → WebSocket Server Settings</b> with authentication. Turn on <b>Studio Mode</b>, choose <b>Fade</b>, and keep the main OBS window and its T-bar visible. The manual control targets OBS 33.0.0 and 33.0.1.</li>
 <li>In the Fadester panel, click <b>Read scenes and inputs from OBS</b>. OBS usually uses port 4455: if yours differs, set the <b>OBS port</b> field. Select <b>Save &amp; start controls</b>, keep the panel open, and bring OBS to the front. You can try the fader before assigning audio.</li></ol>
@@ -184,6 +184,13 @@ const page = `<!doctype html>
 <div><h3>2 · Back out or finish</h3><p>Reverse the Dial to the starting end, or hold <b>Side</b> and press the <b>Dial</b> to cancel. Try again and finish the throw. Preview goes live once. OBS parks its handle at the start. Turn the Dial the opposite way for the return throw.</p></div></div>
 <h3 class="subhead">Assign your own sources</h3><p>In <b>Assignments</b>, choose <b>Music / bed</b>, <b>Content / guest</b>, and any mic, media, overlay or D-pad scenes by name. Overlay needs both a scene and an item in it, and so do <b>Layer 1</b> and <b>Layer 2</b>, the two items in your mix scene that the Top grips drive. Unused assignments can stay empty. Stop and restart controls to apply edits. Adjust <b>Ticks per full fade</b> if you want a longer or shorter throw.</p>
 <p class="note">The <b>Setup</b> tab shows the last scan. Watch the OBS picture, native slider and mixer for live changes. The panel’s <b>Activity</b> tab reports actions and explains a refused command. For an on-screen assignment card, open <b>General HUD</b> at the top right of TourBox Console. It starts hidden and shows a curated set of controls for the current preset.</p></section>
+<section class="sheet mixguide" id="gamepad" aria-labelledby="gamepad-title"><p class="eyebrow">Game controller / optional</p><h2 id="gamepad-title">No TourBox? Use a game controller</h2>
+<ol class="step-list">
+<li>On the <b>Setup</b> tab, tick <b>Use an Xbox or XInput game controller</b>, keep <b>Easy mode</b> ticked and click <b>Save &amp; start controls</b>. You can skip the preset import.</li>
+<li>In OBS, turn on <b>Studio Mode</b> and select <b>Fade</b>. Press D-pad down to cue the next scene in OBS's list, D-pad up for the one above.</li>
+<li>Pull the right trigger: OBS's T-bar follows, and pulling it all the way takes. Or hold <b>A</b>: after 0.15 s the T-bar moves while you hold it and takes at the end. Let go to leave it part-way; hold A again to carry on.</li>
+<li><b>B</b> cuts, <b>View</b> goes back to Program, the left trigger ducks Music while you hold it, and D-pad left and right ride Music. Change any button on the <b>Game controller</b> tab.</li></ol>
+<p class="note">Every control, easy mode and the safety rules: <a href="https://github.com/jbrick2070/streamdeck-fadester/blob/main/docs/gamepad/README.md">the game controller guide</a>.</p></section>
 <section class="sheet mixguide" aria-labelledby="mix-title"><p class="eyebrow">Audio / optional</p><h2 id="mix-title">Ride the whole mix</h2>
 <p>Enable <b>All OBS mixer inputs</b> in Setup and restart controls. Hold <b>Side</b> and turn the <b>raised Knob</b> to ride the group. The Tour menu reads its level. Open Tour for <b>Fade whole mix to silence</b> or <b>Restore whole mix</b>. Set the step and fade time in Setup.</p>
 <p>Music and Content still have their own controls. The group preserves their relative levels and includes other public mixer inputs. Late arrivals are picked up on the next scan; mute new sources before adding them if they must start silent. A hand-adjusted source stays with the operator. Restore returns the other faders to their saved settings. It affects every track and monitor that uses these inputs; it is not a stream-only master.</p>

@@ -17,7 +17,7 @@
 
     <h2>连接 TourBox 和 OBS</h2>
     <ol>
-      <li>完整解压 Windows ZIP 压缩包，然后在解压后的文件夹中运行 <strong>Fadester for TourBox.exe</strong>。</li>
+      <li>完整解压 Windows ZIP 压缩包，然后在解压后的文件夹中运行 <strong>Fadester for TourBox.exe</strong>。从 Microsoft Store 安装？请从开始菜单打开 <strong>Fadester Companion</strong>。</li>
       <li>打开 OBS。在 TourBox Console 中，使用预设列表旁的<strong>导入（Import）</strong>按钮导入 <code>presets/zh-CN/OBS Fadester for TourBox.tb</code>。将预设关联到 OBS，并启用<strong>自动切换（Auto Switch）</strong>。只需导入一个语言版本的预设。 请使用 Fadester 中的<strong>导入到 TourBox Console</strong>按钮；不要双击 <code>.tb</code> 文件。</li>
       <li>在 OBS 中打开<strong>工具 → WebSocket 服务器设置</strong>，启用服务器和身份验证。要在 OBS Studio <strong>33.0.0 或 33.0.1</strong> 中使用手动推子，请进入<strong>工作室模式（Studio Mode）</strong>，选择<strong>淡入淡出（Fade）</strong>转场，并让预览和输出画面之间的白色推子保持可见。</li>
       <li>在 Fadester 中点击<strong>从 OBS 读取场景和输入</strong>。如有需要，输入 OBS 的端口和密码。要试用音量调节，请在<strong>分配</strong>中选择音乐输入源。点击<strong>保存并启动控制</strong>，在 TourBox Console 中选择 <strong>OBS Fadester for TourBox</strong>，再将 OBS 切回前台。保持 Fadester 运行。</li>
@@ -32,6 +32,14 @@
       <li>VJster 只能控制 Chrome 中的 YouTube，无法控制 OBS 中的 YouTube 浏览器源。请用 Chrome 的窗口采集在 OBS 中显示视频。 请添加 Chrome 的应用程序音频采集以获取声音。</li>
       <li>在 Fadester 中指定音乐输入源。按住 <strong>Side</strong> 并转动扁平的 <strong>Dial</strong> 可调节其音量。按住 <strong>Top</strong> 时，Knob、Scroll 和 Dial 控制 VJ 图层（混合模式和不透明度）。</li>
     </ul>
+
+    <h2>没有 TourBox？使用游戏手柄</h2>
+    <ol>
+      <li>在<strong>设置</strong>选项卡中勾选<strong>使用 Xbox 或 XInput 游戏手柄</strong>，保持勾选<strong>简易模式</strong>，然后点击<strong>保存并启动控制</strong>。可以跳过导入预设。</li>
+      <li>在 OBS 中进入<strong>工作室模式（Studio Mode）</strong>并选择<strong>淡入淡出（Fade）</strong>转场。按方向键下，将 OBS 列表中的下一个场景放入预览；按方向键上则选择上一个。</li>
+      <li>扣下右扳机：OBS 的 T-bar 会跟着移动，扣到底即切换到节目。也可以按住 <strong>A</strong>：0.15 秒后，T-bar 会在你按住时持续推进，推到尽头即切换到节目。中途松开，它会停在原处；再次按住 A 即可继续。</li>
+      <li><strong>B</strong> 直接切换，<strong>View</strong> 返回节目画面，按住左扳机时音乐会压低，方向键左右调节音乐。可在<strong>游戏手柄</strong>选项卡中更改任何按钮。</li>
+    </ol>
 
     <h2>调节整个混音</h2>
     <p>如果控制已经启动，请先点击<strong>停止控制</strong>。在<strong>设置</strong>中勾选<strong>启用 OBS 混音器全部输入控制</strong>，然后点击<strong>保存并启动控制</strong>。按住 <strong>Side</strong> 并转动 <strong>Knob</strong> 可整体调节音量。打开 <strong>Tour</strong> 菜单可将整个混音淡出至静音，也可以恢复之前的音量。已静音的输入源仍保持静音。</p>

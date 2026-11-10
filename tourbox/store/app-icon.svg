@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="300" height="300">
+  <title>Fadester Companion</title>
+  <!-- The app's own icon: icon.svg on a rounded tile with transparent corners, for Windows and the package. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#141C36"/>
+      <stop offset="1" stop-color="#0A0F1E"/>
+    </linearGradient>
+    <linearGradient id="fill" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#7C3AED"/>
+      <stop offset="1" stop-color="#3B6BF0"/>
+    </linearGradient>
+    <linearGradient id="pad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4F6BEA"/>
+      <stop offset="1" stop-color="#7C3AED"/>
+    </linearGradient>
+  </defs>
+  <rect x="6" y="6" width="288" height="288" rx="64" fill="url(#bg)"/>
+  <g>
+    <rect x="72" y="38" width="16" height="148" rx="8" fill="#1F2A44"/>
+    <rect x="72" y="94" width="16" height="92" rx="8" fill="url(#fill)"/>
+    <rect x="142" y="38" width="16" height="148" rx="8" fill="#1F2A44"/>
+    <rect x="142" y="130" width="16" height="56" rx="8" fill="url(#fill)"/>
+    <rect x="212" y="38" width="16" height="148" rx="8" fill="#1F2A44"/>
+    <rect x="212" y="64" width="16" height="122" rx="8" fill="url(#fill)"/>
+    <rect x="53" y="81" width="54" height="26" rx="6" fill="#F97316"/>
+    <rect x="53" y="92" width="54" height="4" fill="#FFFFFF"/>
+    <rect x="123" y="117" width="54" height="26" rx="6" fill="#F97316"/>
+    <rect x="123" y="128" width="54" height="4" fill="#FFFFFF"/>
+    <rect x="193" y="51" width="54" height="26" rx="6" fill="#F97316"/>
+    <rect x="193" y="62" width="54" height="4" fill="#FFFFFF"/>
+  </g>
+  <g>
+    <circle cx="112" cy="246" r="22" fill="url(#pad)"/>
+    <circle cx="188" cy="246" r="22" fill="url(#pad)"/>
+    <rect x="88" y="206" width="124" height="48" rx="24" fill="url(#pad)"/>
+    <rect x="104" y="226" width="24" height="8" rx="2" fill="#0E1426"/>
+    <rect x="112" y="218" width="8" height="24" rx="2" fill="#0E1426"/>
+    <circle cx="188" cy="219" r="5" fill="#0E1426"/>
+    <circle cx="188" cy="241" r="5" fill="#0E1426"/>
+    <circle cx="177" cy="230" r="5" fill="#0E1426"/>
+    <circle cx="199" cy="230" r="5" fill="#0E1426"/>
+    <rect x="140" y="224" width="20" height="12" rx="3" fill="#F97316"/>
+  </g>
+</svg>

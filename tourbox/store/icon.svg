@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="300" height="300">
+  <title>Fadester Companion</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#141C36"/>
+      <stop offset="1" stop-color="#0A0F1E"/>
+    </linearGradient>
+    <linearGradient id="fill" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#7C3AED"/>
+      <stop offset="1" stop-color="#3B6BF0"/>
+    </linearGradient>
+    <linearGradient id="pad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4F6BEA"/>
+      <stop offset="1" stop-color="#7C3AED"/>
+    </linearGradient>
+  </defs>
+  <rect width="300" height="300" fill="url(#bg)"/>
+  <!-- three faders, the Fadester mark -->
+  <g>
+    <rect x="72" y="34" width="16" height="152" rx="8" fill="#1F2A44"/>
+    <rect x="72" y="92" width="16" height="94" rx="8" fill="url(#fill)"/>
+    <rect x="142" y="34" width="16" height="152" rx="8" fill="#1F2A44"/>
+    <rect x="142" y="130" width="16" height="56" rx="8" fill="url(#fill)"/>
+    <rect x="212" y="34" width="16" height="152" rx="8" fill="#1F2A44"/>
+    <rect x="212" y="62" width="16" height="124" rx="8" fill="url(#fill)"/>
+    <rect x="53" y="79" width="54" height="26" rx="6" fill="#F97316"/>
+    <rect x="53" y="90" width="54" height="4" fill="#FFFFFF"/>
+    <rect x="123" y="117" width="54" height="26" rx="6" fill="#F97316"/>
+    <rect x="123" y="128" width="54" height="4" fill="#FFFFFF"/>
+    <rect x="193" y="49" width="54" height="26" rx="6" fill="#F97316"/>
+    <rect x="193" y="60" width="54" height="4" fill="#FFFFFF"/>
+  </g>
+  <!-- a small game controller -->
+  <g>
+    <circle cx="112" cy="250" r="24" fill="url(#pad)"/>
+    <circle cx="188" cy="250" r="24" fill="url(#pad)"/>
+    <rect x="86" y="208" width="128" height="50" rx="25" fill="url(#pad)"/>
+    <rect x="103" y="228" width="24" height="8" rx="2" fill="#0E1426"/>
+    <rect x="111" y="220" width="8" height="24" rx="2" fill="#0E1426"/>
+    <circle cx="188" cy="221" r="5" fill="#0E1426"/>
+    <circle cx="188" cy="243" r="5" fill="#0E1426"/>
+    <circle cx="177" cy="232" r="5" fill="#0E1426"/>
+    <circle cx="199" cy="232" r="5" fill="#0E1426"/>
+    <rect x="140" y="226" width="20" height="12" rx="3" fill="#F97316"/>
+  </g>
+</svg>

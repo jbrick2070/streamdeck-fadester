@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 2160" width="1440" height="2160">
+  <title>Fadester Companion</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#151E3A"/>
+      <stop offset="1" stop-color="#070B16"/>
+    </linearGradient>
+    <linearGradient id="fill" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#7C3AED"/>
+      <stop offset="1" stop-color="#3B6BF0"/>
+    </linearGradient>
+    <linearGradient id="pad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4F6BEA"/>
+      <stop offset="1" stop-color="#7C3AED"/>
+    </linearGradient>
+    <linearGradient id="speed" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#EC4899"/>
+      <stop offset="1" stop-color="#22D3EE"/>
+    </linearGradient>
+  </defs>
+  <rect width="1440" height="2160" fill="url(#bg)"/>
+  <g stroke="#FFFFFF" stroke-opacity="0.035" stroke-width="2">
+    <line x1="0" y1="640" x2="1440" y2="640"/><line x1="0" y1="830" x2="1440" y2="830"/>
+    <line x1="0" y1="1020" x2="1440" y2="1020"/><line x1="0" y1="1210" x2="1440" y2="1210"/>
+    <line x1="0" y1="1400" x2="1440" y2="1400"/>
+  </g>
+
+  <g font-family="Segoe UI Variable Display, Segoe UI, Arial, sans-serif" text-anchor="middle">
+    <text x="720" y="300" font-size="170" font-weight="700" fill="#FFFFFF">Fadester</text>
+    <text x="720" y="430" font-size="110" font-weight="600" fill="#F97316">Companion</text>
+    <text x="720" y="530" font-size="46" fill="#A9B4D6">Hands-on mixing for live video</text>
+  </g>
+
+  <!-- the faders -->
+  <g>
+    <rect x="458" y="640" width="44" height="760" rx="22" fill="#1F2A44"/>
+    <rect x="458" y="860" width="44" height="540" rx="22" fill="url(#fill)"/>
+    <rect x="698" y="640" width="44" height="760" rx="22" fill="#1F2A44"/>
+    <rect x="698" y="1100" width="44" height="300" rx="22" fill="url(#fill)"/>
+    <rect x="938" y="640" width="44" height="760" rx="22" fill="#1F2A44"/>
+    <rect x="938" y="760" width="44" height="640" rx="22" fill="url(#fill)"/>
+    <rect x="405" y="825" width="150" height="70" rx="14" fill="#F97316"/>
+    <rect x="405" y="855" width="150" height="10" fill="#FFFFFF"/>
+    <rect x="645" y="1065" width="150" height="70" rx="14" fill="#F97316"/>
+    <rect x="645" y="1095" width="150" height="10" fill="#FFFFFF"/>
+    <rect x="885" y="725" width="150" height="70" rx="14" fill="#F97316"/>
+    <rect x="885" y="755" width="150" height="10" fill="#FFFFFF"/>
+  </g>
+
+  <!-- small controllers: a game pad, a dial, a key deck, and video speed -->
+  <g transform="translate(240 1660) scale(1.9) translate(-150 -238)">
+    <circle cx="112" cy="250" r="24" fill="url(#pad)"/>
+    <circle cx="188" cy="250" r="24" fill="url(#pad)"/>
+    <rect x="86" y="208" width="128" height="50" rx="25" fill="url(#pad)"/>
+    <rect x="103" y="228" width="24" height="8" rx="2" fill="#0E1426"/>
+    <rect x="111" y="220" width="8" height="24" rx="2" fill="#0E1426"/>
+    <circle cx="188" cy="221" r="5" fill="#0E1426"/>
+    <circle cx="188" cy="243" r="5" fill="#0E1426"/>
+    <circle cx="177" cy="232" r="5" fill="#0E1426"/>
+    <circle cx="199" cy="232" r="5" fill="#0E1426"/>
+    <rect x="140" y="226" width="20" height="12" rx="3" fill="#F97316"/>
+  </g>
+  <g>
+    <rect x="450" y="1570" width="220" height="180" rx="36" fill="#1F2A44" stroke="#2E3B5E" stroke-width="4"/>
+    <circle cx="530" cy="1660" r="54" fill="url(#pad)"/>
+    <circle cx="530" cy="1660" r="32" fill="#0E1426"/>
+    <rect x="526" y="1630" width="8" height="24" rx="4" fill="#F97316"/>
+    <rect x="600" y="1600" width="44" height="30" rx="8" fill="#F97316"/>
+    <rect x="600" y="1645" width="44" height="30" rx="8" fill="#2E3B5E"/>
+    <rect x="600" y="1690" width="44" height="30" rx="8" fill="#2E3B5E"/>
+  </g>
+  <g>
+    <rect x="765" y="1575" width="230" height="170" rx="28" fill="#1F2A44" stroke="#2E3B5E" stroke-width="4"/>
+    <rect x="782" y="1597" width="56" height="56" rx="10" fill="#F97316"/>
+    <rect x="852" y="1597" width="56" height="56" rx="10" fill="#4F6BEA"/>
+    <rect x="922" y="1597" width="56" height="56" rx="10" fill="#7C3AED"/>
+    <rect x="782" y="1667" width="56" height="56" rx="10" fill="#3B6BF0"/>
+    <rect x="852" y="1667" width="56" height="56" rx="10" fill="#6D4AE8"/>
+    <rect x="922" y="1667" width="56" height="56" rx="10" fill="#2E3B5E"/>
+  </g>
+  <g fill="none" stroke-linecap="round" stroke-width="20">
+    <path d="M 1139.9 1720.1 A 85 85 0 1 1 1260.1 1720.1" stroke="#1F2A44"/>
+    <path d="M 1139.9 1720.1 A 85 85 0 1 1 1285 1660" stroke="url(#speed)"/>
+  </g>
+  <polygon points="1186,1628 1186,1692 1240,1660" fill="#FFFFFF"/>
+
+  <text x="720" y="1990" font-family="Segoe UI Variable Display, Segoe UI, Arial, sans-serif" font-size="44" fill="#8C97B8" text-anchor="middle">Game controller · T-bar · Music · Video speed</text>
+</svg>

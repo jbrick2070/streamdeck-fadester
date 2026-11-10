@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <title>Fadester Companion</title>
+  <!-- 16 to 32 px: only the three faders, drawn on the pixel grid, so they stay sharp where the game pad would blur. -->
+  <rect x="0" y="0" width="32" height="32" rx="7" fill="#101830"/>
+  <rect x="7" y="4" width="2" height="24" fill="#2A3656"/>
+  <rect x="7" y="12" width="2" height="16" fill="#5B5BE8"/>
+  <rect x="15" y="4" width="2" height="24" fill="#2A3656"/>
+  <rect x="15" y="18" width="2" height="10" fill="#6D4AE8"/>
+  <rect x="23" y="4" width="2" height="24" fill="#2A3656"/>
+  <rect x="23" y="8" width="2" height="20" fill="#4F6BEA"/>
+  <rect x="4" y="10" width="8" height="4" rx="1" fill="#F97316"/>
+  <rect x="12" y="16" width="8" height="4" rx="1" fill="#F97316"/>
+  <rect x="20" y="6" width="8" height="4" rx="1" fill="#F97316"/>
+</svg>

@@ -48,9 +48,16 @@ $manifest = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'AppxManifest.xml'))
 $priconfig = Join-Path $out "priconfig-$Version.xml"
 & $makepri createconfig /cf $priconfig /dq en-US /pv 10.0.0 /o | Out-Null
 if ($LASTEXITCODE) { throw 'makepri createconfig failed.' }
+# One resources.pri: the default config splits scales and languages into resources.scale-*.pri and
+# resources.language-*.pri, which only an app bundle uses; a single .msix would lose its larger logos.
+[xml]$pri = [IO.File]::ReadAllText($priconfig)
+foreach ($node in @($pri.SelectNodes('//packaging'))) { [void]$node.ParentNode.RemoveChild($node) }
+$pri.Save($priconfig)
 & $makepri new /pr $layout /cf $priconfig /mn (Join-Path $layout 'AppxManifest.xml') /of (Join-Path $layout 'resources.pri') /o | Out-Null
 if ($LASTEXITCODE) { throw 'makepri new failed.' }
 Remove-Item -LiteralPath $priconfig -Force
+$extra = Get-ChildItem -LiteralPath $layout -Filter '*.pri' | Where-Object Name -ne 'resources.pri'
+if ($extra) { throw "makepri split the resources ($($extra.Name -join ', ')); the package needs one resources.pri." }
 
 $msix = Join-Path $out "FadesterCompanion_${Version}_x64.msix"
 & $makeappx pack /d $layout /p $msix /o /h SHA256 | Out-Null

@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The Microsoft Store package of the companion, as Fadester Companion. make-msix.ps1 fills in the version.
      Identity and publisher come from Partner Center (Product identity); they must stay exactly as reserved there.
-     Only en-us is declared: Partner Center asks for a Store listing in every language a package declares. The panel
-     still follows the Windows display language by itself. -->
+     Every language the panel, the guides and the presets ship in is declared. Windows gives a packaged app the best
+     match between the user's languages and the languages its package declares, so with en-us alone a German Windows
+     ran the panel in English (2026-11-09 review, SD-2 1). Partner Center asks for a Store listing in every declared
+     language: the nine translated listings are in LISTING-translations.md, to add in the same submission. -->
 <Package
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
@@ -20,6 +22,15 @@
   </Dependencies>
   <Resources>
     <Resource Language="en-us" />
+    <Resource Language="de" />
+    <Resource Language="es" />
+    <Resource Language="fr" />
+    <Resource Language="it" />
+    <Resource Language="ja" />
+    <Resource Language="ko" />
+    <Resource Language="ru" />
+    <Resource Language="zh-CN" />
+    <Resource Language="zh-TW" />
   </Resources>
   <Applications>
     <Application Id="App" Executable="Fadester for TourBox.exe" EntryPoint="Windows.FullTrustApplication">

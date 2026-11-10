@@ -2,8 +2,10 @@
 # Builds the Microsoft Store package (MSIX) of the companion as Fadester Companion from a finished tourbox\build.ps1
 # build. The package is unsigned: the Store signs it after certification. For a local try, -Register registers the
 # unpacked layout with Windows instead (needs Developer Mode; remove it again with Remove-AppxPackage).
-#   .\make-msix.ps1 [-Build "...\dist\build-...\Fadester for TourBox"] [-Version 0.1.0.0] [-Register]
-param([string]$Build, [string]$Version = '0.1.0.0', [string]$OutDir = (Join-Path $PSScriptRoot '..\dist'), [switch]$Register)
+# The Store refuses a second package with the same version and different contents, even within one draft:
+# raise -Version for every package you upload (0.1.1.0 was the first one submitted).
+#   .\make-msix.ps1 [-Build "...\dist\build-...\Fadester for TourBox"] [-Version 0.1.1.0] [-Register]
+param([string]$Build, [string]$Version = '0.1.1.0', [string]$OutDir = (Join-Path $PSScriptRoot '..\dist'), [switch]$Register)
 $ErrorActionPreference = 'Stop'
 # The Store wants Major.Minor.Build with the fourth number 0.
 if ($Version -notmatch '^\d{1,5}\.\d{1,5}\.\d{1,5}\.0$' -or ($Version.Split('.') | Where-Object { [int]$_ -gt 65535 })) {

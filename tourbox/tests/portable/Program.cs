@@ -33,6 +33,8 @@ internal static class CoreChecks
             Console.WriteLine("PASS: audio rides/undo/ramps, grouped mix and journal recovery.");
             await StudioFaderSelfTests.RunAsync();
             Console.WriteLine("PASS: Studio fader state machine with simulated native callbacks.");
+            await TransitionTraceSelfTests.RunAsync();
+            Console.WriteLine("PASS: transition trace attribution with a scripted OBS and clock.");
             await ObsTransportChecks.RunAsync();
             Console.WriteLine("PASS: production OBS connection authentication, framing, correlation, events, errors and disconnect handling against a private loopback fake.");
             Console.WriteLine("PASS: all portable core checks. This is not a native macOS app or a hardware compatibility test.");

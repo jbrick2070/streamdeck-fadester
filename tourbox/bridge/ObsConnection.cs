@@ -24,8 +24,14 @@ internal sealed class ObsConnection : IDisposable
     public event Action<string, double>? InputVolumeChanged;
     public event Action<Guid, double>? InputLevelChangedById;
     public event Action<JsonObject>? CustomEvent;
+    /// <summary>(event type, transition name) for CurrentSceneTransitionChanged, SceneTransitionStarted and
+    /// SceneTransitionEnded. Raised only on a connection opened with transitionEvents; a diagnostic, not a control.</summary>
+    public event Action<string, string>? TransitionEvent;
 
-    public static async Task<ObsConnection> Connect(BridgeConfig cfg, CancellationToken stop)
+    // General (1) and Inputs (8); Transitions (16) only for the transition trace.
+    internal static int Subscriptions(bool transitionEvents) => transitionEvents ? 25 : 9;
+
+    public static async Task<ObsConnection> Connect(BridgeConfig cfg, CancellationToken stop, bool transitionEvents = false)
     {
         var client = new ObsConnection();
         try
@@ -41,7 +47,7 @@ internal sealed class ObsConnection : IDisposable
                 throw new InvalidOperationException("Expected OBS WebSocket v5 with authentication enabled.");
             static string Hash(string s) => Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(s)));
             string signature = Hash(Hash(password + auth["salt"]!.GetValue<string>()) + auth["challenge"]!.GetValue<string>());
-            await client.Send(new() { ["op"] = 1, ["d"] = new JsonObject { ["rpcVersion"] = 1, ["eventSubscriptions"] = 9, ["authentication"] = signature } }, timeout.Token);
+            await client.Send(new() { ["op"] = 1, ["d"] = new JsonObject { ["rpcVersion"] = 1, ["eventSubscriptions"] = Subscriptions(transitionEvents), ["authentication"] = signature } }, timeout.Token);
             if ((await client.Receive(timeout.Token))["op"]?.GetValue<int>() != 2) throw new IOException("OBS rejected identification.");
             _ = client.Listen();
             return client;
@@ -90,6 +96,14 @@ internal sealed class ObsConnection : IDisposable
                     if (Guid.TryParse(change["inputUuid"]?.GetValue<string>(), out var id) &&
                         change["inputVolumeMul"]?.GetValue<double>() is double mul && double.IsFinite(mul))
                         InputLevelChangedById?.Invoke(id, mul);
+                    continue;
+                }
+                if (packet["op"]?.GetValue<int>() == 5 && packet["d"]?["eventType"] is JsonValue type && type.TryGetValue<string>(out var kind) &&
+                    kind is "CurrentSceneTransitionChanged" or "SceneTransitionStarted" or "SceneTransitionEnded")
+                {
+                    // A listener that only watches must never cost the connection, so its failure stops here.
+                    if (packet["d"]?["eventData"]?["transitionName"] is JsonValue named && named.TryGetValue<string>(out var transition))
+                        try { TransitionEvent?.Invoke(kind, transition); } catch (Exception) { }
                     continue;
                 }
                 if (packet["op"]?.GetValue<int>() != 7 || packet["d"] is not JsonObject reply) continue;

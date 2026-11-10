@@ -107,7 +107,7 @@ internal static class ObsTransportChecks
                 ["authentication"] = new JsonObject { ["salt"] = salt, ["challenge"] = challenge } } }, stop);
             var identify = await Receive(socket, stop);
             Check((int?)identify["op"] == 1 && (string?)identify["d"]?["authentication"] == Hash(Hash(password + salt) + challenge), "authentication proof differs");
-            Check((int?)identify["d"]?["rpcVersion"] == 1 && ((int?)identify["d"]?["eventSubscriptions"] & 9) == 9, "RPC version or input/custom event subscription differs");
+            Check((int?)identify["d"]?["rpcVersion"] == 1 && (int?)identify["d"]?["eventSubscriptions"] == 25, "RPC version differs, or the traced connection did not subscribe to general, input and transition events");
             await Send(socket, new() { ["op"] = 2, ["d"] = new JsonObject { ["negotiatedRpcVersion"] = 1 } }, stop);
 
             // Reply to two concurrent requests backwards, exercising request-ID correlation.
@@ -134,6 +134,13 @@ internal static class ObsTransportChecks
                             ["eventData"] = new JsonObject { ["inputName"] = inputName, ["inputUuid"] = inputId.ToString(), ["inputVolumeDb"] = level, ["inputVolumeMul"] = Math.Pow(10, level / 20) } } }, stop, fragmented: true);
                         await Send(socket, new() { ["op"] = 5, ["d"] = new JsonObject { ["eventType"] = "CustomEvent", ["eventIntent"] = 1,
                             ["eventData"] = new JsonObject { ["fixture"] = "received" } } }, stop);
+                        // The transition trace's events: one well formed, one with a name that is not text, one more well formed.
+                        await Send(socket, new() { ["op"] = 5, ["d"] = new JsonObject { ["eventType"] = "CurrentSceneTransitionChanged", ["eventIntent"] = 16,
+                            ["eventData"] = new JsonObject { ["transitionName"] = "Fixture Fade", ["transitionUuid"] = Guid.NewGuid().ToString() } } }, stop);
+                        await Send(socket, new() { ["op"] = 5, ["d"] = new JsonObject { ["eventType"] = "SceneTransitionStarted", ["eventIntent"] = 16,
+                            ["eventData"] = new JsonObject { ["transitionName"] = 7 } } }, stop);
+                        await Send(socket, new() { ["op"] = 5, ["d"] = new JsonObject { ["eventType"] = "SceneTransitionEnded", ["eventIntent"] = 16,
+                            ["eventData"] = new JsonObject { ["transitionName"] = "Fixture Fade" } } }, stop);
                         await Reply(socket, request, new(), stop);
                         break;
                     case "GetReplayBufferStatus":
@@ -155,7 +162,8 @@ internal static class ObsTransportChecks
         try
         {
             var cfg = new BridgeConfig { Host = "127.0.0.1", Port = port, MusicInput = inputName };
-            using var obs = await ObsConnection.Connect(cfg, stop);
+            Check(ObsConnection.Subscriptions(false) == 9, "without the transition trace the connection must subscribe to general and input events only");
+            using var obs = await ObsConnection.Connect(cfg, stop, transitionEvents: true);
             var version = obs.Call("GetVersion");
             var muted = obs.Call("GetInputMute", new() { ["inputName"] = inputName });
             await Task.WhenAll(version, muted).WaitAsync(stop);
@@ -166,11 +174,19 @@ internal static class ObsTransportChecks
             obs.InputVolumeChanged += (name, db) => { if (name == inputName) named.TrySetResult(db); };
             obs.InputLevelChangedById += (id, mul) => { if (id == inputId) uuid.TrySetResult(mul); };
             obs.CustomEvent += data => { if ((string?)data["fixture"] == "received") custom.TrySetResult(); };
+            var transitions = new List<string>();
+            var traced = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            obs.TransitionEvent += (kind, name) => { lock (transitions) transitions.Add(kind + ":" + name); if (kind == "SceneTransitionEnded") traced.TrySetResult(); };
+            // A listener that fails must not cost the connection: the undo below still needs it.
+            obs.TransitionEvent += (_, _) => throw new InvalidOperationException("fixture listener");
             var desk = new DeskActions(cfg, obs.Call);
             obs.InputVolumeChanged += desk.OnVolumeChanged;
             await desk.Dispatch("music.down").WaitAsync(stop);
             Check(await named.Task.WaitAsync(stop) == -7 && Math.Abs(await uuid.Task.WaitAsync(stop) - Math.Pow(10, -7d / 20)) < 1e-12, "volume events lost or changed");
             await custom.Task.WaitAsync(stop);
+            await traced.Task.WaitAsync(stop);
+            lock (transitions) Check(transitions.Take(2).SequenceEqual(["CurrentSceneTransitionChanged:Fixture Fade", "SceneTransitionEnded:Fixture Fade"]),
+                "transition events lost or changed, or one without a text name was passed on");
             await desk.Dispatch("undo").WaitAsync(stop);
             Check(level == -6 && writes == 2, "production dispatcher/undo did not complete its round trip");
             try { await obs.Call("GetReplayBufferStatus"); throw new InvalidOperationException("Refused request was accepted."); }

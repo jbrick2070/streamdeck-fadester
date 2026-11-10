@@ -33,9 +33,11 @@ internal static class Program
                 string v = args[i + 1]; args.RemoveRange(i, 2); return Path.GetFullPath(v);
             }
             string configPath = Option("--config", BridgeConfig.DefaultPath), map = Option("--map", DefaultMap());
+            bool traceTransitions = args.Remove("--trace-transitions");
             string command = args.FirstOrDefault() ?? "--listen";
             if ((command == "--dispatch" && args.Count != 2) || (command != "--dispatch" && args.Count > 1)) throw new ArgumentException("Invalid arguments. See --help.");
-            if (command == "--help") { Console.WriteLine("FadesterTourBoxBridge [--config PATH] [--map PATH] [--init | --catalog | --check | --self-test | --dispatch ACTION | --listen | --mix-only]\nMix-only serves other controllers without registering shortcuts. Type quit or press Ctrl+C to stop."); return 0; }
+            if (command == "--help") { Console.WriteLine("FadesterTourBoxBridge [--config PATH] [--map PATH] [--trace-transitions] [--init | --catalog | --check | --self-test | --dispatch ACTION | --listen | --mix-only]\nMix-only serves other controllers without registering shortcuts. Type quit or press Ctrl+C to stop.\n--trace-transitions, with --listen or --mix-only, prints each change of OBS's selected transition with the time and whether the companion asked for it."); return 0; }
+            if (traceTransitions && command is not ("--listen" or "--mix-only")) throw new ArgumentException("--trace-transitions works with --listen or --mix-only.");
             if (command == "--init")
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(configPath)!);
@@ -45,6 +47,7 @@ internal static class Program
             if (command == "--self-test")
             {
                 var bindings = Binding.Load(map); await BridgeSelfTests.RunAsync(); await StudioFaderSelfTests.RunAsync(); GamepadSelfTests.Run();
+                await TransitionTraceSelfTests.RunAsync();
                 // The packaged panel reads the controller map from here; a source checkout without it skips the check.
                 var padFile = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(map))!, "gamepad.json");
                 if (File.Exists(padFile)) GamepadSelfTests.CheckPresetFile(padFile);
@@ -57,7 +60,7 @@ internal static class Program
             {
                 if (command == "--mix-only" && !config.MixEnabled) throw new ArgumentException("Enable All OBS mixer inputs in Setup first.");
                 if (command == "--listen") config.CheckPorts();
-                await Listen(config, command == "--listen" ? Binding.Load(map) : [], stop); return 0;
+                await Listen(config, command == "--listen" ? Binding.Load(map) : [], stop, traceTransitions); return 0;
             }
             if (command is not ("--catalog" or "--check" or "--dispatch")) throw new ArgumentException("Unknown option " + command + ". See --help.");
             using var obs = await ObsConnection.Connect(config, stop.Token);
@@ -76,7 +79,7 @@ internal static class Program
         catch (Exception e) { Console.Error.WriteLine("ERROR: " + e.Message); return 1; }
     }
 
-    private static async Task Listen(BridgeConfig cfg, List<Binding> bindings, CancellationTokenSource stop)
+    private static async Task Listen(BridgeConfig cfg, List<Binding> bindings, CancellationTokenSource stop, bool traceTransitions = false)
     {
         // One gain authority per local OBS endpoint, including other Windows login sessions.
         // Retain the handle without thread ownership: awaiting OBS can resume on another thread.
@@ -167,18 +170,25 @@ internal static class Program
             string? lastError = null;
             // A duck, a cut's owed transition and a part-thrown T-bar outlive a dropped connection.
             DeskActions.Memory? memory = null;
+            // One queue for the whole run, so a console that stops taking lines never holds up a request or a reply.
+            Action<string>? traceLog = traceTransitions ? TransitionTrace.Queued(Console.WriteLine) : null;
             while (!stop.IsCancellationRequested)
             {
                 try
                 {
-                    using var obs = await ObsConnection.Connect(cfg, stop.Token); lastError = null;
+                    using var obs = await ObsConnection.Connect(cfg, stop.Token, traceTransitions); lastError = null;
                     using var native = new NativeTBar(cfg.Port);
-                    var desk = new DeskActions(cfg, obs.Call, nativeMove: native.MoveAsync, resume: memory); int mine = ++generation;
+                    // --trace-transitions: the desk's requests pass through the trace, which only reads and prints.
+                    TransitionTrace? trace = traceLog != null ? new TransitionTrace(obs.Call, traceLog) : null;
+                    Func<string, System.Text.Json.Nodes.JsonObject?, Task<System.Text.Json.Nodes.JsonObject>> rpc = obs.Call;
+                    if (trace != null) { obs.TransitionEvent += trace.OnEvent; rpc = trace.Call; }
+                    var desk = new DeskActions(cfg, rpc, nativeMove: native.MoveAsync, resume: memory); int mine = ++generation;
                     obs.InputVolumeChanged += desk.OnVolumeChanged;
                     obs.InputLevelChangedById += desk.OnMixInputLevelChanged;
                     desk.StartMixMonitor();
                     var protocol = new MixProtocolServer(obs,desk);
                     Console.WriteLine($"Connected to OBS at {cfg.Host}:{cfg.Port}.");
+                    if (trace != null) await trace.StartAsync();
                     // Before any input is accepted: finish what the last connection left behind.
                     try { var said = await desk.ResumeAsync(); if (said.Length > 0) Console.WriteLine(said); }
                     catch (Exception e) when (!stop.IsCancellationRequested) { Console.WriteLine("After reconnecting: " + e.Message); }

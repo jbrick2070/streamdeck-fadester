@@ -139,7 +139,7 @@ function headings(document: MiniDocument): string[] {
 
 describe("the direct pages' Language section (R-LANG-1, R-LANG-6)", () => {
   it("finds every direct page", () => {
-    expect(DIRECT_PAGES.length).toBe(9);
+    expect(DIRECT_PAGES.length).toBe(8);
   });
 
   it.each(DIRECT_PAGES)("%s has the section: Automatic, the nine by their own names, the note", (page) => {

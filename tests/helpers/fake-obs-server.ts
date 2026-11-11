@@ -513,25 +513,6 @@ export function createDefaultSlots(
   return [...baseSlots, ...(includeFx ? fxSlots : [])].map(withDisplayValue);
 }
 
-/** The fake VJLink's state; a test sets `server.vjlink` to one to "install" VJLink. */
-export interface FakeVjlink {
-  presets: string[];
-  presetIndex: number;
-  effectId: string;
-  bpm: number;
-  /** The BPM a TapBPM leaves (VJLink averages taps; the fake just lands here). */
-  tapBpm: number;
-  blackout: boolean;
-  macros: { energy: number; chaos: number; speed: number; color: number; react: number };
-}
-
-export function fakeVjlink(overrides: Partial<FakeVjlink> = {}): FakeVjlink {
-  return {
-    presets: ["Tunnel", "Plasma", "Strobe"], presetIndex: 0, effectId: "", bpm: 120, tapBpm: 128, blackout: false,
-    macros: { energy: 0.5, chaos: 0.2, speed: 0.5, color: 0.5, react: 0.7 }, ...overrides
-  };
-}
-
 export class FakeObsServer {
   private wss: WebSocketServer | null = null;
   private readonly clients = new Set<WebSocket>();
@@ -548,12 +529,6 @@ export class FakeObsServer {
   /** Like OBS before it has finished loading: every request is answered NotReady (207) while the websocket takes clients. */
   public notReady = false;
   public notReadyRejections = 0;
-  /**
-   * BosoVR's VJLink (vendor "obs-vjlink"), answered as its websocket_handler.c answers: null means no VJLink in
-   * OBS (CallVendorRequest then fails with ResourceNotFound, as for any unknown vendor).
-   */
-  public vjlink: FakeVjlink | null = null;
-  public vjlinkCallLog: Array<{ requestType: string; requestData: Record<string, unknown> }> = [];
   public studioMode: boolean;
   public screenshotDelayMs: number;
   public availableRequests: string[] | undefined;
@@ -1683,16 +1658,6 @@ export class FakeObsServer {
       const vReqType = String(requestData.requestType ?? "");
       const vReqData = (requestData.requestData ?? {}) as Record<string, unknown>;
 
-      if (vendorName === "obs-vjlink" && this.vjlink) {
-        this.vjlinkCallLog.push({ requestType: vReqType, requestData: vReqData });
-        this.sendResponse(ws, requestId, requestType, true, 100, "", {
-          vendorName,
-          requestType: vReqType,
-          responseData: this.handleVjlinkCall(this.vjlink, vReqType, vReqData)
-        });
-        return;
-      }
-
       if (this.missingPlugin || vendorName !== FADESTER_VENDOR_NAME) {
         this.sendResponse(
           ws,
@@ -1712,46 +1677,6 @@ export class FakeObsServer {
         requestType: vReqType,
         responseData
       });
-    }
-  }
-
-  /** VJLink's requests as obs-vjlink answers them: "success" in the reply, VJLink's own "error" words on a refusal. */
-  private handleVjlinkCall(vj: FakeVjlink, type: string, data: Record<string, unknown>): Record<string, unknown> {
-    const count = vj.presets.length;
-    const effectOf = (index: number): string => index >= 0 && index < count ? `${vj.presets[index].toLowerCase()}_fx` : "";
-    switch (type) {
-      case "GetState":
-        return {
-          success: true, bpm: vj.bpm, preset_index: vj.presetIndex, effect_id: vj.presetIndex >= 0 ? effectOf(vj.presetIndex) : vj.effectId,
-          blackout: vj.blackout, macro_energy: vj.macros.energy, macro_chaos: vj.macros.chaos, macro_speed: vj.macros.speed,
-          macro_color: vj.macros.color, macro_react: vj.macros.react, strobe_safety: 1, beat_phase: 0.25
-        };
-      case "NextPreset":
-        vj.presetIndex = count ? (vj.presetIndex + 1 + count) % count : -1;
-        return { success: true, preset_index: vj.presetIndex };
-      case "PrevPreset":
-        vj.presetIndex = count ? (vj.presetIndex < 0 ? count - 1 : (vj.presetIndex - 1 + count) % count) : -1;
-        return { success: true, preset_index: vj.presetIndex };
-      case "SetPreset": {
-        const name = String(data.preset_name ?? "");
-        const found = vj.presets.findIndex((preset) => preset === name || `${preset.toLowerCase()}_fx` === name);
-        if (found < 0) return { success: false, error: "Preset not found", preset_index: -1 };
-        vj.presetIndex = found;
-        return { success: true, preset_index: found };
-      }
-      case "TapBPM":
-        vj.bpm = vj.tapBpm;
-        return { success: true, bpm: vj.bpm };
-      case "Blackout":
-        vj.blackout = !vj.blackout;
-        return { success: true, blackout: vj.blackout };
-      case "SetMacros":
-        for (const macro of ["energy", "chaos", "speed", "color", "react"] as const) {
-          if (typeof data[macro] === "number") vj.macros[macro] = Math.max(0, Math.min(1, data[macro] as number));
-        }
-        return { success: true };
-      default:
-        return { success: false, error: `Unknown VJLink request ${type}` };
     }
   }
 

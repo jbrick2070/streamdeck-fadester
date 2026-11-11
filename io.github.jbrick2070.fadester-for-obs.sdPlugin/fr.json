@@ -53,16 +53,6 @@
     "Name": "Panique visuelle",
     "Tooltip": "Panique (immédiate) et Restaurer (maintenir 0,8 s) de Visual Sidechain, envoyés par les raccourcis clavier d’OBS. Les touches Panique affichent PANIQUE ENVOYÉE jusqu’au déclenchement de Restaurer."
   },
-  "io.github.jbrick2070.fadester-for-obs.vjlink": {
-    "Name": "VJLink",
-    "Tooltip": "Piloter le plugin VJLink pour OBS : changer ou choisir ses presets, taper le BPM ou passer au noir avec une touche, régler l’une de ses cinq macros avec une molette.",
-    "Encoder": {
-      "TriggerDescription": {
-        "Rotate": "Régler la macro",
-        "Push": "Taper le BPM ou blackout"
-      }
-    }
-  },
   "io.github.jbrick2070.fadester-for-obs.fader": {
     "Name": "Fader Midi Fadester (facultatif)",
     "Tooltip": "Contrôle avancé facultatif pour un slot existant de Midi Fadester.",
@@ -382,28 +372,6 @@
     "filterPressToggle": "Appui : filtre on/off",
     "filterGlideCancelled": "Fondu annulé",
     "filterChooseSetting": "Choisissez un réglage",
-    "vjlinkOpNext": "Preset suivant",
-    "vjlinkOpPrevious": "Preset précédent",
-    "vjlinkOpPreset": "Aller au preset",
-    "vjlinkOpTap": "Taper le BPM",
-    "vjlinkOpBlackout": "Blackout",
-    "vjlinkPresetNumber": "Preset {n}",
-    "vjlinkNoPreset": "Aucun preset",
-    "vjlinkBpm": "{bpm} BPM",
-    "vjlinkTapHint": "Tapez en rythme",
-    "vjlinkBlackoutOnHint": "Visuels au noir",
-    "vjlinkBlackoutOffHint": "Appuyez pour le noir",
-    "vjlinkChoosePreset": "Saisissez un preset",
-    "vjlinkReading": "Lecture de VJLink…",
-    "vjlinkMissing": "VJLink absent",
-    "vjlinkMacroEnergy": "Énergie",
-    "vjlinkMacroChaos": "Chaos",
-    "vjlinkMacroSpeed": "Vitesse",
-    "vjlinkMacroColor": "Couleur",
-    "vjlinkMacroReact": "Réaction",
-    "vjlinkPressTap": "Appui : taper le BPM",
-    "vjlinkPressBlackout": "Appui : blackout",
-    "vjlinkRefused": "Refusé par VJLink",
     "pi": {
       "scopeThisKey": "cette touche",
       "scopeThisDial": "cette molette",
@@ -822,24 +790,7 @@
       "accentMagenta": "Magenta",
       "fxBannerRangeChoose": "Choisissez la plage où cette intensité peut varier.",
       "fxBannerOutOfRange": "OBS a {value}, hors de cette plage : la commande ne le déplace pas tant que la valeur ou la plage ne change pas.",
-      "fxNoteOffTable": "Tout autre réglage numérique, y compris les uniforms propres à un shader, peut être piloté dès que vous saisissez sa plage ; choisissez-la avec soin. OBS n’indique pas au deck quels uniforms sont des listes : ceux nommés …_mode ou déclarés en liste dans le texte du shader sont exclus, vérifiez vous-même les autres.",
-      "vjlinkHeading": "VJLink",
-      "vjlinkIntro": "Pilote le plugin VJLink pour OBS, de BosoVR, via le WebSocket d’OBS : ses presets, le tap du BPM, le blackout et ses cinq macros.",
-      "vjlinkCheckNote": "Cette commande a besoin de VJLink dans OBS. VJLink est gratuit pour un usage personnel ; voir sa licence. Si la commande affiche « VJLink absent », OBS n’a pas VJLink.",
-      "vjlinkOptNext": "Preset suivant",
-      "vjlinkOptPrevious": "Preset précédent",
-      "vjlinkOptPreset": "Aller à un preset",
-      "vjlinkOptTap": "Taper le BPM",
-      "vjlinkOptBlackout": "Blackout on/off",
-      "vjlinkPresetLabel": "Preset",
-      "vjlinkPresetPlaceholder": "Nom ou id, comme VJLink l’affiche",
-      "vjlinkMacroLabel": "Macro",
-      "vjlinkMacroOptEnergy": "Énergie",
-      "vjlinkMacroOptChaos": "Chaos",
-      "vjlinkMacroOptSpeed": "Vitesse",
-      "vjlinkMacroOptColor": "Couleur",
-      "vjlinkMacroOptReact": "Réaction",
-      "vjlinkSafetyNote": "Les effets stroboscopiques et les flashs de VJLink peuvent clignoter vite. Gardez une touche Blackout sur le deck et réglez la sécurité stroboscopique de VJLink dans son panneau web."
+      "fxNoteOffTable": "Tout autre réglage numérique, y compris les uniforms propres à un shader, peut être piloté dès que vous saisissez sa plage ; choisissez-la avec soin. OBS n’indique pas au deck quels uniforms sont des listes : ceux nommés …_mode ou déclarés en liste dans le texte du shader sont exclus, vérifiez vous-même les autres."
     }
   }
 }

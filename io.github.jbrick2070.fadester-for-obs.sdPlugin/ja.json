@@ -53,16 +53,6 @@
     "Name": "ビジュアル パニック",
     "Tooltip": "Visual Sidechain のパニック (即時) と復元 (0.8 秒長押し) を OBS のホットキーで送ります。パニックキーは復元までパニック送信済みと表示します。"
   },
-  "io.github.jbrick2070.fadester-for-obs.vjlink": {
-    "Name": "VJLink",
-    "Tooltip": "OBS 用プラグイン VJLink を操作します。キーでプリセットの切り替えや指定、BPM タップ、ブラックアウト。ダイヤルで 5 つのマクロの 1 つを調整します。",
-    "Encoder": {
-      "TriggerDescription": {
-        "Rotate": "マクロを調整",
-        "Push": "BPM タップまたはブラックアウト"
-      }
-    }
-  },
   "io.github.jbrick2070.fadester-for-obs.fader": {
     "Name": "Midi Fadester フェーダー (オプション)",
     "Tooltip": "既存の Midi Fadester スロット用のオプションの拡張操作です。",
@@ -382,28 +372,6 @@
     "filterPressToggle": "押す: フィルタ切替",
     "filterGlideCancelled": "フェードを中止",
     "filterChooseSetting": "設定を選択",
-    "vjlinkOpNext": "次のプリセット",
-    "vjlinkOpPrevious": "前のプリセット",
-    "vjlinkOpPreset": "プリセットへ",
-    "vjlinkOpTap": "BPMをタップ",
-    "vjlinkOpBlackout": "ブラックアウト",
-    "vjlinkPresetNumber": "プリセット {n}",
-    "vjlinkNoPreset": "プリセットなし",
-    "vjlinkBpm": "{bpm} BPM",
-    "vjlinkTapHint": "ビートに合わせてタップ",
-    "vjlinkBlackoutOnHint": "映像はブラックアウト中",
-    "vjlinkBlackoutOffHint": "押すとブラックアウト",
-    "vjlinkChoosePreset": "プリセット名を入力",
-    "vjlinkReading": "VJLink を読み込み中…",
-    "vjlinkMissing": "VJLink なし",
-    "vjlinkMacroEnergy": "エネルギー",
-    "vjlinkMacroChaos": "カオス",
-    "vjlinkMacroSpeed": "スピード",
-    "vjlinkMacroColor": "カラー",
-    "vjlinkMacroReact": "反応",
-    "vjlinkPressTap": "押す: BPMをタップ",
-    "vjlinkPressBlackout": "押す: ブラックアウト",
-    "vjlinkRefused": "VJLink が拒否",
     "pi": {
       "scopeThisKey": "このキー",
       "scopeThisDial": "このダイヤル",
@@ -822,24 +790,7 @@
       "accentMagenta": "マゼンタ",
       "fxBannerRangeChoose": "この適用量を動かせる範囲を選んでください。",
       "fxBannerOutOfRange": "OBS の値は {value} で、この範囲外です。値か範囲が変わるまで、このコントロールは動かしません。",
-      "fxNoteOffTable": "その他の数値設定（シェーダー独自の uniform を含む）も、範囲を入力すれば操作できます。範囲は慎重に選んでください。どの uniform がリストかを OBS はデッキに伝えません。…_mode という名前のものや、シェーダーテキストでリストと指定されたものは除外されます。それ以外はご自身で確認してください。",
-      "vjlinkHeading": "VJLink",
-      "vjlinkIntro": "OBS の WebSocket を通じて、BosoVR による OBS 用プラグイン VJLink を操作します。プリセット、BPM タップ、ブラックアウト、5 つのマクロです。",
-      "vjlinkCheckNote": "このコントロールには OBS の VJLink が必要です。VJLink は個人利用なら無料です。ライセンスを確認してください。「VJLink なし」と表示されたら、OBS に VJLink がありません。",
-      "vjlinkOptNext": "次のプリセット",
-      "vjlinkOptPrevious": "前のプリセット",
-      "vjlinkOptPreset": "プリセットを指定",
-      "vjlinkOptTap": "BPMをタップ",
-      "vjlinkOptBlackout": "ブラックアウト切替",
-      "vjlinkPresetLabel": "プリセット",
-      "vjlinkPresetPlaceholder": "VJLink に表示される名前または ID",
-      "vjlinkMacroLabel": "マクロ",
-      "vjlinkMacroOptEnergy": "エネルギー",
-      "vjlinkMacroOptChaos": "カオス",
-      "vjlinkMacroOptSpeed": "スピード",
-      "vjlinkMacroOptColor": "カラー",
-      "vjlinkMacroOptReact": "反応",
-      "vjlinkSafetyNote": "VJLink のストロボやフラッシュ効果は速く点滅することがあります。デッキにブラックアウトのキーを置き、VJLink の Web パネルでストロボの安全設定を行ってください。"
+      "fxNoteOffTable": "その他の数値設定（シェーダー独自の uniform を含む）も、範囲を入力すれば操作できます。範囲は慎重に選んでください。どの uniform がリストかを OBS はデッキに伝えません。…_mode という名前のものや、シェーダーテキストでリストと指定されたものは除外されます。それ以外はご自身で確認してください。"
     }
   }
 }

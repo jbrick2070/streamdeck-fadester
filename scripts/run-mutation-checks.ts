@@ -2351,45 +2351,6 @@ const MUTATIONS: MutationCheck[] = [
     target: "      if (Date.now() < this.tbarSettleUntil) return Promise.resolve(this.catalog.tbarPosition);",
     mutated: "      if (Date.now() < 0) return Promise.resolve(this.catalog.tbarPosition);",
     testFile: "tests/scene-cycle.test.ts"
-  },
-  {
-    id: "M-VJ.1",
-    step: "VJLink (VJLink's own refusals reach the key)",
-    description:
-      "Take VJLink's success:false for a success and verify the unknown-preset test fails",
-    filePath: resolve(ROOT, "src/control/vjlink.ts"),
-    target: "    if (response.success === false) {",
-    mutated: "    if (false) {",
-    testFile: "tests/vjlink.test.ts"
-  },
-  {
-    id: "M-VJ.2",
-    step: "VJLink (a macro stays within 0..1)",
-    description: "Drop the 0..1 clamp and verify the dial clamp test fails",
-    filePath: resolve(ROOT, "src/control/vjlink.ts"),
-    target: "  return Math.max(0, Math.min(1, value));",
-    mutated: "  return value;",
-    testFile: "tests/vjlink.test.ts"
-  },
-  {
-    id: "M-VJ.3",
-    step: "VJLink (read only while a control is on screen)",
-    description:
-      "Keep reading VJLink after the last control leaves and verify the on-screen test fails",
-    filePath: resolve(ROOT, "src/control/vjlink.ts"),
-    target: "      if (this.watchers === 0) this.stopTimer();",
-    mutated: "      if (this.watchers === -1) this.stopTimer();",
-    testFile: "tests/vjlink.test.ts"
-  },
-  {
-    id: "M-VJ.4",
-    step: "VJLink (a missing VJLink is named on every control)",
-    description:
-      "Pass OBS's no-vendor error through unnamed and verify the missing-VJLink test fails",
-    filePath: resolve(ROOT, "src/control/vjlink.ts"),
-    target: "      if (error instanceof ObsVendorError && error.code === NO_SUCH_VENDOR) {",
-    mutated: "      if (false) {",
-    testFile: "tests/vjlink.test.ts"
   }
 ];
 

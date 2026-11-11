@@ -53,16 +53,6 @@
     "Name": "Visuelle Panik",
     "Tooltip": "Panik (sofort) und Wiederherstellen (0,8 s halten) von Visual Sidechain, gesendet über die eigenen Hotkeys von OBS. Panik-Tasten zeigen PANIK GESENDET bis zum Wiederherstellen."
   },
-  "io.github.jbrick2070.fadester-for-obs.vjlink": {
-    "Name": "VJLink",
-    "Tooltip": "Das Plugin VJLink für OBS steuern: per Taste Presets wechseln oder wählen, BPM tippen oder Blackout; am Drehregler eines der fünf Makros regeln.",
-    "Encoder": {
-      "TriggerDescription": {
-        "Rotate": "Makro regeln",
-        "Push": "BPM tippen oder Blackout"
-      }
-    }
-  },
   "io.github.jbrick2070.fadester-for-obs.fader": {
     "Name": "Midi Fadester Fader (optional)",
     "Tooltip": "Optionale erweiterte Steuerung für einen vorhandenen Slot von Midi Fadester.",
@@ -382,28 +372,6 @@
     "filterPressToggle": "Drücken: Filter an/aus",
     "filterGlideCancelled": "Übergang abgebrochen",
     "filterChooseSetting": "Einstellung wählen",
-    "vjlinkOpNext": "Nächstes Preset",
-    "vjlinkOpPrevious": "Vorheriges Preset",
-    "vjlinkOpPreset": "Preset wählen",
-    "vjlinkOpTap": "BPM tippen",
-    "vjlinkOpBlackout": "Blackout",
-    "vjlinkPresetNumber": "Preset {n}",
-    "vjlinkNoPreset": "Kein Preset",
-    "vjlinkBpm": "{bpm} BPM",
-    "vjlinkTapHint": "Im Takt tippen",
-    "vjlinkBlackoutOnHint": "Visuals ausgeblendet",
-    "vjlinkBlackoutOffHint": "Drücken für Blackout",
-    "vjlinkChoosePreset": "Preset-Namen eingeben",
-    "vjlinkReading": "Lese VJLink…",
-    "vjlinkMissing": "VJLink fehlt",
-    "vjlinkMacroEnergy": "Energie",
-    "vjlinkMacroChaos": "Chaos",
-    "vjlinkMacroSpeed": "Tempo",
-    "vjlinkMacroColor": "Farbe",
-    "vjlinkMacroReact": "Reaktion",
-    "vjlinkPressTap": "Drücken: BPM tippen",
-    "vjlinkPressBlackout": "Drücken: Blackout",
-    "vjlinkRefused": "VJLink lehnt ab",
     "pi": {
       "scopeThisKey": "diese Taste",
       "scopeThisDial": "dieser Drehregler",
@@ -822,24 +790,7 @@
       "accentMagenta": "Magentarot",
       "fxBannerRangeChoose": "Wählen Sie den Bereich, in dem sich diese Stärke bewegen darf.",
       "fxBannerOutOfRange": "OBS hat {value}, außerhalb dieses Bereichs: Das Steuerelement bewegt den Wert erst, wenn sich der Wert oder der Bereich ändert.",
-      "fxNoteOffTable": "Jede andere Zahleneinstellung, auch die eigenen Uniforms eines Shaders, lässt sich steuern, sobald Sie ihren Bereich eingeben; wählen Sie ihn mit Bedacht. OBS teilt dem Deck nicht mit, welche Uniforms Listen sind: Solche mit Namen auf …_mode oder als Liste im Shader-Text werden ausgelassen, alle anderen prüfen Sie selbst.",
-      "vjlinkHeading": "VJLink",
-      "vjlinkIntro": "Steuert das Plugin VJLink für OBS von BosoVR über den WebSocket von OBS: seine Presets, BPM-Tippen, Blackout und fünf Makros.",
-      "vjlinkCheckNote": "Diese Steuerung braucht VJLink in OBS. VJLink ist für den privaten Gebrauch kostenlos; siehe seine Lizenz. Zeigt die Steuerung „VJLink fehlt“, hat OBS kein VJLink.",
-      "vjlinkOptNext": "Nächstes Preset",
-      "vjlinkOptPrevious": "Vorheriges Preset",
-      "vjlinkOptPreset": "Ein Preset wählen",
-      "vjlinkOptTap": "BPM tippen",
-      "vjlinkOptBlackout": "Blackout an/aus",
-      "vjlinkPresetLabel": "Preset",
-      "vjlinkPresetPlaceholder": "Name oder ID, wie VJLink ihn zeigt",
-      "vjlinkMacroLabel": "Makro",
-      "vjlinkMacroOptEnergy": "Energie",
-      "vjlinkMacroOptChaos": "Chaos",
-      "vjlinkMacroOptSpeed": "Tempo",
-      "vjlinkMacroOptColor": "Farbe",
-      "vjlinkMacroOptReact": "Reaktion",
-      "vjlinkSafetyNote": "Die Stroboskop- und Blitzeffekte von VJLink können schnell blitzen. Legen Sie eine Blackout-Taste auf das Deck und stellen Sie die Stroboskop-Sicherheit von VJLink in seinem Web-Panel ein."
+      "fxNoteOffTable": "Jede andere Zahleneinstellung, auch die eigenen Uniforms eines Shaders, lässt sich steuern, sobald Sie ihren Bereich eingeben; wählen Sie ihn mit Bedacht. OBS teilt dem Deck nicht mit, welche Uniforms Listen sind: Solche mit Namen auf …_mode oder als Liste im Shader-Text werden ausgelassen, alle anderen prüfen Sie selbst."
     }
   }
 }

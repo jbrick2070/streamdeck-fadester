@@ -53,16 +53,6 @@
     "Name": "비주얼 긴급 정지",
     "Tooltip": "Visual Sidechain의 긴급 정지(즉시)와 복원(0.8초 길게 누르기)을 OBS 단축키로 보냅니다. 긴급 정지 키는 복원할 때까지 긴급 정지 전송됨을 표시합니다."
   },
-  "io.github.jbrick2070.fadester-for-obs.vjlink": {
-    "Name": "VJLink",
-    "Tooltip": "OBS용 플러그인 VJLink를 조작합니다. 키로 프리셋을 넘기거나 고르고, BPM을 탭하거나 블랙아웃하며, 다이얼로 매크로 5개 중 하나를 조절합니다.",
-    "Encoder": {
-      "TriggerDescription": {
-        "Rotate": "매크로 조절",
-        "Push": "BPM 탭 또는 블랙아웃"
-      }
-    }
-  },
   "io.github.jbrick2070.fadester-for-obs.fader": {
     "Name": "Midi Fadester 페이더 (선택 사항)",
     "Tooltip": "기존 Midi Fadester 슬롯을 위한 선택 사항인 고급 제어입니다.",
@@ -382,28 +372,6 @@
     "filterPressToggle": "누르기: 필터 켜기/끄기",
     "filterGlideCancelled": "페이드 취소됨",
     "filterChooseSetting": "설정 선택",
-    "vjlinkOpNext": "다음 프리셋",
-    "vjlinkOpPrevious": "이전 프리셋",
-    "vjlinkOpPreset": "프리셋으로",
-    "vjlinkOpTap": "BPM 탭",
-    "vjlinkOpBlackout": "블랙아웃",
-    "vjlinkPresetNumber": "프리셋 {n}",
-    "vjlinkNoPreset": "프리셋 없음",
-    "vjlinkBpm": "{bpm} BPM",
-    "vjlinkTapHint": "박자에 맞춰 탭",
-    "vjlinkBlackoutOnHint": "비주얼 블랙아웃 중",
-    "vjlinkBlackoutOffHint": "누르면 블랙아웃",
-    "vjlinkChoosePreset": "프리셋 이름 입력",
-    "vjlinkReading": "VJLink 읽는 중…",
-    "vjlinkMissing": "VJLink 없음",
-    "vjlinkMacroEnergy": "에너지",
-    "vjlinkMacroChaos": "카오스",
-    "vjlinkMacroSpeed": "속도",
-    "vjlinkMacroColor": "색상",
-    "vjlinkMacroReact": "반응",
-    "vjlinkPressTap": "누르기: BPM 탭",
-    "vjlinkPressBlackout": "누르기: 블랙아웃",
-    "vjlinkRefused": "VJLink 거부",
     "pi": {
       "scopeThisKey": "이 키",
       "scopeThisDial": "이 다이얼",
@@ -822,24 +790,7 @@
       "accentMagenta": "마젠타",
       "fxBannerRangeChoose": "이 값이 움직일 수 있는 범위를 선택하세요.",
       "fxBannerOutOfRange": "OBS 값 {value}이(가) 이 범위 밖에 있습니다. 값이나 범위가 바뀔 때까지 이 컨트롤은 움직이지 않습니다.",
-      "fxNoteOffTable": "다른 숫자 설정(셰이더 자체 uniform 포함)도 범위를 입력하면 조절할 수 있습니다. 범위는 신중하게 고르세요. 어떤 uniform이 목록인지 OBS는 덱에 알려 주지 않습니다. 이름이 …_mode인 것과 셰이더 텍스트에 목록으로 지정된 것은 제외되며, 나머지는 직접 확인하세요.",
-      "vjlinkHeading": "VJLink",
-      "vjlinkIntro": "OBS의 WebSocket을 통해 BosoVR가 만든 OBS용 플러그인 VJLink를 조작합니다. 프리셋, BPM 탭, 블랙아웃, 매크로 5개입니다.",
-      "vjlinkCheckNote": "이 컨트롤에는 OBS의 VJLink가 필요합니다. VJLink는 개인 용도로 무료이며 라이선스를 확인하세요. 컨트롤에 'VJLink 없음'이 표시되면 OBS에 VJLink가 없는 것입니다.",
-      "vjlinkOptNext": "다음 프리셋",
-      "vjlinkOptPrevious": "이전 프리셋",
-      "vjlinkOptPreset": "프리셋 지정",
-      "vjlinkOptTap": "BPM 탭",
-      "vjlinkOptBlackout": "블랙아웃 켜기/끄기",
-      "vjlinkPresetLabel": "프리셋",
-      "vjlinkPresetPlaceholder": "VJLink에 표시되는 이름 또는 ID",
-      "vjlinkMacroLabel": "매크로",
-      "vjlinkMacroOptEnergy": "에너지",
-      "vjlinkMacroOptChaos": "카오스",
-      "vjlinkMacroOptSpeed": "속도",
-      "vjlinkMacroOptColor": "색상",
-      "vjlinkMacroOptReact": "반응",
-      "vjlinkSafetyNote": "VJLink의 스트로브와 플래시 효과는 빠르게 깜박일 수 있습니다. 덱에 블랙아웃 키를 두고, VJLink 웹 패널에서 스트로브 안전 설정을 하세요."
+      "fxNoteOffTable": "다른 숫자 설정(셰이더 자체 uniform 포함)도 범위를 입력하면 조절할 수 있습니다. 범위는 신중하게 고르세요. 어떤 uniform이 목록인지 OBS는 덱에 알려 주지 않습니다. 이름이 …_mode인 것과 셰이더 텍스트에 목록으로 지정된 것은 제외되며, 나머지는 직접 확인하세요."
     }
   }
 }

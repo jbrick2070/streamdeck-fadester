@@ -53,16 +53,6 @@
     "Name": "视觉紧急停止",
     "Tooltip": "通过 OBS 自身的快捷键发送 Visual Sidechain 的紧急停止（立即）和恢复（长按 0.8 秒）。紧急停止键会显示“已发送紧急停止”，直到恢复。"
   },
-  "io.github.jbrick2070.fadester-for-obs.vjlink": {
-    "Name": "VJLink",
-    "Tooltip": "控制 OBS 插件 VJLink：用按键切换或选择预设、敲击 BPM 或黑场，用旋钮调节五个宏之一。",
-    "Encoder": {
-      "TriggerDescription": {
-        "Rotate": "调节宏",
-        "Push": "敲击 BPM 或黑场"
-      }
-    }
-  },
   "io.github.jbrick2070.fadester-for-obs.fader": {
     "Name": "Midi Fadester 推子（可选）",
     "Tooltip": "用于现有 Midi Fadester 槽位的可选增强控制。",
@@ -382,28 +372,6 @@
     "filterPressToggle": "按下：滤镜开关",
     "filterGlideCancelled": "渐变已取消",
     "filterChooseSetting": "选择设置",
-    "vjlinkOpNext": "下一个预设",
-    "vjlinkOpPrevious": "上一个预设",
-    "vjlinkOpPreset": "转到预设",
-    "vjlinkOpTap": "敲击 BPM",
-    "vjlinkOpBlackout": "黑场",
-    "vjlinkPresetNumber": "预设 {n}",
-    "vjlinkNoPreset": "无预设",
-    "vjlinkBpm": "{bpm} BPM",
-    "vjlinkTapHint": "跟着节拍敲击",
-    "vjlinkBlackoutOnHint": "画面已黑场",
-    "vjlinkBlackoutOffHint": "按下即黑场",
-    "vjlinkChoosePreset": "输入预设名称",
-    "vjlinkReading": "正在读取 VJLink…",
-    "vjlinkMissing": "缺少 VJLink",
-    "vjlinkMacroEnergy": "能量",
-    "vjlinkMacroChaos": "混沌",
-    "vjlinkMacroSpeed": "速度",
-    "vjlinkMacroColor": "颜色",
-    "vjlinkMacroReact": "响应",
-    "vjlinkPressTap": "按下：敲击 BPM",
-    "vjlinkPressBlackout": "按下：黑场",
-    "vjlinkRefused": "VJLink 拒绝",
     "pi": {
       "scopeThisKey": "此按键",
       "scopeThisDial": "此旋钮",
@@ -822,24 +790,7 @@
       "accentMagenta": "品红",
       "fxBannerRangeChoose": "请选择此调制量可以变化的范围。",
       "fxBannerOutOfRange": "OBS 中的值为 {value}，超出此范围：在值或范围改变之前，此控件不会移动它。",
-      "fxNoteOffTable": "其他任何数值设置（包括着色器自身的 uniform）在输入范围后即可控制，请谨慎选择范围。OBS 不会告诉 Stream Deck 哪些 uniform 是列表：名称以 …_mode 结尾或在着色器文本中标为列表的会被排除，其余请自行确认。",
-      "vjlinkHeading": "VJLink",
-      "vjlinkIntro": "通过 OBS 的 WebSocket 控制 BosoVR 开发的 OBS 插件 VJLink：预设、敲击 BPM、黑场和五个宏。",
-      "vjlinkCheckNote": "此控件需要 OBS 中的 VJLink。VJLink 可免费用于个人用途，请参阅其许可证。若控件显示“缺少 VJLink”，说明 OBS 中没有 VJLink。",
-      "vjlinkOptNext": "下一个预设",
-      "vjlinkOptPrevious": "上一个预设",
-      "vjlinkOptPreset": "转到指定预设",
-      "vjlinkOptTap": "敲击 BPM",
-      "vjlinkOptBlackout": "黑场开关",
-      "vjlinkPresetLabel": "预设",
-      "vjlinkPresetPlaceholder": "VJLink 中显示的名称或 ID",
-      "vjlinkMacroLabel": "宏",
-      "vjlinkMacroOptEnergy": "能量",
-      "vjlinkMacroOptChaos": "混沌",
-      "vjlinkMacroOptSpeed": "速度",
-      "vjlinkMacroOptColor": "颜色",
-      "vjlinkMacroOptReact": "响应",
-      "vjlinkSafetyNote": "VJLink 的频闪和闪光效果可能快速闪烁。请在控制台上保留一个黑场键，并在 VJLink 的网页面板中设置其频闪安全。"
+      "fxNoteOffTable": "其他任何数值设置（包括着色器自身的 uniform）在输入范围后即可控制，请谨慎选择范围。OBS 不会告诉 Stream Deck 哪些 uniform 是列表：名称以 …_mode 结尾或在着色器文本中标为列表的会被排除，其余请自行确认。"
     }
   }
 }

@@ -81,9 +81,12 @@ namespace Fadester.TourBox {
     readonly Dictionary<string, ComboBox> boxes = new Dictionary<string, ComboBox>();
     readonly Dictionary<string,Image> glyphs=new Dictionary<string,Image>();
     Dictionary<string, object> config = new Dictionary<string, object>(), catalog = new Dictionary<string, object>();
-    Label state, status, live, importNote; TextBox password;
-    // The status line: what is true now, never a log line. OBS from the last scan or the running controls' own lines.
+    Label state, live, importNote, reminder; TextBox password;
+    // The readiness lights: what is true now, never a log line. OBS from the last scan or the running controls' own lines.
     bool obsConnected; string padState="stPadOff"; ListBox activity; Button connect, start, save, openSettings;
+    // What the lights also need from the desktop, read once a second without touching OBS (ShowMe.cs).
+    Light obsLight, padLight, ctlLight; System.Windows.Forms.Timer watch; ShowMeWindow showMe;
+    string obsProblem, front=""; bool obsRunning, obsHidden, padSeen, studioOff, tourboxConsole; DateTime autoConnectAt=DateTime.MaxValue; int autoTries;
     // A bridge that a Stop or Close already waited for in vain: the next Stop or Close ends it if it still does not exit.
     // Ending: the bridge the panel is ending, so whichever sees it exit first says so in the same words.
     Process stopTimedOut, ending;
@@ -110,6 +113,7 @@ namespace Fadester.TourBox {
     }
     internal static void Test() {
       PanelText.Test();
+      Readiness.Test();
       var d=Decode("{\"scenes\":[\"🎬 Studio\",\"Act II\"],\"anchors\":[\"a\",\"\",\"b\",\"\"],\"port\":4455}");
       if (List(d,"scenes")[0]!="🎬 Studio" || Val(d,"port")!="4455" || List(d,"anchors").Length!=4) throw new Exception();
       if (List(d,"missing").Length!=0 || Decode(Json.Serialize(d)).Count!=3) throw new Exception();
@@ -132,15 +136,24 @@ namespace Fadester.TourBox {
       // The window and taskbar show the exe's own icon, not WinForms' default one.
       try { Icon=Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch (Exception e) { Entry.Log("icon: "+e.Message); }
       Font=new Font("Segoe UI",10); BackColor=Color.White; StartPosition=FormStartPosition.CenterScreen;
-      var grid=new TableLayoutPanel {Dock=DockStyle.Fill,ColumnCount=1,RowCount=3, Padding=new Padding(14)};
-      grid.RowStyles.Add(new RowStyle(SizeType.Absolute,104)); grid.RowStyles.Add(new RowStyle(SizeType.Percent,100)); grid.RowStyles.Add(new RowStyle(SizeType.Absolute,86));
+      var grid=new TableLayoutPanel {Dock=DockStyle.Fill,ColumnCount=1,RowCount=5, Padding=new Padding(14)};
+      grid.RowStyles.Add(new RowStyle(SizeType.Absolute,80)); grid.RowStyles.Add(new RowStyle(SizeType.AutoSize)); grid.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+      grid.RowStyles.Add(new RowStyle(SizeType.Percent,100)); grid.RowStyles.Add(new RowStyle(SizeType.Absolute,86));
+      grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100)); // the window's width bounds every row, so the lights wrap
       Controls.Add(grid);
       var head=new Panel {Dock=DockStyle.Fill,BackColor=navy,Padding=new Padding(12)};
       head.Controls.Add(new Label {Text="Fadester Companion",Location=new Point(14,7),Font=new Font("Segoe UI",17,FontStyle.Bold),ForeColor=Color.White,AutoSize=true});
-      status=new Label {Location=new Point(16,47),AutoEllipsis=true,UseMnemonic=false,ForeColor=Color.White,Font=new Font("Segoe UI",10,FontStyle.Bold),Width=680,Anchor=AnchorStyles.Left|AnchorStyles.Right|AnchorStyles.Top}; head.Controls.Add(status);
-      state=new Label {Text=text.Get("lookingForObs"),Location=new Point(16,70),AutoEllipsis=true,UseMnemonic=false,ForeColor=Color.White, Width=680,Anchor=AnchorStyles.Left|AnchorStyles.Right|AnchorStyles.Top}; head.Controls.Add(state); grid.Controls.Add(head,0,0);
-      head.ClientSizeChanged+=delegate { state.Width=status.Width=Math.Max(1,head.ClientSize.Width-32); };
-      var tabs=new TabControl {Dock=DockStyle.Fill}; grid.Controls.Add(tabs,0,1);
+      state=new Label {Text=text.Get("lookingForObs"),Location=new Point(16,50),AutoEllipsis=true,UseMnemonic=false,ForeColor=Color.White, Width=680,Anchor=AnchorStyles.Left|AnchorStyles.Right|AnchorStyles.Top}; head.Controls.Add(state); grid.Controls.Add(head,0,0);
+      head.ClientSizeChanged+=delegate { state.Width=Math.Max(1,head.ClientSize.Width-32); };
+      // Three lights, each with the one button that fixes it, so the next step is always in view.
+      var lights=new FlowLayoutPanel {Dock=DockStyle.Fill,AutoSize=true,WrapContents=true,BackColor=Color.FromArgb(241,244,249),Padding=new Padding(10,6,10,6),Margin=new Padding(0,6,0,0)};
+      obsLight=new Light(navy,accent,Color.White); padLight=new Light(navy,accent,Color.White); ctlLight=new Light(navy,accent,Color.White);
+      foreach(var l in new[]{obsLight,padLight,ctlLight}){ l.Acted+=Act; lights.Controls.Add(l); }
+      grid.Controls.Add(lights,0,1);
+      reminder=new Label {AutoSize=true,UseMnemonic=false,Visible=false,BackColor=Color.FromArgb(255,241,214),ForeColor=Color.FromArgb(107,74,0),Font=new Font("Segoe UI",10,FontStyle.Bold),Padding=new Padding(10,7,10,7),Margin=new Padding(0,6,0,0),MaximumSize=new Size(720,0)};
+      grid.Controls.Add(reminder,0,2);
+      grid.ClientSizeChanged+=delegate { reminder.MinimumSize=reminder.MaximumSize=new Size(Math.Max(200,grid.ClientSize.Width-28),0); };
+      var tabs=new TabControl {Dock=DockStyle.Fill}; grid.Controls.Add(tabs,0,3);
       // Setup reads in the order a newcomer acts: OBS, then the controller in hand, then a first cue with it.
       body=Page(tabs,text.Get("setup"));
       Title(body,text.Get("connectTitle")); Hint(body,text.Get("connectHint"));
@@ -181,6 +194,7 @@ namespace Fadester.TourBox {
       extensionId=new TextBox {Width=290}; vjRow.Controls.Add(extensionId); body.Controls.Add(vjRow);
       Hint(body,text.Get("vjsterIdHint"));
       Hint(body,text.Get("keepOpen"));
+      enableGamepad.CheckedChanged+=delegate { ShowStatus(); }; mixOnly.CheckedChanged+=delegate { ShowStatus(); };
       var assign=Page(tabs,text.Get("assignments")); Title(assign,text.Get("assignTitle"));
       Hint(assign,text.Get("assignHint"));
       foreach (var field in new[] { "musicInput", "contentInput", "micInput", "mediaInput", "overlayScene", "overlaySource" })
@@ -223,9 +237,11 @@ namespace Fadester.TourBox {
       AddButton(bar,text.Get("guide"),delegate { OpenPath(text.GuidePath(folder)); });
       // Shown only when config.json cannot be read, so the file can be found and repaired (a Store install keeps it elsewhere).
       openSettings=AddButton(bar,text.Get("openSettings"),delegate { OpenPath(SettingsFolder.Holding(settings)); }); openSettings.Visible=false;
-      grid.Controls.Add(bar,0,2);
+      grid.Controls.Add(bar,0,4);
       ShowStatus();
-      Load += async delegate { ReadSettings(); ReadMap(); ReadPad(); if(!invalidConfig) await Connect(); };
+      watch=new System.Windows.Forms.Timer {Interval=1000}; watch.Tick+=delegate { Watch(); };
+      FormClosed+=delegate { watch.Stop(); watch.Dispose(); };
+      Load += async delegate { ReadSettings(); ReadMap(); ReadPad(); Watch(); watch.Start(); if(!invalidConfig) await Connect(); };
       FormClosing+=async (s,e)=>{
         Entry.Log("closing: "+e.CloseReason+(worker==null?"":", controls running")); if(worker==null)return;
         // Windows is shutting down or signing out: hold that up for a second at most. The bridge is asked to stop, so it can
@@ -492,6 +508,7 @@ namespace Fadester.TourBox {
     async Task Connect() {
       if(refreshing||invalidConfig||PortsClash())return;
       refreshing=true; connect.Enabled=false; start.Enabled=false; string tmp=null;
+      string failure=null; // the OBS problem this scan found; any other failure counts as OBS not answering
       try {
         // A read-only discovery must not overwrite the user's saved assignments.
         tmp=Path.Combine(Path.GetTempPath(),"fadester-discover-"+Guid.NewGuid().ToString("N")+".json");
@@ -499,16 +516,17 @@ namespace Fadester.TourBox {
         using(var proc=Process.Start(Command("--catalog --config \""+tmp+"\""))){
           var output=proc.StandardOutput.ReadToEndAsync(); var error=proc.StandardError.ReadToEndAsync();
           bool done=await Task.Run(()=>proc.WaitForExit(25000)); if(!done){proc.Kill(); throw new Exception(text.Get("obsTimeout"));}
-          var s=await output; var err=await error; if(proc.ExitCode!=0)throw new Exception(String.IsNullOrWhiteSpace(err)?text.Get("obsUnavailable"):text.Explain(err.Trim()));
+          var s=await output; var err=await error;
+          if(proc.ExitCode!=0){ failure=PanelText.ProblemCode(err); throw new Exception(String.IsNullOrWhiteSpace(err)?text.Get("obsUnavailable"):text.Explain(err.Trim())); }
           var next=Decode(s); if(next==null || !next.ContainsKey("scenes"))throw new Exception(text.Get("noScenes"));
           catalog=next; LoadChoices(true);
-          bool studioMode;
-          string studio=Boolean.TryParse(Val(next,"studioMode"),out studioMode) ? text.Get(studioMode?"on":"off") : "—";
+          bool studioMode, knowsStudio=Boolean.TryParse(Val(next,"studioMode"),out studioMode);
+          string studio=knowsStudio ? text.Get(studioMode?"on":"off") : "—";
           live.Text=text.Get("sceneSummary",Val(next,"program","—"),Val(next,"preview","—"),studio);
-          obsConnected=true; ShowStatus();
+          obsConnected=true; obsProblem=null; studioOff=knowsStudio && !studioMode; ShowStatus();
           Note(text.Get(worker==null?"obsReady":"obsConnected",List(next,"scenes").Length));
         }
-      }catch(Exception e){live.Text=""; if(worker==null){obsConnected=false; ShowStatus();} Note(e.Message);}
+      }catch(Exception e){live.Text=""; if(worker==null){obsConnected=false; obsProblem=failure??"obs-no-answer"; ShowStatus();} Note(e.Message);}
       finally{try{if(tmp!=null && File.Exists(tmp))File.Delete(tmp);}catch(IOException){} refreshing=false; if(!IsDisposed){connect.Enabled=true; start.Enabled=true;}}
     }
     void StartControls() {
@@ -538,8 +556,9 @@ namespace Fadester.TourBox {
       if(line==null || IsDisposed || Disposing) return;
       if(InvokeRequired){try{BeginInvoke((Action)(()=>BridgeLine(p,line)));}catch(InvalidOperationException){}return;}
       if(worker==p){
-        string padNow=PadState(line,padState); bool obsNow=ObsState(line,obsConnected);
-        if(padNow!=padState || obsNow!=obsConnected){padState=padNow; obsConnected=obsNow; ShowStatus();}
+        string padNow=PadState(line,padState), problem=PanelText.ProblemCode(line); bool obsNow=ObsState(line,obsConnected);
+        if(obsNow) problem=null; else if(problem==null) problem=obsProblem;
+        if(padNow!=padState || obsNow!=obsConnected || problem!=obsProblem){padState=padNow; obsConnected=obsNow; obsProblem=problem; ShowStatus();}
       }
       Note(text.Explain(line));
     }
@@ -558,7 +577,51 @@ namespace Fadester.TourBox {
       return now;
     }
     void ShowStatus() {
-      status.Text=text.Get("statusLine",text.Get(obsConnected?"stObsOn":"stObsOff"),text.Get(worker!=null?"stCtlOn":"stCtlOff"),text.Get(padState));
+      if(obsLight==null || enableGamepad==null || mixOnly==null) return;
+      bool on=worker!=null;
+      obsLight.Display(Readiness.Obs(obsConnected,obsRunning,obsProblem,studioOff,on),text);
+      padLight.Display(Readiness.Pad(enableGamepad.Checked,mixOnly.Checked,on,padState,padSeen),text);
+      ctlLight.Display(Readiness.Controls(on),text);
+      string key=Readiness.Reminder(on,mixOnly.Checked,obsHidden,tourboxConsole,front);
+      if(key!=null) reminder.Text=text.Get(key);
+      reminder.Visible=key!=null;
+    }
+    /** Once a second: whether OBS runs, has its main window open or is in front, and whether a controller is plugged in. */
+    void Watch() {
+      if(IsDisposed || enableGamepad==null) return;
+      try {
+        bool on=worker!=null, running=Desktop.ObsRunning();
+        // OBS was just started (or was already running when the panel opened): read its scenes once its WebSocket
+        // server has had time to open, and try again a few times while it is still not answering.
+        if(running && !obsRunning && !on && !obsConnected){ autoConnectAt=DateTime.Now.AddSeconds(5); autoTries=4; }
+        if(!running && !on){ obsConnected=false; studioOff=false; autoTries=0; obsProblem=null; }
+        obsRunning=running;
+        if(!on || !enableGamepad.Checked) padSeen=PadProbe.Any();
+        obsHidden=on && running && Desktop.ObsHidden();
+        tourboxConsole=on && Desktop.Running("TourBox Console");
+        front=on ? Desktop.Front() : "";
+        if(obsConnected || on) autoTries=0;
+        if(autoTries>0 && !refreshing && DateTime.Now>=autoConnectAt && (obsProblem==null || obsProblem=="obs-no-answer")){
+          autoTries--; autoConnectAt=DateTime.Now.AddSeconds(5); var pending=Connect();
+        }
+      } catch(Exception e) { Entry.Log("watch: "+e.Message); }
+      ShowStatus();
+    }
+    /** A light's button: start the controls, use the controller that is plugged in, or show how to fix OBS. */
+    async void Act(string action) {
+      // The same rule as the Save & start button: nothing while a scan, a start or a stop is under way.
+      if(!start.Enabled) return;
+      try {
+        if(action=="start"){ if(worker==null) StartControls(); return; }
+        if(action=="usePad"){
+          enableGamepad.Checked=true;
+          if(worker!=null){ await StopControls(); if(worker==null) StartControls(); }
+          return;
+        }
+        if(showMe!=null && !showMe.IsDisposed) showMe.Close();
+        showMe=new ShowMeWindow(text,action,obsProblem,delegate { var pending=Connect(); });
+        showMe.Show(this);
+      } catch(Exception e) { Entry.Log("light button: "+e); Note(e.Message); }
     }
     /** The bridge's own clean stop. A bridge that has just exited by itself has closed its input: the wait that follows then finds it stopped. */
     static void AskToStop(Process p) { try { p.StandardInput.WriteLine("quit"); p.StandardInput.Flush(); } catch(IOException) {} }

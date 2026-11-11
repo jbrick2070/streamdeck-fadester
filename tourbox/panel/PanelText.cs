@@ -198,15 +198,38 @@ namespace Fadester.TourBox {
       { "obsNoPassword", new[] { "OBS has no WebSocket password yet. In OBS, open Tools → WebSocket Server Settings. Turn on Enable WebSocket server and Enable Authentication, then click OK. Then click Read scenes and inputs from OBS.", "OBS aún no tiene contraseña de WebSocket. En OBS, abre Herramientas → Ajustes del servidor WebSocket. Activa Habilitar servidor WebSocket y Habilitar autenticación, y haz clic en Aceptar. Después haz clic en Leer escenas y entradas de OBS.", "OBS n’a pas encore de mot de passe WebSocket. Dans OBS, ouvrez Outils → Paramètres du serveur WebSocket. Cochez Activer le serveur WebSocket et Activer l’authentification, puis cliquez sur OK. Cliquez ensuite sur Lire les scènes et entrées d’OBS.", "OBS 还没有 WebSocket 密码。在 OBS 中打开「工具 → WebSocket 服务器设置」，勾选「启用 WebSocket 服务器」和「启用身份验证」，然后点击「确定」。再点击「从 OBS 读取场景和输入」。" } },
       { "obsAuthOff", new[] { "Authentication is off in OBS. In OBS, open Tools → WebSocket Server Settings and turn on Enable Authentication. Then click Read scenes and inputs from OBS.", "La autenticación está desactivada en OBS. En OBS, abre Herramientas → Ajustes del servidor WebSocket y activa Habilitar autenticación. Después haz clic en Leer escenas y entradas de OBS.", "L’authentification est désactivée dans OBS. Dans OBS, ouvrez Outils → Paramètres du serveur WebSocket et cochez Activer l’authentification. Cliquez ensuite sur Lire les scènes et entrées d’OBS.", "OBS 中的身份验证已关闭。在 OBS 中打开「工具 → WebSocket 服务器设置」，勾选「启用身份验证」。然后点击「从 OBS 读取场景和输入」。" } },
       { "obsBadPassword", new[] { "OBS did not accept the password. In OBS, open Tools → WebSocket Server Settings and click Show Connect Info. Type that password in OBS password (optional) on the Setup tab.", "OBS no aceptó la contraseña. En OBS, abre Herramientas → Ajustes del servidor WebSocket y haz clic en Mostrar información de conexión. Escribe esa contraseña en Contraseña de OBS (opcional), en la pestaña Configuración.", "OBS n’a pas accepté le mot de passe. Dans OBS, ouvrez Outils → Paramètres du serveur WebSocket et cliquez sur Afficher les informations de connexion. Saisissez ce mot de passe dans Mot de passe OBS (facultatif), dans l’onglet Configuration.", "OBS 不接受该密码。在 OBS 中打开「工具 → WebSocket 服务器设置」，点击「显示连接信息」。在「设置」标签页的「OBS 密码（可选）」中输入该密码。" } },
-      { "statusLine", new[] { "OBS: {0}   •   Controls: {1}   •   Game controller: {2}", "OBS: {0}   •   Controles: {1}   •   Mando de juego: {2}", "OBS : {0}   •   Commandes : {1}   •   Manette de jeu : {2}", "OBS：{0}   •   控制：{1}   •   游戏手柄：{2}" } },
-      { "stObsOn", new[] { "connected", "conectado", "connecté", "已连接" } },
-      { "stObsOff", new[] { "not connected", "no conectado", "non connecté", "未连接" } },
-      { "stCtlOn", new[] { "on", "activos", "actives", "已开启" } },
-      { "stCtlOff", new[] { "off", "detenidos", "arrêtées", "已关闭" } },
-      { "stPadOn", new[] { "connected", "conectado", "connectée", "已连接" } },
-      { "stPadMissing", new[] { "not found", "no encontrado", "introuvable", "未找到" } },
-      { "stPadOff", new[] { "off", "desactivado", "désactivée", "已关闭" } },
       { "keepOpen", new[] { "Keep this window open while you work. Closing it stops the controls.", "Mantén esta ventana abierta mientras trabajas. Si la cierras, los controles se detienen.", "Gardez cette fenêtre ouverte pendant que vous travaillez. La fermer arrête les commandes.", "工作时请保持此窗口打开。关闭窗口会停止控制。" } },
+      { "liObsOn", new[] { "OBS: connected", "OBS: conectado", "OBS : connecté", "OBS：已连接" } },
+      { "liObsLooking", new[] { "OBS: connecting…", "OBS: conectando…", "OBS : connexion…", "OBS：正在连接…" } },
+      { "liObsClosed", new[] { "OBS: not running", "OBS: no está abierto", "OBS : non lancé", "OBS：未运行" } },
+      { "liObsSetting", new[] { "OBS: one setting to turn on", "OBS: falta activar un ajuste", "OBS : un réglage à activer", "OBS：有一项设置需要开启" } },
+      { "liObsPassword", new[] { "OBS: password not accepted", "OBS: contraseña no aceptada", "OBS : mot de passe refusé", "OBS：密码未被接受" } },
+      { "liObsStudio", new[] { "OBS: turn on Studio Mode", "OBS: activa el modo Estudio", "OBS : activez le mode Studio", "OBS：请开启工作室模式" } },
+      { "liPadOn", new[] { "Controller: connected", "Mando: conectado", "Manette : connectée", "手柄：已连接" } },
+      { "liPadReady", new[] { "Controller: ready", "Mando: listo", "Manette : prête", "手柄：就绪" } },
+      { "liPadMissing", new[] { "Controller: not found", "Mando: no encontrado", "Manette : introuvable", "手柄：未找到" } },
+      { "liPadIdle", new[] { "Controller: plugged in, not in use", "Mando: conectado, sin usar", "Manette : branchée, non utilisée", "手柄：已插入，未启用" } },
+      { "liPadOff", new[] { "Controller: off", "Mando: desactivado", "Manette : désactivée", "手柄：已关闭" } },
+      { "liCtlOn", new[] { "Controls: on", "Controles: activos", "Commandes : actives", "控制：已开启" } },
+      { "liCtlOff", new[] { "Controls: off", "Controles: detenidos", "Commandes : arrêtées", "控制：已关闭" } },
+      { "btnShowMe", new[] { "Show me", "Muéstramelo", "Montrez-moi", "演示给我看" } },
+      { "btnUseIt", new[] { "Use it", "Usarlo", "L’utiliser", "启用" } },
+      { "btnStart", new[] { "Start", "Iniciar", "Démarrer", "启动" } },
+      { "btnClose", new[] { "Close", "Cerrar", "Fermer", "关闭" } },
+      { "remindObsOpen", new[] { "Keep the main OBS window open, not minimised: the T-bar needs it.", "Mantén abierta la ventana principal de OBS, sin minimizar: el T-bar la necesita.", "Gardez la fenêtre principale d’OBS ouverte, pas réduite : le T-bar en a besoin.", "请保持 OBS 主窗口打开，不要最小化：T-bar 需要它。" } },
+      { "remindObsFront", new[] { "TourBox: bring OBS to the front. Its preset only works while OBS is the active window.", "TourBox: pon OBS en primer plano. Su preajuste solo funciona mientras OBS es la ventana activa.", "TourBox : mettez OBS au premier plan. Son préréglage ne fonctionne que lorsque OBS est la fenêtre active.", "TourBox：请将 OBS 置于前台。其预设只在 OBS 为活动窗口时生效。" } },
+      { "showServerTitle", new[] { "Turn on OBS's WebSocket server", "Activa el servidor WebSocket de OBS", "Activer le serveur WebSocket d’OBS", "开启 OBS 的 WebSocket 服务器" } },
+      { "showPasswordTitle", new[] { "Find OBS's WebSocket password", "Busca la contraseña WebSocket de OBS", "Trouver le mot de passe WebSocket d’OBS", "查找 OBS 的 WebSocket 密码" } },
+      { "showStudioTitle", new[] { "Turn on Studio Mode", "Activa el modo Estudio", "Activer le mode Studio", "开启工作室模式" } },
+      { "showStudioHint", new[] { "In OBS, click Studio Mode under Controls, at the bottom right of the main window, and choose the Fade transition beside it. Then click Read scenes and inputs from OBS.", "En OBS, haz clic en Modo estudio, en Controles, abajo a la derecha de la ventana principal, y elige la transición Desvanecimiento a su lado. Después haz clic en Leer escenas y entradas de OBS.", "Dans OBS, cliquez sur Mode studio dans Commandes, en bas à droite de la fenêtre principale, et choisissez la transition Fondu à côté. Cliquez ensuite sur Lire les scènes et entrées d’OBS.", "在 OBS 中，点击主窗口右下角「控件」中的「工作室模式」，并在旁边选择「淡入淡出」转场。然后点击「从 OBS 读取场景和输入」。" } },
+      { "obsUiTools", new[] { "Tools", "Herramientas", "Outils", "工具" } },
+      { "obsUiWsSettings", new[] { "WebSocket Server Settings", "Ajustes del servidor WebSocket", "Paramètres du serveur WebSocket", "WebSocket 服务器设置" } },
+      { "obsUiEnable", new[] { "Enable WebSocket server", "Habilitar servidor WebSocket", "Activer le serveur WebSocket", "启用 WebSocket 服务器" } },
+      { "obsUiAuth", new[] { "Enable Authentication", "Habilitar autenticación", "Activer l’authentification", "启用身份验证" } },
+      { "obsUiConnectInfo", new[] { "Show Connect Info", "Mostrar información de conexión", "Afficher les informations de connexion", "显示连接信息" } },
+      { "obsUiOk", new[] { "OK", "Aceptar", "OK", "确定" } },
+      { "obsUiStudio", new[] { "Studio Mode", "Modo estudio", "Mode studio", "工作室模式" } },
+      { "obsUiFade", new[] { "Fade", "Desvanecimiento", "Fondu", "淡入淡出" } },
       { "anchorField", new[] { "Preview anchor {0} (TourBox {1})", "Ancla vista previa {0} (TourBox {1})", "Ancre d’aperçu {0} (TourBox {1})", "预览锚点 {0}（TourBox {1}）" } },
     };
 
@@ -256,6 +279,12 @@ namespace Fadester.TourBox {
     internal string Explain(string line) {
       var match = ObsProblem.Match(line ?? "");
       return match.Success ? Get(ObsProblemKeys[match.Groups[1].Value]) : line;
+    }
+
+    /** The OBS connection problem a bridge line names (obs-no-answer and so on), or null. */
+    internal static string ProblemCode(string line) {
+      var match = ObsProblem.Match(line ?? "");
+      return match.Success ? match.Groups[1].Value : null;
     }
 
     internal string Control(string control) {

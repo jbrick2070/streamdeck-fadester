@@ -19,6 +19,8 @@ import { FilterController } from "./control/filter-controller.js";
 import { VisualSafety } from "./control/visual-safety.js";
 import { ObsFilterControlAction } from "./actions/obs-filter-control.js";
 import { VisualPanicKeyAction } from "./actions/visual-panic-key.js";
+import { VjlinkController } from "./control/vjlink.js";
+import { VjlinkControlAction } from "./actions/vjlink-control.js";
 import {
   PiIncomingMessage,
   PropertyInspectorBridge
@@ -61,6 +63,7 @@ const layers = new LayerController(directClient);
 // The VJ rig (PLAN.md 10): one filter controller and one panic latch for every control.
 const filters = new FilterController(directClient);
 const visualSafety = new VisualSafety(directClient, filters);
+const vjlink = new VjlinkController(directClient);
 
 // The Language setting (PLAN.md 11.1): a change redraws every visible control and refills the pages.
 const languageChoice = new LanguageChoiceController({
@@ -154,6 +157,7 @@ streamDeck.actions.registerAction(new ObsNeoInfobarAction(directClient));
 streamDeck.actions.registerAction(new PlaylisterTransportKeyAction(directClient));
 streamDeck.actions.registerAction(new ObsFilterControlAction(filters));
 streamDeck.actions.registerAction(new VisualPanicKeyAction(visualSafety, directClient));
+streamDeck.actions.registerAction(new VjlinkControlAction(vjlink));
 
 function offerOpenDeckStarter(device: Pick<Device, "id" | "type" | "size">): void {
   openDeckStarters.delete(device.id);

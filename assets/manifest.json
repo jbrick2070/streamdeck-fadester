@@ -289,6 +289,31 @@
       ]
     },
     {
+      "Name": "VJLink",
+      "UUID": "io.github.jbrick2070.fadester-for-obs.vjlink",
+      "Icon": "imgs/actions/vjlink/icon",
+      "Tooltip": "Drive the VJLink plugin for OBS: step or pick its presets, tap its BPM or black it out from a key, ride one of its five macros on a dial.",
+      "PropertyInspectorPath": "ui/vjlink.html",
+      "Controllers": [
+        "Keypad",
+        "Encoder"
+      ],
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": false,
+      "Encoder": {
+        "layout": "layouts/fader-cell.json",
+        "TriggerDescription": {
+          "Rotate": "Ride the macro",
+          "Push": "Tap BPM or blackout"
+        }
+      },
+      "States": [
+        {
+          "Image": "imgs/actions/vjlink/key"
+        }
+      ]
+    },
+    {
       "Name": "Midi Fadester Fader (optional)",
       "UUID": "io.github.jbrick2070.fadester-for-obs.fader",
       "Icon": "imgs/actions/fader/icon",

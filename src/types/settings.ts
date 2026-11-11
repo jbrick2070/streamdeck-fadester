@@ -324,3 +324,57 @@ export function normalizeDurationMs(raw: unknown, fallback = 1000): number {
   }
   return rounded === 0 ? 0 : Math.max(50, Math.min(20000, rounded));
 }
+
+/** VJLink (BosoVR's obs-vjlink plugin, driven over its obs-websocket vendor API): what a key does. */
+export type VjlinkKeyOperation = "next" | "previous" | "preset" | "tap" | "blackout";
+/** VJLink's five global macros, each 0..1 (its SetMacros request). */
+export type VjlinkMacro = "energy" | "chaos" | "speed" | "color" | "react";
+/** What a VJLink dial's press does. */
+export type VjlinkDialPress = "tap" | "blackout" | "none";
+
+export const VJLINK_KEY_OPERATIONS: readonly VjlinkKeyOperation[] = ["next", "previous", "preset", "tap", "blackout"];
+export const VJLINK_MACROS: readonly VjlinkMacro[] = ["energy", "chaos", "speed", "color", "react"];
+export const VJLINK_DIAL_PRESSES: readonly VjlinkDialPress[] = ["tap", "blackout", "none"];
+/** A VJLink dial's step per notch, in percent of a macro's range. */
+export const VJLINK_STEP_PERCENTS: readonly number[] = [1, 2, 5, 10];
+/** The longest preset name a key keeps (VJLink's own names and ids are short). */
+export const MAX_VJLINK_PRESET_CHARS = 64 as const;
+
+export interface VjlinkSettings {
+  [key: string]: string | number | boolean | undefined;
+  keyOperation?: VjlinkKeyOperation;
+  /** The preset a "preset" key selects, by VJLink's display name or id. */
+  presetName?: string;
+  macro?: VjlinkMacro;
+  stepPercent?: number;
+  dialPress?: VjlinkDialPress;
+  labelOverride?: string;
+  accent?: AccentName;
+}
+
+export const DEFAULT_VJLINK_SETTINGS: Required<VjlinkSettings> = {
+  keyOperation: "next",
+  presetName: "",
+  macro: "energy",
+  stepPercent: 2,
+  dialPress: "tap",
+  labelOverride: "",
+  accent: "default"
+};
+
+function pickOne<T>(raw: unknown, allowed: readonly T[], fallback: T): T {
+  return (allowed as readonly unknown[]).includes(raw) ? raw as T : fallback;
+}
+
+export function normalizeVjlinkSettings(raw?: VjlinkSettings): Required<VjlinkSettings> {
+  const step = Number(raw?.stepPercent);
+  return {
+    keyOperation: pickOne(raw?.keyOperation, VJLINK_KEY_OPERATIONS, DEFAULT_VJLINK_SETTINGS.keyOperation),
+    presetName: typeof raw?.presetName === "string" ? raw.presetName.trim().slice(0, MAX_VJLINK_PRESET_CHARS) : "",
+    macro: pickOne(raw?.macro, VJLINK_MACROS, DEFAULT_VJLINK_SETTINGS.macro),
+    stepPercent: VJLINK_STEP_PERCENTS.includes(step) ? step : DEFAULT_VJLINK_SETTINGS.stepPercent,
+    dialPress: pickOne(raw?.dialPress, VJLINK_DIAL_PRESSES, DEFAULT_VJLINK_SETTINGS.dialPress),
+    labelOverride: normalizeLabelOverride(raw?.labelOverride),
+    accent: normalizeAccent(raw?.accent)
+  };
+}

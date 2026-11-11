@@ -60,6 +60,8 @@ For a whole-show fade, choose **All OBS mixer inputs** under **Control** on eith
 
 **Visual Panic** (key). [Visual Sidechain](https://github.com/jbrick2070/visual-sidechain)'s own **Panic** (instant) and **Restore** (hold 0.8 s), sent through OBS's hotkeys. After Panic the key reads **PANIC SENT** until a Restore is accepted or the OBS connection drops; meanwhile no Visual Sidechain filter is written from the deck. Needs Visual Sidechain in OBS, and the key looks the same without it. So try it once before the show: hold **Restore**, which changes nothing when no Panic is on. If the key then says **Visual Sidechain missing**, OBS has no Visual Sidechain.
 
+**VJLink** (key or dial). Drives [VJLink](https://github.com/BosoVR/obs-vjlink), BosoVR's audio-reactive visuals plugin for OBS, through OBS's WebSocket. From a key: next or previous preset, a preset by name, tap the BPM, or blackout on and off; the key shows the preset number, the BPM or whether the visuals are blacked out. On a dial: ride one of VJLink's five macros (Energy, Chaos, Speed, Color, React), and press to tap the BPM or black out. Needs VJLink in OBS, a separate plugin under its own licence (free for personal use). If a control says **VJLink missing**, OBS has no VJLink. VJLink's strobe effects can flash fast, so keep a Blackout key on the deck.
+
 **OBS Scene Info Bar** (Stream Deck Neo). Shows the connection, the live scene and, in Studio Mode, the preview scene. Display only.
 
 **Midi Fadester Fader (optional)** and **Midi Fadester Auto-fade (optional)**. For people who use [Midi Fadester](https://github.com/jbrick2070/midi-fadester) with an APC40 or another MIDI controller: a dial and a key for one of its slots. Everything else in this plugin works without Midi Fadester.
@@ -80,6 +82,7 @@ None of these is needed for scenes, transitions, sources, audio or filters.
 |---|---|
 | [Playlister](https://github.com/jbrick2070/obs-playlister) 0.5 or later | The Playlister Transport keys and layout. |
 | [Visual Sidechain](https://github.com/jbrick2070/visual-sidechain) | Visual Panic, and the Effect mix and Reactivity dials of the VJ Rig. |
+| [VJLink](https://github.com/BosoVR/obs-vjlink) by BosoVR | The VJLink keys and dials. VJLink has its own licence: free for personal use, a paid licence for selling it. |
 | [Midi Fadester](https://github.com/jbrick2070/midi-fadester) | The two actions labelled *(optional)*, for an APC40 or another MIDI controller. |
 
 The [Suite Demo Kit](demo-kit/README.md) is one OBS scene collection with media and two Stream Deck + profiles that show the plugins working together.

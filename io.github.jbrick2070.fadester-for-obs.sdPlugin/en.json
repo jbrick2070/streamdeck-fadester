@@ -53,6 +53,16 @@
     "Name": "Visual Panic",
     "Tooltip": "Visual Sidechain's Panic (instant) and Restore (hold 0.8 s), sent through OBS's own hotkeys. Panic keys show PANIC SENT until Restore."
   },
+  "io.github.jbrick2070.fadester-for-obs.vjlink": {
+    "Name": "VJLink",
+    "Tooltip": "Drive the VJLink plugin for OBS: step or pick its presets, tap its BPM or black it out from a key, ride one of its five macros on a dial.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "Ride the macro",
+        "Push": "Tap BPM or blackout"
+      }
+    }
+  },
   "io.github.jbrick2070.fadester-for-obs.fader": {
     "Name": "Midi Fadester Fader (optional)",
     "Tooltip": "Optional enhanced control for an existing Midi Fadester slot.",
@@ -372,6 +382,28 @@
     "filterPressToggle": "Press: filter on/off",
     "filterGlideCancelled": "Glide cancelled",
     "filterChooseSetting": "Choose a setting",
+    "vjlinkOpNext": "Next preset",
+    "vjlinkOpPrevious": "Previous preset",
+    "vjlinkOpPreset": "Go to preset",
+    "vjlinkOpTap": "Tap BPM",
+    "vjlinkOpBlackout": "Blackout",
+    "vjlinkPresetNumber": "Preset {n}",
+    "vjlinkNoPreset": "No preset",
+    "vjlinkBpm": "{bpm} BPM",
+    "vjlinkTapHint": "Tap on the beat",
+    "vjlinkBlackoutOnHint": "Visuals blacked out",
+    "vjlinkBlackoutOffHint": "Press to black out",
+    "vjlinkChoosePreset": "Type a preset name",
+    "vjlinkReading": "Reading VJLink…",
+    "vjlinkMissing": "VJLink missing",
+    "vjlinkMacroEnergy": "Energy",
+    "vjlinkMacroChaos": "Chaos",
+    "vjlinkMacroSpeed": "Speed",
+    "vjlinkMacroColor": "Color",
+    "vjlinkMacroReact": "React",
+    "vjlinkPressTap": "Press: tap BPM",
+    "vjlinkPressBlackout": "Press: blackout",
+    "vjlinkRefused": "VJLink refused",
     "pi": {
       "scopeThisKey": "this key",
       "scopeThisDial": "this dial",
@@ -790,7 +822,24 @@
       "accentMagenta": "Magenta",
       "fxBannerRangeChoose": "Choose the range this amount may move in.",
       "fxBannerOutOfRange": "OBS holds {value}, outside this range: the control does not move it until the value or the range changes.",
-      "fxNoteOffTable": "Any other number setting, a shader's own uniforms included, can be ridden once you type its range; choose it with care. OBS does not tell the deck which uniforms are lists: those named …_mode or marked as a list in the shader text are left out, any other you check yourself."
+      "fxNoteOffTable": "Any other number setting, a shader's own uniforms included, can be ridden once you type its range; choose it with care. OBS does not tell the deck which uniforms are lists: those named …_mode or marked as a list in the shader text are left out, any other you check yourself.",
+      "vjlinkHeading": "VJLink",
+      "vjlinkIntro": "Drives the VJLink plugin for OBS, by BosoVR, through OBS's WebSocket: its presets, BPM tap, blackout and five macros.",
+      "vjlinkCheckNote": "This control needs VJLink in OBS. VJLink is free for personal use; see its licence. If the control says VJLink missing, OBS has no VJLink.",
+      "vjlinkOptNext": "Next preset",
+      "vjlinkOptPrevious": "Previous preset",
+      "vjlinkOptPreset": "Go to a preset",
+      "vjlinkOptTap": "Tap BPM",
+      "vjlinkOptBlackout": "Blackout on/off",
+      "vjlinkPresetLabel": "Preset",
+      "vjlinkPresetPlaceholder": "Name or id, as VJLink shows it",
+      "vjlinkMacroLabel": "Macro",
+      "vjlinkMacroOptEnergy": "Energy",
+      "vjlinkMacroOptChaos": "Chaos",
+      "vjlinkMacroOptSpeed": "Speed",
+      "vjlinkMacroOptColor": "Color",
+      "vjlinkMacroOptReact": "React",
+      "vjlinkSafetyNote": "VJLink's strobe and flash effects can flash fast. Keep a Blackout key on the deck, and set VJLink's own strobe safety in its web panel."
     }
   }
 }

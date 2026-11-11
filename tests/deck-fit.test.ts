@@ -113,6 +113,15 @@ function drawnTexts(): Array<{ key: StringKey; params?: TextParams; boxes: Box[]
   for (const key of ["filterOn", "filterOff"] as const) add(key, [B.keySub, B.filterBadge]);
   add("filterSetTo", [B.keySub], { value: "100 %", s: "2" });
   for (const key of ["filterPressDrop", "filterPressToggle"] as const) add(key, [B.dialHint]);
+  // VJLink keys and dials: operation titles, state subtitles, the dial's macro name (drawn as "Energy · VJLink"),
+  // its press hint and its footer words.
+  for (const key of ["vjlinkOpNext", "vjlinkOpPrevious", "vjlinkOpPreset", "vjlinkOpTap", "vjlinkOpBlackout"] as const) add(key, [B.keyTitle]);
+  add("vjlinkPresetNumber", [B.keySub], { n: 12 });
+  add("vjlinkBpm", [B.keySub], { bpm: 174 });
+  for (const key of ["vjlinkNoPreset", "vjlinkTapHint", "vjlinkBlackoutOffHint", "vjlinkChoosePreset"] as const) add(key, [B.keySub]);
+  for (const key of ["vjlinkReading", "vjlinkMissing", "vjlinkRefused", "vjlinkBlackoutOnHint"] as const) add(key, [B.keySub, B.dialHint]);
+  for (const key of ["vjlinkMacroEnergy", "vjlinkMacroChaos", "vjlinkMacroSpeed", "vjlinkMacroColor", "vjlinkMacroReact"] as const) add(key, [B.filterHead]);
+  for (const key of ["vjlinkPressTap", "vjlinkPressBlackout"] as const) add(key, [B.dialHint]);
   // Its operation words are titles; the state, pending and busy words its subtitle. The time is drawn
   // only in PLAYING and PAUSED, so a two-hour item with those two words is the longest sample.
   for (const key of ["plOpPrevious", "plOpNext", "plOpPlayPause", "plOpStop", "plOpRestart", "plOpStatus"] as const) add(key, [B.keyTitle]);

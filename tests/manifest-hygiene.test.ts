@@ -57,14 +57,14 @@ describe("Step 1.1 — Manifest, Layout, Icons & Repository Hygiene", () => {
     const actions = manifest.Actions as Array<Record<string, unknown>>;
     expect(Array.isArray(actions)).toBe(true);
     // Fadester's ten (the last two optional), then VJster's seven, which the suite assembly adds (scripts/suite/assemble.ts).
-    expect(actions).toHaveLength(17);
+    expect(actions).toHaveLength(18);
     const byId = (id: string) => actions.find((entry) => entry.UUID === `io.github.jbrick2070.fadester-for-obs.${id}`)!;
-    expect(actions.slice(0, 8).every((entry) => !String(entry.Name).includes("optional"))).toBe(true);
-    expect(actions.slice(8, 10).every((entry) => String(entry.Name).includes("optional"))).toBe(true);
-    expect(actions.slice(10).map((entry) => entry.UUID)).toEqual(
+    expect(actions.slice(0, 9).every((entry) => !String(entry.Name).includes("optional"))).toBe(true);
+    expect(actions.slice(9, 11).every((entry) => String(entry.Name).includes("optional"))).toBe(true);
+    expect(actions.slice(11).map((entry) => entry.UUID)).toEqual(
       ["speed", "quality", "speed-preset", "speed-step", "quality-preset", "pin", "transport"].map((kind) => `io.github.jbrick2070.fadester-for-obs.vjster-${kind}`)
     );
-    expect(actions.slice(10).every((entry) => String(entry.Name).startsWith("VJster "))).toBe(true);
+    expect(actions.slice(11).every((entry) => String(entry.Name).startsWith("VJster "))).toBe(true);
     // The VJ rig's two actions (PLAN.md 10.4), before the two optional ones.
     expect(byId("obs-filter")).toMatchObject({
       Controllers: ["Keypad", "Encoder"],
@@ -81,7 +81,18 @@ describe("Step 1.1 — Manifest, Layout, Icons & Repository Hygiene", () => {
       Icon: "imgs/actions/visual-panic/icon",
       States: [{ Image: "imgs/actions/visual-panic/key" }]
     });
-    for (const folder of ["obs-filter", "visual-panic"]) {
+    // VJLink (BosoVR's obs-vjlink, through OBS's WebSocket): a key or a dial, right after the VJ rig's two.
+    expect(actions[8].UUID).toBe("io.github.jbrick2070.fadester-for-obs.vjlink");
+    expect(byId("vjlink")).toMatchObject({
+      Name: "VJLink",
+      Controllers: ["Keypad", "Encoder"],
+      SupportedInMultiActions: false,
+      PropertyInspectorPath: "ui/vjlink.html",
+      Icon: "imgs/actions/vjlink/icon",
+      States: [{ Image: "imgs/actions/vjlink/key" }]
+    });
+    expect(Object.keys((byId("vjlink").Encoder as { TriggerDescription: Record<string, string> }).TriggerDescription)).toEqual(["Rotate", "Push"]);
+    for (const folder of ["obs-filter", "visual-panic", "vjlink"]) {
       for (const icon of ["icon", "key"]) {
         expect(statSync(join(PLUGIN_DIR, "imgs", "actions", folder, `${icon}.svg`)).size).toBeGreaterThan(64);
       }

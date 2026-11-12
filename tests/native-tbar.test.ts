@@ -3,8 +3,7 @@
 // (direct-obs-client.ts), against a stand-in helper and the fake OBS's model of OBS 33's T-bar widget.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fileURLToPath } from "node:url";
-import { tbarDialPosition } from "../src/actions/obs-fader-dial.js";
-import { DirectObsClient } from "../src/obs/direct-obs-client.js";
+import { DirectObsClient, TBAR_SETTLE_MS } from "../src/obs/direct-obs-client.js";
 import {
   NativeTbar,
   NativeTbarHelper,
@@ -246,32 +245,48 @@ describe("dial throws on OBS's real slider", () => {
     expect(tbarWrites()).toEqual([]);
   });
 
-  it("is a crossfader: the end takes and parks, the rest of the spin does nothing, turning back is the next throw", async () => {
+  const rest = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, TBAR_SETTLE_MS + 60));
+
+  it("always turns right: the end takes, the rest of the spin does nothing, and after a rest the next throw starts", async () => {
     await connect();
     const first = client.getCatalog().currentProgramScene;
     const second = client.getCatalog().currentPreviewScene;
     await client.nudgeTbar(0.5);
     await client.nudgeTbar(0.48); // into the last 3 %: the take
     expect(server.programSceneName).toBe(second);
-    expect(server.previewSceneName).toBe(first);
+    expect(server.previewSceneName).toBe(first); // OBS's swap cues the scene just left
     expect(server.tbarCompletionCount).toBe(1);
-    expect(client.getCatalog().tbarLiveAtRight).toBe(true);
+    expect(client.getCatalog().tbarPosition).toBe(0);
     const moves = native.moves.length;
     const writes = server.directCallLog.length;
-    await client.nudgeTbar(0.2); // the rest of the spin, further into the end it rests at
+    await client.nudgeTbar(0.2); // the rest of the same spin
     expect(native.moves).toHaveLength(moves);
     expect(server.directCallLog).toHaveLength(writes);
-    await client.nudgeTbar(-0.3); // back out of that end: the next throw, toward the old Live, on OBS's slider
+    await rest();
+    await client.nudgeTbar(0.3); // after a rest, right again: the next throw, toward the scene in Preview
     expect(server.nativeSlider).toBe(nativeTick(0.3));
-    expect(server.programSceneName).toBe(second);
-    await client.nudgeTbar(-0.7); // all the way to the left end: the next take
+    await client.nudgeTbar(0.7);
     expect(server.programSceneName).toBe(first);
     expect(server.tbarCompletionCount).toBe(2);
-    expect(client.getCatalog().tbarLiveAtRight).toBe(false);
     expect(tbarWrites()).toEqual([{ position: 1, release: true }, { position: 1, release: true }]);
   });
 
-  it("writes nothing for a turn the wrong way at rest, before or after a take", async () => {
+  it("keeps ignoring a long spin past the end until the dial rests", async () => {
+    await connect();
+    await client.nudgeTbar(1);
+    expect(server.tbarCompletionCount).toBe(1);
+    const writes = server.directCallLog.length;
+    for (let tick = 0; tick < 6; tick++) {
+      await new Promise((resolve) => setTimeout(resolve, TBAR_SETTLE_MS / 3)); // 600 ms in all: past the window alone
+      await client.nudgeTbar(0.1); // still spinning: each tick holds the window open
+    }
+    expect(server.directCallLog).toHaveLength(writes);
+    await rest();
+    await client.nudgeTbar(0.1);
+    expect(server.nativeSlider).toBe(nativeTick(0.1));
+  });
+
+  it("writes nothing for a turn left at rest", async () => {
     await connect();
     await client.nudgeTbar(-0.3);
     expect(server.directCallLog.filter((call) => call.requestType === "SetTBarPosition")).toEqual([]);
@@ -279,15 +294,7 @@ describe("dial throws on OBS's real slider", () => {
     expect(client.getCatalog().tbarPosition).toBe(0);
   });
 
-  it("draws the crossfader dial at Live's end, and moving toward the other end during a throw", () => {
-    expect(tbarDialPosition({ tbarPosition: 0, tbarLiveAtRight: false }, false)).toBe(0);
-    expect(tbarDialPosition({ tbarPosition: 0.3, tbarLiveAtRight: false }, false)).toBeCloseTo(0.3);
-    expect(tbarDialPosition({ tbarPosition: 0, tbarLiveAtRight: true }, false)).toBe(1);
-    expect(tbarDialPosition({ tbarPosition: 0.3, tbarLiveAtRight: true }, false)).toBeCloseTo(0.7);
-    expect(tbarDialPosition({ tbarPosition: 0.3, tbarLiveAtRight: true }, true)).toBeCloseTo(0.3); // Scene loop: one way
-  });
-
-  it("cancels a crossfader throw turned back into its first 3 %, staying at the same end", async () => {
+  it("cancels a throw turned back into its first 3 %", async () => {
     await connect();
     const live = client.getCatalog().currentProgramScene;
     await client.nudgeTbar(0.2);
@@ -295,30 +302,29 @@ describe("dial throws on OBS's real slider", () => {
     expect(server.programSceneName).toBe(live);
     expect(server.manualTransitionActive).toBe(false);
     expect(client.getCatalog().tbarPosition).toBe(0);
-    expect(client.getCatalog().tbarLiveAtRight).toBe(false);
     expect(tbarWrites()).toEqual([{ position: 0, release: true }]);
   });
 
-  it("moves the crossfader to the other end on a press take too", async () => {
+  it("turns right for the next throw after a press take too", async () => {
     await connect();
     await client.nudgeTbar(0.4);
     await client.takeTbar();
-    expect(client.getCatalog().tbarLiveAtRight).toBe(true);
-    await client.nudgeTbar(-0.25);
+    await rest();
+    await client.nudgeTbar(0.25);
     expect(server.nativeSlider).toBe(nativeTick(0.25));
   });
 
-  it("is the same crossfader over obs-websocket, where OBS's slider cannot follow", async () => {
+  it("works the same over obs-websocket, where OBS's slider cannot follow", async () => {
     await connect({ native: false });
     const second = client.getCatalog().currentPreviewScene;
     await client.nudgeTbar(0.6);
     await client.nudgeTbar(0.6);
     expect(server.programSceneName).toBe(second);
-    expect(client.getCatalog().tbarLiveAtRight).toBe(true);
     const writes = server.directCallLog.length;
     await client.nudgeTbar(0.3);
     expect(server.directCallLog).toHaveLength(writes);
-    await client.nudgeTbar(-0.3);
+    await rest();
+    await client.nudgeTbar(0.3);
     expect(server.directCallLog.filter((call) => call.requestType === "SetTBarPosition").at(-1)?.requestData)
       .toEqual({ position: 0.3, release: false });
   });

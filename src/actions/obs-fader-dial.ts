@@ -9,7 +9,7 @@ import {
   WillDisappearEvent
 } from "@elgato/streamdeck";
 import { mixProblem } from "../obs/whole-mix.js";
-import { DirectObsCatalog, DirectObsClient } from "../obs/direct-obs-client.js";
+import { DirectObsClient } from "../obs/direct-obs-client.js";
 import { automaticInputRoleName, migrateAutomaticInputSettings } from "../obs/automatic-targets.js";
 import { customCaption } from "../obs/preset-captions.js";
 import { LayerController, LayerOperation } from "../control/layer-controller.js";
@@ -38,14 +38,6 @@ interface DialFeedbackSink {
 function normalizeTarget(raw: unknown): ObsFaderTarget {
   if (raw === undefined) return DEFAULT_OBS_FADER_DIAL_SETTINGS.target;
   return raw === "input_volume" || raw === "tbar" || raw === "all_inputs" ? raw : "unconfigured";
-}
-
-/**
- * Where the T-bar dial draws itself. Without Scene loop it is a crossfader: at rest it sits at Live's end, which is its
- * right end after a take, and a throw moves it toward the other end. With Scene loop it always starts from the left.
- */
-export function tbarDialPosition(catalog: Pick<DirectObsCatalog, "tbarPosition" | "tbarLiveAtRight">, sceneLoop: boolean): number {
-  return !sceneLoop && catalog.tbarLiveAtRight ? 1 - catalog.tbarPosition : catalog.tbarPosition;
 }
 
 export class ObsFaderDialInstanceController {
@@ -243,7 +235,7 @@ export class ObsFaderDialInstanceController {
     const inputRole = automaticInputRoleName(this.settings.inputName);
     const mix = all ? this.client.wholeMix.state : undefined;
     const value = mix ? (mix.db === null ? 0 : Math.pow(10, mix.db / 20)) : isTbar
-      ? tbarDialPosition(catalog, this.settings.autoQueueNextScene === true)
+      ? catalog.tbarPosition
       : catalog.inputVolumes[inputName] ?? 0;
     // A shipped caption ("Scene blend", "Music") is a default: the dial draws its role instead.
     const customLabel = customCaption("fader", this.settings);

@@ -72,6 +72,13 @@ describe("direct inspector feedback", () => {
     expect(h.text("obs-fader-slider-status")).toContain("not minimised");
     expect(h.text("obs-fader-slider-status")).toContain("Fading still works.");
     expect(h.display("obs-fader-midi-tip")).toBe("");
+    h.render({ target: "tbar" }, { ...base, nativeTbar: "permission" });
+    expect(h.text("obs-fader-slider-status")).toContain("Accessibility");
+    expect(h.text("obs-fader-slider-status")).toContain("Fading still works.");
+    expect(h.display("obs-fader-midi-tip")).toBe("");
+    h.render({ target: "tbar" }, { ...base, nativeTbar: "unsupportedOs" });
+    expect(h.text("obs-fader-slider-status")).toContain("Windows and macOS");
+    expect(h.display("obs-fader-midi-tip")).toBe("");
     h.render({ target: "tbar" }, { ...base, nativeTbar: "transition" });
     expect(h.text("obs-fader-slider-status")).toContain("Fade transition");
     expect(h.display("obs-fader-midi-tip")).toBe("");

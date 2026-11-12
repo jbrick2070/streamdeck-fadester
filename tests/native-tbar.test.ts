@@ -11,6 +11,7 @@ import { fileURLToPath } from "node:url";
 import { DirectObsClient, TBAR_SETTLE_MS } from "../src/obs/direct-obs-client.js";
 import { DirectObsPropertyInspectorBridge } from "../src/pi/direct-obs-bridge.js";
 import {
+  builtAxWorkerPath,
   builtUiaWorkerPath,
   NativeTbar,
   NativeTbarHelper,
@@ -99,23 +100,31 @@ describe("native T-bar helper driver", () => {
     await expect(h.read()).rejects.toBeInstanceOf(NativeTbarRefusal);
   });
 
-  it("is only used for a local OBS 33 on Windows", () => {
+  it("is only used for a local OBS 33 on Windows and macOS", () => {
     expect(nativeTbarEligible("win32", "127.0.0.1", "33.0.1")).toBe(true);
     expect(nativeTbarEligible("win32", "localhost", "33.0.0")).toBe(true);
     expect(nativeTbarEligible("win32", "::1", "33.1.0")).toBe(true);
     expect(nativeTbarEligible("win32", "127.0.0.1", "33.0.1-rc1")).toBe(true);
+    expect(nativeTbarEligible("darwin", "127.0.0.1", "33.0.1")).toBe(true);
+    expect(nativeTbarEligible("darwin", "localhost", "33.0.0")).toBe(true);
+    expect(nativeTbarEligible("darwin", "[::1]", "33.0.1")).toBe(true);
     expect(nativeTbarEligible("win32", "192.168.1.20", "33.0.1")).toBe(false);
-    expect(nativeTbarEligible("darwin", "127.0.0.1", "33.0.1")).toBe(false);
+    expect(nativeTbarEligible("darwin", "192.168.1.20", "33.0.1")).toBe(false);
+    expect(nativeTbarEligible("linux", "127.0.0.1", "33.0.1")).toBe(false);
     expect(nativeTbarEligible("win32", "127.0.0.1", "32.0.4")).toBe(false);
+    expect(nativeTbarEligible("darwin", "127.0.0.1", "32.0.4")).toBe(false);
     expect(nativeTbarEligible("win32", "127.0.0.1", "34.0.0")).toBe(false);
     expect(nativeTbarEligible("win32", "127.0.0.1", "330.0.0")).toBe(false);
   });
 
   it("names what keeps OBS's slider out of reach", () => {
-    expect(nativeTbarBlocker("darwin", "127.0.0.1", "33.0.1")).toBe("notWindows");
+    expect(nativeTbarBlocker("linux", "127.0.0.1", "33.0.1")).toBe("unsupportedOs");
     expect(nativeTbarBlocker("win32", "192.168.1.20", "33.0.1")).toBe("remote");
+    expect(nativeTbarBlocker("darwin", "192.168.1.20", "33.0.1")).toBe("remote");
     expect(nativeTbarBlocker("win32", "localhost", "32.0.4")).toBe("version");
+    expect(nativeTbarBlocker("darwin", "localhost", "32.0.4")).toBe("version");
     expect(nativeTbarBlocker("win32", "localhost", "33.0.1")).toBeUndefined();
+    expect(nativeTbarBlocker("darwin", "localhost", "33.0.1")).toBeUndefined();
   });
 });
 
@@ -384,6 +393,34 @@ describe("dial throws on OBS's real slider", () => {
     await server.stop();
     await connect({ version: "34.0.0" });
     expect(client.getNativeTbarStatus()).toBe("version");
+    client.stop();
+    await server.stop();
+
+    server = new FakeObsServer({ obsVersion: "33.0.1" });
+    const macPort = await server.start();
+    let denyPermission = true;
+    const macNative: NativeTbar = {
+      read: async () => {
+        if (denyPermission) {
+          throw new NativeTbarRefusal("Allow Stream Deck in Accessibility.", "permission");
+        }
+        return server.nativeSlider / 1023;
+      },
+      move: async (_from, to) => {
+        server.moveNativeSlider(nativeTick(to));
+        return to;
+      },
+      close: () => {}
+    };
+    client = new DirectObsClient(
+      { host: "127.0.0.1", port: macPort, password: "" },
+      { nativeTbar: () => macNative, nativePlatform: "darwin" }
+    );
+    client.start();
+    await vi.waitFor(() => expect(client.getNativeTbarStatus()).toBe("permission"), { timeout: 3000 });
+    denyPermission = false;
+    await client.refreshNativeTbar();
+    expect(client.getNativeTbarStatus()).toBe("following");
   });
 
   it("updates the settings page's line from a throw, without waiting for the page to reopen", async () => {
@@ -638,6 +675,25 @@ describe("dial throws on OBS's real slider", () => {
     expect(server.directCallLog.some((call) => call.requestType === "SetStudioModeEnabled")).toBe(false);
   });
 
+  it("picks up an open real-slider fade immediately while OBS 33's manual cursor is still easing after a mouse drag or restart", async () => {
+    await connect();
+    await client.nudgeTbar(-0.1); // drain initial post-connect pickup
+    const next = client.getCatalog().currentPreviewScene;
+
+    // Operator drags OBS's T-bar halfway: OBS emits SceneTransitionStarted, sets Program = Next, and eases cursor 0 -> 0.5
+    server.moveNativeSlider(512);
+    server.emitObsEvent("SceneTransitionStarted", { transitionName: "Fade" });
+    server.cursorScript = [0, 0.22, 0.34, 0.42];
+
+    await client.nudgeTbar(0.2);
+    expect(server.nativeSlider).toBe(nativeTick(512 / 1023 + 0.2));
+    await client.nudgeTbar(0.35);
+    expect(server.manualTransitionActive).toBe(false);
+    expect(server.programSceneName).toBe(next);
+    expect(server.nativeSlider).toBe(0);
+    expect(server.directCallLog.some((call) => call.requestType === "SetStudioModeEnabled")).toBe(false);
+  });
+
   it("never triggers a fallback Studio Mode toggle take when OBS's resting transition cursor is 1.0 after an ended fade", async () => {
     await connect();
     const live = client.getCatalog().currentProgramScene;
@@ -721,7 +777,7 @@ class FakeUiaWorker extends EventEmitter implements UiaWorkerLike {
   public requests: UiaWorkerRequest[] = [];
   public terminated = 0;
   public slider = 0;
-  public mode: "ok" | "admin" | "minimised" | "unavailable" | "uncertain" | "hang" = "ok";
+  public mode: "ok" | "admin" | "permission" | "minimised" | "unavailable" | "uncertain" | "hang" = "ok";
   private hungRequest: UiaWorkerRequest | null = null;
 
   public constructor(bootReady = true, bootError = "koffi load failed", bootDelayMs = 0) {
@@ -759,6 +815,10 @@ class FakeUiaWorker extends EventEmitter implements UiaWorkerLike {
   private respond(msg: UiaWorkerRequest): void {
     if (this.mode === "admin") {
       this.emit("message", { seq: msg.seq, generation: msg.generation, status: "refusal", message: "OBS is running as administrator.", reason: "admin" });
+      return;
+    }
+    if (this.mode === "permission") {
+      this.emit("message", { seq: msg.seq, generation: msg.generation, status: "refusal", message: "Accessibility denied.", reason: "permission" });
       return;
     }
     if (this.mode === "minimised") {
@@ -799,6 +859,7 @@ describe("NativeTbarUia worker adapter", () => {
   const servers: Server[] = [];
 
   afterEach(async () => {
+    delete process.env.FADESTER_NO_AX_PROMPT;
     for (const a of adapters.splice(0)) a.close();
     for (const s of servers.splice(0)) await new Promise<void>((res) => s.close(() => res()));
     for (const d of tempDirs.splice(0)) rmSync(d, { recursive: true, force: true });
@@ -839,6 +900,8 @@ describe("NativeTbarUia worker adapter", () => {
     // Refusal reasons and unavailable mapping
     worker.mode = "admin";
     await expect(uia.read()).rejects.toMatchObject({ reason: "admin" });
+    worker.mode = "permission";
+    await expect(uia.read()).rejects.toMatchObject({ reason: "permission" });
     worker.mode = "unavailable";
     await expect(uia.read()).rejects.toBeInstanceOf(NativeTbarUnavailable);
   });
@@ -984,5 +1047,61 @@ describe("NativeTbarUia worker adapter", () => {
     adapters.push(uia);
 
     await expect(uia.read()).rejects.toThrow(/not the OBS process/i);
+  });
+
+  it.runIf(process.platform === "darwin")("boots the staged ax-worker.js + packaged darwin koffi.node in an isolated folder outside repo node_modules", async () => {
+    process.env.FADESTER_NO_AX_PROMPT = "1";
+    const isolated = mkdtempSync(join(tmpdir(), "fadester-staged-ax-"));
+    tempDirs.push(isolated);
+
+    const builtWorker = builtAxWorkerPath();
+    if (builtWorker) {
+      const builtBinDir = dirname(builtWorker);
+      cpSync(builtWorker, join(isolated, "ax-worker.js"));
+      cpSync(join(builtBinDir, "node_modules", "koffi"), join(isolated, "node_modules", "koffi"), { recursive: true });
+    } else {
+      const [{ rollup }, { default: typescript }, { default: nodeResolve }, { default: commonjs }, { stageKoffi }] = await Promise.all([
+        import("rollup"),
+        import("@rollup/plugin-typescript"),
+        import("@rollup/plugin-node-resolve"),
+        import("@rollup/plugin-commonjs"),
+        import("../scripts/native/stage-koffi.mjs")
+      ]);
+      const bundle = await rollup({
+        input: "src/obs/ax/ax-worker.ts",
+        external: [/^node:/, "koffi"],
+        plugins: [
+          typescript({ tsconfig: "./tsconfig.json", include: ["src/**/*.ts", "packages/**/*.ts"] }),
+          nodeResolve({ browser: false, exportConditions: ["node"], preferBuiltins: true }),
+          commonjs()
+        ]
+      });
+      await bundle.write({
+        file: join(isolated, "ax-worker.js"),
+        format: "esm",
+        inlineDynamicImports: true
+      });
+      await bundle.close();
+      stageKoffi(undefined, isolated);
+    }
+
+    // Listen on ephemeral local TCP ports (both IPv4 127.0.0.1 and IPv4-mapped IPv6 ::ffff:127.0.0.1) owned by node so
+    // libproc listenerPid + CoreFoundation CFBundle verification run end-to-end without TCC prompts and refuse cleanly!
+    for (const host of ["127.0.0.1", "::ffff:127.0.0.1"]) {
+      const srv = createServer();
+      servers.push(srv);
+      await new Promise<void>((res) => srv.listen(0, host, () => res()));
+      const address = srv.address();
+      const port = typeof address === "object" && address ? address.port : 0;
+      expect(port).toBeGreaterThan(0);
+
+      const ax = new NativeTbarUia(port, {
+        workerPath: join(isolated, "ax-worker.js"),
+        callTimeoutMs: 500
+      });
+      adapters.push(ax);
+
+      await expect(ax.read()).rejects.toThrow(/not the OBS process/i);
+    }
   });
 });

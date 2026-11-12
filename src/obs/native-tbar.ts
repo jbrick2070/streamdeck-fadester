@@ -1,28 +1,34 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// OBS 33's own T-bar slider on Windows, moved in-process from a dedicated COM MTA worker thread via UI Automation
-// (NativeTbarUia, docs/TBAR-WINDOWS-INPLUGIN-DESIGN.md). OBS ignores obs-websocket's SetTBarPosition for its visible
-// slider (obsproject/obs-studio#11372), and its release reads that slider: so a throw that moves the real slider is the
-// one that follows on screen and that OBS can finish or cancel cleanly with a single release.
+// OBS 33's own T-bar slider on Windows and macOS, moved in-process from a dedicated worker thread via Windows UI
+// Automation (uia-worker.ts) or macOS Accessibility AXUIElement (ax-worker.ts). OBS ignores obs-websocket's
+// SetTBarPosition for its visible slider (obsproject/obs-studio#11372), and its release reads that slider: so a throw
+// that moves the real slider is the one that follows on screen and finishes or cancels cleanly with a single release.
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Worker } from "node:worker_threads";
-import type { UiaRefusalReason } from "./uia/uia-slider.js";
-import type { UiaWorkerCallReply, UiaWorkerMessage, UiaWorkerRequest } from "./uia/uia-worker.js";
+import type { UiaWorkerCallReply, UiaWorkerMessage, UiaWorkerRequest, WorkerRefusalReason } from "./uia/uia-worker.js";
 
 /** OBS's slider range: 0 (Program) to 1023 (Preview fully faded in). */
 export const NATIVE_TBAR_MAX = 1023;
-/** Per-call UI Automation worker deadline on the main thread (~80 ms, docs/TBAR-WINDOWS-INPLUGIN-DESIGN.md §3.2). */
+/** Per-call UI Automation / Accessibility movement deadline on the main thread (~80 ms). */
 export const UIA_CALL_TIMEOUT_MS = 80;
-/** Initial worker thread + koffi load budget before the first call is raced at UIA_CALL_TIMEOUT_MS. */
+/** Cold discovery / setup read deadline on the main thread (~500 ms for macOS AX BFS and one-time TCC check). */
+export const UIA_READ_TIMEOUT_MS = 500;
+/** Initial worker thread + koffi load budget before the first call is raced. */
 export const UIA_BOOT_TIMEOUT_MS = 1500;
-/** Maximum wait for a busy-tainted worker's late reply before reconciliation gives up on UIA. */
+/** Maximum wait for a busy-tainted worker's late reply before reconciliation gives up on native slider recovery. */
 export const UIA_TAINT_DRAIN_MS = 1200;
 
-/** Nothing was written: OBS is as it was (slider moved by hand, OBS window closed/minimised, or OBS running as admin). */
+/** Ensures macOS Accessibility consent is requested at most once per plugin process lifetime across OBS reconnects. */
+let darwinAxPromptBudget = true;
+
+export type NativeTbarRefusalReason = WorkerRefusalReason;
+
+/** Nothing was written: OBS is as it was (slider moved by hand, OBS closed/minimised, admin on Win, or AX denied on Mac). */
 export class NativeTbarRefusal extends Error {
-  public constructor(message: string, public readonly reason: UiaRefusalReason = "refused") {
+  public constructor(message: string, public readonly reason: NativeTbarRefusalReason = "refused") {
     super(message);
   }
 }
@@ -57,26 +63,26 @@ export function nativeTick(position: number): number {
   return Math.round(position * NATIVE_TBAR_MAX);
 }
 
-/** Why OBS's own slider cannot be reached from here: not Windows, OBS on another computer, an OBS other than 33. */
-export type NativeTbarBlocker = "notWindows" | "remote" | "version";
+/** Why OBS's own slider cannot be reached from here: unsupported OS, OBS on another computer, or OBS other than 33. */
+export type NativeTbarBlocker = "unsupportedOs" | "remote" | "version";
 
 /** What keeps OBS's own slider out of reach, or undefined when the backend can try it. */
 export function nativeTbarBlocker(platform: string, host: string, obsVersion: string): NativeTbarBlocker | undefined {
-  if (platform !== "win32") return "notWindows";
+  if (platform !== "win32" && platform !== "darwin") return "unsupportedOs";
   if (!["127.0.0.1", "localhost", "::1", "[::1]"].includes(host.trim().toLowerCase())) return "remote";
   if (!/^33\.\d+\.\d+(\D|$)/.test(obsVersion)) return "version";
   return undefined;
 }
 
 /**
- * Whether OBS's own slider can be reached from here: Windows, OBS on this computer, OBS 33. The backend still checks
- * the slider's names, orientation and range before each write and writes nothing to a slider it does not recognise.
+ * Whether OBS's own slider can be reached from here: Windows or macOS, OBS on this computer, OBS 33. The backend still
+ * checks the slider's names, orientation and range before each write and writes nothing to a slider it does not recognise.
  */
 export function nativeTbarEligible(platform: string, host: string, obsVersion: string): boolean {
   return nativeTbarBlocker(platform, host, obsVersion) === undefined;
 }
 
-/** The bundled worker script next to bin/fadester.js, or undefined when running unbuilt source. */
+/** The bundled Windows UIA worker script next to bin/fadester.js, or undefined when running unbuilt source. */
 export function bundledUiaWorkerPath(): string | undefined {
   try {
     const path = join(dirname(fileURLToPath(import.meta.url)), "uia-worker.js");
@@ -86,7 +92,7 @@ export function bundledUiaWorkerPath(): string | undefined {
   }
 }
 
-/** Resolves the built worker script either next to the bundle or in the repo's .sdPlugin/bin directory. */
+/** Resolves the built Windows UIA worker script either next to the bundle or in the repo's .sdPlugin/bin directory. */
 export function builtUiaWorkerPath(): string | undefined {
   const adjacent = bundledUiaWorkerPath();
   if (adjacent) return adjacent;
@@ -94,6 +100,31 @@ export function builtUiaWorkerPath(): string | undefined {
     const repoBuilt = resolve(
       dirname(fileURLToPath(import.meta.url)),
       "../../io.github.jbrick2070.fadester-for-obs.sdPlugin/bin/uia-worker.js"
+    );
+    return existsSync(repoBuilt) ? repoBuilt : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** The bundled macOS AX worker script next to bin/fadester.js, or undefined when running unbuilt source. */
+export function bundledAxWorkerPath(): string | undefined {
+  try {
+    const path = join(dirname(fileURLToPath(import.meta.url)), "ax-worker.js");
+    return existsSync(path) ? path : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Resolves the built macOS AX worker script either next to the bundle or in the repo's .sdPlugin/bin directory. */
+export function builtAxWorkerPath(): string | undefined {
+  const adjacent = bundledAxWorkerPath();
+  if (adjacent) return adjacent;
+  try {
+    const repoBuilt = resolve(
+      dirname(fileURLToPath(import.meta.url)),
+      "../../io.github.jbrick2070.fadester-for-obs.sdPlugin/bin/ax-worker.js"
     );
     return existsSync(repoBuilt) ? repoBuilt : undefined;
   } catch {
@@ -124,6 +155,7 @@ export interface NativeTbarUiaOptions {
   workerPath?: string;
   workerFactory?: (port: number) => UiaWorkerLike;
   callTimeoutMs?: number;
+  readTimeoutMs?: number;
   bootTimeoutMs?: number;
   taintDrainMs?: number;
 }
@@ -150,6 +182,7 @@ interface InFlightCall {
  */
 export class NativeTbarUia implements NativeTbar {
   private readonly callTimeoutMs: number;
+  private readonly readTimeoutMs: number;
   private readonly bootTimeoutMs: number;
   private readonly taintDrainMs: number;
   private readonly createWorker: (port: number) => UiaWorkerLike;
@@ -169,15 +202,21 @@ export class NativeTbarUia implements NativeTbar {
     options: NativeTbarUiaOptions = {}
   ) {
     this.callTimeoutMs = options.callTimeoutMs ?? UIA_CALL_TIMEOUT_MS;
+    this.readTimeoutMs = options.readTimeoutMs ?? options.callTimeoutMs ?? UIA_READ_TIMEOUT_MS;
     this.bootTimeoutMs = options.bootTimeoutMs ?? UIA_BOOT_TIMEOUT_MS;
     this.taintDrainMs = options.taintDrainMs ?? UIA_TAINT_DRAIN_MS;
     if (options.workerFactory) {
       this.createWorker = options.workerFactory;
     } else {
-      const script = options.workerPath ?? builtUiaWorkerPath();
+      const script =
+        options.workerPath ??
+        (process.platform === "darwin" ? builtAxWorkerPath() : builtUiaWorkerPath());
       this.createWorker = (targetPort: number) => {
-        if (!script) throw new NativeTbarUnavailable("The in-plugin T-bar UIA worker is not built.");
-        return new Worker(script, { workerData: { port: targetPort } });
+        if (!script) throw new NativeTbarUnavailable("The in-plugin T-bar worker is not built.");
+        return new Worker(script, {
+          workerData: { port: targetPort, allowPrompt: darwinAxPromptBudget },
+          execArgv: []
+        });
       };
     }
   }
@@ -417,6 +456,7 @@ export class NativeTbarUia implements NativeTbar {
       markIdle = resolveIdle;
     });
 
+    const deadlineMs = op === "move" ? this.callTimeoutMs : this.readTimeoutMs;
     const reply = await new Promise<UiaWorkerCallReply>((resolveReply, rejectReply) => {
       const timer = setTimeout(() => {
         if (this.inFlight?.seq === seq) {
@@ -424,7 +464,7 @@ export class NativeTbarUia implements NativeTbar {
           this.tainted = true;
         }
         rejectReply(new NativeTbarTimeout("The OBS T-bar UIA call timed out."));
-      }, this.callTimeoutMs);
+      }, deadlineMs);
       timer.unref?.();
 
       this.inFlight = {
@@ -455,6 +495,7 @@ export class NativeTbarUia implements NativeTbar {
       return reply.value;
     }
     if (reply.status === "refusal") {
+      if (reply.reason === "permission") darwinAxPromptBudget = false;
       if (reply.reason === "unavailable") throw new NativeTbarUnavailable(reply.message);
       throw new NativeTbarRefusal(reply.message, reply.reason);
     }
@@ -464,13 +505,20 @@ export class NativeTbarUia implements NativeTbar {
 }
 
 /**
- * Default in-plugin T-bar backend for local Windows OBS 33.x: loads koffi + COM IUIAutomation2 on a dedicated worker
- * thread when built for Windows x64 or arm64; undefined elsewhere.
+ * Default in-plugin T-bar backend for local Windows or macOS OBS 33.x: loads koffi + COM IUIAutomation2 (Windows) or
+ * AXUIElement / CoreFoundation (macOS) on a dedicated worker thread when built for x64 or arm64; undefined elsewhere.
  */
 export function defaultNativeTbar(port: number): NativeTbar | undefined {
-  if (process.platform !== "win32" || (process.arch !== "x64" && process.arch !== "arm64")) return undefined;
-  const workerPath = bundledUiaWorkerPath();
-  return workerPath ? new NativeTbarUia(port, { workerPath }) : undefined;
+  if (process.arch !== "x64" && process.arch !== "arm64") return undefined;
+  if (process.platform === "win32") {
+    const workerPath = bundledUiaWorkerPath();
+    return workerPath ? new NativeTbarUia(port, { workerPath }) : undefined;
+  }
+  if (process.platform === "darwin") {
+    const workerPath = bundledAxWorkerPath();
+    return workerPath ? new NativeTbarUia(port, { workerPath }) : undefined;
+  }
+  return undefined;
 }
 
 /**

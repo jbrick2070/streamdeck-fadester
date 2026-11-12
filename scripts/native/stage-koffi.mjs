@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Stages koffi's JavaScript loader and prebuilt Windows N-API binaries (win32-x64 and win32-arm64) at fixed paths
-// inside io.github.jbrick2070.fadester-for-obs.sdPlugin/bin/node_modules/koffi, verified against package-lock.json.
-// Runs identically on Windows and macOS without a compiler or platform-filtered optionalDependencies.
+// Stages koffi's JavaScript loader and prebuilt Windows + macOS N-API binaries (win32-x64, win32-arm64, darwin-x64,
+// darwin-arm64) at fixed paths inside io.github.jbrick2070.fadester-for-obs.sdPlugin/bin/node_modules/koffi, verified
+// against package-lock.json. Runs identically on Windows and macOS without a compiler or optionalDependencies filters.
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -20,10 +21,21 @@ const KOFFI_JS_FILES = [
   "src/koffi/src/static.js"
 ];
 
-const WIN32_TARGETS = [
-  { arch: "x64", triplet: "win32_x64" },
-  { arch: "arm64", triplet: "win32_arm64" }
+const NATIVE_TARGETS = [
+  { platform: "win32", arch: "x64", triplet: "win32_x64", format: "pe", outKey: "win32X64Node" },
+  { platform: "win32", arch: "arm64", triplet: "win32_arm64", format: "pe", outKey: "win32Arm64Node" },
+  { platform: "darwin", arch: "x64", triplet: "darwin_x64", format: "macho64", outKey: "darwinX64Node" },
+  { platform: "darwin", arch: "arm64", triplet: "darwin_arm64", format: "macho64", outKey: "darwinArm64Node" }
 ];
+
+function isValidNativeAddon(bytes, format) {
+  if (bytes.length < 65536) return false;
+  if (format === "pe") return bytes[0] === 0x4d && bytes[1] === 0x5a;
+  if (format === "macho64") {
+    return bytes[0] === 0xcf && bytes[1] === 0xfa && bytes[2] === 0xed && bytes[3] === 0xfe;
+  }
+  return false;
+}
 
 /** Extracts one regular file from a gzipped POSIX/USTAR tar archive. */
 export function extractTarGzEntry(tgzBytes, entryPath) {
@@ -50,7 +62,7 @@ export function extractTarGzEntry(tgzBytes, entryPath) {
   throw new Error(`Missing ${entryPath} in vendored koffi archive`);
 }
 
-/** Stages koffi and its win32-x64 + win32-arm64 N-API binaries into `<pluginDir>/bin/node_modules/koffi`. */
+/** Stages koffi and its Windows + macOS N-API binaries into `<pluginDir>/bin/node_modules/koffi`. */
 export function stageKoffi(
   root = resolve(dirname(fileURLToPath(import.meta.url)), "../.."),
   outBinDir = join(root, "io.github.jbrick2070.fadester-for-obs.sdPlugin", "bin")
@@ -80,8 +92,8 @@ export function stageKoffi(
   }
 
   const stagedAddons = {};
-  for (const { arch, triplet } of WIN32_TARGETS) {
-    const lockKey = `node_modules/@koromix/koffi-win32-${arch}`;
+  for (const { platform, arch, triplet, format, outKey } of NATIVE_TARGETS) {
+    const lockKey = `node_modules/@koromix/koffi-${platform}-${arch}`;
     const lockEntry = packages[lockKey];
     if (!lockEntry?.version || !lockEntry.integrity) {
       throw new Error(`Missing version or integrity for ${lockKey} in package-lock.json`);
@@ -89,7 +101,7 @@ export function stageKoffi(
     if (lockEntry.version !== koffiPkg.version) {
       throw new Error(`Version mismatch: koffi@${koffiPkg.version} vs ${lockKey}@${lockEntry.version}`);
     }
-    const tarballPath = join(root, "vendor", "koffi", `koffi-win32-${arch}-${lockEntry.version}.tgz`);
+    const tarballPath = join(root, "vendor", "koffi", `koffi-${platform}-${arch}-${lockEntry.version}.tgz`);
     if (!existsSync(tarballPath)) {
       throw new Error(`Missing vendored prebuilt archive: ${tarballPath}`);
     }
@@ -99,24 +111,29 @@ export function stageKoffi(
       throw new Error(`Integrity mismatch for ${tarballPath}: expected ${lockEntry.integrity}, got ${actualIntegrity}`);
     }
     const addonBytes = extractTarGzEntry(tgzBytes, `package/${triplet}/koffi.node`);
-    if (addonBytes.length < 65536 || addonBytes[0] !== 0x4d || addonBytes[1] !== 0x5a) {
-      throw new Error(`Extracted ${triplet}/koffi.node is not a valid PE binary`);
+    if (!isValidNativeAddon(addonBytes, format)) {
+      throw new Error(`Extracted ${triplet}/koffi.node is not a valid ${format} binary`);
     }
     const addonOut = join(destRoot, "build", "koffi", triplet, "koffi.node");
     mkdirSync(dirname(addonOut), { recursive: true });
-    writeFileSync(addonOut, addonBytes);
-    stagedAddons[arch] = addonOut;
+    writeFileSync(addonOut, addonBytes, { mode: 0o755 });
+    stagedAddons[outKey] = addonOut;
   }
 
   copyFileSync(join(root, "vendor", "koffi", "LICENSE.txt"), join(destRoot, "LICENSE.txt"));
+  if (process.platform === "darwin" && existsSync("/usr/bin/xattr")) {
+    spawnSync("/usr/bin/xattr", ["-dr", "com.apple.quarantine", destRoot], { stdio: "ignore" });
+  }
   return {
     koffiDir: destRoot,
-    win32X64Node: stagedAddons.x64,
-    win32Arm64Node: stagedAddons.arm64
+    win32X64Node: stagedAddons.win32X64Node,
+    win32Arm64Node: stagedAddons.win32Arm64Node,
+    darwinX64Node: stagedAddons.darwinX64Node,
+    darwinArm64Node: stagedAddons.darwinArm64Node
   };
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url))) {
   const staged = stageKoffi();
-  console.log(`Staged koffi (win32-x64 + win32-arm64) to ${staged.koffiDir}`);
+  console.log(`Staged koffi (win32-x64, win32-arm64, darwin-x64, darwin-arm64) to ${staged.koffiDir}`);
 }

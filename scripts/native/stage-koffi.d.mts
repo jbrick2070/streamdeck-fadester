@@ -3,6 +3,8 @@ export interface StagedKoffiPaths {
   koffiDir: string;
   win32X64Node: string;
   win32Arm64Node: string;
+  darwinX64Node: string;
+  darwinArm64Node: string;
 }
 
 export function extractTarGzEntry(tgzBytes: Buffer, entryPath: string): Buffer;

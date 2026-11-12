@@ -3,7 +3,10 @@
 // Joins COM's multithreaded apartment once on this thread, keeps all COM pointers here, and runs synchronous UIA calls
 // off the plugin's main event loop.
 import { parentPort, workerData } from "node:worker_threads";
+import type { AxRefusalReason } from "../ax/ax-slider.js";
 import type { UiaRefusalReason, UiaSlider } from "./uia-slider.js";
+
+export type WorkerRefusalReason = UiaRefusalReason | AxRefusalReason;
 
 export interface UiaWorkerRequest {
   seq: number;
@@ -19,7 +22,7 @@ export type UiaWorkerBootMessage =
 
 export type UiaWorkerCallReply =
   | { seq: number; generation: number; status: "ok"; value: number }
-  | { seq: number; generation: number; status: "refusal"; message: string; reason: UiaRefusalReason }
+  | { seq: number; generation: number; status: "refusal"; message: string; reason: WorkerRefusalReason }
   | { seq: number; generation: number; status: "uncertain"; message: string };
 
 export type UiaWorkerMessage = UiaWorkerBootMessage | UiaWorkerCallReply;

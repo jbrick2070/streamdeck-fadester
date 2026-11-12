@@ -174,6 +174,21 @@ describe("the T-bar dial recovers by itself", () => {
       expect(notes.some((note) => note.includes("cursor"))).toBe(true);
     });
 
+    it("adopts an open manual fade across a restart even while OBS 33's manual cursor is still easing", async () => {
+      const port = await start();
+      const before = await connect(port);
+      await before.nudgeTbar(0.45);
+      before.stop();
+
+      // OBS 33 reports Program === Preview === target while its manual cursor eases toward 0.45
+      server.cursorScript = [0.22, 0.34];
+      const after = await connect(port);
+      await vi.waitFor(() => expect(after.getCatalog().tbarPosition).toBeCloseTo(0.34, 2), { timeout: 3000 });
+      await after.nudgeTbar(0.7);
+      expect(server.programSceneName).toBe("Scene Preview");
+      unlocked();
+    });
+
     it("re-reads Program and Preview before refusing a throw on a stale Live equals Next", async () => {
       const client = await connect(await start());
       pickPreview("Scene Live");

@@ -44,6 +44,17 @@ export default [
       inlineDynamicImports: true
     },
     external: [...sharedExternal, "koffi"],
+    plugins: sharedPlugins()
+  },
+  {
+    input: "src/obs/ax/ax-worker.ts",
+    output: {
+      file: "io.github.jbrick2070.fadester-for-obs.sdPlugin/bin/ax-worker.js",
+      format: "esm",
+      sourcemap: true,
+      inlineDynamicImports: true
+    },
+    external: [...sharedExternal, "koffi"],
     plugins: sharedPlugins([
       {
         name: "stage-koffi",

@@ -296,7 +296,15 @@ export type DirectObsClientOptions = Pick<
  * connected, Studio Mode off, not found out yet, or the slider helper not in use); the page has its own banners.
  */
 export type NativeTbarStatus =
-  | "following" | "notWindows" | "remote" | "version" | "transition" | "unreachable" | "unavailable" | "off";
+  | "following"
+  | "unsupportedOs"
+  | "remote"
+  | "version"
+  | "transition"
+  | "permission"
+  | "unreachable"
+  | "unavailable"
+  | "off";
 
 /** A throw that moves OBS's real slider: the scenes it started between and where the slider was last put. */
 interface NativeThrow {
@@ -436,8 +444,8 @@ export class DirectObsClient extends ObsVendorClient {
   private nudgeEpoch = 0;
   private inFlightTerminal = false;
   private pendingNudge: PendingTbarNudge | null = null;
-  /** What the helper last found: OBS's slider read, refused (window closed or minimised, OBS as administrator), or no helper. */
-  private nativeReach: "unknown" | "following" | "unreachable" | "unavailable" = "unknown";
+  /** What the helper last found: OBS's slider read, Accessibility denied, refused (window closed/minimised, admin), or no helper. */
+  private nativeReach: "unknown" | "following" | "permission" | "unreachable" | "unavailable" = "unknown";
   /** The selected transition's kind, as last read: OBS's slider mixes only with a Fade. */
   private transitionKind = "";
 
@@ -931,6 +939,7 @@ export class DirectObsClient extends ObsVendorClient {
     const blocker = nativeTbarBlocker(this.nativePlatform, this.settings.host, this.obsVersion);
     if (blocker) return blocker;
     if (this.nativeReach === "unavailable") return "unavailable";
+    if (this.nativeReach === "permission") return "permission";
     if (this.transitionKind && this.transitionKind !== "fade_transition") return "transition";
     return this.nativeReach === "unknown" ? "off" : this.nativeReach;
   }
@@ -967,14 +976,14 @@ export class DirectObsClient extends ObsVendorClient {
   }
 
   /**
-   * A refusal wrote nothing: the mover runs but cannot reach the slider (minimised, admin, no main window).
+   * A refusal wrote nothing: the mover runs but cannot reach the slider (Accessibility denied, minimised, admin, no main window).
    * `NativeTbarUnavailable` means the mover itself could not load; `NativeTbarTimeout` says nothing yet on probe.
    */
   private noteNativeFailure(error: unknown): void {
     if (error instanceof NativeTbarUnavailable) {
       this.nativeReach = "unavailable";
     } else if (error instanceof NativeTbarRefusal) {
-      this.nativeReach = "unreachable";
+      this.nativeReach = error.reason === "permission" ? "permission" : "unreachable";
     } else if (error instanceof NativeTbarTimeout) {
       this.nativeReach = "unknown";
     } else if (error instanceof NativeTbarUncertain) {
@@ -1684,6 +1693,47 @@ export class DirectObsClient extends ObsVendorClient {
     const unchanged = (): boolean =>
       this.catalog.studioMode && this.catalog.tbarPosition <= 0 && this.catalogEventRevisions.studio === studio;
     if (!unchanged()) return true;
+
+    const native = this.nativeSlider();
+    if (native) {
+      try {
+        const sliderPos = await native.read();
+        this.requireControlGeneration(generation);
+        this.nativeReach = "following";
+        if (!unchanged()) return true;
+        if (nativeTick(sliderPos) > 0) {
+          // OBS 33's on-screen T-bar stays at 0 during timed transitions, whereas its transitionCursor eases over ~700 ms
+          // after any manual move (and stays 0/1 for the first 1-2 frames): a non-zero slider proves a manual fade is open.
+          let cursor = await this.readTransitionCursor(generation);
+          if (!(cursor > 0 && cursor < 1)) {
+            try {
+              await this.waitForManualTransition(generation);
+              cursor = await this.readTransitionCursor(generation);
+            } catch {
+              this.requireControlGeneration(generation);
+              cursor = 0;
+            }
+          }
+          if (cursor > 0 && cursor < 1) {
+            const reply = await this.sendObsRequest("GetCurrentProgramScene");
+            this.requireControlGeneration(generation);
+            const target = String(reply.currentProgramSceneName ?? reply.sceneName ?? "");
+            if (!target || !unchanged()) return true;
+            this.tbarThrow = {
+              live: this.catalog.currentProgramScene === target ? "" : this.catalog.currentProgramScene,
+              next: target
+            };
+            this.catalog.tbarPosition = Math.min(clampUnit(sliderPos), NATIVE_NEAR_END);
+            this.emitDirectState();
+            return true;
+          }
+        }
+      } catch (error) {
+        this.requireControlGeneration(generation);
+        this.noteNativeFailure(error);
+      }
+    }
+
     const first = await this.readTransitionCursor(generation);
     if (!(first > 0 && first < 1)) return true;
     await new Promise((resolve) => setTimeout(resolve, PICKUP_SAMPLE_MS));
@@ -1693,10 +1743,14 @@ export class DirectObsClient extends ObsVendorClient {
     if (!(second > 0 && second < 1)) return true; // it ended meanwhile
     if (Math.abs(second - first) > 0.001) {
       // A moving cursor is a timed transition only while OBS has said one started and not yet ended. Without that
-      // (a restart lost the Started, or OBS left its cursor drifting after a take), it does not hold the dial.
+      // (a restart lost the Started, or OBS left its cursor drifting after a take), hold nothing: if Program and
+      // Preview still differ, let a fresh throw start; if OBS already names an open manual fade's target as both
+      // Program and Preview while its manual cursor eases to rest, adopt it so the turn finishes instead of refusing.
       if (this.transitionStartedAt > 0 && Date.now() - this.transitionStartedAt < TBAR_TIMED_TRANSITION_MAX_MS) return false;
-      this.noteTbarIgnored("OBS's transition cursor moves with no transition running: not waiting, the turn goes ahead");
-      return true;
+      if (this.catalog.currentPreviewScene && this.catalog.currentProgramScene !== this.catalog.currentPreviewScene) {
+        this.noteTbarIgnored("OBS's transition cursor moves with no transition running: not waiting, the turn goes ahead");
+        return true;
+      }
     }
     const reply = await this.sendObsRequest("GetCurrentProgramScene");
     this.requireControlGeneration(generation);

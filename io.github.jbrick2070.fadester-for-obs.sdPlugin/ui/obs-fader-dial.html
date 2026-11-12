@@ -147,8 +147,8 @@
       if (midiTip) midiTip.style.display = selectedTarget === "tbar" && (!state || state.nativeTbar !== "following") ? "" : "none";
       const sliderStatus = document.getElementById("obs-fader-slider-status");
       const sliderKeys = {
-        following: "sliderFollowing", notWindows: "sliderNotWindows", remote: "sliderRemote", version: "sliderVersion",
-        transition: "sliderTransition", unreachable: "sliderUnreachable", unavailable: "sliderUnavailable"
+        following: "sliderFollowing", unsupportedOs: "sliderUnsupportedOs", remote: "sliderRemote", version: "sliderVersion",
+        transition: "sliderTransition", permission: "sliderPermission", unreachable: "sliderUnreachable", unavailable: "sliderUnavailable"
       };
       const sliderKey = selectedTarget === "tbar" && state ? sliderKeys[state.nativeTbar] : undefined;
       if (sliderStatus) {

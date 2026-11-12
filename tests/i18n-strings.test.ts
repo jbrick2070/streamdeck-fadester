@@ -183,7 +183,7 @@ describe("German on the deck", () => {
     useLanguage("de");
     const catalog = {
       scenes: [], sceneDetails: [], groupDetails: [], inputs: [], inputDetails: [], transitions: [], studioMode: false, currentProgramScene: "Opening",
-      currentPreviewScene: "", currentTransition: "", inputVolumes: {}, tbarPosition: 0
+      currentPreviewScene: "", currentTransition: "", inputVolumes: {}, tbarPosition: 0, tbarLiveAtRight: false
     };
     expect(buildNeoInfobarFeedback(true, catalog)).toEqual({
       status: "OBS verbunden", live: "LIVE  Opening", preview: "VORSCHAU  Studio-Modus aus"

@@ -31,6 +31,9 @@ export const DIRECT_SCENE_RANDOM = "__random_scene__";
 export const DIRECT_SCENE_CURRENT_PREVIEW = "__current_preview__";
 export const OBS_TRANSITION_CURRENT = "__current_transition__";
 export const OBS_TRANSITION_CUT = "__cut__";
+/** The crossfader dial takes in the last 3 % of a throw and cancels a throw turned back into its first 3 %, as Midi
+ * Fadester's crossfader does (its rail zones, tbar-logic.h). */
+const CROSSFADER_RAIL = 0.03;
 /** A take from rest starts OBS's blend one slider step short of the end (1022 of 1023), then finishes it. */
 const NATIVE_NEAR_END = (NATIVE_TBAR_MAX - 1) / NATIVE_TBAR_MAX;
 /** After a queue-next take, encoder ticks this long are the end of the old throw, not a new one. */
@@ -256,6 +259,11 @@ export interface DirectObsCatalog {
   inputVolumes: Record<string, number>;
   /** The last position sent by this plugin. OBS does not expose a stable readback. */
   tbarPosition: number;
+  /**
+   * The T-bar dial without queue-next is a crossfader (as an APC40's is with Midi Fadester): after a take it stays at
+   * the end it reached, and Live is at that end. True when Live is at its right end, so a turn left is the next throw.
+   */
+  tbarLiveAtRight: boolean;
 }
 
 export type DirectObsClientOptions = Pick<
@@ -346,7 +354,8 @@ export class DirectObsClient extends ObsVendorClient {
     currentPreviewScene: "",
     currentTransition: "",
     inputVolumes: {},
-    tbarPosition: 0
+    tbarPosition: 0,
+    tbarLiveAtRight: false
   };
   private readonly inputFadeTokens = new Map<string, number>();
   private readonly inputQueues = new Map<string, Promise<unknown>>();
@@ -987,6 +996,7 @@ export class DirectObsClient extends ObsVendorClient {
     }
     this.nativeThrow = null;
     this.catalog.tbarPosition = 0;
+    this.crossfaderTaken(queueNextScene);
     await this.refreshCurrentSceneNames();
     this.requireControlGeneration(generation);
     const previewTarget = queueNextScene ? await this.sceneAfter(next, generation) : live;
@@ -1001,8 +1011,31 @@ export class DirectObsClient extends ObsVendorClient {
   }
 
   public async nudgeTbar(delta: number, queueNextScene = false): Promise<number> {
-    return this.queueTbar((generation) =>
-      this.writeTbarPosition(this.catalog.tbarPosition + delta, false, queueNextScene, generation));
+    return this.queueTbar((generation) => queueNextScene
+      // Queue-next walks the scene list: each turn to the end takes, and turning on is the next throw.
+      ? this.writeTbarPosition(this.catalog.tbarPosition + delta, false, true, generation)
+      : this.throwCrossfader(delta, generation));
+  }
+
+  /**
+   * The dial as a crossfader, as an APC40's is with Midi Fadester: a turn toward the far end fades Live into Next, the
+   * last 3 % takes, and the crossfader stays at that end with Live now there. A turn back out of it is the next throw,
+   * toward the scene now in Preview; turning further into the end it rests at does nothing, so the rest of a spin
+   * never starts a throw. A throw turned back into its first 3 % cancels.
+   */
+  private async throwCrossfader(delta: number, generation: number): Promise<number> {
+    const position = this.catalog.tbarPosition;
+    const progress = position + (this.catalog.tbarLiveAtRight ? -delta : delta);
+    if (progress >= 1 - CROSSFADER_RAIL) return this.writeTbarPosition(1, true, false, generation);
+    if (progress <= CROSSFADER_RAIL && progress < position) {
+      return position > 0 ? this.writeTbarPosition(0, false, false, generation) : position;
+    }
+    return this.writeTbarPosition(progress, false, false, generation);
+  }
+
+  /** After a take on the crossfader dial: it stays at the end it reached, and that end is Live's now. */
+  private crossfaderTaken(queueNextScene: boolean): void {
+    if (!queueNextScene) this.catalog.tbarLiveAtRight = !this.catalog.tbarLiveAtRight;
   }
 
   /** Takes Next live: the scene mixer's dial press, and the end of a throw. */
@@ -1081,6 +1114,7 @@ export class DirectObsClient extends ObsVendorClient {
       this.emitDirectState();
       throw new DirectObsError(ownText("errorTakeUnconfirmed"), 500);
     }
+    this.crossfaderTaken(queueNextScene);
     const previewTarget = queueNextScene ? await this.sceneAfter(next, generation) : live;
     if (previewTarget && previewTarget !== this.catalog.currentPreviewScene) {
       await this.sendObsRequest("SetCurrentPreviewScene", { sceneName: previewTarget });

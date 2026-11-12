@@ -4,11 +4,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fileURLToPath } from "node:url";
 import { DirectObsClient, TBAR_SETTLE_MS } from "../src/obs/direct-obs-client.js";
+import { DirectObsPropertyInspectorBridge } from "../src/pi/direct-obs-bridge.js";
 import {
   NativeTbar,
   NativeTbarHelper,
   NativeTbarRefusal,
+  NativeTbarTimeout,
   NativeTbarUncertain,
+  nativeTbarBlocker,
   nativeTbarEligible,
   nativeTick
 } from "../src/obs/native-tbar.js";
@@ -97,6 +100,13 @@ describe("native T-bar helper driver", () => {
     expect(nativeTbarEligible("win32", "127.0.0.1", "34.0.0")).toBe(false);
     expect(nativeTbarEligible("win32", "127.0.0.1", "330.0.0")).toBe(false);
   });
+
+  it("names what keeps OBS's slider out of reach", () => {
+    expect(nativeTbarBlocker("darwin", "127.0.0.1", "33.0.1")).toBe("notWindows");
+    expect(nativeTbarBlocker("win32", "192.168.1.20", "33.0.1")).toBe("remote");
+    expect(nativeTbarBlocker("win32", "localhost", "32.0.4")).toBe("version");
+    expect(nativeTbarBlocker("win32", "localhost", "33.0.1")).toBeUndefined();
+  });
 });
 
 /** The helper's stand-in for the dial tests: moves the fake OBS's real slider, refuses a slider that moved. */
@@ -127,13 +137,13 @@ describe("dial throws on OBS's real slider", () => {
   let client: DirectObsClient;
   let native: FakeNative;
 
-  async function connect(options: { native?: boolean; version?: string; host?: string } = {}): Promise<void> {
+  async function connect(options: { native?: boolean; missing?: boolean; version?: string; host?: string } = {}): Promise<void> {
     server = new FakeObsServer({ obsVersion: options.version ?? "33.0.1" });
     const port = await server.start();
     native = new FakeNative(server);
     client = new DirectObsClient(
       { host: options.host ?? "127.0.0.1", port, password: "" },
-      { nativeTbar: options.native === false ? false : () => native, nativePlatform: "win32" }
+      { nativeTbar: options.native === false ? false : options.missing ? () => undefined : () => native, nativePlatform: "win32" }
     );
     client.start();
     await vi.waitFor(() => expect(client.getStatus().kind).toBe("connected"), { timeout: 3000 });
@@ -327,6 +337,67 @@ describe("dial throws on OBS's real slider", () => {
     await client.nudgeTbar(0.3);
     expect(server.directCallLog.filter((call) => call.requestType === "SetTBarPosition").at(-1)?.requestData)
       .toEqual({ position: 0.3, release: false });
+  });
+
+  it("tells the settings page that OBS's slider follows the dial once the helper has read it", async () => {
+    await connect();
+    await vi.waitFor(() => expect(client.getNativeTbarStatus()).toBe("following"), { timeout: 3000 });
+    const payloads: Record<string, unknown>[] = [];
+    const bridge = new DirectObsPropertyInspectorBridge(client, {
+      sendToPropertyInspector: (payload) => payloads.push(payload),
+      persistGlobalSettings: async () => {}
+    });
+    bridge.broadcast();
+    expect(payloads.at(-1)).toMatchObject({ event: "directObsState", nativeTbar: "following" });
+  });
+
+  it("says why OBS's slider stays still: a transition other than Fade, a closed window, a missing helper, the OBS version", async () => {
+    await connect();
+    await vi.waitFor(() => expect(client.getNativeTbarStatus()).toBe("following"), { timeout: 3000 });
+    server.currentTransitionName = "Cut";
+    server.emitObsEvent("CurrentSceneTransitionChanged", { transitionName: "Cut" });
+    await vi.waitFor(() => expect(client.getNativeTbarStatus()).toBe("transition"), { timeout: 3000 });
+    server.currentTransitionName = "Fade";
+    native.refuseReads = true;
+    server.emitObsEvent("CurrentSceneTransitionChanged", { transitionName: "Fade" });
+    await vi.waitFor(() => expect(client.getNativeTbarStatus()).toBe("unreachable"), { timeout: 3000 });
+    native.refuseReads = false;
+    await client.refreshNativeTbar(); // the inspector opened again, OBS's window back
+    expect(client.getNativeTbarStatus()).toBe("following");
+    client.stop();
+    await server.stop();
+    await connect({ missing: true });
+    await vi.waitFor(() => expect(client.getNativeTbarStatus()).toBe("unavailable"), { timeout: 3000 });
+    client.stop();
+    await server.stop();
+    await connect({ version: "34.0.0" });
+    expect(client.getNativeTbarStatus()).toBe("version");
+  });
+
+  it("updates the settings page's line from a throw, without waiting for the page to reopen", async () => {
+    await connect();
+    await vi.waitFor(() => expect(client.getNativeTbarStatus()).toBe("following"), { timeout: 3000 });
+    const states: string[] = [];
+    client.on("directStateChanged", () => states.push(client.getNativeTbarStatus()));
+    native.refuseReads = true; // OBS minimised meanwhile
+    await client.nudgeTbar(0.2);
+    expect(client.getNativeTbarStatus()).toBe("unreachable");
+    expect(states).toContain("unreachable");
+  });
+
+  it("says nothing yet when the helper is slow to answer, rather than that it could not start", async () => {
+    await connect();
+    await vi.waitFor(() => expect(client.getNativeTbarStatus()).toBe("following"), { timeout: 3000 });
+    native.read = async () => { throw new NativeTbarTimeout("The OBS slider helper did not answer."); };
+    await client.refreshNativeTbar();
+    expect(client.getNativeTbarStatus()).toBe("off");
+  });
+
+  it("says nothing about OBS's slider while Studio Mode is off", async () => {
+    await connect();
+    server.setStudioModeExternally(false);
+    await vi.waitFor(() => expect(client.getCatalog().studioMode).toBe(false), { timeout: 3000 });
+    expect(client.getNativeTbarStatus()).toBe("off");
   });
 
   it("stops a throw whose slider was moved by hand, and starts the next one from rest", async () => {

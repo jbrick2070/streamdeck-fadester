@@ -17,6 +17,9 @@ export class NativeTbarRefusal extends Error {}
 /** A write may or may not have reached OBS: it is never replayed, and the throw is given up. */
 export class NativeTbarUncertain extends Error {}
 
+/** The helper did not answer in time (a slow first start, a virus scan): uncertain, but it may well run next time. */
+export class NativeTbarTimeout extends NativeTbarUncertain {}
+
 /** Moves and reads OBS's real T-bar slider, in normalised 0..1 positions. */
 export interface NativeTbar {
   /** The slider's position now. */
@@ -32,13 +35,23 @@ export function nativeTick(position: number): number {
   return Math.round(position * NATIVE_TBAR_MAX);
 }
 
+/** Why OBS's own slider cannot be reached from here: not Windows, OBS on another computer, an OBS other than 33. */
+export type NativeTbarBlocker = "notWindows" | "remote" | "version";
+
+/** What keeps OBS's own slider out of reach, or undefined when the helper can try it. */
+export function nativeTbarBlocker(platform: string, host: string, obsVersion: string): NativeTbarBlocker | undefined {
+  if (platform !== "win32") return "notWindows";
+  if (!["127.0.0.1", "localhost", "::1", "[::1]"].includes(host.trim().toLowerCase())) return "remote";
+  if (!/^33\.\d+\.\d+(\D|$)/.test(obsVersion)) return "version";
+  return undefined;
+}
+
 /**
  * Whether OBS's own slider can be reached from here: Windows, OBS on this computer, OBS 33. The helper still checks the
  * slider's names and range before each write and writes nothing to a slider it does not recognise.
  */
 export function nativeTbarEligible(platform: string, host: string, obsVersion: string): boolean {
-  const local = ["127.0.0.1", "localhost", "::1", "[::1]"].includes(host.trim().toLowerCase());
-  return platform === "win32" && local && /^33\.\d+\.\d+(\D|$)/.test(obsVersion);
+  return nativeTbarBlocker(platform, host, obsVersion) === undefined;
 }
 
 /** The bundled helper next to this script (bin/native/), or undefined when it is not there. */
@@ -160,7 +173,7 @@ export class NativeTbarHelper implements NativeTbar {
       reply = await new Promise<string>((resolve, reject) => {
         const timer = setTimeout(() => {
           this.waiting = null;
-          reject(new NativeTbarUncertain("The OBS slider helper did not answer."));
+          reject(new NativeTbarTimeout("The OBS slider helper did not answer."));
         }, this.replyTimeoutMs);
         this.waiting = {
           resolve: (value) => { clearTimeout(timer); resolve(value); },

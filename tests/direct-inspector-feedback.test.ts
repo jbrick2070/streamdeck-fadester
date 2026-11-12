@@ -61,6 +61,22 @@ describe("direct inspector feedback", () => {
     expect(h.text("obs-fader-tbar-hint")).toContain("Press to take NEXT live");
   });
 
+  it("says under the T-bar settings whether OBS's own slider follows the dial, and why not", () => {
+    const h = inspector("obs-fader-dial.html");
+    const base = { status: { kind: "connected" }, catalog: { studioMode: true } };
+    h.render({ target: "tbar" }, { ...base, nativeTbar: "following" });
+    expect(h.text("obs-fader-slider-status")).toBe("OBS's on-screen T-bar moves with this dial.");
+    h.render({ target: "tbar" }, { ...base, nativeTbar: "unreachable" });
+    expect(h.text("obs-fader-slider-status")).toContain("not minimised");
+    expect(h.text("obs-fader-slider-status")).toContain("Fading still works.");
+    h.render({ target: "tbar" }, { ...base, nativeTbar: "transition" });
+    expect(h.text("obs-fader-slider-status")).toContain("Fade transition");
+    h.render({ target: "tbar" }, { ...base, nativeTbar: "off" });
+    expect(h.text("obs-fader-slider-status")).toBe("");
+    h.render({ target: "input_volume" }, { ...base, nativeTbar: "following" });
+    expect(h.text("obs-fader-slider-status")).toBe("");
+  });
+
   it("distinguishes loaded empty scenes, removed selections, and fixed targets", () => {
     const h = inspector("obs-layer-control.html");
     const scene = { layers: [] as Array<{ sceneItemId: number; sourceName: string }>, selectedId: -1 };

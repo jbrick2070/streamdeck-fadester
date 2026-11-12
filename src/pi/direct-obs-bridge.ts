@@ -174,6 +174,8 @@ export class DirectObsPropertyInspectorBridge {
         passwordSet: settings.password.length > 0
       },
       catalog,
+      // Whether OBS's own slider follows the T-bar dial, or why not (the OBS Fader inspector's status line).
+      nativeTbar: this.client.getNativeTbarStatus?.() ?? "off",
       wholeMix: this.client.wholeMix?.state,
       // Whether this OBS offers the media requests (the Playlister inspector's compatibility banner).
       mediaCapability: this.client.getMediaCapability(),
@@ -198,6 +200,7 @@ export class DirectObsPropertyInspectorBridge {
     switch (msg.event) {
       case "directPiReady":
         this.broadcast();
+        void this.client.refreshNativeTbar?.(); // an opened inspector reads OBS's slider afresh
         return true;
       case "directUpdateGlobalSettings":
         await this.queueConnection(() => this.updateGlobalSettings(msg));

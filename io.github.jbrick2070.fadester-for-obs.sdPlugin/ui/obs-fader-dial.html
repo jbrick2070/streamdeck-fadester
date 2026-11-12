@@ -26,6 +26,7 @@
     <button id="obs-fader-refresh" class="btn secondary" type="button" data-i18n="refresh">Refresh</button>
   </div>
   <p id="obs-fader-tbar-hint" class="muted" style="display:none;">Turn to move from LIVE to NEXT. NEXT is the scene in OBS Preview. This manual transition control (T-bar) needs Studio Mode.</p>
+  <p id="obs-fader-slider-status" class="muted" style="display:none;"></p>
   <div id="obs-fader-cycle-row" style="display:none;">
     <div class="row"><label for="obs-fader-cycle" data-i18n="sceneLoop">Scene loop</label><input id="obs-fader-cycle" type="checkbox" /><span class="hint" data-i18n="sceneLoopHint">Queue the next scene after each transition</span></div>
     <p class="muted" data-i18n="sceneLoopNote">After your fade finishes, the following scene in the OBS scene list becomes NEXT. Wraps to the first scene at the end. You still control every fade with the dial.</p>
@@ -141,6 +142,16 @@
         if (row) row.style.display = selectedTarget === "all_inputs" ? "none" : "";
       });
       if (tbarHint) tbarHint.style.display = selectedTarget === "tbar" ? "" : "none";
+      const sliderStatus = document.getElementById("obs-fader-slider-status");
+      const sliderKeys = {
+        following: "sliderFollowing", notWindows: "sliderNotWindows", remote: "sliderRemote", version: "sliderVersion",
+        transition: "sliderTransition", unreachable: "sliderUnreachable", unavailable: "sliderUnavailable"
+      };
+      const sliderKey = selectedTarget === "tbar" && state ? sliderKeys[state.nativeTbar] : undefined;
+      if (sliderStatus) {
+        sliderStatus.textContent = sliderKey ? T(sliderKey) : "";
+        sliderStatus.style.display = sliderKey ? "" : "none";
+      }
       if (cycleRow) cycleRow.style.display = selectedTarget === "tbar" ? "" : "none";
       if (cycle) cycle.checked = settings.autoQueueNextScene === true;
       if (banner) {

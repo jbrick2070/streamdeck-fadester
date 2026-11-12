@@ -16,6 +16,8 @@ import {
   NativeTbar,
   NativeTbarHelper,
   NativeTbarRefusal,
+  NativeTbarTimeout,
+  nativeTbarBlocker,
   nativeTbarEligible,
   nativeTick
 } from "./native-tbar.js";
@@ -276,6 +278,13 @@ export type DirectObsClientOptions = Pick<
 };
 
 /** A throw that moves OBS's real slider: the scenes it started between and where the slider was last put. */
+/**
+ * What the dial's settings page says about OBS's own slider: it follows the dial, or why not. "off" says nothing (not
+ * connected, Studio Mode off, or not found out yet); the page has its own banners for those.
+ */
+export type NativeTbarStatus =
+  | "following" | "notWindows" | "remote" | "version" | "transition" | "unreachable" | "unavailable" | "off";
+
 interface NativeThrow {
   live: string;
   next: string;
@@ -386,6 +395,10 @@ export class DirectObsClient extends ObsVendorClient {
   private native: NativeTbar | null = null;
   private nativeTried = false;
   private nativeThrow: NativeThrow | null = null;
+  /** What the helper last found: OBS's slider read, refused (window closed or minimised, OBS as administrator), or no helper. */
+  private nativeReach: "unknown" | "following" | "unreachable" | "unavailable" = "unknown";
+  /** The selected transition's kind, as last read: OBS's slider mixes only with a Fade. */
+  private transitionKind = "";
 
   public constructor(
     initialSettings?: FadesterGlobalSettings,
@@ -414,6 +427,7 @@ export class DirectObsClient extends ObsVendorClient {
         this.filterDefaults.clear();
         this.endNative();
         this.obsVersion = "";
+        this.transitionKind = "";
         // OBS may have restarted or been moved by hand meanwhile: the next throw starts from rest.
         this.catalog.tbarPosition = 0;
         this.invalidateMediaTargets();
@@ -790,13 +804,51 @@ export class DirectObsClient extends ObsVendorClient {
     return this.native;
   }
 
+  /** For the dial's settings page: whether OBS's own slider follows the dial, or why not. */
+  public getNativeTbarStatus(): NativeTbarStatus {
+    if (this.nativeOption === false || !this.isConnected() || !this.catalog.studioMode) return "off";
+    const blocker = nativeTbarBlocker(this.nativePlatform, this.settings.host, this.obsVersion);
+    if (blocker) return blocker;
+    if (this.nativeReach === "unavailable") return "unavailable";
+    if (this.transitionKind && this.transitionKind !== "fade_transition") return "transition";
+    return this.nativeReach === "unknown" ? "off" : this.nativeReach;
+  }
+
   /**
-   * Starts the helper and finds OBS's slider before the first dial turn, so that a first start (or a virus scan of it)
-   * never holds up a fade. Anything it cannot reach now is found again on the turn itself.
+   * Finds out, without moving anything, whether OBS's own slider can follow the dial now: starts the helper and reads
+   * the slider before the first turn (so a first start, or a virus scan of it, never holds up a fade), and reads the
+   * selected transition. The settings page shows the result; anything out of reach now is tried again on the turn.
    */
-  private warmNative(): void {
-    if (!this.catalog.studioMode) return;
-    void this.nativeSlider()?.read().catch(() => undefined);
+  public async refreshNativeTbar(): Promise<void> {
+    if (!this.isConnected() || !this.catalog.studioMode) return;
+    const connection = this.connectionGeneration;
+    const before = this.getNativeTbarStatus();
+    try {
+      const native = this.nativeSlider();
+      if (native) {
+        try {
+          await native.read();
+          if (connection === this.connectionGeneration) this.nativeReach = "following";
+        } catch (error) {
+          if (connection === this.connectionGeneration) this.noteNativeFailure(error);
+        }
+      } else if (this.nativeOption !== false && nativeTbarEligible(this.nativePlatform, this.settings.host, this.obsVersion)) {
+        this.nativeReach = "unavailable"; // the helper is not in the plugin
+      }
+      const kind = (await this.sendObsRequest("GetCurrentSceneTransition")).transitionKind;
+      if (connection === this.connectionGeneration) this.transitionKind = typeof kind === "string" ? kind : "";
+    } catch {
+      // OBS went away or does not know the request: the status keeps what it had
+    }
+    if (connection === this.connectionGeneration && this.getNativeTbarStatus() !== before) this.emitDirectState();
+  }
+
+  /**
+   * A refusal wrote nothing: the helper runs but cannot reach the slider. A helper that did not answer in time says
+   * nothing yet (a slow first start); anything else means the helper itself would not run.
+   */
+  private noteNativeFailure(error: unknown): void {
+    this.nativeReach = error instanceof NativeTbarRefusal ? "unreachable" : error instanceof NativeTbarTimeout ? "unknown" : "unavailable";
   }
 
   /** Ends the helper and any throw it was driving: the next connection finds OBS again. */
@@ -805,6 +857,7 @@ export class DirectObsClient extends ObsVendorClient {
     this.native?.close();
     this.native = null;
     this.nativeTried = false;
+    this.nativeReach = "unknown";
   }
 
   private abandonNativeThrow(): void {
@@ -860,11 +913,15 @@ export class DirectObsClient extends ObsVendorClient {
       return false; // an OBS without these requests keeps the obs-websocket throw
     }
     this.requireControlGeneration(generation);
+    this.transitionKind = typeof kind === "string" ? kind : this.transitionKind;
     if (kind !== "fade_transition" || (cursor !== 0 && cursor !== 1)) return false;
     try {
-      if (nativeTick(await native.read()) !== 0) return false;
-    } catch {
-      return false; // the helper cannot reach OBS's slider now (window closed or minimised, OBS as administrator)
+      const tick = nativeTick(await native.read());
+      this.nativeReach = "following";
+      if (tick !== 0) return false;
+    } catch (error) {
+      this.noteNativeFailure(error); // the helper cannot reach OBS's slider now (window closed or minimised, OBS as administrator)
+      return false;
     }
     this.nativeThrow = { live, next, at: 0, started: false };
     return true;
@@ -1339,7 +1396,7 @@ export class DirectObsClient extends ObsVendorClient {
       });
       ready = true;
       this.emitDirectState();
-      this.warmNative();
+      void this.refreshNativeTbar();
       // Every completed (re)connection, also one whose status did not change.
       this.emit("connectionReady");
     } catch (err) {
@@ -1475,7 +1532,7 @@ export class DirectObsClient extends ObsVendorClient {
       this.nativeThrow = null;
       if (!this.catalog.studioMode) this.cancelSceneCycle();
       else {
-        this.warmNative();
+        void this.refreshNativeTbar();
         // A previous Preview value may be stale after Studio Mode was off.
         // Clear it until OBS supplies the current value again.
         this.catalogEventRevisions.preview++;
@@ -1492,6 +1549,7 @@ export class DirectObsClient extends ObsVendorClient {
         if (this.sceneCycle && eventData.transitionName !== this.sceneCycle.transition) this.cancelSceneCycle();
         this.catalog.currentTransition = eventData.transitionName;
         this.emitDirectState();
+        void this.refreshNativeTbar(); // the settings page says whether OBS's slider can follow this transition
       }
       return;
     }

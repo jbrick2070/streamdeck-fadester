@@ -1,9 +1,12 @@
 param([Parameter(Mandatory=$true)][string]$OutputPath)
 $ErrorActionPreference = 'Stop'
 $finder = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
-if (!(Test-Path -LiteralPath $finder)) { throw 'Install Visual Studio 2022 Build Tools with Desktop development with C++ and a Windows SDK.' }
-$msbuild = & $finder -latest -products '*' -version '[17.0,18.0)' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -find 'MSBuild\Current\Bin\MSBuild.exe' | Select-Object -First 1
-if (!$msbuild) { throw 'MSVC v143 x64 build tools and a Windows SDK are required to build the native slider.' }
+if (!(Test-Path -LiteralPath $finder)) { throw 'Install Visual Studio 2022 or later Build Tools with Desktop development with C++ and a Windows SDK.' }
+$msbuild = & $finder -latest -products '*' -version '[17.0,)' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -find 'MSBuild\Current\Bin\MSBuild.exe' | Select-Object -First 1
+if (!$msbuild) {
+    $found = (& $finder -all -products '*' -property installationVersion) -join ', '
+    throw "Visual Studio 2022 or later with the MSVC x64 build tools and a Windows SDK is required to build the native slider (found: $found)."
+}
 $destination = [IO.Path]::GetFullPath($OutputPath)
 $tempRoot = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\')
 $stage = Join-Path $tempRoot ('fadester-native-build-' + [guid]::NewGuid().ToString('N'))

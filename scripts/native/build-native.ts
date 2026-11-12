@@ -31,7 +31,7 @@ export function buildNative(required = process.env.FADESTER_REQUIRE_NATIVE === "
     { stdio: "inherit", windowsHide: true }
   );
   if (result.status !== 0 || !existsSync(NATIVE_HELPER)) {
-    const why = "Windows T-bar helper: build failed (needs Visual Studio 2022 Build Tools with C++ and a Windows SDK).";
+    const why = "Windows T-bar helper: build failed (needs Visual Studio 2022 or later with C++ and a Windows SDK).";
     if (required) throw new Error(why);
     console.warn(`${why} The plugin keeps the obs-websocket T-bar.`);
     return false;

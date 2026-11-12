@@ -144,7 +144,7 @@
       });
       if (tbarHint) tbarHint.style.display = selectedTarget === "tbar" ? "" : "none";
       const midiTip = document.getElementById("obs-fader-midi-tip");
-      if (midiTip) midiTip.style.display = selectedTarget === "tbar" ? "" : "none";
+      if (midiTip) midiTip.style.display = selectedTarget === "tbar" && (!state || state.nativeTbar !== "following") ? "" : "none";
       const sliderStatus = document.getElementById("obs-fader-slider-status");
       const sliderKeys = {
         following: "sliderFollowing", notWindows: "sliderNotWindows", remote: "sliderRemote", version: "sliderVersion",

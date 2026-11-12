@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { stageKoffi } from "../scripts/native/stage-koffi.mjs";
 import { checkPortablePlugin } from "../scripts/suite/package-candidate.js";
 
 const temps: string[] = [];
@@ -51,5 +52,26 @@ describe("one Stream Deck package for Windows and macOS", () => {
 
   it("does not accept a separate Windows executable override", () => {
     expect(() => checkPortablePlugin(fixture({ CodePathWin: "bin/helper.exe" }))).toThrow(/shared Node/);
+  });
+
+  it("stages locked koffi win32-x64 and win32-arm64 binaries cleanly on any host OS without legacy exe helpers", () => {
+    const path = fixture();
+    const binDir = join(path, "bin");
+    mkdirSync(join(binDir, "native"), { recursive: true });
+    writeFileSync(join(binDir, "native", "FadesterNativeSlider.exe"), "legacy");
+    const staged = stageKoffi(undefined, binDir);
+    expect(existsSync(join(binDir, "native"))).toBe(false);
+    const x64Node = join(binDir, "node_modules", "koffi", "build", "koffi", "win32_x64", "koffi.node");
+    const arm64Node = join(binDir, "node_modules", "koffi", "build", "koffi", "win32_arm64", "koffi.node");
+    expect(staged).toEqual({
+      koffiDir: join(binDir, "node_modules", "koffi"),
+      win32X64Node: x64Node,
+      win32Arm64Node: arm64Node
+    });
+    expect(statSync(x64Node).size).toBeGreaterThan(100_000);
+    expect(statSync(arm64Node).size).toBeGreaterThan(100_000);
+    expect(existsSync(join(binDir, "node_modules", "koffi", "index.js"))).toBe(true);
+    expect(existsSync(join(binDir, "node_modules", "koffi", "LICENSE.txt"))).toBe(true);
+    expect(checkPortablePlugin(path).CodePath).toBe("bin/plugin.js");
   });
 });

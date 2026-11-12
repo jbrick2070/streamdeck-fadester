@@ -267,6 +267,7 @@ describe("Step 1.1 — Manifest, Layout, Icons & Repository Hygiene", () => {
 
       if (
         file.endsWith(".ts") ||
+        file.endsWith(".mts") ||
         file.endsWith(".js") ||
         file.endsWith(".mjs") ||
         file.endsWith(".css") ||

@@ -24,6 +24,7 @@ function inspector(file: string) {
   });
   return { render: (settings: Record<string, unknown>, state: Record<string, unknown>) => render(settings, (patch) => saved.push(patch), state),
     text: (id: string) => elements.get(id)!.textContent,
+    display: (id: string) => elements.get(id)!.style.display,
     value: (id: string) => elements.get(id)!.value,
     change: (id: string, value: string) => { const element = elements.get(id)!; element.value = value; element.onchange?.(); }, saved };
 }
@@ -66,15 +67,20 @@ describe("direct inspector feedback", () => {
     const base = { status: { kind: "connected" }, catalog: { studioMode: true } };
     h.render({ target: "tbar" }, { ...base, nativeTbar: "following" });
     expect(h.text("obs-fader-slider-status")).toBe("OBS's on-screen T-bar moves with this dial.");
+    expect(h.display("obs-fader-midi-tip")).toBe("none");
     h.render({ target: "tbar" }, { ...base, nativeTbar: "unreachable" });
     expect(h.text("obs-fader-slider-status")).toContain("not minimised");
     expect(h.text("obs-fader-slider-status")).toContain("Fading still works.");
+    expect(h.display("obs-fader-midi-tip")).toBe("");
     h.render({ target: "tbar" }, { ...base, nativeTbar: "transition" });
     expect(h.text("obs-fader-slider-status")).toContain("Fade transition");
+    expect(h.display("obs-fader-midi-tip")).toBe("");
     h.render({ target: "tbar" }, { ...base, nativeTbar: "off" });
     expect(h.text("obs-fader-slider-status")).toBe("");
+    expect(h.display("obs-fader-midi-tip")).toBe("");
     h.render({ target: "input_volume" }, { ...base, nativeTbar: "following" });
     expect(h.text("obs-fader-slider-status")).toBe("");
+    expect(h.display("obs-fader-midi-tip")).toBe("none");
   });
 
   it("distinguishes loaded empty scenes, removed selections, and fixed targets", () => {

@@ -32,7 +32,8 @@
     "build:native": "node --import tsx scripts/native/build-native.ts"
   },
   "dependencies": {
-    "@elgato/streamdeck": "3.0.3"
+    "@elgato/streamdeck": "3.0.3",
+    "koffi": "3.3.7"
   },
   "devDependencies": {
     "@elgato/cli": "1.10.3",

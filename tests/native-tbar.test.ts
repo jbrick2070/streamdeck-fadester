@@ -1,20 +1,30 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The bundled T-bar helper's driver (src/obs/native-tbar.ts) and the dial's throws on OBS's real slider
 // (direct-obs-client.ts), against a stand-in helper and the fake OBS's model of OBS 33's T-bar widget.
+import { EventEmitter } from "node:events";
+import { cpSync, mkdtempSync, rmSync } from "node:fs";
+import { createServer, type Server } from "node:net";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fileURLToPath } from "node:url";
 import { DirectObsClient, TBAR_SETTLE_MS } from "../src/obs/direct-obs-client.js";
 import { DirectObsPropertyInspectorBridge } from "../src/pi/direct-obs-bridge.js";
 import {
+  builtUiaWorkerPath,
   NativeTbar,
   NativeTbarHelper,
   NativeTbarRefusal,
   NativeTbarTimeout,
+  NativeTbarUia,
+  NativeTbarUnavailable,
   NativeTbarUncertain,
   nativeTbarBlocker,
   nativeTbarEligible,
-  nativeTick
+  nativeTick,
+  UiaWorkerLike
 } from "../src/obs/native-tbar.js";
+import type { UiaWorkerRequest } from "../src/obs/uia/uia-worker.js";
 import { FakeObsServer } from "./helpers/fake-obs-server.js";
 
 const FAKE_HELPER = fileURLToPath(new URL("./helpers/fake-native-slider.mjs", import.meta.url));
@@ -136,10 +146,12 @@ describe("dial throws on OBS's real slider", () => {
   let server: FakeObsServer;
   let client: DirectObsClient;
   let native: FakeNative;
+  let obsPort = 0;
 
   async function connect(options: { native?: boolean; missing?: boolean; version?: string; host?: string } = {}): Promise<void> {
     server = new FakeObsServer({ obsVersion: options.version ?? "33.0.1" });
     const port = await server.start();
+    obsPort = port;
     native = new FakeNative(server);
     client = new DirectObsClient(
       { host: options.host ?? "127.0.0.1", port, password: "" },
@@ -434,5 +446,543 @@ describe("dial throws on OBS's real slider", () => {
     server.setStudioModeExternally(false);
     server.setStudioModeExternally(true);
     await vi.waitFor(() => expect(client.getCatalog().tbarPosition).toBe(0), { timeout: 3000 });
+  });
+
+  it("holds a mid-fade blend open on OBS's slider, reverses cleanly, and completes or cancels on command", async () => {
+    await connect();
+    const live = client.getCatalog().currentProgramScene;
+    const next = client.getCatalog().currentPreviewScene;
+    await client.nudgeTbar(0.45);
+    expect(server.nativeSlider).toBe(nativeTick(0.45));
+    expect(server.manualTransitionActive).toBe(true);
+    await new Promise((resolve) => setTimeout(resolve, 120)); // hold mid-fade
+    expect(server.manualTransitionActive).toBe(true);
+    await client.nudgeTbar(-0.2); // reverse part-way
+    expect(server.nativeSlider).toBe(nativeTick(0.25));
+    expect(client.getTbarScenes()).toEqual({ live, next });
+    await client.nudgeTbar(-0.24); // into cancel rail (<= 3 %)
+    expect(server.manualTransitionActive).toBe(false);
+    expect(server.programSceneName).toBe(live);
+    expect(tbarWrites()).toEqual([{ position: 0, release: true }]);
+
+    await rest();
+    await client.nudgeTbar(0.6);
+    await client.nudgeTbar(-0.3);
+    expect(server.nativeSlider).toBe(nativeTick(0.3));
+    await client.nudgeTbar(0.7); // reverse forward to finish
+    expect(server.manualTransitionActive).toBe(false);
+    expect(server.programSceneName).toBe(next);
+    expect(tbarWrites()).toEqual([{ position: 0, release: true }, { position: 1, release: true }]);
+    expect(server.directCallLog.some((call) => call.requestType === "SetStudioModeEnabled")).toBe(false);
+  });
+
+  it("coalesces 200 rapid encoder ticks while one UIA write is slow into <= 1 in flight + 1 pending, keeping reversals and latched endpoints", async () => {
+    await connect();
+    const origMove = native.move.bind(native);
+    let inFlight = 0;
+    let maxInFlight = 0;
+    native.move = async (from: number, to: number): Promise<number> => {
+      inFlight++;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 35));
+        return await origMove(from, to);
+      } finally {
+        inFlight--;
+      }
+    };
+
+    // 100 forward ticks (+0.005 = +0.50) then 40 reverse ticks (-0.005 = -0.20) => net 0.30
+    const burst: Promise<number>[] = [];
+    for (let i = 0; i < 100; i++) burst.push(client.nudgeTbar(0.005));
+    for (let i = 0; i < 40; i++) burst.push(client.nudgeTbar(-0.005));
+    await Promise.all(burst);
+    expect(maxInFlight).toBe(1);
+    expect(native.moves.length).toBeLessThanOrEqual(3);
+    expect(server.nativeSlider).toBe(nativeTick(0.3));
+
+    // Now burst past finish (+0.70 => 1.00) followed by bounce ticks (-0.05) and extra take ticks (+0.20):
+    // latched take must still win and emit SetTBarPosition release:true once!
+    const finishBurst: Promise<number>[] = [
+      client.nudgeTbar(0.1),
+      client.nudgeTbar(0.65),
+      client.nudgeTbar(-0.05),
+      client.nudgeTbar(0.2),
+      client.nudgeTbar(0.2)
+    ];
+    await Promise.all(finishBurst);
+    expect(maxInFlight).toBe(1);
+    expect(server.manualTransitionActive).toBe(false);
+    expect(tbarWrites()).toEqual([{ position: 1, release: true }]);
+  });
+
+  it("pins the chosen backend for the entire throw and never switches from toggle to native mid-throw", async () => {
+    await connect();
+    native.refuseReads = true; // UIA unavailable at rest => throw pins to "toggle"
+    await client.nudgeTbar(0.25);
+    expect(native.moves).toEqual([]);
+    expect(tbarWrites()).toEqual([{ position: 0.25, release: false }]);
+
+    native.refuseReads = false; // OBS window restored mid-throw!
+    await client.nudgeTbar(0.25);
+    expect(native.moves).toEqual([]); // still pinned to "toggle" for this throw
+    expect(tbarWrites()).toEqual([{ position: 0.25, release: false }, { position: 0.5, release: false }]);
+    await client.takeTbar();
+    expect(native.moves).toEqual([]);
+    expect(server.directCallLog.some((call) => call.requestType === "SetStudioModeEnabled")).toBe(true);
+
+    // Next throw from rest picks up native cleanly!
+    await rest();
+    await client.nudgeTbar(0.3);
+    expect(server.nativeSlider).toBe(nativeTick(0.3));
+  });
+
+  it("closes an open fade automatically via reconciliation read + release when a mid-fade step times out transiently", async () => {
+    await connect();
+    const live = client.getCatalog().currentProgramScene;
+    await client.nudgeTbar(0.4);
+    expect(server.manualTransitionActive).toBe(true);
+
+    const origMove = native.move.bind(native);
+    let failOnce = true;
+    native.move = async (from: number, to: number): Promise<number> => {
+      if (failOnce) {
+        failOnce = false;
+        server.moveNativeSlider(512); // write landed late on OBS's slider
+        throw new NativeTbarTimeout("UIA call exceeded 80 ms");
+      }
+      return origMove(from, to);
+    };
+
+    await client.nudgeTbar(0.1);
+    expect(server.manualTransitionActive).toBe(false);
+    expect(server.programSceneName).toBe(live); // reconciled back to 0 and released cleanly
+    expect(tbarWrites()).toEqual([{ position: 0, release: true }]);
+    expect(server.directCallLog.some((call) => call.requestType === "SetStudioModeEnabled")).toBe(false);
+    expect(client.getCatalog().tbarPosition).toBe(0);
+  });
+
+  it("falls back to the Studio Mode toggle take when the UIA backend dies mid-fade with the slider stuck mid-range, never leaving Transition locked", async () => {
+    await connect();
+    const live = client.getCatalog().currentProgramScene;
+    const next = client.getCatalog().currentPreviewScene;
+    await client.nudgeTbar(0.45);
+    expect(server.manualTransitionActive).toBe(true);
+    expect(server.nativeSlider).toBe(nativeTick(0.45));
+
+    // OBS is minimised mid-fade: UIA can neither move nor read the slider, and slider is stuck at ~460 (in 103..920)
+    native.refuseReads = true;
+    native.move = async () => {
+      throw new NativeTbarRefusal("The main OBS window is minimised.", "minimised");
+    };
+
+    await client.nudgeTbar(0.15);
+    expect(server.manualTransitionActive).toBe(false); // Transition button is NOT locked!
+    expect(server.programSceneName).toBe(next);
+    expect(server.previewSceneName).toBe(live);
+    expect(client.getCatalog().tbarPosition).toBe(0);
+    expect(client.getNativeTbarStatus()).toBe("unreachable");
+  });
+
+  it("finishes a native fade when Preview changes mid-throw and preserves the newly cued Preview scene", async () => {
+    await connect();
+    const next = client.getCatalog().currentPreviewScene;
+    await client.nudgeTbar(0.3);
+    server.previewSceneName = "Scene 3";
+    server.emitObsEvent("CurrentPreviewSceneChanged", { sceneName: "Scene 3" });
+    await vi.waitFor(() => expect(client.getCatalog().currentPreviewScene).toBe("Scene 3"), { timeout: 3000 });
+    await client.nudgeTbar(0.7); // finish on native slider
+    expect(server.programSceneName).toBe(next);
+    expect(server.previewSceneName).toBe("Scene 3");
+    expect(server.manualTransitionActive).toBe(false);
+    expect(server.directCallLog.some((call) => call.requestType === "SetStudioModeEnabled")).toBe(false);
+  });
+
+  it("invalidates cached UIA handles when Studio Mode turns off and on", async () => {
+    await connect();
+    let invalidated = 0;
+    (native as NativeTbar).invalidate = () => {
+      invalidated++;
+    };
+    server.setStudioModeExternally(false);
+    server.setStudioModeExternally(true);
+    await vi.waitFor(() => expect(invalidated).toBeGreaterThanOrEqual(2), { timeout: 3000 });
+  });
+
+  it("picks up an open real-slider fade after a mid-fade plugin restart and finishes or cancels it without leaving Studio Mode", async () => {
+    await connect();
+    const live = client.getCatalog().currentProgramScene;
+    const next = client.getCatalog().currentPreviewScene;
+    await client.nudgeTbar(0.4);
+    expect(server.manualTransitionActive).toBe(true);
+    expect(server.nativeSlider).toBe(nativeTick(0.4));
+
+    // Simulate plugin restart while OBS still holds the real slider at ~409
+    const port = obsPort;
+    client.stop();
+    const native2 = new FakeNative(server);
+    client = new DirectObsClient(
+      { host: "127.0.0.1", port, password: "" },
+      { nativeTbar: () => native2, nativePlatform: "win32" }
+    );
+    client.start();
+    await vi.waitFor(() => expect(client.getStatus().kind).toBe("connected"), { timeout: 3000 });
+    await vi.waitFor(() => expect(client.getCatalog().tbarPosition).toBeCloseTo(0.4, 1), { timeout: 3000 });
+
+    // Cancel the picked-up real-slider fade back to Live!
+    await client.nudgeTbar(-0.5);
+    expect(server.manualTransitionActive).toBe(false);
+    expect(server.nativeSlider).toBe(0);
+    expect(server.programSceneName).toBe(live);
+    expect(server.previewSceneName).toBe(next);
+    expect(server.directCallLog.some((call) => call.requestType === "SetStudioModeEnabled")).toBe(false);
+  });
+
+  it("never triggers a fallback Studio Mode toggle take when OBS's resting transition cursor is 1.0 after an ended fade", async () => {
+    await connect();
+    const live = client.getCatalog().currentProgramScene;
+    const next = client.getCatalog().currentPreviewScene;
+    await client.nudgeTbar(0.3);
+    expect(server.manualTransitionActive).toBe(true);
+
+    // Suppose OBS finishes or cancels externally and rests at cursor === 1.0 (as OBS 33 does after a completed transition),
+    // and then the OBS window is minimised right before the next dial tick.
+    server.manualTransitionActive = false;
+    server.nativeSlider = 0;
+    server.programSceneName = live;
+    server.previewSceneName = next;
+    server.cursorScript = [1.0, 1.0];
+    native.move = async () => {
+      throw new NativeTbarRefusal("The main OBS window is minimised.", "minimised");
+    };
+
+    await client.nudgeTbar(0.2);
+    expect(server.directCallLog.some((call) => call.requestType === "SetStudioModeEnabled")).toBe(false);
+    expect(server.programSceneName).toBe(live);
+    expect(client.getCatalog().tbarPosition).toBe(0);
+    expect(client.getNativeTbarStatus()).toBe("unreachable");
+  });
+
+  it("drops coalesced nudges queued before an explicit cancel so they cannot reopen a cancelled fade", async () => {
+    await connect();
+    let releaseFirstMove!: () => void;
+    const firstMoveGate = new Promise<void>((res) => {
+      releaseFirstMove = res;
+    });
+    const origMove = native.move.bind(native);
+    let gated = true;
+    native.move = async (from: number, to: number) => {
+      if (gated) {
+        gated = false;
+        await firstMoveGate;
+      }
+      return origMove(from, to);
+    };
+
+    const p1 = client.nudgeTbar(0.3);
+    await vi.waitFor(() => expect(gated).toBe(false), { timeout: 1000 });
+    const p2 = client.nudgeTbar(0.25); // coalesced while p1 is still in flight
+    const cancel = client.setTbarPosition(0); // explicit cancel must drop p2!
+    releaseFirstMove();
+    await Promise.all([p1, p2, cancel]);
+
+    expect(server.manualTransitionActive).toBe(false);
+    expect(server.nativeSlider).toBe(0);
+    expect(client.getCatalog().tbarPosition).toBe(0);
+  });
+
+  it("evaluates coalesced nudges against the actual T-bar position when an opening step waits out a timed transition", async () => {
+    await connect();
+    // Ensure the post-connect pickUpOpenFade check has drained before scripting the timed transition cursor.
+    await client.nudgeTbar(-0.1);
+    const next = client.getCatalog().currentPreviewScene;
+
+    // OBS reports a timed transition in progress during Step 1 (4 cursor samples across pickUpOpenFadeOrRetry).
+    server.emitObsEvent("SceneTransitionStarted", { transitionName: "Fade" });
+    await new Promise((res) => setTimeout(res, 15));
+    server.cursorScript = [0.2, 0.4, 0.6, 0.8];
+
+    const p1 = client.nudgeTbar(0.25);
+    await new Promise((res) => setTimeout(res, 10));
+    // Queued while p1 is waiting out the timed transition: 0.25 + 0.8 >= 1 would prematurely latch a take if projected
+    // optimistically, whereas actual tbarPosition stays 0 so Step 2 must land at 0.8 instead of taking!
+    const p2 = client.nudgeTbar(0.8);
+    await Promise.all([p1, p2]);
+
+    expect(server.manualTransitionActive).toBe(true);
+    expect(server.nativeSlider).toBe(nativeTick(0.8));
+    expect(client.getCatalog().tbarPosition).toBeCloseTo(0.8, 2);
+    expect(server.tbarCompletionCount).toBe(0);
+    expect(server.programSceneName).not.toBe(next);
+  });
+});
+
+class FakeUiaWorker extends EventEmitter implements UiaWorkerLike {
+  public requests: UiaWorkerRequest[] = [];
+  public terminated = 0;
+  public slider = 0;
+  public mode: "ok" | "admin" | "minimised" | "unavailable" | "uncertain" | "hang" = "ok";
+  private hungRequest: UiaWorkerRequest | null = null;
+
+  public constructor(bootReady = true, bootError = "koffi load failed", bootDelayMs = 0) {
+    super();
+    const fire = (): void => {
+      if (bootReady) this.emit("message", { ready: true });
+      else this.emit("message", { ready: false, message: bootError });
+    };
+    if (bootDelayMs > 0) setTimeout(fire, bootDelayMs);
+    else queueMicrotask(fire);
+  }
+
+  public postMessage(msg: UiaWorkerRequest): void {
+    this.requests.push(msg);
+    if (msg.op === "close" || msg.op === "forget") {
+      queueMicrotask(() => this.emit("message", { seq: msg.seq, generation: msg.generation, status: "ok", value: 0 }));
+      return;
+    }
+    if (this.mode === "hang") {
+      this.hungRequest = msg;
+      return;
+    }
+    queueMicrotask(() => this.respond(msg));
+  }
+
+  public releaseHung(landedValue = this.slider): void {
+    const req = this.hungRequest;
+    this.hungRequest = null;
+    this.slider = landedValue;
+    if (req) {
+      this.emit("message", { seq: req.seq, generation: req.generation, status: "ok", value: landedValue });
+    }
+  }
+
+  private respond(msg: UiaWorkerRequest): void {
+    if (this.mode === "admin") {
+      this.emit("message", { seq: msg.seq, generation: msg.generation, status: "refusal", message: "OBS is running as administrator.", reason: "admin" });
+      return;
+    }
+    if (this.mode === "minimised") {
+      this.emit("message", { seq: msg.seq, generation: msg.generation, status: "refusal", message: "The main OBS window is minimised.", reason: "minimised" });
+      return;
+    }
+    if (this.mode === "unavailable") {
+      this.emit("message", { seq: msg.seq, generation: msg.generation, status: "refusal", message: "COM UIA2 missing", reason: "unavailable" });
+      return;
+    }
+    if (this.mode === "uncertain") {
+      this.emit("message", { seq: msg.seq, generation: msg.generation, status: "uncertain", message: "SetValue unconfirmed" });
+      return;
+    }
+    if (msg.op === "read") {
+      this.emit("message", { seq: msg.seq, generation: msg.generation, status: "ok", value: this.slider });
+      return;
+    }
+    if (msg.op === "move") {
+      if (this.slider !== msg.expected) {
+        this.emit("message", { seq: msg.seq, generation: msg.generation, status: "refusal", message: `T-bar moved; actual ${this.slider}`, reason: "moved" });
+        return;
+      }
+      this.slider = msg.desired ?? 0;
+      this.emit("message", { seq: msg.seq, generation: msg.generation, status: "ok", value: this.slider });
+    }
+  }
+
+  public async terminate(): Promise<number> {
+    this.terminated++;
+    return 0;
+  }
+}
+
+describe("NativeTbarUia worker adapter", () => {
+  const adapters: NativeTbarUia[] = [];
+  const tempDirs: string[] = [];
+  const servers: Server[] = [];
+
+  afterEach(async () => {
+    for (const a of adapters.splice(0)) a.close();
+    for (const s of servers.splice(0)) await new Promise<void>((res) => s.close(() => res()));
+    for (const d of tempDirs.splice(0)) rmSync(d, { recursive: true, force: true });
+  });
+
+  it("reads, moves, parks, invalidates, and maps refusal/unavailable/uncertain replies", async () => {
+    let worker!: FakeUiaWorker;
+    const uia = new NativeTbarUia(4455, {
+      workerFactory: () => {
+        worker = new FakeUiaWorker();
+        return worker;
+      }
+    });
+    adapters.push(uia);
+
+    expect(await uia.read()).toBe(0);
+    expect(nativeTick(await uia.move(0, 0.5))).toBe(512);
+    expect(nativeTick(await uia.read())).toBe(512);
+
+    // Park-wait: move(0, 0) polls read until OBS resets slider to 0
+    worker.slider = 512;
+    setTimeout(() => { worker.slider = 0; }, 40);
+    expect(await uia.move(0, 0)).toBe(0);
+
+    // Invalidate queues a forget before the next call
+    uia.invalidate();
+    expect(await uia.read()).toBe(0);
+    expect(worker.requests.some((r) => r.op === "forget")).toBe(true);
+
+    // Uncertain write blocks further moves until a fresh read succeeds
+    worker.mode = "uncertain";
+    await expect(uia.move(0, 0.4)).rejects.toBeInstanceOf(NativeTbarUncertain);
+    worker.mode = "ok";
+    await expect(uia.move(0, 0.4)).rejects.toBeInstanceOf(NativeTbarUncertain);
+    expect(await uia.read()).toBe(0);
+    expect(nativeTick(await uia.move(0, 0.25))).toBe(256);
+
+    // Refusal reasons and unavailable mapping
+    worker.mode = "admin";
+    await expect(uia.read()).rejects.toMatchObject({ reason: "admin" });
+    worker.mode = "unavailable";
+    await expect(uia.read()).rejects.toBeInstanceOf(NativeTbarUnavailable);
+  });
+
+  it("quarantines a timed-out call as busy-tainted without terminating mid-call, drains the late reply, and clears taint only after read()", async () => {
+    let worker!: FakeUiaWorker;
+    const uia = new NativeTbarUia(4455, {
+      callTimeoutMs: 50,
+      taintDrainMs: 400,
+      workerFactory: () => {
+        worker = new FakeUiaWorker();
+        return worker;
+      }
+    });
+    adapters.push(uia);
+
+    expect(await uia.read()).toBe(0);
+    worker.mode = "hang";
+    await expect(uia.move(0, 0.5)).rejects.toBeInstanceOf(NativeTbarTimeout);
+    expect(worker.terminated).toBe(0); // NEVER terminate a COM worker mid-call!
+
+    // Moves are refused while busy-tainted
+    await expect(uia.move(0.5, 1)).rejects.toBeInstanceOf(NativeTbarUncertain);
+
+    // Late reply arrives after 30 ms while reconciliation read() is waiting to drain
+    worker.mode = "ok";
+    setTimeout(() => worker.releaseHung(512), 30);
+    expect(nativeTick(await uia.read())).toBe(512);
+
+    // Taint is now cleared; moves work again
+    expect(await uia.move(512 / 1023, 1)).toBe(1);
+    uia.close();
+    await vi.waitFor(() => expect(worker.terminated).toBe(1), { timeout: 1000 });
+  });
+
+  it("treats mid-call invalidate() as uncertain+tainted for moves, refusal for reads, and flushes forget afterwards", async () => {
+    let worker!: FakeUiaWorker;
+    const uia = new NativeTbarUia(4455, {
+      callTimeoutMs: 500,
+      workerFactory: () => {
+        worker = new FakeUiaWorker();
+        return worker;
+      }
+    });
+    adapters.push(uia);
+
+    expect(await uia.read()).toBe(0);
+    const beforeReadCount = worker.requests.length;
+
+    // Mid-flight read invalidated -> NativeTbarRefusal (not tainted)
+    worker.mode = "hang";
+    const reading = uia.read();
+    await vi.waitFor(() => expect(worker.requests.length).toBe(beforeReadCount + 1), { timeout: 500 });
+    uia.invalidate();
+    worker.releaseHung(0);
+    await expect(reading).rejects.toBeInstanceOf(NativeTbarRefusal);
+
+    // Mid-flight move invalidated -> NativeTbarUncertain + tainted until read()
+    const moving = uia.move(0, 0.5);
+    await vi.waitFor(() => expect(worker.requests.at(-1)?.op).toBe("move"), { timeout: 500 });
+    uia.invalidate();
+    worker.releaseHung(512);
+    await expect(moving).rejects.toBeInstanceOf(NativeTbarUncertain);
+
+    worker.mode = "ok";
+    await expect(uia.move(0.5, 1)).rejects.toBeInstanceOf(NativeTbarUncertain);
+    expect(nativeTick(await uia.read())).toBe(512);
+    expect(worker.requests.some((r) => r.op === "forget")).toBe(true);
+    expect(await uia.move(512 / 1023, 1)).toBe(1);
+  });
+
+  it("survives a transient cold-boot timeout without permanently latching bootFailure or spawning a duplicate worker", async () => {
+    let spawns = 0;
+    let worker!: FakeUiaWorker;
+    const uia = new NativeTbarUia(4455, {
+      bootTimeoutMs: 40,
+      callTimeoutMs: 500,
+      workerFactory: () => {
+        spawns++;
+        worker = new FakeUiaWorker(true, "", 85);
+        return worker;
+      }
+    });
+    adapters.push(uia);
+
+    await expect(uia.read()).rejects.toBeInstanceOf(NativeTbarTimeout);
+    expect(spawns).toBe(1);
+    expect(worker.terminated).toBe(0);
+
+    await new Promise((res) => setTimeout(res, 70));
+    expect(await uia.read()).toBe(0);
+    expect(spawns).toBe(1);
+  });
+
+  it.runIf(process.platform === "win32")("boots the staged uia-worker.js + packaged koffi.node in an isolated folder outside repo node_modules", async () => {
+    const isolated = mkdtempSync(join(tmpdir(), "fadester-staged-uia-"));
+    tempDirs.push(isolated);
+
+    const builtWorker = builtUiaWorkerPath();
+    if (builtWorker) {
+      const builtBinDir = dirname(builtWorker);
+      cpSync(builtWorker, join(isolated, "uia-worker.js"));
+      cpSync(join(builtBinDir, "node_modules", "koffi"), join(isolated, "node_modules", "koffi"), { recursive: true });
+    } else {
+      const [{ rollup }, { default: typescript }, { default: nodeResolve }, { default: commonjs }, { stageKoffi }] = await Promise.all([
+        import("rollup"),
+        import("@rollup/plugin-typescript"),
+        import("@rollup/plugin-node-resolve"),
+        import("@rollup/plugin-commonjs"),
+        import("../scripts/native/stage-koffi.mjs")
+      ]);
+      const bundle = await rollup({
+        input: "src/obs/uia/uia-worker.ts",
+        external: [/^node:/, "koffi"],
+        plugins: [
+          typescript({ tsconfig: "./tsconfig.json", include: ["src/**/*.ts", "packages/**/*.ts"] }),
+          nodeResolve({ browser: false, exportConditions: ["node"], preferBuiltins: true }),
+          commonjs()
+        ]
+      });
+      await bundle.write({
+        file: join(isolated, "uia-worker.js"),
+        format: "esm",
+        inlineDynamicImports: true
+      });
+      await bundle.close();
+      stageKoffi(undefined, isolated);
+    }
+
+    // Listen on an ephemeral local TCP port owned by node.exe so listenerPid + COM IUIAutomation2 run end-to-end
+    // and refuse cleanly because node.exe is not obs64.exe!
+    const srv = createServer();
+    servers.push(srv);
+    await new Promise<void>((res) => srv.listen(0, "127.0.0.1", () => res()));
+    const address = srv.address();
+    const port = typeof address === "object" && address ? address.port : 0;
+    expect(port).toBeGreaterThan(0);
+
+    const uia = new NativeTbarUia(port, {
+      workerPath: join(isolated, "uia-worker.js"),
+      callTimeoutMs: 500
+    });
+    adapters.push(uia);
+
+    await expect(uia.read()).rejects.toThrow(/not the OBS process/i);
   });
 });

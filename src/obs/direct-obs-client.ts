@@ -44,6 +44,12 @@ export const TBAR_SETTLE_MS = 300;
 const PICKUP_SAMPLE_MS = 100;
 /** A take's own Studio Mode events are expected within this time; older counts no longer mask. */
 export const TBAR_STUDIO_EVENT_GRACE_MS = 1500;
+/** The settle window after a take never grows past this, however long the dial keeps spinning. */
+export const TBAR_SETTLE_MAX_MS = 1500;
+/** A moving transition cursor counts as a timed transition only this long after OBS said one started. */
+export const TBAR_TIMED_TRANSITION_MAX_MS = 10_000;
+/** A Scene loop step still pending after this long is stale: it no longer holds the dial. */
+const SCENE_CYCLE_HOLD_MAX_MS = 2000;
 
 export type DirectSceneOperation = "preview" | "cut" | "transition";
 
@@ -380,8 +386,13 @@ export class DirectObsClient extends ObsVendorClient {
   private readonly inputVolumeEventRevisions = new Map<string, number>();
   private sceneCycleGeneration = 0;
   private sceneCycle: {
-    token: number; live: string; next: string; transition: string; started: boolean; ended: boolean;
+    token: number; live: string; next: string; transition: string; started: boolean; ended: boolean; endedAt?: number;
   } | null = null;
+  /** When OBS last said a transition started, 0 once it said it ended (or on a new connection). */
+  private transitionStartedAt = 0;
+  /** The last reason a T-bar turn was refused or ignored, and when, so a spin logs it once. */
+  private lastTbarNote = { reason: "", at: 0 };
+  private tbarSettleCap = 0;
   /** A scene mixer take leaves and re-enters Studio Mode: that many StudioModeStateChanged events are its own. */
   private tbarStudioEventsToIgnore = 0;
   private tbarStudioEventsIgnoreUntil = 0;
@@ -435,6 +446,10 @@ export class DirectObsClient extends ObsVendorClient {
         this.catalogRefreshGeneration++;
         this.cancelAllInputFades();
         this.cancelSceneCycle();
+        this.transitionStartedAt = 0;
+        this.tbarStudioEventsToIgnore = 0;
+        this.tbarSettleUntil = 0;
+        this.tbarSettleCap = 0;
         this.mediaCapability = "unknown";
         this.filterDefaults.clear();
         this.endNative();
@@ -768,10 +783,19 @@ export class DirectObsClient extends ObsVendorClient {
     // After a take the rest of that spin does nothing: every tick in the window opens it again, so the next throw starts
     // only once the dial has rested a moment. OBS's transition settles and the next Preview is prepared meanwhile.
     if (Date.now() < this.tbarSettleUntil) {
-      this.tbarSettleUntil = Date.now() + TBAR_SETTLE_MS;
+      // Never past the cap: a dial that keeps spinning cannot hold the window open for good.
+      this.tbarSettleUntil = Math.min(Date.now() + TBAR_SETTLE_MS, this.tbarSettleCap);
+      this.noteTbarIgnored("settling after a take");
       return this.catalog.tbarPosition;
     }
-    if (this.sceneCycle?.ended) return this.catalog.tbarPosition;
+    if (this.sceneCycle?.ended) {
+      if (Date.now() - (this.sceneCycle.endedAt ?? 0) < SCENE_CYCLE_HOLD_MAX_MS) {
+        this.noteTbarIgnored("Scene loop is preparing the next scene");
+        return this.catalog.tbarPosition;
+      }
+      this.noteTbarIgnored("a stale Scene loop step was dropped");
+      this.cancelSceneCycle();
+    }
     // The end of a throw is a take: OBS 33.0.1 cancels a T-bar released over obs-websocket.
     if (shouldRelease) return this.performTbarTake(queueNextScene, generation);
     // A throw remembers where it goes: a Preview picked mid-throw is for the next fade, not this one.
@@ -1080,6 +1104,7 @@ export class DirectObsClient extends ObsVendorClient {
       this.catalog.currentPreviewScene = previewTarget;
     }
     this.tbarSettleUntil = Date.now() + TBAR_SETTLE_MS;
+    this.tbarSettleCap = Date.now() + TBAR_SETTLE_MAX_MS;
     this.emitDirectState();
     return 0;
   }
@@ -1091,21 +1116,83 @@ export class DirectObsClient extends ObsVendorClient {
    */
   public async nudgeTbar(delta: number, queueNextScene = false): Promise<number> {
     return this.queueTbar(async (generation) => {
-      if (!this.catalog.studioMode) throw new DirectObsError(ownText("errorTbarNeedsStudio"), 400);
-      if (Date.now() < this.tbarSettleUntil) return this.writeTbarPosition(this.catalog.tbarPosition, false, queueNextScene, generation);
-      if (!(await this.pickUpOpenFade(generation))) return this.catalog.tbarPosition; // a timed transition runs: wait
+      if (!this.catalog.studioMode && !(await this.recheckStudioMode(generation))) {
+        this.noteTbarIgnored("Studio Mode is off");
+        throw new DirectObsError(ownText("errorTbarNeedsStudio"), 400);
+      }
+      if (Date.now() < this.tbarSettleUntil) {
+        this.tbarSettleUntil = Math.min(Date.now() + TBAR_SETTLE_MS, this.tbarSettleCap);
+        this.noteTbarIgnored("settling after a take");
+        return this.catalog.tbarPosition;
+      }
+      if (!(await this.pickUpOpenFadeOrRetry(generation))) return this.catalog.tbarPosition; // a timed transition runs: wait
       const position = this.catalog.tbarPosition;
       let next = position + delta;
       if (delta < 0 && next <= TBAR_RAIL) {
-        if (position <= 0) return position; // turning left at rest does nothing
+        if (position <= 0) {
+          this.noteTbarIgnored("turned left at rest");
+          return position; // turning left at rest does nothing
+        }
         next = 0;
       }
       // From rest a throw needs a Next: not the live scene, and not a Preview still being read after Studio Mode came on.
-      if (position <= 0 && (!this.catalog.currentPreviewScene || this.catalog.currentProgramScene === this.catalog.currentPreviewScene)) {
-        throw new DirectObsError(ownText("mixerChooseDifferent"), 409);
+      const noNext = (): boolean =>
+        !this.catalog.currentPreviewScene || this.catalog.currentProgramScene === this.catalog.currentPreviewScene;
+      if (position <= 0 && noNext()) {
+        // What was last heard may be stale (an event missed across a restart): ask OBS once before refusing.
+        await this.refreshCurrentSceneNames();
+        this.requireControlGeneration(generation);
+        this.emitDirectState();
+        if (noNext()) {
+          this.noteTbarIgnored("Live and Next are the same scene");
+          throw new DirectObsError(ownText("mixerChooseDifferent"), 409);
+        }
       }
       return this.writeTbarPosition(next, false, queueNextScene, generation);
     });
+  }
+
+  /** Re-reads Studio Mode (and, when on, Program and Preview) after the dial found it off: true when OBS says it is on. */
+  private async recheckStudioMode(generation: number): Promise<boolean> {
+    const enabled = (await this.sendObsRequest("GetStudioModeEnabled")).studioModeEnabled === true;
+    this.requireControlGeneration(generation);
+    if (!enabled) {
+      this.noteTbarIgnored("Studio Mode is off");
+      return false;
+    }
+    this.catalog.studioMode = true;
+    await this.refreshCurrentSceneNames();
+    this.requireControlGeneration(generation);
+    this.emitDirectState();
+    return true;
+  }
+
+  /** For the dial's own check: Studio Mode as OBS reports it now, not as last heard. */
+  public async confirmStudioMode(): Promise<boolean> {
+    if (this.catalog.studioMode) return true;
+    try {
+      return await this.recheckStudioMode(this.controlGeneration);
+    } catch {
+      return false;
+    }
+  }
+
+  /** One concise log line per refused or ignored turn (a spin with the same reason logs it once a second). */
+  private noteTbarIgnored(reason: string): void {
+    const now = Date.now();
+    if (reason === this.lastTbarNote.reason && now - this.lastTbarNote.at < 1000) return;
+    this.lastTbarNote = { reason, at: now };
+    this.emit("tbarTurnIgnored", reason);
+  }
+
+  /** `pickUpOpenFade`, and once more after re-reading Program and Preview when it says to wait. */
+  private async pickUpOpenFadeOrRetry(generation: number): Promise<boolean> {
+    if (await this.pickUpOpenFade(generation)) return true;
+    await this.refreshCurrentSceneNames();
+    this.requireControlGeneration(generation);
+    if (await this.pickUpOpenFade(generation)) return true;
+    this.noteTbarIgnored("a timed transition is running");
+    return false;
   }
 
   /**
@@ -1127,7 +1214,13 @@ export class DirectObsClient extends ObsVendorClient {
     if (!unchanged()) return true;
     const second = await this.readTransitionCursor(generation);
     if (!(second > 0 && second < 1)) return true; // it ended meanwhile
-    if (Math.abs(second - first) > 0.001) return false;
+    if (Math.abs(second - first) > 0.001) {
+      // A moving cursor is a timed transition only while OBS has said one started and not yet ended. Without that
+      // (a restart lost the Started, or OBS left its cursor drifting after a take), it does not hold the dial.
+      if (this.transitionStartedAt > 0 && Date.now() - this.transitionStartedAt < TBAR_TIMED_TRANSITION_MAX_MS) return false;
+      this.noteTbarIgnored("OBS's transition cursor moves with no transition running: not waiting, the turn goes ahead");
+      return true;
+    }
     const reply = await this.sendObsRequest("GetCurrentProgramScene");
     this.requireControlGeneration(generation);
     const target = String(reply.currentProgramSceneName ?? reply.sceneName ?? "");
@@ -1157,10 +1250,16 @@ export class DirectObsClient extends ObsVendorClient {
   /** Takes Next live: the scene mixer's dial press, and the end of a throw. */
   public async takeTbar(queueNextScene = false): Promise<number> {
     return this.queueTbar(async (generation) => {
-      if (!this.catalog.studioMode) throw new DirectObsError(ownText("errorTbarNeedsStudio"), 400);
+      if (!this.catalog.studioMode && !(await this.recheckStudioMode(generation))) {
+        this.noteTbarIgnored("Studio Mode is off");
+        throw new DirectObsError(ownText("errorTbarNeedsStudio"), 400);
+      }
       // A press in the settle window is the end of the last take, as the trailing ticks are.
-      if (Date.now() < this.tbarSettleUntil) return this.catalog.tbarPosition;
-      if (!(await this.pickUpOpenFade(generation))) return this.catalog.tbarPosition; // a timed transition runs: wait
+      if (Date.now() < this.tbarSettleUntil) {
+        this.noteTbarIgnored("settling after a take");
+        return this.catalog.tbarPosition;
+      }
+      if (!(await this.pickUpOpenFadeOrRetry(generation))) return this.catalog.tbarPosition; // a timed transition runs: wait
       return this.performTbarTake(queueNextScene, generation);
     });
   }
@@ -1265,6 +1364,7 @@ export class DirectObsClient extends ObsVendorClient {
       this.catalog.currentPreviewScene = previewTarget;
     }
     this.tbarSettleUntil = Date.now() + TBAR_SETTLE_MS;
+    this.tbarSettleCap = Date.now() + TBAR_SETTLE_MAX_MS;
     this.emitDirectState();
     return 0;
   }
@@ -1316,6 +1416,7 @@ export class DirectObsClient extends ObsVendorClient {
     const cycle = this.sceneCycle;
     if (!cycle || cycle.ended || transitionName !== cycle.transition) return;
     cycle.ended = true;
+    cycle.endedAt = Date.now();
     void this.tbarQueue.catch(() => {}).then(async () => {
       const task = this.sceneQueue.catch(() => {}).then(async () => {
         if (cycle.token !== this.sceneCycleGeneration || !this.isConnected() || !this.catalog.studioMode) return;
@@ -1532,6 +1633,7 @@ export class DirectObsClient extends ObsVendorClient {
     }
 
     if (eventType === "SceneTransitionStarted") {
+      this.transitionStartedAt = Date.now();
       const cycle = this.sceneCycle;
       if (cycle && !cycle.ended && typeof eventData.transitionName === "string") {
         if (cycle.started) this.cancelSceneCycle();
@@ -1545,6 +1647,7 @@ export class DirectObsClient extends ObsVendorClient {
       return;
     }
     if (eventType === "SceneTransitionEnded") {
+      this.transitionStartedAt = 0;
       this.finishSceneCycle(eventData.transitionName);
       this.forgetTbarIfIdle();
       return;
@@ -1557,6 +1660,7 @@ export class DirectObsClient extends ObsVendorClient {
       this.catalogRefreshGeneration++;
       this.cancelAllInputFades();
       this.cancelSceneCycle();
+      this.transitionStartedAt = 0;
       this.catalog = {
         ...this.catalog, scenes: [], sceneDetails: [], groupDetails: [], inputs: [], inputDetails: [], inputVolumes: {},
         currentProgramScene: "", currentPreviewScene: "", tbarPosition: 0
@@ -1636,8 +1740,10 @@ export class DirectObsClient extends ObsVendorClient {
       // OBS rebuilds its T-bar when Studio Mode turns off and on: a throw in progress is gone.
       this.catalog.tbarPosition = 0;
       this.nativeThrow = null;
-      if (!this.catalog.studioMode) this.cancelSceneCycle();
-      else {
+      if (!this.catalog.studioMode) {
+        this.cancelSceneCycle();
+        this.transitionStartedAt = 0;
+      } else {
         void this.refreshNativeTbar();
         // A previous Preview value may be stale after Studio Mode was off.
         // Clear it until OBS supplies the current value again.

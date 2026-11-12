@@ -118,7 +118,9 @@ describe("the T-bar dial recovers by itself", () => {
   it("waits out a timed transition instead of taking it over", async () => {
     const client = await connect(await start());
     await new Promise((resolve) => setTimeout(resolve, 60)); // the look for an open fade made on connecting is done
-    server.cursorScript = [0.3, 0.5]; // OBS's Transition button: the cursor moves on its own
+    server.emitObsEvent("SceneTransitionStarted", { transitionName: "Fade" }); // OBS's Transition button
+    await vi.waitFor(() => expect((client as unknown as { transitionStartedAt: number }).transitionStartedAt).toBeGreaterThan(0));
+    server.cursorScript = [0.3, 0.5, 0.6, 0.7]; // the cursor moves on its own, also on the second look
     await client.nudgeTbar(0.2);
     expect(server.directCallLog.filter((call) => call.requestType === "SetTBarPosition")).toEqual([]);
     await client.nudgeTbar(0.2); // it has ended: the dial throws as usual
@@ -157,5 +159,58 @@ describe("the T-bar dial recovers by itself", () => {
     await new Promise((resolve) => setTimeout(resolve, TBAR_SETTLE_MS));
     await client.nudgeTbar(0.2);
     expect(server.manualTransitionActive).toBe(true);
+  });
+
+  describe("after a restart, a turn is never ignored quietly", () => {
+    it("moves when OBS's transition cursor drifts with no transition running", async () => {
+      const client = await connect(await start());
+      await new Promise((resolve) => setTimeout(resolve, 60)); // the look for an open fade made on connecting is done
+      const notes: string[] = [];
+      client.on("tbarTurnIgnored", (reason: string) => notes.push(reason));
+      server.cursorScript = [0.31, 0.32, 0.33, 0.34]; // drifting, and OBS never said a transition started
+      await client.nudgeTbar(0.2);
+      expect(server.manualTransitionActive).toBe(true);
+      expect(client.getCatalog().tbarPosition).toBeCloseTo(0.2);
+      expect(notes.some((note) => note.includes("cursor"))).toBe(true);
+    });
+
+    it("re-reads Program and Preview before refusing a throw on a stale Live equals Next", async () => {
+      const client = await connect(await start());
+      pickPreview("Scene Live");
+      await vi.waitFor(() => expect(client.getCatalog().currentPreviewScene).toBe("Scene Live"), { timeout: 3000 });
+      server.previewSceneName = "Scene 3"; // OBS moved on; the event was lost
+      await client.nudgeTbar(0.2);
+      expect(server.manualTransitionActive).toBe(true);
+      expect(client.getTbarScenes()).toEqual({ live: "Scene Live", next: "Scene 3" });
+    });
+
+    it("re-reads Studio Mode before refusing a turn on a stale 'off'", async () => {
+      const client = await connect(await start());
+      (client as unknown as { catalog: { studioMode: boolean } }).catalog.studioMode = false; // a lost event
+      const sink = { setFeedback: vi.fn(async () => {}), showAlert: vi.fn(async () => {}) };
+      const dial = new ObsFaderDialInstanceController(client, sink, { target: "tbar" }, 1);
+      await dial.handleRotate(5);
+      expect(sink.showAlert).not.toHaveBeenCalled();
+      expect(server.manualTransitionActive).toBe(true);
+    });
+
+    it("drops a Scene loop step that never finished instead of holding the dial", async () => {
+      const client = await connect(await start());
+      const internal = client as unknown as { sceneCycle: unknown };
+      internal.sceneCycle = { token: -1, live: "Scene Live", next: "Scene Preview", transition: "Fade", started: true, ended: true, endedAt: Date.now() - 5000 };
+      await client.nudgeTbar(0.2, true);
+      expect(server.manualTransitionActive).toBe(true);
+    });
+
+    it("caps the settle window after a take even while the dial keeps spinning", async () => {
+      const client = await connect(await start());
+      await client.nudgeTbar(1); // a take
+      const until = Date.now() + 1800;
+      while (Date.now() < until) {
+        await client.nudgeTbar(0.05);
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      expect(server.manualTransitionActive).toBe(true); // the spin went on to the next throw
+    });
   });
 });

@@ -27,6 +27,7 @@
   </div>
   <p id="obs-fader-tbar-hint" class="muted" style="display:none;">Turn to move from LIVE to NEXT. NEXT is the scene in OBS Preview. This manual transition control (T-bar) needs Studio Mode.</p>
   <p id="obs-fader-slider-status" class="muted" style="display:none;"></p>
+  <p id="obs-fader-midi-tip" class="muted" style="display:none;" data-i18n="tbarMidiFadesterTip">For a smooth fade with no white flash in OBS's window, install Midi Fadester and use its Midi Fadester Fader dial.</p>
   <div id="obs-fader-cycle-row" style="display:none;">
     <div class="row"><label for="obs-fader-cycle" data-i18n="sceneLoop">Scene loop</label><input id="obs-fader-cycle" type="checkbox" /><span class="hint" data-i18n="sceneLoopHint">Queue the next scene after each transition</span></div>
     <p class="muted" data-i18n="sceneLoopNote">After your fade finishes, the following scene in the OBS scene list becomes NEXT. Wraps to the first scene at the end. You still control every fade with the dial.</p>
@@ -142,6 +143,8 @@
         if (row) row.style.display = selectedTarget === "all_inputs" ? "none" : "";
       });
       if (tbarHint) tbarHint.style.display = selectedTarget === "tbar" ? "" : "none";
+      const midiTip = document.getElementById("obs-fader-midi-tip");
+      if (midiTip) midiTip.style.display = selectedTarget === "tbar" ? "" : "none";
       const sliderStatus = document.getElementById("obs-fader-slider-status");
       const sliderKeys = {
         following: "sliderFollowing", notWindows: "sliderNotWindows", remote: "sliderRemote", version: "sliderVersion",

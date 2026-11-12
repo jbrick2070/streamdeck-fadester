@@ -207,7 +207,8 @@ export class ObsFaderDialInstanceController {
       await this.sink.showAlert();
       return false;
     }
-    if (this.settings.target === "tbar" && !this.client.getCatalog().studioMode) {
+    if (this.settings.target === "tbar" && !this.client.getCatalog().studioMode &&
+      !(await this.client.confirmStudioMode?.())) {
       await this.sink.showAlert();
       return false;
     }

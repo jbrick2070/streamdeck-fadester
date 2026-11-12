@@ -529,6 +529,7 @@
       "sliderTransition": "Elige la transición Desvanecimiento en OBS para ver moverse su T-bar. El fundido sigue funcionando.",
       "sliderUnreachable": "Para ver moverse el T-bar de OBS, mantén abierta la ventana principal de OBS, sin minimizar, y abre OBS de forma normal, no como administrador. El fundido sigue funcionando.",
       "sliderUnavailable": "El asistente de T-bar de Fadester no pudo iniciarse, así que el T-bar de OBS no se mueve. Reinstalar Fadester puede ayudar. El fundido sigue funcionando.",
+      "tbarMidiFadesterTip": "Para un fundido suave sin destello blanco en la ventana de OBS, instala Midi Fadester y usa su dial Midi Fadester Fader.",
       "faderBannerChoose": "Elige qué debe controlar este dial.",
       "layerHeading": "Fuente y capa",
       "layerIntro": "Recorre las fuentes que ya están en tu escena. El deck comparte una fuente elegida por escena hasta que el plugin se reinicie o cambie la colección de escenas. Recorrerlas no cambia el orden de las capas.",

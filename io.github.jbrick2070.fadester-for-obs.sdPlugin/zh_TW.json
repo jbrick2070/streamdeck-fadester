@@ -529,6 +529,7 @@
       "sliderTransition": "請在 OBS 中選擇「淡出」轉場，才能看到 T-bar 移動。旋鈕混合仍可使用。",
       "sliderUnreachable": "若要看到 OBS 視窗中的 T-bar 移動，請保持 OBS 主視窗開啟、不要最小化，並以一般方式（而非系統管理員身分）執行 OBS。旋鈕混合仍可使用。",
       "sliderUnavailable": "Fadester 的 T-bar 助手無法啟動，因此 OBS 視窗中的 T-bar 不會移動。重新安裝 Fadester 可能會有幫助。旋鈕混合仍可使用。",
+      "tbarMidiFadesterTip": "若要在 OBS 視窗中獲得沒有白色閃爍的平滑淡入淡出，請安裝 Midi Fadester 並使用其 Midi Fadester Fader 旋鈕。",
       "faderBannerChoose": "請選擇此旋鈕要控制的內容。",
       "layerHeading": "來源與圖層",
       "layerIntro": "瀏覽場景中既有的來源。在外掛程式重新啟動或場景群組變更之前，Stream Deck 上每個場景共用一個選取的來源。瀏覽不會改變圖層順序。",

@@ -57,6 +57,7 @@ const settingsStore = new GlobalSettingsStore({
 const enhancedClient = new FadesterClient(DEFAULT_GLOBAL_SETTINGS);
 const store = new FadesterStore(enhancedClient);
 const directClient = new DirectObsClient(DEFAULT_GLOBAL_SETTINGS);
+directClient.on("tbarTurnIgnored", (reason: string) => streamDeck.logger.info(`T-bar dial: ${reason}`));
 const layers = new LayerController(directClient);
 // The VJ rig (PLAN.md 10): one filter controller and one panic latch for every control.
 const filters = new FilterController(directClient);

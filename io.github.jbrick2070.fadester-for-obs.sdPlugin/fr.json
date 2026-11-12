@@ -529,6 +529,7 @@
       "sliderTransition": "Choisissez la transition Fondu dans OBS pour voir son T-bar bouger. Le fondu fonctionne quand même.",
       "sliderUnreachable": "Pour voir bouger le T-bar d’OBS, gardez la fenêtre principale d’OBS ouverte, pas réduite, et lancez OBS normalement, pas en tant qu’administrateur. Le fondu fonctionne quand même.",
       "sliderUnavailable": "L’assistant T-bar de Fadester n’a pas pu démarrer : le T-bar d’OBS reste immobile. Réinstaller Fadester peut aider. Le fondu fonctionne quand même.",
+      "tbarMidiFadesterTip": "Pour un fondu fluide sans flash blanc dans la fenêtre d’OBS, installez Midi Fadester et utilisez sa molette Midi Fadester Fader.",
       "faderBannerChoose": "Choisissez ce que cette molette doit contrôler.",
       "layerHeading": "Source et calque",
       "layerIntro": "Parcourez les sources déjà présentes dans votre scène. Le deck partage une source choisie par scène jusqu’au redémarrage du plugin ou au changement de collection de scènes. Parcourir ne modifie pas l’ordre des calques.",

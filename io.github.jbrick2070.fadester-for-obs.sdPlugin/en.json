@@ -529,6 +529,7 @@
       "sliderTransition": "Choose the Fade transition in OBS to see its on-screen T-bar move. Fading still works.",
       "sliderUnreachable": "To see OBS's on-screen T-bar move, keep the main OBS window open, not minimised, and run OBS normally, not as administrator. Fading still works.",
       "sliderUnavailable": "Fadester's T-bar helper could not start, so OBS's on-screen T-bar stays still. Reinstalling Fadester may help. Fading still works.",
+      "tbarMidiFadesterTip": "For a smooth fade with no white flash in OBS's window, install Midi Fadester and use its Midi Fadester Fader dial.",
       "faderBannerChoose": "Choose what this dial should control.",
       "layerHeading": "Source & layer",
       "layerIntro": "Browse the sources already in your scene. The deck shares one selected source per scene until the plugin restarts or the scene collection changes. Browsing keeps your layer order unchanged.",

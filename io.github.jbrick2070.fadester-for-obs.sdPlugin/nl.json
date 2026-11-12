@@ -418,6 +418,7 @@
       "sliderTransition": "Kies in OBS de overgang Vervagen om de T-bar te zien bewegen. Overvloeien werkt nog steeds.",
       "sliderUnreachable": "Om de T-bar van OBS te zien bewegen: houd het hoofdvenster van OBS open, niet geminimaliseerd, en start OBS normaal, niet als administrator. Overvloeien werkt nog steeds.",
       "sliderUnavailable": "De T-bar-hulp van Fadester kon niet starten, dus de T-bar van OBS blijft stilstaan. Fadester opnieuw installeren kan helpen. Overvloeien werkt nog steeds.",
+      "tbarMidiFadesterTip": "Voor een vloeiende fade zonder witte flits in het OBS-venster installeer je Midi Fadester en gebruik je de draaiknop Midi Fadester Fader.",
       "faderBannerChoose": "Kies wat deze draaiknop moet bedienen.",
       "layerHeading": "Bron & laag",
       "layerIntro": "Doorloop de bronnen die al in je scène staan. Het deck deelt per scène één gekozen bron tot de plugin herstart of de scèneverzameling wisselt. Doorlopen laat de volgorde van de lagen ongewijzigd.",

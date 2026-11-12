@@ -13,7 +13,7 @@
     "node": ">=24.0.0"
   },
   "scripts": {
-    "build": "npm run build:profiles && rollup -c && npm run build:vjster && npm run build:suite",
+    "build": "npm run build:profiles && rollup -c && npm run build:vjster && npm run build:suite && npm run build:native",
     "build:suite": "node --import tsx scripts/suite/assemble.ts && rollup -c suite-plugin/rollup.config.mjs && node --import tsx scripts/suite/copy-vjster.ts",
     "suite:assemble": "node --import tsx scripts/suite/assemble.ts",
     "watch": "rollup -c -w",
@@ -28,7 +28,8 @@
     "test:obs-live": "node --import tsx tests/obs-live-conformance.ts",
     "pi:harness": "node --import tsx scripts/pi-harness.ts",
     "validate": "streamdeck validate io.github.jbrick2070.fadester-for-obs.sdPlugin",
-    "pack": "streamdeck pack io.github.jbrick2070.fadester-for-obs.sdPlugin --output release --force"
+    "pack": "streamdeck pack io.github.jbrick2070.fadester-for-obs.sdPlugin --output release --force",
+    "build:native": "node --import tsx scripts/native/build-native.ts"
   },
   "dependencies": {
     "@elgato/streamdeck": "3.0.3"

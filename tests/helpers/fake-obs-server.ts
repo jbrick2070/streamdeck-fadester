@@ -146,10 +146,14 @@ export const FAKE_HOTKEY_NAMES = [
   "visual_sidechain_panic", "visual_sidechain_restore"
 ];
 
+/** OBS 33's T-bar widget range and the end zone in which its release completes (T_BAR_PRECISION / 10). */
+const NATIVE_TBAR_TOP = 1023;
+const NATIVE_TBAR_CLAMP = 102;
+
 /** Every request type `handleObsRequest` answers; `GetVersion.availableRequests` by default. */
 const FAKE_REQUEST_TYPES = [
   "GetVersion", "GetStudioModeEnabled", "SetStudioModeEnabled", "GetSceneList", "GetInputList",
-  "GetSceneTransitionList", "GetCurrentSceneTransition", "GetSceneSceneTransitionOverride",
+  "GetSceneTransitionList", "GetCurrentSceneTransition", "GetCurrentSceneTransitionCursor", "GetSceneSceneTransitionOverride",
   "SetSceneSceneTransitionOverride", "GetCurrentProgramScene", "GetCurrentPreviewScene", "GetInputVolume",
   "SetInputVolume", "SetTBarPosition", "SetCurrentPreviewScene", "SetCurrentProgramScene",
   "SetCurrentSceneTransition", "TriggerStudioModeTransition", "GetSourceScreenshot", "CallVendorRequest",
@@ -566,11 +570,33 @@ export class FakeObsServer {
    * active, and leaving Studio Mode sets Program to its target in one step. */
   public manualTransitionActive = false;
   public manualTransitionTarget = "";
+  /** OBS's own T-bar widget, 0..1023: only `moveNativeSlider` (the Windows helper's stand-in) moves it, as on OBS 33. */
+  public nativeSlider = 0;
+
+  /** What OBS does when its real slider moves (TBarChanged): starts the manual transition and follows the widget. */
+  public moveNativeSlider(value: number): void {
+    this.nativeSlider = value;
+    const wasActive = this.manualTransitionActive;
+    if (!wasActive && value > 0 && this.programSceneName !== this.previewSceneName) {
+      this.manualTransitionActive = true;
+      this.manualTransitionTarget = this.previewSceneName;
+    }
+    if (this.manualTransitionActive) this.directTbarPosition = value / NATIVE_TBAR_TOP;
+    if (!wasActive && this.manualTransitionActive) this.emitObsEvent("SceneTransitionStarted", { transitionName: this.currentTransitionName });
+  }
   public studioEnableFailures: number;
   public studioDisableDelayMs: number;
   public dropStudioDisableResponse: boolean;
   public deferStudioModeEvents: boolean;
   private readonly heldStudioModeEvents: boolean[] = [];
+
+  /** Studio Mode turned on or off in OBS's own window (not by a request): OBS rebuilds its T-bar. */
+  public setStudioModeExternally(enabled: boolean): void {
+    this.studioMode = enabled;
+    this.manualTransitionActive = false;
+    this.nativeSlider = 0;
+    this.emitObsEvent("StudioModeStateChanged", { studioModeEnabled: enabled });
+  }
 
   /** Sends the StudioModeStateChanged events held by `deferStudioModeEvents`, in order. */
   public flushStudioModeEvents(): void {
@@ -1474,8 +1500,16 @@ export class FakeObsServer {
 
     if (requestType === "GetCurrentSceneTransition") {
       this.sendResponse(ws, requestId, requestType, true, 100, "", {
-        transitionName: this.currentTransitionName
+        transitionName: this.currentTransitionName,
+        transitionKind: this.currentTransitionName === "Cut" ? "cut_transition" : "fade_transition"
       });
+      return;
+    }
+
+    if (requestType === "GetCurrentSceneTransitionCursor") {
+      // OBS's transition time: part-way during a manual throw, 0 at rest.
+      const cursor = this.manualTransitionActive ? Math.min(0.999, Math.max(0.001, this.directTbarPosition)) : 0;
+      this.sendResponse(ws, requestId, requestType, true, 100, "", { transitionCursor: cursor });
       return;
     }
 
@@ -1547,11 +1581,28 @@ export class FakeObsServer {
       } else {
         this.directCallLog.push({ requestType, requestData });
         const wasActive = this.manualTransitionActive;
+        if (requestData.release === true && wasActive && this.nativeSlider >= NATIVE_TBAR_TOP - NATIVE_TBAR_CLAMP) {
+          // OBS 33.0.1's TBarReleased reads its own slider widget: within 10 % of the end (T_BAR_CLAMP) it completes
+          // the manual transition, parks the slider at 0 and swaps Preview to the scene that was live.
+          const was = this.programSceneName;
+          this.programSceneName = this.manualTransitionTarget;
+          this.previewSceneName = was;
+          this.directTbarPosition = 0;
+          this.nativeSlider = 0;
+          this.manualTransitionActive = false;
+          this.tbarCompletionCount++;
+          this.sendResponse(ws, requestId, requestType, true, 100, "", {});
+          this.emitObsEvent("SceneTransitionEnded", { transitionName: this.currentTransitionName });
+          this.emitObsEvent("CurrentProgramSceneChanged", { sceneName: this.programSceneName });
+          this.emitObsEvent("CurrentPreviewSceneChanged", { sceneName: this.previewSceneName });
+          return;
+        }
         if (requestData.release === true) {
           // OBS 33.0.1: TBarReleased reads the T-bar widget, which obs_frontend_set_tbar_position
           // never moves, so a release over obs-websocket always cancels ("Manual transition
           // cancelled", OBSBasic_Transitions.cpp:767-777): Program stays, nothing is taken.
           this.directTbarPosition = 0;
+          this.nativeSlider = 0;
           this.manualTransitionActive = false;
         } else {
           this.directTbarPosition = Number(requestData.position ?? 0);

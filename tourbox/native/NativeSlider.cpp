@@ -1,9 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Private line protocol with the bridge: READ or "<expected> <desired>" in OBS's integer units.
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #include <windows.h>
+#include <iphlpapi.h>
 #include <UIAutomation.h>
 #include <wrl/client.h>
+#include <algorithm>
 #include <charconv>
+#include <cstring>
 #include <cmath>
 #include <filesystem>
 #include <iostream>
@@ -199,16 +204,57 @@ private:
 };
 }
 
+// The one local process listening on this TCP port on a loopback or any address: the OBS WebSocket the caller
+// authenticated. Mirrors NativeTBar.cs, for callers that cannot read the TCP table themselves (the Stream Deck plugin).
+int listenerPid(int port)
+{
+    std::vector<int> owners;
+    for (ULONG family : {AF_INET, AF_INET6}) {
+        DWORD size = 0;
+        DWORD status = GetExtendedTcpTable(nullptr, &size, FALSE, family, TCP_TABLE_OWNER_PID_LISTENER, 0);
+        if (status == ERROR_NOT_SUPPORTED && family == AF_INET6) continue;
+        if (status != ERROR_INSUFFICIENT_BUFFER || size < sizeof(DWORD)) throw std::runtime_error("Couldn't identify the local OBS listener.");
+        std::vector<unsigned char> buffer(size);
+        if (GetExtendedTcpTable(buffer.data(), &size, FALSE, family, TCP_TABLE_OWNER_PID_LISTENER, 0) != NO_ERROR)
+            throw std::runtime_error("Couldn't read the local OBS listener.");
+        auto add = [&](int pid) { if (std::find(owners.begin(), owners.end(), pid) == owners.end()) owners.push_back(pid); };
+        if (family == AF_INET) {
+            auto *table = reinterpret_cast<MIB_TCPTABLE_OWNER_PID *>(buffer.data());
+            for (DWORD i = 0; i < table->dwNumEntries; i++) {
+                const auto &row = table->table[i];
+                if (ntohs(static_cast<u_short>(row.dwLocalPort)) != port) continue;
+                ULONG address = ntohl(row.dwLocalAddr);
+                if (address != 0 && (address >> 24) != 127) continue;
+                add(static_cast<int>(row.dwOwningPid));
+            }
+        } else {
+            auto *table = reinterpret_cast<MIB_TCP6TABLE_OWNER_PID *>(buffer.data());
+            static const unsigned char loopback[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
+            static const unsigned char any[16] = {};
+            for (DWORD i = 0; i < table->dwNumEntries; i++) {
+                const auto &row = table->table[i];
+                if (ntohs(static_cast<u_short>(row.dwLocalPort)) != port) continue;
+                if (memcmp(row.ucLocalAddr, any, 16) != 0 && memcmp(row.ucLocalAddr, loopback, 16) != 0) continue;
+                add(static_cast<int>(row.dwOwningPid));
+            }
+        }
+    }
+    if (owners.size() != 1) throw std::runtime_error("Could not match the WebSocket port to exactly one local OBS process.");
+    return owners.front();
+}
+
 int main(int argc, char **argv)
 {
-    int pid = 0;
-    if (argc != 2 || !integer(argv[1], pid) || pid <= 0) return 2;
+    // FadesterNativeSlider <pid>, or FadesterNativeSlider --port <websocket port>.
+    int pid = 0, port = 0;
+    bool byPort = argc == 3 && std::string(argv[1]) == "--port";
+    if (byPort ? !integer(argv[2], port) || port <= 0 || port > 65535 : argc != 2 || !integer(argv[1], pid) || pid <= 0) return 2;
     HRESULT initialized = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
     {
         std::unique_ptr<Target> target;
         std::string failure = "cannot initialize Windows UI Automation";
         if (SUCCEEDED(initialized)) {
-            try { target = std::make_unique<Target>(pid); }
+            try { target = std::make_unique<Target>(byPort ? listenerPid(port) : pid); }
             catch (const std::exception &e) { failure = e.what(); } // Pin failure, never bind to a recycled PID.
         }
         std::string line;

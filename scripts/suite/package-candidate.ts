@@ -6,6 +6,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { packExtension } from "../vjster/pack-extension.js";
+import { buildNative } from "../native/build-native.js";
 
 type Manifest = {
   UUID: string;
@@ -94,6 +95,9 @@ export function packageCandidate(root: string): string {
   run(root, [rollup, "-c", "suite-plugin/rollup.config.mjs"]);
   run(root, ["--import", "tsx", "scripts/suite/copy-vjster.ts"]);
   run(root, [rollup, "-c", "vjster-extension/rollup.config.mjs"]);
+  // The Windows T-bar helper (native-tbar.ts): required in a candidate built on Windows, where releases are made.
+  // A candidate built elsewhere (the macOS CI check) still works, with the obs-websocket T-bar only.
+  buildNative(process.platform === "win32");
   const manifest = checkPortablePlugin(join(root, SUITE));
   checkPortablePlugin(join(root, VJSTER));
   run(root, ["--import", "tsx", "scripts/suite/assemble.ts", "--check"]);

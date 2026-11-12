@@ -40,6 +40,8 @@ const TBAR_RAIL = 0.03;
 const NATIVE_NEAR_END = (NATIVE_TBAR_MAX - 1) / NATIVE_TBAR_MAX;
 /** After a take, encoder ticks are the end of the old throw until the dial has rested this long. */
 export const TBAR_SETTLE_MS = 300;
+/** Two looks at OBS's transition cursor this far apart tell a fade nobody drives (still) from a timed one (moving). */
+const PICKUP_SAMPLE_MS = 100;
 /** A take's own Studio Mode events are expected within this time; older counts no longer mask. */
 export const TBAR_STUDIO_EVENT_GRACE_MS = 1500;
 
@@ -277,14 +279,14 @@ export type DirectObsClientOptions = Pick<
   nativePlatform?: string;
 };
 
-/** A throw that moves OBS's real slider: the scenes it started between and where the slider was last put. */
 /**
  * What the dial's settings page says about OBS's own slider: it follows the dial, or why not. "off" says nothing (not
- * connected, Studio Mode off, or not found out yet); the page has its own banners for those.
+ * connected, Studio Mode off, not found out yet, or the slider helper not in use); the page has its own banners.
  */
 export type NativeTbarStatus =
   | "following" | "notWindows" | "remote" | "version" | "transition" | "unreachable" | "unavailable" | "off";
 
+/** A throw that moves OBS's real slider: the scenes it started between and where the slider was last put. */
 interface NativeThrow {
   live: string;
   next: string;
@@ -292,7 +294,12 @@ interface NativeThrow {
   started: boolean;
 }
 
-function defaultNativeTbar(port: number): NativeTbar | undefined {
+/**
+ * The bundled helper that moves OBS's own slider (native-tbar.ts). Not used by default since 2026-11-12: a fade the
+ * helper leaves part-way can only be closed by moving that same slider, and the operator chose a dial that never gets
+ * stuck over one that moves OBS's slider. Pass it as `nativeTbar` to use it.
+ */
+export function defaultNativeTbar(port: number): NativeTbar | undefined {
   const exe = bundledNativeTbarPath();
   return exe ? new NativeTbarHelper(exe, port) : undefined;
 }
@@ -380,6 +387,11 @@ export class DirectObsClient extends ObsVendorClient {
   private tbarStudioEventsIgnoreUntil = 0;
   /** Encoder ticks that arrive just after a take do not start the next throw before this time. */
   private tbarSettleUntil = 0;
+  /**
+   * The fade the dial has open: the scene it started from ("" when it was picked up and that is unknown) and the scene
+   * it goes to. Kept while `catalog.tbarPosition` is above 0; a Preview picked meanwhile is for the next fade.
+   */
+  private tbarThrow: { live: string; next: string } | null = null;
   private mediaCapability: MediaCapability = "unknown";
   private mediaGeneration = 0;
   private mediaSequence = 0;
@@ -409,7 +421,7 @@ export class DirectObsClient extends ObsVendorClient {
       surfaceDisplayName: "Fadester for OBS"
     });
     this.mediaPauseWaitMs = options?.mediaPauseWaitMs ?? MEDIA_PAUSE_WAIT_MS;
-    this.nativeOption = options?.nativeTbar ?? defaultNativeTbar;
+    this.nativeOption = options?.nativeTbar ?? false;
     this.nativePlatform = options?.nativePlatform ?? process.platform;
     // Several controls on a full deck intentionally share this one client.
     this.setMaxListeners(0);
@@ -762,6 +774,10 @@ export class DirectObsClient extends ObsVendorClient {
     if (this.sceneCycle?.ended) return this.catalog.tbarPosition;
     // The end of a throw is a take: OBS 33.0.1 cancels a T-bar released over obs-websocket.
     if (shouldRelease) return this.performTbarTake(queueNextScene, generation);
+    // A throw remembers where it goes: a Preview picked mid-throw is for the next fade, not this one.
+    if (this.catalog.tbarPosition <= 0 && position > 0) {
+      this.tbarThrow = { live: this.catalog.currentProgramScene, next: this.catalog.currentPreviewScene };
+    }
     if (!queueNextScene || position === 0) this.cancelSceneCycle();
     else if (!this.sceneCycle && this.catalog.currentProgramScene !== this.catalog.currentPreviewScene) {
       this.sceneCycle = {
@@ -783,6 +799,9 @@ export class DirectObsClient extends ObsVendorClient {
         const releaseAtLive = position === 0 && this.catalog.tbarPosition > 0;
         await this.sendObsRequest("SetTBarPosition", { position, release: releaseAtLive });
         this.requireControlGeneration(generation);
+        // A release cancels only while OBS's own slider is near its start. One a hand (or an earlier helper) left
+        // part-way keeps the fade open, and OBS's transition buttons locked: then the fade is finished instead.
+        if (releaseAtLive && !(await this.transitionAtRest(generation))) return this.performTbarTake(queueNextScene, generation);
       }
     } catch (error) {
       this.cancelSceneCycle();
@@ -820,7 +839,7 @@ export class DirectObsClient extends ObsVendorClient {
    * selected transition. The settings page shows the result; anything out of reach now is tried again on the turn.
    */
   public async refreshNativeTbar(): Promise<void> {
-    if (!this.isConnected() || !this.catalog.studioMode) return;
+    if (this.nativeOption === false || !this.isConnected() || !this.catalog.studioMode) return;
     const connection = this.connectionGeneration;
     const before = this.getNativeTbarStatus();
     try {
@@ -832,7 +851,7 @@ export class DirectObsClient extends ObsVendorClient {
         } catch (error) {
           if (connection === this.connectionGeneration) this.noteNativeFailure(error);
         }
-      } else if (this.nativeOption !== false && nativeTbarEligible(this.nativePlatform, this.settings.host, this.obsVersion)) {
+      } else if (nativeTbarEligible(this.nativePlatform, this.settings.host, this.obsVersion)) {
         this.nativeReach = "unavailable"; // the helper is not in the plugin
       }
       const kind = (await this.sendObsRequest("GetCurrentSceneTransition")).transitionKind;
@@ -1071,23 +1090,77 @@ export class DirectObsClient extends ObsVendorClient {
    * with Scene loop, the next in the list). A turn left fades back, and a throw turned back into its first 3 % cancels.
    */
   public async nudgeTbar(delta: number, queueNextScene = false): Promise<number> {
-    return this.queueTbar((generation) => {
+    return this.queueTbar(async (generation) => {
+      if (!this.catalog.studioMode) throw new DirectObsError(ownText("errorTbarNeedsStudio"), 400);
+      if (Date.now() < this.tbarSettleUntil) return this.writeTbarPosition(this.catalog.tbarPosition, false, queueNextScene, generation);
+      if (!(await this.pickUpOpenFade(generation))) return this.catalog.tbarPosition; // a timed transition runs: wait
       const position = this.catalog.tbarPosition;
       let next = position + delta;
       if (delta < 0 && next <= TBAR_RAIL) {
-        if (position <= 0) return Promise.resolve(position); // turning left at rest does nothing
+        if (position <= 0) return position; // turning left at rest does nothing
         next = 0;
+      }
+      // From rest a throw needs a Next: not the live scene, and not a Preview still being read after Studio Mode came on.
+      if (position <= 0 && (!this.catalog.currentPreviewScene || this.catalog.currentProgramScene === this.catalog.currentPreviewScene)) {
+        throw new DirectObsError(ownText("mixerChooseDifferent"), 409);
       }
       return this.writeTbarPosition(next, false, queueNextScene, generation);
     });
   }
 
+  /**
+   * Before a gesture from rest: a fade OBS has open that the dial does not hold (the plugin or the connection restarted
+   * mid-fade, a throw was given up, a hand moved OBS's own T-bar) is taken up from where it is, so the dial finishes or
+   * cancels it rather than starting another, and OBS's transition buttons never stay locked. OBS 33 names an open
+   * fade's target as Program. False: a timed transition is running, and this gesture waits for it.
+   */
+  private async pickUpOpenFade(generation: number): Promise<boolean> {
+    const studio = this.catalogEventRevisions.studio;
+    // Studio Mode turned off or on meanwhile (OBS rebuilt its T-bar, the dial went back to rest): nothing to take up.
+    const unchanged = (): boolean =>
+      this.catalog.studioMode && this.catalog.tbarPosition <= 0 && this.catalogEventRevisions.studio === studio;
+    if (!unchanged()) return true;
+    const first = await this.readTransitionCursor(generation);
+    if (!(first > 0 && first < 1)) return true;
+    await new Promise((resolve) => setTimeout(resolve, PICKUP_SAMPLE_MS));
+    this.requireControlGeneration(generation);
+    if (!unchanged()) return true;
+    const second = await this.readTransitionCursor(generation);
+    if (!(second > 0 && second < 1)) return true; // it ended meanwhile
+    if (Math.abs(second - first) > 0.001) return false;
+    const reply = await this.sendObsRequest("GetCurrentProgramScene");
+    this.requireControlGeneration(generation);
+    const target = String(reply.currentProgramSceneName ?? reply.sceneName ?? "");
+    if (!target || !unchanged()) return true;
+    this.tbarThrow = { live: this.catalog.currentProgramScene === target ? "" : this.catalog.currentProgramScene, next: target };
+    this.catalog.tbarPosition = second;
+    this.emitDirectState();
+    return true;
+  }
+
+  /** After a release: true once OBS's transition rests (its cursor at an end), false when it stays open. */
+  private async transitionAtRest(generation: number): Promise<boolean> {
+    for (let attempt = 0; attempt < 15; attempt++) {
+      const cursor = await this.readTransitionCursor(generation);
+      if (!(cursor > 0 && cursor < 1)) return true;
+      await new Promise((resolve) => setTimeout(resolve, 40));
+    }
+    return false;
+  }
+
+  /** The scenes the T-bar dial shows: an open fade's own (its start "" when unknown), else OBS's Program and Preview. */
+  public getTbarScenes(): { live: string; next: string } {
+    const open = this.catalog.tbarPosition > 0 ? this.tbarThrow : null;
+    return open ?? { live: this.catalog.currentProgramScene, next: this.catalog.currentPreviewScene };
+  }
+
   /** Takes Next live: the scene mixer's dial press, and the end of a throw. */
   public async takeTbar(queueNextScene = false): Promise<number> {
-    return this.queueTbar((generation) => {
+    return this.queueTbar(async (generation) => {
       if (!this.catalog.studioMode) throw new DirectObsError(ownText("errorTbarNeedsStudio"), 400);
       // A press in the settle window is the end of the last take, as the trailing ticks are.
-      if (Date.now() < this.tbarSettleUntil) return Promise.resolve(this.catalog.tbarPosition);
+      if (Date.now() < this.tbarSettleUntil) return this.catalog.tbarPosition;
+      if (!(await this.pickUpOpenFade(generation))) return this.catalog.tbarPosition; // a timed transition runs: wait
       return this.performTbarTake(queueNextScene, generation);
     });
   }
@@ -1109,13 +1182,16 @@ export class DirectObsClient extends ObsVendorClient {
    * frame of the old scene; a cancel followed by a Cut showed one in 14.
    */
   private async performTbarTake(queueNextScene: boolean, generation: number): Promise<number> {
-    const live = this.catalog.currentProgramScene;
-    const next = this.catalog.currentPreviewScene;
+    const open = this.catalog.tbarPosition > 0 ? this.tbarThrow : null;
+    const live = open ? open.live : this.catalog.currentProgramScene;
+    const next = open ? open.next : this.catalog.currentPreviewScene;
+    // The operator's Preview now: picked mid-throw, it is the scene the next fade goes to, so it stays in Preview.
+    const cue = this.catalog.currentPreviewScene;
     this.cancelSceneCycle();
     if (!next || next === live) {
       this.catalog.tbarPosition = 0;
       this.emitDirectState();
-      return 0;
+      throw new DirectObsError(ownText("mixerChooseDifferent"), 409);
     }
     const native = this.nativeSlider();
     if (native) {
@@ -1129,12 +1205,18 @@ export class DirectObsClient extends ObsVendorClient {
     let left = false;
     let restoreTried = false;
     let restored = false;
+    let target = next;
     try {
       // Never `release: true`: that is the cancel. At the end of a throw this only re-aims the
       // manual transition (its eased value moves by about one percent before the next request);
       // from rest it starts one, and Program keeps showing Live until the step below.
       await this.sendObsRequest("SetTBarPosition", { position: 1, release: false });
       this.requireControlGeneration(generation);
+      // Leaving Studio Mode finishes OBS's open fade at its own target, which OBS 33 names as Program while the fade
+      // is open: that, not the dial's memory, is the scene the take is confirmed against.
+      const reported = await this.sendObsRequest("GetCurrentProgramScene");
+      this.requireControlGeneration(generation);
+      target = String(reported.currentProgramSceneName ?? reported.sceneName ?? "") || next;
       left = true;
       // Nothing may sit between leaving and re-entering: once OBS was asked to leave Studio
       // Mode it is always asked back, whatever the answer, the connection or the collection does.
@@ -1154,11 +1236,29 @@ export class DirectObsClient extends ObsVendorClient {
     this.catalog.tbarPosition = 0;
     await this.refreshCurrentSceneNames();
     this.requireControlGeneration(generation);
-    if (this.catalog.currentProgramScene !== next) {
+    if (this.catalog.currentProgramScene !== target) {
+      // Whatever OBS took, Live and Next must not end up on the same scene, or the next turn would be refused.
+      if (this.catalog.currentProgramScene === this.catalog.currentPreviewScene) {
+        try {
+          const repair = cue && cue !== this.catalog.currentProgramScene ? cue
+            : live && live !== this.catalog.currentProgramScene ? live
+              : await this.sceneAfter(this.catalog.currentProgramScene, generation);
+          if (repair) {
+            await this.sendObsRequest("SetCurrentPreviewScene", { sceneName: repair });
+            this.catalog.currentPreviewScene = repair;
+          }
+        } catch {
+          // the take's own error is the one to report
+        }
+      }
       this.emitDirectState();
       throw new DirectObsError(ownText("errorTakeUnconfirmed"), 500);
     }
-    const previewTarget = queueNextScene ? await this.sceneAfter(next, generation) : live;
+    // Next in Preview, never the scene now live: the operator's pick, else the scene that was live, else the next one.
+    const previewTarget = queueNextScene ? await this.sceneAfter(target, generation)
+      : cue && cue !== target ? cue
+        : live && live !== target ? live
+          : await this.sceneAfter(target, generation);
     if (previewTarget && previewTarget !== this.catalog.currentPreviewScene) {
       await this.sendObsRequest("SetCurrentPreviewScene", { sceneName: previewTarget });
       this.requireControlGeneration(generation);
@@ -1219,6 +1319,9 @@ export class DirectObsClient extends ObsVendorClient {
     void this.tbarQueue.catch(() => {}).then(async () => {
       const task = this.sceneQueue.catch(() => {}).then(async () => {
         if (cycle.token !== this.sceneCycleGeneration || !this.isConnected() || !this.catalog.studioMode) return;
+        // A late Ended from an earlier transition while a fade is still open: leave that fade alone.
+        const cursor = Number((await this.sendObsRequest("GetCurrentSceneTransitionCursor")).transitionCursor);
+        if (cursor > 0 && cursor < 1) return;
         await this.refreshCurrentSceneNames();
         // Aborts, unrelated transitions and an operator's new Preview choice
         // must never cause an automatic scene change.
@@ -1397,6 +1500,9 @@ export class DirectObsClient extends ObsVendorClient {
       ready = true;
       this.emitDirectState();
       void this.refreshNativeTbar();
+      // A fade OBS already has open (the plugin restarted mid-fade): the dial shows it and the next turn carries it on.
+      void this.queueTbar((generation) => this.pickUpOpenFade(generation).then(() => this.catalog.tbarPosition))
+        .catch(() => undefined);
       // Every completed (re)connection, also one whose status did not change.
       this.emit("connectionReady");
     } catch (err) {

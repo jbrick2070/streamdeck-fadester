@@ -592,11 +592,22 @@ export class FakeObsServer {
 
   /** Studio Mode turned on or off in OBS's own window (not by a request): OBS rebuilds its T-bar. */
   public setStudioModeExternally(enabled: boolean): void {
+    // Leaving Studio Mode finishes an open fade at its target, as SetStudioModeEnabled does.
+    if (!enabled && this.manualTransitionActive) this.programSceneName = this.manualTransitionTarget;
     this.studioMode = enabled;
     this.manualTransitionActive = false;
+    this.directTbarPosition = 0;
     this.nativeSlider = 0;
     this.emitObsEvent("StudioModeStateChanged", { studioModeEnabled: enabled });
   }
+
+  /** OBS 33 names an open fade's target as Program from the moment the fade starts (TransitionToScene sets it first). */
+  public reportedProgramScene(): string {
+    return this.manualTransitionActive ? this.manualTransitionTarget : this.programSceneName;
+  }
+
+  /** A transition cursor script: each GetCurrentSceneTransitionCursor takes the next value (a timed transition running). */
+  public cursorScript: number[] = [];
 
   /** Sends the StudioModeStateChanged events held by `deferStudioModeEvents`, in order. */
   public flushStudioModeEvents(): void {
@@ -1339,7 +1350,7 @@ export class FakeObsServer {
     if (requestType === "GetSceneList") {
       if (this.sceneListDelayMs > 0) await new Promise((r) => setTimeout(r, this.sceneListDelayMs));
       this.sendResponse(ws, requestId, requestType, true, 100, "", {
-        currentProgramSceneName: this.programSceneName,
+        currentProgramSceneName: this.reportedProgramScene(),
         currentPreviewSceneName: this.previewSceneName,
         scenes: this.sceneNames.map((sceneName, index) => ({
           sceneName,
@@ -1507,8 +1518,10 @@ export class FakeObsServer {
     }
 
     if (requestType === "GetCurrentSceneTransitionCursor") {
-      // OBS's transition time: part-way during a manual throw, 0 at rest.
-      const cursor = this.manualTransitionActive ? Math.min(0.999, Math.max(0.001, this.directTbarPosition)) : 0;
+      // OBS's transition time: part-way during a manual throw, 0 at rest; a script stands in for a timed transition.
+      const scripted = this.cursorScript.shift();
+      const cursor = scripted !== undefined ? scripted
+        : this.manualTransitionActive ? Math.min(0.999, Math.max(0.001, this.directTbarPosition)) : 0;
       this.sendResponse(ws, requestId, requestType, true, 100, "", { transitionCursor: cursor });
       return;
     }
@@ -1536,8 +1549,8 @@ export class FakeObsServer {
 
     if (requestType === "GetCurrentProgramScene") {
       this.sendResponse(ws, requestId, requestType, true, 100, "", {
-        currentProgramSceneName: this.programSceneName,
-        sceneName: this.programSceneName
+        currentProgramSceneName: this.reportedProgramScene(),
+        sceneName: this.reportedProgramScene()
       });
       return;
     }
@@ -1595,6 +1608,11 @@ export class FakeObsServer {
           this.emitObsEvent("SceneTransitionEnded", { transitionName: this.currentTransitionName });
           this.emitObsEvent("CurrentProgramSceneChanged", { sceneName: this.programSceneName });
           this.emitObsEvent("CurrentPreviewSceneChanged", { sceneName: this.previewSceneName });
+          return;
+        }
+        if (requestData.release === true && this.nativeSlider > NATIVE_TBAR_CLAMP) {
+          // TBarReleased with OBS's own slider part-way (moved by a hand or a helper) does nothing: the fade stays open.
+          this.sendResponse(ws, requestId, requestType, true, 100, "", {});
           return;
         }
         if (requestData.release === true) {

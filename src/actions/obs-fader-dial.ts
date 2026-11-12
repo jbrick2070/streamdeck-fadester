@@ -145,6 +145,13 @@ export class ObsFaderDialInstanceController {
         return;
       }
       if (!(await this.ensureReady(now))) return;
+      // A combined press changes a layer before it takes: refuse it first when there is nothing to take.
+      const catalog = this.client.getCatalog();
+      const scenes = this.client.getTbarScenes?.() ?? { live: catalog.currentProgramScene, next: catalog.currentPreviewScene };
+      if (pressAction === "next_blend_and_finish" && (!scenes.next || scenes.live === scenes.next)) {
+        await this.sink.showAlert();
+        return;
+      }
     } else if (!(await this.ensureConnected(now))) {
       return;
     }
@@ -204,11 +211,8 @@ export class ObsFaderDialInstanceController {
       await this.sink.showAlert();
       return false;
     }
-    const catalog = this.client.getCatalog();
-    if (this.settings.target === "tbar" && catalog.currentProgramScene === catalog.currentPreviewScene) {
-      await this.sink.showAlert();
-      return false;
-    }
+    // Live and Next being the same scene is the client's call, made after it has taken up a fade OBS left open: a
+    // check here, on Program and Preview as last heard, could refuse the very turn that would close that fade.
     return true;
   }
 
@@ -231,6 +235,7 @@ export class ObsFaderDialInstanceController {
       all || this.settings.target === "tbar" ||
       (this.settings.target === "input_volume" && Boolean(this.settings.inputName));
     const isTbar = this.settings.target === "tbar";
+    const tbarScenes = this.client.getTbarScenes?.() ?? { live: catalog.currentProgramScene, next: catalog.currentPreviewScene };
     const inputName = isTbar || all ? "" : this.client.resolveInputName(this.settings.inputName);
     const inputRole = automaticInputRoleName(this.settings.inputName);
     const mix = all ? this.client.wholeMix.state : undefined;
@@ -266,8 +271,9 @@ export class ObsFaderDialInstanceController {
         ...(pressHint ? { pressHint: t(pressHint) } : {}),
         ...(isTbar ? {
           studioMode: catalog.studioMode,
-          programSceneName: catalog.currentProgramScene,
-          previewSceneName: catalog.currentPreviewScene,
+          // An open fade's own scenes: a Preview picked mid-fade is for the next one.
+          programSceneName: tbarScenes.live,
+          previewSceneName: tbarScenes.next,
           autoQueueNextScene: this.settings.autoQueueNextScene
         } : {})
       })

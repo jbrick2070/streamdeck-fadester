@@ -191,11 +191,11 @@ describe("Scene mixer take on OBS 33.0.1, and the optional queue-next cycle", ()
     expect(server.programSceneName).toBe("Scene Preview");
   });
 
-  it("does nothing when Live and Next are the same scene", async () => {
+  it("takes nothing, and says so, when Live and Next are the same scene", async () => {
     await connect();
     server.previewSceneName = server.programSceneName;
     await client.refreshCatalog();
-    await client.takeTbar(true);
+    await expect(client.takeTbar(true)).rejects.toThrow("Choose a different Next scene");
     expect(calls("SetStudioModeEnabled")).toEqual([]);
     expect(calls("SetTBarPosition")).toEqual([]);
   });

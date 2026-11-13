@@ -27,11 +27,35 @@ struct RuntimePaths {
     private var armed = false
     // READY was seen once for the child this controller owns: a later DISARMED (a reconnect, OBS lost) is not a failed start.
     private var reachedReady = false
+    private var lastError: String?
     var changed: ((String, Bool) -> Void)?
     var line: ((String) -> Void)?
     var exited: (() -> Void)?
     var running: Bool { process != nil }
     var isArmed: Bool { armed }
+
+    nonisolated static func explainHostError(_ text: String) -> String {
+        if text.localizedCaseInsensitiveContains("Accessibility denied") {
+            return "Accessibility needed: click Grant Accessibility… below (if Fadester Companion is already on, toggle it OFF then ON)."
+        }
+        if text.localizedCaseInsensitiveContains("expected one OBS window") {
+            return "Close open OBS dialog or plugin windows so only the main OBS window is open, then click Start."
+        }
+        if text.localizedCaseInsensitiveContains("not parked at zero") {
+            return "Move OBS’s T-bar slider back to the left/top end in Studio Mode, then click Start."
+        }
+        if text.localizedCaseInsensitiveContains("expected exactly one native OBS T-bar") {
+            return "Turn on Studio Mode in OBS and keep the main OBS window visible, then click Start."
+        }
+        var clean = text
+        if clean.hasPrefix("ERROR: ") { clean = String(clean.dropFirst(7)) }
+        if clean.hasPrefix("initialization: ") { clean = String(clean.dropFirst(16)) }
+        if clean.hasPrefix("guardFailed(\"") && clean.hasSuffix("\")") {
+            clean = String(clean.dropFirst(13).dropLast(2))
+        }
+        clean = clean.trimmingCharacters(in: .whitespacesAndNewlines)
+        return clean.isEmpty ? "Controls stopped. Review Activity for the reason." : "Controls stopped: \(clean)"
+    }
 
     func start(paths: RuntimePaths, config: URL, password: String, mixEnabled: Bool, extraSecrets: [String] = []) throws {
         try paths.validate()
@@ -49,14 +73,15 @@ struct RuntimePaths {
         if !password.isEmpty { environment["FADESTER_OBS_PASSWORD"] = password }
         child.environment = environment; child.executableURL = executable; child.arguments = arguments
         child.standardInput = commands; child.standardOutput = output; child.standardError = output
-        secret = password; armed = false; reachedReady = false; process = child; input = commands
+        secret = password; armed = false; reachedReady = false; lastError = nil; process = child; input = commands
         child.terminationHandler = { [weak self] owned in
             DispatchQueue.global(qos: .utility).async {
                 _ = drained.wait(timeout: .now() + 2)
                 DispatchQueue.main.async {
                     guard let self, self.process === owned else { return }
-                    self.input = nil; self.process = nil; self.secret = ""; self.armed = false
-                    self.changed?(owned.terminationStatus == 0 ? "Controls stopped." : "Controls stopped. Review Activity for the reason.", false)
+                    let reason = self.lastError ?? "Controls stopped. Review Activity for the reason."
+                    self.input = nil; self.process = nil; self.secret = ""; self.armed = false; self.lastError = nil
+                    self.changed?(owned.terminationStatus == 0 ? "Controls stopped." : reason, false)
                     self.exited?()
                 }
             }
@@ -83,10 +108,14 @@ struct RuntimePaths {
                         pending.removeAll(keepingCapacity: true); truncated = false
                         DispatchQueue.main.async {
                             guard let self, self.process === child else { return }
+                            if raw.hasPrefix("ERROR:") {
+                                self.lastError = Self.explainHostError(text)
+                            }
                             self.line?(text)
                             if ready && child.isRunning {
                                 self.armed = true
                                 self.reachedReady = true
+                                self.lastError = nil
                                 self.changed?("Connected — controls armed. Keep OBS in front.", true)
                             } else if disarmed {
                                 self.armed = false

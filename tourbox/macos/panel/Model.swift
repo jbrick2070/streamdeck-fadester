@@ -227,8 +227,12 @@ enum Readiness {
             : LightState(.amber, "VJster: waiting for video", button: "Show me", action: "vjsterWait")
     }
 
-    static func controls(running: Bool, armed: Bool) -> LightState {
-        if !running { return LightState(.grey, "Controls: off", button: "Start", action: "start") }
+    static func controls(running: Bool, armed: Bool, axTrusted: Bool = true) -> LightState {
+        if !running {
+            return axTrusted
+                ? LightState(.grey, "Controls: off", button: "Start", action: "start")
+                : LightState(.amber, "Accessibility: needed", button: "Grant…", action: "grantAx")
+        }
         if !armed { return LightState(.amber, "Controls: starting…", button: "Stop", action: "stop") }
         return LightState(.green, "Controls: on", button: "Stop", action: "stop")
     }
@@ -237,6 +241,20 @@ enum Readiness {
         guard controlsOn else { return nil }
         if obsHidden { return "Keep the main OBS window open, not hidden: the T-bar needs it." }
         if consoleRunning && !frontIsObs { return "TourBox: bring OBS to the front. Its preset only works while OBS is the active window." }
+        return nil
+    }
+
+    static func banner(controlsOn: Bool, obsHidden: Bool, consoleRunning: Bool, frontIsObs: Bool, axTrusted: Bool = true) -> (text: String, button: String, action: String)? {
+        if !controlsOn && !axTrusted {
+            return (
+                "macOS Accessibility needed: enable Fadester Companion in System Settings → Accessibility (if already on, toggle it OFF then ON) so Start can move OBS’s T-bar.",
+                "Grant Accessibility…",
+                "grantAx"
+            )
+        }
+        if let obsText = reminder(controlsOn: controlsOn, obsHidden: obsHidden, consoleRunning: consoleRunning, frontIsObs: frontIsObs) {
+            return (obsText, "Bring OBS to Front", "openObs")
+        }
         return nil
     }
 
@@ -384,7 +402,9 @@ enum ModelTests {
         try check(Readiness.vjster(enabled: true, controlsOn: false, connectedPeers: 0) == LightState(.green, "VJster: ready"), "VJster ready before start")
         try check(Readiness.vjster(enabled: true, controlsOn: true, connectedPeers: 1) == LightState(.green, "VJster: connected") && Readiness.vjster(enabled: true, controlsOn: true, connectedPeers: 0).action == "vjsterWait", "VJster readiness light")
         try check(Readiness.vjster(enabled: true, controlsOn: true, connectedPeers: 0, portBusy: true).action == "vjsterPort", "VJster port busy light")
-        try check(Readiness.controls(running: false, armed: false).action == "start" && Readiness.controls(running: true, armed: true) == LightState(.green, "Controls: on", button: "Stop", action: "stop"), "Controls readiness light")
+        try check(Readiness.controls(running: false, armed: false).action == "start" && Readiness.controls(running: false, armed: false, axTrusted: false).action == "grantAx" && Readiness.controls(running: true, armed: true) == LightState(.green, "Controls: on", button: "Stop", action: "stop"), "Controls readiness light")
+        try check(Readiness.banner(controlsOn: false, obsHidden: false, consoleRunning: true, frontIsObs: false, axTrusted: false)?.action == "grantAx", "Accessibility banner before start")
+        try check(HostController.explainHostError("ERROR: initialization: guardFailed(\"Accessibility denied; grant the responsible app\")").contains("Grant Accessibility"), "Host Accessibility error explanation")
         try check(Readiness.reminder(controlsOn: true, obsHidden: false, consoleRunning: true, frontIsObs: false) != nil && Readiness.reminder(controlsOn: true, obsHidden: false, consoleRunning: true, frontIsObs: true) == nil, "Frontmost OBS reminder")
         var peers = Readiness.vjsterPeers(after: "VJster: extension connected", current: [])
         peers = Readiness.vjsterPeers(after: "VJster: OBS page connected", current: peers)

@@ -892,6 +892,7 @@ private final class SheetBackground: NSView {
         var controlsLamp: Lamp = .grey
         var controlsRunning = false
         var controlsArmed = false
+        var axTrusted = true
         var canStart = true
     }
 
@@ -1002,15 +1003,24 @@ private final class SheetBackground: NSView {
             enabled: true
         ))
 
-        // Box 2 button: Start / Stop Controls
-        let ctlTitle = state.controlsRunning ? "Stop Controls" : "Start Controls"
+        // Box 2 button: Start / Stop / Grant Accessibility
+        let ctlTitle: String
+        let ctlAction: String
+        let ctlFill: NSColor
+        if state.controlsRunning {
+            ctlTitle = "Stop Controls"; ctlAction = "stop"; ctlFill = Self.stopRed
+        } else if !state.axTrusted {
+            ctlTitle = "Grant Access…"; ctlAction = "grantAx"; ctlFill = Self.amber
+        } else {
+            ctlTitle = "Start Controls"; ctlAction = "start"; ctlFill = Self.accent
+        }
         let ctlW = pillWidth(ctlTitle)
         buttons.append(ButtonSpec(
-            id: state.controlsRunning ? "stop" : "start",
+            id: ctlAction,
             title: ctlTitle,
             rect: NSRect(x: box2.minX + 10, y: box2.maxY - 31, width: ctlW, height: 22),
-            fill: state.controlsRunning ? Self.stopRed : Self.accent,
-            enabled: state.controlsRunning || state.canStart
+            fill: ctlFill,
+            enabled: state.controlsRunning || !state.axTrusted || state.canStart
         ))
 
         // Box 3A button: OBS Studio action
@@ -1203,10 +1213,10 @@ private final class SheetBackground: NSView {
 
         // --- Box 2: Fadester Companion (Here) ---
         fill(g.box2, Self.navy, radius: 7)
-        stroke(g.box2, state.controlsArmed ? Self.green : Self.accent, radius: 7, width: 1.5)
+        stroke(g.box2, state.controlsArmed ? Self.green : (!state.axTrusted ? Self.amber : Self.accent), radius: 7, width: 1.5)
         drawDot(state.controlsLamp, x: g.box2.minX + 10, y: g.box2.minY + 10)
         drawText("2. Companion (Here)", at: NSPoint(x: g.box2.minX + 24, y: g.box2.minY + 7), size: 11.5, bold: true, color: .white)
-        let ctlText = !state.controlsRunning ? "Controls: off" : (state.controlsArmed ? "Controls: armed" : "Controls: starting…")
+        let ctlText = !state.controlsRunning ? (state.axTrusted ? "Controls: off" : "Needs Mac Access") : (state.controlsArmed ? "Controls: armed" : "Controls: starting…")
         drawText(ctlText, at: NSPoint(x: g.box2.minX + 10, y: g.box2.minY + 33), size: 10.5, bold: true, color: lightInk)
         drawText("Drives OBS & VJster", at: NSPoint(x: g.box2.minX + 10, y: g.box2.minY + 49), size: 9.8, bold: false, color: mutedLight)
         drawText("Keep this app open", at: NSPoint(x: g.box2.minX + 10, y: g.box2.minY + 63), size: 9.8, bold: false, color: mutedLight)

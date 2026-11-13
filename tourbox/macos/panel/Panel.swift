@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import AppKit
+import ApplicationServices
 
 private let navyColor = NSColor(srgbRed: 26 / 255, green: 34 / 255, blue: 51 / 255, alpha: 1)
 private let accentColor = NSColor(srgbRed: 38 / 255, green: 90 / 255, blue: 158 / 255, alpha: 1)
@@ -167,7 +168,8 @@ private final class PillActionButton: NSControl {
     private let previewMode: Bool
     private let paths: RuntimePaths
     private var settings = Settings(), catalog = Catalog(), invalidSettings = false, scanning = false, terminating = false
-    private var obsConnected = false, obsRunning = false, obsHidden = false, studioOff = false, tourboxConsoleRunning = false, tourboxConsoleInstalled = true, frontIsObs = false, vjsterPortBusy = false
+    private var obsConnected = false, obsRunning = false, obsHidden = false, studioOff = false, tourboxConsoleRunning = false, tourboxConsoleInstalled = true, frontIsObs = false, vjsterPortBusy = false, axTrusted = true
+    private var bannerActionId = "openObs"
     private var obsProblem: String?
     private var vjsterPeers: Set<String> = []
     private var lastSavedPreset: URL?
@@ -198,7 +200,8 @@ private final class PillActionButton: NSControl {
     private var vjsterPort = NSTextField(string: "48150"), vjsterExtensionId = NSTextField(string: ""), vjsterVideo = NSTextField(string: "")
     private var vjsterTarget = NSPopUpButton(frame: .zero, pullsDown: false)
     private var fields: [String: NSTextField] = [:], choices: [String: NSPopUpButton] = [:]
-    private var scanButton: NSButton!, primaryButton: NSButton!, saveButton: NSButton!, copyObsUrlButton: NSButton!, firstFourButton: NSButton!, savePresetStepButton: NSButton!, openConsoleStepButton: NSButton!
+    private var scanButton: NSButton!, primaryButton: NSButton!, saveButton: NSButton!, copyObsUrlButton: NSButton!, firstFourButton: NSButton!, savePresetStepButton: NSButton!, openConsoleStepButton: NSButton!, grantAxButton: NSButton!
+    private var axStatusLabel = NSTextField(wrappingLabelWithString: "")
     private var activity = NSTextView()
     private var mapRows: [ControlMapRow] = []
     private var glyphs: [String: NSImage] = [:]
@@ -219,6 +222,9 @@ private final class PillActionButton: NSControl {
             obsConnected = true; obsRunning = true; tourboxConsoleRunning = true
             status.stringValue = "Connected to OBS. Scenes found: 3. Your controller does nothing until you click Save & start controls."
             snapshot.stringValue = "Program: Opening   •   Preview: Guest   •   Studio Mode: On"
+        }
+        if !preview {
+            axTrusted = AXIsProcessTrusted()
         }
         if !preview, let presetBytes = try? Data(contentsOf: paths.preset) {
             bundledPresetHash = LocalFiles.sha256Hex(presetBytes)
@@ -324,7 +330,10 @@ private final class PillActionButton: NSControl {
         reminderLabel.textColor = reminderFgColor
         reminderAction.titleText = "Bring OBS to Front"
         reminderAction.fill = accentColor
-        reminderAction.onClick = { [weak self] in self?.bringObsToFront() }
+        reminderAction.onClick = { [weak self] in
+            guard let self else { return }
+            self.handleLightAction(self.bannerActionId)
+        }
         let reminderRow = NSStackView(views: [reminderLabel, NSView(), reminderAction])
         reminderRow.orientation = .horizontal; reminderRow.alignment = .centerY; reminderRow.spacing = 12
         reminderRow.translatesAutoresizingMaskIntoConstraints = false
@@ -498,8 +507,11 @@ private final class PillActionButton: NSControl {
         importNote.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
 
         subheading("macOS Accessibility permission", in: stack)
-        paragraph("The visible native crossfader needs macOS Accessibility permission (and TourBox Console needs its own permission). Open the native slider permission window once and enable it in System Settings → Privacy & Security → Accessibility.", in: stack)
-        stack.addArrangedSubview(button("Open native slider permission window", #selector(permission)))
+        paragraph("Fadester Companion needs macOS Accessibility permission to drive OBS’s visible T-bar (TourBox Console has its own separate permission). After an app update, if Fadester Companion already appears switched ON in System Settings → Privacy & Security → Accessibility, toggle it OFF and back ON once.", in: stack)
+        grantAxButton = button("Grant Accessibility to Fadester Companion…", #selector(grantAccessibility))
+        grantAxButton.bezelStyle = .rounded
+        axStatusLabel.font = .systemFont(ofSize: 12, weight: .semibold)
+        stack.addArrangedSubview(horizontal([grantAxButton, button("Native helper window…", #selector(permission)), axStatusLabel]))
 
         heading("3   Try a cue", in: stack)
         paragraph("Click Save & start controls (or Start in the top bar) and bring OBS to the front. Turn Scroll one step: Preview changes while Program stays put. Turn the Dial to fade smoothly between them.", in: stack)
@@ -767,7 +779,7 @@ private final class PillActionButton: NSControl {
         let tbState = Readiness.tourBox(consoleRunning: tourboxConsoleRunning, consoleInstalled: consoleReady)
         let vjEnabled = vjster.state == .on
         let vjState = Readiness.vjster(enabled: vjEnabled, controlsOn: controlsOn, connectedPeers: vjsterPeers.count, portBusy: vjsterPortBusy)
-        let ctlState = Readiness.controls(running: controlsOn, armed: host.isArmed)
+        let ctlState = Readiness.controls(running: controlsOn, armed: host.isArmed, axTrusted: axTrusted)
 
         let syncState: PresetSyncState = lastSavedPreset != nil
             ? .current
@@ -775,9 +787,12 @@ private final class PillActionButton: NSControl {
         obsLight.display(obsState, enabled: !scanning)
         tourboxLight.display(tbState, enabled: true)
         vjsterLight.display(vjState, enabled: true)
-        controlsLight.display(ctlState, enabled: controlsOn || canAct)
+        controlsLight.display(ctlState, enabled: controlsOn || !axTrusted || canAct)
         savePresetStepButton?.title = syncState == .updateAvailable ? "1. Save Updated Preset (.tb)…" : "1. Save TourBox Preset (.tb)…"
         openConsoleStepButton?.title = consoleReady ? "2. Open TourBox Console" : "2. Download TourBox Console…"
+        grantAxButton?.bezelColor = axTrusted ? nil : accentColor
+        axStatusLabel.stringValue = axTrusted ? "✓ Accessibility granted" : "Needed — enable Fadester Companion in Accessibility"
+        axStatusLabel.textColor = axTrusted ? NSColor(srgbRed: 40 / 255, green: 140 / 255, blue: 72 / 255, alpha: 1) : reminderFgColor
         importGuideWindow?.update(savedPreset: lastSavedPreset, consoleInstalled: consoleReady)
 
         let parsedVjPort = Int(vjsterPort.stringValue.trimmingCharacters(in: .whitespaces)) ?? settings.vjsterPort
@@ -800,11 +815,14 @@ private final class PillActionButton: NSControl {
             controlsLamp: ctlState.lamp,
             controlsRunning: controlsOn,
             controlsArmed: host.isArmed,
+            axTrusted: axTrusted,
             canStart: canAct
         )
 
-        if let text = Readiness.reminder(controlsOn: controlsOn, obsHidden: obsHidden, consoleRunning: tourboxConsoleRunning, frontIsObs: frontIsObs) {
-            reminderLabel.stringValue = text
+        if let banner = Readiness.banner(controlsOn: controlsOn, obsHidden: obsHidden, consoleRunning: tourboxConsoleRunning, frontIsObs: frontIsObs, axTrusted: axTrusted) {
+            reminderLabel.stringValue = banner.text
+            reminderAction.titleText = banner.button
+            bannerActionId = banner.action
             reminderCard.isHidden = false
         } else {
             reminderCard.isHidden = true
@@ -813,6 +831,7 @@ private final class PillActionButton: NSControl {
 
     private func watchDesktop() {
         guard !previewMode else { return }
+        axTrusted = AXIsProcessTrusted()
         let apps = NSWorkspace.shared.runningApplications
         let obsApp = apps.first {
             $0.bundleIdentifier == "com.obsproject.obs-studio" || $0.localizedName == "OBS" || $0.localizedName == "OBS Studio"
@@ -856,7 +875,7 @@ private final class PillActionButton: NSControl {
             obsProblem = Readiness.obsProblem(from: safeLine)
         } else if safeLine.hasPrefix("ERROR:") {
             let problem = Readiness.obsProblem(from: safeLine)
-            if problem != "obs-no-answer" || safeLine.localizedCaseInsensitiveContains("OBS") {
+            if problem != "obs-no-answer" || safeLine.localizedCaseInsensitiveContains("WebSocket") {
                 obsProblem = problem
             }
         }
@@ -900,6 +919,7 @@ private final class PillActionButton: NSControl {
         case "openObs": bringObsToFront()
         case "openConsole": openTourBoxConsole()
         case "downloadConsole": downloadTourBoxConsole()
+        case "grantAx": grantAccessibility()
         case "studio", "password", "server", "vjsterWait", "vjsterPort":
             openObsShowMe(mode: action)
         default: break
@@ -1008,6 +1028,12 @@ private final class PillActionButton: NSControl {
         do {
             let proposed = try current(), secret = try LocalFiles.password(port: proposed.port, override: password.stringValue)
             try paths.validate(); try LocalFiles.save(proposed); settings = proposed
+            axTrusted = AXIsProcessTrusted()
+            if !axTrusted {
+                grantAccessibility()
+                updateEnabled()
+                return
+            }
             vjsterPeers.removeAll()
             vjsterPortBusy = false
             try host.start(paths: paths, config: LocalFiles.settings, password: secret, mixEnabled: proposed.mixEnabled, extraSecrets: [proposed.vjsterObsToken])
@@ -1181,6 +1207,21 @@ private final class PillActionButton: NSControl {
         )
         importGuideWindow = guide
         guide.show(relativeTo: window)
+    }
+
+    @objc private func grantAccessibility() {
+        guard !previewMode else { return }
+        let opts = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+        axTrusted = AXIsProcessTrustedWithOptions(opts)
+        if !axTrusted, let settingsUrl = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+            NSWorkspace.shared.open(settingsUrl)
+        }
+        let msg = axTrusted
+            ? "macOS Accessibility permission is granted! Click Start to arm controls."
+            : "Enable Fadester Companion in System Settings → Privacy & Security → Accessibility (if already on, toggle OFF then ON), then click Start."
+        setStatus(msg)
+        note(msg)
+        refreshIndicators()
     }
 
     @objc private func permission() {

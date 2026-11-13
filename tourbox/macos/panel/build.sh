@@ -35,7 +35,7 @@ cp README.md "$resources/README.md"
 "$python" make-guide.py "$resources/START-HERE.html"
 /usr/bin/swiftc -swift-version 5 -parse-as-library -O -warnings-as-errors \
   -target "$architecture-apple-macosx12.0" -framework AppKit -framework CryptoKit \
-  Model.swift ObsDiscovery.swift HostController.swift Panel.swift Main.swift \
+  Model.swift ObsDiscovery.swift HostController.swift ShowMe.swift Panel.swift Main.swift \
   -o "$app/Contents/MacOS/FadesterTourBoxPanel"
 if [[ "$mode" != --ui-only ]]; then
   dotnet="${DOTNET:-}"

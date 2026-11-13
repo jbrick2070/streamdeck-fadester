@@ -62,12 +62,20 @@ import AppKit
             }
             dispatchMain()
         }
-        if (args.count == 3 || args.count == 4) && args[0] == "--render-preview" {
+        if (3...6).contains(args.count) && args[0] == "--render-preview" {
             let app = NSApplication.shared; app.setActivationPolicy(.prohibited); app.appearance = NSAppearance(named: .aqua)
             do {
                 try Panel(preview: true).render(to: URL(fileURLWithPath: args[1]))
                 try Panel(preview: true).render(to: URL(fileURLWithPath: args[2]), tab: 1)
-                if args.count == 4 { try Panel(preview: true).render(to: URL(fileURLWithPath: args[3]), tab: 2) }
+                if args.count >= 4 { try Panel(preview: true).render(to: URL(fileURLWithPath: args[3]), tab: 2) }
+                if args.count >= 5 {
+                    let previewSaved = URL(fileURLWithPath: "/Users/operator/Downloads/OBS Fadester for TourBox.tb")
+                    let guide = TourBoxImportWindow(savedPreset: previewSaved, consoleInstalled: true, onSavePreset: { nil }, onOpenConsole: {}, onDownloadConsole: {})
+                    try guide.renderPreview(to: URL(fileURLWithPath: args[4]), time: 2.05)
+                    if args.count == 6 {
+                        try guide.renderPreview(to: URL(fileURLWithPath: args[5]), time: 5.4)
+                    }
+                }
                 print("Rendered offline Fadester Companion previews using synthetic names. No window shown, settings read or OBS connection.")
             } catch { fputs("Preview rendering failed: \(error)\n", stderr); exit(1) }
             return

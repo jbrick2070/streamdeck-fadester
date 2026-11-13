@@ -182,33 +182,34 @@ enum Readiness {
     static func obs(connected: Bool, running: Bool, problem: String?, studioOff: Bool, controlsOn: Bool) -> LightState {
         if connected {
             return studioOff && !controlsOn
-                ? LightState(.amber, "OBS: turn on Studio Mode", button: "How to fix", action: "studio")
+                ? LightState(.amber, "OBS: turn on Studio Mode", button: "Show me", action: "studio")
                 : LightState(.green, "OBS: connected")
         }
         if !running {
             return LightState(.red, "OBS: not running", button: "Open OBS", action: "openObs")
         }
         if problem == "obs-bad-password" {
-            return LightState(.amber, "OBS: password not accepted", button: "How to fix", action: "password")
+            return LightState(.amber, "OBS: password not accepted", button: "Show me", action: "password")
         }
         if problem == nil {
             return LightState(.grey, "OBS: connecting…")
         }
-        return LightState(.amber, "OBS: one setting to turn on", button: "How to fix", action: "server")
+        return LightState(.amber, "OBS: one setting to turn on", button: "Show me", action: "server")
     }
 
-    static func tourBox(consoleRunning: Bool) -> LightState {
-        consoleRunning
-            ? LightState(.green, "TourBox: ready")
-            : LightState(.amber, "TourBox Console: closed", button: "Open Console", action: "openConsole")
+    static func tourBox(consoleRunning: Bool, consoleInstalled: Bool = true) -> LightState {
+        if consoleRunning { return LightState(.green, "TourBox: ready") }
+        if !consoleInstalled { return LightState(.amber, "TourBox Console: not installed", button: "Download", action: "downloadConsole") }
+        return LightState(.amber, "TourBox Console: closed", button: "Open Console", action: "openConsole")
     }
 
-    static func vjster(enabled: Bool, controlsOn: Bool, connectedPeers: Int) -> LightState {
+    static func vjster(enabled: Bool, controlsOn: Bool, connectedPeers: Int, portBusy: Bool = false) -> LightState {
         if !enabled { return LightState(.grey, "VJster: off") }
-        if !controlsOn { return LightState(.grey, "VJster: ready") }
+        if portBusy { return LightState(.red, "VJster: port in use", button: "Show me", action: "vjsterPort") }
+        if !controlsOn { return LightState(.green, "VJster: ready") }
         return connectedPeers > 0
             ? LightState(.green, "VJster: connected")
-            : LightState(.amber, "VJster: waiting for player")
+            : LightState(.amber, "VJster: waiting for video", button: "Show me", action: "vjsterWait")
     }
 
     static func controls(running: Bool, armed: Bool) -> LightState {
@@ -246,6 +247,16 @@ enum Readiness {
         else if line.hasPrefix("VJster: OBS page disconnected") { next.remove("obs") }
         else if line == "VJster link stopped" { next.removeAll() }
         return next
+    }
+
+    static func vjsterPortBusy(after line: String, current: Bool) -> Bool {
+        if (line.hasPrefix("VJster port ") && line.contains(" is in use")) || line.hasPrefix("The VJster port could not be opened") {
+            return true
+        }
+        if line.hasPrefix("VJster link listening on ") || line == "VJster link stopped" {
+            return false
+        }
+        return current
     }
 }
 
@@ -354,13 +365,17 @@ enum ModelTests {
         try check(Readiness.obs(connected: false, running: false, problem: nil, studioOff: false, controlsOn: false) == LightState(.red, "OBS: not running", button: "Open OBS", action: "openObs"), "OBS closed light")
         try check(Readiness.obs(connected: false, running: true, problem: "obs-bad-password", studioOff: false, controlsOn: false).action == "password", "OBS bad password light")
         try check(Readiness.obs(connected: false, running: true, problem: nil, studioOff: false, controlsOn: false) == LightState(.grey, "OBS: connecting…"), "OBS connecting light")
-        try check(Readiness.tourBox(consoleRunning: true) == LightState(.green, "TourBox: ready") && Readiness.tourBox(consoleRunning: false).action == "openConsole", "TourBox Console light")
-        try check(Readiness.vjster(enabled: true, controlsOn: true, connectedPeers: 1) == LightState(.green, "VJster: connected") && Readiness.vjster(enabled: true, controlsOn: true, connectedPeers: 0).lamp == .amber, "VJster readiness light")
+        try check(Readiness.tourBox(consoleRunning: true) == LightState(.green, "TourBox: ready") && Readiness.tourBox(consoleRunning: false).action == "openConsole" && Readiness.tourBox(consoleRunning: false, consoleInstalled: false).action == "downloadConsole", "TourBox Console light")
+        try check(Readiness.vjster(enabled: true, controlsOn: false, connectedPeers: 0) == LightState(.green, "VJster: ready"), "VJster ready before start")
+        try check(Readiness.vjster(enabled: true, controlsOn: true, connectedPeers: 1) == LightState(.green, "VJster: connected") && Readiness.vjster(enabled: true, controlsOn: true, connectedPeers: 0).action == "vjsterWait", "VJster readiness light")
+        try check(Readiness.vjster(enabled: true, controlsOn: true, connectedPeers: 0, portBusy: true).action == "vjsterPort", "VJster port busy light")
         try check(Readiness.controls(running: false, armed: false).action == "start" && Readiness.controls(running: true, armed: true) == LightState(.green, "Controls: on", button: "Stop", action: "stop"), "Controls readiness light")
         try check(Readiness.reminder(controlsOn: true, obsHidden: false, consoleRunning: true, frontIsObs: false) != nil && Readiness.reminder(controlsOn: true, obsHidden: false, consoleRunning: true, frontIsObs: true) == nil, "Frontmost OBS reminder")
         var peers = Readiness.vjsterPeers(after: "VJster: extension connected", current: [])
         peers = Readiness.vjsterPeers(after: "VJster: OBS page connected", current: peers)
         try check(peers.count == 2 && Readiness.vjsterPeers(after: "VJster: extension disconnected (closed)", current: peers) == ["obs"], "VJster peer tracking")
+        let busy = Readiness.vjsterPortBusy(after: "VJster port 48150 is in use, probably by the VJster actions in your Stream Deck or OpenDeck software.", current: false)
+        try check(busy && !Readiness.vjsterPortBusy(after: "VJster link listening on 127.0.0.1:48150", current: busy), "VJster port busy tracking")
         let sampleMap = Data("{\"presets\":{\"master\":{\"bindings\":[{\"control\":\"side+knob\",\"gesture\":\"cw\",\"action\":\"vjster.speed.up\",\"label\":\"Video speed up\"}]}}}".utf8)
         let mapRows = try ControlMapRow.load(data: sampleMap)
         try check(mapRows == [ControlMapRow(category: "media", control: "Side + Knob", gesture: "Clockwise", action: "Video speed up")], "Control map formatting")

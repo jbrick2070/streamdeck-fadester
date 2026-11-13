@@ -167,21 +167,26 @@ private final class PillActionButton: NSControl {
     private let previewMode: Bool
     private let paths: RuntimePaths
     private var settings = Settings(), catalog = Catalog(), invalidSettings = false, scanning = false, terminating = false
-    private var obsConnected = false, obsRunning = false, obsHidden = false, studioOff = false, tourboxConsoleRunning = false, frontIsObs = false
+    private var obsConnected = false, obsRunning = false, obsHidden = false, studioOff = false, tourboxConsoleRunning = false, tourboxConsoleInstalled = true, frontIsObs = false, vjsterPortBusy = false
     private var obsProblem: String?
     private var vjsterPeers: Set<String> = []
+    private var lastSavedPreset: URL?
     private var autoTries = 0
     private var nextAutoScan = Date.distantFuture
     private var watchTimer: Timer?
     private var scanTask: Task<Void, Never>?
     private let host = HostController()
     private var hud: FeedbackHud?
+    private var importGuideWindow: TourBoxImportWindow?
+    private var showMeWindow: ObsShowMeWindow?
     private var window: NSWindow!
     private var tabs: NSTabView!
     private var navigation: [NSButton] = []
     private var obsLight = LightView(), tourboxLight = LightView(), vjsterLight = LightView(), controlsLight = LightView()
+    private var diagramView = SetupDiagramView()
     private var reminderCard = RoundedCardView(fill: reminderBgColor, radius: 5)
     private var reminderLabel = NSTextField(wrappingLabelWithString: "")
+    private var reminderAction = PillActionButton()
     private var status = NSTextField(labelWithString: "Looking for OBS on this Mac…")
     private var snapshot = NSTextField(wrappingLabelWithString: "Read OBS to load real scene and source names. This scan changes nothing in OBS.")
     private var importNote = NSTextField(wrappingLabelWithString: "")
@@ -191,7 +196,7 @@ private final class PillActionButton: NSControl {
     private var vjsterPort = NSTextField(string: "48150"), vjsterExtensionId = NSTextField(string: ""), vjsterVideo = NSTextField(string: "")
     private var vjsterTarget = NSPopUpButton(frame: .zero, pullsDown: false)
     private var fields: [String: NSTextField] = [:], choices: [String: NSPopUpButton] = [:]
-    private var scanButton: NSButton!, primaryButton: NSButton!, saveButton: NSButton!, copyObsUrlButton: NSButton!, firstFourButton: NSButton!
+    private var scanButton: NSButton!, primaryButton: NSButton!, saveButton: NSButton!, copyObsUrlButton: NSButton!, firstFourButton: NSButton!, openConsoleStepButton: NSButton!
     private var activity = NSTextView()
     private var mapRows: [ControlMapRow] = []
     private var glyphs: [String: NSImage] = [:]
@@ -311,16 +316,21 @@ private final class PillActionButton: NSControl {
         // 3. Contextual amber reminder strip (shown only when OBS is hidden or behind another app while controls run).
         reminderLabel.font = .boldSystemFont(ofSize: 12.5)
         reminderLabel.textColor = reminderFgColor
-        reminderLabel.translatesAutoresizingMaskIntoConstraints = false
-        reminderCard.addSubview(reminderLabel)
+        reminderAction.titleText = "Bring OBS to Front"
+        reminderAction.fill = accentColor
+        reminderAction.onClick = { [weak self] in self?.bringObsToFront() }
+        let reminderRow = NSStackView(views: [reminderLabel, NSView(), reminderAction])
+        reminderRow.orientation = .horizontal; reminderRow.alignment = .centerY; reminderRow.spacing = 12
+        reminderRow.translatesAutoresizingMaskIntoConstraints = false
+        reminderCard.addSubview(reminderRow)
         reminderCard.isHidden = true
         root.addArrangedSubview(reminderCard)
         NSLayoutConstraint.activate([
             reminderCard.widthAnchor.constraint(equalTo: root.widthAnchor, constant: -36),
-            reminderLabel.leadingAnchor.constraint(equalTo: reminderCard.leadingAnchor, constant: 12),
-            reminderLabel.trailingAnchor.constraint(equalTo: reminderCard.trailingAnchor, constant: -12),
-            reminderLabel.topAnchor.constraint(equalTo: reminderCard.topAnchor, constant: 7),
-            reminderLabel.bottomAnchor.constraint(equalTo: reminderCard.bottomAnchor, constant: -7)
+            reminderRow.leadingAnchor.constraint(equalTo: reminderCard.leadingAnchor, constant: 12),
+            reminderRow.trailingAnchor.constraint(equalTo: reminderCard.trailingAnchor, constant: -12),
+            reminderRow.topAnchor.constraint(equalTo: reminderCard.topAnchor, constant: 6),
+            reminderRow.bottomAnchor.constraint(equalTo: reminderCard.bottomAnchor, constant: -6)
         ])
 
         // 4. Tab navigation (Setup, Assignments, Control map, Activity).
@@ -376,6 +386,7 @@ private final class PillActionButton: NSControl {
         host.exited = { [weak self] in
             guard let self else { return }
             self.vjsterPeers.removeAll()
+            self.vjsterPortBusy = false
             self.updateEnabled()
             if self.terminating { NSApp.reply(toApplicationShouldTerminate: true) }
         }
@@ -438,6 +449,10 @@ private final class PillActionButton: NSControl {
 
     private func setup() -> NSView {
         let stack = column()
+        diagramView.onAction = { [weak self] action in self?.handleDiagramAction(action) }
+        stack.addArrangedSubview(diagramView)
+        diagramView.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
+
         heading("1   Connect to OBS", in: stack)
         paragraph("In OBS, open Tools → WebSocket Server Settings and turn on Enable WebSocket server. Keep authentication on. The T-bar needs OBS 33.0.0 or 33.0.1. Turn on Studio Mode, choose the Fade transition, and keep the main OBS window open with its T-bar visible.", in: stack)
         port.widthAnchor.constraint(equalToConstant: 86).isActive = true
@@ -455,11 +470,13 @@ private final class PillActionButton: NSControl {
 
         heading("2   Set up TourBox & native T-bar", in: stack)
         subheading("TourBox Console preset", in: stack)
-        paragraph("Click Import into TourBox Console to copy the Mac preset path and open TourBox Console. In Console, click Import beside Preset List, press Cmd + Shift + G, paste with Cmd + V, press Return, link the preset to OBS Studio, and turn Auto Switch on.", in: stack)
-        stack.addArrangedSubview(horizontal([
-            button("Import into TourBox Console", #selector(importIntoConsole)),
-            button("Save Mac preset…", #selector(exportPreset))
-        ]))
+        paragraph("Save the Mac preset (.tb) to Downloads once, then import it in TourBox Console. Both apps work together: TourBox Console sends shortcuts while OBS Studio is in front, and Fadester Companion stays open with Controls: on.", in: stack)
+        let savePresetBtn = button("1. Save TourBox Preset (.tb)…", #selector(saveAndGuidePreset))
+        savePresetBtn.bezelStyle = .rounded
+        savePresetBtn.bezelColor = accentColor
+        openConsoleStepButton = button("2. Open TourBox Console", #selector(openOrDownloadConsole))
+        let showGuideBtn = button("Show me where to click", #selector(showImportGuide))
+        stack.addArrangedSubview(horizontal([savePresetBtn, openConsoleStepButton, showGuideBtn]))
         importNote.font = .systemFont(ofSize: 12, weight: .medium)
         importNote.textColor = accentColor
         importNote.isHidden = true
@@ -731,10 +748,42 @@ private final class PillActionButton: NSControl {
     private func refreshIndicators() {
         let controlsOn = host.running
         let canAct = !scanning && !invalidSettings && !previewMode
-        obsLight.display(Readiness.obs(connected: obsConnected, running: obsRunning, problem: obsProblem, studioOff: studioOff, controlsOn: controlsOn), enabled: !scanning)
-        tourboxLight.display(Readiness.tourBox(consoleRunning: tourboxConsoleRunning), enabled: true)
-        vjsterLight.display(Readiness.vjster(enabled: vjster.state == .on, controlsOn: controlsOn, connectedPeers: vjsterPeers.count), enabled: true)
-        controlsLight.display(Readiness.controls(running: controlsOn, armed: host.isArmed), enabled: controlsOn || canAct)
+        let consoleReady = tourboxConsoleInstalled || tourboxConsoleRunning
+        let obsState = Readiness.obs(connected: obsConnected, running: obsRunning, problem: obsProblem, studioOff: studioOff, controlsOn: controlsOn)
+        let tbState = Readiness.tourBox(consoleRunning: tourboxConsoleRunning, consoleInstalled: consoleReady)
+        let vjEnabled = vjster.state == .on
+        let vjState = Readiness.vjster(enabled: vjEnabled, controlsOn: controlsOn, connectedPeers: vjsterPeers.count, portBusy: vjsterPortBusy)
+        let ctlState = Readiness.controls(running: controlsOn, armed: host.isArmed)
+
+        obsLight.display(obsState, enabled: !scanning)
+        tourboxLight.display(tbState, enabled: true)
+        vjsterLight.display(vjState, enabled: true)
+        controlsLight.display(ctlState, enabled: controlsOn || canAct)
+        openConsoleStepButton?.title = consoleReady ? "2. Open TourBox Console" : "2. Download TourBox Console…"
+        importGuideWindow?.update(savedPreset: lastSavedPreset, consoleInstalled: consoleReady)
+
+        let parsedVjPort = Int(vjsterPort.stringValue.trimmingCharacters(in: .whitespaces)) ?? settings.vjsterPort
+        diagramView.state = SetupDiagramView.State(
+            obsLamp: obsState.lamp,
+            obsRunning: obsRunning,
+            obsConnected: obsConnected,
+            studioOff: studioOff,
+            frontIsObs: frontIsObs,
+            obsAction: obsState.action ?? "server",
+            tourBoxLamp: tbState.lamp,
+            consoleRunning: tourboxConsoleRunning,
+            consoleInstalled: consoleReady,
+            presetSaved: lastSavedPreset != nil,
+            vjsterLamp: vjState.lamp,
+            vjsterEnabled: vjEnabled,
+            vjsterPort: parsedVjPort,
+            vjsterConnected: !vjsterPeers.isEmpty,
+            vjsterPortBusy: vjsterPortBusy,
+            controlsLamp: ctlState.lamp,
+            controlsRunning: controlsOn,
+            controlsArmed: host.isArmed,
+            canStart: canAct
+        )
 
         if let text = Readiness.reminder(controlsOn: controlsOn, obsHidden: obsHidden, consoleRunning: tourboxConsoleRunning, frontIsObs: frontIsObs) {
             reminderLabel.stringValue = text
@@ -756,6 +805,9 @@ private final class PillActionButton: NSControl {
         tourboxConsoleRunning = apps.contains {
             ($0.localizedName?.localizedCaseInsensitiveContains("TourBox Console") == true) || ($0.bundleIdentifier?.localizedCaseInsensitiveContains("tourbox") == true)
         }
+        tourboxConsoleInstalled = tourboxConsoleRunning
+            || FileManager.default.fileExists(atPath: "/Applications/TourBox Console.app")
+            || (NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.tourbox.ui.launch") != nil)
         if let front = NSWorkspace.shared.frontmostApplication {
             frontIsObs = front.bundleIdentifier == "com.obsproject.obs-studio" || front.localizedName == "OBS" || front.localizedName == "OBS Studio"
         } else {
@@ -780,6 +832,7 @@ private final class PillActionButton: NSControl {
 
     private func handleHostLine(_ safeLine: String) {
         vjsterPeers = Readiness.vjsterPeers(after: safeLine, current: vjsterPeers)
+        vjsterPortBusy = Readiness.vjsterPortBusy(after: safeLine, current: vjsterPortBusy)
         if safeLine.hasPrefix("OFFLINE:") || safeLine.hasPrefix("DISARMED ") {
             obsConnected = false
             obsProblem = Readiness.obsProblem(from: safeLine)
@@ -793,46 +846,91 @@ private final class PillActionButton: NSControl {
         note(safeLine)
     }
 
+    private func bringObsToFront() {
+        guard !previewMode else { return }
+        if let obsApp = NSWorkspace.shared.runningApplications.first(where: {
+            $0.bundleIdentifier == "com.obsproject.obs-studio" || $0.localizedName == "OBS" || $0.localizedName == "OBS Studio"
+        }) {
+            obsApp.unhide()
+            obsApp.activate(options: [.activateAllWindows])
+            return
+        }
+        let obsUrl = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.obsproject.obs-studio") ?? URL(fileURLWithPath: "/Applications/OBS.app")
+        if FileManager.default.fileExists(atPath: obsUrl.path) {
+            NSWorkspace.shared.openApplication(at: obsUrl, configuration: .init(), completionHandler: nil)
+        } else {
+            setStatus("OBS.app was not found in /Applications. Start OBS Studio manually.")
+        }
+    }
+
+    private func handleDiagramAction(_ action: String) {
+        guard !previewMode else { return }
+        switch action {
+        case "savePreset": saveAndGuidePreset()
+        case "guide": showImportGuide()
+        case "scan": scan()
+        case "copyObsUrl": copyObsUrl()
+        default: handleLightAction(action)
+        }
+    }
+
     private func handleLightAction(_ action: String) {
         guard !previewMode else { return }
         switch action {
         case "start": start()
         case "stop": stop()
-        case "openObs":
-            let obsUrl = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.obsproject.obs-studio") ?? URL(fileURLWithPath: "/Applications/OBS.app")
-            if FileManager.default.fileExists(atPath: obsUrl.path) {
-                NSWorkspace.shared.openApplication(at: obsUrl, configuration: .init(), completionHandler: nil)
-            } else {
-                setStatus("OBS.app was not found in /Applications. Start OBS Studio manually.")
-            }
-        case "openConsole":
-            openTourBoxConsole()
-        case "studio", "password", "server":
-            showObsHelpSheet(mode: action)
+        case "openObs": bringObsToFront()
+        case "openConsole": openTourBoxConsole()
+        case "downloadConsole": downloadTourBoxConsole()
+        case "studio", "password", "server", "vjsterWait", "vjsterPort":
+            openObsShowMe(mode: action)
         default: break
         }
     }
 
-    private func showObsHelpSheet(mode: String) {
-        let alert = NSAlert()
-        alert.alertStyle = .informational
-        if mode == "studio" {
-            alert.messageText = "Turn on Studio Mode in OBS"
-            alert.informativeText = "In OBS Studio, click Studio Mode under Controls (bottom right of the main OBS window), and select the Fade transition beside it. Keep at least two scenes in the list and the T-bar parked at 0."
-        } else if mode == "password" {
-            alert.messageText = "Check OBS’s WebSocket password"
-            alert.informativeText = "In OBS Studio, open Tools → WebSocket Server Settings → Show Connect Info, copy the Server Password, and paste it into OBS password (optional) on the Setup tab (or leave it empty if OBS uses this Mac’s saved profile)."
-        } else {
-            alert.messageText = "Turn on OBS’s WebSocket server"
-            alert.informativeText = "In OBS Studio, open Tools → WebSocket Server Settings:\n\n1. Check Enable WebSocket server (port 4455).\n2. Keep Enable Authentication checked.\n3. Click Apply / OK, then click Read scenes and inputs from OBS."
+    private func openObsShowMe(mode: String) {
+        showMeWindow?.close()
+        let canvasMode: ShowMeCanvas.Mode
+        let title: String
+        let detail: String
+        let buttonTitle: String?
+        let action: (() -> Void)?
+        switch mode {
+        case "studio":
+            canvasMode = .obsStudio
+            title = "Turn on Studio Mode in OBS"
+            detail = "In OBS Studio, click Studio Mode under Controls (bottom right of the main OBS window), select the Fade transition beside it, and keep at least two scenes in the list."
+            buttonTitle = "Read scenes and inputs from OBS"
+            action = { [weak self] in self?.scan() }
+        case "password":
+            canvasMode = .obsPassword
+            title = "Check OBS’s WebSocket password"
+            detail = "In OBS Studio, open Tools → WebSocket Server Settings → Show Connect Info, copy the Server Password, and paste it into OBS password (optional) on the Setup tab."
+            buttonTitle = "Read scenes and inputs from OBS"
+            action = { [weak self] in self?.scan() }
+        case "vjsterWait":
+            canvasMode = .vjsterWait
+            title = "Connect a YouTube video to VJster"
+            detail = "Either open a YouTube video in Google Chrome with the VJster extension enabled, or click Copy OBS Browser Source URL on the Setup tab and paste that URL into an OBS Browser Source."
+            buttonTitle = "Copy OBS Browser Source URL"
+            action = { [weak self] in self?.copyObsUrl() }
+        case "vjsterPort":
+            let activePort = Int(vjsterPort.stringValue.trimmingCharacters(in: .whitespaces)) ?? settings.vjsterPort
+            canvasMode = .vjsterPort(port: activePort)
+            title = "VJster port \(activePort) is in use"
+            detail = "Quit Stream Deck (or remove VJster actions from its active profile), or stop controls and change VJster port on the Setup tab and in the Chrome VJster extension Options."
+            buttonTitle = nil
+            action = nil
+        default:
+            canvasMode = .obsServer
+            title = "Turn on OBS’s WebSocket server"
+            detail = "In OBS Studio, open Tools → WebSocket Server Settings, check Enable WebSocket server (port 4455), keep Enable Authentication checked, click OK, then click Read scenes and inputs from OBS."
+            buttonTitle = "Read scenes and inputs from OBS"
+            action = { [weak self] in self?.scan() }
         }
-        alert.addButton(withTitle: "Read scenes and inputs from OBS")
-        alert.addButton(withTitle: "Close")
-        alert.beginSheetModal(for: window) { [weak self] response in
-            if response == .alertFirstButtonReturn {
-                Task { @MainActor in self?.scan() }
-            }
-        }
+        let win = ObsShowMeWindow(mode: canvasMode, title: title, detail: detail, actionTitle: buttonTitle, onAction: action)
+        showMeWindow = win
+        win.show(relativeTo: window)
     }
 
     private func updateEnabled() {
@@ -893,6 +991,7 @@ private final class PillActionButton: NSControl {
             let proposed = try current(), secret = try LocalFiles.password(port: proposed.port, override: password.stringValue)
             try paths.validate(); try LocalFiles.save(proposed); settings = proposed
             vjsterPeers.removeAll()
+            vjsterPortBusy = false
             try host.start(paths: paths, config: LocalFiles.settings, password: secret, mixEnabled: proposed.mixEnabled, extraSecrets: [proposed.vjsterObsToken])
             updateEnabled()
         } catch { failure(error); updateEnabled() }
@@ -978,37 +1077,81 @@ private final class PillActionButton: NSControl {
     }
 
     private func openTourBoxConsole() {
-        let console = URL(fileURLWithPath: "/Applications/TourBox Console.app")
+        let console = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.tourbox.ui.launch") ?? URL(fileURLWithPath: "/Applications/TourBox Console.app")
         if FileManager.default.fileExists(atPath: console.path) {
             NSWorkspace.shared.openApplication(at: console, configuration: .init(), completionHandler: nil)
         } else {
-            setStatus("TourBox Console.app was not found in /Applications.")
+            downloadTourBoxConsole()
         }
     }
 
-    @objc private func importIntoConsole() {
+    private func downloadTourBoxConsole() {
+        if let url = URL(string: "https://www.tourboxtech.com/en/downloads/") {
+            NSWorkspace.shared.open(url)
+            setStatus("Opened TourBox Console download page in your browser.")
+            note("Opened TourBox Console download page: https://www.tourboxtech.com/en/downloads/")
+        }
+    }
+
+    @objc private func openOrDownloadConsole() {
         guard !previewMode else { return }
-        do {
-            try FileManager.default.createDirectory(at: LocalFiles.support, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
-            let staged = LocalFiles.support.appendingPathComponent("OBS Fadester for TourBox.tb")
-            try Data(contentsOf: paths.preset).write(to: staged, options: .atomic)
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(staged.path, forType: .string)
-            importNote.stringValue = "Path copied! In TourBox Console, click Import beside Preset List, press Cmd + Shift + G, press Cmd + V, press Return, then link the preset to OBS Studio and turn Auto Switch on."
+        if lastSavedPreset == nil {
+            importNote.stringValue = "Need the preset file? Click “1. Save TourBox Preset (.tb)…” or “Show me where to click”."
             importNote.isHidden = false
-            setStatus("Preset path copied to clipboard and TourBox Console opened.")
-            note("Copied preset path to clipboard: \(staged.path)")
+        }
+        if tourboxConsoleInstalled || tourboxConsoleRunning {
             openTourBoxConsole()
-        } catch { failure(error) }
+        } else {
+            downloadTourBoxConsole()
+        }
     }
 
-    @objc private func exportPreset() {
-        guard !previewMode else { return }
-        let save = NSSavePanel(); save.nameFieldStringValue = "OBS Fadester for TourBox.tb"; save.title = "Save the Mac TourBox preset"
-        save.directoryURL = FileManager.default.homeDirectoryForCurrentUser
-        if save.runModal() == .OK, let url = save.url {
-            do { try Data(contentsOf: paths.preset).write(to: url, options: .atomic); note("Mac preset saved. Import it in TourBox Console; no Console settings were changed.") } catch { failure(error) }
+    private func savePresetDialog() -> URL? {
+        guard !previewMode else { return nil }
+        let save = NSSavePanel()
+        save.nameFieldStringValue = "OBS Fadester for TourBox.tb"
+        save.title = "Save the Mac TourBox preset (.tb)"
+        save.message = "Choose a visible folder such as Downloads, then import this file in TourBox Console."
+        guard save.runModal() == .OK, let url = save.url else { return nil }
+        do {
+            try Data(contentsOf: paths.preset).write(to: url, options: .atomic)
+            lastSavedPreset = url
+            let folder = url.deletingLastPathComponent().lastPathComponent
+            importNote.stringValue = "Saved: \(url.path) — now click 2. Open TourBox Console and import it beside Preset List."
+            importNote.isHidden = false
+            setStatus("Saved Mac TourBox preset in “\(folder)”.")
+            note("Saved Mac preset: \(url.path) (import it in TourBox Console; no Console settings were changed automatically).")
+            refreshIndicators()
+            return url
+        } catch {
+            failure(error)
+            return nil
         }
+    }
+
+    @objc private func saveAndGuidePreset() {
+        if savePresetDialog() != nil {
+            showImportGuide()
+        }
+    }
+
+    @objc private func showImportGuide() {
+        guard !previewMode else { return }
+        let consoleReady = tourboxConsoleInstalled || tourboxConsoleRunning
+        if let existing = importGuideWindow {
+            existing.update(savedPreset: lastSavedPreset, consoleInstalled: consoleReady)
+            existing.show(relativeTo: window)
+            return
+        }
+        let guide = TourBoxImportWindow(
+            savedPreset: lastSavedPreset,
+            consoleInstalled: consoleReady,
+            onSavePreset: { [weak self] in self?.savePresetDialog() },
+            onOpenConsole: { [weak self] in self?.openTourBoxConsole() },
+            onDownloadConsole: { [weak self] in self?.downloadTourBoxConsole() }
+        )
+        importGuideWindow = guide
+        guide.show(relativeTo: window)
     }
 
     @objc private func permission() {
@@ -1026,6 +1169,8 @@ private final class PillActionButton: NSControl {
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         watchTimer?.invalidate(); watchTimer = nil
         hud?.close(); hud = nil
+        importGuideWindow?.close(); importGuideWindow = nil
+        showMeWindow?.close(); showMeWindow = nil
         scanTask?.cancel()
         if host.running { terminating = true; host.stop(); return .terminateLater }
         return .terminateNow

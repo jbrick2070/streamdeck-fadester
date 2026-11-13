@@ -127,6 +127,35 @@ internal static class HostSelfTests
         await Refused(() => readOnly.Desk.Dispatch("mic.mute"));
         await Refused(() => readOnly.Desk.Dispatch("fader.forward"));
         Check(nativeCalls == seen && nativeWrites == 0 && calls.All(c => c.StartsWith("Get", StringComparison.Ordinal)), "read-only backend refuses OBS and native writes independently");
+        Check(ingress.SubmitLine("action vjster.status", out _), "read-only vjster.status admitted");
+        Check(await readOnly.Dispatch(Pop(ingress)) == "VJster: disabled in read-only mode.", "read-only vjster.status reports disabled");
+        Check(ingress.SubmitLine("action vjster.speed.up", out _), "read-only vjster.speed.up reaches guard");
+        await Refused(() => readOnly.Dispatch(Pop(ingress)));
+
+        var noVjster = new HostSession(config, ingress, generation, Rpc, Native, () => true, CancellationToken.None);
+        Check(ingress.SubmitLine("action vjster.speed.up", out _), "disabled vjster action admitted");
+        await Refused(() => noVjster.Dispatch(Pop(ingress)));
+
+        await using var vjLink = new VjsterLink(0, null, _ => { });
+        await vjLink.StartAsync();
+        using var fakeExt = new System.Net.WebSockets.ClientWebSocket();
+        fakeExt.Options.SetRequestHeader("Origin", "chrome-extension://abcdefghijklmnopabcdefghijklmnop");
+        await fakeExt.ConnectAsync(new Uri($"ws://127.0.0.1:{vjLink.BoundPort}/"), CancellationToken.None);
+        var buf = new byte[4096];
+        var initMsg = await fakeExt.ReceiveAsync(buf, CancellationToken.None);
+        var initObj = JsonNode.Parse(System.Text.Encoding.UTF8.GetString(buf, 0, initMsg.Count))!.AsObject();
+        Check(initObj["type"]!.GetValue<string>() == "state.get", "host vjster link requests initial state");
+        var withVjster = new HostSession(config, ingress, generation, Rpc, Native, () => true, CancellationToken.None, vjster: new VjsterDesk(vjLink, targetChoice: "both"));
+        Check(ingress.SubmitLine("action vjster.speed.up", out _), "live vjster rotary admitted");
+        var vjTask = withVjster.Dispatch(Pop(ingress));
+        var stepMsg = await fakeExt.ReceiveAsync(buf, CancellationToken.None);
+        var stepObj = JsonNode.Parse(System.Text.Encoding.UTF8.GetString(buf, 0, stepMsg.Count))!.AsObject();
+        string replyJson = $$"""{"v":1,"id":"r1","target":"browser","type":"state","inReplyTo":"{{stepObj["id"]!.GetValue<string>()}}","rate":1.25,"rateDirect":false,"availableRates":[1,1.25],"quality":"hd1080","availableQualities":["hd1080"],"qualityAuto":false,"title":"Test","host":"www.youtube.com","playing":true,"adPlaying":false,"capabilities":["speed","quality","transport"],"pinned":false}""";
+        await fakeExt.SendAsync(System.Text.Encoding.UTF8.GetBytes(replyJson), System.Net.WebSockets.WebSocketMessageType.Text, true, CancellationToken.None);
+        Check(await vjTask == "Video 1.25x · 1080p · playing", "HostSession routes vjster actions through VjsterDesk");
+        Check(ingress.SubmitLine("action vjster.speed.up", out _), "stale vjster rotary admitted before clock advance");
+        var staleVj = Pop(ingress); time += 181;
+        await Refused(() => withVjster.Dispatch(staleVj));
 
         LogPass();
     }

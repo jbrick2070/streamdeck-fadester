@@ -1,18 +1,23 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// The VJster link, hosted by the TourBox companion: the loopback WebSocket the
-// VJster Chrome extension connects to, so TourBox controls can change the
-// speed and quality of the video in Chrome. A port of the Stream Deck plugin's
-// server (src/vjster/plugin/link-server.ts) and protocol v1
-// (src/vjster/shared/protocol.ts); the extension cannot tell the two apart.
+// The VJster link, hosted by the TourBox companion: the loopback WebSocket and
+// optional /obs Browser Source page that the VJster Chrome extension and OBS
+// connect to, so TourBox controls can change video speed and quality in Chrome
+// or directly inside an OBS Browser Source without needing Midi Fadester. A port
+// of the Stream Deck plugin's server (src/vjster/plugin/link-server.ts,
+// src/vjster/plugin/obs-page.ts) and protocol v1 (src/vjster/shared/protocol.ts).
 //
 // Who may connect, decided on the HTTP upgrade before any WebSocket exists:
-// exactly one Host header naming this server (127.0.0.1 or localhost on its
-// port, which defeats DNS rebinding); an Origin of chrome-extension://<32
-// letters a-p>, one of the pinned ids when there are any; no `token` query
-// (the OBS page is a plugin feature, this host does not serve it). Anything
-// else gets a plain HTTP 403 and no WebSocket; a request that is not an
-// upgrade gets 426. One extension at a time: a newer connection replaces the
-// older one with close code 4000.
+// - exactly one Host header naming this server (127.0.0.1 or localhost on its
+//   port, which defeats DNS rebinding);
+// - with a `token` query parameter, the Origin must be http://127.0.0.1:<port>
+//   or http://localhost:<port>, the token must match obsToken in constant time,
+//   and the connection becomes the `obs` target;
+// - without one, the Origin must be chrome-extension://<32 letters a-p>, one of
+//   the pinned ids when there are any, and the connection becomes `browser`.
+// Anything else gets a plain HTTP 403 and no WebSocket; plain HTTP GET/HEAD
+// serves only the registered /obs page assets (with strict Host + CSP), and any
+// other plain HTTP request gets 426. One peer per target at a time: a newer
+// connection for the same target replaces the older one with close code 4000.
 //
 // Logs never carry a URL, a title, a token or a message body (docs/vjster R-BEH-5).
 
@@ -42,7 +47,10 @@ internal sealed class VjsterPortInUseException(int port, string code) : Exceptio
     public int Port { get; } = port;
 }
 
-/** One parsed message from the extension, or why it was refused. */
+/** One static file served over plain HTTP on the VJster loopback port (/obs, /obs/player.js). */
+internal sealed record VjsterPage(string Type, byte[] Body);
+
+/** One parsed message from a VJster target, or why it was refused. */
 internal sealed record VjsterParse(bool Ok, string Code, string Reason, string? InReplyTo, string Type, string Target, VjsterState? State, VjsterError? Error, double T)
 {
     public static VjsterParse Fail(string code, string reason, string? inReplyTo = null) => new(false, code, reason, inReplyTo, "", "", null, null, 0);
@@ -56,6 +64,9 @@ internal sealed class VjsterLink : IAsyncDisposable
     public const int MaxMessageChars = 16384;
     public const int MaxPayloadBytes = MaxMessageChars * 3;
     public const int CloseReplaced = 4000, CloseIdle = 4001;
+    public const string ObsPagePath = "/obs";
+    public const string VideoPlaceholder = "VIDEO_ID";
+    public const string PageCsp = "default-src 'none'; script-src 'self' https://www.youtube.com https://s.ytimg.com; frame-src https://www.youtube.com; connect-src ws://127.0.0.1:* ws://localhost:*; style-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
     public static readonly TimeSpan PingInterval = TimeSpan.FromSeconds(20);
     public static readonly TimeSpan IdleTimeout = TimeSpan.FromSeconds(60);
     public static readonly TimeSpan ReaskMin = TimeSpan.FromSeconds(2);
@@ -65,6 +76,8 @@ internal sealed class VjsterLink : IAsyncDisposable
     // \z, not $: in .NET, $ also matches before a trailing newline, which the plugin's regexes refuse.
     static readonly Regex ExtensionIdPattern = new(@"^[a-p]{32}\z", RegexOptions.Compiled);
     static readonly Regex ExtensionOrigin = new(@"^chrome-extension://([a-p]{32})\z", RegexOptions.Compiled);
+    static readonly Regex TokenPattern = new(@"^[0-9a-f]{32}\z", RegexOptions.Compiled);
+    static readonly Regex VideoIdPattern = new(@"^[A-Za-z0-9_-]{11}\z", RegexOptions.Compiled);
     static readonly Regex IdPattern = new(@"^[A-Za-z0-9_-]{1,64}\z", RegexOptions.Compiled);
     static readonly Regex LevelId = new(@"^[a-z0-9]{1,16}\z", RegexOptions.Compiled);
     static readonly Regex HostPattern = new(@"^[A-Za-z0-9.-]{1,253}\z", RegexOptions.Compiled);
@@ -74,10 +87,11 @@ internal sealed class VjsterLink : IAsyncDisposable
     const double MaxRate = 16; // the extended range's top (src/vjster/shared/speed.ts)
     const int MaxTitleChars = 300, MaxList = 64;
 
-    sealed class Peer(TcpClient client, WebSocket socket)
+    sealed class Peer(TcpClient client, WebSocket socket, string target)
     {
         public readonly TcpClient Client = client;
         public readonly WebSocket Socket = socket;
+        public readonly string Target = target;
         public long LastHeard = Stopwatch.GetTimestamp();
         public long LastReask = long.MinValue / 2;
         public bool WarnedMalformed;
@@ -87,12 +101,15 @@ internal sealed class VjsterLink : IAsyncDisposable
 
     readonly int port;
     readonly string[] allowed;
+    readonly string? obsToken;
+    readonly IReadOnlyDictionary<string, VjsterPage> pages;
     readonly Action<string> log;
     readonly object gate = new();
-    readonly ConcurrentDictionary<string, TaskCompletionSource<(VjsterState? State, VjsterError? Error)>> pending = new();
+    readonly Dictionary<string, Peer> peers = new(StringComparer.Ordinal);
+    readonly Dictionary<string, VjsterState?> states = new(StringComparer.Ordinal);
+    readonly ConcurrentDictionary<string, (string Target, TaskCompletionSource<(VjsterState? State, VjsterError? Error)> Tcs)> pending = new();
     readonly string idPrefix = Convert.ToHexString(RandomNumberGenerator.GetBytes(4)).ToLowerInvariant();
     TcpListener? listener;
-    Peer? peer;
     CancellationTokenSource? running;
     Task? acceptLoop, pingLoop;
     int nextId = 1, refusalsSinceLog;
@@ -102,28 +119,107 @@ internal sealed class VjsterLink : IAsyncDisposable
     public event Action<VjsterError>? ErrorReceived;
     public event Action<bool>? ConnectionChanged;
 
-    /** The last state the extension reported on the current connection; null when none is connected. */
-    public VjsterState? LastState { get; private set; }
+    /** The last state reported on an active connection (browser preferred when both are up); null when none is connected. */
+    public VjsterState? LastState => GetLastState("browser") ?? GetLastState("obs");
 
     /**
      * `allowedExtensionIds`: ids that may connect; empty allows any extension. A malformed id is dropped with a
      * warning, and a list of only malformed ids refuses everyone (fail closed), as the plugin does.
+     * `obsToken`: 32 lowercase hex digits for the /obs Browser Source target, or null/empty to refuse token connections.
      */
-    public VjsterLink(int port, IEnumerable<string>? allowedExtensionIds = null, Action<string>? log = null)
+    public VjsterLink(int port, IEnumerable<string>? allowedExtensionIds = null, Action<string>? log = null,
+        string? obsToken = null, IReadOnlyDictionary<string, VjsterPage>? pages = null)
     {
         this.port = port;
         this.log = log ?? (_ => { });
+        this.pages = pages ?? new Dictionary<string, VjsterPage>(StringComparer.Ordinal);
         var ids = (allowedExtensionIds ?? []).Select(id => id.Trim().ToLowerInvariant()).Where(id => id.Length > 0).ToArray();
         var good = ids.Where(id => ExtensionIdPattern.IsMatch(id)).ToArray();
         if (good.Length < ids.Length) this.log($"VJster: ignored {ids.Length - good.Length} malformed pinned extension id(s)");
         allowed = ids.Length > 0 && good.Length == 0 ? ["-"] : good;
+        if (!string.IsNullOrEmpty(obsToken))
+        {
+            if (TokenPattern.IsMatch(obsToken)) this.obsToken = obsToken;
+            else this.log("VJster: ignored a malformed OBS page token; OBS pages cannot connect");
+        }
     }
+
+    public static string NewObsToken() => Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
+
+    public static IReadOnlyDictionary<string, VjsterPage> LoadObsPages(string? dir, Action<string>? log = null)
+    {
+        if (string.IsNullOrEmpty(dir)) return new Dictionary<string, VjsterPage>(StringComparer.Ordinal);
+        try
+        {
+            var html = new VjsterPage("text/html; charset=utf-8", File.ReadAllBytes(Path.Combine(dir, "player.html")));
+            var script = new VjsterPage("text/javascript; charset=utf-8", File.ReadAllBytes(Path.Combine(dir, "player.js")));
+            return new Dictionary<string, VjsterPage>(StringComparer.Ordinal)
+            {
+                [ObsPagePath] = html,
+                [$"{ObsPagePath}/"] = html,
+                [$"{ObsPagePath}/player.js"] = script
+            };
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            log?.Invoke("VJster: the OBS page files are missing; OBS browser sources cannot load /obs");
+            return new Dictionary<string, VjsterPage>(StringComparer.Ordinal);
+        }
+    }
+
+    public static string? VideoIdFrom(string? input)
+    {
+        var text = (input ?? "").Trim();
+        if (text.Length == 0) return null;
+        if (VideoIdPattern.IsMatch(text)) return text != "videoseries" ? text : null;
+        string withScheme = text.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || text.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+            ? text : "https://" + text;
+        if (!Uri.TryCreate(withScheme, UriKind.Absolute, out var uri)) return null;
+        string host = uri.Host.ToLowerInvariant();
+        bool youtube = host == "youtube.com" || host.EndsWith(".youtube.com", StringComparison.Ordinal)
+            || host == "youtube-nocookie.com" || host.EndsWith(".youtube-nocookie.com", StringComparison.Ordinal);
+        string? candidate = null;
+        if (host == "youtu.be")
+        {
+            var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            candidate = segments.Length > 0 ? segments[0] : null;
+        }
+        else if (youtube)
+        {
+            if (TryGetQuery(uri.Query.TrimStart('?'), "v", out var v)) candidate = v;
+            else
+            {
+                var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+                if (segments.Length >= 2 && segments[0] is "shorts" or "embed" or "live" or "v") candidate = segments[1];
+            }
+        }
+        return candidate != null && VideoIdPattern.IsMatch(candidate) && candidate != "videoseries" ? candidate : null;
+    }
+
+    public static string ObsPageAddress(int port, string token, string? videoInput = null)
+    {
+        if (!TokenPattern.IsMatch(token)) throw new ArgumentException("Invalid OBS page token.", nameof(token));
+        string v = VideoIdFrom(videoInput) ?? VideoPlaceholder;
+        return $"http://{LinkHost}:{port}{ObsPagePath}?v={v}#token={token}";
+    }
+
+    static string PeerLabel(string target) => target == "obs" ? "the OBS video page" : "the Chrome extension";
 
     public int Port => port;
     public bool Running => listener != null;
     /** The port actually bound (differs from the option only when it was 0, in tests). */
     public int BoundPort => listener == null ? port : ((IPEndPoint)listener.LocalEndpoint).Port;
-    public bool Connected => peer?.Socket.State == WebSocketState.Open;
+    public bool Connected => IsConnected("browser") || IsConnected("obs");
+
+    public bool IsConnected(string target)
+    {
+        lock (gate) return peers.TryGetValue(target, out var p) && p.Socket.State == WebSocketState.Open;
+    }
+
+    public VjsterState? GetLastState(string target)
+    {
+        lock (gate) return states.TryGetValue(target, out var s) ? s : null;
+    }
 
     /** Bind 127.0.0.1 and start accepting. Throws VjsterPortInUseException when the port is taken or reserved. */
     public Task StartAsync()
@@ -146,28 +242,28 @@ internal sealed class VjsterLink : IAsyncDisposable
         }
     }
 
-    /** Close the connection, free the port. Safe to call twice. */
+    /** Close every connection, free the port. Safe to call twice. */
     public async Task StopAsync()
     {
-        TcpListener? l; CancellationTokenSource? r; Task? a, p; Peer? gone;
+        TcpListener? l; CancellationTokenSource? r; Task? a, p; Peer[] gone;
         lock (gate)
         {
-            l = listener; r = running; a = acceptLoop; p = pingLoop; gone = peer;
-            listener = null; running = null; acceptLoop = null; pingLoop = null; peer = null;
+            l = listener; r = running; a = acceptLoop; p = pingLoop; gone = peers.Values.ToArray();
+            listener = null; running = null; acceptLoop = null; pingLoop = null;
+            peers.Clear(); states.Clear();
         }
         if (l == null) return;
-        // Stop taking connections first, so none arrives while the current one closes. The receive loop runs without
-        // this token, so cancelling it does not abort the extension's socket.
+        // Stop taking connections first, so none arrives while the current ones close. The receive loop runs without
+        // this token, so cancelling it does not abort a peer's socket.
         r!.Cancel();
         l.Stop();
-        if (gone != null)
+        if (gone.Length > 0)
         {
-            await Drop(gone, (WebSocketCloseStatus)1001, "server stopping", announce: false);
-            lock (gate) LastState = null;
+            foreach (var peer in gone) await Drop(peer, (WebSocketCloseStatus)1001, "server stopping", announce: false);
             Raise(ConnectionChanged, false);
         }
         foreach (var t in new[] { a, p }) { try { if (t != null) await t; } catch (OperationCanceledException) { } catch (ObjectDisposedException) { } }
-        foreach (var key in pending.Keys) if (pending.TryRemove(key, out var tcs)) tcs.TrySetResult((null, new VjsterError("internal", "the link stopped", null)));
+        foreach (var key in pending.Keys) if (pending.TryRemove(key, out var entry)) entry.Tcs.TrySetResult((null, new VjsterError("internal", "the link stopped", null)));
         r.Dispose();
         log("VJster link stopped");
     }
@@ -176,24 +272,47 @@ internal sealed class VjsterLink : IAsyncDisposable
 
     // ---- the upgrade gate ----
 
-    /** Why an upgrade is refused, or ok. Exposed for the self-tests; the rules are the plugin's (link-server.ts classifyUpgrade). */
+    /** Why an upgrade is refused, or ok (browser-only overload kept for existing self-tests). */
     public static (bool Ok, string Reason) ClassifyUpgrade(string? host, int hostHeaders, string? origin, string query, int port, IReadOnlyList<string> allowed)
     {
-        if (hostHeaders != 1 || (host != $"{LinkHost}:{port}" && host != $"localhost:{port}")) return (false, "host");
-        if (QueryHas(query, "token")) return (false, "token"); // the OBS page target is not served here
-        var match = ExtensionOrigin.Match(origin ?? "");
-        if (!match.Success) return (false, "origin");
-        if (allowed.Count > 0 && !allowed.Contains(match.Groups[1].Value)) return (false, "extension-id");
-        return (true, "");
+        var (ok, reason, _) = ClassifyUpgrade(host, hostHeaders, origin, query, port, allowed, null);
+        return (ok, reason);
     }
 
-    static bool QueryHas(string query, string name)
+    /** Why an upgrade is refused, or which target it is (matching link-server.ts classifyUpgrade). */
+    public static (bool Ok, string Reason, string Target) ClassifyUpgrade(string? host, int hostHeaders, string? origin, string query, int port, IReadOnlyList<string> allowed, string? obsToken)
+    {
+        if (hostHeaders != 1 || (host != $"{LinkHost}:{port}" && host != $"localhost:{port}")) return (false, "host", "");
+        if (TryGetQuery(query, "token", out var token))
+        {
+            if (obsToken == null) return (false, "token", "");
+            if (origin != $"http://{LinkHost}:{port}" && origin != $"http://localhost:{port}") return (false, "origin", "");
+            if (!TokenPattern.IsMatch(token) || !TokenPattern.IsMatch(obsToken)) return (false, "token", "");
+            bool same = CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(token), Encoding.UTF8.GetBytes(obsToken));
+            return same ? (true, "", "obs") : (false, "token", "");
+        }
+        var match = ExtensionOrigin.Match(origin ?? "");
+        if (!match.Success) return (false, "origin", "");
+        if (allowed.Count > 0 && !allowed.Contains(match.Groups[1].Value)) return (false, "extension-id", "");
+        return (true, "", "browser");
+    }
+
+    static bool TryGetQuery(string query, string name, out string value)
     {
         foreach (var part in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
         {
-            var key = part.Split('=', 2)[0];
-            if (Uri.UnescapeDataString(key.Replace('+', ' ')) == name) return true;
+            var kv = part.Split('=', 2);
+            try
+            {
+                if (Uri.UnescapeDataString(kv[0].Replace('+', ' ')) == name)
+                {
+                    value = kv.Length == 2 ? Uri.UnescapeDataString(kv[1].Replace('+', ' ')) : "";
+                    return true;
+                }
+            }
+            catch (UriFormatException) { }
         }
+        value = "";
         return false;
     }
 
@@ -230,20 +349,43 @@ internal sealed class VjsterLink : IAsyncDisposable
             var parts = requestLine.Split(' ');
             if (parts.Length != 3 || !parts[2].StartsWith("HTTP/1.", StringComparison.Ordinal)) { await Reply(stream, "400 Bad Request", "bad request"); client.Dispose(); return; }
             string method = parts[0], target = parts[1];
+            string path = target.Split(['?', '#'], 2)[0];
             string query = target.Contains('?') ? target[(target.IndexOf('?') + 1)..].Split('#')[0] : "";
+            headers.TryGetValue("host", out var hosts);
             bool upgrade = headers.TryGetValue("upgrade", out var up) && up.Count == 1 && up[0].Equals("websocket", StringComparison.OrdinalIgnoreCase)
                 && headers.TryGetValue("sec-websocket-key", out var keys) && keys.Count == 1
                 && headers.TryGetValue("sec-websocket-version", out var versions) && versions.Count == 1 && versions[0].Trim() == "13";
-            if (!upgrade || method != "GET")
+            if (!upgrade)
             {
-                // Plain HTTP: this host serves nothing, the plugin serves the OBS page. Refuse the way it does.
+                if ((method == "GET" || method == "HEAD") && pages.TryGetValue(path, out var page))
+                {
+                    int bound = BoundPort;
+                    if (hosts?.Count != 1 || (hosts[0] != $"{LinkHost}:{bound}" && hosts[0] != $"localhost:{bound}"))
+                    {
+                        await Reply(stream, "403 Forbidden", "forbidden");
+                        client.Dispose();
+                        NoteRefusal("host");
+                        return;
+                    }
+                    var headBytes = Encoding.ASCII.GetBytes(
+                        $"HTTP/1.1 200 OK\r\nContent-Type: {page.Type}\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nReferrer-Policy: strict-origin\r\nContent-Security-Policy: {PageCsp}\r\nConnection: close\r\nContent-Length: {page.Body.Length}\r\n\r\n");
+                    await stream.WriteAsync(headBytes, timeout.Token);
+                    if (method == "GET" && page.Body.Length > 0) await stream.WriteAsync(page.Body, timeout.Token);
+                    client.Dispose();
+                    return;
+                }
                 await Reply(stream, "426 Upgrade Required", "upgrade required");
                 client.Dispose();
                 return;
             }
-            headers.TryGetValue("host", out var hosts);
+            if (method != "GET")
+            {
+                await Reply(stream, "426 Upgrade Required", "upgrade required");
+                client.Dispose();
+                return;
+            }
             headers.TryGetValue("origin", out var origins);
-            var verdict = ClassifyUpgrade(hosts?.FirstOrDefault(), hosts?.Count ?? 0, origins?.Count == 1 ? origins[0] : null, query, BoundPort, allowed);
+            var verdict = ClassifyUpgrade(hosts?.FirstOrDefault(), hosts?.Count ?? 0, origins?.Count == 1 ? origins[0] : null, query, BoundPort, allowed, obsToken);
             if (!verdict.Ok)
             {
                 await Reply(stream, "403 Forbidden", "");
@@ -255,7 +397,7 @@ internal sealed class VjsterLink : IAsyncDisposable
             var response = Encoding.ASCII.GetBytes($"HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: {accept}\r\n\r\n");
             await stream.WriteAsync(response, timeout.Token);
             var socket = WebSocket.CreateFromStream(stream, isServer: true, subProtocol: null, keepAliveInterval: TimeSpan.Zero);
-            Accept(new Peer(client, socket), stop);
+            Accept(new Peer(client, socket, verdict.Target), stop);
         }
         catch (Exception e) when (e is IOException or SocketException or OperationCanceledException or ObjectDisposedException or InvalidOperationException)
         {
@@ -319,16 +461,21 @@ internal sealed class VjsterLink : IAsyncDisposable
         Peer? previous = null; bool stopping;
         lock (gate)
         {
-            // Under the lock StopAsync takes: a handshake that finishes as the link stops never becomes the peer.
+            // Under the lock StopAsync takes: a handshake that finishes as the link stops never becomes a peer.
             stopping = stop.IsCancellationRequested || listener == null;
-            if (!stopping) { previous = peer; peer = p; LastState = null; }
+            if (!stopping)
+            {
+                peers.TryGetValue(p.Target, out previous);
+                peers[p.Target] = p;
+                states[p.Target] = null;
+            }
         }
         if (stopping) { _ = Drop(p, (WebSocketCloseStatus)1001, "server stopping", announce: false); return; }
         if (previous != null) _ = Drop(previous, (WebSocketCloseStatus)CloseReplaced, "replaced by a newer connection", announce: false);
-        log("VJster: the Chrome extension connected");
+        log($"VJster: {PeerLabel(p.Target)} connected");
         Raise(ConnectionChanged, true);
         p.Loop = ReceiveLoop(p);
-        Send("state.get", null); // ask for the current state at once
+        Send("state.get", null, p.Target); // ask for the current state at once
     }
 
     /** Send a close frame, give the peer up to two seconds to answer it (its receive loop ends then), and free the socket. */
@@ -347,10 +494,21 @@ internal sealed class VjsterLink : IAsyncDisposable
 
     void Disconnected(Peer p, string why)
     {
-        lock (gate) { if (peer != p) return; peer = null; LastState = null; }
-        foreach (var key in pending.Keys) if (pending.TryRemove(key, out var tcs)) tcs.TrySetResult((null, new VjsterError("internal", "the extension disconnected", null)));
-        log($"VJster: the Chrome extension disconnected ({why})");
-        Raise(ConnectionChanged, false);
+        bool anyOpen;
+        lock (gate)
+        {
+            if (!peers.TryGetValue(p.Target, out var current) || current != p) return;
+            peers.Remove(p.Target);
+            states.Remove(p.Target);
+            anyOpen = peers.Values.Any(x => x.Socket.State == WebSocketState.Open);
+        }
+        foreach (var pair in pending)
+        {
+            if (pair.Value.Target == p.Target && pending.TryRemove(pair.Key, out var entry))
+                entry.Tcs.TrySetResult((null, new VjsterError("internal", $"{PeerLabel(p.Target)} disconnected", null)));
+        }
+        log($"VJster: {PeerLabel(p.Target)} disconnected ({why})");
+        Raise(ConnectionChanged, anyOpen);
     }
 
     /** A listener that throws must not drop the connection; the plugin logs a fixed line too (R-BEH-5). */
@@ -377,7 +535,7 @@ internal sealed class VjsterLink : IAsyncDisposable
                 var r = await p.Socket.ReceiveAsync(buffer, CancellationToken.None);
                 if (r.MessageType == WebSocketMessageType.Close)
                 {
-                    // The extension closed first (its worker stops, say): answer its close so Chrome sees a clean 1000, not 1006.
+                    // The peer closed first (its worker stops, say): answer its close so Chrome/OBS sees a clean 1000, not 1006.
                     if (p.Socket.State == WebSocketState.CloseReceived)
                     {
                         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
@@ -416,35 +574,40 @@ internal sealed class VjsterLink : IAsyncDisposable
 
     void HandleMessage(Peer p, string? text)
     {
-        Peer? current; lock (gate) current = peer;
-        if (current != p) return; // a replaced connection no longer speaks for the extension
+        Peer? current;
+        lock (gate) peers.TryGetValue(p.Target, out current);
+        if (current != p) return; // a replaced connection no longer speaks for its target
         p.LastHeard = Stopwatch.GetTimestamp();
         var result = ParseReport(text);
-        if (!result.Ok || result.Target != "browser")
+        if (!result.Ok || result.Target != p.Target)
         {
             // Only targets answer with `error`; this side drops the message, says so once per connection without its
             // content, and asks again, at most once every ReaskMin so a bad reporter cannot start a loop.
             if (!p.WarnedMalformed)
             {
                 p.WarnedMalformed = true;
-                log($"VJster: dropped a message from the extension ({(result.Ok ? "wrong target" : text == null ? "binary frame" : result.Code)})");
+                log($"VJster: dropped a message from {PeerLabel(p.Target)} ({(result.Ok ? "wrong target" : text == null ? "binary frame" : result.Code)})");
             }
-            if (Stopwatch.GetElapsedTime(p.LastReask) >= ReaskMin) { p.LastReask = Stopwatch.GetTimestamp(); Send("state.get", null); }
+            if (Stopwatch.GetElapsedTime(p.LastReask) >= ReaskMin) { p.LastReask = Stopwatch.GetTimestamp(); Send("state.get", null, p.Target); }
             return;
         }
         switch (result.Type)
         {
             case "state":
-                lock (gate) { if (peer == p) LastState = result.State; }
-                if (result.State!.InReplyTo != null && pending.TryRemove(result.State.InReplyTo, out var tcs)) tcs.TrySetResult((result.State, null));
+                lock (gate) { if (peers.TryGetValue(p.Target, out var c) && c == p) states[p.Target] = result.State; }
+                if (result.State!.InReplyTo != null && pending.TryGetValue(result.State.InReplyTo, out var sEntry) && sEntry.Target == p.Target
+                    && pending.TryRemove(result.State.InReplyTo, out var removed))
+                    removed.Tcs.TrySetResult((result.State, null));
                 Raise(StateReceived, result.State);
                 return;
             case "error":
-                if (result.Error!.InReplyTo != null && pending.TryRemove(result.Error.InReplyTo, out var etcs)) etcs.TrySetResult((null, result.Error));
+                if (result.Error!.InReplyTo != null && pending.TryGetValue(result.Error.InReplyTo, out var eEntry) && eEntry.Target == p.Target
+                    && pending.TryRemove(result.Error.InReplyTo, out var eremoved))
+                    eremoved.Tcs.TrySetResult((null, result.Error));
                 Raise(ErrorReceived, result.Error);
                 return;
             case "ping":
-                Send("pong", o => o["t"] = result.T);
+                Send("pong", o => o["t"] = result.T, p.Target);
                 return;
             default:
                 return; // pong
@@ -458,16 +621,19 @@ internal sealed class VjsterLink : IAsyncDisposable
         {
             while (await timer.WaitForNextTickAsync(stop))
             {
-                Peer? p; lock (gate) p = peer;
-                if (p == null) continue;
-                var silent = Stopwatch.GetElapsedTime(p.LastHeard);
-                if (silent > IdleTimeout)
+                Peer[] snapshot;
+                lock (gate) snapshot = peers.Values.ToArray();
+                foreach (var p in snapshot)
                 {
-                    log($"VJster: the extension was silent for {(int)silent.TotalSeconds} s; closing");
-                    await Drop(p, (WebSocketCloseStatus)CloseIdle, "no answer to pings", announce: true);
-                    continue;
+                    var silent = Stopwatch.GetElapsedTime(p.LastHeard);
+                    if (silent > IdleTimeout)
+                    {
+                        log($"VJster: {PeerLabel(p.Target)} was silent for {(int)silent.TotalSeconds} s; closing");
+                        await Drop(p, (WebSocketCloseStatus)CloseIdle, "no answer to pings", announce: true);
+                        continue;
+                    }
+                    Send("ping", o => o["t"] = Math.Round(Stopwatch.GetElapsedTime(0).TotalMilliseconds), p.Target);
                 }
-                Send("ping", o => o["t"] = Math.Round(Stopwatch.GetElapsedTime(0).TotalMilliseconds));
             }
         }
         catch (OperationCanceledException) { }
@@ -475,13 +641,14 @@ internal sealed class VjsterLink : IAsyncDisposable
 
     // ---- sending ----
 
-    /** Send an intent (or keepalive) to the extension; returns its id, or null when no extension is connected. */
-    public string? Send(string type, Action<JsonObject>? fill)
+    /** Send an intent (or keepalive) to a target; returns its id, or null when that target is not connected. */
+    public string? Send(string type, Action<JsonObject>? fill, string target = "browser")
     {
-        Peer? p; lock (gate) p = peer;
+        Peer? p;
+        lock (gate) peers.TryGetValue(target, out p);
         if (p == null || p.Socket.State != WebSocketState.Open) return null;
         string id = $"t{idPrefix}-{Interlocked.Increment(ref nextId)}";
-        var message = new JsonObject { ["v"] = ProtocolVersion, ["id"] = id, ["target"] = "browser", ["type"] = type };
+        var message = new JsonObject { ["v"] = ProtocolVersion, ["id"] = id, ["target"] = target, ["type"] = type };
         fill?.Invoke(message);
         var bytes = Encoding.UTF8.GetBytes(message.ToJsonString());
         _ = Deliver(p, bytes);
@@ -503,11 +670,10 @@ internal sealed class VjsterLink : IAsyncDisposable
     }
 
     /** Send an intent and wait for the report that answers it (`inReplyTo`), or for `timeout`. Null when not connected. */
-    public async Task<(VjsterState? State, VjsterError? Error)?> Request(string type, Action<JsonObject>? fill, TimeSpan timeout)
+    public async Task<(VjsterState? State, VjsterError? Error)?> Request(string type, Action<JsonObject>? fill, TimeSpan timeout, string target = "browser")
     {
         var tcs = new TaskCompletionSource<(VjsterState?, VjsterError?)>(TaskCreationOptions.RunContinuationsAsynchronously);
-        // Register before sending so a fast answer cannot be missed; the id is only known after Send, so key by a placeholder first.
-        string? id = Send(type, o => { fill?.Invoke(o); pending[o["id"]!.GetValue<string>()] = tcs; });
+        string? id = Send(type, o => { fill?.Invoke(o); pending[o["id"]!.GetValue<string>()] = (target, tcs); }, target);
         if (id == null) return null;
         try { return await tcs.Task.WaitAsync(timeout); }
         catch (TimeoutException) { pending.TryRemove(id, out _); return (null, null); }

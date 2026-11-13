@@ -2,7 +2,7 @@
 
 The [Mac workflow](https://github.com/jbrick2070/streamdeck-fadester/actions/workflows/tourbox-macos.yml) is configured to build and run the shared Fadester control logic on GitHub-hosted Macs. Its output is a **developer core-check bundle**. A usable Fadester for TourBox Mac application is still to be built.
 
-> **Status, 2026-11-07.** Everything under `tourbox/macos/` and `tourbox/presets/macos/` is experimental and was written against the Windows package at 61e77c4, before bee7115 moved VJster into the one preset and added its Ctrl+Shift and Alt+Shift chords. The Mac preset generator, the Mac preset and the Mac shortcut helper follow the current map again (the helper's change was written on Windows and is first compiled by the macOS workflow). Still to port: the Mac host does not host the VJster link, so the video actions are refused there; the Mac panel's settings lack the VJster port, extension pin and layer fields.
+> **Status, 2026-11-12.** Everything under `tourbox/macos/` and `tourbox/presets/macos/` is experimental. The Mac preset generator, Mac preset, Mac shortcut helper, Mac action host and Mac setup panel follow the unified master map: `FadesterMacHost` hosts the loopback VJster link (serving both the Chrome `VJster` extension and the bundled `/obs` YouTube Browser Source page so TourBox users never need Midi Fadester), and `macos/panel` configures VJster port/target/extension-pin/OBS-URL copy as well as Layer 1 & Layer 2 scene-item assignments and opacity step. Physical rehearsal of every modifier combination on Mac hardware remains in progress.
 
 ## Cloud builds
 
@@ -53,8 +53,7 @@ Use the preset map from the same checkout. In an extracted developer bundle, run
 
 ## Work still needed for a Mac application
 
-- Decide how the Mac host treats the video actions: host the VJster link the way `tourbox/bridge/Program.cs` does on Windows, or refuse `vjster.*` at `macos/host/CommandIngress.cs` with a plain reason. Today they pass ingress and are refused by `DeskActions` with a message about a desk the host does not have.
-- A Mac setup and activity interface to replace the Windows Forms panel, including local settings and credential handling; the current `macos/panel` has no VJster port, extension pin or layer fields.
+- Validate VJster video control (Chrome extension and `/obs` Browser Source) and Layer 1/2 scene-item actions end to end from the physical TourBox on Mac hardware.
 - Finish validating the experimental Mac shortcut input and Mac preset, including modifier releases, menu actions, conflicts and shutdown behavior on physical hardware. Mac Console's acceptance of the Control+Shift and Option+Shift F-key chords in an imported preset is unproven, as mask 7 was before the 4 November check.
 - Extend native T-bar rehearsal beyond the verified small move/cancel to full endpoints, return throws, operator interference and sustained physical rotary performance. The Windows UI Automation helper is separate.
 - Mac packaging, signing/notarization and installation instructions, followed by real OBS and physical TourBox rehearsal on the supported architectures.

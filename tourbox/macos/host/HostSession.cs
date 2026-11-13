@@ -14,16 +14,19 @@ internal sealed class HostSession
     readonly CancellationToken stop;
     readonly bool readOnly;
     readonly Func<Task<int>>? nativeRead;
+    readonly VjsterDesk? vjster;
     static readonly HashSet<string> StatusActions = ["preview.status", "fader.status", "recording.status", "mix.status", "vjster.status", "host.native.status"];
     readonly AsyncLocal<DispatchPermit?> active = new();
     internal DeskActions Desk { get; }
     internal HostSession(BridgeConfig config, CommandIngress ingress, int generation,
         Func<string, JsonObject?, Task<JsonObject>> rpc, Func<double, double, Task> native,
-        Func<bool> connected, CancellationToken stop, bool readOnly = false, Func<Task<int>>? nativeRead = null)
+        Func<bool> connected, CancellationToken stop, bool readOnly = false, Func<Task<int>>? nativeRead = null,
+        VjsterDesk? vjster = null)
     {
         this.ingress = ingress; this.generation = generation; this.rpc = rpc;
         this.native = native ?? throw new ArgumentNullException(nameof(native));
         this.connected = connected; this.stop = stop; this.readOnly = readOnly; this.nativeRead = nativeRead;
+        this.vjster = vjster;
         Desk = new DeskActions(config, Call, nativeMove: Move);
     }
     void Current()
@@ -61,6 +64,14 @@ internal sealed class HostSession
             return "Native slider: " + value + " / 1023";
         }
         if (command.Action == "bridge.reconnect") throw new InvalidOperationException("Reconnect must be handled by the host.");
+        if (VjsterDesk.Actions.Contains(command.Action))
+        {
+            if (readOnly) return "VJster: disabled in read-only mode.";
+            if (vjster is null) throw new InvalidOperationException("VJster is disabled in Setup.");
+            var vjPermit = new DispatchPermit(ingress, command);
+            vjPermit.Check(write: command.Action != "vjster.status");
+            return await vjster.Dispatch(command.Action);
+        }
         active.Value = new DispatchPermit(ingress, command);
         try { return await Desk.Dispatch(command.Action); }
         finally { active.Value = null; }

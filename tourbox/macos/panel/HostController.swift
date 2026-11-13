@@ -9,8 +9,10 @@ struct RuntimePaths {
     var input: URL { resources.appendingPathComponent("runtime/Fadester Mac Shortcuts Experimental.app") }
     var map: URL { resources.appendingPathComponent("presets/map.json") }
     var preset: URL { resources.appendingPathComponent("presets/OBS Fadester for TourBox.tb") }
+    var vjsterObsHtml: URL { resources.appendingPathComponent("vjster/obs/player.html") }
+    var vjsterObsScript: URL { resources.appendingPathComponent("vjster/obs/player.js") }
     func validate() throws {
-        for file in [host, native.appendingPathComponent("Contents/MacOS/FadesterNativeSlider"), input.appendingPathComponent("Contents/MacOS/FadesterMacShortcuts"), map, preset] {
+        for file in [host, native.appendingPathComponent("Contents/MacOS/FadesterNativeSlider"), input.appendingPathComponent("Contents/MacOS/FadesterMacShortcuts"), map, preset, vjsterObsHtml, vjsterObsScript] {
             guard FileManager.default.fileExists(atPath: file.path) else { throw PanelFailure.message("The experimental app is incomplete. Rebuild or extract the entire app bundle.") }
         }
     }
@@ -29,14 +31,14 @@ struct RuntimePaths {
     var exited: (() -> Void)?
     var running: Bool { process != nil }
 
-    func start(paths: RuntimePaths, config: URL, password: String, mixEnabled: Bool) throws {
+    func start(paths: RuntimePaths, config: URL, password: String, mixEnabled: Bool, extraSecrets: [String] = []) throws {
         try paths.validate()
         guard process == nil else { throw PanelFailure.message("Stop the current controls first.") }
         var args = ["--run", "--config", config.path, "--native-app", paths.native.path, "--input-app", paths.input.path, "--map", paths.map.path]
         if !mixEnabled { args.append("--no-mix-provider") }
-        try launch(executable: paths.host, arguments: args, password: password)
+        try launch(executable: paths.host, arguments: args, password: password, extraSecrets: extraSecrets)
     }
-    func launch(executable: URL, arguments: [String], password: String) throws {
+    func launch(executable: URL, arguments: [String], password: String, extraSecrets: [String] = []) throws {
         guard process == nil else { throw PanelFailure.message("A child host is already owned.") }
         let child = Process(), output = Pipe(), commands = Pipe(), drained = DispatchGroup()
         var environment = ProcessInfo.processInfo.environment
@@ -61,7 +63,7 @@ struct RuntimePaths {
         do { try child.run() }
         catch { drained.leave(); process = nil; input = nil; secret = ""; throw PanelFailure.message("The bundled control host could not start.") }
         changed?("Connecting… Controls are not armed yet.", true)
-        let redactionSecret = password
+        let redactionSecrets = [password] + extraSecrets
         DispatchQueue.global(qos: .utility).async { [weak self] in
             defer { drained.leave() }
             var pending = [UInt8](), truncated = false, bytes = [UInt8](repeating: 0, count: 4096)
@@ -73,7 +75,7 @@ struct RuntimePaths {
                 for byte in bytes.prefix(count) {
                     if byte == 10 {
                         let raw = truncated ? "Host output exceeded its line limit." : String(decoding: pending, as: UTF8.self).trimmingCharacters(in: .newlines)
-                        let text = redact(raw, secret: redactionSecret)
+                        let text = redact(raw, secrets: redactionSecrets)
                         let ready = raw.range(of: "^READY [1-9][0-9]*$", options: .regularExpression) != nil
                         let disarmed = raw.hasPrefix("DISARMED ") || raw.hasPrefix("OFFLINE:")
                         pending.removeAll(keepingCapacity: true); truncated = false

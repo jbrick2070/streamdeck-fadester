@@ -20,8 +20,11 @@ private final class PanelBackground: NSView {
     private var snapshot = NSTextField(wrappingLabelWithString: "Read OBS to load real scene and source names. This scan changes nothing in OBS.")
     private var port = NSTextField(string: "4455"), password = NSSecureTextField(string: "")
     private var mix = NSButton(checkboxWithTitle: "Enable whole-mix control", target: nil, action: nil)
+    private var vjster = NSButton(checkboxWithTitle: "Enable VJster video control", target: nil, action: nil)
+    private var vjsterPort = NSTextField(string: "48150"), vjsterExtensionId = NSTextField(string: ""), vjsterVideo = NSTextField(string: "")
+    private var vjsterTarget = NSPopUpButton(frame: .zero, pullsDown: false)
     private var fields: [String: NSTextField] = [:], choices: [String: NSPopUpButton] = [:]
-    private var scanButton: NSButton!, startButton: NSButton!, stopButton: NSButton!, saveButton: NSButton!
+    private var scanButton: NSButton!, startButton: NSButton!, stopButton: NSButton!, saveButton: NSButton!, copyObsUrlButton: NSButton!
     private var activity = NSTextView()
     private var edits: [NSControl] = []
     init(preview: Bool = false) {
@@ -33,6 +36,7 @@ private final class PanelBackground: NSView {
             catalog.items = ["Guest":["Lower third", "Guest camera"]]
             settings.musicInput = "Music bed"; settings.contentInput = "Guest audio"; settings.micInput = "Microphone"; settings.mediaInput = "Clips"
             settings.overlayScene = "Guest"; settings.overlaySource = "Lower third"; settings.anchors = ["Opening","Guest","Closing",""]
+            settings.layer1Scene = "Guest"; settings.layer1Source = "Guest camera"; settings.layer2Scene = "Guest"; settings.layer2Source = "Lower third"
         }
         if !preview, FileManager.default.fileExists(atPath: LocalFiles.settings.path) {
             do { settings = try Settings(data: Data(contentsOf: LocalFiles.settings)) }
@@ -52,7 +56,7 @@ private final class PanelBackground: NSView {
         NSLayoutConstraint.activate([root.leadingAnchor.constraint(equalTo: window.contentView!.leadingAnchor), root.trailingAnchor.constraint(equalTo: window.contentView!.trailingAnchor), root.topAnchor.constraint(equalTo: window.contentView!.topAnchor), root.bottomAnchor.constraint(equalTo: window.contentView!.bottomAnchor)])
         let title = NSTextField(labelWithString: "OBS Fadester for TourBox"); title.font = .boldSystemFont(ofSize: 24)
         root.addArrangedSubview(title)
-        let subtitle = label("Experimental Mac edition · One master preset · Scenes, audio and production tools")
+        let subtitle = label("Experimental Mac edition · One master preset · Scenes, audio, VJster video and layers")
         subtitle.textColor = .secondaryLabelColor; root.addArrangedSubview(subtitle)
         status.font = .systemFont(ofSize: 13, weight: .semibold); status.lineBreakMode = .byTruncatingTail
         root.addArrangedSubview(status); status.widthAnchor.constraint(equalTo: root.widthAnchor, constant: -48).isActive = true
@@ -123,6 +127,23 @@ private final class PanelBackground: NSView {
         paragraph("The native slider component needs macOS Accessibility permission. Open its permission window and grant it through System Settings. TourBox Console also needs its own permissions. This app never grants either permission for you.", in: stack)
         stack.addArrangedSubview(button("Open native slider permission window", #selector(permission)))
         paragraph("For manual fades use OBS 33.0.0 or 33.0.1, Studio Mode, Fade, two different scenes and a visible native T-bar parked at its starting end. Close OBS dialogs. Start refuses unavailable native control; it never substitutes an invisible fade.", in: stack)
+        heading("4  VJster video control (Chrome & OBS Browser Source)", in: stack)
+        vjsterPort.widthAnchor.constraint(equalToConstant: 90).isActive = true
+        vjsterTarget.widthAnchor.constraint(greaterThanOrEqualToConstant: 210).isActive = true
+        vjsterTarget.removeAllItems()
+        for (titleText, code) in [("Chrome & OBS page", "both"), ("Chrome extension only", "browser"), ("OBS Browser Source only", "obs")] {
+            vjsterTarget.addItem(withTitle: titleText); vjsterTarget.lastItem?.representedObject = code
+        }
+        stack.addArrangedSubview(horizontal([vjster, label("Port"), vjsterPort, label("Target"), vjsterTarget]))
+        vjsterExtensionId.widthAnchor.constraint(equalToConstant: 310).isActive = true
+        vjsterExtensionId.placeholderString = "Optional 32-letter Chrome extension ID"
+        stack.addArrangedSubview(horizontal([label("Pinned extension ID"), vjsterExtensionId]))
+        vjsterVideo.widthAnchor.constraint(equalToConstant: 310).isActive = true
+        vjsterVideo.placeholderString = "YouTube URL or 11-character video ID"
+        copyObsUrlButton = button("Copy OBS Browser Source URL", #selector(copyObsUrl))
+        stack.addArrangedSubview(horizontal([label("OBS video URL / ID"), vjsterVideo, copyObsUrlButton]))
+        edits += [vjster, vjsterPort, vjsterTarget, vjsterExtensionId]
+        paragraph("Raised Knob steps playback speed (press + turn for fine 0.05x, press to reset 1x); Top + Scroll steps quality; Top + Tall toggles play/pause. Works with the VJster Chrome extension on YouTube and/or directly in an OBS Browser Source using the copied URL (no Midi Fadester plugin required).", in: stack)
         heading("Optional  Whole-mix control", in: stack)
         stack.addArrangedSubview(mix); edits.append(mix)
         paragraph("Off by default. When enabled, Side + Knob and compatible local clients can fade public OBS mixer inputs together. This affects every track and monitor fed by them. Start may resume monitoring an existing mix; Stop never raises the sound. Enable only after reviewing your inputs.", in: stack)
@@ -135,6 +156,8 @@ private final class PanelBackground: NSView {
         let text = label(title); text.widthAnchor.constraint(equalToConstant: 145).isActive = true
         choices[key] = popup; edits.append(popup); stack.addArrangedSubview(horizontal([text,popup]))
         if key == "overlayScene" { popup.target = self; popup.action = #selector(overlayChanged) }
+        else if key == "layer1Scene" { popup.target = self; popup.action = #selector(layer1Changed) }
+        else if key == "layer2Scene" { popup.target = self; popup.action = #selector(layer2Changed) }
     }
     private func number(_ title: String, key: String, in stack: NSStackView) {
         let field = NSTextField(string: ""); field.widthAnchor.constraint(equalToConstant: 100).isActive = true
@@ -144,11 +167,11 @@ private final class PanelBackground: NSView {
     private func assignments() -> NSView {
         let stack = column(); heading("Choose sources by name", in: stack)
         paragraph("Read OBS in Setup first. Unassigned roles do nothing. Missing saved targets stay visible as unavailable; nothing is silently reassigned. Stop controls before changing settings.", in: stack)
-        for (name,key) in [("Music / bed","musicInput"),("Content / guest","contentInput"),("Microphone","micInput"),("Media / Playlister","mediaInput"),("Overlay scene","overlayScene"),("Overlay source","overlaySource")] { choice(name,key:key,in:stack) }
+        for (name,key) in [("Music / bed","musicInput"),("Content / guest","contentInput"),("Microphone","micInput"),("Media / Playlister","mediaInput"),("Overlay scene","overlayScene"),("Overlay source","overlaySource"),("Layer 1 scene","layer1Scene"),("Layer 1 source","layer1Source"),("Layer 2 scene","layer2Scene"),("Layer 2 source","layer2Source")] { choice(name,key:key,in:stack) }
         for (index,name) in ["Up","Right","Down","Left"].enumerated() { choice("D-pad \(name)",key:"anchor\(index)",in:stack) }
         heading("Adjust the feel", in: stack)
-        for (name,key) in [("Music step (dB)","volumeStepDb"),("Duck ceiling (dB)","duckDb"),("Ticks per full fade","ticks"),("Timing step (ms)","transitionStepMs")] { number(name,key:key,in:stack) }
-        paragraph("Knob/Dial press-and-turn use quarter steps. Duck does not raise an already quiet source. Overlay actions affect the selected item, including when that scene is live. Mic mute is one-way; unmute in OBS.", in: stack)
+        for (name,key) in [("Music step (dB)","volumeStepDb"),("Duck ceiling (dB)","duckDb"),("Ticks per full fade","ticks"),("Timing step (ms)","transitionStepMs"),("Layer 2 opacity (%)","opacityPct")] { number(name,key:key,in:stack) }
+        paragraph("Knob/Dial press-and-turn use quarter steps. Duck does not raise an already quiet source. Top + Dial rides Layer 2 opacity; Top + Knob / Top + Side + Knob step Layer 1 / Layer 2 blend modes. Overlay actions affect the selected item, including when that scene is live. Mic mute is one-way; unmute in OBS.", in: stack)
         return scrolling(stack)
     }
     private func activityPage() -> NSView {
@@ -160,7 +183,10 @@ private final class PanelBackground: NSView {
     }
     private func loadFields() {
         port.stringValue = String(settings.port); mix.state = settings.mixEnabled ? .on : .off
-        let values: [String:Double] = ["volumeStepDb":settings.volumeStepDb,"duckDb":settings.duckDb,"ticks":1/settings.faderStep,"transitionStepMs":Double(settings.transitionStepMs),"mixStepDb":settings.mixStepDb,"mixFadeMs":Double(settings.mixFadeMs)]
+        vjster.state = settings.vjsterEnabled ? .on : .off; vjsterPort.stringValue = String(settings.vjsterPort)
+        vjsterExtensionId.stringValue = settings.vjsterExtensionId
+        if let item = vjsterTarget.itemArray.first(where: { $0.representedObject as? String == settings.vjsterTarget }) { vjsterTarget.select(item) }
+        let values: [String:Double] = ["volumeStepDb":settings.volumeStepDb,"duckDb":settings.duckDb,"ticks":1/settings.faderStep,"transitionStepMs":Double(settings.transitionStepMs),"mixStepDb":settings.mixStepDb,"mixFadeMs":Double(settings.mixFadeMs),"opacityPct":settings.opacityStep * 100]
         for (key,value) in values { fields[key]?.stringValue = String(format: "%g", value) }
     }
     private func selected(_ key: String) -> String { choices[key]?.selectedItem?.representedObject as? String ?? "" }
@@ -175,19 +201,32 @@ private final class PanelBackground: NSView {
         for (key,value) in [("musicInput",settings.musicInput),("contentInput",settings.contentInput),("micInput",settings.micInput)] { fill(key,catalog.audio,keep:value) }
         fill("mediaInput",catalog.media,keep:settings.mediaInput); fill("overlayScene",catalog.scenes,keep:settings.overlayScene)
         fill("overlaySource",catalog.items[settings.overlayScene] ?? [],keep:settings.overlaySource)
+        fill("layer1Scene",catalog.scenes,keep:settings.layer1Scene); fill("layer1Source",catalog.items[settings.layer1Scene] ?? [],keep:settings.layer1Source)
+        fill("layer2Scene",catalog.scenes,keep:settings.layer2Scene); fill("layer2Source",catalog.items[settings.layer2Scene] ?? [],keep:settings.layer2Source)
         for index in 0..<4 { fill("anchor\(index)",catalog.scenes,keep:settings.anchors[index]) }
     }
     @objc private func overlayChanged() { fill("overlaySource",catalog.items[selected("overlayScene")] ?? [],keep:"") }
+    @objc private func layer1Changed() { fill("layer1Source",catalog.items[selected("layer1Scene")] ?? [],keep:"") }
+    @objc private func layer2Changed() { fill("layer2Source",catalog.items[selected("layer2Scene")] ?? [],keep:"") }
     private func current() throws -> Settings {
         var result = settings
         guard let value = Int(port.stringValue.trimmingCharacters(in: .whitespaces)) else { throw PanelFailure.message("Enter a whole-number local port.") }; result.port = value
+        guard let vjPort = Int(vjsterPort.stringValue.trimmingCharacters(in: .whitespaces)) else { throw PanelFailure.message("Enter a whole-number VJster port (1024–65535).") }; result.vjsterPort = vjPort
+        result.vjsterEnabled = vjster.state == .on
+        result.vjsterTarget = vjsterTarget.selectedItem?.representedObject as? String ?? "both"
+        result.vjsterExtensionId = vjsterExtensionId.stringValue.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if result.vjsterObsToken.isEmpty { result.vjsterObsToken = Settings.newObsToken() }
         result.musicInput = selected("musicInput"); result.contentInput = selected("contentInput"); result.micInput = selected("micInput"); result.mediaInput = selected("mediaInput")
-        result.overlayScene = selected("overlayScene"); result.overlaySource = selected("overlaySource"); result.anchors = (0..<4).map { selected("anchor\($0)") }
+        result.overlayScene = selected("overlayScene"); result.overlaySource = selected("overlaySource")
+        result.layer1Scene = selected("layer1Scene"); result.layer1Source = selected("layer1Source")
+        result.layer2Scene = selected("layer2Scene"); result.layer2Source = selected("layer2Source")
+        result.anchors = (0..<4).map { selected("anchor\($0)") }
         func number(_ key: String) throws -> Double {
             guard let text = fields[key]?.stringValue, let value = Double(text.trimmingCharacters(in: .whitespaces)), value.isFinite else { throw PanelFailure.message("Enter a valid number for \(key). Use a decimal point.") }; return value
         }
         result.volumeStepDb = try number("volumeStepDb"); result.duckDb = try number("duckDb")
         let ticks = try number("ticks"); guard (1...1000).contains(ticks) else { throw PanelFailure.message("Use 1–1000 ticks per full fade.") }; result.faderStep = 1/ticks
+        let opacityPct = try number("opacityPct"); guard (1...50).contains(opacityPct) else { throw PanelFailure.message("Use 1–50% for Layer 2 opacity step.") }; result.opacityStep = opacityPct / 100.0
         let timing = try number("transitionStepMs"), duration = try number("mixFadeMs")
         guard timing.rounded() == timing, (1...5000).contains(timing), duration.rounded() == duration, (0...10000).contains(duration) else { throw PanelFailure.message("Timing and group fade must be whole milliseconds in the shown ranges.") }
         result.transitionStepMs = Int(timing); result.mixFadeMs = Int(duration); result.mixStepDb = try number("mixStepDb"); result.mixEnabled = mix.state == .on
@@ -201,7 +240,7 @@ private final class PanelBackground: NSView {
         stopButton?.isEnabled = host.running
     }
     private func note(_ text: String) {
-        let safe = redact(text, secret: password.stringValue)
+        let safe = redact(text, secrets: [password.stringValue, settings.vjsterObsToken])
         let line = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .medium) + "  " + safe + "\n"
         activity.textStorage?.append(NSAttributedString(string: line))
         if activity.string.count > 60_000 { activity.string = String(activity.string.suffix(45_000)) }
@@ -217,10 +256,29 @@ private final class PanelBackground: NSView {
         do {
             let proposed = try current(), secret = try LocalFiles.password(port: proposed.port, override: password.stringValue)
             try paths.validate(); try LocalFiles.save(proposed); settings = proposed
-            try host.start(paths: paths, config: LocalFiles.settings, password: secret, mixEnabled: proposed.mixEnabled)
+            try host.start(paths: paths, config: LocalFiles.settings, password: secret, mixEnabled: proposed.mixEnabled, extraSecrets: [proposed.vjsterObsToken])
         } catch { failure(error); updateEnabled() }
     }
     @objc private func stop() { host.stop() }
+    @objc private func copyObsUrl() {
+        guard !previewMode else { return }
+        do {
+            let active: Settings
+            if host.running {
+                active = settings
+            } else {
+                active = try current()
+                settings = active
+                if !invalidSettings { try LocalFiles.save(active) }
+            }
+            let url = try active.obsBrowserUrl(videoInput: vjsterVideo.stringValue)
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(url, forType: .string)
+            let hasId = Settings.videoId(from: vjsterVideo.stringValue) != nil
+            status.stringValue = hasId ? "Copied OBS Browser Source URL to clipboard." : "Copied OBS Browser Source URL (replace VIDEO_ID if left blank)."
+            note(status.stringValue)
+        } catch { failure(error) }
+    }
     @objc private func scan() {
         guard !host.running && !scanning && !previewMode else { return }
         do {
@@ -241,7 +299,7 @@ private final class PanelBackground: NSView {
     @objc private func exportPreset() {
         guard !previewMode else { return }
         let save = NSSavePanel(); save.nameFieldStringValue = "OBS Fadester for TourBox.tb"; save.title = "Save the Mac TourBox preset"
-        save.directoryURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
+        save.directoryURL = FileManager.default.homeDirectoryForCurrentUser
         if save.runModal() == .OK, let url = save.url {
             do { try Data(contentsOf: paths.preset).write(to: url, options: .atomic); note("Mac preset saved. Import it in TourBox Console; no Console settings were changed.") } catch { failure(error) }
         }

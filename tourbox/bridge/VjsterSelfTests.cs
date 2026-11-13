@@ -24,6 +24,7 @@ internal static class VjsterSelfTests
         Ports();
         Guards();
         await Loopback();
+        await ObsPageLoopback();
         await StopRace();
         await Oversize();
         await Layers();
@@ -32,6 +33,7 @@ internal static class VjsterSelfTests
     static void Gate()
     {
         string[] none = [];
+        const string tok = "0123456789abcdef0123456789abcdef";
         Check(VjsterLink.ClassifyUpgrade("127.0.0.1:48150", 1, Ext, "", 48150, none).Ok, "extension origin on the right host");
         Check(VjsterLink.ClassifyUpgrade("localhost:48150", 1, Ext, "", 48150, none).Ok, "localhost is this server too");
         Check(VjsterLink.ClassifyUpgrade("127.0.0.1:48151", 1, Ext, "", 48150, none).Reason == "host", "wrong port is a host refusal");
@@ -41,9 +43,19 @@ internal static class VjsterSelfTests
         Check(VjsterLink.ClassifyUpgrade("127.0.0.1:48150", 1, "https://www.youtube.com", "", 48150, none).Reason == "origin", "a web page");
         Check(VjsterLink.ClassifyUpgrade("127.0.0.1:48150", 1, null, "", 48150, none).Reason == "origin", "no Origin");
         Check(VjsterLink.ClassifyUpgrade("127.0.0.1:48150", 1, "chrome-extension://ABCDEFGHIJKLMNOPABCDEFGHIJKLMNOP", "", 48150, none).Reason == "origin", "upper-case id is not an id");
-        Check(VjsterLink.ClassifyUpgrade("127.0.0.1:48150", 1, Ext, "token=0123456789abcdef0123456789abcdef", 48150, none).Reason == "token", "the OBS page token path is not served here");
+        Check(VjsterLink.ClassifyUpgrade("127.0.0.1:48150", 1, Ext, $"token={tok}", 48150, none).Reason == "token", "without obsToken, token query is refused");
+        Check(VjsterLink.ClassifyUpgrade("127.0.0.1:48150", 1, "http://127.0.0.1:48150", $"token={tok}", 48150, none, tok) == (true, "", "obs"), "obs page token on 127.0.0.1");
+        Check(VjsterLink.ClassifyUpgrade("localhost:48150", 1, "http://localhost:48150", $"token={tok}", 48150, none, tok) == (true, "", "obs"), "obs page token on localhost");
+        Check(VjsterLink.ClassifyUpgrade("127.0.0.1:48150", 1, "http://127.0.0.1:48150", "token=ffffffffffffffffffffffffffffffff", 48150, none, tok).Reason == "token", "wrong obs page token");
+        Check(VjsterLink.ClassifyUpgrade("127.0.0.1:48150", 1, Ext, $"token={tok}", 48150, none, tok).Reason == "origin", "extension origin cannot use obs page token");
         Check(VjsterLink.ClassifyUpgrade("127.0.0.1:48150", 1, Ext, "", 48150, ["abcdefghijklmnopabcdefghijklmnop"]).Ok, "pinned id matches");
         Check(VjsterLink.ClassifyUpgrade("127.0.0.1:48150", 1, OtherExt, "", 48150, ["abcdefghijklmnopabcdefghijklmnop"]).Reason == "extension-id", "pinned id differs");
+        Check(VjsterLink.VideoIdFrom("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=5") == "dQw4w9WgXcQ", "watch url id");
+        Check(VjsterLink.VideoIdFrom("https://youtu.be/dQw4w9WgXcQ") == "dQw4w9WgXcQ", "short url id");
+        Check(VjsterLink.VideoIdFrom("https://www.youtube.com/shorts/dQw4w9WgXcQ") == "dQw4w9WgXcQ", "shorts url id");
+        Check(VjsterLink.VideoIdFrom("https://www.youtube.com/embed/videoseries?list=PL123") == null, "playlist videoseries is not a video id");
+        Check(VjsterLink.ObsPageAddress(48150, tok, "dQw4w9WgXcQ") == $"http://127.0.0.1:48150/obs?v=dQw4w9WgXcQ#token={tok}", "obs page address with video id");
+        Check(VjsterLink.ObsPageAddress(48150, tok, "") == $"http://127.0.0.1:48150/obs?v=VIDEO_ID#token={tok}", "obs page address placeholder");
     }
 
     static void Ports()
@@ -59,6 +71,13 @@ internal static class VjsterSelfTests
             Check(BridgeConfig.Load(path).Port == 48150, "a catalog read does not care about the VJster port");
             File.WriteAllText(path, """{"port":48150,"vjsterPort":48150,"vjsterEnabled":false}""");
             Check(Fails(() => BridgeConfig.Load(path).CheckPorts()) == "", "with VJster off, the port is free");
+            File.WriteAllText(path, """{"vjsterObsToken":"zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"}""");
+            Check(Fails(() => BridgeConfig.Load(path)).Contains("32 lowercase hex digits"), "invalid obs token is refused");
+            File.WriteAllText(path, """{"vjsterTarget":"tv"}""");
+            Check(Fails(() => BridgeConfig.Load(path)).Contains("browser, obs, or both"), "invalid vjsterTarget is refused");
+            File.WriteAllText(path, """{"vjsterObsToken":"0123456789ABCDEF0123456789abcdef","vjsterTarget":"OBS"}""");
+            var loaded = BridgeConfig.Load(path);
+            Check(loaded.VjsterObsToken == "0123456789abcdef0123456789abcdef" && loaded.VjsterTarget == "obs", "obs token and target normalize cleanly");
             const string obs = """{"server_port":4455,"server_password":"pw"}""";
             Check(BridgeConfig.SavedPassword(obs, 4455) == "pw", "the saved password on the matching port");
             Check(Fails(() => BridgeConfig.SavedPassword(obs, 48150)).Contains("uses port 4455"), "a wrong port says so instead of asking for a password");
@@ -124,17 +143,17 @@ internal static class VjsterSelfTests
 
     static Task SendText(ClientWebSocket ws, string text) => ws.SendAsync(Encoding.UTF8.GetBytes(text), WebSocketMessageType.Text, true, CancellationToken.None);
 
-    static async Task<ClientWebSocket> Connect(int port, string origin)
+    static async Task<ClientWebSocket> Connect(int port, string origin, string query = "")
     {
         var ws = new ClientWebSocket();
         ws.Options.SetRequestHeader("Origin", origin);
         using var cts = new CancellationTokenSource(3000);
-        await ws.ConnectAsync(new Uri($"ws://127.0.0.1:{port}/"), cts.Token);
+        await ws.ConnectAsync(new Uri($"ws://127.0.0.1:{port}/{query}"), cts.Token);
         return ws;
     }
 
-    static string StateJson(string inReplyTo, double rate, string title = "Clip", bool playing = true, string quality = "hd1080") =>
-        $$"""{"v":1,"id":"e{{Random.Shared.Next()}}","target":"browser","type":"state","inReplyTo":{{(inReplyTo == "" ? "null" : "\"" + inReplyTo + "\"")}},"rate":{{rate.ToString(System.Globalization.CultureInfo.InvariantCulture)}},"rateDirect":false,"availableRates":[0.25,0.5,1,1.25,1.5,2],"quality":"{{quality}}","availableQualities":["hd1080","hd720"],"qualityAuto":false,"title":"{{title}}","host":"www.youtube.com","playing":{{(playing ? "true" : "false")}},"adPlaying":false,"capabilities":["speed","quality","transport"],"pinned":false}""";
+    static string StateJson(string inReplyTo, double rate, string title = "Clip", bool playing = true, string quality = "hd1080", string target = "browser") =>
+        $$"""{"v":1,"id":"e{{Random.Shared.Next()}}","target":"{{target}}","type":"state","inReplyTo":{{(inReplyTo == "" ? "null" : "\"" + inReplyTo + "\"")}},"rate":{{rate.ToString(System.Globalization.CultureInfo.InvariantCulture)}},"rateDirect":false,"availableRates":[0.25,0.5,1,1.25,1.5,2],"quality":"{{quality}}","availableQualities":["hd1080","hd720"],"qualityAuto":false,"title":"{{title}}","host":"www.youtube.com","playing":{{(playing ? "true" : "false")}},"adPlaying":false,"capabilities":["speed","quality","transport"],"pinned":false}""";
 
     static async Task Loopback()
     {
@@ -240,6 +259,58 @@ internal static class VjsterSelfTests
         await clash.StartAsync();
         Check(clash.Running, "the port is free again after a stop");
         await clash.StopAsync();
+    }
+
+    static async Task ObsPageLoopback()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "fadester-obs-page-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            File.WriteAllText(Path.Combine(dir, "player.html"), "<!doctype html><title>VJster OBS</title>");
+            File.WriteAllText(Path.Combine(dir, "player.js"), "// script");
+            string tok = VjsterLink.NewObsToken();
+            var pages = VjsterLink.LoadObsPages(dir);
+            await using var link = new VjsterLink(0, null, _ => { }, tok, pages);
+            await link.StartAsync();
+            int port = link.BoundPort;
+
+            string htmlResp = await Raw(port, $"GET /obs?v=dQw4w9WgXcQ HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\n\r\n");
+            Check(htmlResp.StartsWith("HTTP/1.1 200 OK") && htmlResp.Contains("Content-Security-Policy: " + VjsterLink.PageCsp) && htmlResp.Contains("<title>VJster OBS</title>"), "/obs serves player.html with CSP");
+            string headResp = await Raw(port, $"HEAD /obs/player.js HTTP/1.1\r\nHost: localhost:{port}\r\n\r\n");
+            Check(headResp.StartsWith("HTTP/1.1 200 OK") && headResp.Contains("text/javascript") && !headResp.Contains("// script"), "HEAD /obs/player.js omits body");
+            Check((await Raw(port, $"GET /obs HTTP/1.1\r\nHost: evil.example:{port}\r\n\r\n")).StartsWith("HTTP/1.1 403"), "/obs refuses foreign Host header");
+
+            var obsOnlyDesk = new VjsterDesk(link, targetChoice: "obs");
+            var bothDesk = new VjsterDesk(link, targetChoice: "both");
+            Check((await obsOnlyDesk.Dispatch("vjster.speed.up")).Contains("no OBS video page is connected"), "obs-only offline message");
+            Check((await bothDesk.Dispatch("vjster.speed.up")).Contains("no Chrome extension or OBS video page is connected"), "both offline message");
+
+            using var browser = await Connect(port, Ext);
+            using var obs = await Connect(port, $"http://127.0.0.1:{port}", $"?token={tok}");
+            var bInit = JsonNode.Parse(await Receive(browser))!.AsObject();
+            var oInit = JsonNode.Parse(await Receive(obs))!.AsObject();
+            Check(bInit["target"]!.GetValue<string>() == "browser" && oInit["target"]!.GetValue<string>() == "obs", "browser and obs coexist on separate slots");
+            Check(link.IsConnected("browser") && link.IsConnected("obs"), "both targets open");
+            await SendText(browser, StateJson(bInit["id"]!.GetValue<string>(), 1, target: "browser"));
+            await SendText(obs, StateJson(oInit["id"]!.GetValue<string>(), 1, target: "obs"));
+
+            // Dispatch to obs only leaves browser untouched.
+            var obsStep = obsOnlyDesk.Dispatch("vjster.speed.up");
+            var oIntent = JsonNode.Parse(await Receive(obs))!.AsObject();
+            Check(oIntent["type"]!.GetValue<string>() == "speed.step" && oIntent["target"]!.GetValue<string>() == "obs", "obs-only desk targets obs");
+            await SendText(obs, StateJson(oIntent["id"]!.GetValue<string>(), 1.25, target: "obs"));
+            Check(await obsStep == "Video 1.25x · 1080p · playing", "obs-only reply");
+
+            // Dispatch to both sends to both simultaneously.
+            var bothStep = bothDesk.Dispatch("vjster.speed.down");
+            var bIntent = JsonNode.Parse(await Receive(browser))!.AsObject();
+            oIntent = JsonNode.Parse(await Receive(obs))!.AsObject();
+            await SendText(browser, StateJson(bIntent["id"]!.GetValue<string>(), 0.75, target: "browser"));
+            await SendText(obs, StateJson(oIntent["id"]!.GetValue<string>(), 1.0, target: "obs"));
+            Check(await bothStep == "Chrome: Video 0.75x · 1080p · playing | OBS: Video 1x · 1080p · playing", "both targets reply");
+        }
+        finally { Directory.Delete(dir, true); }
     }
 
     /** A connection that arrives while the link stops is never kept as the peer of a stopped link. */

@@ -51,16 +51,19 @@ EMPTY = bytes(5)
 # Compatibility contract from the former two presets: every original action keeps
 # its Ctrl+Alt+Shift chord. The VJ layout (2026-11) moves some of them to other
 # controls and adds VJ_KEYS; VJ_PHYSICAL_KEYS lists the controls it changed.
-ACTION_KEYS = dict(zip(
-    [f"F{i}" for i in range(1, 13)] + list("ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789"),
-    ("music.down music.up fader.back fader.forward preview.previous preview.next take undo "
-     "anchor.1 anchor.2 anchor.3 anchor.4 "
-     "fader.cancel preview.sync take.cut music.duck content.down content.up media.previous media.next "
-     "media.play media.restart overlay.show overlay.hide mic.mute transition.previous transition.next "
-     "transition.shorter transition.longer music.restore capture.screenshot recording.chapter replay.save "
-     "recording.status bridge.reconnect soundcheck mix.fadeOut mix.restore "
-     "music.fineDown music.fineUp fader.fineBack fader.fineForward fader.status preview.status "
-     "mix.down mix.up mix.status").split(), strict=True))
+_BASE_KEYS = [f"F{i}" for i in range(1, 13)] + list("ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789")
+_BASE_ACTIONS = (
+    "music.down music.up fader.back fader.forward preview.previous preview.next take undo "
+    "anchor.1 anchor.2 anchor.3 anchor.4 "
+    "fader.cancel preview.sync take.cut music.duck content.down content.up media.previous media.next "
+    "media.play media.restart overlay.show overlay.hide mic.mute transition.previous transition.next "
+    "transition.shorter transition.longer music.restore capture.screenshot recording.chapter replay.save "
+    "recording.status bridge.reconnect soundcheck mix.fadeOut mix.restore "
+    "music.fineDown music.fineUp fader.fineBack fader.fineForward fader.status preview.status "
+    "mix.down mix.up mix.status").split()
+if len(_BASE_KEYS) != len(_BASE_ACTIONS):
+    raise ValueError("Mismatched base action chord table")
+ACTION_KEYS = dict(zip(_BASE_KEYS, _BASE_ACTIONS))
 # Full chords for the VJ actions: Ctrl+Shift and Alt+Shift with F-keys, which
 # Console encodes as modifier bits (mods 10 and 6). They reach the focused window
 # when the bridge is stopped, so Alt+Shift+F4 is not used: Windows could read it

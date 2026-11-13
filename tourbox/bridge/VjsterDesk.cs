@@ -29,8 +29,9 @@ internal static class KeyGuards
     public static bool IsStrayFaderTick(string action, long lastHeldTurn, long at) => IsFaderTick(action) && lastHeldTurn != 0 && Stopwatch.GetElapsedTime(lastHeldTurn, at) < AfterHeldTurn;
 }
 
-internal sealed class VjsterDesk(VjsterLink link, double fastSpeed = 2.0, double slowSpeed = 0.5)
+internal sealed class VjsterDesk(VjsterLink link, double fastSpeed = 2.0, double slowSpeed = 0.5, string targetChoice = "browser")
 {
+    readonly string targetChoice = targetChoice is "obs" or "both" ? targetChoice : "browser";
     // vjster.speed.fast and vjster.speed.slow are game-controller presets: not on the TourBox, so not in DeskActions.Supported.
     public static readonly HashSet<string> Actions = new(("vjster.speed.down vjster.speed.up vjster.speed.fineDown vjster.speed.fineUp vjster.speed.reset vjster.speed.fast vjster.speed.slow " +
         "vjster.quality.down vjster.quality.up vjster.quality.reset vjster.playPause vjster.status").Split(' '));
@@ -45,7 +46,22 @@ internal sealed class VjsterDesk(VjsterLink link, double fastSpeed = 2.0, double
     {
         if (!Actions.Contains(id)) throw new ArgumentException("Unknown VJster action: " + id);
         if (!link.Running) return $"VJster: the link is not running (port {link.Port} is in use).";
-        if (!link.Connected) return $"VJster: no Chrome extension is connected on port {link.Port}. Open YouTube in Chrome with the VJster extension.";
+        string[] candidates = this.targetChoice switch
+        {
+            "obs" => ["obs"],
+            "both" => ["browser", "obs"],
+            _ => ["browser"]
+        };
+        string[] open = candidates.Where(link.IsConnected).ToArray();
+        if (open.Length == 0)
+        {
+            return this.targetChoice switch
+            {
+                "obs" => $"VJster: no OBS video page is connected on port {link.Port}. Add an OBS Browser Source with the VJster URL from Setup.",
+                "both" => $"VJster: no Chrome extension or OBS video page is connected on port {link.Port}. Open YouTube in Chrome with VJster or load the /obs Browser Source in OBS.",
+                _ => $"VJster: no Chrome extension is connected on port {link.Port}. Open YouTube in Chrome with the VJster extension."
+            };
+        }
         string type;
         Action<JsonObject>? fill = null;
         switch (id)
@@ -63,12 +79,20 @@ internal sealed class VjsterDesk(VjsterLink link, double fastSpeed = 2.0, double
             case "vjster.playPause": type = "transport.toggle"; break;
             default: type = "state.get"; break;
         }
-        var reply = await link.Request(type, fill, ReplyTimeout);
-        if (reply == null) return "VJster: the extension disconnected.";
+        if (open.Length == 1)
+            return FormatReply(id, open[0], await link.Request(type, fill, ReplyTimeout, open[0]));
+        var replies = await Task.WhenAll(open.Select(t => link.Request(type, fill, ReplyTimeout, t)));
+        return $"Chrome: {FormatReply(id, open[0], replies[0])} | OBS: {FormatReply(id, open[1], replies[1])}";
+    }
+
+    static string FormatReply(string id, string target, (VjsterState? State, VjsterError? Error)? reply)
+    {
+        string peer = target == "obs" ? "OBS video page" : "extension";
+        if (reply == null) return $"VJster: the {peer} disconnected.";
         var (state, error) = reply.Value;
         if (error != null) return "VJster: " + error.Message;
-        if (state == null) return $"VJster: sent {id["vjster.".Length..]}; no reply from the extension yet.";
-        return Describe(state, id == "vjster.status");
+        if (state == null) return $"VJster: sent {id["vjster.".Length..]}; no reply from the {peer} yet.";
+        return Describe(state, id == "vjster.status", target);
     }
 
     static Action<JsonObject> Rate(double rate) => o => { o["rate"] = rate; o["direct"] = false; o["hold"] = false; };
@@ -76,9 +100,9 @@ internal sealed class VjsterDesk(VjsterLink link, double fastSpeed = 2.0, double
     static Action<JsonObject> Step(double delta) => o => { o["delta"] = delta; o["direct"] = false; o["hold"] = false; };
 
     /** One line for the panel: what the video is doing now. The title only on a status read. */
-    public static string Describe(VjsterState s, bool withTitle)
+    public static string Describe(VjsterState s, bool withTitle, string target = "browser")
     {
-        if (s.Rate == null && s.Title == null) return "VJster: no video is playing in Chrome.";
+        if (s.Rate == null && s.Title == null) return target == "obs" ? "VJster: no video is loaded in the OBS page." : "VJster: no video is playing in Chrome.";
         var parts = new List<string> { "Video " + Rate(s.Rate) };
         if (s.Capabilities.Contains("quality")) parts.Add(s.QualityAuto == true ? $"Auto ({Quality(s.Quality)})" : Quality(s.Quality));
         parts.Add(s.Playing ? "playing" : "paused");
@@ -103,11 +127,32 @@ internal sealed class VjsterHost : IAsyncDisposable
     public VjsterHost(BridgeConfig cfg, Action<string> log)
     {
         this.log = log;
-        Link = new VjsterLink(cfg.VjsterPort, cfg.VjsterExtensionId.Length == 0 ? null : [cfg.VjsterExtensionId], log);
-        Desk = new VjsterDesk(Link, cfg.GamepadFastSpeed, cfg.GamepadSlowSpeed);
-        // The extension's own reports (a new video, play, pause): without the title, which only a status press shows (R-BEH-5).
+        bool serveObs = cfg.VjsterObsToken.Length == 32;
+        var pages = serveObs ? VjsterLink.LoadObsPages(FindObsPageDirectory(), log) : null;
+        Link = new VjsterLink(cfg.VjsterPort, cfg.VjsterExtensionId.Length == 0 ? null : [cfg.VjsterExtensionId], log,
+            serveObs ? cfg.VjsterObsToken : null, pages);
+        Desk = new VjsterDesk(Link, cfg.GamepadFastSpeed, cfg.GamepadSlowSpeed, cfg.VjsterTarget);
+        // Spontaneous reports (a new video, play, pause): without the title, which only a status press shows (R-BEH-5).
         Link.StateReceived += s => { if (s.InReplyTo == null) log(VjsterDesk.Describe(s, false)); };
     }
+
+    static string? FindObsPageDirectory()
+    {
+        static bool HasPage(string dir) => File.Exists(Path.Combine(dir, "player.html")) && File.Exists(Path.Combine(dir, "player.js"));
+        foreach (var local in new[] { Path.Combine(AppContext.BaseDirectory, "vjster", "obs"), Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "vjster", "obs")) })
+            if (HasPage(local)) return local;
+        for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir != null; dir = dir.Parent)
+        {
+            foreach (var rel in new[] { Path.Combine("io.github.jbrick2070.fadester-for-obs.sdPlugin", "bin", "vjster", "obs"), Path.Combine("com.jbrick2070.vjster.sdPlugin", "bin", "obs") })
+            {
+                var candidate = Path.Combine(dir.FullName, rel);
+                if (HasPage(candidate)) return candidate;
+            }
+        }
+        return null;
+    }
+
+    public Task StartBinding(CancellationToken stop) => Bind(stop);
 
     public async Task Run(ChannelReader<KeyInput> input, CancellationToken stop)
     {

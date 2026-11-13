@@ -13,9 +13,13 @@ internal static class MacDevelopmentHost
     static string HostDirectory => Path.Combine(Support, "FadesterTourBox");
     static string ObsConfig => Path.Combine(Support, "obs-studio", "plugin_config", "obs-websocket", "config.json");
     static string? secret;
+    static string? obsTokenSecret;
     static void Log(string message)
     {
-        if (!string.IsNullOrEmpty(secret)) message = message.Replace(secret, "[redacted]", StringComparison.Ordinal);
+        string? first = secret, second = obsTokenSecret;
+        if ((first?.Length ?? 0) < (second?.Length ?? 0)) (first, second) = (second, first);
+        if (!string.IsNullOrEmpty(first)) message = message.Replace(first, "[redacted]", StringComparison.Ordinal);
+        if (!string.IsNullOrEmpty(second)) message = message.Replace(second, "[redacted]", StringComparison.Ordinal);
         Console.WriteLine(message.Replace('\r', ' ').Replace('\n', ' '));
     }
     enum Control { Ready, Disarmed, Stopped }
@@ -34,17 +38,17 @@ internal static class MacDevelopmentHost
     }
     internal static void CheckControlFrames()
     {
-        string? previousSecret = secret; TextWriter previousOutput = Console.Out;
+        string? previousSecret = secret, previousToken = obsTokenSecret; TextWriter previousOutput = Console.Out;
         using var output = new StringWriter(CultureInfo.InvariantCulture);
         try
         {
-            Console.SetOut(output); secret = "1";
+            Console.SetOut(output); secret = "1"; obsTokenSecret = "0123456789abcdef0123456789abcdef";
             WriteControl(Control.Ready, 1); WriteControl(Control.Disarmed, 1);
-            Log("Synthetic secret 1"); secret = "STOPPED"; WriteControl(Control.Stopped);
+            Log("Synthetic secret 1 and 0123456789abcdef0123456789abcdef"); secret = "STOPPED"; WriteControl(Control.Stopped);
         }
-        finally { secret = previousSecret; Console.SetOut(previousOutput); }
+        finally { secret = previousSecret; obsTokenSecret = previousToken; Console.SetOut(previousOutput); }
         string[] lines = output.ToString().Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
-        if (!lines.SequenceEqual(new[] { "READY 1", "DISARMED 1", "Synthetic secret [redacted]", "STOPPED" }))
+        if (!lines.SequenceEqual(new[] { "READY 1", "DISARMED 1", "Synthetic secret [redacted] and [redacted]", "STOPPED" }))
             throw new InvalidOperationException("Host control frames or human-text secret redaction failed.");
     }
     static void Help() => Console.WriteLine("""
@@ -131,6 +135,8 @@ internal static class MacDevelopmentHost
             var config = BridgeConfig.Load(configPath);
             if (enableMix) config.MixEnabled = true;
             if (readOnly || noMixProvider) config.MixEnabled = false;
+            obsTokenSecret = config.VjsterObsToken.Length > 0 ? config.VjsterObsToken : null;
+            if (!readOnly) config.CheckPorts();
             using var stop = new CancellationTokenSource();
             var ingress = new CommandIngress();
             int stopping = 0;
@@ -144,14 +150,21 @@ internal static class MacDevelopmentHost
             // Console's synchronized TextReader may block before returning an async
             // task. Keep stdin on its own worker so startup can authenticate first.
             _ = Task.Run(() => ReadInput(ingress, Stop, stop.Token));
+            await using var vjster = !readOnly && config.VjsterEnabled ? new VjsterHost(config, Log) : null;
+            Task vjsterBinder = vjster?.StartBinding(stop.Token) ?? Task.CompletedTask;
             try
             {
                 do
                 {
-                    if (!await RunSession(config, nativeApp, inputApp, mapPath, ingress, stop.Token, readOnly, noMixProvider)) break;
+                    if (!await RunSession(config, nativeApp, inputApp, mapPath, ingress, stop.Token, readOnly, noMixProvider, vjster?.Desk)) break;
                 } while (!stop.IsCancellationRequested);
             }
-            finally { Stop(); }
+            finally
+            {
+                Stop();
+                try { await vjsterBinder; } catch (OperationCanceledException) { }
+                if (vjster is not null) await vjster.DisposeAsync();
+            }
             WriteControl(Control.Stopped);
             Log("No automatic T-bar reset, take or level restore was sent.");
             return 0;
@@ -237,7 +250,7 @@ internal static class MacDevelopmentHost
         try { return await ObsConnection.Connect(config, stop); }
         finally { Environment.SetEnvironmentVariable("FADESTER_OBS_PASSWORD", supplied); }
     }
-    static async Task<bool> RunSession(BridgeConfig config, string nativeApp, string? inputApp, string? mapPath, CommandIngress ingress, CancellationToken stop, bool readOnly, bool noMixProvider)
+    static async Task<bool> RunSession(BridgeConfig config, string nativeApp, string? inputApp, string? mapPath, CommandIngress ingress, CancellationToken stop, bool readOnly, bool noMixProvider, VjsterDesk? vjster = null)
     {
         ingress.Disarm();
         using var obs = await Connect(config, stop);
@@ -261,7 +274,7 @@ internal static class MacDevelopmentHost
         _ = obs.Disconnected.ContinueWith(_ => ingress.Disarm(generation), TaskScheduler.Default);
         if (shortcuts is not null) _ = shortcuts.Done.ContinueWith(_ => ingress.Disarm(generation), TaskScheduler.Default);
         var session = new HostSession(config, ingress, generation, obs.Call, native.MoveAsync,
-            () => !obs.Disconnected.IsCompleted && (shortcuts is null || !shortcuts.Done.IsCompleted), stop, readOnly, native.ReadAsync);
+            () => !obs.Disconnected.IsCompleted && (shortcuts is null || !shortcuts.Done.IsCompleted), stop, readOnly, native.ReadAsync, vjster);
         var desk = session.Desk;
         obs.InputVolumeChanged += desk.OnVolumeChanged; obs.InputLevelChangedById += desk.OnMixInputLevelChanged;
         MixProtocolServer? protocol = null;

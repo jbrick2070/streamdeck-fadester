@@ -15,9 +15,12 @@ they are never silently rebound. Stop before editing assignments.
 The panel uses authenticated loopback OBS only. A blank password field reads the
 matching local OBS settings; a typed password stays in process memory and the
 owned host's environment, never the saved settings or log. Settings use the
-separate `~/Library/Application Support/FadesterTourBox/panel-config.json`.
-Malformed saved settings are not overwritten. Whole-mix control starts disabled;
-when disabled the host is launched with `--no-mix-provider`.
+separate `~/Library/Application Support/FadesterTourBox/panel-config.json`
+(including VJster port, optional Chrome extension pin, `/obs` Browser Source
+token, target selection, and Layer 1/2 scene-item assignments; the OBS page
+token is redacted from Activity logs). Malformed saved settings are not
+overwritten. Whole-mix control starts disabled; when disabled the host is
+launched with `--no-mix-provider`.
 
 Accessibility is granted manually to the native slider component using its
 permission window. TourBox Console has separate permissions. The actual child

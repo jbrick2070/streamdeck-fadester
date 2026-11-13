@@ -23,11 +23,15 @@ internal sealed class BridgeConfig
     public bool MixEnabled { get; set; }
     public double MixStepDb { get; set; } = 3;
     public int MixFadeMs { get; set; } = 600;
-    /** VJster: the link the Chrome extension connects to (docs/vjster R-LNK-1..2); off leaves the port alone. */
+    /** VJster: the link the Chrome extension and the /obs Browser Source page connect to (docs/vjster R-LNK-1..2); off leaves the port alone. */
     public bool VjsterEnabled { get; set; } = true;
     public int VjsterPort { get; set; } = VjsterLink.DefaultPort;
     /** Empty lets any VJster extension connect; otherwise only this 32-letter id (the extension's options page shows it). */
     public string VjsterExtensionId { get; set; } = "";
+    /** The OBS Browser Source page token (32 lowercase hex digits); empty refuses every token connection. */
+    public string VjsterObsToken { get; set; } = "";
+    /** Which VJster target receives video controls: browser, obs, or both. */
+    public string VjsterTarget { get; set; } = "both";
     /** The two VJ layers: a scene item each, by scene and source name. Layer 2 is the one opacity rides. */
     public string Layer1Scene { get; set; } = "";
     public string Layer1Source { get; set; } = "";
@@ -62,8 +66,14 @@ internal sealed class BridgeConfig
         if (config.VjsterPort is < 1024 or > 65535 || !double.IsFinite(config.OpacityStep) || config.OpacityStep is < 0.01 or > 0.5)
             throw new InvalidDataException("The VJster port must be 1024–65535 and the opacity step 0.01–0.5.");
         config.VjsterExtensionId = (config.VjsterExtensionId ?? "").Trim().ToLowerInvariant();
-        if (config.VjsterExtensionId.Length > 0 && !System.Text.RegularExpressions.Regex.IsMatch(config.VjsterExtensionId, "^[a-p]{32}$"))
+        if (config.VjsterExtensionId.Length > 0 && !System.Text.RegularExpressions.Regex.IsMatch(config.VjsterExtensionId, @"^[a-p]{32}\z"))
             throw new InvalidDataException("The VJster extension id is 32 letters a to p, as the extension's options page shows it.");
+        config.VjsterObsToken = (config.VjsterObsToken ?? "").Trim().ToLowerInvariant();
+        if (config.VjsterObsToken.Length > 0 && !System.Text.RegularExpressions.Regex.IsMatch(config.VjsterObsToken, @"^[0-9a-f]{32}\z"))
+            throw new InvalidDataException("The VJster OBS page token must be 32 lowercase hex digits (0–9, a–f).");
+        config.VjsterTarget = string.IsNullOrWhiteSpace(config.VjsterTarget) ? "both" : config.VjsterTarget.Trim().ToLowerInvariant();
+        if (config.VjsterTarget is not ("browser" or "obs" or "both"))
+            throw new InvalidDataException("The VJster target must be browser, obs, or both.");
         foreach (var layer in new[] { config.Layer1Scene, config.Layer1Source, config.Layer2Scene, config.Layer2Source }) if (layer == null) throw new InvalidDataException("Layer assignments must be text.");
         config.GamepadMap ??= new();
         if (!PresetSpeeds.Contains(config.GamepadFastSpeed) || !PresetSpeeds.Contains(config.GamepadSlowSpeed))

@@ -28,7 +28,17 @@ if [[ "$mode" != --ui-only ]]; then
   if [[ -z "$dotnet" ]]; then
     if command -v dotnet >/dev/null; then dotnet="$(command -v dotnet)"; else dotnet="$HOME/.dotnet/dotnet"; fi
   fi
-  mkdir -p "$resources/runtime"
+  mkdir -p "$resources/runtime" "$resources/vjster/obs"
+  vjster_obs=""
+  for candidate in "$repo/io.github.jbrick2070.fadester-for-obs.sdPlugin/bin/vjster/obs" "$repo/com.jbrick2070.vjster.sdPlugin/bin/obs"; do
+    if [[ -f "$candidate/player.html" && -f "$candidate/player.js" ]]; then vjster_obs="$candidate"; break; fi
+  done
+  if [[ -z "$vjster_obs" ]]; then
+    export PATH="$HOME/.local/node/bin:$PATH"
+    (cd "$repo" && npm run build:vjster-page)
+    vjster_obs="$repo/com.jbrick2070.vjster.sdPlugin/bin/obs"
+  fi
+  cp "$vjster_obs/player.html" "$vjster_obs/player.js" "$resources/vjster/obs/"
   "$dotnet" publish "$repo/tourbox/macos/host/FadesterMacHost.csproj" -c Release -r "$rid" --self-contained true \
     -p:PublishSingleFile=true -p:DebugType=None -o "$resources/runtime" --nologo
   bash "$repo/tourbox/macos/native/build.sh"

@@ -15,6 +15,46 @@ struct Settings {
     var volumeStepDb = 1.0, duckDb = -12.0, faderStep = 0.05
     var transitionStepMs = 50, mixStepDb = 3.0, mixFadeMs = 600
     var mixEnabled = false
+    var vjsterEnabled = true, vjsterPort = 48150
+    var vjsterExtensionId = "", vjsterObsToken = Settings.newObsToken(), vjsterTarget = "both"
+    var layer1Scene = "", layer1Source = "", layer2Scene = "", layer2Source = ""
+    var opacityStep = 0.05
+
+    static func newObsToken() -> String {
+        (0..<16).map { _ in String(format: "%02x", UInt8.random(in: 0...255)) }.joined()
+    }
+    static func videoId(from input: String) -> String? {
+        let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let idPattern = "^[A-Za-z0-9_-]{11}$"
+        if trimmed.range(of: idPattern, options: .regularExpression) != nil {
+            return trimmed != "videoseries" ? trimmed : nil
+        }
+        let lower = trimmed.lowercased()
+        let withScheme = (lower.hasPrefix("http://") || lower.hasPrefix("https://")) ? trimmed : "https://" + trimmed
+        guard let components = URLComponents(string: withScheme), let rawHost = components.host?.lowercased() else { return nil }
+        let youtube = rawHost == "youtube.com" || rawHost.hasSuffix(".youtube.com")
+            || rawHost == "youtube-nocookie.com" || rawHost.hasSuffix(".youtube-nocookie.com")
+        let segments = components.path.split(separator: "/").map(String.init)
+        var candidate: String?
+        if rawHost == "youtu.be" {
+            candidate = segments.first
+        } else if youtube {
+            if let v = components.queryItems?.first(where: { $0.name == "v" })?.value {
+                candidate = v
+            } else if segments.count >= 2, ["shorts", "embed", "live", "v"].contains(segments[0]) {
+                candidate = segments[1]
+            }
+        }
+        guard let id = candidate, id != "videoseries", id.range(of: idPattern, options: .regularExpression) != nil else { return nil }
+        return id
+    }
+    func obsBrowserUrl(videoInput: String) throws -> String {
+        try validate()
+        guard vjsterObsToken.count == 32 else { throw PanelFailure.message("Generate or save a VJster OBS page token first.") }
+        let video = Settings.videoId(from: videoInput) ?? "VIDEO_ID"
+        return "http://127.0.0.1:\(vjsterPort)/obs?v=\(video)#token=\(vjsterObsToken)"
+    }
 
     init() {}
     init(data: Data) throws {
@@ -34,6 +74,11 @@ struct Settings {
             guard value.isFinite, value.rounded() == value, (-1_000_000...1_000_000).contains(value) else { throw PanelFailure.message("Invalid integer: \(key).") }
             return Int(value)
         }
+        func boolean(_ key: String, _ fallback: Bool) throws -> Bool {
+            guard let raw = json[key] else { return fallback }
+            guard let value = raw as? NSNumber, CFGetTypeID(value) == CFBooleanGetTypeID() else { throw PanelFailure.message("Invalid boolean setting: \(key).") }
+            return value.boolValue
+        }
         port = try integer("port", port)
         musicInput = try text("musicInput"); contentInput = try text("contentInput"); micInput = try text("micInput"); mediaInput = try text("mediaInput")
         overlayScene = try text("overlayScene"); overlaySource = try text("overlaySource")
@@ -42,9 +87,18 @@ struct Settings {
         }
         volumeStepDb = try number("volumeStepDb", volumeStepDb); duckDb = try number("duckDb", duckDb); faderStep = try number("faderStep", faderStep)
         transitionStepMs = try integer("transitionStepMs", transitionStepMs); mixStepDb = try number("mixStepDb", mixStepDb); mixFadeMs = try integer("mixFadeMs", mixFadeMs)
-        if let raw = json["mixEnabled"] {
-            guard let value = raw as? NSNumber, CFGetTypeID(value) == CFBooleanGetTypeID() else { throw PanelFailure.message("Invalid whole-mix setting.") }; mixEnabled = value.boolValue
+        mixEnabled = try boolean("mixEnabled", mixEnabled)
+        vjsterEnabled = try boolean("vjsterEnabled", vjsterEnabled)
+        vjsterPort = try integer("vjsterPort", vjsterPort)
+        vjsterExtensionId = try text("vjsterExtensionId").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if json["vjsterObsToken"] != nil {
+            vjsterObsToken = try text("vjsterObsToken").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         }
+        let rawTarget = try text("vjsterTarget", "both").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        vjsterTarget = rawTarget.isEmpty ? "both" : rawTarget
+        layer1Scene = try text("layer1Scene"); layer1Source = try text("layer1Source")
+        layer2Scene = try text("layer2Scene"); layer2Source = try text("layer2Source")
+        opacityStep = try number("opacityStep", opacityStep)
         try validate()
     }
     func validate() throws {
@@ -54,6 +108,21 @@ struct Settings {
               mixStepDb.isFinite, mixStepDb > 0, mixStepDb <= 12, (0...10000).contains(mixFadeMs) else {
             throw PanelFailure.message("Check the level, fade and timing settings. Steps must be positive; duck is −100 to 0 dB.")
         }
+        guard (1024...65535).contains(vjsterPort), opacityStep.isFinite, (0.01...0.5).contains(opacityStep) else {
+            throw PanelFailure.message("Use a VJster port from 1024 to 65535 and Layer 2 opacity step from 1% to 50%.")
+        }
+        if vjsterEnabled && vjsterPort == port {
+            throw PanelFailure.message("OBS port and VJster port cannot both be \(port).")
+        }
+        guard vjsterExtensionId.isEmpty || vjsterExtensionId.range(of: "^[a-p]{32}$", options: .regularExpression) != nil else {
+            throw PanelFailure.message("A pinned VJster extension ID must be 32 lowercase letters a–p.")
+        }
+        guard vjsterObsToken.isEmpty || vjsterObsToken.range(of: "^[0-9a-f]{32}$", options: .regularExpression) != nil else {
+            throw PanelFailure.message("A VJster OBS page token must be 32 hex digits.")
+        }
+        guard ["browser", "obs", "both"].contains(vjsterTarget) else {
+            throw PanelFailure.message("VJster target must be browser, obs, or both.")
+        }
     }
     func encoded() throws -> Data {
         try validate()
@@ -61,7 +130,11 @@ struct Settings {
             "musicInput":musicInput, "contentInput":contentInput, "micInput":micInput, "mediaInput":mediaInput,
             "overlayScene":overlayScene, "overlaySource":overlaySource, "anchors":anchors,
             "volumeStepDb":volumeStepDb, "duckDb":duckDb, "faderStep":faderStep, "transitionStepMs":transitionStepMs,
-            "mixEnabled":mixEnabled, "mixStepDb":mixStepDb, "mixFadeMs":mixFadeMs], options: [.prettyPrinted, .sortedKeys])
+            "mixEnabled":mixEnabled, "mixStepDb":mixStepDb, "mixFadeMs":mixFadeMs,
+            "vjsterEnabled":vjsterEnabled, "vjsterPort":vjsterPort, "vjsterExtensionId":vjsterExtensionId,
+            "vjsterObsToken":vjsterObsToken, "vjsterTarget":vjsterTarget,
+            "layer1Scene":layer1Scene, "layer1Source":layer1Source, "layer2Scene":layer2Scene, "layer2Source":layer2Source,
+            "opacityStep":opacityStep], options: [.prettyPrinted, .sortedKeys])
     }
 }
 
@@ -92,26 +165,38 @@ enum LocalFiles {
     }
 }
 
-func redact(_ value: String, secret: String) -> String {
-    let clean = secret.isEmpty ? value : value.replacingOccurrences(of: secret, with: "[redacted]")
+func redact(_ value: String, secrets: [String]) -> String {
+    var clean = value
+    for secret in secrets.filter({ !$0.isEmpty }).sorted(by: { $0.count > $1.count }) {
+        clean = clean.replacingOccurrences(of: secret, with: "[redacted]")
+    }
     return clean.replacingOccurrences(of: "\r", with: " ").replacingOccurrences(of: "\n", with: " ")
 }
+func redact(_ value: String, secret: String) -> String { redact(value, secrets: [secret]) }
 
 enum ModelTests {
     static func run() throws {
         func check(_ okay: Bool, _ label: String) throws { if !okay { throw PanelFailure.message("Self-test: " + label) } }
         var settings = Settings(); settings.musicInput = "Bed • 音楽"; settings.anchors[1] = "Guest / Δ"
+        settings.layer1Scene = "Guest"; settings.layer1Source = "Cam A"; settings.layer2Scene = "Guest"; settings.layer2Source = "Clip B"
+        settings.vjsterTarget = "obs"; settings.opacityStep = 0.1
         let roundtrip = try Settings(data: settings.encoded())
-        try check(roundtrip.musicInput == settings.musicInput && roundtrip.anchors == settings.anchors, "Unicode assignments survive JSON")
+        try check(roundtrip.musicInput == settings.musicInput && roundtrip.anchors == settings.anchors && roundtrip.layer2Source == "Clip B" && roundtrip.vjsterTarget == "obs" && roundtrip.opacityStep == 0.1, "Unicode, VJster and layer assignments survive JSON")
+        try check(roundtrip.vjsterObsToken.count == 32, "OBS page token is generated and roundtripped")
+        try check(try settings.obsBrowserUrl(videoInput: "https://youtu.be/dQw4w9WgXcQ") == "http://127.0.0.1:48150/obs?v=dQw4w9WgXcQ#token=\(settings.vjsterObsToken)", "OBS Browser Source URL extraction")
+        try check(Settings.videoId(from: "https://www.youtube.com/embed/videoseries?list=PL123") == nil, "playlist path is not a video id")
         try check(!String(data: try settings.encoded(), encoding: .utf8)!.contains("password"), "password is not a saved setting")
-        for bad in ["{\"port\":0}", "{\"port\":true}", "{\"host\":\"example.com\"}", "{\"host\":true}", "{\"host\":null}", "{\"anchors\":[\"one\"]}", "{\"mixEnabled\":1}", "{\"faderStep\":0}"] {
+        for bad in ["{\"port\":0}", "{\"port\":true}", "{\"host\":\"example.com\"}", "{\"host\":true}", "{\"host\":null}", "{\"anchors\":[\"one\"]}", "{\"mixEnabled\":1}", "{\"faderStep\":0}", "{\"port\":48150,\"vjsterPort\":48150}", "{\"vjsterExtensionId\":\"bad\"}", "{\"vjsterObsToken\":\"zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz\"}", "{\"vjsterTarget\":\"tv\"}", "{\"opacityStep\":0.9}"] {
             do { _ = try Settings(data: Data(bad.utf8)); throw PanelFailure.message("accepted invalid settings") }
             catch PanelFailure.message(let text) { try check(text != "accepted invalid settings", "invalid settings rejected") }
         }
+        let disabledClash = try Settings(data: Data("{\"port\":48150,\"vjsterPort\":48150,\"vjsterEnabled\":false}".utf8))
+        try check(!disabledClash.vjsterEnabled && disabledClash.port == 48150, "clashing port allowed when VJster is disabled")
         settings.volumeStepDb = .nan
         do { _ = try settings.encoded(); throw PanelFailure.message("accepted nonfinite step") }
         catch PanelFailure.message(let text) { try check(text != "accepted nonfinite step", "nonfinite step rejected") }
         try check(redact("ERROR test-secret\nagain", secret: "test-secret") == "ERROR [redacted] again", "secret redaction")
-        print("PASS: panel settings, Unicode assignments, strict ranges, secret-free serialization and log redaction. No files, OBS, shortcuts or GUI used.")
+        try check(redact("pw 1 tok 0123456789abcdef0123456789abcdef", secrets: ["1", "0123456789abcdef0123456789abcdef"]) == "pw [redacted] tok [redacted]", "longest-first multi-secret redaction")
+        print("PASS: panel settings, Unicode/layer/VJster assignments, strict ranges, secret-free serialization and log redaction. No files, OBS, shortcuts or GUI used.")
     }
 }

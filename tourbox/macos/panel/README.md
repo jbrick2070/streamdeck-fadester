@@ -1,16 +1,8 @@
-# Experimental Mac setup window
+# Fadester Companion — Mac setup window
 
-This AppKit window provides Setup, real source/scene dropdowns under Assignments,
-Activity, and explicit Save & start / Stop controls for the existing Mac action
-host. It is an unpublished developer candidate, not a notarized release.
-Opening the panel does not connect to OBS or register shortcuts. It never imports
-or overwrites TourBox Console presets automatically.
+**Fadester Companion** (`Fadester Companion.app`) is the Mac AppKit companion matching the Windows Fadester Companion header, live readiness lights (`OBS`, `TourBox`, `VJster`, `Controls` + quick `Start`/`Stop`), contextual foreground reminder banner, Setup, Assignments, Control map, Activity, and non-activating floating feedback HUD for the Mac action host. It is an unpublished developer candidate, not a notarized release. Opening the window performs read-only OBS scene/input discovery when OBS is running, never registers shortcuts until explicit Start, and never overwrites TourBox Console presets automatically.
 
-Use **Save Mac preset…** to export the bundled Mac master, then import it beside
-Preset List in Console and link it to OBS. Open the included Quick guide for the
-full map and rehearsal. Use **Read scenes and inputs from OBS** for bounded,
-authenticated, read-only discovery. Unavailable saved targets remain visible;
-they are never silently rebound. Stop before editing assignments.
+Use **Import into TourBox Console** (which stages the Mac master preset, copies its path, and opens TourBox Console) or **Save Mac preset…**, then import it beside Preset List in Console and link it to OBS Studio with Auto Switch. Open the included Quick guide for the full map and rehearsal. Use **Read scenes and inputs from OBS** for bounded, authenticated, read-only discovery. Unavailable saved targets remain visible; they are never silently rebound. Stop before editing assignments.
 
 The panel uses authenticated loopback OBS only. A blank password field reads the
 matching local OBS settings; a typed password stays in process memory and the
@@ -44,14 +36,14 @@ The build embeds the self-contained action host, native/input helper apps, Mac
 preset, map, offline guide, license and .NET notices. It uses only ad-hoc signing;
 it is not notarized and does not install or launch the GUI. `DOTNET=/path/to/dotnet`
 selects the existing SDK, and `PYTHON=/path/to/python3` selects Python.
-`--ui-only` omits the runtime and creates the separate **OBS Fadester for TourBox
+`--ui-only` omits the runtime and creates the separate **Fadester Companion
 UI Preview.app** bundle. Its Start guard refuses use; a complete build is preserved.
 
 ```sh
-app='tourbox/macos/panel/build/OBS Fadester for TourBox Experimental.app'
+app='tourbox/macos/panel/build/Fadester Companion.app'
 "$app/Contents/MacOS/FadesterTourBoxPanel" --self-test
 node tourbox/macos/panel/tests/discovery-server.mjs "$app/Contents/MacOS/FadesterTourBoxPanel"
-"$app/Contents/MacOS/FadesterTourBoxPanel" --render-preview /tmp/setup.png /tmp/assignments.png
+"$app/Contents/MacOS/FadesterTourBoxPanel" --render-preview /tmp/setup.png /tmp/assignments.png /tmp/control-map.png
 ```
 
 Self-tests cover strict settings, Unicode, secret-free serialization, redaction,

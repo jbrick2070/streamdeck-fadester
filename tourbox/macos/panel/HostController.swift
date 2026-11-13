@@ -9,11 +9,12 @@ struct RuntimePaths {
     var input: URL { resources.appendingPathComponent("runtime/Fadester Mac Shortcuts Experimental.app") }
     var map: URL { resources.appendingPathComponent("presets/map.json") }
     var preset: URL { resources.appendingPathComponent("presets/OBS Fadester for TourBox.tb") }
+    var icons: URL { resources.appendingPathComponent("artwork/icons") }
     var vjsterObsHtml: URL { resources.appendingPathComponent("vjster/obs/player.html") }
     var vjsterObsScript: URL { resources.appendingPathComponent("vjster/obs/player.js") }
     func validate() throws {
         for file in [host, native.appendingPathComponent("Contents/MacOS/FadesterNativeSlider"), input.appendingPathComponent("Contents/MacOS/FadesterMacShortcuts"), map, preset, vjsterObsHtml, vjsterObsScript] {
-            guard FileManager.default.fileExists(atPath: file.path) else { throw PanelFailure.message("The experimental app is incomplete. Rebuild or extract the entire app bundle.") }
+            guard FileManager.default.fileExists(atPath: file.path) else { throw PanelFailure.message("Fadester Companion is incomplete. Rebuild or extract the entire app bundle.") }
         }
     }
 }
@@ -30,6 +31,7 @@ struct RuntimePaths {
     var line: ((String) -> Void)?
     var exited: (() -> Void)?
     var running: Bool { process != nil }
+    var isArmed: Bool { armed }
 
     func start(paths: RuntimePaths, config: URL, password: String, mixEnabled: Bool, extraSecrets: [String] = []) throws {
         try paths.validate()
@@ -53,8 +55,8 @@ struct RuntimePaths {
                 _ = drained.wait(timeout: .now() + 2)
                 DispatchQueue.main.async {
                     guard let self, self.process === owned else { return }
-                    self.input = nil; self.process = nil; self.secret = ""
-                    self.changed?(owned.terminationStatus == 0 ? "Stopped. OBS was left as it is." : "Controls stopped. Review Activity for the reason.", false)
+                    self.input = nil; self.process = nil; self.secret = ""; self.armed = false
+                    self.changed?(owned.terminationStatus == 0 ? "Controls stopped." : "Controls stopped. Review Activity for the reason.", false)
                     self.exited?()
                 }
             }

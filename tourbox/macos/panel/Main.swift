@@ -62,20 +62,21 @@ import AppKit
             }
             dispatchMain()
         }
-        if args.count == 3 && args[0] == "--render-preview" {
+        if (args.count == 3 || args.count == 4) && args[0] == "--render-preview" {
             let app = NSApplication.shared; app.setActivationPolicy(.prohibited); app.appearance = NSAppearance(named: .aqua)
             do {
                 try Panel(preview: true).render(to: URL(fileURLWithPath: args[1]))
                 try Panel(preview: true).render(to: URL(fileURLWithPath: args[2]), tab: 1)
-                print("Rendered offline Setup and Assignments using synthetic names. No window shown, settings read or OBS connection.")
+                if args.count == 4 { try Panel(preview: true).render(to: URL(fileURLWithPath: args[3]), tab: 2) }
+                print("Rendered offline Fadester Companion previews using synthetic names. No window shown, settings read or OBS connection.")
             } catch { fputs("Preview rendering failed: \(error)\n", stderr); exit(1) }
             return
         }
-        guard args.isEmpty else { fputs("Use no arguments for the experimental panel, or --self-test for offline checks.\n", stderr); exit(2) }
+        guard args.isEmpty else { fputs("Use no arguments for Fadester Companion, or --self-test for offline checks.\n", stderr); exit(2) }
         let app = NSApplication.shared, delegate = Panel()
         app.setActivationPolicy(.regular); app.delegate = delegate
         let menu = NSMenu(), item = NSMenuItem(), application = NSMenu()
-        application.addItem(withTitle: "Quit OBS Fadester for TourBox", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        application.addItem(withTitle: "Quit Fadester Companion", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         item.submenu = application; menu.addItem(item); app.mainMenu = menu
         withExtendedLifetime(delegate) { app.run() }
     }

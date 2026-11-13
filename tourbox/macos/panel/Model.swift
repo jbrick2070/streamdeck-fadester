@@ -165,6 +165,158 @@ enum LocalFiles {
     }
 }
 
+enum Lamp: Equatable { case green, amber, red, grey }
+
+struct LightState: Equatable {
+    let lamp: Lamp
+    let text: String
+    let button: String?
+    let action: String?
+    init(_ lamp: Lamp, _ text: String, button: String? = nil, action: String? = nil) {
+        self.lamp = lamp; self.text = text; self.button = button; self.action = action
+    }
+}
+
+/// Pure header readiness state machine (mirrors Windows Readiness in tourbox/panel/ShowMe.cs).
+enum Readiness {
+    static func obs(connected: Bool, running: Bool, problem: String?, studioOff: Bool, controlsOn: Bool) -> LightState {
+        if connected {
+            return studioOff && !controlsOn
+                ? LightState(.amber, "OBS: turn on Studio Mode", button: "How to fix", action: "studio")
+                : LightState(.green, "OBS: connected")
+        }
+        if !running {
+            return LightState(.red, "OBS: not running", button: "Open OBS", action: "openObs")
+        }
+        if problem == "obs-bad-password" {
+            return LightState(.amber, "OBS: password not accepted", button: "How to fix", action: "password")
+        }
+        if problem == nil {
+            return LightState(.grey, "OBS: connecting…")
+        }
+        return LightState(.amber, "OBS: one setting to turn on", button: "How to fix", action: "server")
+    }
+
+    static func tourBox(consoleRunning: Bool) -> LightState {
+        consoleRunning
+            ? LightState(.green, "TourBox: ready")
+            : LightState(.amber, "TourBox Console: closed", button: "Open Console", action: "openConsole")
+    }
+
+    static func vjster(enabled: Bool, controlsOn: Bool, connectedPeers: Int) -> LightState {
+        if !enabled { return LightState(.grey, "VJster: off") }
+        if !controlsOn { return LightState(.grey, "VJster: ready") }
+        return connectedPeers > 0
+            ? LightState(.green, "VJster: connected")
+            : LightState(.amber, "VJster: waiting for player")
+    }
+
+    static func controls(running: Bool, armed: Bool) -> LightState {
+        if !running { return LightState(.grey, "Controls: off", button: "Start", action: "start") }
+        if !armed { return LightState(.amber, "Controls: starting…", button: "Stop", action: "stop") }
+        return LightState(.green, "Controls: on", button: "Stop", action: "stop")
+    }
+
+    static func reminder(controlsOn: Bool, obsHidden: Bool, consoleRunning: Bool, frontIsObs: Bool) -> String? {
+        guard controlsOn else { return nil }
+        if obsHidden { return "Keep the main OBS window open, not hidden: the T-bar needs it." }
+        if consoleRunning && !frontIsObs { return "TourBox: bring OBS to the front. Its preset only works while OBS is the active window." }
+        return nil
+    }
+
+    static func obsProblem(from text: String) -> String {
+        let lower = text.lowercased()
+        if lower.contains("obs-bad-password") || lower.contains("did not accept authentication") || lower.contains("did not accept the password") {
+            return "obs-bad-password"
+        }
+        if lower.contains("obs-auth-off") || lower.contains("authentication enabled") {
+            return "obs-auth-off"
+        }
+        if lower.contains("obs-no-password") || lower.contains("enable authenticated obs websocket") {
+            return "obs-no-password"
+        }
+        return "obs-no-answer"
+    }
+
+    static func vjsterPeers(after line: String, current: Set<String>) -> Set<String> {
+        var next = current
+        if line == "VJster: extension connected" { next.insert("browser") }
+        else if line == "VJster: OBS page connected" { next.insert("obs") }
+        else if line.hasPrefix("VJster: extension disconnected") { next.remove("browser") }
+        else if line.hasPrefix("VJster: OBS page disconnected") { next.remove("obs") }
+        else if line == "VJster link stopped" { next.removeAll() }
+        return next
+    }
+}
+
+struct ControlMapRow: Equatable {
+    let category: String
+    let control: String
+    let gesture: String
+    let action: String
+
+    static func categoryName(for id: String) -> String {
+        switch id.split(separator: ".").first.map(String.init) ?? "" {
+        case "mix", "music", "content", "mic", "soundcheck", "undo": return "audio"
+        case "fader": return "fade"
+        case "media", "vjster": return "media"
+        case "overlay", "layer1", "layer2": return "overlay"
+        case "capture", "recording", "replay": return "capture"
+        case "transition", "take": return "transition"
+        case "anchor", "preview": return "scenes"
+        default: return "diagnostics"
+        }
+    }
+
+    static func formatControl(_ raw: String) -> String {
+        if raw == "Tour menu" { return "Tour menu" }
+        return raw.split(separator: "+").map { token -> String in
+            let part = String(token)
+            switch part {
+            case "press": return "Press"
+            case "up": return "D-pad Up"
+            case "right": return "D-pad Right"
+            case "down": return "D-pad Down"
+            case "left": return "D-pad Left"
+            case "c1", "c2": return part.uppercased()
+            default: return part.prefix(1).uppercased() + part.dropFirst()
+            }
+        }.joined(separator: " + ")
+    }
+
+    static func formatGesture(_ raw: String) -> String {
+        switch raw {
+        case "press": return "Press"
+        case "select": return "Select"
+        case "cw": return "Clockwise"
+        case "ccw": return "Counterclockwise"
+        default: return raw
+        }
+    }
+
+    static func load(data: Data) throws -> [ControlMapRow] {
+        guard let root = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let presets = root["presets"] as? [String: Any] else {
+            throw PanelFailure.message("Cannot read presets/map.json.")
+        }
+        var rows: [ControlMapRow] = []
+        for key in presets.keys.sorted() {
+            guard let bank = presets[key] as? [String: Any] else { continue }
+            for section in ["bindings", "nativeBindings", "menuBindings"] {
+                guard let items = bank[section] as? [[String: Any]] else { continue }
+                for item in items {
+                    let id = (item["action"] as? String) ?? (item["function"] as? String) ?? ""
+                    let control = item["control"] as? String ?? ""
+                    let gesture = item["gesture"] as? String ?? ""
+                    let label = item["label"] as? String ?? id
+                    rows.append(ControlMapRow(category: categoryName(for: id), control: formatControl(control), gesture: formatGesture(gesture), action: label))
+                }
+            }
+        }
+        return rows
+    }
+}
+
 func redact(_ value: String, secrets: [String]) -> String {
     var clean = value
     for secret in secrets.filter({ !$0.isEmpty }).sorted(by: { $0.count > $1.count }) {
@@ -197,6 +349,21 @@ enum ModelTests {
         catch PanelFailure.message(let text) { try check(text != "accepted nonfinite step", "nonfinite step rejected") }
         try check(redact("ERROR test-secret\nagain", secret: "test-secret") == "ERROR [redacted] again", "secret redaction")
         try check(redact("pw 1 tok 0123456789abcdef0123456789abcdef", secrets: ["1", "0123456789abcdef0123456789abcdef"]) == "pw [redacted] tok [redacted]", "longest-first multi-secret redaction")
-        print("PASS: panel settings, Unicode/layer/VJster assignments, strict ranges, secret-free serialization and log redaction. No files, OBS, shortcuts or GUI used.")
+        try check(Readiness.obs(connected: true, running: true, problem: nil, studioOff: false, controlsOn: false) == LightState(.green, "OBS: connected"), "OBS connected light")
+        try check(Readiness.obs(connected: true, running: true, problem: nil, studioOff: true, controlsOn: false).action == "studio", "OBS Studio Mode light")
+        try check(Readiness.obs(connected: false, running: false, problem: nil, studioOff: false, controlsOn: false) == LightState(.red, "OBS: not running", button: "Open OBS", action: "openObs"), "OBS closed light")
+        try check(Readiness.obs(connected: false, running: true, problem: "obs-bad-password", studioOff: false, controlsOn: false).action == "password", "OBS bad password light")
+        try check(Readiness.obs(connected: false, running: true, problem: nil, studioOff: false, controlsOn: false) == LightState(.grey, "OBS: connecting…"), "OBS connecting light")
+        try check(Readiness.tourBox(consoleRunning: true) == LightState(.green, "TourBox: ready") && Readiness.tourBox(consoleRunning: false).action == "openConsole", "TourBox Console light")
+        try check(Readiness.vjster(enabled: true, controlsOn: true, connectedPeers: 1) == LightState(.green, "VJster: connected") && Readiness.vjster(enabled: true, controlsOn: true, connectedPeers: 0).lamp == .amber, "VJster readiness light")
+        try check(Readiness.controls(running: false, armed: false).action == "start" && Readiness.controls(running: true, armed: true) == LightState(.green, "Controls: on", button: "Stop", action: "stop"), "Controls readiness light")
+        try check(Readiness.reminder(controlsOn: true, obsHidden: false, consoleRunning: true, frontIsObs: false) != nil && Readiness.reminder(controlsOn: true, obsHidden: false, consoleRunning: true, frontIsObs: true) == nil, "Frontmost OBS reminder")
+        var peers = Readiness.vjsterPeers(after: "VJster: extension connected", current: [])
+        peers = Readiness.vjsterPeers(after: "VJster: OBS page connected", current: peers)
+        try check(peers.count == 2 && Readiness.vjsterPeers(after: "VJster: extension disconnected (closed)", current: peers) == ["obs"], "VJster peer tracking")
+        let sampleMap = Data("{\"presets\":{\"master\":{\"bindings\":[{\"control\":\"side+knob\",\"gesture\":\"cw\",\"action\":\"vjster.speed.up\",\"label\":\"Video speed up\"}]}}}".utf8)
+        let mapRows = try ControlMapRow.load(data: sampleMap)
+        try check(mapRows == [ControlMapRow(category: "media", control: "Side + Knob", gesture: "Clockwise", action: "Video speed up")], "Control map formatting")
+        print("PASS: panel settings, readiness lights, control map formatting, Unicode/layer/VJster assignments, strict ranges, secret-free serialization and log redaction. No files, OBS, shortcuts or GUI used.")
     }
 }

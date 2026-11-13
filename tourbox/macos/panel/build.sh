@@ -6,16 +6,30 @@ mode="${1:-}"
 if [[ -n "$mode" && "$mode" != --ui-only ]]; then echo 'Usage: build.sh [--ui-only]' >&2; exit 2; fi
 architecture="$(uname -m)"
 case "$architecture" in arm64) rid=osx-arm64;; x86_64) rid=osx-x64;; *) echo 'Unsupported architecture' >&2; exit 2;; esac
-app="$PWD/build/OBS Fadester for TourBox Experimental.app"
-if [[ "$mode" == --ui-only ]]; then app="$PWD/build/OBS Fadester for TourBox UI Preview.app"; fi
+app="$PWD/build/Fadester Companion.app"
+if [[ "$mode" == --ui-only ]]; then app="$PWD/build/Fadester Companion UI Preview.app"; fi
 python="${PYTHON:-python3}"
 resources="$app/Contents/Resources"
-mkdir -p "$app/Contents/MacOS" "$resources/presets"
+mkdir -p "$app/Contents/MacOS" "$resources/presets" "$resources/artwork/icons"
 cp Info.plist "$app/Contents/Info.plist"
 "$python" "$repo/tourbox/presets/build.py" --check
 "$python" "$repo/tourbox/presets/build_macos.py" --check
 cp "$repo/tourbox/presets/map.json" "$resources/presets/"
 cp "$repo/tourbox/presets/macos/OBS Fadester for TourBox.tb" "$resources/presets/"
+cp "$repo/tourbox/artwork/icons/"*.png "$resources/artwork/icons/"
+icon_src="$repo/tourbox/store/assets/Square44x44Logo.targetsize-256.png"
+if [[ -f "$icon_src" ]]; then
+  iconset="$PWD/build/AppIcon.iconset"
+  rm -rf "$iconset"
+  mkdir -p "$iconset"
+  for spec in "16 icon_16x16.png" "32 icon_16x16@2x.png" "32 icon_32x32.png" "64 icon_32x32@2x.png" "128 icon_128x128.png" "256 icon_128x128@2x.png" "256 icon_256x256.png" "512 icon_256x256@2x.png" "512 icon_512x512.png" "1024 icon_512x512@2x.png"; do
+    px="${spec%% *}"
+    name="${spec#* }"
+    /usr/bin/sips -s format png -z "$px" "$px" "$icon_src" --out "$iconset/$name" >/dev/null
+  done
+  /usr/bin/iconutil -c icns "$iconset" -o "$resources/AppIcon.icns"
+  rm -rf "$iconset"
+fi
 cp "$repo/LICENSE" "$resources/LICENSE"
 cp README.md "$resources/README.md"
 "$python" make-guide.py "$resources/START-HERE.html"

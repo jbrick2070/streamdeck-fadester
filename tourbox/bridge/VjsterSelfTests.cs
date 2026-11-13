@@ -359,10 +359,18 @@ internal static class VjsterSelfTests
         await client.ConnectAsync("127.0.0.1", port);
         var stream = client.GetStream();
         await stream.WriteAsync(Encoding.ASCII.GetBytes(request));
+        try { client.Client.Shutdown(SocketShutdown.Send); }
+        catch (SocketException) { }
         var buffer = new byte[4096];
+        using var ms = new MemoryStream();
         using var cts = new CancellationTokenSource(3000);
-        int n = await stream.ReadAsync(buffer, cts.Token);
-        return Encoding.ASCII.GetString(buffer, 0, n);
+        while (true)
+        {
+            int n = await stream.ReadAsync(buffer, cts.Token);
+            if (n == 0) break;
+            ms.Write(buffer, 0, n);
+        }
+        return Encoding.UTF8.GetString(ms.ToArray());
     }
 
     static async Task Layers()

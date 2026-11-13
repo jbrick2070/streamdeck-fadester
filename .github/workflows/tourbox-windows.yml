@@ -19,6 +19,8 @@ on:
       - tourbox/store/**
       - tourbox/tests/**
       - vjster-page/**
+      - src/vjster/shared/**
+      - vjster-extension/src/**
       - LICENSE
   pull_request:
     branches: [main]
@@ -38,6 +40,8 @@ on:
       - tourbox/store/**
       - tourbox/tests/**
       - vjster-page/**
+      - src/vjster/shared/**
+      - vjster-extension/src/**
       - LICENSE
   workflow_dispatch:
 

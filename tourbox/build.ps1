@@ -85,6 +85,13 @@ foreach($sub in 'presets','bridge','panel','tests','native'){
   $null=New-Item -ItemType Directory -Force $dest
   foreach($file in Get-ChildItem -LiteralPath $src -File){if($file.Extension -in '.tb','.json','.py','.cjs','.mjs','.cs','.csproj','.cpp','.vcxproj','.md','.ps1','.txt','.js','.xml','.ico'){Copy-Item -LiteralPath $file.FullName -Destination $dest}}
 }
+foreach($rel in 'vjster-page','vjster-page\src','src\vjster\shared','vjster-extension\src'){
+  $src=Join-Path $repoRoot $rel; $dest=Join-Path (Join-Path $bundle 'source') $rel
+  if(Test-Path -LiteralPath $src){
+    $null=New-Item -ItemType Directory -Force $dest
+    foreach($file in Get-ChildItem -LiteralPath $src -File){if($file.Extension -in '.ts','.html','.mjs','.json'){Copy-Item -LiteralPath $file.FullName -Destination $dest}}
+  }
+}
 $zip=Join-Path $out ("Fadester-for-TourBox-Windows-x64-"+$Version+'.zip')
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $tmpZip=Join-Path $stage 'candidate.zip'

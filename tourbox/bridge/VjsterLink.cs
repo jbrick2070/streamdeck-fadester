@@ -347,7 +347,7 @@ internal sealed class VjsterLink : IAsyncDisposable
             if (head == null) { client.Dispose(); return; }
             var (requestLine, headers) = head.Value;
             var parts = requestLine.Split(' ');
-            if (parts.Length != 3 || !parts[2].StartsWith("HTTP/1.", StringComparison.Ordinal)) { await Reply(stream, "400 Bad Request", "bad request"); client.Dispose(); return; }
+            if (parts.Length != 3 || !parts[2].StartsWith("HTTP/1.", StringComparison.Ordinal)) { await Reply(stream, "400 Bad Request", "bad request"); CloseHttp(client); return; }
             string method = parts[0], target = parts[1];
             string path = target.Split(['?', '#'], 2)[0];
             string query = target.Contains('?') ? target[(target.IndexOf('?') + 1)..].Split('#')[0] : "";
@@ -363,25 +363,35 @@ internal sealed class VjsterLink : IAsyncDisposable
                     if (hosts?.Count != 1 || (hosts[0] != $"{LinkHost}:{bound}" && hosts[0] != $"localhost:{bound}"))
                     {
                         await Reply(stream, "403 Forbidden", "forbidden");
-                        client.Dispose();
+                        CloseHttp(client);
                         NoteRefusal("host");
                         return;
                     }
                     var headBytes = Encoding.ASCII.GetBytes(
                         $"HTTP/1.1 200 OK\r\nContent-Type: {page.Type}\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nReferrer-Policy: strict-origin\r\nContent-Security-Policy: {PageCsp}\r\nConnection: close\r\nContent-Length: {page.Body.Length}\r\n\r\n");
-                    await stream.WriteAsync(headBytes, timeout.Token);
-                    if (method == "GET" && page.Body.Length > 0) await stream.WriteAsync(page.Body, timeout.Token);
-                    client.Dispose();
+                    if (method == "GET" && page.Body.Length > 0)
+                    {
+                        var payload = new byte[headBytes.Length + page.Body.Length];
+                        Buffer.BlockCopy(headBytes, 0, payload, 0, headBytes.Length);
+                        Buffer.BlockCopy(page.Body, 0, payload, headBytes.Length, page.Body.Length);
+                        await stream.WriteAsync(payload, timeout.Token);
+                    }
+                    else
+                    {
+                        await stream.WriteAsync(headBytes, timeout.Token);
+                    }
+                    await stream.FlushAsync(timeout.Token);
+                    CloseHttp(client);
                     return;
                 }
                 await Reply(stream, "426 Upgrade Required", "upgrade required");
-                client.Dispose();
+                CloseHttp(client);
                 return;
             }
             if (method != "GET")
             {
                 await Reply(stream, "426 Upgrade Required", "upgrade required");
-                client.Dispose();
+                CloseHttp(client);
                 return;
             }
             headers.TryGetValue("origin", out var origins);
@@ -389,7 +399,7 @@ internal sealed class VjsterLink : IAsyncDisposable
             if (!verdict.Ok)
             {
                 await Reply(stream, "403 Forbidden", "");
-                client.Dispose();
+                CloseHttp(client);
                 NoteRefusal(verdict.Reason);
                 return;
             }
@@ -437,6 +447,13 @@ internal sealed class VjsterLink : IAsyncDisposable
     {
         var text = $"HTTP/1.1 {status}\r\nContent-Type: text/plain\r\nConnection: close\r\nContent-Length: {Encoding.ASCII.GetByteCount(body)}\r\n\r\n{body}";
         return stream.WriteAsync(Encoding.ASCII.GetBytes(text)).AsTask();
+    }
+
+    static void CloseHttp(TcpClient client)
+    {
+        try { client.Client.Shutdown(SocketShutdown.Send); }
+        catch (Exception e) when (e is SocketException or ObjectDisposedException) { }
+        client.Dispose();
     }
 
     /** Anyone on this machine can knock; log a refusal at most once every 10 s, with a count. */

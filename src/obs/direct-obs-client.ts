@@ -1035,13 +1035,19 @@ export class DirectObsClient extends ObsVendorClient {
    */
   private forgetTbarIfIdle(): void {
     void this.queueTbar(async (generation) => {
-      if (this.catalog.tbarPosition === 0 && !this.nativeThrow) return 0;
+      const sameProgramAndPreview =
+        this.catalog.studioMode &&
+        Boolean(this.catalog.currentProgramScene) &&
+        this.catalog.currentProgramScene === this.catalog.currentPreviewScene;
+      if (this.catalog.tbarPosition === 0 && !this.nativeThrow && !sameProgramAndPreview) return 0;
       const cursor = await this.readTransitionCursor(generation);
       if (!(cursor > 0 && cursor < 1)) {
         this.catalog.tbarPosition = 0;
         this.nativeThrow = null;
         this.tbarThrow = null;
         this.throwBackend = "none";
+        await this.refreshCurrentSceneNames();
+        this.requireControlGeneration(generation);
         this.emitDirectState();
       }
       return this.catalog.tbarPosition;
@@ -1225,7 +1231,9 @@ export class DirectObsClient extends ObsVendorClient {
       const cursor = await this.readTransitionCursor(generation);
       const programName = String(programReply.currentProgramSceneName ?? programReply.sceneName ?? "");
       const previewName = String(previewReply.currentPreviewSceneName ?? previewReply.sceneName ?? "");
-      const programMatches = program === "" ? Boolean(programName) : programName === program;
+      const programMatches = program === ""
+        ? Boolean(programName && (preview === "" || this.catalog.scenes.length <= 1 || programName !== preview))
+        : programName === program;
       const previewMatches = preview === "" ? Boolean(previewName && previewName !== programName) : previewName === preview;
       if (programMatches && (cursor === 0 || cursor === 1)) {
         if (previewMatches) return;

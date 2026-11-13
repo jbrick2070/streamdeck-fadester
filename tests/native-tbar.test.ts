@@ -771,6 +771,80 @@ describe("dial throws on OBS's real slider", () => {
     expect(server.tbarCompletionCount).toBe(0);
     expect(server.programSceneName).not.toBe(next);
   });
+
+  it("refreshes Program and Preview when a mid-restart open fade is cancelled in OBS's own window", async () => {
+    await connect();
+    const live = client.getCatalog().currentProgramScene;
+    const next = client.getCatalog().currentPreviewScene;
+    await client.nudgeTbar(0.5);
+    expect(server.manualTransitionActive).toBe(true);
+
+    const port = obsPort;
+    client.stop();
+    const native2 = new FakeNative(server);
+    client = new DirectObsClient(
+      { host: "127.0.0.1", port, password: "" },
+      { nativeTbar: () => native2, nativePlatform: "darwin" }
+    );
+    client.start();
+    await vi.waitFor(() => expect(client.getStatus().kind).toBe("connected"), { timeout: 3000 });
+    await vi.waitFor(() => expect(client.getCatalog().tbarPosition).toBeGreaterThan(0.4), { timeout: 3000 });
+    expect(client.getCatalog().currentProgramScene).toBe(next);
+    expect(client.getCatalog().currentPreviewScene).toBe(next);
+
+    // Operator drags OBS's own T-bar back to 0: OBS cancels without emitting CurrentProgramSceneChanged.
+    server.nativeSlider = 0;
+    server.directTbarPosition = 0;
+    server.manualTransitionActive = false;
+    server.emitObsEvent("SceneTransitionEnded", { transitionName: server.currentTransitionName });
+
+    await vi.waitFor(() => {
+      expect(client.getCatalog().tbarPosition).toBe(0);
+      expect(client.getCatalog().currentProgramScene).toBe(live);
+      expect(client.getCatalog().currentPreviewScene).toBe(next);
+    }, { timeout: 3000 });
+
+    await client.nudgeTbar(0.25);
+    expect(server.nativeSlider).toBe(nativeTick(0.25));
+  });
+
+  it("waits for OBS to restore the original Program scene when cancelling a mid-restart open fade with the dial", async () => {
+    await connect();
+    const live = client.getCatalog().currentProgramScene;
+    const next = client.getCatalog().currentPreviewScene;
+    await client.nudgeTbar(0.5);
+
+    const port = obsPort;
+    client.stop();
+    const native2 = new FakeNative(server);
+    client = new DirectObsClient(
+      { host: "127.0.0.1", port, password: "" },
+      { nativeTbar: () => native2, nativePlatform: "darwin" }
+    );
+    client.start();
+    await vi.waitFor(() => expect(client.getStatus().kind).toBe("connected"), { timeout: 3000 });
+    await vi.waitFor(() => expect(client.getCatalog().tbarPosition).toBeGreaterThan(0.4), { timeout: 3000 });
+
+    const origSend = (client as unknown as { sendObsRequest: (type: string, data?: Record<string, unknown>) => Promise<Record<string, unknown>> }).sendObsRequest.bind(client);
+    let sawRelease = false;
+    let stalePollsRemaining = 2;
+    vi.spyOn(client as unknown as { sendObsRequest: typeof origSend }, "sendObsRequest").mockImplementation(async (type, data) => {
+      if (type === "SetTBarPosition" && data?.release === true) {
+        sawRelease = true;
+      }
+      if (sawRelease && type === "GetCurrentProgramScene" && stalePollsRemaining > 0) {
+        stalePollsRemaining--;
+        return { currentProgramSceneName: next, sceneName: next };
+      }
+      return origSend(type, data);
+    });
+
+    await client.nudgeTbar(-0.6);
+    expect(stalePollsRemaining).toBe(0);
+    expect(client.getCatalog().tbarPosition).toBe(0);
+    expect(client.getCatalog().currentProgramScene).toBe(live);
+    expect(client.getCatalog().currentPreviewScene).toBe(next);
+  });
 });
 
 class FakeUiaWorker extends EventEmitter implements UiaWorkerLike {

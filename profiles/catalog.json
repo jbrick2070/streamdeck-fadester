@@ -77,7 +77,7 @@
     "description": "Studio Mode scene browsing and random selection, separate Cut and Transition keys, mixer dials, and the Scene T-bar.",
     "obsMode": "studio",
     "deviceType": 7,
-    "file": "profiles/plus-scene-desk-v2.streamDeckProfile",
+    "file": "profiles/plus-scene-desk-v3.streamDeckProfile",
     "keysUsed": 8,
     "keysAvailable": 8,
     "dialsUsed": 3,

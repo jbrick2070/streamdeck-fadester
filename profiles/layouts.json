@@ -118,9 +118,9 @@
       { "controller": "Keypad", "column": 1, "row": 1, "kind": "scene", "label": "Random scene", "settings": { "sceneTarget": "__random_scene__", "operation": "preview" } },
       { "controller": "Keypad", "column": 2, "row": 1, "kind": "fade", "label": "Mic down", "settings": { "inputName": "__audio_mic__", "to": 0, "durationMs": 500 } },
       { "controller": "Keypad", "column": 3, "row": 1, "kind": "fade", "label": "Mic up", "settings": { "inputName": "__audio_mic__", "to": 1, "durationMs": 500 } },
-      { "controller": "Encoder", "column": 0, "row": 0, "kind": "fader", "label": "Music", "settings": { "target": "input_volume", "inputName": "__audio_main__", "stepPerTick": 0.02 } },
-      { "controller": "Encoder", "column": 1, "row": 0, "kind": "fader", "label": "Mic", "settings": { "target": "input_volume", "inputName": "__audio_mic__", "stepPerTick": 0.01 } },
-      { "controller": "Encoder", "column": 2, "row": 0, "kind": "fader", "label": "Scene blend", "settings": { "target": "tbar", "stepPerTick": 0.02 } }
+      { "controller": "Encoder", "column": 0, "row": 0, "kind": "fader", "label": "Scene blend", "settings": { "target": "tbar", "stepPerTick": 0.02 } },
+      { "controller": "Encoder", "column": 1, "row": 0, "kind": "fader", "label": "Music", "settings": { "target": "input_volume", "inputName": "__audio_main__", "stepPerTick": 0.02 } },
+      { "controller": "Encoder", "column": 2, "row": 0, "kind": "fader", "label": "Mic", "settings": { "target": "input_volume", "inputName": "__audio_mic__", "stepPerTick": 0.01 } }
     ]
   },
   {

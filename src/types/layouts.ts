@@ -8,6 +8,7 @@ export const READY_LAYOUT_REVISION = 2;
 const READY_LAYOUT_REVISIONS: Readonly<Record<string, number>> = {
   "plus-source-desk": 3,
   "buttons-source-desk": 4,
+  "plus-scene-desk": 3,
   "plus-scene-regular": 3,
   "plus-playlister-transport": 1,
   "plus-vj-rig": 1,

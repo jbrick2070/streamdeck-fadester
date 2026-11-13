@@ -32,7 +32,7 @@ What every layout already knows:
 
 ## Scene Desk (Studio Mode)
 
-[Scene Desk +](io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-scene-desk-v2.streamDeckProfile) for the Stream Deck +, [Scene Desk 15 Keys](io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-scene-desk-v2.streamDeckProfile) for the 15-key deck.
+[Scene Desk +](io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-scene-desk-v3.streamDeckProfile) for the Stream Deck +, [Scene Desk 15 Keys](io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-scene-desk-v2.streamDeckProfile) for the 15-key deck.
 
 Browse scenes in Preview with **Previous**, **Next** or **Random**, then press **Cut** or **Transition** to take Preview live. The Plus layout adds a **Scene 1** key and the scene mixer dial (the T-bar: turn from LIVE to NEXT, press to take Next live); the 15-key layout has **Scene 1-4**. Both have audio controls.
 

@@ -71,7 +71,7 @@
       "DontAutoSwitchWhenInstalled": true
     },
     {
-      "Name": "profiles/plus-scene-desk-v2",
+      "Name": "profiles/plus-scene-desk-v3",
       "DeviceType": 7,
       "Readonly": false,
       "AutoInstall": false,

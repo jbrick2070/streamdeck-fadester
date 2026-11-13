@@ -171,6 +171,8 @@ private final class PillActionButton: NSControl {
     private var obsProblem: String?
     private var vjsterPeers: Set<String> = []
     private var lastSavedPreset: URL?
+    private var bundledPresetHash = ""
+    private var savedPresetHash: String?
     private var autoTries = 0
     private var nextAutoScan = Date.distantFuture
     private var watchTimer: Timer?
@@ -196,7 +198,7 @@ private final class PillActionButton: NSControl {
     private var vjsterPort = NSTextField(string: "48150"), vjsterExtensionId = NSTextField(string: ""), vjsterVideo = NSTextField(string: "")
     private var vjsterTarget = NSPopUpButton(frame: .zero, pullsDown: false)
     private var fields: [String: NSTextField] = [:], choices: [String: NSPopUpButton] = [:]
-    private var scanButton: NSButton!, primaryButton: NSButton!, saveButton: NSButton!, copyObsUrlButton: NSButton!, firstFourButton: NSButton!, openConsoleStepButton: NSButton!
+    private var scanButton: NSButton!, primaryButton: NSButton!, saveButton: NSButton!, copyObsUrlButton: NSButton!, firstFourButton: NSButton!, savePresetStepButton: NSButton!, openConsoleStepButton: NSButton!
     private var activity = NSTextView()
     private var mapRows: [ControlMapRow] = []
     private var glyphs: [String: NSImage] = [:]
@@ -217,6 +219,10 @@ private final class PillActionButton: NSControl {
             obsConnected = true; obsRunning = true; tourboxConsoleRunning = true
             status.stringValue = "Connected to OBS. Scenes found: 3. Your controller does nothing until you click Save & start controls."
             snapshot.stringValue = "Program: Opening   •   Preview: Guest   •   Studio Mode: On"
+        }
+        if !preview, let presetBytes = try? Data(contentsOf: paths.preset) {
+            bundledPresetHash = LocalFiles.sha256Hex(presetBytes)
+            savedPresetHash = try? String(contentsOf: LocalFiles.presetStamp, encoding: .utf8)
         }
         if !preview, FileManager.default.fileExists(atPath: LocalFiles.settings.path) {
             do { settings = try Settings(data: Data(contentsOf: LocalFiles.settings)) }
@@ -470,16 +476,22 @@ private final class PillActionButton: NSControl {
 
         heading("2   Set up TourBox & native T-bar", in: stack)
         subheading("TourBox Console preset", in: stack)
-        paragraph("Save the Mac preset (.tb) to Downloads once, then import it in TourBox Console. Both apps work together: TourBox Console sends shortcuts while OBS Studio is in front, and Fadester Companion stays open with Controls: on.", in: stack)
-        let savePresetBtn = button("1. Save TourBox Preset (.tb)…", #selector(saveAndGuidePreset))
-        savePresetBtn.bezelStyle = .rounded
-        savePresetBtn.bezelColor = accentColor
+        paragraph("Save the embedded Mac preset (.tb) to Downloads once, import it in TourBox Console, then click “Not Linked” on the preset row → pick OBS (not Fadester) → click Save, and keep Auto Switch on. TourBox’s .tb format does not store app links inside the file, so that 1-time link in Console connects it to OBS.", in: stack)
+        savePresetStepButton = button("1. Save TourBox Preset (.tb)…", #selector(saveAndGuidePreset))
+        savePresetStepButton.bezelStyle = .rounded
+        savePresetStepButton.bezelColor = accentColor
         openConsoleStepButton = button("2. Open TourBox Console", #selector(openOrDownloadConsole))
         let showGuideBtn = button("Show me where to click", #selector(showImportGuide))
-        stack.addArrangedSubview(horizontal([savePresetBtn, openConsoleStepButton, showGuideBtn]))
+        let presetSquareBtn = button("TourBox Preset Square…", #selector(openPresetSquare))
+        stack.addArrangedSubview(horizontal([savePresetStepButton, openConsoleStepButton, showGuideBtn, presetSquareBtn]))
+        if LocalFiles.presetSyncState(bundledHash: bundledPresetHash, savedHash: savedPresetHash) == .updateAvailable {
+            importNote.stringValue = "This version of Fadester Companion includes an updated Mac TourBox preset (.tb). Click 1. Save Updated Preset (.tb)… and re-import it in TourBox Console."
+            importNote.isHidden = false
+        } else {
+            importNote.isHidden = true
+        }
         importNote.font = .systemFont(ofSize: 12, weight: .medium)
         importNote.textColor = accentColor
-        importNote.isHidden = true
         stack.addArrangedSubview(importNote)
         importNote.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
 
@@ -755,10 +767,14 @@ private final class PillActionButton: NSControl {
         let vjState = Readiness.vjster(enabled: vjEnabled, controlsOn: controlsOn, connectedPeers: vjsterPeers.count, portBusy: vjsterPortBusy)
         let ctlState = Readiness.controls(running: controlsOn, armed: host.isArmed)
 
+        let syncState: PresetSyncState = lastSavedPreset != nil
+            ? .current
+            : (bundledPresetHash.isEmpty ? .neverSaved : LocalFiles.presetSyncState(bundledHash: bundledPresetHash, savedHash: savedPresetHash))
         obsLight.display(obsState, enabled: !scanning)
         tourboxLight.display(tbState, enabled: true)
         vjsterLight.display(vjState, enabled: true)
         controlsLight.display(ctlState, enabled: controlsOn || canAct)
+        savePresetStepButton?.title = syncState == .updateAvailable ? "1. Save Updated Preset (.tb)…" : "1. Save TourBox Preset (.tb)…"
         openConsoleStepButton?.title = consoleReady ? "2. Open TourBox Console" : "2. Download TourBox Console…"
         importGuideWindow?.update(savedPreset: lastSavedPreset, consoleInstalled: consoleReady)
 
@@ -773,7 +789,7 @@ private final class PillActionButton: NSControl {
             tourBoxLamp: tbState.lamp,
             consoleRunning: tourboxConsoleRunning,
             consoleInstalled: consoleReady,
-            presetSaved: lastSavedPreset != nil,
+            presetSync: syncState,
             vjsterLamp: vjState.lamp,
             vjsterEnabled: vjEnabled,
             vjsterPort: parsedVjPort,
@@ -1093,9 +1109,16 @@ private final class PillActionButton: NSControl {
         }
     }
 
+    @objc private func openPresetSquare() {
+        guard !previewMode, let url = URL(string: "https://www.tourboxtech.com/en/presets/") else { return }
+        NSWorkspace.shared.open(url)
+        setStatus("Opened TourBox Preset Square in your browser.")
+        note("Opened TourBox Preset Square: https://www.tourboxtech.com/en/presets/")
+    }
+
     @objc private func openOrDownloadConsole() {
         guard !previewMode else { return }
-        if lastSavedPreset == nil {
+        if lastSavedPreset == nil && savedPresetHash == nil {
             importNote.stringValue = "Need the preset file? Click “1. Save TourBox Preset (.tb)…” or “Show me where to click”."
             importNote.isHidden = false
         }
@@ -1114,10 +1137,15 @@ private final class PillActionButton: NSControl {
         save.message = "Choose a visible folder such as Downloads, then import this file in TourBox Console."
         guard save.runModal() == .OK, let url = save.url else { return nil }
         do {
-            try Data(contentsOf: paths.preset).write(to: url, options: .atomic)
+            let presetBytes = try Data(contentsOf: paths.preset)
+            try presetBytes.write(to: url, options: .atomic)
+            let hash = LocalFiles.sha256Hex(presetBytes)
+            bundledPresetHash = hash
+            savedPresetHash = hash
+            try? LocalFiles.recordPresetSaved(bundledHash: hash)
             lastSavedPreset = url
             let folder = url.deletingLastPathComponent().lastPathComponent
-            importNote.stringValue = "Saved: \(url.path) — now click 2. Open TourBox Console and import it beside Preset List."
+            importNote.stringValue = "Saved: \(url.path) — in TourBox Console, import it beside Preset List, click “Not Linked” → pick OBS → click Save."
             importNote.isHidden = false
             setStatus("Saved Mac TourBox preset in “\(folder)”.")
             note("Saved Mac preset: \(url.path) (import it in TourBox Console; no Console settings were changed automatically).")

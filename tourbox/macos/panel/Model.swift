@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import Foundation
 import CoreFoundation
+import CryptoKit
 
 enum PanelFailure: Error, CustomStringConvertible {
     case message(String)
@@ -144,9 +145,23 @@ struct Catalog {
     var program = "", preview = "", studio = false
 }
 
+enum PresetSyncState: Equatable { case neverSaved, current, updateAvailable }
+
 enum LocalFiles {
     static let support = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/FadesterTourBox", isDirectory: true)
     static let settings = support.appendingPathComponent("panel-config.json")
+    static let presetStamp = support.appendingPathComponent("saved-preset.sha256")
+    static func sha256Hex(_ data: Data) -> String {
+        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
+    static func presetSyncState(bundledHash: String, savedHash: String?) -> PresetSyncState {
+        guard let saved = savedHash?.trimmingCharacters(in: .whitespacesAndNewlines), !saved.isEmpty else { return .neverSaved }
+        return saved == bundledHash ? .current : .updateAvailable
+    }
+    static func recordPresetSaved(bundledHash: String) throws {
+        try FileManager.default.createDirectory(at: support, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        try Data((bundledHash + "\n").utf8).write(to: presetStamp, options: .atomic)
+    }
     static func password(port: Int, override: String) throws -> String {
         if !override.isEmpty { return override }
         let file = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/obs-studio/plugin_config/obs-websocket/config.json")
@@ -376,6 +391,8 @@ enum ModelTests {
         try check(peers.count == 2 && Readiness.vjsterPeers(after: "VJster: extension disconnected (closed)", current: peers) == ["obs"], "VJster peer tracking")
         let busy = Readiness.vjsterPortBusy(after: "VJster port 48150 is in use, probably by the VJster actions in your Stream Deck or OpenDeck software.", current: false)
         try check(busy && !Readiness.vjsterPortBusy(after: "VJster link listening on 127.0.0.1:48150", current: busy), "VJster port busy tracking")
+        let sampleHash = LocalFiles.sha256Hex(Data("preset-v1".utf8))
+        try check(LocalFiles.presetSyncState(bundledHash: sampleHash, savedHash: nil) == .neverSaved && LocalFiles.presetSyncState(bundledHash: sampleHash, savedHash: sampleHash) == .current && LocalFiles.presetSyncState(bundledHash: sampleHash, savedHash: "older") == .updateAvailable, "Preset freshness tracking")
         let sampleMap = Data("{\"presets\":{\"master\":{\"bindings\":[{\"control\":\"side+knob\",\"gesture\":\"cw\",\"action\":\"vjster.speed.up\",\"label\":\"Video speed up\"}]}}}".utf8)
         let mapRows = try ControlMapRow.load(data: sampleMap)
         try check(mapRows == [ControlMapRow(category: "media", control: "Side + Knob", gesture: "Clockwise", action: "Video speed up")], "Control map formatting")

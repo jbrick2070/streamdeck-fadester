@@ -73,7 +73,7 @@ import AppKit
                     let guide = TourBoxImportWindow(savedPreset: previewSaved, consoleInstalled: true, onSavePreset: { nil }, onOpenConsole: {}, onDownloadConsole: {})
                     try guide.renderPreview(to: URL(fileURLWithPath: args[4]), time: 2.05)
                     if args.count == 6 {
-                        try guide.renderPreview(to: URL(fileURLWithPath: args[5]), time: 5.4)
+                        try guide.renderPreview(to: URL(fileURLWithPath: args[5]), time: 8.45)
                     }
                 }
                 print("Rendered offline Fadester Companion previews using synthetic names. No window shown, settings read or OBS connection.")

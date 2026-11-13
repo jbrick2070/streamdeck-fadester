@@ -240,24 +240,19 @@ import AppKit
         drawTrafficLights(x: 26, y: 21)
         text("TourBox Console", at: NSPoint(x: 218, y: 18), size: 11.5, bold: true, color: ink)
 
-        // Left Preset List column
+        // Left Preset List column (matches TourBox Console 5.12 layout)
         let leftCol = NSRect(x: 24, y: 48, width: 226, height: 194)
         fill(leftCol, sidebar, radius: 6)
 
-        // Auto Switch row at top of Preset List
-        let autoOn = t >= 8.7
-        text("Auto Switch", at: NSPoint(x: 36, y: 58), size: 11, bold: true, color: ink)
-        let toggleRect = NSRect(x: 204, y: 57, width: 34, height: 18)
-        fill(toggleRect, autoOn ? green : card, radius: 9)
-        let knobX = autoOn ? toggleRect.maxX - 16 : toggleRect.minX + 2
-        fill(NSRect(x: knobX, y: 59, width: 14, height: 14), .white, radius: 7)
-
-        // Preset List header + [+] + [Import ↓] button
-        text("Preset List", at: NSPoint(x: 36, y: 86), size: 12, bold: true, color: ink)
-        let plusBtn = NSRect(x: 184, y: 83, width: 22, height: 22)
-        let importBtn = NSRect(x: 212, y: 83, width: 24, height: 22)
+        // Preset List header + [↗] [↙ Import] [+] buttons
+        text("Preset List", at: NSPoint(x: 34, y: 56), size: 11.5, bold: true, color: ink)
+        let exportBtn = NSRect(x: 168, y: 54, width: 20, height: 20)
+        let importBtn = NSRect(x: 193, y: 54, width: 22, height: 20)
+        let plusBtn = NSRect(x: 220, y: 54, width: 20, height: 20)
+        fill(exportBtn, card, radius: 4)
+        text("↗", at: NSPoint(x: exportBtn.minX + 4.5, y: exportBtn.minY + 2), size: 11, bold: true, color: muted)
         fill(plusBtn, card, radius: 4)
-        text("+", at: NSPoint(x: plusBtn.minX + 6.5, y: plusBtn.minY + 2), size: 13, bold: true, color: muted)
+        text("+", at: NSPoint(x: plusBtn.minX + 5.5, y: plusBtn.minY + 1), size: 12.5, bold: true, color: muted)
 
         let importHot = t < 3.4
         fill(importBtn, importHot ? blue : card, radius: 4)
@@ -267,39 +262,70 @@ import AppKit
         drawImportGlyph(in: importBtn.insetBy(dx: 3, dy: 2), color: .white)
 
         if importHot {
-            let callout = NSRect(x: 246, y: 79, width: 148, height: 28)
+            let callout = NSRect(x: 258, y: 50, width: 176, height: 28)
             fill(callout, NSColor(srgbRed: 244 / 255, green: 176 / 255, blue: 48 / 255, alpha: 1), radius: 6)
-            text("1. Click Import icon", at: NSPoint(x: callout.minX + 10, y: callout.minY + 6), size: 11.5, bold: true, color: NSColor(srgbRed: 32 / 255, green: 24 / 255, blue: 8 / 255, alpha: 1))
+            text("1. Click middle Import icon", at: NSPoint(x: callout.minX + 10, y: callout.minY + 6), size: 11.2, bold: true, color: NSColor(srgbRed: 32 / 255, green: 24 / 255, blue: 8 / 255, alpha: 1))
         }
 
-        // Preset rows
-        let row1 = NSRect(x: 34, y: 114, width: 206, height: 34)
-        fill(row1, card, radius: 5)
-        text("Default Preset", at: NSPoint(x: 44, y: 123), size: 11, bold: false, color: muted)
+        // Auto Switch card below Preset List
+        let autoBox = NSRect(x: 32, y: 82, width: 210, height: 34)
+        fill(autoBox, card.withAlphaComponent(0.75), radius: 5)
+        text("Auto Switch", at: NSPoint(x: 40, y: 91), size: 11, bold: true, color: ink)
+        let toggleRect = NSRect(x: 202, y: 90, width: 32, height: 17)
+        fill(toggleRect, blue, radius: 8.5)
+        fill(NSRect(x: toggleRect.maxX - 15, y: 92, width: 13, height: 13), .white, radius: 6.5)
 
+        // Preset row: OBS Fadester for TourBox + [Not Linked] -> [OBS]
         let imported = t >= 6.8
-        let linked = t >= 7.9
-        let presetRow = NSRect(x: 34, y: 154, width: 206, height: 54)
-        let linkBadge = NSRect(x: 44, y: 181, width: 132, height: 20)
+        let linkPopoverOpen = t >= 7.55 && t < 9.15
+        let linked = t >= 9.15
+        let presetRow = NSRect(x: 32, y: 124, width: 210, height: 34)
+        let notLinkedBtn = NSRect(x: 176, y: 131, width: 60, height: 20)
         if imported {
-            fill(presetRow, NSColor(srgbRed: 38 / 255, green: 68 / 255, blue: 118 / 255, alpha: 1), radius: 6)
-            stroke(presetRow, blue, radius: 6, width: 1.4)
-            text("OBS Fadester for TourBox", at: NSPoint(x: 44, y: 161), size: 11.2, bold: true, color: .white)
-            fill(linkBadge, linked ? green : blue, radius: 4)
-            text(linked ? "Linked: OBS Studio" : "Link App → OBS Studio", at: NSPoint(x: 51, y: 183.5), size: 10.2, bold: true, color: .white)
+            fill(presetRow, NSColor(srgbRed: 72 / 255, green: 76 / 255, blue: 88 / 255, alpha: 1), radius: 5)
+            text("OBS Fadester for…", at: NSPoint(x: 40, y: 133), size: 10.8, bold: true, color: .white)
+            if linked {
+                fill(notLinkedBtn, green, radius: 4)
+                text("✓ OBS", at: NSPoint(x: notLinkedBtn.minX + 12, y: notLinkedBtn.minY + 2.5), size: 10.2, bold: true, color: .white)
+            } else {
+                fill(notLinkedBtn, NSColor(srgbRed: 238 / 255, green: 229 / 255, blue: 174 / 255, alpha: 1), radius: 4)
+                text("Not Linked", at: NSPoint(x: notLinkedBtn.minX + 5, y: notLinkedBtn.minY + 3), size: 9.8, bold: true, color: NSColor(srgbRed: 32 / 255, green: 28 / 255, blue: 14 / 255, alpha: 1))
+            }
+        } else {
+            let row1 = NSRect(x: 32, y: 124, width: 210, height: 32)
+            fill(row1, card, radius: 5)
+            text("Default Preset", at: NSPoint(x: 40, y: 132), size: 10.8, bold: false, color: muted)
         }
 
-        // Stylized TourBox hardware preview on the right side of TourBox Console
+        // Stylized TourBox hardware preview on the right side (shown when popover is closed)
         let rightArea = NSRect(x: 262, y: 114, width: 252, height: 128)
         fill(rightArea, sidebar, radius: 6)
         let bodyRect = NSRect(x: 326, y: 126, width: 124, height: 104)
         fill(bodyRect, card, radius: 18)
         stroke(bodyRect, muted.withAlphaComponent(0.35), radius: 18, width: 1.2)
-        // Flat Dial + Raised Knob + Scroll
         fill(NSRect(x: 344, y: 170, width: 42, height: 42), frame, radius: 21)
         fill(NSRect(x: 396, y: 140, width: 32, height: 32), frame, radius: 16)
         fill(NSRect(x: 348, y: 138, width: 30, height: 16), frame, radius: 5)
         fill(NSRect(x: 404, y: 186, width: 26, height: 12), blue.withAlphaComponent(0.75), radius: 4)
+
+        // Scene 3 (7.55 .. 9.15s): TourBox Console "Running applications" link popover
+        let obsAppRow = NSRect(x: 270, y: 146, width: 232, height: 26)
+        let saveLinkBtn = NSRect(x: 396, y: 208, width: 96, height: 24)
+        if linkPopoverOpen {
+            let pop = NSRect(x: 258, y: 48, width: 256, height: 194)
+            fill(pop, NSColor(srgbRed: 36 / 255, green: 39 / 255, blue: 48 / 255, alpha: 1), radius: 7)
+            stroke(pop, muted.withAlphaComponent(0.5), radius: 7, width: 1.2)
+            text("Running applications", at: NSPoint(x: 270, y: 58), size: 11, bold: true, color: ink)
+            text("FadesterTourBoxPanel  (skip)", at: NSPoint(x: 276, y: 88), size: 10.2, bold: false, color: muted)
+            text("Google Chrome", at: NSPoint(x: 276, y: 116), size: 10.2, bold: false, color: muted)
+            let obsChosen = t >= 8.2
+            fill(obsAppRow, obsChosen ? blue : card, radius: 5)
+            text("●  OBS   ← Pick OBS!", at: NSPoint(x: 278, y: 151), size: 11, bold: true, color: .white)
+            fill(NSRect(x: 286, y: 208, width: 96, height: 24), card, radius: 5)
+            text("Cancel", at: NSPoint(x: 315, y: 213), size: 10.5, bold: false, color: muted)
+            fill(saveLinkBtn, obsChosen ? blue : card, radius: 5)
+            text("Save", at: NSPoint(x: 430, y: 213), size: 10.8, bold: true, color: .white)
+        }
 
         // Scene 2 (3.4 .. 6.8s): macOS File Open sheet slides down
         let openSheetVisible = t >= 3.4 && t < 6.8
@@ -336,8 +362,8 @@ import AppKit
             text("Open", at: NSPoint(x: 410, y: 204), size: 11, bold: true, color: .white)
         }
 
-        if t >= 9.3 {
-            drawCheckBadge(center: NSPoint(x: 388, y: 178), scale: Self.ease(t, 9.3, 9.65))
+        if t >= 9.4 {
+            drawCheckBadge(center: NSPoint(x: 388, y: 178), scale: Self.ease(t, 9.4, 9.75))
         }
 
         let rest = NSPoint(x: 350, y: 155)
@@ -346,11 +372,12 @@ import AppKit
             Hop(from: 3.5, to: 4.2, target: Self.center(folderItem)),
             Hop(from: 4.5, to: 5.15, target: Self.center(fileItem)),
             Hop(from: 5.5, to: 6.2, target: Self.center(openBtn)),
-            Hop(from: 7.0, to: 7.8, target: Self.center(linkBadge)),
-            Hop(from: 8.1, to: 8.65, target: Self.center(toggleRect)),
-            Hop(from: 9.2, to: 9.9, target: NSPoint(x: 460, y: 210))
+            Hop(from: 6.95, to: 7.5, target: Self.center(notLinkedBtn)),
+            Hop(from: 7.7, to: 8.15, target: Self.center(obsAppRow)),
+            Hop(from: 8.45, to: 8.95, target: Self.center(saveLinkBtn)),
+            Hop(from: 9.3, to: 9.9, target: NSPoint(x: 460, y: 210))
         ]
-        let clicks: [CGFloat] = [2.0, 4.25, 5.2, 6.25, 7.85, 8.7]
+        let clicks: [CGFloat] = [2.0, 4.25, 5.2, 6.25, 7.55, 8.2, 9.0]
         drawPointer(at: Self.walk(t, start: rest, steps: steps), clicks: clicks, t: t)
     }
 
@@ -592,7 +619,7 @@ private final class SheetBackground: NSView {
         let initialFolder = Self.folderLabel(for: savedPreset)
         canvas = ShowMeCanvas(mode: .tourboxImport(folderName: initialFolder))
         panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 580, height: 486),
+            contentRect: NSRect(x: 0, y: 0, width: 580, height: 504),
             styleMask: [.titled, .closable, .utilityWindow],
             backing: .buffered,
             defer: false
@@ -603,7 +630,7 @@ private final class SheetBackground: NSView {
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
 
-        let root = SheetBackground(frame: NSRect(x: 0, y: 0, width: 580, height: 486))
+        let root = SheetBackground(frame: NSRect(x: 0, y: 0, width: 580, height: 504))
         panel.contentView = root
 
         let stack = NSStackView()
@@ -623,7 +650,7 @@ private final class SheetBackground: NSView {
         whyLabel.widthAnchor.constraint(equalToConstant: 540).isActive = true
 
         // Interactive step selector pills (click any step to pause & inspect, or Loop animation)
-        let titles = ["1. Click Import [↓]", "2. Pick .tb File", "3. Link OBS + Auto Switch", "▶ Loop"]
+        let titles = ["1. Click Import [↙]", "2. Pick .tb File", "3. Not Linked → OBS", "▶ Loop"]
         stepButtons = titles.enumerated().map { idx, title in
             let b = NSButton(title: title, target: self, action: #selector(selectStep(_:)))
             b.tag = idx
@@ -691,7 +718,7 @@ private final class SheetBackground: NSView {
             revealBtn.isHidden = true
         }
         openBtn.title = consoleInstalled ? "2. Open TourBox Console" : "2. Download TourBox Console…"
-        stepsSummary.stringValue = "1. In TourBox Console, click the small Import [↓] icon beside Preset List.\n2. Choose “\(folder)” in the sidebar and open OBS Fadester for TourBox.tb.\n3. Link OBS Fadester for TourBox to OBS Studio and turn Auto Switch on."
+        stepsSummary.stringValue = "1. In TourBox Console, click the middle Import [↙] icon beside Preset List.\n2. Choose “\(folder)” in the sidebar and open OBS Fadester for TourBox.tb.\n3. Click “Not Linked” on the preset → pick OBS (not Fadester) → click Save, with Auto Switch on."
     }
 
     @objc private func selectStep(_ sender: NSButton) {
@@ -699,7 +726,7 @@ private final class SheetBackground: NSView {
         switch sender.tag {
         case 0: canvas.stopAnimation(); canvas.fixedTime = 2.05
         case 1: canvas.stopAnimation(); canvas.fixedTime = 5.4
-        case 2: canvas.stopAnimation(); canvas.fixedTime = 8.9
+        case 2: canvas.stopAnimation(); canvas.fixedTime = 8.45
         default: canvas.fixedTime = nil; canvas.startAnimation()
         }
     }
@@ -856,7 +883,7 @@ private final class SheetBackground: NSView {
         var tourBoxLamp: Lamp = .amber
         var consoleRunning = false
         var consoleInstalled = true
-        var presetSaved = false
+        var presetSync: PresetSyncState = .neverSaved
         var vjsterLamp: Lamp = .green
         var vjsterEnabled = true
         var vjsterPort = 48150
@@ -949,7 +976,13 @@ private final class SheetBackground: NSView {
         var buttons: [ButtonSpec] = []
 
         // Box 1 buttons: Save .tb + Guide/Console
-        let b1Title = state.presetSaved ? "Save .tb" : "1. Save .tb"
+        let b1Title: String
+        let b1Fill: NSColor
+        switch state.presetSync {
+        case .neverSaved: b1Title = "1. Save .tb"; b1Fill = Self.accent
+        case .current: b1Title = "Save .tb"; b1Fill = Self.slatePill
+        case .updateAvailable: b1Title = "Update .tb!"; b1Fill = Self.amber
+        }
         let b1W = pillWidth(b1Title)
         let b2Title = state.consoleRunning ? "Guide" : (state.consoleInstalled ? "2. Console" : "Download")
         let b2Action = state.consoleRunning ? "guide" : (state.consoleInstalled ? "openConsole" : "downloadConsole")
@@ -958,14 +991,14 @@ private final class SheetBackground: NSView {
             id: "savePreset",
             title: b1Title,
             rect: NSRect(x: box1.minX + 10, y: box1.maxY - 31, width: b1W, height: 22),
-            fill: state.presetSaved ? Self.slatePill : Self.accent,
+            fill: b1Fill,
             enabled: true
         ))
         buttons.append(ButtonSpec(
             id: b2Action,
             title: b2Title,
             rect: NSRect(x: box1.minX + 16 + b1W, y: box1.maxY - 31, width: b2W, height: 22),
-            fill: state.presetSaved && !state.consoleRunning ? Self.accent : Self.slatePill,
+            fill: state.presetSync == .current && !state.consoleRunning ? Self.accent : Self.slatePill,
             enabled: true
         ))
 

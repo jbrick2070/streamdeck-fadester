@@ -10,7 +10,7 @@ internal sealed class MacNativeTBar(int port, string applicationPath) : IDisposa
 {
     readonly SemaphoreSlim serial = new(1);
     Process? helper;
-    bool faulted, disposed;
+    bool disposed;
 
     internal static int Tick(double normalized)
     {
@@ -74,12 +74,9 @@ internal sealed class MacNativeTBar(int port, string applicationPath) : IDisposa
     }
     async Task OpenLocked()
     {
-        if (disposed || faulted) throw new InvalidOperationException("Native T-bar adapter is disarmed; revalidate a new OBS connection.");
-        if (helper is not null)
-        {
-            if (helper.HasExited) throw new IOException("Native slider helper exited.");
-            return;
-        }
+        if (disposed) throw new InvalidOperationException("Native T-bar adapter is disposed.");
+        if (helper is { HasExited: false }) return;
+        Close();
         if (!OperatingSystem.IsMacOS()) throw new PlatformNotSupportedException("Mac native slider requires macOS.");
         string executable = Path.Combine(Path.GetFullPath(applicationPath), "Contents", "MacOS", "FadesterNativeSlider");
         if (!File.Exists(executable)) throw new FileNotFoundException("Experimental native slider app is missing.", executable);
@@ -94,13 +91,17 @@ internal sealed class MacNativeTBar(int port, string applicationPath) : IDisposa
         helper = Process.Start(start) ?? throw new IOException("Could not start the experimental native slider app.");
         _ = await Exchange("READ"); // Bind and warm the read-only target before timestamping any write.
     }
+    internal static InvalidOperationException ClassifyError(string why) =>
+        why.StartsWith("write unconfirmed", StringComparison.Ordinal)
+            ? new InvalidOperationException(why)
+            : new NativeRefusal(why);
     async Task<int> Exchange(string command)
     {
         await helper!.StandardInput.WriteLineAsync(command);
         await helper.StandardInput.FlushAsync();
         string? line = await helper.StandardOutput.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(4));
         if (line is null || helper.HasExited) throw new IOException("Native slider connection lost.");
-        if (line.StartsWith("ERR ", StringComparison.Ordinal)) throw new InvalidOperationException(line[4..]);
+        if (line.StartsWith("ERR ", StringComparison.Ordinal)) throw ClassifyError(line[4..]);
         if (!line.StartsWith("OK ", StringComparison.Ordinal) ||
             !int.TryParse(line.AsSpan(3), NumberStyles.None, CultureInfo.InvariantCulture, out int value) || value is < 0 or > 1023)
             throw new IOException("Invalid native slider reply.");
@@ -110,7 +111,7 @@ internal sealed class MacNativeTBar(int port, string applicationPath) : IDisposa
     {
         await serial.WaitAsync();
         try { await OpenLocked(); return await Exchange("READ"); }
-        catch { Fault(); throw; }
+        catch { Close(); throw; }
         finally { serial.Release(); }
     }
     public async Task MoveAsync(double from, double to)
@@ -121,26 +122,28 @@ internal sealed class MacNativeTBar(int port, string applicationPath) : IDisposa
         await serial.WaitAsync();
         try
         {
-            if (Stopwatch.GetElapsedTime(queued).TotalMilliseconds > 400) throw new InvalidOperationException("Queued native move expired.");
-            await OpenLocked();
-            if (Stopwatch.GetElapsedTime(queued).TotalMilliseconds > 400) throw new InvalidOperationException("Native move expired during helper startup; warm ReadAsync before accepting controls.");
-            if (expected == desired)
+            if (Stopwatch.GetElapsedTime(queued).TotalMilliseconds > 400) throw new NativeRefusal("Queued native move expired.");
+            try
             {
-                long began = Stopwatch.GetTimestamp();
-                do
+                await OpenLocked();
+                if (Stopwatch.GetElapsedTime(queued).TotalMilliseconds > 400) throw new NativeRefusal("Native move expired during helper startup.");
+                if (expected == desired)
                 {
-                    if (await Exchange("READ") == desired) return;
-                    await Task.Delay(25);
-                } while (Stopwatch.GetElapsedTime(began).TotalMilliseconds < 600);
-                throw new InvalidOperationException("OBS did not park the native T-bar at the expected position.");
+                    long began = Stopwatch.GetTimestamp();
+                    do
+                    {
+                        if (await Exchange("READ") == desired) return;
+                        await Task.Delay(25);
+                    } while (Stopwatch.GetElapsedTime(began).TotalMilliseconds < 600);
+                    throw new InvalidOperationException("OBS did not park the native T-bar at the expected position.");
+                }
+                string command = FormattableString.Invariant($"MOVE {expected} {desired} {requestedAt}");
+                if (await Exchange(command) != desired) throw new InvalidOperationException("Native slider position not confirmed.");
             }
-            string command = FormattableString.Invariant($"MOVE {expected} {desired} {requestedAt}");
-            if (await Exchange(command) != desired) throw new InvalidOperationException("Native slider position not confirmed.");
+            catch { Close(); throw; }
         }
-        catch { Fault(); throw; }
         finally { serial.Release(); }
     }
-    void Fault() { faulted = true; Close(); }
     void Close()
     {
         if (helper is null) return;

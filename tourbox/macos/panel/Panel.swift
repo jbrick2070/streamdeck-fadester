@@ -870,14 +870,18 @@ private final class PillActionButton: NSControl {
     private func handleHostLine(_ safeLine: String) {
         vjsterPeers = Readiness.vjsterPeers(after: safeLine, current: vjsterPeers)
         vjsterPortBusy = Readiness.vjsterPortBusy(after: safeLine, current: vjsterPortBusy)
-        if safeLine.hasPrefix("OFFLINE:") || safeLine.hasPrefix("DISARMED ") {
+        if safeLine.hasPrefix("OFFLINE:") {
             obsConnected = false
-            obsProblem = Readiness.obsProblem(from: safeLine)
+            let problem = Readiness.obsProblem(from: safeLine)
+            obsProblem = problem == "obs-no-answer" ? nil : problem
         } else if safeLine.hasPrefix("ERROR:") {
             let problem = Readiness.obsProblem(from: safeLine)
             if problem != "obs-no-answer" || safeLine.localizedCaseInsensitiveContains("WebSocket") {
                 obsProblem = problem
             }
+        }
+        if let feedback = Readiness.hostFeedback(from: safeLine) {
+            setStatus(feedback)
         }
         refreshIndicators()
         note(safeLine)

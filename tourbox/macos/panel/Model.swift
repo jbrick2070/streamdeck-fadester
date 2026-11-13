@@ -274,12 +274,51 @@ enum Readiness {
 
     static func vjsterPeers(after line: String, current: Set<String>) -> Set<String> {
         var next = current
-        if line == "VJster: extension connected" { next.insert("browser") }
-        else if line == "VJster: OBS page connected" { next.insert("obs") }
-        else if line.hasPrefix("VJster: extension disconnected") { next.remove("browser") }
-        else if line.hasPrefix("VJster: OBS page disconnected") { next.remove("obs") }
-        else if line == "VJster link stopped" { next.removeAll() }
+        if line == "VJster: the Chrome extension connected" || line == "VJster: extension connected" {
+            next.insert("browser")
+        } else if line == "VJster: the OBS video page connected" || line == "VJster: OBS page connected" {
+            next.insert("obs")
+        } else if line.hasPrefix("VJster: the Chrome extension disconnected") || line.hasPrefix("VJster: extension disconnected") {
+            next.remove("browser")
+        } else if line.hasPrefix("VJster: the OBS video page disconnected") || line.hasPrefix("VJster: OBS page disconnected") {
+            next.remove("obs")
+        } else if line == "VJster link stopped" {
+            next.removeAll()
+        }
         return next
+    }
+
+    static func hostFeedback(from line: String) -> String? {
+        if line.hasPrefix("RESULT ") {
+            guard let sep = line.range(of: ": ") else { return nil }
+            let action = String(line[line.index(line.startIndex, offsetBy: 7)..<sep.lowerBound])
+            let summary = String(line[sep.upperBound...]).trimmingCharacters(in: .whitespaces)
+            guard !summary.isEmpty else { return nil }
+            if summary.hasSuffix("· T-bar 0%") {
+                if action == "fader.forward" || action == "fader.fineForward" {
+                    return "T-bar at 0% — turn Dial counterclockwise for this fade."
+                }
+                if action == "fader.back" || action == "fader.fineBack" {
+                    return "T-bar at 0% — turn Dial clockwise for this fade."
+                }
+            }
+            return summary
+        }
+        if line.hasPrefix("REFUSED ") {
+            guard let sep = line.range(of: ": ") else { return nil }
+            let reason = String(line[sep.upperBound...]).trimmingCharacters(in: .whitespaces)
+            if reason.localizedCaseInsensitiveContains("Choose a different Preview scene first") || reason.localizedCaseInsensitiveContains("Preview is the same scene as Program") {
+                return "Preview matches Program — turn Scroll to cue a different scene first."
+            }
+            if reason.localizedCaseInsensitiveContains("cancel/reset the fader") || reason.localizedCaseInsensitiveContains("stuck part-way, press Cancel") {
+                return "T-bar paused — press Side + Dial on TourBox to reset the fader."
+            }
+            return reason.isEmpty ? nil : reason
+        }
+        if line.hasPrefix("Video ") {
+            return line
+        }
+        return nil
     }
 
     static func vjsterPortBusy(after line: String, current: Bool) -> Bool {
@@ -406,9 +445,13 @@ enum ModelTests {
         try check(Readiness.banner(controlsOn: false, obsHidden: false, consoleRunning: true, frontIsObs: false, axTrusted: false)?.action == "grantAx", "Accessibility banner before start")
         try check(HostController.explainHostError("ERROR: initialization: guardFailed(\"Accessibility denied; grant the responsible app\")").contains("Grant Accessibility"), "Host Accessibility error explanation")
         try check(Readiness.reminder(controlsOn: true, obsHidden: false, consoleRunning: true, frontIsObs: false) != nil && Readiness.reminder(controlsOn: true, obsHidden: false, consoleRunning: true, frontIsObs: true) == nil, "Frontmost OBS reminder")
-        var peers = Readiness.vjsterPeers(after: "VJster: extension connected", current: [])
-        peers = Readiness.vjsterPeers(after: "VJster: OBS page connected", current: peers)
-        try check(peers.count == 2 && Readiness.vjsterPeers(after: "VJster: extension disconnected (closed)", current: peers) == ["obs"], "VJster peer tracking")
+        var peers = Readiness.vjsterPeers(after: "VJster: the Chrome extension connected", current: [])
+        peers = Readiness.vjsterPeers(after: "VJster: the OBS video page connected", current: peers)
+        try check(peers.count == 2 && Readiness.vjsterPeers(after: "VJster: the Chrome extension disconnected (closed)", current: peers) == ["obs"], "VJster peer tracking")
+        try check(Readiness.vjsterPeers(after: "VJster: the OBS video page disconnected (closed)", current: ["obs"]).isEmpty, "VJster OBS peer disconnect tracking")
+        try check(Readiness.hostFeedback(from: "RESULT vjster.speed.up: Video 1.25x · 1080p · playing") == "Video 1.25x · 1080p · playing", "Host RESULT feedback")
+        try check(Readiness.hostFeedback(from: "RESULT fader.forward: T-bar right · T-bar 0%")?.contains("counterclockwise") == true, "Alternating T-bar throw hint")
+        try check(Readiness.hostFeedback(from: "REFUSED fader.forward: Choose a different Preview scene first.")?.contains("Scroll") == true, "Same-scene Preview hint")
         let busy = Readiness.vjsterPortBusy(after: "VJster port 48150 is in use, probably by the VJster actions in your Stream Deck or OpenDeck software.", current: false)
         try check(busy && !Readiness.vjsterPortBusy(after: "VJster link listening on 127.0.0.1:48150", current: busy), "VJster port busy tracking")
         let sampleHash = LocalFiles.sha256Hex(Data("preset-v1".utf8))

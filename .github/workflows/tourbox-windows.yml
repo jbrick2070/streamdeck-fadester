@@ -1,0 +1,110 @@
+name: TourBox Windows companion build and checks
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/tourbox-windows.yml
+      - tourbox/build.ps1
+      - tourbox/make-guide.cjs
+      - tourbox/README.md
+      - tourbox/REHEARSAL.md
+      - tourbox/GALLERY.txt
+      - tourbox/artwork/**
+      - tourbox/bridge/**
+      - tourbox/guide/**
+      - tourbox/native/**
+      - tourbox/panel/**
+      - tourbox/presets/**
+      - tourbox/store/**
+      - tourbox/tests/**
+      - vjster-page/**
+      - LICENSE
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/tourbox-windows.yml
+      - tourbox/build.ps1
+      - tourbox/make-guide.cjs
+      - tourbox/README.md
+      - tourbox/REHEARSAL.md
+      - tourbox/GALLERY.txt
+      - tourbox/artwork/**
+      - tourbox/bridge/**
+      - tourbox/guide/**
+      - tourbox/native/**
+      - tourbox/panel/**
+      - tourbox/presets/**
+      - tourbox/store/**
+      - tourbox/tests/**
+      - vjster-page/**
+      - LICENSE
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tourbox-windows-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-companion:
+    name: Windows x64 companion package
+    runs-on: windows-2025
+    timeout-minutes: 15
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      DOTNET_NOLOGO: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          dotnet-version: 8.0.x
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          architecture: x64
+          package-manager-cache: false
+      - name: Build VJster OBS page asset
+        shell: pwsh
+        run: |
+          npm ci
+          npm run build:vjster-page
+      - name: Build and self-test Windows Fadester Companion ZIP and MSIX
+        shell: pwsh
+        run: |
+          $out = Join-Path $env:RUNNER_TEMP 'fadester-tourbox-win'
+          & .\tourbox\build.ps1 -OutDir $out
+          & .\tourbox\store\make-msix.ps1 -Build ((Get-ChildItem -LiteralPath $out -Directory -Filter 'build-*' | Select-Object -First 1).FullName + '\Fadester for TourBox') -OutDir $out -Version '0.1.2.0' -Overwrite
+          New-Item -ItemType Directory -Force -Path artifacts | Out-Null
+          Copy-Item -Path (Join-Path $out 'Fadester-for-TourBox-Windows-x64-*.zip*') -Destination artifacts
+          Copy-Item -Path (Join-Path $out 'FadesterCompanion_*.msix') -Destination artifacts
+          Set-Content -LiteralPath 'artifacts\SOURCE-COMMIT.txt' -Value $env:GITHUB_SHA -Encoding utf8NoBOM
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: Fadester-for-TourBox-Windows-x64
+          path: artifacts/*
+          retention-days: 7
+          if-no-files-found: error
+          compression-level: 0
+      - name: Report tested scope
+        if: always()
+        shell: pwsh
+        env:
+          RESULT: ${{ job.status }}
+        run: |
+          @(
+            '### TourBox Windows x64 companion package',
+            '',
+            "Result: **$env:RESULT**. Commit: ``$env:GITHUB_SHA``.",
+            '',
+            'Builds the native C++ UIA slider helper (`FadesterNativeSlider.exe`), self-contained bridge (`FadesterTourBoxBridge.exe`), 10-locale WinForms panel (`Fadester for TourBox.exe`), VJster `/obs` page assets, ZIP archive, and unsigned MSIX candidate, running both `--self-test` suites.',
+            '',
+            '**Developer candidates only.** Store submission remains held until Windows and macOS physical hardware verification are completely signed off.'
+          ) | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Encoding utf8NoBOM

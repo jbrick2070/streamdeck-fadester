@@ -27,6 +27,7 @@ struct RuntimePaths {
     private var armed = false
     // READY was seen once for the child this controller owns: a later DISARMED (a reconnect, OBS lost) is not a failed start.
     private var reachedReady = false
+    private var stopping = false
     private var lastError: String?
     var changed: ((String, Bool) -> Void)?
     var line: ((String) -> Void)?
@@ -73,14 +74,14 @@ struct RuntimePaths {
         if !password.isEmpty { environment["FADESTER_OBS_PASSWORD"] = password }
         child.environment = environment; child.executableURL = executable; child.arguments = arguments
         child.standardInput = commands; child.standardOutput = output; child.standardError = output
-        secret = password; armed = false; reachedReady = false; lastError = nil; process = child; input = commands
+        secret = password; armed = false; reachedReady = false; stopping = false; lastError = nil; process = child; input = commands
         child.terminationHandler = { [weak self] owned in
             DispatchQueue.global(qos: .utility).async {
                 _ = drained.wait(timeout: .now() + 2)
                 DispatchQueue.main.async {
                     guard let self, self.process === owned else { return }
                     let reason = self.lastError ?? "Controls stopped. Review Activity for the reason."
-                    self.input = nil; self.process = nil; self.secret = ""; self.armed = false; self.lastError = nil
+                    self.input = nil; self.process = nil; self.secret = ""; self.armed = false; self.stopping = false; self.lastError = nil
                     self.changed?(owned.terminationStatus == 0 ? "Controls stopped." : reason, false)
                     self.exited?()
                 }
@@ -119,7 +120,9 @@ struct RuntimePaths {
                                 self.changed?("Connected — controls armed. Keep OBS in front.", true)
                             } else if disarmed {
                                 self.armed = false
-                                self.changed?("Controls disarmed. Check Activity before restarting.", true)
+                                if !self.stopping {
+                                    self.changed?("Controls disarmed. Check Activity before restarting.", true)
+                                }
                             }
                         }
                     } else if !truncated {
@@ -137,6 +140,7 @@ struct RuntimePaths {
     }
     func stop() {
         guard let owned = process else { return }
+        stopping = true
         changed?("Stopping controls… No fade or volume reset will be sent.", true)
         try? input?.fileHandleForWriting.write(contentsOf: Data("quit\n".utf8))
         try? input?.fileHandleForWriting.close(); input = nil

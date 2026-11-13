@@ -2,6 +2,8 @@
 using Fadester.TourBox;
 static void Check(bool okay, string reason) { if (!okay) throw new Exception(reason); }
 Check(MacNativeTBar.Tick(0) == 0 && MacNativeTBar.Tick(.5) == 512 && MacNativeTBar.Tick(1) == 1023, "native tick conversion");
+Check(MacNativeTBar.ClassifyError("guard: stale or future write") is NativeRefusal, "pre-write guard maps to NativeRefusal");
+Check(MacNativeTBar.ClassifyError("write unconfirmed: synthetic reply loss") is not NativeRefusal, "uncertain write stays non-refusal so StudioFader disarms");
 foreach (double invalid in new[] { double.NaN, double.PositiveInfinity, -.1, 1.1 })
 {
     try { MacNativeTBar.Tick(invalid); throw new Exception("accepted invalid tick"); }
@@ -21,3 +23,8 @@ foreach (string invalid in new[] {
     catch (IOException) { }
 }
 Console.WriteLine("PASS: experimental Mac C# adapter compiles; tick conversion and strict listener parsing. No process, AX or OBS access.");
+
+namespace Fadester.TourBox
+{
+    internal sealed class NativeRefusal(string message) : InvalidOperationException(message);
+}

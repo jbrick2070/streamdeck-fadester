@@ -48,7 +48,9 @@ internal sealed class HostSession
         Current();
         if (readOnly) throw new InvalidOperationException("Read-only session refuses native slider moves.");
         // A post-release equal-value read verifies parking, never writes a reset.
-        active.Value?.Check(write: from != to);
+        // An input that expired before native() ran wrote nothing, so StudioFader must not latch needsReset.
+        try { active.Value?.Check(write: from != to); }
+        catch (InvalidOperationException e) when (from != to) { throw new NativeRefusal(e.Message); }
         await native(from, to);
         Current();
     }

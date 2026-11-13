@@ -42,6 +42,22 @@ $null=New-Item -ItemType Directory -Force $presets
 Copy-Item -LiteralPath (Join-Path $presetDir 'map.json') -Destination $presets
 Copy-Item -LiteralPath (Join-Path $presetDir 'gamepad.json') -Destination $presets
 foreach($bank in $map.presets.PSObject.Properties.Value){Copy-Item -LiteralPath (Join-Path $presetDir $bank.file) -Destination $presets}
+$repoRoot=Split-Path $PSScriptRoot
+$vjObsCandidates=@(
+  (Join-Path $repoRoot 'io.github.jbrick2070.fadester-for-obs.sdPlugin\bin\vjster\obs'),
+  (Join-Path $repoRoot 'com.jbrick2070.vjster.sdPlugin\bin\obs')
+)
+$vjObsSrc=$vjObsCandidates | Where-Object { (Test-Path -LiteralPath (Join-Path $_ 'player.html')) -and (Test-Path -LiteralPath (Join-Path $_ 'player.js')) } | Select-Object -First 1
+if(!$vjObsSrc){
+  Push-Location $repoRoot
+  try { & npm run build:vjster-page; if($LASTEXITCODE){throw 'VJster OBS page build failed.'} }
+  finally { Pop-Location }
+  $vjObsSrc=Join-Path $repoRoot 'com.jbrick2070.vjster.sdPlugin\bin\obs'
+}
+$vjObsDest=Join-Path $bundle 'vjster\obs'
+$null=New-Item -ItemType Directory -Force $vjObsDest
+Copy-Item -LiteralPath (Join-Path $vjObsSrc 'player.html') -Destination $vjObsDest
+Copy-Item -LiteralPath (Join-Path $vjObsSrc 'player.js') -Destination $vjObsDest
 & (Join-Path $bundle 'FadesterTourBoxBridge.exe') --self-test --map (Join-Path $presets 'map.json')
 if($LASTEXITCODE){throw 'Packaged bridge self-test failed.'}
 & node (Join-Path $PSScriptRoot 'make-guide.cjs') (Join-Path $bundle 'START-HERE.html')

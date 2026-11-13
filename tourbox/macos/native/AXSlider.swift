@@ -82,7 +82,7 @@ final class AXSlider: SliderAccess {
         var owner: pid_t = 0
         let error = AXUIElementGetPid(element, &owner)
         guard error == .success, owner == pid else { throw failAX("element PID mismatch", error) }
-        let timeout = AXUIElementSetMessagingTimeout(element, 0.075)
+        let timeout = AXUIElementSetMessagingTimeout(element, 0.20)
         guard timeout == .success else { throw failAX("set AX timeout", timeout) }
     }
     private func children(_ element: AXUIElement, _ name: String, limit: Int) throws -> [AXUIElement] {
@@ -117,26 +117,46 @@ final class AXSlider: SliderAccess {
         try processIsPinned()
         let app = AXUIElementCreateApplication(pid); try owned(app)
         let windows = try children(app, kAXWindowsAttribute, limit: 16)
-        guard windows.count == 1 else { throw NativeFailure.guardFailed("expected one OBS window; close OBS dialogs") }
-        let window = windows[0]; try owned(window)
-        guard try attribute(window, kAXRoleAttribute) as? String == kAXWindowRole else { throw NativeFailure.guardFailed("invalid OBS root window") }
-        if let pinnedWindow, !CFEqual(pinnedWindow, window) { throw NativeFailure.guardFailed("OBS window was recreated") }
+        if let pinnedWindow, let pinnedSlider, windows.contains(where: { CFEqual($0, pinnedWindow) }) {
+            if let value = try? validate(pinnedSlider, window: pinnedWindow) {
+                try processIsPinned()
+                lastRead = value
+                return value
+            }
+            // OBS rebuilds the Studio Mode slider when Studio Mode is toggled off and on.
+            self.pinnedWindow = nil; self.pinnedSlider = nil; self.lastRead = nil
+        }
+        var candidateWindows: [AXUIElement] = []
+        for candidate in windows {
+            try owned(candidate)
+            if (try? attribute(candidate, kAXRoleAttribute) as? String) == kAXWindowRole {
+                candidateWindows.append(candidate)
+            }
+        }
+        guard !candidateWindows.isEmpty else { throw NativeFailure.guardFailed("invalid OBS root window") }
         let start = ProcessInfo.processInfo.systemUptime
-        var queue: [(AXUIElement, Int)] = [(window, 0)], index = 0, seen = Set<ElementKey>(), found: [AXUIElement] = []
-        while index < queue.count {
-            guard ProcessInfo.processInfo.systemUptime - start < 1.5 else { throw NativeFailure.guardFailed("incomplete AX traversal: deadline") }
-            let (element, depth) = queue[index]; index += 1
-            guard seen.insert(ElementKey(element: element)).inserted else { continue }
-            try owned(element)
-            if try attribute(element, kAXRoleAttribute) as? String == kAXSliderRole,
-               try attribute(element, kAXIdentifierAttribute) as? String == sliderID { found.append(element) }
-            let descendants = try children(element, kAXChildrenAttribute, limit: min(128, 3000 - queue.count))
-            guard depth < 30 || descendants.isEmpty else { throw NativeFailure.guardFailed("incomplete AX traversal: depth") }
-            queue.append(contentsOf: descendants.map { ($0, depth + 1) })
+        var found: [(AXUIElement, AXUIElement)] = []
+        var seen = Set<ElementKey>()
+        for window in candidateWindows {
+            var queue: [(AXUIElement, Int)] = [(window, 0)], index = 0
+            while index < queue.count {
+                guard ProcessInfo.processInfo.systemUptime - start < 1.5 else { throw NativeFailure.guardFailed("incomplete AX traversal: deadline") }
+                let (element, depth) = queue[index]; index += 1
+                guard seen.insert(ElementKey(element: element)).inserted else { continue }
+                try owned(element)
+                if (try? attribute(element, kAXRoleAttribute) as? String) == kAXSliderRole,
+                   (try? attribute(element, kAXIdentifierAttribute) as? String) == sliderID {
+                    found.append((element, window))
+                }
+                let room = 3000 - seen.count - (queue.count - index)
+                guard room > 0 else { throw NativeFailure.guardFailed("incomplete AX traversal: child/node limit") }
+                let descendants = try children(element, kAXChildrenAttribute, limit: min(128, room))
+                guard depth < 30 || descendants.isEmpty else { throw NativeFailure.guardFailed("incomplete AX traversal: depth") }
+                queue.append(contentsOf: descendants.map { ($0, depth + 1) })
+            }
         }
         guard found.count == 1 else { throw NativeFailure.guardFailed("expected exactly one native OBS T-bar") }
-        let slider = found[0]
-        if let pinnedSlider, !CFEqual(pinnedSlider, slider) { throw NativeFailure.guardFailed("OBS slider was recreated") }
+        let (slider, window) = found[0]
         let value = try validate(slider, window: window)
         try processIsPinned()
         pinnedWindow = window; pinnedSlider = slider; lastRead = value

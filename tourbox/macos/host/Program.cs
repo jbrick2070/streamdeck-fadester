@@ -292,6 +292,7 @@ internal static class MacDevelopmentHost
             Log(readOnly ? "Read-only host ready; no OBS writes, native moves, mix provider or shortcut registration."
                 : "Experimental host armed; native T-bar available, grouped mix " + (config.MixEnabled ? "enabled." : "disabled.") +
                   (shortcuts is null ? " Stdin input only." : " Exclusive Mac shortcuts enabled."));
+            long lastHeldTurn = 0;
             while (!stop.IsCancellationRequested && !obs.Disconnected.IsCompleted)
             {
                 var available = ingress.Commands.Reader.WaitToReadAsync(stop).AsTask();
@@ -305,6 +306,9 @@ internal static class MacDevelopmentHost
                 if (completed != available) break;
                 if (!await available || !ingress.Commands.Reader.TryRead(out var command)) continue;
                 if (!ingress.Current(command) || !ingress.Fresh(command)) { Log("DROPPED: expired input or old connection generation."); continue; }
+                long nowStamp = System.Diagnostics.Stopwatch.GetTimestamp();
+                if (KeyGuards.IsStrayFaderTick(command.Action, lastHeldTurn, nowStamp)) { Log("DROPPED: stray T-bar tick right after a held Dial turn."); continue; }
+                if (KeyGuards.IsHeldDialTurn(command.Action)) lastHeldTurn = nowStamp;
                 if (!readOnly && command.Action == "bridge.reconnect") { reconnect = true; break; }
                 try { Log("RESULT " + command.Action + ": " + await session.Dispatch(command)); }
                 catch (Exception error) when (error is not OperationCanceledException) { Log("REFUSED " + command.Action + ": " + error.Message); }

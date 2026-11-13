@@ -80,7 +80,7 @@ internal static class HostSelfTests
                 "GetVersion" => new() { ["obsVersion"] = "33.0.1" },
                 "GetStudioModeEnabled" => new() { ["studioModeEnabled"] = true },
                 "GetSceneList" => new() { ["currentProgramSceneUuid"] = "a", ["currentPreviewSceneUuid"] = "b", ["currentProgramSceneName"] = "Fixture A", ["currentPreviewSceneName"] = "Fixture B" },
-                "GetCurrentSceneTransitionCursor" => new() { ["transitionCursor"] = 0d },
+                "GetCurrentSceneTransitionCursor" => new() { ["transitionCursor"] = nativeWrites > 0 ? 0.05d : 0d },
                 "GetCurrentSceneTransition" => new() { ["transitionKind"] = "fade_transition", ["transitionName"] = "Fade", ["transitionUuid"] = "fade" },
                 "GetSceneSceneTransitionOverride" => new() { ["transitionName"] = "" },
                 _ => throw new InvalidOperationException("Unexpected fixture RPC: " + method)
@@ -97,7 +97,11 @@ internal static class HostSelfTests
         Check(ingress.SubmitLine("action fader.forward", out _), "fader admitted before slow preflight");
         await Refused(() => session.Dispatch(Pop(ingress)));
         Check(nativeWrites == 0 && calls.All(c => c.StartsWith("Get", StringComparison.Ordinal)), "late first native write blocked after OBS reads");
-        expireOnScenes = false; failNative = true; calls.Clear(); int seen = nativeCalls;
+        expireOnScenes = false;
+        Check(ingress.SubmitLine("action fader.forward", out _), "next fader tick admitted after pre-write expiry");
+        Check((await session.Dispatch(Pop(ingress))).Contains("T-bar"), "pre-write expiry does not latch StudioFader needsReset");
+        Check(nativeWrites == 1, "fresh tick after pre-write expiry moves native T-bar");
+        nativeWrites = 0; failNative = true; calls.Clear(); int seen = nativeCalls;
         session = new HostSession(config, ingress, generation, Rpc, Native, () => true, CancellationToken.None);
         Check(ingress.SubmitLine("action fader.forward", out _), "native refusal fixture admitted");
         await Refused(() => session.Dispatch(Pop(ingress)));

@@ -248,9 +248,9 @@ private final class PillActionButton: NSControl {
     }
 
     func build() {
-        window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 920, height: 820), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
+        window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 920, height: 856), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
         window.appearance = NSAppearance(named: .aqua)
-        window.contentView = PanelBackground(frame: NSRect(x: 0, y: 0, width: 920, height: 820))
+        window.contentView = PanelBackground(frame: NSRect(x: 0, y: 0, width: 920, height: 856))
         window.title = "Fadester Companion"
         window.minSize = NSSize(width: 780, height: 660)
         window.delegate = self
@@ -476,14 +476,16 @@ private final class PillActionButton: NSControl {
 
         heading("2   Set up TourBox & native T-bar", in: stack)
         subheading("TourBox Console preset", in: stack)
-        paragraph("Save the embedded Mac preset (.tb) to Downloads once, import it in TourBox Console, then click “Not Linked” on the preset row → pick OBS (not Fadester) → click Save, and keep Auto Switch on. TourBox’s .tb format does not store app links inside the file, so that 1-time link in Console connects it to OBS.", in: stack)
+        paragraph("1. Click “1. Save TourBox Preset (.tb)…” below to save OBS Fadester for TourBox.tb (for example in Downloads).\n2. Click “2. Open TourBox Console”, then click the middle Import [↙] icon beside Preset List and open that .tb file.\n3. With OBS Studio open, click “Not Linked” on the preset row → pick OBS (not FadesterTourBoxPanel) under Running applications → click Save, and keep Auto Switch on.\n(TourBox’s .tb format does not store app links inside the file, so linking OBS once in Console is always required.)", in: stack)
         savePresetStepButton = button("1. Save TourBox Preset (.tb)…", #selector(saveAndGuidePreset))
         savePresetStepButton.bezelStyle = .rounded
         savePresetStepButton.bezelColor = accentColor
         openConsoleStepButton = button("2. Open TourBox Console", #selector(openOrDownloadConsole))
         let showGuideBtn = button("Show me where to click", #selector(showImportGuide))
+        stack.addArrangedSubview(horizontal([savePresetStepButton, openConsoleStepButton, showGuideBtn]))
+        let downloadConsoleBtn = button("Download TourBox Console…", #selector(downloadTourBoxConsole))
         let presetSquareBtn = button("TourBox Preset Square…", #selector(openPresetSquare))
-        stack.addArrangedSubview(horizontal([savePresetStepButton, openConsoleStepButton, showGuideBtn, presetSquareBtn]))
+        stack.addArrangedSubview(horizontal([label("TourBox software & info:", small: true), downloadConsoleBtn, presetSquareBtn]))
         if LocalFiles.presetSyncState(bundledHash: bundledPresetHash, savedHash: savedPresetHash) == .updateAvailable {
             importNote.stringValue = "This version of Fadester Companion includes an updated Mac TourBox preset (.tb). Click 1. Save Updated Preset (.tb)… and re-import it in TourBox Console."
             importNote.isHidden = false
@@ -1101,12 +1103,11 @@ private final class PillActionButton: NSControl {
         }
     }
 
-    private func downloadTourBoxConsole() {
-        if let url = URL(string: "https://www.tourboxtech.com/en/downloads/") {
-            NSWorkspace.shared.open(url)
-            setStatus("Opened TourBox Console download page in your browser.")
-            note("Opened TourBox Console download page: https://www.tourboxtech.com/en/downloads/")
-        }
+    @objc private func downloadTourBoxConsole() {
+        guard !previewMode, let url = URL(string: "https://www.tourboxtech.com/en/downloads/") else { return }
+        NSWorkspace.shared.open(url)
+        setStatus("Opened TourBox Console download page in your browser.")
+        note("Opened TourBox Console download page: https://www.tourboxtech.com/en/downloads/")
     }
 
     @objc private func openPresetSquare() {

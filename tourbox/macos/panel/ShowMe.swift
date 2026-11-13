@@ -718,7 +718,7 @@ private final class SheetBackground: NSView {
             revealBtn.isHidden = true
         }
         openBtn.title = consoleInstalled ? "2. Open TourBox Console" : "2. Download TourBox Console…"
-        stepsSummary.stringValue = "1. In TourBox Console, click the middle Import [↙] icon beside Preset List.\n2. Choose “\(folder)” in the sidebar and open OBS Fadester for TourBox.tb.\n3. Click “Not Linked” on the preset → pick OBS (not Fadester) → click Save, with Auto Switch on."
+        stepsSummary.stringValue = "1. In TourBox Console, click the middle Import [↙] icon beside Preset List.\n2. Choose “\(folder)” in the sidebar and open OBS Fadester for TourBox.tb.\n3. With OBS open, click “Not Linked” → pick OBS (not FadesterTourBoxPanel) → click Save, with Auto Switch on."
     }
 
     @objc private func selectStep(_ sender: NSButton) {

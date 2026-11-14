@@ -662,7 +662,7 @@ export class FakeObsServer {
   public visualSidechainSinceMs = 0;
   public visualSidechainSignals: Record<string, unknown> = {
     audio_present: false,
-    rms: 0,
+    level: 0,
     sub_bass: 0,
     bass: 0,
     mid: 0,
@@ -675,7 +675,7 @@ export class FakeObsServer {
     bar_phase: 0,
     bar_index: 0,
     beat_confidence: 0,
-    spectrum: new Array<number>(32).fill(0)
+    spectrum: Array.from({ length: 32 }, (_, band) => ({ band, value: 0 }))
   };
   public visualSidechainCallLog: Array<{ requestType: string; requestData: Record<string, unknown> }> = [];
   public visualSidechainFailNext = "";

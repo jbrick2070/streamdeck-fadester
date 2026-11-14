@@ -26,8 +26,8 @@ const NOT_FOUND_CODE = 600;
 const INVALID_RESOURCE_TYPE_CODE = 604;
 const SPECTRUM_BINS = 32;
 const DEFAULT_BPM = 120;
-const MIN_BPM = 60;
-const MAX_BPM = 200;
+const MIN_BPM = 30;
+const MAX_BPM = 300;
 /** Maximum local interpolation span without a fresh signal frame before holding position. */
 const MAX_LOCAL_INTERPOLATION_SEC = 5;
 
@@ -102,9 +102,19 @@ function normalizeBarIndex(raw: unknown, fallback = 0): number {
 
 function normalizeSpectrum(raw: unknown): readonly number[] {
   if (!Array.isArray(raw)) return ZERO_SPECTRUM;
-  const out = new Array<number>(SPECTRUM_BINS);
-  for (let i = 0; i < SPECTRUM_BINS; i++) {
-    out[i] = clamp01(raw[i]);
+  const out = new Array<number>(SPECTRUM_BINS).fill(0);
+  for (let i = 0; i < raw.length && i < SPECTRUM_BINS; i++) {
+    const entry = raw[i];
+    if (typeof entry === "number") {
+      out[i] = clamp01(entry);
+    } else if (entry !== null && typeof entry === "object") {
+      const rec = entry as Record<string, unknown>;
+      const bandIdx =
+        typeof rec.band === "number" && Number.isInteger(rec.band) && rec.band >= 0 && rec.band < SPECTRUM_BINS
+          ? rec.band
+          : i;
+      out[bandIdx] = clamp01(rec.value);
+    }
   }
   return out;
 }
@@ -380,7 +390,7 @@ export class VisualSignals extends EventEmitter {
     if (typeof raw.panic === "boolean") {
       this.remotePanic = raw.panic;
     }
-    const rms = clamp01(raw.rms);
+    const rms = clamp01(raw.level ?? raw.rms);
     const audioPresent = typeof raw.audio_present === "boolean" ? raw.audio_present : rms > 0.001;
     const beatPhase = clamp01(raw.beat_phase);
     const barPhase = raw.bar_phase !== undefined

@@ -41,6 +41,16 @@ public sealed class StudioFader
     private int direction = 1;
     private long takeAt;
 
+    public const int SliderMax = 1023;
+    public const int ObsFinishMinTick = 921;
+    public const int ObsCancelMaxTick = 102;
+
+    public static int ToSliderTick(double normalized)
+    {
+        if (!double.IsFinite(normalized) || normalized < 0 || normalized > 1) throw new ArgumentOutOfRangeException(nameof(normalized));
+        return (int)Math.Round(normalized * SliderMax, MidpointRounding.AwayFromZero);
+    }
+
     public double Position { get; private set; }
 
     /// <summary>

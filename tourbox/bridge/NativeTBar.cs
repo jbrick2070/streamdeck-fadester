@@ -73,11 +73,7 @@ internal sealed class NativeTBar(int port) : IDisposable
         helper = Process.Start(start) ?? throw new IOException("Could not open the OBS slider helper.");
     }
 
-    private static int Tick(double normalized)
-    {
-        if (!double.IsFinite(normalized) || normalized < 0 || normalized > 1) throw new ArgumentOutOfRangeException(nameof(normalized));
-        return (int)Math.Round(normalized * 1023, MidpointRounding.AwayFromZero);
-    }
+    private static int Tick(double normalized) => StudioFader.ToSliderTick(normalized);
 
     private async Task<int> RequestAsync(string request)
     {

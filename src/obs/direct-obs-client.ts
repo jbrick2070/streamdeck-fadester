@@ -38,12 +38,12 @@ export const OBS_TRANSITION_CURRENT = "__current_transition__";
 export const OBS_TRANSITION_CUT = "__cut__";
 /** The T-bar dial takes in the last 3 % of a throw and cancels a throw turned back into its first 3 %, as Midi
  * Fadester's crossfader does with an APC40 (its rail zones, tbar-logic.h). */
-const TBAR_RAIL = 0.03;
+export const TBAR_RAIL = 0.03;
 /** A take from rest starts OBS's blend one slider step short of the end (1022 of 1023), then finishes it. */
-const NATIVE_NEAR_END = (NATIVE_TBAR_MAX - 1) / NATIVE_TBAR_MAX;
+export const NATIVE_NEAR_END = (NATIVE_TBAR_MAX - 1) / NATIVE_TBAR_MAX;
 /** OBS 33's TBarReleased completion threshold (90 % of 0..1023) and cancellation threshold (10 % of 0..1023). */
-const NATIVE_FINISH_MIN_TICK = 921;
-const NATIVE_CANCEL_MAX_TICK = 102;
+export const NATIVE_FINISH_MIN_TICK = 921;
+export const NATIVE_CANCEL_MAX_TICK = 102;
 /** After a take, encoder ticks are the end of the old throw until the dial has rested this long. */
 export const TBAR_SETTLE_MS = 300;
 /** Two looks at OBS's transition cursor this far apart tell a fade nobody drives (still) from a timed one (moving). */

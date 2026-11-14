@@ -25,6 +25,7 @@ interface TbarSafetyVectors {
     obs_finish_min_tick: number;
     obs_cancel_max_tick: number;
     controller_rail_zone: number;
+    companion_edge: number;
     midi_start_deadband: number;
   };
   tick_vectors: Array<{
@@ -59,6 +60,7 @@ interface TbarSafetyVectors {
   reconnect_vectors: Array<{
     id: string;
     samples: Array<{ cursor: number }>;
+    reconnect_transition?: string;
     contract_expected: { action: "adopt_open_throw" | "leave_alone" };
     known_divergences?: Record<string, { decision_id: string }>;
   }>;
@@ -174,6 +176,16 @@ describe("shared T-bar safety contract vectors (Stream Deck)", () => {
     for (const decisionId of ["DEC-1", "DEC-2", "DEC-3", "DEC-4"]) {
       expect(doc).toContain(decisionId);
     }
+    for (const group of [
+      vectors.failure_vectors,
+      vectors.reconnect_vectors,
+      vectors.version_gate_vectors,
+      vectors.controller_disconnect_vectors
+    ]) {
+      for (const entry of group) {
+        expect(entry.known_divergences).toBeUndefined();
+      }
+    }
   });
 
   it.each(vectors.tick_vectors)("maps tick vector $id ($normalized -> $tick, $obs_release_zone)", (vec) => {
@@ -280,6 +292,9 @@ describe("shared T-bar safety contract vectors (Stream Deck)", () => {
 
       // Reconnect while the manual fade sits motionless at openPos.
       h.client.stop();
+      if (vec.reconnect_transition) {
+        h.server.currentTransitionName = vec.reconnect_transition;
+      }
       const native2 = new ScriptedNative(h.server);
       client = new DirectObsClient(
         { host: "127.0.0.1", port, password: "" },

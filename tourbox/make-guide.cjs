@@ -162,7 +162,7 @@ const page = `<!doctype html>
 <nav aria-label="Quick starts in other languages">${languageLinks}</nav>
 <section class="sheet" id="gamepad" aria-labelledby="gamepad-title"><p class="eyebrow">Game controller</p><h2 id="gamepad-title">Start with a game controller</h2>
 <ol class="step-list">
-<li>Open OBS. In <b>Tools → WebSocket Server Settings</b>, turn on <b>Enable WebSocket server</b> and keep authentication on. Then open <b>Fadester Companion</b> from the Start menu: it connects by itself, and its window says what to do if it cannot. The T-bar needs OBS 33.0.0 or 33.0.1, with the main OBS window open and its T-bar visible.</li>
+<li>Open OBS. In <b>Tools → WebSocket Server Settings</b>, turn on <b>Enable WebSocket server</b> and keep authentication on. Then open <b>Fadester Companion</b> from the Start menu: it connects by itself, and its window says what to do if it cannot. The T-bar needs OBS 33, with the main OBS window open and its T-bar visible.</li>
 <li>On the <b>Setup</b> tab, tick <b>Use an Xbox or XInput game controller</b>, keep <b>Easy mode</b> ticked and click <b>Save &amp; start controls</b>. You can skip the preset import. Keep the window open: closing it stops the controls.</li>
 <li>In OBS, turn on <b>Studio Mode</b> and select <b>Fade</b>. Press D-pad down to cue the next scene in OBS's list, D-pad up for the one above.</li>
 <li>Pull the right trigger: OBS's T-bar follows, and pulling it all the way takes. Or hold <b>A</b>: after 0.15 s the T-bar moves while you hold it and takes at the end. Let go to leave it part-way; hold A again to carry on.</li>
@@ -185,7 +185,7 @@ const page = `<!doctype html>
 <h3>Set up once</h3><ol class="step-list">
 <li>Open <strong>Fadester Companion</strong> from the Start menu. If you use the ZIP, extract all of it and open <strong>Fadester for TourBox.exe</strong>. Keep its files together.</li>
 <li>Open OBS. In TourBox Console, use <b>Import</b> beside <b>Preset List</b> to add <b>OBS Fadester for TourBox.tb</b> from <b>presets</b>. Link it to <b>obs64</b>, enable <b>Auto Switch</b>, and select <b>OBS Fadester for TourBox</b>. For later updates, select this preset and use its own menu’s <b>Import</b> to replace its contents.</li>
-<li>In OBS, enable <b>Tools → WebSocket Server Settings</b> with authentication. Turn on <b>Studio Mode</b>, choose <b>Fade</b>, and keep the main OBS window and its T-bar visible. The manual control targets OBS 33.0.0 and 33.0.1.</li>
+<li>In OBS, enable <b>Tools → WebSocket Server Settings</b> with authentication. Turn on <b>Studio Mode</b>, choose <b>Fade</b>, and keep the main OBS window and its T-bar visible. The manual control targets OBS 33.</li>
 <li>In the Fadester panel, click <b>Read scenes and inputs from OBS</b>. OBS usually uses port 4455: if yours differs, set the <b>OBS port</b> field. Select <b>Save &amp; start controls</b>, keep the panel open, and bring OBS to the front. You can try the fader before assigning audio.</li></ol>
 <h3>Rehearse with two different pictures</h3>
 <div class="practice"><div><h3>1 · Cue and hold</h3><p>Note the scene on <b>Program</b>. Turn <b>Scroll</b> one step until <b>Preview</b> shows a different picture. Turn the <b>flat Dial</b> clockwise a few steps. Watch the white handle travel and the pictures blend. Stop halfway and the mix holds.</p></div>

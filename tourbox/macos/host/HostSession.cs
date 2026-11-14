@@ -27,7 +27,7 @@ internal sealed class HostSession
         this.native = native ?? throw new ArgumentNullException(nameof(native));
         this.connected = connected; this.stop = stop; this.readOnly = readOnly; this.nativeRead = nativeRead;
         this.vjster = vjster;
-        Desk = new DeskActions(config, Call, nativeMove: Move);
+        Desk = new DeskActions(config, Call, nativeMove: Move, allowAutoCloseout: false);
     }
     void Current()
     {

@@ -71,8 +71,24 @@ internal static class TbarSafetyVectorChecks
                 case "GetCurrentSceneTransition":
                     result["transitionName"] = Transition;
                     result["transitionUuid"] = Transition + "-id";
-                    result["transitionKind"] = "fade_transition";
-                    result["transitionDuration"] = Duration;
+                    result["transitionKind"] = Transition == "Cut" ? "cut_transition" : "fade_transition";
+                    result["transitionDuration"] = Transition == "Cut" ? 0 : Duration;
+                    break;
+                case "GetSceneTransitionList":
+                    result["currentSceneTransitionName"] = Transition;
+                    result["transitions"] = new JsonArray(
+                        new JsonObject { ["transitionName"] = "Fade", ["transitionUuid"] = "Fade-id", ["transitionKind"] = "fade_transition" },
+                        new JsonObject { ["transitionName"] = "Cut", ["transitionUuid"] = "Cut-id", ["transitionKind"] = "cut_transition" });
+                    break;
+                case "SetCurrentSceneTransition":
+                    if (Studio && Cursor is > 0 and < 1) break; // OBS 33 drops transition selections while a manual transition is active
+                    Transition = (string)data!["transitionName"]!;
+                    break;
+                case "SetCurrentProgramScene":
+                    if (Studio && Cursor is > 0 and < 1) break; // OBS 33 blocks new transitions while a manual transition is active
+                    string oldProgram = Program;
+                    Program = (string)data!["sceneUuid"]!;
+                    if (Studio && oldProgram != Program) Preview = oldProgram;
                     break;
                 case "SetCurrentPreviewScene":
                     Preview = (string)data!["sceneUuid"]!;
@@ -141,6 +157,7 @@ internal static class TbarSafetyVectorChecks
         Require(StudioFader.SliderMax == (int)constants["slider_max"]!, "slider_max matches StudioFader.SliderMax");
         Require(StudioFader.ObsFinishMinTick == (int)constants["obs_finish_min_tick"]!, "obs_finish_min_tick matches 921");
         Require(StudioFader.ObsCancelMaxTick == (int)constants["obs_cancel_max_tick"]!, "obs_cancel_max_tick matches 102");
+        Require(Math.Abs(StudioFader.Edge - (double)constants["companion_edge"]!) < 1e-12, "companion_edge matches StudioFader.Edge");
 
         int passed = 0;
         var divergences = new List<string>();
@@ -172,6 +189,30 @@ internal static class TbarSafetyVectorChecks
             string actualZone = ClassifyZone(actualTick);
             RecordOutcome(id, actualTick == expectedTick && actualZone == expectedZone, null, false,
                 $"normalized={normalized} -> tick={actualTick} ({actualZone})");
+        }
+
+        foreach (var node in root["edge_vectors"]!.AsArray())
+        {
+            var vec = node!.AsObject();
+            string id = (string)vec["id"]!;
+            double startPos = (double)vec["start_position"]!;
+            double targetPos = (double)vec["target_position"]!;
+            var expected = vec["contract_expected"]!.AsObject();
+
+            var obs = new VectorObs();
+            var fader = new StudioFader(obs.Call, nativeMove: obs.NativeMove);
+            if (startPos > 0) await fader.MoveToAsync(startPos);
+            await fader.MoveToAsync(targetPos);
+
+            bool leftOpen = obs.Cursor is > 0 and < 1;
+            string finalScene = obs.Program == "b" ? "preview" : "program";
+            string snappedEndpoint = leftOpen ? "open" : finalScene == "preview" ? "finish" : "cancel";
+
+            bool ok = snappedEndpoint == (string)expected["snapped_endpoint"]! &&
+                      finalScene == (string)expected["final_scene"]! &&
+                      leftOpen == (bool)expected["transition_left_open"]!;
+            RecordOutcome(id, ok, null, false,
+                $"start={startPos}, target={targetPos} -> endpoint={snappedEndpoint}, final_scene={finalScene}, transition_left_open={leftOpen}");
         }
 
         foreach (var node in root["release_once_vectors"]!.AsArray())
@@ -221,6 +262,7 @@ internal static class TbarSafetyVectorChecks
             double attemptPos = (double)vec["attempt_position"]!;
             var expected = vec["contract_expected"]!.AsObject();
             var div = vec["known_divergences"]?["companion"]?.AsObject();
+            var macosException = vec["known_exceptions"]?["macos_host"]?.AsObject();
 
             var obs = new VectorObs();
             var fader = new StudioFader(obs.Call, nativeMove: obs.NativeMove);
@@ -229,6 +271,7 @@ internal static class TbarSafetyVectorChecks
             bool needsReset;
             bool leftOpen;
             string outcome;
+            string finalScene;
 
             if (kind == "pre_write_refusal")
             {
@@ -238,6 +281,7 @@ internal static class TbarSafetyVectorChecks
 
                 writesReplayed = obs.AcceptedMoves.Count + obs.ObsTbarCalls.Count;
                 leftOpen = obs.Cursor is > 0 and < 1;
+                finalScene = obs.Program == "b" ? "preview" : "program";
 
                 obs.RefuseAllWrites = false;
                 needsReset = false;
@@ -253,29 +297,65 @@ internal static class TbarSafetyVectorChecks
                 await fader.MoveToAsync(throwPos);
                 Require(obs.Cursor is > 0 and < 1, $"{id} setup must open manual transition");
                 int movesBeforeFailure = obs.AcceptedMoves.Count;
-                int obsCallsBeforeFailure = obs.ObsTbarCalls.Count;
                 obs.FailUncertainOnMoveAttempt = obs.MoveAttempts + 1;
 
                 try { await fader.MoveToAsync(attemptPos); }
                 catch (Exception e) when (e is IOException or InvalidOperationException) { }
 
-                writesReplayed = (obs.AcceptedMoves.Count - movesBeforeFailure) +
-                                 (obs.ObsTbarCalls.Count - obsCallsBeforeFailure);
+                writesReplayed = obs.AcceptedMoves.Count - movesBeforeFailure;
                 leftOpen = obs.Cursor is > 0 and < 1;
+                finalScene = obs.Program == "b" ? "preview" : "program";
+
+                // Helper recovers once OBS rebuilt the Studio Mode slider; next throw must work without a manual Cancel.
+                obs.Dead = false;
+                obs.FailUncertainOnMoveAttempt = -1;
                 needsReset = false;
-                try { await fader.MoveToAsync(0.2); }
+                try { await fader.MoveToAsync(0.2); await fader.CancelAsync(); }
                 catch (InvalidOperationException e) when (e.Message.Contains("cancel/reset", StringComparison.OrdinalIgnoreCase))
                 {
                     needsReset = true;
                 }
                 outcome = !needsReset && !leftOpen ? "auto_closed" : "latched_needs_reset";
+
+                if (macosException != null)
+                {
+                    var macObs = new VectorObs();
+                    var macFader = new StudioFader(macObs.Call, nativeMove: macObs.NativeMove, allowAutoCloseout: false);
+                    await macFader.MoveToAsync(throwPos);
+                    int macMovesBefore = macObs.AcceptedMoves.Count;
+                    int macObsCallsBefore = macObs.ObsTbarCalls.Count;
+                    macObs.FailUncertainOnMoveAttempt = macObs.MoveAttempts + 1;
+                    try { await macFader.MoveToAsync(attemptPos); }
+                    catch (Exception e) when (e is IOException or InvalidOperationException) { }
+
+                    int macReplayed = (macObs.AcceptedMoves.Count - macMovesBefore) + (macObs.ObsTbarCalls.Count - macObsCallsBefore);
+                    bool macLeftOpen = macObs.Cursor is > 0 and < 1;
+                    bool macNeedsReset = false;
+                    macObs.Dead = false;
+                    macObs.FailUncertainOnMoveAttempt = -1;
+                    try { await macFader.MoveToAsync(0.2); }
+                    catch (InvalidOperationException e) when (e.Message.Contains("cancel/reset", StringComparison.OrdinalIgnoreCase))
+                    {
+                        macNeedsReset = true;
+                    }
+                    string macOutcome = !macNeedsReset && !macLeftOpen ? "auto_closed" : "latched_needs_reset";
+                    Require(
+                        macReplayed == (int)macosException["writes_replayed"]! &&
+                        macNeedsReset == (bool)macosException["needs_operator_reset"]! &&
+                        macLeftOpen == (bool)macosException["transition_left_open"]! &&
+                        macOutcome == (string)macosException["outcome"]!,
+                        $"{id} macos_host exception mismatch: replayed={macReplayed}, needsReset={macNeedsReset}, leftOpen={macLeftOpen}, outcome={macOutcome}");
+                    Console.WriteLine($"  [VECTOR EXCEPTION VERIFIED ({(string)macosException["decision_id"]!}:macos_host)] {id}: outcome={macOutcome}");
+                }
             }
 
+            string? expectedFinalScene = (string?)expected["companion_final_scene"];
             bool matchesContract =
                 writesReplayed == (int)expected["writes_replayed"]! &&
                 needsReset == (bool)expected["needs_operator_reset"]! &&
                 leftOpen == (bool)expected["transition_left_open"]! &&
-                outcome == (string)expected["outcome"]!;
+                outcome == (string)expected["outcome"]! &&
+                (expectedFinalScene == null || finalScene == expectedFinalScene);
 
             bool matchesDiv = div != null &&
                 writesReplayed == (int)div["writes_replayed"]! &&
@@ -284,7 +364,7 @@ internal static class TbarSafetyVectorChecks
                 outcome == (string)div["outcome"]!;
 
             RecordOutcome(id, matchesContract, div, matchesDiv,
-                $"expected(transition_left_open={(bool)expected["transition_left_open"]!}, needs_operator_reset={(bool)expected["needs_operator_reset"]!}, outcome={(string)expected["outcome"]!}) vs observed(writes_replayed={writesReplayed}, transition_left_open={leftOpen}, needs_operator_reset={needsReset}, outcome={outcome})");
+                $"expected(transition_left_open={(bool)expected["transition_left_open"]!}, needs_operator_reset={(bool)expected["needs_operator_reset"]!}, outcome={(string)expected["outcome"]!}, final_scene={expectedFinalScene ?? "n/a"}) vs observed(writes_replayed={writesReplayed}, transition_left_open={leftOpen}, needs_operator_reset={needsReset}, outcome={outcome}, final_scene={finalScene})");
         }
 
         foreach (var node in root["reconnect_vectors"]!.AsArray())
@@ -294,6 +374,7 @@ internal static class TbarSafetyVectorChecks
             var samples = vec["samples"]!.AsArray();
             double firstSample = (double)samples[0]!["cursor"]!;
             double secondSample = (double)samples[1]!["cursor"]!;
+            string reconnectTransition = (string?)vec["reconnect_transition"] ?? "Fade";
             var expected = vec["contract_expected"]!.AsObject();
             var div = vec["known_divergences"]?["companion"]?.AsObject();
 
@@ -302,7 +383,9 @@ internal static class TbarSafetyVectorChecks
             await fader1.MoveToAsync(firstSample);
             var memory = fader1.Leave();
 
+            obs.Transition = reconnectTransition;
             int obsCallsBeforeResume = obs.ObsTbarCalls.Count;
+            int movesBeforeResume = obs.AcceptedMoves.Count;
             obs.CursorSamples.Enqueue(firstSample);
             obs.CursorSamples.Enqueue(secondSample);
             if (firstSample != secondSample) obs.Cursor = secondSample;
@@ -310,21 +393,31 @@ internal static class TbarSafetyVectorChecks
             var fader2 = new StudioFader(obs.Call, nativeMove: obs.NativeMove, resume: memory);
             await fader2.ResumeAsync();
 
+            bool leftOpen = obs.Cursor is > 0 and < 1 && firstSample == secondSample;
             string observedAction;
-            if (obs.ObsTbarCalls.Count == obsCallsBeforeResume)
+            if (obs.ObsTbarCalls.Count == obsCallsBeforeResume && obs.AcceptedMoves.Count == movesBeforeResume)
             {
                 observedAction = fader2.Position > 0 ? "adopt_open_throw" : "leave_alone";
             }
+            else if (obs.Cursor == 0 && obs.Program == "a")
+            {
+                observedAction = "cancel_to_program";
+            }
+            else if (obs.Cursor == 0 && obs.Program == "b")
+            {
+                observedAction = "finish_to_preview";
+            }
             else
             {
-                observedAction = obs.Cursor == 0 && obs.Program == "a" ? "cancel_to_program" : "unexpected_write";
+                observedAction = "unexpected_write";
             }
 
-            string expectedAction = (string)expected["action"]!;
-            bool matchesContract = observedAction == expectedAction;
+            string expectedAction = (string)expected["companion_action"]!;
+            bool expectedLeftOpen = (bool)expected["companion_transition_left_open"]!;
+            bool matchesContract = observedAction == expectedAction && leftOpen == expectedLeftOpen;
             bool matchesDiv = div != null && observedAction == (string)div["action"]!;
             RecordOutcome(id, matchesContract, div, matchesDiv,
-                $"expected({expectedAction}) vs observed({observedAction})");
+                $"transition={reconnectTransition}, cursor={firstSample}->{secondSample} -> expected({expectedAction}, leftOpen={expectedLeftOpen}) vs observed({observedAction}, leftOpen={leftOpen})");
         }
 
         foreach (var node in root["version_gate_vectors"]!.AsArray())

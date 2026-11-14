@@ -17,7 +17,7 @@
 
     <h2>TourBox がなければゲームコントローラーで</h2>
     <ol>
-      <li>OBS を開きます。<strong>ツール → WebSocket サーバー設定</strong>でサーバーをオンにし、認証はオンのままにします。次に <strong>Fadester Companion</strong> を開きます。自動で接続し、接続できない場合はウィンドウに対処方法が表示されます。T バーには OBS 33.0.0 または 33.0.1 が必要です。OBS のメインウィンドウを開き、T バーが見えるようにしておいてください。</li>
+      <li>OBS を開きます。<strong>ツール → WebSocket サーバー設定</strong>でサーバーをオンにし、認証はオンのままにします。次に <strong>Fadester Companion</strong> を開きます。自動で接続し、接続できない場合はウィンドウに対処方法が表示されます。T バーには OBS 33 が必要です。OBS のメインウィンドウを開き、T バーが見えるようにしておいてください。</li>
       <li><strong>セットアップ</strong>タブで<strong>Xbox または XInput 対応のコントローラーを使う</strong>にチェックを入れ、<strong>かんたんモード</strong>はオンのまま、<strong>保存 &amp; 開始</strong>をクリックします。プリセットの読み込みは不要です。</li>
       <li>OBS で<strong>スタジオモード</strong>を有効にし、<strong>フェード（Fade）</strong>を選びます。十字キーの下で OBS の一覧の次のシーンを、上で前のシーンをプレビューに送ります。</li>
       <li>右トリガーを引くと OBS の T バーが追従し、奥まで引くとプログラムに切り替わります。または <strong>A</strong> を押し続けると、0.15 秒後から押している間だけ T バーが進み、端まで行くと切り替わります。途中で離すとその位置で止まり、もう一度 A を押し続けると続きから進みます。</li>
@@ -29,7 +29,7 @@
     <ol>
       <li>スタート メニューから <strong>Fadester Companion</strong> を開きます。ZIP を使う場合は、ZIP 全体を展開して <strong>Fadester for TourBox.exe</strong> を起動します。</li>
       <li>OBS を開きます。TourBox Console のプリセットリスト横のインポートボタンから <code>presets/ja/OBS Fadester for TourBox.tb</code> を読み込みます。プリセットを OBS に関連付け、自動切り替え（<strong>Auto Switch</strong>）を有効にします。読み込むプリセットは、使用する言語のもの一つだけです。 Fadester の <strong>TourBox Console にインポート</strong> ボタンを使ってください。<code>.tb</code> ファイルはダブルクリックしないでください。</li>
-      <li>OBS の <strong>ツール → WebSocket サーバー設定</strong>で、認証を有効にした状態でサーバーをオンにします。OBS Studio <strong>33.0.0 または 33.0.1</strong> で手動フェードを使うには、<strong>スタジオモード</strong>を有効にし、<strong>フェード（Fade）</strong>を選び、プレビューとプログラムの間にある白いスライダーを表示したままにします。</li>
+      <li>OBS の <strong>ツール → WebSocket サーバー設定</strong>で、認証を有効にした状態でサーバーをオンにします。OBS Studio <strong>33</strong> で手動フェードを使うには、<strong>スタジオモード</strong>を有効にし、<strong>フェード（Fade）</strong>を選び、プレビューとプログラムの間にある白いスライダーを表示したままにします。</li>
       <li>Fadester で OBS のシーンと入力を読み込みます。必要に応じて OBS に設定したポートとパスワードを入力します。TourBox Console で <strong>OBS Fadester for TourBox</strong> を選び、Fadester で設定を保存して操作を開始します。Fadester を開いたまま OBS を前面に戻します。</li>
     </ol>
     <p>Windows の表示言語が日本語以外の場合は、Fadester を閉じ、展開先のフォルダーで PowerShell を開いて <code>&amp; '.\Fadester for TourBox.exe' --language ja</code> を実行します。</p>

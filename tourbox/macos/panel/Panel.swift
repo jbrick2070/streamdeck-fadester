@@ -469,7 +469,7 @@ private final class PillActionButton: NSControl {
         diagramView.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
 
         heading("1   Connect to OBS", in: stack)
-        paragraph("In OBS, open Tools → WebSocket Server Settings and turn on Enable WebSocket server. Keep authentication on. The T-bar needs OBS 33.0.0 or 33.0.1. Turn on Studio Mode, choose the Fade transition, and keep the main OBS window open with its T-bar visible.", in: stack)
+        paragraph("In OBS, open Tools → WebSocket Server Settings and turn on Enable WebSocket server. Keep authentication on. The T-bar needs OBS 33. Turn on Studio Mode, choose the Fade transition, and keep the main OBS window open with its T-bar visible.", in: stack)
         port.widthAnchor.constraint(equalToConstant: 86).isActive = true
         password.widthAnchor.constraint(equalToConstant: 220).isActive = true
         password.placeholderString = "Optional session password"

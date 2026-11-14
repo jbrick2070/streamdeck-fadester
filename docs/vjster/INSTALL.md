@@ -2,7 +2,7 @@
 
 **Do you have Fadester for OBS 0.9.0 or later?** Then you already have the seven VJster actions. Install only the Chrome extension (step 2). Do not install the VJster plugin too: both would want the same link port.
 
-With a TourBox or a game controller you do not need Stream Deck: use Fadester Companion with the Chrome extension, and follow `tourbox/README.md`. Fadester Companion controls YouTube in Chrome only, not the OBS page.
+With a TourBox or a game controller you do not need Stream Deck: use Fadester Companion with the Chrome extension or with VJster's `/obs` Browser Source page, and follow `tourbox/README.md` (on Windows, set a 32-digit lowercase hex `vjsterObsToken` in `config.json` to enable `/obs`; the experimental macOS Setup window generates and copies the address directly).
 
 VJster has three parts. The keys and dials (in Fadester for OBS, or in the VJster plugin) also serve the OBS page. The Chrome extension controls the video in a Chrome tab. The OBS page is a browser source for OBS. They talk over one local socket on this computer (port 48150 by default); nothing goes to the internet except what YouTube's own player loads. What VJster is and what each control does: [README.md](README.md).
 
@@ -17,7 +17,7 @@ The Chrome extension is on the [Chrome Web Store](https://chromewebstore.google.
 
 ## Install
 
-**1. The keys and dials.** With Fadester for OBS 0.9.0 or later, skip this step: its action list already has **VJster Speed**, **VJster Quality** and the other five. Otherwise install the VJster plugin. It needs Stream Deck 7.1 or later on Windows 10 or later. Double-click `com.jbrick2070.vjster.streamDeckPlugin`; Stream Deck asks to install it. The VJster category then lists seven actions. Stream Deck may also ask whether to install the bundled profiles; say yes and they appear in your profile list without switching to them: **VJster Live +** and **VJster Dual +** for the Stream Deck +, **VJster Live** for the 15-key Stream Deck, **VJster Mini** for the Mini. A profile may only appear once a deck of its kind is connected.
+**1. The keys and dials.** With Fadester for OBS 0.9.0 or later, skip this step: its action list already has **VJster Speed**, **VJster Quality** and the other five. Otherwise install the VJster plugin. It needs Stream Deck 7.1 or later on Windows 10 or later or macOS 13.5 or later. Double-click `com.jbrick2070.vjster.streamDeckPlugin`; Stream Deck asks to install it. The VJster category then lists seven actions. Stream Deck may also ask whether to install the bundled profiles; say yes and they appear in your profile list without switching to them: **VJster Live +** and **VJster Dual +** for the Stream Deck +, **VJster Live** for the 15-key Stream Deck, **VJster Mini** for the Mini. A profile may only appear once a deck of its kind is connected.
 
 **2. The Chrome extension.** Needs Chrome 116 or later. Add [VJster from the Chrome Web Store](https://chromewebstore.google.com/detail/daohboebokfmamkblejcpbblfnaijgnb). It asks for access to YouTube and to a socket on this computer (`ws://127.0.0.1`), and for the storage and alarms permissions. Its options page opens once. The page shows the extension's id (`daohboebokfmamkblejcpbblfnaijgnb` for the store version): to let only this extension connect, paste it into the **Only this extension** field on VJster's settings page.
 

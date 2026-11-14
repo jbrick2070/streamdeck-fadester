@@ -55,8 +55,8 @@ export interface VisualSignalsSnapshot {
   readonly barIndex: number;
   readonly beatConfidence: number;
   readonly panic: boolean;
-  readonly supportsTempoGrid: boolean;
-  readonly needsTempoUpdate: boolean;
+  readonly supportsTempoGrid?: boolean;
+  readonly needsTempoUpdate?: boolean;
   readonly spectrum: readonly number[];
   readonly receivedAtMs: number;
 }

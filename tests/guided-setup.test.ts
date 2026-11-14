@@ -720,7 +720,7 @@ describe("P1-5 Guided Setup Pass", () => {
       const plKey = new PlaylisterTransportInstanceController(
         client,
         {
-          setImage: async (img) => keyFrames.push(decodeSvgUri(img)),
+          setImage: async (img) => { keyFrames.push(decodeSvgUri(img)); },
           showAlert: async () => {}
         },
         { inputUuid: "", operation: "playpause" },

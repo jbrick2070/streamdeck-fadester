@@ -6,9 +6,9 @@ Checked against Elgato's official documentation on 28 October 2026. The current 
 
 | Component | Install location/runtime | Role |
 |---|---|---|
-| Midi Fadester | OBS Studio 33 on Windows x64 | Optional integration that owns slots, MIDI control, filter bindings and the vendor API. |
-| Fadester for OBS | Stream Deck 7.6+ | Provides dial/key controls, a Neo Info Bar display, and configuration. Updates independently of the OBS plugins. |
-| Visual Sidechain | OBS Studio 33 on Windows x64 | Optional audio modulation and shader effects; can consume Midi's 18 slots or expose numeric filter settings for Midi to control. |
+| Midi Fadester | OBS Studio 33 on Windows x64 and macOS 13.0+ | Optional integration that owns slots, MIDI control, filter bindings and the vendor API (0.6.0 release archives are Windows x64; macOS CoreMIDI builds from `main`). |
+| Fadester for OBS | Stream Deck 7.6+ on Windows 10+ and macOS 13.5+ (and OpenDeck) | Provides dial/key controls, a Neo Info Bar display, VJster actions, and configuration. Updates independently of the OBS plugins. |
+| Visual Sidechain | OBS Studio 33 on Windows x64 | Optional audio modulation, shader effects, and Tape Deck; can consume Midi's 18 slots or expose numeric filter settings for Midi to control. |
 
 Use one coordinated setup guide and a tested compatibility matrix. An optional combined OBS installer could later offer Midi and Visual Sidechain as separate choices, but each plugin should keep independent versions, uninstall behavior and downloads. Do not bundle OBS binaries into the Stream Deck plugin. Keep the two OBS components optional for users who need only one. For Stream Deck users, clearly disclose that Midi Fadester is optional for the main OBS controls and required for its two optional actions; Visual Sidechain is optional.
 

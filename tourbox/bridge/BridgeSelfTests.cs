@@ -149,7 +149,148 @@ internal static class BridgeSelfTests
         catch (InvalidOperationException) { }
         await desk.Dispatch("media.play"); Check(media.Single() == "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE", "play toggles a playing source");
         await RunQuantizedTakeTestsAsync();
+        await RunLayerOpacityOwnerTestsAsync();
         await VjsterSelfTests.RunAsync();
+    }
+
+    private static async Task RunLayerOpacityOwnerTestsAsync()
+    {
+        static void Check(bool ok, string msg) { if (!ok) throw new Exception("Layer opacity owner self-test: " + msg); }
+
+        var cfg = new BridgeConfig { Layer1Scene = "Mix", Layer1Source = "Clip A", Layer2Scene = "Mix", Layer2Source = "Clip B", OpacityStep = 0.25 };
+        bool mfLoaded = true;
+        bool slotEnabled = true;
+        bool slotAvailable = true;
+        string slotScene = "Mix";
+        string slotSource = "Clip B";
+        double slotValue = 1.0;
+        string? lastSetFaderSlot = null;
+        int createFilterCalls = 0;
+        int setFilterCalls = 0;
+        int removeFilterCalls = 0;
+        var filters = new List<JsonObject>();
+        double colorFilterOpacity = 0.6;
+
+        Task<JsonObject> FakeObs(string op, JsonObject? args)
+        {
+            var reply = new JsonObject();
+            string Arg(string k) => args![k]!.GetValue<string>();
+            switch (op)
+            {
+                case "GetSceneItemList":
+                    Check(Arg("sceneName") == "Mix", "scene item list uses Layer 2 scene");
+                    reply["sceneItems"] = new JsonArray(
+                        new JsonObject { ["sourceName"] = "Clip A", ["sceneItemId"] = 1 },
+                        new JsonObject { ["sourceName"] = "Clip B", ["sceneItemId"] = 2 });
+                    break;
+                case "GetSourceFilterList":
+                    Check(Arg("sourceName") == "Clip B", "filter list queries Layer 2 source");
+                    reply["filters"] = new JsonArray(filters.Select(f => (JsonNode)f.DeepClone()).ToArray());
+                    break;
+                case "CreateSourceFilter":
+                    createFilterCalls++;
+                    colorFilterOpacity = 1.0;
+                    filters.Add(new JsonObject { ["filterName"] = Arg("filterName"), ["filterKind"] = Arg("filterKind"), ["filterEnabled"] = true });
+                    break;
+                case "GetSourceFilter":
+                    reply["filterSettings"] = new JsonObject { ["opacity"] = colorFilterOpacity };
+                    break;
+                case "SetSourceFilterSettings":
+                    setFilterCalls++;
+                    colorFilterOpacity = args!["filterSettings"]!["opacity"]!.GetValue<double>();
+                    break;
+                case "RemoveSourceFilter":
+                    removeFilterCalls++;
+                    break;
+                case "CallVendorRequest":
+                    Check(Arg("vendorName") == "midi-fadester", "opacity queries midi-fadester vendor");
+                    if (!mfLoaded) throw new ObsError("CallVendorRequest", 600, "No vendor");
+                    string reqType = Arg("requestType");
+                    if (reqType == "get_state")
+                    {
+                        reply["responseData"] = new JsonObject
+                        {
+                            ["api_version"] = 1,
+                            ["slots"] = new JsonArray(new JsonObject
+                            {
+                                ["id"] = "fx_3",
+                                ["name"] = "FX 3",
+                                ["enabled"] = slotEnabled,
+                                ["available"] = slotAvailable,
+                                ["target_mode"] = "layer_opacity",
+                                ["scene"] = slotScene,
+                                ["source_a"] = slotSource,
+                                ["value"] = slotValue
+                            })
+                        };
+                    }
+                    else if (reqType == "set_fader_value")
+                    {
+                        var rdata = args!["requestData"]!.AsObject();
+                        lastSetFaderSlot = rdata["slot"]!.GetValue<string>();
+                        slotValue = rdata["value"]!.GetValue<double>();
+                        reply["responseData"] = new JsonObject { ["ok"] = true, ["slot"] = lastSetFaderSlot, ["value"] = slotValue };
+                    }
+                    else
+                    {
+                        throw new Exception("Unexpected midi-fadester requestType: " + reqType);
+                    }
+                    break;
+                default:
+                    throw new Exception("Unexpected OBS request in layer opacity owner self-test: " + op);
+            }
+            return Task.FromResult(reply);
+        }
+
+        var desk = new DeskActions(cfg, FakeObs);
+
+        // 1. Enabled, available Midi Fadester layer_opacity slot on Layer 2 -> drives set_fader_value across 100%..0%, never touches Color Correction.
+        string down1 = await desk.Dispatch("layer2.opacity.down");
+        Check(down1 == "Layer 2 opacity 75 % (Midi Fadester FX 3)" && lastSetFaderSlot == "fx_3" && Math.Abs(slotValue - 0.75) < 1e-6,
+            "matching layer_opacity slot receives set_fader_value without stacking note");
+        await desk.Dispatch("layer2.opacity.down");
+        await desk.Dispatch("layer2.opacity.down");
+        string down0 = await desk.Dispatch("layer2.opacity.down");
+        Check(down0 == "Layer 2 opacity 0 % (Midi Fadester FX 3)" && Math.Abs(slotValue) < 1e-6, "reaches 0 % via Midi Fadester");
+        await desk.Dispatch("layer2.opacity.up");
+        await desk.Dispatch("layer2.opacity.up");
+        await desk.Dispatch("layer2.opacity.up");
+        string up100 = await desk.Dispatch("layer2.opacity.up");
+        Check(up100 == "Layer 2 opacity 100 % (Midi Fadester FX 3)" && Math.Abs(slotValue - 1.0) < 1e-6, "reaches 100 % via Midi Fadester");
+        Check(createFilterCalls == 0 && setFilterCalls == 0 && removeFilterCalls == 0, "never creates, edits, or deletes Color Correction when Midi Fadester owns Layer 2");
+
+        // 2. Pre-existing Fadester opacity filter on the same source -> untouched (never deleted or edited) and Activity line warns that the two stack.
+        filters.Add(new JsonObject { ["filterName"] = DeskActions.OpacityFilterName, ["filterKind"] = "color_filter_v2", ["filterEnabled"] = true });
+        string stacked = await desk.Dispatch("layer2.opacity.down");
+        Check(stacked.Contains("Midi Fadester FX 3", StringComparison.Ordinal) && stacked.Contains("stack", StringComparison.Ordinal),
+            "Activity line warns that Fadester opacity and Midi Fadester stack");
+        Check(filters.Count == 1 && Math.Abs(colorFilterOpacity - 0.6) < 1e-6 && createFilterCalls == 0 && setFilterCalls == 0 && removeFilterCalls == 0,
+            "user Fadester opacity filter is neither modified nor deleted");
+
+        // 3. Non-matching scene, disabled slot, unavailable slot, or absent Midi Fadester -> falls back to Color Correction as today.
+        lastSetFaderSlot = null;
+        slotScene = "Other Scene";
+        string fallbackScene = await desk.Dispatch("layer2.opacity.up");
+        Check(fallbackScene == "Layer 2 opacity 85 %" && lastSetFaderSlot == null && setFilterCalls == 1 && Math.Abs(colorFilterOpacity - 0.85) < 1e-6,
+            "different scene falls back to Color Correction");
+
+        slotScene = "Mix";
+        slotEnabled = false;
+        string fallbackDisabled = await desk.Dispatch("layer2.opacity.up");
+        Check(fallbackDisabled == "Layer 2 opacity 100 %" && lastSetFaderSlot == null && setFilterCalls == 2,
+            "disabled slot falls back to Color Correction");
+
+        slotEnabled = true;
+        slotAvailable = false;
+        string fallbackUnavailable = await desk.Dispatch("layer2.opacity.down");
+        Check(fallbackUnavailable == "Layer 2 opacity 75 %" && lastSetFaderSlot == null && setFilterCalls == 3,
+            "unavailable slot falls back to Color Correction");
+
+        mfLoaded = false;
+        filters.Clear();
+        string fallbackNoMf = await desk.Dispatch("layer2.opacity.down");
+        Check(fallbackNoMf == "Layer 2 opacity 75 %" && createFilterCalls == 1 && setFilterCalls == 4 && removeFilterCalls == 0,
+            "absent Midi Fadester creates and drives Fadester opacity as before");
     }
 
     private static async Task RunQuantizedTakeTestsAsync()

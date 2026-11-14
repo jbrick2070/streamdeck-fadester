@@ -18,7 +18,7 @@ Values are floats 0.0 to 1.0. Slot ids are stable strings, never display names:
 | `auto_fade` | `{ slot, to, ms }` | `{ slot }` | Timed fade from the current value to `to` over `ms` (50..20000). A new call on the same slot replaces the running one. |
 | `set_slot` | `{ slot, enabled?, target_mode?, scene?, source_a?, source_b?, filter_name?, filter_prop?, from_val?, to_val?, bypass_at_zero?, curve?, afv?, cal_min?, cal_max? }` | the updated slot | Same fields as the OBS dialog. Unknown scene, source, filter, or property names — or duplicate `(source_a, filter_name, filter_prop)` writers across any of the 18 slots — return a validation error, never a silent no-op. |
 | `load_profile` | `{ name }` | `{ loaded, profile_tier }` | `name`: `apc40mk2` (`verified`), `apcminimk2`, `midimix`, `nanokontrol2`, `launchcontrolxl` (`beta`), or `generic` (`custom`). Profiles for desks without a physical crossfader or master turn those fader slots off (`enabled: false`, `available: false`, `reason: "Not used. Click to set up."`), while `fx_1 .. fx_8` stay `enabled: true` across all 6 profiles so Stream Deck + and WebSocket surfaces always have 8 dedicated FX slots. |
-| `get_catalog` | `{ source? }` | Overview (no `source`): `{ scenes: [{ name, layers: [{ name, has_audio }] }], audio_sources: [{ name, db }], filter_hosts: [{ source, is_scene, filter_count }] }`<br>Source detail (`source` set): `{ source, is_scene, filters: [{ name, type_id, enabled, properties: [{ name, label, type: "float" \| "int", min, max, step, suffix, current }] }] }` | Added in `0.4.0`. Discovers scenes, audio sources, filter-capable sources/scenes, and numeric (`OBS_PROPERTY_FLOAT` / `OBS_PROPERTY_INT`, recursing nested `OBS_PROPERTY_GROUP`s) filter settings without polling or calling `obs_source_properties()` on the video tick. Internal `__midi_fadester_opacity__` filters are excluded. |
+| `get_catalog` | `{ source? }` | Overview (no `source`): `{ scenes: [{ name, layers: [{ name, has_audio, has_internal_opacity, opacity_slot }] }], audio_sources: [{ name, db }], filter_hosts: [{ source, is_scene, filter_count }] }`<br>Source detail (`source` set): `{ source, is_scene, filters: [{ name, type_id, enabled, properties: [{ name, label, type: "float" \| "int", min, max, step, suffix, current }] }] }` | Added in `0.4.0`. Discovers scenes, audio sources, filter-capable sources/scenes, and numeric (`OBS_PROPERTY_FLOAT` / `OBS_PROPERTY_INT`, recursing nested `OBS_PROPERTY_GROUP`s) filter settings without polling or calling `obs_source_properties()` on the video tick. Internal `__midi_fadester_opacity__` filters are excluded from `filters` and `filter_count`, while additive `has_internal_opacity` (`bool`) and `opacity_slot` (`string`, enabled `layer_opacity` slot id or `""`) report internal opacity ownership on each layer entry (`api_version` stays `1`). |
 | `reset_fx` | `{ ms? }` | `{ eligible_count, reset_count, queued_unavailable_count, ms }` | Added in `0.4.0` (`Clean / All FX Off`). Resets every enabled `filter_param` slot, in either bank, to `0.0` (`from_val`), instantly (`ms` omitted or `0`) or over a timed ramp (`ms` in `50..20000`). It applies aggregated `bypass_at_zero` ownership. Nonfilter audio, opacity, A/B crossfade and T-bar assignments are untouched, including those in `fx_1..fx_8`. Unavailable eligible slots queue a clean for when availability returns. |
 
 `set_slot.enabled` must be a boolean. An explicit value overrides automatic enablement from a
@@ -45,7 +45,7 @@ Slot object (`0.4.0`, backward-compatible superset of `0.3.0`):
   "name": "FX 1",
   "kind": "crossfader | fader | master | fx",
   "enabled": true,
-  "target_mode": "unassigned | tbar | crossfade_ab | layer_opacity | audio_volume | filter_param",
+  "target_mode": "unassigned | tbar | crossfade_ab | layer_opacity | audio_volume | filter_param | mix_master",
   "scene": "",
   "source_a": "Cam 1",
   "source_b": "",
@@ -70,7 +70,14 @@ Slot object (`0.4.0`, backward-compatible superset of `0.3.0`):
 
 `display_value` (added in `0.4.0`) carries the engine's human-formatted value string (`"14.1 px"`, `"-40%"`,
 `"-6.0 dB"`, `"0 (Off)"`, `"42%"`). Surfaces connected to `0.3.0` fall back to `${Math.round(value * 100)}%`
-when `display_value` is absent.
+when `display_value` is absent. `target_mode: "mix_master"` drives the whole OBS audio mix through a running whole-mix provider using the `io.github.jbrick2070.fadester.mix.v1` protocol (`client: "midi-fadester"` and `mix_reply`) defined in **Shared whole-mix protocol** below.
+
+### Layer 1, Layer 2, and single-owner layer opacity
+
+- **Layer 1** and **Layer 2** are Fadester Companion's two configured VJ scene items (`layer1Scene` + `layer1Source` and `layer2Scene` + `layer2Source`); both expose blend-mode stepping, and **Layer 2** also exposes Companion's opacity controls (`layer2.opacity.up`, `layer2.opacity.down`).
+- **Single-owner opacity rule:** For any source, exactly one writer owns opacity — a Midi Fadester `layer_opacity` slot (which drives Midi Fadester's hidden `__midi_fadester_opacity__` filter) if one exists for that source, otherwise Fadester Companion's `"Fadester opacity"` Color Correction filter (`color_filter_v2` / `color_filter`).
+- In `get_catalog` overview replies, each scene layer entry carries additive `has_internal_opacity` (`true` when `__midi_fadester_opacity__` is attached to that source) and `opacity_slot` (the slot `id`, such as `"fx_3"`, of the enabled `layer_opacity` slot targeting that source, or `""` when none is enabled) so surfaces can explain dim layers without exposing `__midi_fadester_opacity__` as an editable user filter.
+- When Fadester Companion handles a Layer 2 opacity step and Midi Fadester answers `get_state` with an enabled, available `layer_opacity` slot whose `source_a` and `scene` match Layer 2, Companion drives that slot via `set_fader_value` instead of creating or writing a Color Correction filter; otherwise Companion behaves as before. If a `"Fadester opacity"` filter already exists on that source while Midi Fadester owns Layer 2 opacity, Companion never deletes or modifies the user's filter and reports in its Activity line that the two filters stack.
 
 `parked: true` means the slot just completed a throw or reached a rail and ignores physical MIDI input until
 the control leaves that rail by the hysteresis amount; surfaces show it (a dot or "at end") and do not treat

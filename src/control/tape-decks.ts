@@ -14,10 +14,13 @@ import { EventEmitter } from "node:events";
 import { DirectObsClient, DirectObsError } from "../obs/direct-obs-client.js";
 import { VS_VENDOR_NAME } from "./visual-safety.js";
 import { TapeDeckOperation } from "../types/settings.js";
+import {
+  OBS_VENDOR_NOT_FOUND,
+  OBS_VENDOR_REQUEST_MISSING,
+  isObsVendorMissingError,
+  isObsVendorRequestMissingError
+} from "../../packages/streamdeck-fadester-shared/src/obs/obs-vendor-client.js";
 import { ownText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
-
-const NOT_FOUND_CODE = 600;
-const INVALID_RESOURCE_TYPE_CODE = 604;
 
 export const TAPE_DECK_MIN_PCT = 25;
 export const TAPE_DECK_MAX_PCT = 800;
@@ -226,7 +229,7 @@ export class TapeDecks extends EventEmitter {
       "namedVendorEvent",
       (vendorName: string, eventType: string, eventData: Record<string, unknown>) => {
         if (vendorName !== VS_VENDOR_NAME || eventType !== "decks_changed") return;
-        this.applyDecksPayload(eventData);
+        this.applyDecksPayload(eventData, false);
       }
     );
 
@@ -294,11 +297,10 @@ export class TapeDecks extends EventEmitter {
     try {
       const reply = await this.client.callNamedVendor<GetDecksReply>(VS_VENDOR_NAME, "get_decks");
       if (gen !== this.connectionGen) return;
-      this.applyDecksPayload(reply as Record<string, unknown>);
+      this.applyDecksPayload(reply as Record<string, unknown>, true);
     } catch (error) {
       if (gen !== this.connectionGen) return;
-      const code = errorCodeOf(error);
-      if (code === NOT_FOUND_CODE || code === INVALID_RESOURCE_TYPE_CODE) {
+      if (isObsVendorMissingError(error)) {
         this.availability = "not_loaded";
         this.version = "";
         this.decks = [];
@@ -405,7 +407,7 @@ export class TapeDecks extends EventEmitter {
     params: Record<string, unknown>
   ): Promise<DeckCommandReply> {
     if (this.availability === "not_loaded") {
-      throw new DirectObsError(ownText("vpNotLoaded"), NOT_FOUND_CODE);
+      throw new DirectObsError(ownText("vpNotLoaded"), OBS_VENDOR_NOT_FOUND);
     }
     const resolved = this.resolveDeck(deckSource);
     const targetName = resolved?.source || deckSource.trim();
@@ -428,29 +430,38 @@ export class TapeDecks extends EventEmitter {
       return reply;
     } catch (error) {
       const code = errorCodeOf(error);
-      if (code === NOT_FOUND_CODE) {
+      if (code === OBS_VENDOR_NOT_FOUND) {
         if (gen === this.connectionGen) {
           this.availability = "not_loaded";
           this.decks = [];
           this.emit("changed");
         }
-        throw new DirectObsError(ownText("vpNotLoaded"), NOT_FOUND_CODE);
+        throw new DirectObsError(ownText("vpNotLoaded"), OBS_VENDOR_NOT_FOUND);
       }
-      if (code === INVALID_RESOURCE_TYPE_CODE) {
+      if (isObsVendorRequestMissingError(error)) {
         if (gen === this.connectionGen) {
           this.deckCommandUnsupported = true;
           this.emit("changed");
         }
-        throw new DirectObsError(ownText("tdNeedsUpdate"), INVALID_RESOURCE_TYPE_CODE);
+        throw new DirectObsError(
+          ownText("vsNeedsUpdateSentence", { request: "deck_command" }),
+          OBS_VENDOR_REQUEST_MISSING
+        );
       }
       throw error;
     }
   }
 
-  private applyDecksPayload(payload: Record<string, unknown>): void {
+  private applyDecksPayload(payload: Record<string, unknown>, initial: boolean): void {
     this.availability = "loaded";
-    if (typeof payload.version === "string") {
+    if (typeof payload.version === "string" && payload.version.length > 0) {
       this.version = payload.version;
+      if (initial) {
+        this.deckCommandUnsupported = false;
+      }
+    } else if (initial) {
+      // Pre-P1-6 Visual Sidechain omitted `version` in `get_decks` and lacked `deck_command`.
+      this.deckCommandUnsupported = true;
     }
     this.decks = normalizeDecksList(payload.decks);
     this.emit("changed");

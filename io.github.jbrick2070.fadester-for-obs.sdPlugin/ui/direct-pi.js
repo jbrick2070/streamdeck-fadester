@@ -138,7 +138,16 @@
       '<div class="row"><label for="direct-conn-host" data-i18n="host">Host</label><input id="direct-conn-host" type="text" value="127.0.0.1" /></div>',
       '<div class="row"><label for="direct-conn-port" data-i18n="port">Port</label><input id="direct-conn-port" type="number" value="4455" min="1" max="65535" /></div>',
       '<div class="row"><label for="direct-conn-password" data-i18n="password">Password</label><input id="direct-conn-password" type="password" autocomplete="off" placeholder="Enter the OBS password once" data-i18n-placeholder="passwordPlaceholderOnce" /></div>',
+      '<div class="row"><label></label><button id="direct-conn-read-obs" class="btn secondary" type="button" data-i18n="obsSavedReadBtn">Use OBS\'s saved password</button></div>',
+      '<p class="muted" id="direct-obs-saved-hint" style="display:none"></p>',
+      '<div id="direct-obs-saved-preview" class="status-banner status-info" style="display:none"></div>',
+      '<div class="row" id="direct-obs-saved-apply-row" style="display:none"><label></label><button id="direct-conn-apply-obs" class="btn secondary" type="button" data-i18n="obsSavedApplyBtn">Fill port &amp; save password</button></div>',
       '<div class="row"><label></label><button id="direct-conn-test" class="btn" type="button" data-i18n="saveAndTest">Save for all controls &amp; test</button></div>',
+      '</details>',
+      '<details id="direct-setup-checklist" class="editor"><summary data-i18n="chkHeading">Setup checklist</summary>',
+      '<p class="muted" data-i18n="chkIntro">One-pass readiness check for OBS, the T-bar, optional OBS plugins, and the VJster link.</p>',
+      '<div id="direct-checklist-list" class="checklist-list"></div>',
+      '<div class="editor-actions"><button id="direct-checklist-refresh" class="btn secondary" type="button" data-i18n="chkCheckAgain">Check again</button></div>',
       '</details>',
       '<div id="direct-studio-setup" style="display:none"><p class="muted" data-i18n="studioSetupNote">This control uses Studio Mode. Prepare Preview from your existing scenes to start mixing.</p>',
       '<button id="direct-studio-prepare" class="btn" type="button">Enable Studio Mode &amp; prepare Preview</button></div>',
@@ -162,6 +171,19 @@
     const port = $("direct-conn-port");
     const password = $("direct-conn-password");
     const test = $("direct-conn-test");
+    const readObs = $("direct-conn-read-obs");
+    const applyObs = $("direct-conn-apply-obs");
+    const refreshChecklist = $("direct-checklist-refresh");
+    function syncObsSavedHostGate() {
+      const val = (host ? host.value : "127.0.0.1").trim().toLowerCase();
+      const local = val === "" || val === "127.0.0.1" || val === "localhost" || val === "::1" || val === "[::1]";
+      if (readObs) readObs.disabled = !local;
+      const hostHint = $("direct-obs-saved-hint");
+      if (hostHint) {
+        hostHint.textContent = local ? "" : T("obsSavedNonLocal");
+        hostHint.style.display = local ? "none" : "";
+      }
+    }
     function pushConnection() {
       const payload = {
         event: "directUpdateGlobalSettings",
@@ -177,8 +199,28 @@
       password.oninput = function () { passwordDirty = true; };
       password.onchange = pushConnection;
     }
-    if (host) host.onchange = pushConnection;
+    if (host) {
+      host.oninput = syncObsSavedHostGate;
+      host.onchange = function () {
+        syncObsSavedHostGate();
+        pushConnection();
+      };
+    }
     if (port) port.onchange = pushConnection;
+    if (readObs) readObs.onclick = function () {
+      sendToPlugin({ event: "directReadObsSavedConfig", host: host ? host.value : "127.0.0.1" });
+    };
+    if (applyObs) applyObs.onclick = function () {
+      passwordDirty = false;
+      connectionTesting = true;
+      window.clearTimeout(connectionTestTimer);
+      connectionTestTimer = window.setTimeout(endConnectionTest, CONNECTION_TEST_LIMIT_MS);
+      setBanner($("direct-conn-status"), T("connTesting"), "info");
+      sendToPlugin({ event: "directApplyObsSavedConfig" });
+    };
+    if (refreshChecklist) refreshChecklist.onclick = function () {
+      sendToPlugin({ event: "directRunChecklist" });
+    };
     if (test) test.onclick = function () {
       pushConnection();
       // Feedback that the test runs, also when its result is the same sentence as before; the button stays usable.
@@ -262,6 +304,200 @@
     }
   }
 
+  function checklistItemTitle(id) {
+    if (id === "obs_reachable") return T("chkItemReachable");
+    if (id === "password_accepted") return T("chkItemPassword");
+    if (id === "obs_version") return T("chkItemObsVersion");
+    if (id === "studio_mode") return T("chkItemStudioMode");
+    if (id === "fade_selected") return T("chkItemFade");
+    if (id === "obs_not_elevated") return T("chkItemNotElevated");
+    if (id === "window_not_minimised") return T("chkItemNotMinimised");
+    if (id === "macos_accessibility") return T("chkItemMacAx");
+    if (id === "midi_fadester") return T("chkItemMidiFadester");
+    if (id === "visual_sidechain") return T("chkItemVisualSidechain");
+    if (id === "playlister") return T("chkItemPlaylister");
+    return T("chkItemVjsterPort");
+  }
+
+  function checklistItemDetail(item) {
+    const id = item.id;
+    const code = item.code;
+    const metaParams = {
+      port: item.meta && item.meta.port ? item.meta.port : 48150,
+      holder: item.meta && item.meta.holder ? item.meta.holder : ""
+    };
+    if (id === "password_accepted") {
+      if (code === "ok") return T("chkDetailAccepted");
+      if (code === "wrong_password") return T("chkDetailRejected");
+      return T("chkDetailWaitingObs");
+    }
+    if (id === "obs_version") {
+      if (code === "unknown") return T("chkDetailWaitingObs");
+      return item.detail || T("chkDetailUnknown");
+    }
+    if (id === "studio_mode") {
+      if (code === "ok") return T("chkDetailOn");
+      if (code === "studio_off") return T("chkDetailOff");
+      return T("chkDetailWaitingObs");
+    }
+    if (id === "fade_selected") {
+      if (code === "unknown") return T("chkDetailWaitingObs");
+      return item.detail || T("chkDetailUnknown");
+    }
+    if (id === "obs_not_elevated") {
+      if (code === "ok") return T("chkDetailNormalUser");
+      if (code === "elevated") return T("chkDetailElevated");
+      if (code === "not_applicable") return T("chkDetailNotApplicable");
+      return T("chkDetailUnknown");
+    }
+    if (id === "window_not_minimised") {
+      if (code === "ok") return T("chkDetailVisible");
+      if (code === "minimised") return T("chkDetailMinimised");
+      return T("chkDetailUnknown");
+    }
+    if (id === "macos_accessibility") {
+      if (code === "ok") return T("chkDetailGranted");
+      if (code === "ax_denied") return T("chkDetailNotGranted");
+      if (code === "not_applicable") return T("chkDetailNotApplicable");
+      return T("chkDetailUnknown");
+    }
+    if (id === "midi_fadester" || id === "visual_sidechain") {
+      if (code === "missing") return T("chkDetailOptionalMissing");
+      if (code === "unknown") return T("chkDetailWaitingObs");
+      return item.detail || T("chkDetailUnknown");
+    }
+    if (id === "playlister") {
+      if (code === "present") return T("chkDetailPlPresent");
+      if (code === "missing") return T("chkDetailPlMissing");
+      return T("chkDetailVersionUnknown");
+    }
+    if (id === "vjster_port_holder") {
+      if (code === "port_free") return T("chkDetailPortFree", metaParams);
+      if (code === "port_self") return T("chkDetailPortSelf", metaParams);
+      if (code === "port_other") return T("chkDetailPortOther", metaParams);
+      if (code === "port_unknown_holder") return T("chkDetailPortInUse", metaParams);
+    }
+    return item.detail || "";
+  }
+
+  function checklistItemFix(item) {
+    const code = item.code;
+    const metaParams = {
+      port: item.meta && item.meta.port ? item.meta.port : 48150,
+      holder: item.meta && item.meta.holder ? item.meta.holder : ""
+    };
+    if (code === "unreachable") return T("chkFixReachable");
+    if (code === "wrong_password") return T("chkFixPassword");
+    if (code === "not_obs_33") return T("chkFixObsVersion");
+    if (code === "studio_off") return T("chkFixStudioMode");
+    if (code === "not_fade") return T("chkFixFade");
+    if (code === "elevated") return T("chkFixElevated");
+    if (code === "minimised") return T("chkFixMinimised");
+    if (code === "ax_denied") return T("chkFixMacAx");
+    if (item.id === "midi_fadester" && code === "missing") return T("chkFixMfMissing");
+    if (item.id === "midi_fadester" && code === "too_old") return T("chkFixMfOld");
+    if (item.id === "visual_sidechain" && code === "missing") return T("chkFixVsMissing");
+    if (item.id === "visual_sidechain" && code === "too_old") return T("chkFixVsOld");
+    if (item.id === "playlister" && code === "missing") return T("chkFixPlMissing");
+    if (code === "port_other") return T("chkFixPortOther", metaParams);
+    if (code === "port_unknown_holder") return T("chkFixPortUnknown", metaParams);
+    return item.fix || "";
+  }
+
+  function updateObsSavedConfigPreview(state) {
+    const preview = state && state.obsSavedConfigPreview;
+    const banner = $("direct-obs-saved-preview");
+    const applyRow = $("direct-obs-saved-apply-row");
+    const readObs = $("direct-conn-read-obs");
+    const hostHint = $("direct-obs-saved-hint");
+    const hostEl = $("direct-conn-host");
+    const hostVal = ((hostEl ? hostEl.value : "") || (state && state.connection && state.connection.host) || "127.0.0.1").trim().toLowerCase();
+    const local = hostVal === "" || hostVal === "127.0.0.1" || hostVal === "localhost" || hostVal === "::1" || hostVal === "[::1]";
+    if (readObs) readObs.disabled = !local;
+    if (hostHint) {
+      hostHint.textContent = local ? "" : T("obsSavedNonLocal");
+      hostHint.style.display = local ? "none" : "";
+    }
+    if (!preview) {
+      setBanner(banner, "");
+      if (applyRow) applyRow.style.display = "none";
+      return;
+    }
+    const previewParams = {
+      source: preview.sourceRelPath || "obs-studio/plugin_config/obs-websocket/config.json",
+      port: preview.serverPort || 4455
+    };
+    let text = "";
+    let kind = "info";
+    let canApply = false;
+    if (preview.ok) {
+      text = preview.serverEnabled === false ? T("obsSavedServerOff", previewParams) : T("obsSavedFound", previewParams);
+      kind = preview.serverEnabled === false ? "warn" : "ok";
+      canApply = true;
+    } else if (preview.reason === "no_password" && preview.authRequired === false && preview.serverPort) {
+      text = T("obsSavedAuthOff", previewParams);
+      kind = "ok";
+      canApply = true;
+    } else if (preview.reason === "no_password") {
+      text = T("obsSavedNoPassword", previewParams);
+      kind = "warn";
+    } else if (preview.reason === "missing_file") {
+      text = T("obsSavedMissing", previewParams);
+      kind = "warn";
+    } else if (preview.reason === "non_local") {
+      text = T("obsSavedNonLocal");
+      kind = "warn";
+    } else {
+      text = T("obsSavedInvalid", previewParams);
+      kind = "warn";
+    }
+    setBanner(banner, text, kind);
+    if (applyRow) applyRow.style.display = canApply ? "" : "none";
+  }
+
+  function updateSetupChecklist(state) {
+    const list = $("direct-checklist-list");
+    if (!list) return;
+    const report = state && state.setupChecklist;
+    list.innerHTML = "";
+    if (!report || !Array.isArray(report.items)) {
+      const waiting = document.createElement("p");
+      waiting.className = "muted";
+      waiting.textContent = T("chkWaiting");
+      list.appendChild(waiting);
+      return;
+    }
+    report.items.forEach(function (item) {
+      const row = document.createElement("div");
+      row.className = "chk-row";
+      const dot = document.createElement("span");
+      dot.className = "chk-dot chk-" + (item.state || "unknown");
+      row.appendChild(dot);
+      const body = document.createElement("div");
+      body.className = "chk-body";
+      const head = document.createElement("div");
+      head.className = "chk-head";
+      const title = document.createElement("span");
+      title.className = "chk-title";
+      title.textContent = checklistItemTitle(item.id);
+      const detail = document.createElement("span");
+      detail.className = "chk-detail";
+      detail.textContent = checklistItemDetail(item);
+      head.appendChild(title);
+      head.appendChild(detail);
+      body.appendChild(head);
+      const fixText = checklistItemFix(item);
+      if (fixText && item.state !== "ok" && item.state !== "not_applicable") {
+        const fix = document.createElement("div");
+        fix.className = "chk-fix";
+        fix.textContent = fixText;
+        body.appendChild(fix);
+      }
+      row.appendChild(body);
+      list.appendChild(row);
+    });
+  }
+
   function updateConnection(state) {
     const connection = state.connection || {};
     const status = state.status || {};
@@ -308,6 +544,8 @@
     fillSelect(picker, layouts.map(function (layout) { return { value: layout.slug, text: layout.name }; }), selected, T("layoutChoose"));
     updateLayoutButton();
     updateStudioSetup();
+    updateObsSavedConfigPreview(state);
+    updateSetupChecklist(state);
   }
 
   /**
@@ -430,6 +668,7 @@
         }
         if (message.event === "sendToPropertyInspector" && message.payload && message.payload.event === "directTestDone") {
           endConnectionTest();
+          sendToPlugin({ event: "directRunChecklist" });
         }
         if (message.event === "sendToPropertyInspector" && message.payload && message.payload.event === "directSetupResult") {
           layoutBusy = false;

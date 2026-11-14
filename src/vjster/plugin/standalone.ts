@@ -3,6 +3,7 @@
 // the seven VJster actions around one shared hub, the plugin-wide settings,
 // and the link status the settings page shows.
 
+import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import streamDeck from "@elgato/streamdeck";
@@ -12,7 +13,7 @@ import { PinAction, QualityDialAction, QualityPresetAction, SpeedDialAction, Spe
 import { GlobalSaver, repairPageWrite } from "./global-sync.js";
 import { Hub } from "./hub.js";
 import { DeckLanguage, normalizeChoice } from "./language.js";
-import { newObsToken } from "./link-server.js";
+import { newObsToken, probeVjsterPortHolder, type VjsterLinkIdentity } from "./link-server.js";
 import { ObsKeepAlive } from "./obs-keepalive.js";
 import { loadObsPage, obsPageAddress, videoIdFrom } from "./obs-page.js";
 import { globalSettings, type GlobalSettings } from "./settings.js";
@@ -32,8 +33,25 @@ const START_READ_MS = Number(process.env.VJSTER_START_READ_MS) || 5000;
 let startupDone = false;
 /** Stream Deck sent settings by itself; a late start-up answer must not undo them. */
 let settingsSent = false;
+function resolveLinkIdentity(): VjsterLinkIdentity {
+  const inSuite = Boolean(process.env.SUITE_PARENT_PID);
+  const manifestPath = inSuite ? join(process.cwd(), "..", "manifest.json") : join(process.cwd(), "manifest.json");
+  try {
+    const raw = JSON.parse(readFileSync(manifestPath, "utf8")) as Record<string, unknown>;
+    const product = typeof raw.Name === "string" && raw.Name.trim() ? raw.Name.trim() : (inSuite ? "Fadester for OBS" : "VJster");
+    const rawVersion = typeof raw.Version === "string" ? raw.Version.trim() : "";
+    // Four-part Stream Deck manifest versions such as 0.11.0.0 display cleanly as 0.11.0.
+    const version = rawVersion.replace(/^(\d+\.\d+\.\d+)\.0$/, "$1") || "0.0.0";
+    return { product, version };
+  } catch {
+    return { product: inSuite ? "Fadester for OBS" : "VJster", version: "0.0.0" };
+  }
+}
+
+const linkIdentity = resolveLinkIdentity();
+
 let current: GlobalSettings = globalSettings({});
-const hub = new Hub({ port: DEFAULT_LINK_PORT, log, pages });
+const hub = new Hub({ port: DEFAULT_LINK_PORT, log, pages, identity: linkIdentity });
 
 // The deck words (R-I18N-1, R-LANG-1..5): VJster reads its own <lang>.json files from the plugin folder (Stream Deck
 // starts the plugin there), in Stream Deck's language until the stored Language choice is applied at connect. The
@@ -55,7 +73,7 @@ async function apply(settings: GlobalSettings): Promise<void> {
   current = settings;
   // A changed language redraws every key and dial (the actions listen to deck) and re-words an open settings page.
   if (deck.apply(settings.languageRaw)) sendLanguage();
-  await hub.reconfigure({ port: settings.port, allowedExtensionIds: settings.extensionIds, obsToken: settings.obsToken, log, pages });
+  await hub.reconfigure({ port: settings.port, allowedExtensionIds: settings.extensionIds, identity: linkIdentity, obsToken: settings.obsToken, log, pages });
   keepAlive.set(settings.obsAlwaysOn);
 }
 
@@ -126,18 +144,22 @@ async function setLanguageChoice(raw: unknown): Promise<void> {
 }
 
 /** The link's status for the settings page, after the language its words are in. */
-function sendStatus(): void {
+async function sendStatus(): Promise<void> {
   sendLanguage();
+  const port = current.port;
+  const portInUse = hub.portInUse;
+  const portHolder = portInUse ? await probeVjsterPortHolder(port) : null;
   const browser = hub.view("browser");
   const obs = hub.view("obs");
   void streamDeck.ui.sendToPropertyInspector({
     event: "status",
-    port: current.port,
+    port,
     extensionIds: [...current.extensionIds],
     badIds: current.extensionIds.filter((id) => !/^[a-p]{32}$/.test(id)).length,
     browser: browser.status,
     obs: obs.status,
-    portInUse: hub.portInUse,
+    portInUse,
+    portHolder: portHolder ? { product: portHolder.product, version: portHolder.version, port: portHolder.port } : null,
     obsPage: pages.size > 0,
     obsAlwaysOn: current.obsAlwaysOn,
     ...obsAddress(null)
@@ -145,12 +167,14 @@ function sendStatus(): void {
 }
 
 // Stream Deck drops messages to a settings page that has not appeared yet, so say it again when it does.
-streamDeck.ui.onDidAppear(() => sendStatus());
+streamDeck.ui.onDidAppear(() => {
+  void sendStatus();
+});
 
 /** The settings page asks for the link's status and for the OBS page address. */
 streamDeck.ui.onSendToPlugin<JsonObject>((ev) => {
   const message = ev.payload;
-  if (message.event === "status") sendStatus();
+  if (message.event === "status") void sendStatus();
   if (message.event === "setLanguage") void setLanguageChoice(message.choice);
   if (message.event === "obs-address") {
     void streamDeck.ui.sendToPropertyInspector({ event: "obs-address", ...obsAddress(message.input) });

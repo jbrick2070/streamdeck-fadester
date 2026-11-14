@@ -102,6 +102,7 @@
       "statusConnected": "Chrome-Erweiterung verbunden",
       "statusWaiting": "Keine Chrome-Erweiterung verbunden. Chrome mit der VJster-Erweiterung öffnen. Der Port muss hier und in den Optionen der Erweiterung gleich sein.",
       "statusPortInUse": "Port {port} ist belegt. Vielleicht läuft schon ein anderes Programm mit VJster: Fadester for OBS, das VJster-Plugin oder Fadester Companion. Nur eines laufen lassen.",
+      "statusPortInUseHeld": "VJster-Verbindung wird von {holder} gehalten. Programm schließen oder VJster dort ausschalten.",
       "noValidId": "Kein Eintrag ist eine Chrome-Erweiterungs-ID: keine Erweiterung kann sich verbinden",
       "badIdOne": "{n} Eintrag ignoriert: keine Chrome-Erweiterungs-ID",
       "badIdMany": "{n} Einträge ignoriert: keine Chrome-Erweiterungs-IDs",

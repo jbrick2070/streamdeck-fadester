@@ -177,10 +177,10 @@ export class TapeDeckInstanceController {
     const caption = customCaption("tapeDeck", this.settings);
     const title = caption || this.defaultTitle(sampled);
     const subtitle = this.subtitleFor(sampled);
-    const problemText = this.lastError
-      ? wordText(this.lastError, translate)
-      : sampled.deckCommandUnsupported
-        ? t("tdNeedsUpdate")
+    const problemText = sampled.deckCommandUnsupported
+      ? t("tdNeedsUpdate")
+      : this.lastError
+        ? wordText(this.lastError, translate)
         : "";
     const input = {
       state: sampled.state,

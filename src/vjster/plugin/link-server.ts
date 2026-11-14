@@ -16,7 +16,7 @@
 // Anything else gets a plain HTTP 403 and no WebSocket.
 
 import { randomBytes, timingSafeEqual } from "node:crypto";
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import { createServer, request as httpRequest, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import type { Duplex } from "node:stream";
 import { WebSocket, WebSocketServer, type RawData } from "ws";
@@ -72,6 +72,21 @@ const realClock: LinkClock = {
   clearInterval: (h) => clearInterval(h as ReturnType<typeof setInterval>)
 };
 
+export interface VjsterLinkIdentity {
+  readonly product: string;
+  readonly version: string;
+}
+
+export interface VjsterPortHolder {
+  readonly product: string;
+  readonly version: string;
+  readonly port: number;
+}
+
+export type VjsterPortProbeResult =
+  | { readonly state: "free" }
+  | { readonly state: "held"; readonly holder: VjsterPortHolder | null };
+
 export interface LinkServerOptions {
   port?: number;
   /** Extension ids allowed to connect; empty or absent allows any extension. */
@@ -84,6 +99,8 @@ export interface LinkServerOptions {
   clock?: LinkClock;
   /** Files handed out over plain HTTP by path, such as the OBS page (Phase 2); everything else gets 426. */
   pages?: ReadonlyMap<string, ServedFile>;
+  /** Product and version reported on `GET /whoami` (P1-5; never carries tokens, ids or paths). */
+  identity?: VjsterLinkIdentity;
 }
 
 /** A file the server hands out over plain HTTP. */
@@ -180,6 +197,7 @@ export class LinkServer {
   private readonly listeners = new Set<(event: LinkEvent) => void>();
   private readonly peers = new Map<Target, Peer>();
   private readonly pages: ReadonlyMap<string, ServedFile>;
+  private readonly identity: VjsterLinkIdentity;
   private http: Server | null = null;
   private wss: WebSocketServer | null = null;
   private pingTimer: unknown = null;
@@ -197,6 +215,12 @@ export class LinkServer {
     this.log = options.log ?? silentLog;
     this.clock = options.clock ?? realClock;
     this.pages = options.pages ?? new Map();
+    const product = options.identity?.product?.trim();
+    const version = options.identity?.version?.trim();
+    this.identity = {
+      product: product && product.length > 0 ? product : "VJster",
+      version: version && version.length > 0 ? version : "0.0.0"
+    };
     // Bad settings would refuse everyone silently; say so once, and fail closed.
     const ids = (options.allowedExtensionIds ?? []).map((id) => id.toLowerCase());
     const goodIds = ids.filter((id) => EXTENSION_ID.test(id));
@@ -361,11 +385,12 @@ export class LinkServer {
     return hostHeaders === 1 && (host === `${LINK_HOST}:${port}` || host === `localhost:${port}`);
   }
 
-  /** Plain HTTP: one of the served pages, else a refusal, since this server otherwise only upgrades. */
+  /** Plain HTTP: `/whoami` or one of the served pages, else a refusal, since this server otherwise only upgrades. */
   private onRequest(req: IncomingMessage, res: ServerResponse): void {
     const path = (req.url ?? "/").split(/[?#]/)[0];
-    const page = this.pages.get(path);
-    if (!page || (req.method !== "GET" && req.method !== "HEAD")) {
+    const isWhoami = path === "/whoami";
+    const page = isWhoami ? undefined : this.pages.get(path);
+    if ((!isWhoami && !page) || (req.method !== "GET" && req.method !== "HEAD")) {
       res.writeHead(426, { "content-type": "text/plain", connection: "close" });
       res.end("upgrade required");
       return;
@@ -376,14 +401,31 @@ export class LinkServer {
       res.end("forbidden");
       return;
     }
+    if (isWhoami) {
+      const port = this.boundPort ?? this.port;
+      const body = JSON.stringify({
+        product: this.identity.product,
+        version: this.identity.version,
+        port
+      });
+      res.writeHead(200, {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "x-content-type-options": "nosniff",
+        "content-length": String(Buffer.byteLength(body, "utf8")),
+        connection: "close"
+      });
+      res.end(req.method === "HEAD" ? undefined : body);
+      return;
+    }
     res.writeHead(200, {
-      "content-type": page.type,
+      "content-type": page!.type,
       "cache-control": "no-store",
       "x-content-type-options": "nosniff",
       "referrer-policy": "strict-origin",
       "content-security-policy": PAGE_CSP
     });
-    res.end(req.method === "HEAD" ? undefined : page.body);
+    res.end(req.method === "HEAD" ? undefined : page!.body);
   }
 
   private onUpgrade(wss: WebSocketServer, req: IncomingMessage, socket: Duplex, head: Buffer): void {
@@ -553,4 +595,93 @@ export class LinkLifecycle {
       if (this.users === 0) void this.server.stop();
     }, this.stopDelayMs);
   }
+}
+
+function parseWhoamiBody(raw: string, expectedPort: number): VjsterPortHolder | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+  const obj = parsed as Record<string, unknown>;
+  const product = typeof obj.product === "string" ? obj.product.trim() : "";
+  const version = typeof obj.version === "string" ? obj.version.trim() : "";
+  const port = typeof obj.port === "number" && Number.isInteger(obj.port) ? obj.port : -1;
+  if (!product || port !== expectedPort) return null;
+  return { product, version, port };
+}
+
+/**
+ * Asks `GET http://127.0.0.1:<port>/whoami` once (on explicit user action only, never in a loop)
+ * to discover whether a local port is free, held by a Fadester/VJster host, or held by another program.
+ */
+export function probeVjsterPortStatus(
+  port: number,
+  timeoutMs = 600
+): Promise<VjsterPortProbeResult> {
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    return Promise.resolve({ state: "free" });
+  }
+  return new Promise<VjsterPortProbeResult>((resolve) => {
+    let settled = false;
+    const finish = (result: VjsterPortProbeResult): void => {
+      if (settled) return;
+      settled = true;
+      resolve(result);
+    };
+    const req = httpRequest(
+      {
+        host: LINK_HOST,
+        port,
+        method: "GET",
+        path: "/whoami",
+        headers: {
+          Host: `${LINK_HOST}:${port}`,
+          Connection: "close"
+        },
+        timeout: timeoutMs
+      },
+      (res) => {
+        const chunks: Buffer[] = [];
+        let total = 0;
+        res.on("data", (chunk: Buffer | string) => {
+          const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, "utf8");
+          total += buf.length;
+          if (total <= 4096) chunks.push(buf);
+        });
+        res.on("end", () => {
+          if (res.statusCode === 200 && total <= 4096) {
+            const body = Buffer.concat(chunks).toString("utf8");
+            finish({ state: "held", holder: parseWhoamiBody(body, port) });
+          } else {
+            finish({ state: "held", holder: null });
+          }
+        });
+        res.on("error", () => finish({ state: "held", holder: null }));
+      }
+    );
+    req.on("timeout", () => {
+      req.destroy();
+      finish({ state: "held", holder: null });
+    });
+    req.on("error", (err: NodeJS.ErrnoException) => {
+      if (err.code === "ECONNREFUSED") {
+        finish({ state: "free" });
+      } else {
+        finish({ state: "held", holder: null });
+      }
+    });
+    req.end();
+  });
+}
+
+/** Asks `GET http://127.0.0.1:<port>/whoami` once and returns `{ product, version, port }` or `null`. */
+export async function probeVjsterPortHolder(
+  port: number,
+  timeoutMs = 600
+): Promise<VjsterPortHolder | null> {
+  const res = await probeVjsterPortStatus(port, timeoutMs);
+  return res.state === "held" ? res.holder : null;
 }

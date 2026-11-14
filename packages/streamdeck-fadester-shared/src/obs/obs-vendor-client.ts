@@ -49,9 +49,28 @@ export class ObsVendorError extends LocalizedError {
  * collection change), while its websocket already takes clients. Such a request may be tried again after a delay.
  */
 export const OBS_NOT_READY = 207;
+export const OBS_VENDOR_NOT_FOUND = 600;
+export const OBS_VENDOR_REQUEST_MISSING = 604;
 
 export function isObsNotReady(err: unknown): boolean {
   return err instanceof ObsVendorError && err.code === OBS_NOT_READY;
+}
+
+/**
+ * obs-websocket code 600 (vendor or hotkey not found) or 604 (request type not
+ * registered on that vendor). Used for missing-plugin and missing-feature gates.
+ */
+export function isObsVendorMissingError(err: unknown): boolean {
+  const code = (err as { code?: unknown } | null)?.code;
+  return code === OBS_VENDOR_NOT_FOUND || code === OBS_VENDOR_REQUEST_MISSING;
+}
+
+/**
+ * obs-websocket code 604: the vendor is loaded in OBS, while the specific vendor
+ * request is missing on this plugin build (feature-detection gate, P1-5).
+ */
+export function isObsVendorRequestMissingError(err: unknown): boolean {
+  return (err as { code?: unknown } | null)?.code === OBS_VENDOR_REQUEST_MISSING;
 }
 
 export interface ObsVendorClientOptions {
@@ -578,10 +597,7 @@ export class ObsVendorClient<
         const vendorErr = err instanceof ObsVendorError ? err : null;
         // 600 or 604: no such vendor or request. NotReady (207) means OBS is still loading, not a missing plugin:
         // it is rethrown below, and syncAfterIdentify tries again.
-        if (
-          vendorErr &&
-          (vendorErr.code === 600 || vendorErr.code === 604)
-        ) {
+        if (vendorErr && isObsVendorMissingError(vendorErr)) {
           this.haltedReason = "missing_plugin";
           this.clearReconnectTimer();
           this.setStatus(

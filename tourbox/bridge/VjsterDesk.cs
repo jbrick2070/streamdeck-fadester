@@ -45,7 +45,13 @@ internal sealed class VjsterDesk(VjsterLink link, double fastSpeed = 2.0, double
     public async Task<string> Dispatch(string id)
     {
         if (!Actions.Contains(id)) throw new ArgumentException("Unknown VJster action: " + id);
-        if (!link.Running) return $"VJster: the link is not running (port {link.Port} is in use).";
+        if (!link.Running)
+        {
+            var holder = await VjsterLink.ProbePortHolderAsync(link.Port);
+            return holder is not null
+                ? $"VJster link is held by {holder.DisplayName}. Close it or turn off VJster there."
+                : $"VJster: the link is not running (port {link.Port} is in use).";
+        }
         string[] candidates = this.targetChoice switch
         {
             "obs" => ["obs"],
@@ -173,13 +179,22 @@ internal sealed class VjsterHost : IAsyncDisposable
     async Task Bind(CancellationToken stop)
     {
         string? last = null;
+        bool probedHolder = false;
+        VjsterPortHolder? cachedHolder = null;
         void Once(string message) { if (message != last) { last = message; log(message); } }
         while (!stop.IsCancellationRequested)
         {
             try { await Link.StartAsync(); return; }
             catch (VjsterPortInUseException e)
             {
-                Once($"VJster port {e.Port} is in use, probably by the VJster actions in your Stream Deck or OpenDeck software. Remove them from the deck, or choose another port here and on the extension's options page. Trying again every 30 s.");
+                if (!probedHolder)
+                {
+                    probedHolder = true;
+                    cachedHolder = await VjsterLink.ProbePortHolderAsync(e.Port, stop);
+                }
+                Once(cachedHolder is not null
+                    ? $"VJster link is held by {cachedHolder.DisplayName}. Close it or turn off VJster there. Trying again every 30 s."
+                    : $"VJster port {e.Port} is in use, probably by the VJster actions in your Stream Deck or OpenDeck software. Remove them from the deck, or choose another port here and on the extension's options page. Trying again every 30 s.");
             }
             catch (System.Net.Sockets.SocketException e)
             {

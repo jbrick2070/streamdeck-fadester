@@ -102,6 +102,7 @@
       "statusConnected": "Chrome extension connected",
       "statusWaiting": "No Chrome extension is connected. Open Chrome with the VJster extension. The port must be the same here and in the extension's options.",
       "statusPortInUse": "Port {port} is in use. Another program with VJster may be running: Fadester for OBS, the VJster plugin or Fadester Companion. Keep only one.",
+      "statusPortInUseHeld": "VJster link is held by {holder}. Close it or turn off VJster there.",
       "noValidId": "No entry is a Chrome extension id: no extension can connect",
       "badIdOne": "{n} entry ignored: not a Chrome extension id",
       "badIdMany": "{n} entries ignored: not a Chrome extension id",

@@ -11,7 +11,7 @@ internal static class MacDevelopmentHost
 {
     static string Support => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Application Support");
     static string HostDirectory => Path.Combine(Support, "FadesterTourBox");
-    static string ObsConfig => Path.Combine(Support, "obs-studio", "plugin_config", "obs-websocket", "config.json");
+    static string ObsConfig => BridgeConfig.ObsWebsocketConfigPath(isMacOS: true);
     static string? secret;
     static string? obsTokenSecret;
     static void Log(string message)
@@ -240,10 +240,7 @@ internal static class MacDevelopmentHost
         string? supplied = Environment.GetEnvironmentVariable("FADESTER_OBS_PASSWORD");
         if (!string.IsNullOrEmpty(supplied)) { secret = supplied; return await ObsConnection.Connect(config, stop); }
         if (!File.Exists(ObsConfig)) throw new InvalidOperationException("No local OBS authentication config found; set FADESTER_OBS_PASSWORD for this process.");
-        var saved = JsonNode.Parse(await File.ReadAllTextAsync(ObsConfig, stop));
-        if ((int?)saved?["server_port"] != config.Port || (bool?)saved?["server_enabled"] != true ||
-            (bool?)saved?["auth_required"] != true || saved?["server_password"]?.GetValue<string>() is not { Length: > 0 } password)
-            throw new InvalidOperationException("Local OBS must be enabled, authenticated, and match the configured loopback port.");
+        string password = BridgeConfig.SavedPassword(await File.ReadAllTextAsync(ObsConfig, stop), config.Port, requireEnabledAndAuth: true);
         secret = password;
         // No child process is launched during this temporary process-local credential scope.
         Environment.SetEnvironmentVariable("FADESTER_OBS_PASSWORD", password);

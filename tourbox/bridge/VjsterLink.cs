@@ -50,6 +50,12 @@ internal sealed class VjsterPortInUseException(int port, string code) : Exceptio
 /** One static file served over plain HTTP on the VJster loopback port (/obs, /obs/player.js). */
 internal sealed record VjsterPage(string Type, byte[] Body);
 
+/** Who holds a VJster loopback port, answered over `GET /whoami` (P1-5; never carries tokens, ids or paths). */
+internal sealed record VjsterPortHolder(string Product, string Version, int Port)
+{
+    public string DisplayName => string.IsNullOrWhiteSpace(Version) ? Product : $"{Product} {Version}";
+}
+
 /** One parsed message from a VJster target, or why it was refused. */
 internal sealed record VjsterParse(bool Ok, string Code, string Reason, string? InReplyTo, string Type, string Target, VjsterState? State, VjsterError? Error, double T)
 {
@@ -201,6 +207,47 @@ internal sealed class VjsterLink : IAsyncDisposable
         if (!TokenPattern.IsMatch(token)) throw new ArgumentException("Invalid OBS page token.", nameof(token));
         string v = VideoIdFrom(videoInput) ?? VideoPlaceholder;
         return $"http://{LinkHost}:{port}{ObsPagePath}?v={v}#token={token}";
+    }
+
+    /** Asks `GET http://127.0.0.1:<port>/whoami` once (never in a background polling loop) and returns `{ Product, Version, Port }` or `null`. */
+    public static async Task<VjsterPortHolder?> ProbePortHolderAsync(int port, CancellationToken stop = default, int timeoutMs = 600)
+    {
+        if (port is < 1 or > 65535) return null;
+        try
+        {
+            using var client = new TcpClient { NoDelay = true };
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(stop);
+            timeout.CancelAfter(timeoutMs);
+            await client.ConnectAsync(IPAddress.Loopback, port, timeout.Token);
+            using var stream = client.GetStream();
+            var reqBytes = Encoding.ASCII.GetBytes($"GET /whoami HTTP/1.1\r\nHost: {LinkHost}:{port}\r\nConnection: close\r\n\r\n");
+            await stream.WriteAsync(reqBytes, timeout.Token);
+            await stream.FlushAsync(timeout.Token);
+            var head = await ReadHead(stream, timeout.Token);
+            if (head == null) return null;
+            var (statusLine, _) = head.Value;
+            var statusParts = statusLine.Split(' ', 3);
+            if (statusParts.Length < 2 || statusParts[1] != "200") return null;
+            var bodyBytes = new List<byte>(256);
+            var buf = new byte[256];
+            while (bodyBytes.Count <= 4096)
+            {
+                int n = await stream.ReadAsync(buf, timeout.Token);
+                if (n == 0) break;
+                for (int i = 0; i < n && bodyBytes.Count <= 4096; i++) bodyBytes.Add(buf[i]);
+            }
+            if (bodyBytes.Count is 0 or > 4096) return null;
+            var node = JsonNode.Parse(Encoding.UTF8.GetString(bodyBytes.ToArray())) as JsonObject;
+            string? product = node?["product"]?.GetValue<string>()?.Trim();
+            string version = node?["version"]?.GetValue<string>()?.Trim() ?? "";
+            int? bodyPort = node?["port"] is JsonValue pv && pv.TryGetValue<int>(out var p) ? p : null;
+            if (string.IsNullOrEmpty(product) || bodyPort != port) return null;
+            return new VjsterPortHolder(product, version, port);
+        }
+        catch (Exception e) when (e is IOException or SocketException or OperationCanceledException or ObjectDisposedException or JsonException or InvalidOperationException)
+        {
+            return null;
+        }
     }
 
     static string PeerLabel(string target) => target == "obs" ? "the OBS video page" : "the Chrome extension";
@@ -357,6 +404,40 @@ internal sealed class VjsterLink : IAsyncDisposable
                 && headers.TryGetValue("sec-websocket-version", out var versions) && versions.Count == 1 && versions[0].Trim() == "13";
             if (!upgrade)
             {
+                if ((method == "GET" || method == "HEAD") && path == "/whoami")
+                {
+                    int bound = BoundPort;
+                    if (hosts?.Count != 1 || (hosts[0] != $"{LinkHost}:{bound}" && hosts[0] != $"localhost:{bound}"))
+                    {
+                        await Reply(stream, "403 Forbidden", "forbidden");
+                        CloseHttp(client);
+                        NoteRefusal("host");
+                        return;
+                    }
+                    var whoamiJson = new JsonObject
+                    {
+                        ["product"] = "Fadester Companion",
+                        ["version"] = MixProtocolServer.DefaultProviderVersion,
+                        ["port"] = bound
+                    }.ToJsonString();
+                    var whoamiBody = Encoding.UTF8.GetBytes(whoamiJson);
+                    var whoamiHead = Encoding.ASCII.GetBytes(
+                        $"HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=utf-8\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nConnection: close\r\nContent-Length: {whoamiBody.Length}\r\n\r\n");
+                    if (method == "GET")
+                    {
+                        var payload = new byte[whoamiHead.Length + whoamiBody.Length];
+                        Buffer.BlockCopy(whoamiHead, 0, payload, 0, whoamiHead.Length);
+                        Buffer.BlockCopy(whoamiBody, 0, payload, whoamiHead.Length, whoamiBody.Length);
+                        await stream.WriteAsync(payload, timeout.Token);
+                    }
+                    else
+                    {
+                        await stream.WriteAsync(whoamiHead, timeout.Token);
+                    }
+                    await stream.FlushAsync(timeout.Token);
+                    CloseHttp(client);
+                    return;
+                }
                 if ((method == "GET" || method == "HEAD") && pages.TryGetValue(path, out var page))
                 {
                     int bound = BoundPort;

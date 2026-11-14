@@ -84,9 +84,16 @@ export class Hub {
   }
 
   release(): void {
+    const doRelease = (): void => {
+      this.lifecycle.release();
+      if (this.lifecycle.userCount === 0 && this.retryTimer !== null) {
+        clearTimeout(this.retryTimer);
+        this.retryTimer = null;
+      }
+    };
     const gate = this.readyGate;
-    if (gate) void gate.then(() => this.lifecycle.release());
-    else this.lifecycle.release();
+    if (gate) void gate.then(doRelease);
+    else doRelease();
   }
 
   /** While the port is taken and actions want the link, try again every retryMs (D-11). */
@@ -143,7 +150,13 @@ export class Hub {
 
   private async applyOptions(options: LinkServerOptions): Promise<void> {
     const key = (o: LinkServerOptions) =>
-      JSON.stringify([o.port ?? DEFAULT_LINK_PORT, o.obsToken ?? null, [...(o.allowedExtensionIds ?? [])].sort()]);
+      JSON.stringify([
+        o.port ?? DEFAULT_LINK_PORT,
+        o.obsToken ?? null,
+        [...(o.allowedExtensionIds ?? [])].sort(),
+        o.identity?.product ?? null,
+        o.identity?.version ?? null
+      ]);
     if (key(options) === key(this.options)) return;
     this.options = options;
     const old = this.server;

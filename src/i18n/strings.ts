@@ -123,6 +123,7 @@ const PLUGIN_EN = {
   plOpRestart: "Restart",
   plOpStatus: "Status",
   plMissing: "Playlister missing",
+  plNotInstalled: "Install Playlister",
   plWrongKind: "Not a Playlister",
   plUnsupported: "Update OBS",
   mediaStateNone: "Empty",
@@ -270,9 +271,12 @@ const PLUGIN_EN = {
   infobarNoScene: "—",
   infobarUnavailable: "Unavailable",
   infobarStudioOff: "Studio Mode off",
-  // Midi Fadester dial hold labels
+  // Midi Fadester dial hold labels and feature-detection gates (P1-5)
   holdCleanFx: "HOLD CLEAN FX",
   holdFinish: "HOLD FINISH",
+  mfNeedsUpdate: "Update Midi Fadester",
+  mfNeedsUpdateSentence: "Update Midi Fadester in OBS to use '{request}'.",
+  vsNeedsUpdateSentence: "Update Visual Sidechain in OBS to use '{request}'.",
   // Texts the plugin sends to the property inspectors
   setupErrorStudio: "Press Enable Studio Mode & open current starter layout.",
   setupErrorFallback: "Could not prepare this OBS layout.",

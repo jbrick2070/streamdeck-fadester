@@ -57,6 +57,7 @@
       "statusConnected": "Chrome-extensie verbonden",
       "statusWaiting": "Er is geen Chrome-extensie verbonden. Open Chrome met de VJster-extensie. De poort moet hier en in de opties van de extensie gelijk zijn.",
       "statusPortInUse": "Poort {port} is bezet. Misschien draait er al een ander programma met VJster: Fadester for OBS, de VJster-plug-in of Fadester Companion. Laat er maar één draaien.",
+      "statusPortInUseHeld": "VJster-koppeling is in gebruik door {holder}. Sluit het of zet VJster daar uit.",
       "noValidId": "Geen enkel item is een Chrome-extensie-id: geen extensie kan verbinden",
       "badIdOne": "{n} item genegeerd: geen Chrome-extensie-id",
       "badIdMany": "{n} items genegeerd: geen Chrome-extensie-id's",

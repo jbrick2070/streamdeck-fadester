@@ -22,23 +22,20 @@
 import { EventEmitter } from "node:events";
 import { DirectObsClient, DirectObsError } from "../obs/direct-obs-client.js";
 import { FilterController } from "./filter-controller.js";
+import {
+  OBS_VENDOR_NOT_FOUND,
+  isObsVendorMissingError
+} from "../../packages/streamdeck-fadester-shared/src/obs/obs-vendor-client.js";
 import { ownText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
 
 export const VS_VENDOR_NAME = "visual-sidechain";
 export const VS_PANIC_HOTKEY = "visual_sidechain_panic";
 export const VS_RESTORE_HOTKEY = "visual_sidechain_restore";
-const NOT_FOUND_CODE = 600;
-const INVALID_RESOURCE_TYPE_CODE = 604;
 
 interface VisualSafetyReply {
   api_version?: number;
   panic?: boolean;
   since_ms?: number;
-}
-
-function isMissingVendorOrRequest(error: unknown): boolean {
-  const code = (error as { code?: unknown } | null)?.code;
-  return code === NOT_FOUND_CODE || code === INVALID_RESOURCE_TYPE_CODE;
 }
 
 function readSinceMs(value: unknown): number {
@@ -122,7 +119,7 @@ export class VisualSafety extends EventEmitter {
       }
     } catch (error) {
       if (gen !== this.connectionGen) return;
-      if (isMissingVendorOrRequest(error) && this.mode === "unknown") {
+      if (isObsVendorMissingError(error) && this.mode === "unknown") {
         this.mode = "legacy";
       }
     }
@@ -146,7 +143,7 @@ export class VisualSafety extends EventEmitter {
           this.setState(reply.panic !== false, reply.panic !== false ? sinceMs : 0);
           return;
         } catch (error) {
-          if (!isMissingVendorOrRequest(error)) {
+          if (!isObsVendorMissingError(error)) {
             throw this.failure(error, panic);
           }
           this.mode = "legacy";
@@ -176,7 +173,7 @@ export class VisualSafety extends EventEmitter {
         }
         return;
       } catch (error) {
-        if (!isMissingVendorOrRequest(error)) {
+        if (!isObsVendorMissingError(error)) {
           throw this.failure(error, panics);
         }
         this.mode = "legacy";
@@ -195,9 +192,9 @@ export class VisualSafety extends EventEmitter {
    * (unless a newer Panic went out meanwhile); anything else keeps the latch.
    */
   private failure(error: unknown, panics: number): unknown {
-    if ((error as { code?: unknown }).code !== NOT_FOUND_CODE) return error;
+    if ((error as { code?: unknown }).code !== OBS_VENDOR_NOT_FOUND) return error;
     if (this.panics === panics) this.setState(false, 0);
-    return new DirectObsError(ownText("vpNotLoaded"), NOT_FOUND_CODE);
+    return new DirectObsError(ownText("vpNotLoaded"), OBS_VENDOR_NOT_FOUND);
   }
 
   private setState(latched: boolean, sinceMs: number): void {

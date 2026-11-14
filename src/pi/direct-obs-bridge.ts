@@ -3,6 +3,20 @@ import { DirectObsClient, DirectObsError } from "../obs/direct-obs-client.js";
 import { resolveAutomaticInputName } from "../obs/automatic-targets.js";
 import { LayerController, LayerSettings } from "../control/layer-controller.js";
 import type { TapeDecks } from "../control/tape-decks.js";
+import type { VisualSignals } from "../control/visual-signals.js";
+import {
+  readObsWebsocketConfig,
+  toObsWebsocketConfigPreview,
+  type ObsWebsocketConfigPreview,
+  type ObsWebsocketConfigReadResult,
+  type ReadObsWebsocketConfigOptions
+} from "../../packages/streamdeck-fadester-shared/src/obs/obs-websocket-config.js";
+import {
+  evaluateSetupChecklist,
+  type PlaylisterPluginInfo,
+  type SetupChecklistOptions,
+  type SetupChecklistReport
+} from "../obs/setup-checklist.js";
 import { READY_LAYOUTS, readyLayoutName } from "../types/layouts.js";
 import { LocalText, errorLocalText, errorText, ownText, wordText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
 import { statusCellReason, statusSentence } from "../../packages/streamdeck-fadester-shared/src/status-text.js";
@@ -123,6 +137,12 @@ export interface DirectPiTransport {
   activateLayout?(slug: string): Promise<void>;
   /** The Language setting and the language the deck draws in (PLAN.md 11.1). */
   getLanguage?(): LanguageState;
+  /** Configured VJster link port for the setup checklist probe (defaults to 48150). */
+  getVjsterPort?(): number | undefined;
+  /** Optional overrides for deterministic setup-checklist tests. */
+  checklistOptions?: SetupChecklistOptions;
+  /** Optional override for reading OBS's saved obs-websocket config in fixture tests. */
+  readObsSavedConfig?: (options?: ReadObsWebsocketConfigOptions) => ObsWebsocketConfigReadResult;
 }
 
 /**
@@ -138,11 +158,21 @@ export class DirectObsPropertyInspectorBridge {
    * the status "connected"), and a list read across a reset is dropped.
    */
   private filterEpoch = 0;
+  /** Last read OBS WebSocket config kept in plugin process memory only (never sent to the page). */
+  private pendingObsSavedConfig: ObsWebsocketConfigReadResult | null = null;
+  /** Redacted preview of what was read from OBS's local config file. */
+  private obsSavedConfigPreview: ObsWebsocketConfigPreview | null = null;
+  /** Monotonic counter for one-shot setup checklist runs. */
+  private checklistSeq = 0;
+  /** Latest one-shot setup checklist report. */
+  private lastChecklist: SetupChecklistReport | null = null;
+
   public constructor(
     private readonly client: DirectObsClient,
     private readonly transport: DirectPiTransport,
     private readonly layers?: LayerController,
-    private readonly tapeDecks?: TapeDecks
+    private readonly tapeDecks?: TapeDecks,
+    private readonly visualSignals?: VisualSignals
   ) {
     client.on("statusChanged", () => this.broadcast());
     client.on("directStateChanged", () => this.broadcast());
@@ -155,6 +185,7 @@ export class DirectObsPropertyInspectorBridge {
     });
     layers?.on("changed", () => this.broadcast());
     tapeDecks?.on("changed", () => this.broadcast());
+    visualSignals?.on("stateChanged", () => this.broadcast());
   }
 
   public broadcast(): void {
@@ -162,6 +193,12 @@ export class DirectObsPropertyInspectorBridge {
     const settings = this.client.getSettings();
     const catalog = this.client.getCatalog();
     const audioInputs = Object.keys(catalog.inputVolumes);
+    const vsSnap = this.visualSignals?.getSnapshot();
+    const playlisterPlugin: PlaylisterPluginInfo = this.lastChecklist?.playlisterPlugin ?? {
+      status: "unknown",
+      inputKind: "obs_playlister_source",
+      version: "version unknown"
+    };
     this.transport.sendToPropertyInspector({
       event: "directObsState",
       // Worded here, in the plugin's language; the inspectors compare only `kind`.
@@ -176,6 +213,9 @@ export class DirectObsPropertyInspectorBridge {
         port: settings.port,
         passwordSet: settings.password.length > 0
       },
+      obsSavedConfigPreview: this.obsSavedConfigPreview,
+      setupChecklist: this.lastChecklist,
+      playlisterPlugin,
       catalog,
       // Whether OBS's own slider follows the T-bar dial, or why not (the OBS Fader inspector's status line).
       nativeTbar: this.client.getNativeTbarStatus?.() ?? "off",
@@ -191,6 +231,16 @@ export class DirectObsPropertyInspectorBridge {
       layerScenes: Object.fromEntries(Object.entries(this.layers?.getCatalog() ?? {}).map(([name, scene]) =>
         [name, { ...scene, error: wordText(scene.error, translate) }])),
       ...(this.tapeDecks ? { tapeDecks: this.tapeDecks.getInspectorState() } : {}),
+      ...(vsSnap
+        ? {
+            visualSignals: {
+              availability: vsSnap.availability,
+              version: vsSnap.version,
+              supportsTempoGrid: vsSnap.supportsTempoGrid,
+              needsTempoUpdate: vsSnap.needsTempoUpdate
+            }
+          }
+        : {}),
       openDeckStarter: this.transport.getOpenDeckStarter?.(),
       layouts: READY_LAYOUTS.filter((layout) => layout.deviceType === this.transport.getDeviceType?.())
         .map((layout) => ({ ...layout, name: readyLayoutName(layout) })),
@@ -206,6 +256,26 @@ export class DirectObsPropertyInspectorBridge {
         this.broadcast();
         void this.client.refreshNativeTbar?.(); // an opened inspector reads OBS's slider afresh
         void this.tapeDecks?.refreshDecks();
+        void this.runChecklist();
+        return true;
+      case "directRunChecklist":
+        await this.runChecklist();
+        return true;
+      case "directReadObsSavedConfig": {
+        const current = this.client.getSettings();
+        const host =
+          typeof msg.host === "string" && msg.host.trim()
+            ? msg.host.trim()
+            : current.host;
+        const reader = this.transport.readObsSavedConfig ?? readObsWebsocketConfig;
+        const read = reader({ host });
+        this.pendingObsSavedConfig = read;
+        this.obsSavedConfigPreview = toObsWebsocketConfigPreview(read);
+        this.broadcast();
+        return true;
+      }
+      case "directApplyObsSavedConfig":
+        await this.queueConnection(() => this.applyObsSavedConfig());
         return true;
       case "directUpdateGlobalSettings":
         await this.queueConnection(() => this.updateGlobalSettings(msg));
@@ -305,6 +375,47 @@ export class DirectObsPropertyInspectorBridge {
     });
   }
 
+  private async runChecklist(): Promise<void> {
+    const seq = ++this.checklistSeq;
+    const vjsterPort = this.transport.getVjsterPort?.() ?? 48150;
+    const report = await evaluateSetupChecklist(this.client, {
+      ...this.transport.checklistOptions,
+      vjsterPort: this.transport.checklistOptions?.vjsterPort ?? vjsterPort
+    });
+    if (seq !== this.checklistSeq) return;
+    this.lastChecklist = report;
+    this.broadcast();
+  }
+
+  private async applyObsSavedConfig(): Promise<void> {
+    const read = this.pendingObsSavedConfig;
+    if (!read) {
+      this.broadcast();
+      return;
+    }
+    const canApplyPassword = read.ok;
+    const canApplyAuthOff =
+      !read.ok &&
+      read.reason === "no_password" &&
+      read.authRequired === false &&
+      typeof read.serverPort === "number";
+    if (!canApplyPassword && !canApplyAuthOff) {
+      this.broadcast();
+      return;
+    }
+    const current = this.client.getSettings();
+    const next: FadesterGlobalSettings = {
+      host: current.host || DEFAULT_GLOBAL_SETTINGS.host,
+      port: canApplyPassword ? read.serverPort : (read.serverPort ?? current.port),
+      password: canApplyPassword ? read.password : ""
+    };
+    this.pendingObsSavedConfig = null;
+    this.obsSavedConfigPreview = null;
+    await this.transport.persistGlobalSettings(next);
+    this.client.updateSettings(next);
+    await this.testConnection();
+  }
+
   private async updateGlobalSettings(msg: DirectPiIncomingMessage): Promise<void> {
     const current = this.client.getSettings();
     const next: FadesterGlobalSettings = {
@@ -316,6 +427,8 @@ export class DirectObsPropertyInspectorBridge {
       // A password only reaches this bridge if the operator typed it locally.
       password: typeof msg.password === "string" ? msg.password : current.password
     };
+    this.pendingObsSavedConfig = null;
+    this.obsSavedConfigPreview = null;
     await this.transport.persistGlobalSettings(next);
     this.client.updateSettings(next);
     this.broadcast();

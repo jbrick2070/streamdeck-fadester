@@ -27,6 +27,7 @@ internal static class VjsterSelfTests
         await ObsPageLoopback();
         await StopRace();
         await Oversize();
+        await GuidedSetupAsync();
         await Layers();
     }
 
@@ -371,6 +372,76 @@ internal static class VjsterSelfTests
             ms.Write(buffer, 0, n);
         }
         return Encoding.UTF8.GetString(ms.ToArray());
+    }
+
+    static async Task GuidedSetupAsync()
+    {
+        static string Fails(Action run) { try { run(); return ""; } catch (Exception e) { return e.Message; } }
+
+        // 1. Shared obs-websocket config path + strict/standard SavedPassword checks across Windows and macOS:
+        string winPath = BridgeConfig.ObsWebsocketConfigPath(isMacOS: false, appData: Path.Combine("C:", "Users", "Alice", "AppData", "Roaming"));
+        Check(winPath.EndsWith(Path.Combine("Roaming", "obs-studio", "plugin_config", "obs-websocket", "config.json"), StringComparison.Ordinal),
+            "Windows obs-websocket config path under Roaming");
+        string macPath = BridgeConfig.ObsWebsocketConfigPath(isMacOS: true, userProfile: "/Users/carol");
+        Check(macPath.Replace('\\', '/').EndsWith("/Users/carol/Library/Application Support/obs-studio/plugin_config/obs-websocket/config.json", StringComparison.Ordinal),
+            "macOS obs-websocket config path under Library/Application Support");
+
+        const string strictGood = """{"server_port":4455,"server_enabled":true,"auth_required":true,"server_password":"secret-pw"}""";
+        Check(BridgeConfig.SavedPassword(strictGood, 4455, requireEnabledAndAuth: true) == "secret-pw", "strict SavedPassword accepts enabled + auth_required");
+        Check(Fails(() => BridgeConfig.SavedPassword("""{"server_port":4455,"server_enabled":false,"auth_required":true,"server_password":"secret-pw"}""", 4455, requireEnabledAndAuth: true)).Contains("enabled, authenticated"),
+            "strict SavedPassword rejects disabled server");
+        Check(Fails(() => BridgeConfig.SavedPassword("""{"server_port":4455,"server_enabled":true,"auth_required":false,"server_password":"secret-pw"}""", 4455, requireEnabledAndAuth: true)).Contains("enabled, authenticated"),
+            "strict SavedPassword rejects disabled auth");
+
+        // 2. VjsterLink GET /whoami + HEAD /whoami + ProbePortHolderAsync:
+        string secretToken = VjsterLink.NewObsToken();
+        const string pinnedId = "abcdefghijklmnopabcdefghijklmnop";
+        await using var link = new VjsterLink(0, [pinnedId], _ => { }, secretToken);
+        await link.StartAsync();
+        int port = link.BoundPort;
+
+        string whoamiIp = await Raw(port, $"GET /whoami HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\n\r\n");
+        Check(whoamiIp.StartsWith("HTTP/1.1 200 OK\r\n", StringComparison.Ordinal), "GET /whoami 200 on 127.0.0.1");
+        Check(!whoamiIp.Contains("Access-Control-Allow-", StringComparison.OrdinalIgnoreCase), "/whoami carries no CORS headers");
+        Check(!whoamiIp.Contains(secretToken, StringComparison.Ordinal) && !whoamiIp.Contains(pinnedId, StringComparison.Ordinal), "/whoami never leaks tokens or pinned ids");
+        string bodyText = whoamiIp.Split("\r\n\r\n", 2)[1];
+        var bodyObj = JsonNode.Parse(bodyText)!.AsObject();
+        var keys = bodyObj.Select(kv => kv.Key).OrderBy(k => k, StringComparer.Ordinal).ToArray();
+        Check(keys.SequenceEqual(new[] { "port", "product", "version" }), "/whoami returns only product, version, port");
+        Check(bodyObj["product"]!.GetValue<string>() == "Fadester Companion" && bodyObj["port"]!.GetValue<int>() == port, "/whoami identifies Fadester Companion and port");
+
+        string whoamiLocal = await Raw(port, $"GET /whoami HTTP/1.1\r\nHost: localhost:{port}\r\n\r\n");
+        Check(whoamiLocal.StartsWith("HTTP/1.1 200 OK\r\n", StringComparison.Ordinal), "GET /whoami 200 on localhost");
+
+        string whoamiHead = await Raw(port, $"HEAD /whoami HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\n\r\n");
+        Check(whoamiHead.StartsWith("HTTP/1.1 200 OK\r\n", StringComparison.Ordinal) && whoamiHead.Split("\r\n\r\n", 2)[1].Length == 0, "HEAD /whoami omits body");
+
+        Check((await Raw(port, $"GET /whoami HTTP/1.1\r\nHost: evil.example:{port}\r\n\r\n")).StartsWith("HTTP/1.1 403", StringComparison.Ordinal), "/whoami refuses foreign Host");
+        Check((await Raw(port, $"GET /whoami HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nHost: evil.example\r\n\r\n")).StartsWith("HTTP/1.1 403", StringComparison.Ordinal), "/whoami refuses two Host headers");
+        Check((await Raw(port, "GET /whoami HTTP/1.1\r\n\r\n")).StartsWith("HTTP/1.1 403", StringComparison.Ordinal), "/whoami refuses missing Host");
+
+        var holder = await VjsterLink.ProbePortHolderAsync(port);
+        Check(holder is not null && holder.Product == "Fadester Companion" && holder.Port == port && holder.DisplayName.StartsWith("Fadester Companion", StringComparison.Ordinal),
+            "ProbePortHolderAsync names Fadester Companion");
+
+        await link.StopAsync();
+        Check(await VjsterLink.ProbePortHolderAsync(port) is null, "ProbePortHolderAsync returns null when port is free");
+
+        var silent = new TcpListener(System.Net.IPAddress.Loopback, 0);
+        silent.Start();
+        int silentPort = ((System.Net.IPEndPoint)silent.LocalEndpoint).Port;
+        var acceptOne = Task.Run(async () =>
+        {
+            try { using var c = await silent.AcceptTcpClientAsync(); c.Close(); }
+            catch (ObjectDisposedException) { }
+            catch (SocketException) { }
+        });
+        try
+        {
+            Check(await VjsterLink.ProbePortHolderAsync(silentPort, timeoutMs: 400) is null, "ProbePortHolderAsync returns null for non-VJster holder");
+            await acceptOne;
+        }
+        finally { silent.Stop(); }
     }
 
     static async Task Layers()

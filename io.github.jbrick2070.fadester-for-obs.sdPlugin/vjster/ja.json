@@ -102,6 +102,7 @@
       "statusConnected": "Chrome 拡張機能に接続済み",
       "statusWaiting": "Chrome 拡張機能が接続されていません。VJster 拡張機能を入れた Chrome を開いてください。ポートは、ここと拡張機能のオプションで同じにする必要があります。",
       "statusPortInUse": "ポート {port} は使用中です。VJster を含む別のプログラムが動いている可能性があります (Fadester for OBS、VJster プラグイン、Fadester Companion)。1 つだけにしてください。",
+      "statusPortInUseHeld": "VJster リンクは {holder} が使用中です。終了するか、そちらの VJster をオフにしてください。",
       "noValidId": "入力内容に Chrome 拡張機能の ID が 1 つもありません: どの拡張機能も接続できません",
       "badIdOne": "{n} 件を無視しました: Chrome 拡張機能の ID ではありません",
       "badIdMany": "{n} 件を無視しました: Chrome 拡張機能の ID ではありません",

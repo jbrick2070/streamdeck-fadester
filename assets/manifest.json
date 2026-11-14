@@ -132,7 +132,7 @@
       "Name": "OBS Scene Info Bar",
       "UUID": "io.github.jbrick2070.fadester-for-obs.obs-neo-infobar",
       "Icon": "imgs/actions/scene-transition/icon",
-      "Tooltip": "Display OBS connection, live scene, and Studio Mode preview on the Stream Deck Neo Info Bar.",
+      "Tooltip": "Display OBS connection, Program scene, and Studio Mode Preview on the Stream Deck Neo Info Bar.",
       "PropertyInspectorPath": "ui/obs-neo-infobar.html",
       "Controllers": [
         "Neo"
@@ -175,7 +175,7 @@
       "Name": "OBS Fader",
       "UUID": "io.github.jbrick2070.fadester-for-obs.obs-fader",
       "Icon": "imgs/actions/fader/icon",
-      "Tooltip": "Adjust an audio source, or blend the Live scene into Next with the colorful scene mixer.",
+      "Tooltip": "Adjust an audio source, or blend the Program scene into Preview with the colorful scene mixer.",
       "PropertyInspectorPath": "ui/obs-fader-dial.html",
       "Controllers": [
         "Encoder"
@@ -185,7 +185,7 @@
       "Encoder": {
         "layout": "layouts/fader-cell.json",
         "TriggerDescription": {
-          "Rotate": "Adjust audio volume, or blend Live into Next",
+          "Rotate": "Adjust audio volume, or blend Program into Preview",
           "Push": "Run the press action chosen in settings"
         }
       },
@@ -275,7 +275,7 @@
       "Name": "Visual Panic",
       "UUID": "io.github.jbrick2070.fadester-for-obs.visual-panic",
       "Icon": "imgs/actions/visual-panic/icon",
-      "Tooltip": "Visual Sidechain's Panic (instant) and Restore (hold 0.8 s), sent through OBS's own hotkeys. Panic keys show PANIC SENT until Restore.",
+      "Tooltip": "Visual Sidechain's Panic (instant) and Restore visuals (hold 0.8 s), sent through OBS's own hotkeys. Panic keys show PANIC SENT until Restore visuals.",
       "PropertyInspectorPath": "ui/visual-panic.html",
       "Controllers": [
         "Keypad"

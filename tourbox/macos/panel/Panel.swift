@@ -138,7 +138,7 @@ private final class PillActionButton: NSControl {
             backing: .buffered,
             defer: false
         )
-        panel.title = "Fadester · last action"
+        panel.title = "Fadester Companion · last action"
         panel.level = .floating
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
@@ -513,7 +513,7 @@ private final class PillActionButton: NSControl {
         axStatusLabel.font = .systemFont(ofSize: 12, weight: .semibold)
         stack.addArrangedSubview(horizontal([grantAxButton, button("Native helper window…", #selector(permission)), axStatusLabel]))
 
-        heading("3   Try a cue", in: stack)
+        heading("3   Try Preview", in: stack)
         paragraph("Click Save & start controls (or Start in the top bar) and bring OBS to the front. Turn Scroll one step: Preview changes while Program stays put. Turn the Dial to fade smoothly between them.", in: stack)
 
         heading("Optional   VJster: YouTube from TourBox (Chrome & OBS Browser Source)", in: stack)

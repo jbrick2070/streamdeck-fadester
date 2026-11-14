@@ -153,7 +153,7 @@ describe("the T-bar dial recovers by itself", () => {
     const client = await connect(await start());
     pickPreview("Scene Live");
     await vi.waitFor(() => expect(client.getCatalog().currentPreviewScene).toBe("Scene Live"), { timeout: 3000 });
-    await expect(client.nudgeTbar(0.2)).rejects.toThrow("Choose a different Next scene");
+    await expect(client.nudgeTbar(0.2)).rejects.toThrow("Choose a different Preview");
     pickPreview("Scene 3");
     await vi.waitFor(() => expect(client.getCatalog().currentPreviewScene).toBe("Scene 3"), { timeout: 3000 });
     await new Promise((resolve) => setTimeout(resolve, TBAR_SETTLE_MS));

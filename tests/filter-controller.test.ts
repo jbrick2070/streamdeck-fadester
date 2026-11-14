@@ -310,11 +310,11 @@ describe("filter controller", () => {
     await sleep(50);
     const writes = server.filterWriteLog.length;
     const requests = server.filterRequestLog.length;
-    await expect(filters.nudge(mix(sceneUuid), 0.1, 5000)).rejects.toThrow(/Restore first/);
+    await expect(filters.nudge(mix(sceneUuid), 0.1, 5000)).rejects.toThrow(/Restore visuals first/);
     // Refused before any read: nothing goes to OBS for a latched Visual Sidechain filter.
     expect(server.filterRequestLog).toHaveLength(requests);
-    await expect(filters.dropStart(mix(sceneUuid))).rejects.toThrow(/Restore first/);
-    await expect(filters.toggleEnabled(mix(sceneUuid))).rejects.toThrow(/Restore first/);
+    await expect(filters.dropStart(mix(sceneUuid))).rejects.toThrow(/Restore visuals first/);
+    await expect(filters.toggleEnabled(mix(sceneUuid))).rejects.toThrow(/Restore visuals first/);
     expect(filters.getState(mix(sceneUuid)).latched).toBe(true);
     expect(server.directCallLog.filter((call) => call.requestType === "SetSourceFilterEnabled")).toEqual([]);
     expect(server.filterWriteLog).toHaveLength(writes);
@@ -416,11 +416,11 @@ describe("filter controller", () => {
     const toggle = filters.toggleEnabled(mix(sceneUuid));
     await sleep(40);
     filters.setPanicLatched(true);
-    await expect(toggle).rejects.toThrow(/Restore first/);
+    await expect(toggle).rejects.toThrow(/Restore visuals first/);
     expect(server.directCallLog.filter((call) => call.requestType === "SetSourceFilterEnabled")).toEqual([]);
     // Latched before the press: refused before any read.
     const reads = server.filterRequestLog.length;
-    await expect(filters.toggleEnabled(mix(sceneUuid))).rejects.toThrow(/Restore first/);
+    await expect(filters.toggleEnabled(mix(sceneUuid))).rejects.toThrow(/Restore visuals first/);
     expect(server.filterRequestLog).toHaveLength(reads);
   });
 

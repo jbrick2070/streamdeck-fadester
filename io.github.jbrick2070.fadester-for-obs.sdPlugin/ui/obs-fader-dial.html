@@ -17,7 +17,7 @@
       <option value="unconfigured" selected data-i18n="controlChoose">Choose an OBS control</option>
       <option value="input_volume" data-i18n="controlAudio">Audio volume</option>
       <option value="all_inputs" data-i18n="mixAll">All OBS mixer inputs</option>
-      <option value="tbar" data-i18n="controlTbar">Blend Live into Next scene</option>
+      <option value="tbar" data-i18n="controlTbar">Blend Program into Preview</option>
     </select>
   </div>
   <div class="row" id="obs-fader-input-row">
@@ -25,20 +25,20 @@
     <select id="obs-fader-input"></select>
     <button id="obs-fader-refresh" class="btn secondary" type="button" data-i18n="refresh">Refresh</button>
   </div>
-  <p id="obs-fader-tbar-hint" class="muted" style="display:none;">Turn to move from LIVE to NEXT. NEXT is the scene in OBS Preview. This manual transition control (T-bar) needs Studio Mode.</p>
+  <p id="obs-fader-tbar-hint" class="muted" style="display:none;">Turn to move from PROGRAM to PREVIEW. PREVIEW is the scene in OBS Preview. This manual transition control (T-bar) needs Studio Mode.</p>
   <p id="obs-fader-slider-status" class="muted" style="display:none;"></p>
   <p id="obs-fader-midi-tip" class="muted" style="display:none;" data-i18n="tbarMidiFadesterTip">For a smooth fade with no white flash in OBS's window, install Midi Fadester and use its Midi Fadester Fader dial.</p>
   <div id="obs-fader-cycle-row" style="display:none;">
     <div class="row"><label for="obs-fader-cycle" data-i18n="sceneLoop">Scene loop</label><input id="obs-fader-cycle" type="checkbox" /><span class="hint" data-i18n="sceneLoopHint">Queue the next scene after each transition</span></div>
-    <p class="muted" data-i18n="sceneLoopNote">After your fade finishes, the following scene in the OBS scene list becomes NEXT. Wraps to the first scene at the end. You still control every fade with the dial.</p>
+    <p class="muted" data-i18n="sceneLoopNote">After your fade finishes, the following scene in the OBS scene list becomes Preview. Wraps to the first scene at the end. You still control every fade with the dial.</p>
   </div>
   <div class="row"><label for="obs-fader-press" data-i18n="dialPress">Dial press</label><select id="obs-fader-press">
-    <option value="finish_transition" data-i18n="pressFinish">Take Next scene live</option>
+    <option value="finish_transition" data-i18n="pressFinish">Take Preview</option>
     <option value="next_blend" data-i18n="pressNextBlend">Next blend mode on selected source</option>
     <option value="previous_blend" data-i18n="pressPreviousBlend">Previous blend mode on selected source</option>
     <option value="normal_blend" data-i18n="pressNormalBlend">Reset selected source to Normal blend</option>
     <option value="toggle_source" data-i18n="pressToggle">Show / hide selected source</option>
-    <option value="next_blend_and_finish" data-i18n="pressCombined">Next blend mode, then take Next live</option>
+    <option value="next_blend_and_finish" data-i18n="pressCombined">Next blend mode, then take Preview</option>
     <option value="none" data-i18n="pressNone">Do nothing</option>
   </select></div>
   <div id="obs-fader-press-layer-row" style="display:none;">

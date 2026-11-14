@@ -94,7 +94,7 @@ internal static class Program
         // One gain authority per local OBS endpoint, including other Windows login sessions.
         // Retain the handle without thread ownership: awaiting OBS can resume on another thread.
         using var single = new Mutex(false, @"Global\FadesterMixBridge-" + cfg.Port, out bool first);
-        if (!first) throw new InvalidOperationException("Fadester controls are already running for this OBS port. Use the existing panel.");
+        if (!first) throw new InvalidOperationException("Fadester Companion controls are already running for this OBS port. Use the existing window.");
         var input = Channel.CreateBounded<KeyInput>(new BoundedChannelOptions(128) { SingleReader = true, FullMode = BoundedChannelFullMode.Wait });
         // VJster actions go to the Chrome extension, never to OBS, so they are queued whether or not OBS is connected.
         var vjInput = Channel.CreateBounded<KeyInput>(new BoundedChannelOptions(64) { SingleReader = true, FullMode = BoundedChannelFullMode.DropOldest });

@@ -122,7 +122,7 @@
       '<option value="default" data-i18n="accentDefault">Fadester violet</option><option value="brass" data-i18n="accentBrass">Brass</option>',
       '<option value="teal" data-i18n="accentTeal">Teal</option><option value="magenta" data-i18n="accentMagenta">Magenta</option></select></div>',
       // One Language for the whole plugin, kept by the plugin (PLAN.md 11.1); the page only asks for a change.
-      '<h3><span data-i18n="languageHeading">Language</span> <span class="scope" data-i18n="scopeAllControls">all Fadester controls</span></h3>',
+      '<h3><span data-i18n="languageHeading">Language</span> <span class="scope" data-i18n="scopeAllControls">all Fadester for OBS controls</span></h3>',
       '<div class="row"><label for="direct-language" data-i18n="languageHeading">Language</label><select id="direct-language">',
       '<option value="auto" data-i18n="languageAuto">Automatic (Stream Deck\'s language)</option>',
       LANGUAGE_CHOICES.map(function (entry) {
@@ -130,11 +130,11 @@
       }).join(""),
       '</select></div>',
       '<p class="muted" id="direct-language-note" data-i18n="languageNote">Applies to all Fadester for OBS controls. Stream Deck\'s own menus, action list, tooltips and dial hints stay in Stream Deck\'s language.</p>',
-      '<h3><span data-i18n="connHeading">OBS connection</span> <span class="scope" data-i18n="scopeAllControls">all Fadester controls</span></h3>',
+      '<h3><span data-i18n="connHeading">OBS connection</span> <span class="scope" data-i18n="scopeAllControls">all Fadester for OBS controls</span></h3>',
       '<div id="direct-conn-status" class="status-banner status-err" data-i18n="connWaiting">Waiting for OBS…</div>',
-      '<p class="muted" id="direct-conn-hint" data-i18n="connHintOnce">Connect once for every Fadester button and dial.</p>',
+      '<p class="muted" id="direct-conn-hint" data-i18n="connHintOnce">Connect once for every Fadester for OBS button and dial.</p>',
       '<details id="direct-conn-editor" class="editor" open><summary id="direct-conn-summary" data-i18n="connSetupOnce">Set up OBS once</summary>',
-      '<p class="muted" data-i18n="connAppliesAll">These settings apply to all Fadester controls on all your layouts. Enter the OBS password once here.</p>',
+      '<p class="muted" data-i18n="connAppliesAll">These settings apply to all Fadester for OBS controls on all your layouts. Enter the OBS password once here.</p>',
       '<div class="row"><label for="direct-conn-host" data-i18n="host">Host</label><input id="direct-conn-host" type="text" value="127.0.0.1" /></div>',
       '<div class="row"><label for="direct-conn-port" data-i18n="port">Port</label><input id="direct-conn-port" type="number" value="4455" min="1" max="65535" /></div>',
       '<div class="row"><label for="direct-conn-password" data-i18n="password">Password</label><input id="direct-conn-password" type="password" autocomplete="off" placeholder="Enter the OBS password once" data-i18n-placeholder="passwordPlaceholderOnce" /></div>',

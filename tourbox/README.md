@@ -20,13 +20,13 @@ The panel, native preset labels and quick guides are available in English, Germa
 
 ## Connect a TourBox
 
-With a full-size TourBox, the Scroll wheel cues the next scene, the flat Dial drives the T-bar, and the raised Knob rides the speed of the YouTube video in Chrome. Music is on Side + Dial. Press **Tour** for media, overlays, transition settings and capture tools.
+With a full-size TourBox, the Scroll wheel selects the next scene in Preview, the flat Dial drives the T-bar, and the raised Knob rides the speed of the YouTube video in Chrome. Music is on Side + Dial. Press **Tour** for media, overlays, transition settings and capture tools.
 
 1. Open Fadester Companion (step 1 above).
 2. Open OBS. In TourBox Console, use **Import** beside **Preset List** to add **OBS Fadester for TourBox.tb**. The panel’s **Import into TourBox Console** button copies the matching language’s preset path and opens Console; paste it into Console’s import window. Do not double-click the `.tb` file, because Windows has no app for it. Import one language only. Enable **Auto Switch** and link **OBS Fadester for TourBox** to the running OBS application. To change languages or update, select this existing preset and use its own menu’s **Import** to replace its contents.
 3. In OBS, enable **Tools → WebSocket Server Settings** with authentication. Use **Studio Mode**, select **Fade**, and keep the main OBS window and its white T-bar visible. The manual fader targets OBS Studio **33.x**.
-4. In the Fadester panel, click **Read scenes and inputs from OBS**. If your server uses a different port, set the **OBS port** (OBS usually uses 4455; while VJster is on, the OBS port cannot be the same as the VJster port). Leave **OBS password (optional)** empty: the panel uses the password OBS saved on this PC. Type one only if the connection fails; it is not saved.
-5. Select **OBS Fadester for TourBox**, click **Save & start controls**, and bring OBS to the front. Keep the Fadester panel running.
+4. In Fadester Companion, click **Read scenes and inputs from OBS**. If your server uses a different port, set the **OBS port** (OBS usually uses 4455; while VJster is on, the OBS port cannot be the same as the VJster port). Leave **OBS password (optional)** empty: the panel uses the password OBS saved on this PC. Type one only if the connection fails; it is not saved.
+5. Select **OBS Fadester for TourBox**, click **Save & start controls**, and bring OBS to the front. Keep Fadester Companion running.
 
 ## Rehearse the first throw
 
@@ -40,16 +40,16 @@ From rest, **Tall** takes Preview using the selected transition. **Top** cuts di
 
 **Fade the whole mix.** Under Setup, enable **All OBS mixer inputs**, then save and start controls. Hold **Side** and turn the **raised Knob** to lower or raise the group; the Tour menu reads its level. Press **Tour** and choose **Fade whole mix to silence** or **Restore whole mix** for a timed fade. The default is 600 ms and each turn steps 3 dB. Music duck/restore and the Content control remain available separately.
 
-The group scales each public, non-composite OBS audio input in this scene collection from its own starting volume. New eligible inputs join while it is active. Muted inputs stay muted. Editing a source’s level by hand releases that input from the current group until the next fade cycle. Restore brings the untouched faders back to their original levels. Stopping the companion does not raise the sound: restart with the same config and select Restore. This controls the input faders feeding every track and monitor, not a separate post-processing or stream-only master. A newly created source can be heard briefly before it is discovered; use OBS mute when adding a source that must enter silently.
+The group scales each public, non-composite OBS audio input in this scene collection from its own starting volume. New eligible inputs join while it is active. Muted inputs stay muted. Editing a source’s level by hand releases that input from the current group until the next fade cycle. **Restore mix** (**Restore whole mix** in the Tour menu) brings the untouched faders back to their original levels. Stopping Fadester Companion does not raise the sound: restart with the same config and select **Restore whole mix**. This controls the input faders feeding every track and monitor, not a separate post-processing or stream-only master. A newly created source can be heard briefly before it is discovered; use OBS mute when adding a source that must enter silently.
 
-Stream Deck, OpenDeck and MIDI users can tick **Use only Stream Deck, OpenDeck or MIDI (no TourBox, no game controller, no VJster)** in Setup and start the companion without TourBox hardware or global shortcuts. In this mode the game controller and VJster are off too. Use a compatible plugin build with the all-inputs target. All controllers share one gain setting through the authenticated local OBS connection.
+Stream Deck, OpenDeck and MIDI users can tick **Use only Stream Deck, OpenDeck or MIDI (no TourBox, no game controller, no VJster)** in Setup and start Fadester Companion without TourBox hardware or global shortcuts. In this mode the game controller and VJster are off too. Use a compatible **Fadester for OBS** build with the **All OBS mixer inputs** target. All controllers share one gain setting through the authenticated local OBS connection.
 
 | Control | Action |
 | --- | --- |
 | Raised Knob | Turn to change the YouTube video’s speed (needs the VJster extension). Tap to read the video. Press and turn for 0.05 steps. |
 | Flat Dial | Turn for a manual blend. Tap to read the current fade. Press and turn for quarter steps. |
-| Scroll wheel | Turn to cue Preview. Tap for Program and Preview names. Press and turn for the video’s quality. |
-| D-pad | Cue assigned scenes. Up, Right, Down and Left correspond to anchors 1–4. |
+| Scroll wheel | Turn to select Preview. Tap for Program and Preview names. Press and turn for the video’s quality. |
+| D-pad | Put assigned scenes in Preview. Up, Right, Down and Left correspond to anchors 1–4. |
 | C1 / C2 | Duck music / restore the saved bed level. |
 | Tall / Short | Take Preview / undo the last supported audio adjustment. |
 | Top | Cut Preview live. |
@@ -83,7 +83,7 @@ Install the free **VJster** extension in Chrome from the [Chrome Web Store](http
 
 In **Assignments**, set **Layer 1** and **Layer 2** to two items in your mix scene, each appearing once in it. Opacity uses a filter on the source, so it also changes that source anywhere else it appears, Program included. Hold **Top** and turn the **Knob** to cycle Layer 1’s blend mode, **Scroll** for Layer 2’s, and the **Dial** to ride Layer 2’s opacity (through a Color Correction filter, added when the source has none). Tour has both blend modes back to Normal. The **Activity** tab reads back the video and each layer after every move.
 
-If the VJster actions of the Stream Deck or OpenDeck plugin are on a deck page, they hold the port and Activity says so; remove them from the deck or choose another port in both places. The companion tries the port again every 30 seconds.
+If the VJster actions of **Fadester for OBS** are on a Stream Deck or OpenDeck page, they hold the port and Activity says so; remove them from the deck or choose another port in both places. Fadester Companion tries the port again every 30 seconds.
 
 ## Assign your show
 
@@ -97,7 +97,7 @@ For an interview, use **C1** to duck the bed as the guest comes up, hold **Tall*
 
 - **OBS** shows the actual Program, Preview, slider and mixer. **TourBox Console** identifies the active preset and physical assignments. The panel’s **Activity** tab lists action results and refusals. Its Setup scene names are a snapshot from the last scan. The optional last-action strip can appear in a desktop capture.
 - **A dial changed the wrong thing.** Focus OBS, confirm the active preset and release any held modifier. With Auto Switch enabled, bringing another application forward can select a different preset.
-- **The manual fade will not start.** Check the supported OBS version, two different scenes, Studio Mode, a Fade among OBS's scene transitions, and a visible native T-bar. The Dial mixes with that Fade even while Cut is selected. Clear a conflicting transition override on Preview. If someone moved the cue or slider independently, settle the handle in OBS, verify Program and Preview, then use Side + Dial press to reset.
+- **The manual fade will not start.** Check the supported OBS version, two different scenes, Studio Mode, a Fade among OBS's scene transitions, and a visible native T-bar. The Dial mixes with that Fade even while Cut is selected. Clear a conflicting transition override on Preview. If someone moved Preview or the slider independently, settle the handle in OBS, verify Program and Preview, then use Side + Dial press to reset.
 - **The selected transition changes and you did not change it.** Stop controls in the panel, open a terminal in the package folder and run `FadesterTourBoxBridge.exe --trace-transitions`. The controls work as usual, and each change of OBS's selected transition is printed with the time, next to the companion's own requests. A line that says `NOT asked by the companion` is a change something else made: OBS itself, a click in OBS, another plugin, a script or another controller. Started this way, the companion connects with the password OBS has saved on this PC. Type `quit` to stop, then start controls in the panel again.
 - **The transition did not change.** Right after a take or cut OBS ignores a change of transition for about a second. **Previous / next transition** keeps asking for up to three seconds, and **Activity** names the transition OBS really has. After a cut, the companion also puts your transition back by itself if OBS returns to Cut.
 - **Stop controls says the bridge is still finishing.** Click **Stop controls** again (or close the panel again): if the bridge still has not stopped after 3 more seconds, the panel ends it and says so. Then check the T-bar and the selected transition in OBS.

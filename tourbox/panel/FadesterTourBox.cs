@@ -29,7 +29,7 @@ namespace Fadester.TourBox {
       var text = PanelText.FromArguments(args, CultureInfo.CurrentUICulture);
       bool created;
       using (var single = new Mutex(true, @"Local\FadesterTourBoxPanel", out created)) {
-        if (!created) { MessageBox.Show(text.Get("alreadyOpen"), "Fadester"); return 0; }
+        if (!created) { MessageBox.Show(text.Get("alreadyOpen"), "Fadester Companion"); return 0; }
         Application.EnableVisualStyles(); Application.SetCompatibleTextRenderingDefault(false);
         Application.Run(new PanelWindow(text));
       }

@@ -225,7 +225,7 @@ async function main(): Promise<void> {
         }
         during = (await client.getSourceFilter(inputUuid, SHADER_NAME)).filterSettings;
         const zeroed = Object.keys(during).filter((key) => during[key] !== before[key]);
-        expect("Panic", safety.isLatched() && panicLine && refused === "Restore first",
+        expect("Panic", safety.isLatched() && panicLine && refused === "Restore visuals first",
           `latched ${String(safety.isLatched())}, log line ${panicLine ? "found" : "missing"}, a turn ${refused || "not refused"}, settings Panic wrote: ${zeroed.join(", ") || "none"}`);
       } finally {
         // Panic is never left standing, whatever failed above.

@@ -53,6 +53,16 @@
     "Name": "ビジュアル パニック",
     "Tooltip": "Visual Sidechain のパニック (即時) と復元 (0.8 秒長押し) を OBS のホットキーで送ります。パニックキーは復元までパニック送信済みと表示します。"
   },
+  "io.github.jbrick2070.fadester-for-obs.visual-meter": {
+    "Name": "Visual Sidechain メーター",
+    "Tooltip": "Visual Sidechain のライブ BPM、拍カウンター、平滑化 4 バンド、32 バンドスペクトラム、タップ・ロック・1 拍目再同期。",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "BPM を 1 ずつ調整",
+        "Push": "タップテンポ・BPM ロック・1 拍目再同期"
+      }
+    }
+  },
   "io.github.jbrick2070.fadester-for-obs.fader": {
     "Name": "Midi Fadester フェーダー (オプション)",
     "Tooltip": "既存の Midi Fadester スロット用のオプションの拡張操作です。",
@@ -373,6 +383,22 @@
     "filterPressToggle": "押す: フィルタ切替",
     "filterGlideCancelled": "フェードを中止",
     "filterChooseSetting": "設定を選択",
+    "vmTitle": "VSメーター",
+    "vmOpTap": "タップ",
+    "vmOpLock": "BPM固定",
+    "vmOpResync": "1拍目",
+    "vmNoAudio": "音声なし",
+    "vmPanic": "パニック",
+    "vmNotLoaded": "未読込",
+    "vmBeatCount": "拍 {beat}/4",
+    "vmLocked": "ロック中",
+    "vmUnlocked": "自動BPM",
+    "vmHintTap": "押してタップ",
+    "vmHintResync": "押して1拍目",
+    "vmDialHint": "押: {op} · 回: BPM",
+    "vmDialHintNoTurn": "押: {op}",
+    "infobarVsActive": "{bpm} BPM · {beat}/4拍",
+    "infobarVsLocked": "{bpm} BPM [固定] · {beat}/4拍",
     "pi": {
       "scopeThisKey": "このキー",
       "scopeThisDial": "このダイヤル",
@@ -801,7 +827,21 @@
       "accentMagenta": "マゼンタ",
       "fxBannerRangeChoose": "この適用量を動かせる範囲を選んでください。",
       "fxBannerOutOfRange": "OBS の値は {value} で、この範囲外です。値か範囲が変わるまで、このコントロールは動かしません。",
-      "fxNoteOffTable": "その他の数値設定（シェーダー独自の uniform を含む）も、範囲を入力すれば操作できます。範囲は慎重に選んでください。どの uniform がリストかを OBS はデッキに伝えません。…_mode という名前のものや、シェーダーテキストでリストと指定されたものは除外されます。それ以外はご自身で確認してください。"
+      "fxNoteOffTable": "その他の数値設定（シェーダー独自の uniform を含む）も、範囲を入力すれば操作できます。範囲は慎重に選んでください。どの uniform がリストかを OBS はデッキに伝えません。…_mode という名前のものや、シェーダーテキストでリストと指定されたものは除外されます。それ以外はご自身で確認してください。",
+      "vmHeading": "Visual Sidechain メーター",
+      "vmIntro": "Visual Sidechain のライブ BPM、拍カウンター、平滑化エンベロープ、および「音声なし」「パニック」「未読込」状態を表示します。",
+      "vmOptTap": "タップテンポ",
+      "vmOptLock": "BPM をロック / 解除",
+      "vmOptResync": "1 拍目を再同期",
+      "vmOptDisplay": "メーターのみ（押下動作なし）",
+      "vmRotateLabel": "ダイヤル回転",
+      "vmRotateBpm": "BPM を調整（1 クリックで 1）",
+      "vmRateLabel": "更新頻度",
+      "vmRate2": "毎秒 2 回",
+      "vmRate5": "毎秒 5 回（標準）",
+      "vmRate10": "毎秒 10 回（上限）",
+      "vmNote": "セルあたり 10 Hz の上限内で平滑化エンベロープと補間拍カウンターを描画します。生のキック波形は描画しません。",
+      "infobarShowVs": "ステータス行に Visual Sidechain のテンポを表示"
     }
   }
 }

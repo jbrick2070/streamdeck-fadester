@@ -109,7 +109,7 @@ describe("the assembly", () => {
   it("keeps Fadester's own actions exactly as they were", () => {
     const manifest = read(join(SUITE, "manifest.json"));
     const own = manifest.Actions.filter((action) => !String(action.UUID).startsWith(suiteActionId("")));
-    expect(own).toHaveLength(10);
+    expect(own).toHaveLength(11);
     expect(own[0].UUID).toBe("io.github.jbrick2070.fadester-for-obs.obs-neo-infobar");
   });
 });

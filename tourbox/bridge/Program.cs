@@ -224,18 +224,21 @@ internal static class Program
             {
                 try
                 {
-                    using var obs = await ObsConnection.Connect(cfg, stop.Token, traceTransitions); lastError = null;
+                    using var obs = await ObsConnection.Connect(cfg, stop.Token, traceTransitions, vendorEvents: true); lastError = null;
                     using var native = new NativeTBar(cfg.Port);
                     // --trace-transitions: the desk's requests pass through the trace, which only reads and prints.
                     TransitionTrace? trace = traceLog != null ? new TransitionTrace(obs.Call, traceLog) : null;
                     Func<string, System.Text.Json.Nodes.JsonObject?, Task<System.Text.Json.Nodes.JsonObject>> rpc = obs.Call;
                     if (trace != null) { obs.TransitionEvent += trace.OnEvent; rpc = trace.Call; }
+                    using var vsMonitor = new VisualSidechainMonitor(obs.Call, panelOwned ? Console.WriteLine : null);
+                    vsMonitor.Attach(obs);
                     var desk = new DeskActions(cfg, rpc, nativeMove: native.MoveAsync, resume: memory); int mine = ++generation;
                     obs.InputVolumeChanged += desk.OnVolumeChanged;
                     obs.InputLevelChangedById += desk.OnMixInputLevelChanged;
                     desk.StartMixMonitor();
                     var protocol = new MixProtocolServer(obs, desk, providerId: providerId);
                     Console.WriteLine($"Connected to OBS at {cfg.Host}:{cfg.Port}."); // the panel reads this line for its status line
+                    await vsMonitor.StartAsync(stop.Token);
                     if (trace != null) await trace.StartAsync();
                     // Before any input is accepted: finish what the last connection left behind.
                     try { var said = await desk.ResumeAsync(); if (said.Length > 0) Console.WriteLine(said); }

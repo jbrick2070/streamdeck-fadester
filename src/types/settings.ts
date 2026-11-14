@@ -224,6 +224,63 @@ export function normalizeVisualPanicOperation(raw: unknown): VisualPanicOperatio
   return raw === "restore" ? "restore" : "panic";
 }
 
+/** Visual Sidechain Meter key/dial action (P1-3): tap tempo, BPM lock toggle, downbeat resync, or display-only. */
+export type VisualMeterOperation = "tap_tempo" | "lock_bpm" | "resync_downbeat" | "display_only";
+export const VISUAL_METER_OPERATIONS: readonly VisualMeterOperation[] = [
+  "tap_tempo",
+  "lock_bpm",
+  "resync_downbeat",
+  "display_only"
+];
+
+/** Per-action redraw rate choice in redraws per second (P1-3): 2, 5 or 10 (default 5, strictly inside 10 Hz cap). */
+export type VisualMeterRefreshRate = 2 | 5 | 10;
+export const VISUAL_METER_REFRESH_RATES: readonly VisualMeterRefreshRate[] = [2, 5, 10];
+
+/** Dial rotation behaviour on Visual Sidechain Meter: 1 BPM per tick or disabled. */
+export type VisualMeterDialRotate = "adjust_bpm" | "none";
+
+export interface VisualMeterSettings {
+  [key: string]: string | number | boolean | undefined;
+  operation?: VisualMeterOperation;
+  refreshRate?: VisualMeterRefreshRate;
+  dialRotate?: VisualMeterDialRotate;
+  labelOverride?: string;
+  accent?: AccentName;
+}
+
+export const DEFAULT_VISUAL_METER_SETTINGS: Required<VisualMeterSettings> = {
+  operation: "tap_tempo",
+  refreshRate: 5,
+  dialRotate: "adjust_bpm",
+  labelOverride: "",
+  accent: "default"
+};
+
+export function normalizeVisualMeterOperation(raw: unknown): VisualMeterOperation {
+  return (VISUAL_METER_OPERATIONS as readonly unknown[]).includes(raw)
+    ? raw as VisualMeterOperation
+    : DEFAULT_VISUAL_METER_SETTINGS.operation;
+}
+
+export function normalizeVisualMeterRefreshRate(raw: unknown): VisualMeterRefreshRate {
+  const n = Number(raw);
+  return n === 2 || n === 5 || n === 10 ? n : DEFAULT_VISUAL_METER_SETTINGS.refreshRate;
+}
+
+export function normalizeVisualMeterDialRotate(raw: unknown): VisualMeterDialRotate {
+  return raw === "none" ? "none" : "adjust_bpm";
+}
+
+export interface ObsNeoInfobarSettings {
+  [key: string]: string | number | boolean | undefined;
+  showVisualSidechain?: boolean;
+}
+
+export const DEFAULT_OBS_NEO_INFOBAR_SETTINGS: Required<ObsNeoInfobarSettings> = {
+  showVisualSidechain: false
+};
+
 /** What an OBS Filter dial's press does (PLAN.md 10.4): nothing, drop-and-return, or the filter on/off. */
 export type ObsFilterDialPress = "none" | "drop_return" | "toggle";
 /** What an OBS Filter key does: the filter on/off, a value over a time, or a step. */

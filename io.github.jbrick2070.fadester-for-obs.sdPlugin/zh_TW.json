@@ -53,6 +53,16 @@
     "Name": "視覺緊急停止",
     "Tooltip": "透過 OBS 本身的快捷鍵送出 Visual Sidechain 的緊急停止（立即）和還原（長按 0.8 秒）。緊急停止鍵會顯示「已送出緊急停止」，直到還原。"
   },
+  "io.github.jbrick2070.fadester-for-obs.visual-meter": {
+    "Name": "Visual Sidechain 電平表",
+    "Tooltip": "顯示 Visual Sidechain 即時 BPM、拍數計數、四段平滑頻段條、32 段頻譜，並提供打拍、鎖定與重設第 1 拍控制。",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "每格調整 1 BPM",
+        "Push": "打拍測速、鎖定 BPM 或重設第 1 拍"
+      }
+    }
+  },
   "io.github.jbrick2070.fadester-for-obs.fader": {
     "Name": "Midi Fadester 推桿（選用）",
     "Tooltip": "用於既有 Midi Fadester 插槽的選用進階控制。",
@@ -373,6 +383,22 @@
     "filterPressToggle": "按下：濾鏡開關",
     "filterGlideCancelled": "漸變已取消",
     "filterChooseSetting": "選擇設定",
+    "vmTitle": "VS 電平表",
+    "vmOpTap": "打拍測速",
+    "vmOpLock": "鎖定 BPM",
+    "vmOpResync": "第 1 拍",
+    "vmNoAudio": "無音訊",
+    "vmPanic": "緊急停止",
+    "vmNotLoaded": "未載入",
+    "vmBeatCount": "第 {beat}/4 拍",
+    "vmLocked": "已鎖定",
+    "vmUnlocked": "自動 BPM",
+    "vmHintTap": "按下打拍",
+    "vmHintResync": "按下重設第1拍",
+    "vmDialHint": "按: {op} · 轉: BPM",
+    "vmDialHintNoTurn": "按: {op}",
+    "infobarVsActive": "{bpm} BPM · 第{beat}/4拍",
+    "infobarVsLocked": "{bpm} BPM [鎖定] · 第{beat}/4拍",
     "pi": {
       "scopeThisKey": "此按鍵",
       "scopeThisDial": "此旋鈕",
@@ -801,7 +827,21 @@
       "accentMagenta": "洋紅",
       "fxBannerRangeChoose": "請選擇此調變幅度可以變化的範圍。",
       "fxBannerOutOfRange": "OBS 中的值為 {value}，超出此範圍：在值或範圍改變之前，此控制項不會移動它。",
-      "fxNoteOffTable": "其他任何數值設定（包括著色器本身的 uniform）在輸入範圍後即可控制，請謹慎選擇範圍。OBS 不會告訴 Stream Deck 哪些 uniform 是清單：名稱以 …_mode 結尾或在著色器文字中標為清單的會被排除，其餘請自行確認。"
+      "fxNoteOffTable": "其他任何數值設定（包括著色器本身的 uniform）在輸入範圍後即可控制，請謹慎選擇範圍。OBS 不會告訴 Stream Deck 哪些 uniform 是清單：名稱以 …_mode 結尾或在著色器文字中標為清單的會被排除，其餘請自行確認。",
+      "vmHeading": "Visual Sidechain 電平表",
+      "vmIntro": "顯示 Visual Sidechain 的即時 BPM、拍數計數、平滑頻段包絡以及「無音訊」「緊急停止」「未載入」狀態。",
+      "vmOptTap": "打拍測速",
+      "vmOptLock": "鎖定 / 解鎖 BPM",
+      "vmOptResync": "重設第 1 拍",
+      "vmOptDisplay": "僅顯示電平表（按下無動作）",
+      "vmRotateLabel": "旋鈕旋轉",
+      "vmRotateBpm": "調整 BPM（每格 1）",
+      "vmRateLabel": "更新率",
+      "vmRate2": "每秒 2 次",
+      "vmRate5": "每秒 5 次（預設）",
+      "vmRate10": "每秒 10 次（上限）",
+      "vmNote": "在每格 10 Hz 上限內繪製平滑包絡與本地步進拍數計數，絕不繪製原始底鼓瞬態。",
+      "infobarShowVs": "在狀態列顯示 Visual Sidechain 速度"
     }
   }
 }

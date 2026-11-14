@@ -53,6 +53,16 @@
     "Name": "Visuelle Panik",
     "Tooltip": "Panik (sofort) und Wiederherstellen (0,8 s halten) von Visual Sidechain, gesendet über die eigenen Hotkeys von OBS. Panik-Tasten zeigen PANIK GESENDET bis zum Wiederherstellen."
   },
+  "io.github.jbrick2070.fadester-for-obs.visual-meter": {
+    "Name": "Visual-Sidechain-Pegel",
+    "Tooltip": "Live-BPM, Taktzähler, vier geglättete Bandbalken, 32-Band-Spektrum sowie Tap-, Sperr- und Eins-Resync-Steuerung für Visual Sidechain.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "BPM um 1 pro Rastung ändern",
+        "Push": "Tap-Tempo, BPM sperren oder Schlag 1 setzen"
+      }
+    }
+  },
   "io.github.jbrick2070.fadester-for-obs.fader": {
     "Name": "Midi Fadester Fader (optional)",
     "Tooltip": "Optionale erweiterte Steuerung für einen vorhandenen Slot von Midi Fadester.",
@@ -373,6 +383,22 @@
     "filterPressToggle": "Drücken: Filter an/aus",
     "filterGlideCancelled": "Übergang abgebrochen",
     "filterChooseSetting": "Einstellung wählen",
+    "vmTitle": "VS-Pegel",
+    "vmOpTap": "Tap-Tempo",
+    "vmOpLock": "BPM-Sperre",
+    "vmOpResync": "Schlag 1",
+    "vmNoAudio": "KEIN TON",
+    "vmPanic": "PANIK",
+    "vmNotLoaded": "NICHT GELADEN",
+    "vmBeatCount": "Schlag {beat}/4",
+    "vmLocked": "Gesperrt",
+    "vmUnlocked": "Auto-BPM",
+    "vmHintTap": "Tippen: Tempo",
+    "vmHintResync": "Drücken: Eins",
+    "vmDialHint": "Druck: {op} · Dreh: BPM",
+    "vmDialHintNoTurn": "Druck: {op}",
+    "infobarVsActive": "{bpm} BPM · Schlag {beat}/4",
+    "infobarVsLocked": "{bpm} BPM [FIX] · Schlag {beat}/4",
     "pi": {
       "scopeThisKey": "diese Taste",
       "scopeThisDial": "dieser Drehregler",
@@ -801,7 +827,21 @@
       "accentMagenta": "Magentarot",
       "fxBannerRangeChoose": "Wählen Sie den Bereich, in dem sich diese Stärke bewegen darf.",
       "fxBannerOutOfRange": "OBS hat {value}, außerhalb dieses Bereichs: Das Steuerelement bewegt den Wert erst, wenn sich der Wert oder der Bereich ändert.",
-      "fxNoteOffTable": "Jede andere Zahleneinstellung, auch die eigenen Uniforms eines Shaders, lässt sich steuern, sobald Sie ihren Bereich eingeben; wählen Sie ihn mit Bedacht. OBS teilt dem Deck nicht mit, welche Uniforms Listen sind: Solche mit Namen auf …_mode oder als Liste im Shader-Text werden ausgelassen, alle anderen prüfen Sie selbst."
+      "fxNoteOffTable": "Jede andere Zahleneinstellung, auch die eigenen Uniforms eines Shaders, lässt sich steuern, sobald Sie ihren Bereich eingeben; wählen Sie ihn mit Bedacht. OBS teilt dem Deck nicht mit, welche Uniforms Listen sind: Solche mit Namen auf …_mode oder als Liste im Shader-Text werden ausgelassen, alle anderen prüfen Sie selbst.",
+      "vmHeading": "Visual-Sidechain-Pegel",
+      "vmIntro": "Zeigt Live-BPM, Taktzähler, geglättete Bandhüllkurven sowie die Zustände KEIN TON, PANIK und NICHT GELADEN von Visual Sidechain.",
+      "vmOptTap": "Tap-Tempo",
+      "vmOptLock": "BPM sperren / entsperren",
+      "vmOptResync": "Schlag 1 neu setzen",
+      "vmOptDisplay": "Nur Anzeige (keine Druckaktion)",
+      "vmRotateLabel": "Drehung",
+      "vmRotateBpm": "BPM ändern (1 pro Rastung)",
+      "vmRateLabel": "Bildrate",
+      "vmRate2": "2 pro Sekunde",
+      "vmRate5": "5 pro Sekunde (Standard)",
+      "vmRate10": "10 pro Sekunde (Maximum)",
+      "vmNote": "Zeichnet geglättete Hüllkurven und einen lokal fortgeschalteten Taktzähler innerhalb der 10-Hz-Grenze; rohe Kick-Transienten werden nie gezeichnet.",
+      "infobarShowVs": "Visual-Sidechain-Tempo in der Statuszeile zeigen"
     }
   }
 }

@@ -103,6 +103,18 @@ function drawnTexts(): Array<{ key: StringKey; params?: TextParams; boxes: Box[]
   for (const key of ["vpPanic", "vpPanicSent", "vpRestore"] as const) add(key, [B.keyTitle]);
   for (const key of ["vpPanicHint", "vpLatchedHint", "vpHolding", "vpNotLoaded"] as const) add(key, [B.keySub]);
   add("vpHoldSeconds", [B.keySub], { s: "0,8" });
+  // Visual Sidechain Meter (P1-3): key, dial and Neo Info Bar texts.
+  for (const key of ["vmTitle", "vmOpTap", "vmOpLock", "vmOpResync", "vmNoAudio", "vmPanic", "vmNotLoaded"] as const) {
+    add(key, [B.keyTitle, B.dialTitle]);
+  }
+  add("vmBeatCount", [B.keySub, B.dialHint], { beat: 4 });
+  for (const key of ["vmLocked", "vmUnlocked", "vmHintTap", "vmHintResync"] as const) add(key, [B.keySub]);
+  for (const opKey of ["vmOpTap", "vmOpLock", "vmOpResync"] as const) {
+    add("vmDialHint", [B.dialHint], { op: t(opKey) });
+    add("vmDialHintNoTurn", [B.dialHint], { op: t(opKey) });
+  }
+  add("infobarVsActive", [B.infobarStatus], { bpm: 200, beat: 4 });
+  add("infobarVsLocked", [B.infobarStatus], { bpm: 200, beat: 4 });
   // The OBS Filter controls: key titles and subtitles, the dial's title, value line and press hint.
   const settingNames = [t("filterSettingEffectMix"), t("filterSettingReactivity"), t("filterSettingOpacity"), t("filterSettingModAmount", { n: 8 })];
   for (const key of ["filterSettingEffectMix", "filterSettingReactivity", "filterSettingOpacity", "filterSettingNone"] as const) add(key, [B.keyTitle, B.filterHead]);

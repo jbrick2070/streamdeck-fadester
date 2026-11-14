@@ -39,8 +39,8 @@ export interface FakeObsServerOptions {
   studioDisableDelayMs?: number;
   dropStudioDisableResponse?: boolean;
   deferStudioModeEvents?: boolean;
-  /** Optional `visual-sidechain` vendor mode: `"none"` (default), `"legacy"` (0.6.0, no safety requests), or `"safety"` (P0-3). */
-  visualSidechainVendor?: "none" | "legacy" | "safety";
+  /** Optional `visual-sidechain` vendor mode: `"none"` (default), `"legacy"` (0.6.0, no safety/tempo requests), `"safety"` (P0-3), or `"tempo"` (P1-2/P1-3). */
+  visualSidechainVendor?: "none" | "legacy" | "safety" | "tempo";
 }
 
 /** An OBS input as `GetInputList` reports it (obs-websocket 5.6.3). */
@@ -142,10 +142,11 @@ export const FAKE_FILTER_DEFAULTS: Readonly<Record<string, Readonly<Record<strin
   }
 };
 
-/** The frontend hotkeys the fake knows by name (Visual Sidechain's two among them). */
+/** The frontend hotkeys the fake knows by name (Visual Sidechain's hotkeys among them). */
 export const FAKE_HOTKEY_NAMES = [
   "OBSBasic.StartStreaming", "OBSBasic.StopStreaming", "OBSBasic.Transition",
-  "visual_sidechain_panic", "visual_sidechain_restore"
+  "visual_sidechain_panic", "visual_sidechain_restore",
+  "visual_sidechain_tap_tempo", "visual_sidechain_lock_bpm", "visual_sidechain_resync_downbeat"
 ];
 
 /** OBS 33's T-bar widget range and the end zone in which its release completes (T_BAR_PRECISION / 10). */
@@ -656,9 +657,26 @@ export class FakeObsServer {
   /** Fails the next `TriggerHotkeyByName` with this OBS comment (code 500), then clears itself. */
   public hotkeyFailNext = "";
   public hotkeyDelayMs: number;
-  public visualSidechainVendor: "none" | "legacy" | "safety";
+  public visualSidechainVendor: "none" | "legacy" | "safety" | "tempo";
   public visualSidechainPanic = false;
   public visualSidechainSinceMs = 0;
+  public visualSidechainSignals: Record<string, unknown> = {
+    audio_present: false,
+    rms: 0,
+    sub_bass: 0,
+    bass: 0,
+    mid: 0,
+    high: 0,
+    kick: 0,
+    bpm: 120,
+    bpm_locked: false,
+    beat_phase: 0,
+    beat_index: 0,
+    bar_phase: 0,
+    bar_index: 0,
+    beat_confidence: 0,
+    spectrum: new Array<number>(32).fill(0)
+  };
   public visualSidechainCallLog: Array<{ requestType: string; requestData: Record<string, unknown> }> = [];
   public visualSidechainFailNext = "";
   /** Delays every `GetSceneList` reply (the catalog read after an identify), so a test can act in between. */
@@ -1223,7 +1241,7 @@ export class FakeObsServer {
       this.visualSidechainPanic = false;
       this.visualSidechainSinceMs = 0;
     }
-    if (this.visualSidechainVendor === "safety") {
+    if (this.visualSidechainVendor === "safety" || this.visualSidechainVendor === "tempo") {
       this.emitVendorEvent(
         "safety_changed",
         {
@@ -1235,6 +1253,19 @@ export class FakeObsServer {
         "visual-sidechain"
       );
     }
+  }
+
+  public emitVisualSidechainSignals(patch: Record<string, unknown> = {}): void {
+    this.visualSidechainSignals = { ...this.visualSidechainSignals, ...patch };
+    this.emitVendorEvent(
+      "signals_changed",
+      {
+        api_version: 1,
+        panic: this.visualSidechainPanic,
+        ...this.visualSidechainSignals
+      },
+      "visual-sidechain"
+    );
   }
 
   public emitObsEvent(
@@ -1787,19 +1818,21 @@ export class FakeObsServer {
         }
         this.visualSidechainCallLog.push({ requestType: vReqType, requestData: vReqData });
         if (vReqType === "get_signals") {
+          const hasSafety = this.visualSidechainVendor === "safety" || this.visualSidechainVendor === "tempo";
           this.sendResponse(ws, requestId, requestType, true, 100, "", {
             vendorName,
             requestType: vReqType,
             responseData: {
               success: true,
-              version: this.visualSidechainVendor === "safety" ? "0.7.0" : "0.6.0",
+              version: hasSafety ? "0.7.0" : "0.6.0",
               api_version: 1,
-              ...(this.visualSidechainVendor === "safety" ? { panic: this.visualSidechainPanic } : {})
+              ...this.visualSidechainSignals,
+              ...(hasSafety ? { panic: this.visualSidechainPanic } : {})
             }
           });
           return;
         }
-        if (this.visualSidechainVendor === "safety") {
+        if (this.visualSidechainVendor === "safety" || this.visualSidechainVendor === "tempo") {
           if (vReqType === "get_safety") {
             this.sendResponse(ws, requestId, requestType, true, 100, "", {
               vendorName,
@@ -1825,6 +1858,53 @@ export class FakeObsServer {
                 api_version: 1,
                 panic: this.visualSidechainPanic,
                 since_ms: this.visualSidechainPanic ? this.visualSidechainSinceMs : 0
+              }
+            });
+            return;
+          }
+        }
+        if (this.visualSidechainVendor === "tempo") {
+          if (vReqType === "tap_tempo" || vReqType === "set_bpm" || vReqType === "lock_bpm" || vReqType === "resync_downbeat") {
+            if (vReqType === "set_bpm") {
+              const rawBpm = Number(vReqData.bpm);
+              if (!Number.isFinite(rawBpm)) {
+                this.sendResponse(ws, requestId, requestType, false, 602, "Missing numeric bpm.");
+                return;
+              }
+              this.visualSidechainSignals = {
+                ...this.visualSidechainSignals,
+                bpm: Math.max(60, Math.min(200, rawBpm))
+              };
+            } else if (vReqType === "lock_bpm") {
+              const nextLocked = typeof vReqData.locked === "boolean"
+                ? vReqData.locked
+                : !Boolean(this.visualSidechainSignals.bpm_locked);
+              this.visualSidechainSignals = { ...this.visualSidechainSignals, bpm_locked: nextLocked };
+            } else if (vReqType === "resync_downbeat") {
+              this.visualSidechainSignals = {
+                ...this.visualSidechainSignals,
+                beat_phase: 0,
+                beat_index: 0,
+                bar_phase: 0
+              };
+            } else if (vReqType === "tap_tempo") {
+              this.visualSidechainSignals = {
+                ...this.visualSidechainSignals,
+                beat_phase: 0
+              };
+            }
+            this.sendResponse(ws, requestId, requestType, true, 100, "", {
+              vendorName,
+              requestType: vReqType,
+              responseData: {
+                success: true,
+                api_version: 1,
+                bpm: this.visualSidechainSignals.bpm,
+                bpm_locked: this.visualSidechainSignals.bpm_locked,
+                beat_phase: this.visualSidechainSignals.beat_phase,
+                beat_index: this.visualSidechainSignals.beat_index,
+                bar_phase: this.visualSidechainSignals.bar_phase,
+                bar_index: this.visualSidechainSignals.bar_index
               }
             });
             return;

@@ -1,0 +1,84 @@
+<!-- SPDX-License-Identifier: GPL-2.0-or-later -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Fadester for OBS — Visual Sidechain Meter</title>
+  <link rel="stylesheet" href="pi.css" />
+</head>
+<body>
+  <h3><span data-i18n="vmHeading">Visual Sidechain Meter</span></h3>
+  <p class="muted" data-i18n="vmIntro">Shows Visual Sidechain's live BPM, beat counter, smoothed band envelopes, and NO AUDIO, PANIC, or NOT LOADED states.</p>
+  <div class="row" id="vm-operation-row">
+    <label for="vm-operation" data-i18n="whenPressed">When pressed</label>
+    <select id="vm-operation">
+      <option value="tap_tempo" data-i18n="vmOptTap">Tap tempo</option>
+      <option value="lock_bpm" data-i18n="vmOptLock">Lock / unlock BPM</option>
+      <option value="resync_downbeat" data-i18n="vmOptResync">Resync beat 1</option>
+      <option value="display_only" data-i18n="vmOptDisplay">Meter only (no press action)</option>
+    </select>
+  </div>
+  <div class="row" id="vm-dial-rotate-row">
+    <label for="vm-dial-rotate" data-i18n="vmRotateLabel">Dial turn</label>
+    <select id="vm-dial-rotate">
+      <option value="adjust_bpm" data-i18n="vmRotateBpm">Adjust BPM (1 per click)</option>
+      <option value="none" data-i18n="pressNone">Do nothing</option>
+    </select>
+  </div>
+  <div class="row">
+    <label for="vm-rate" data-i18n="vmRateLabel">Redraw rate</label>
+    <select id="vm-rate">
+      <option value="2" data-i18n="vmRate2">2 per second</option>
+      <option value="5" data-i18n="vmRate5">5 per second (default)</option>
+      <option value="10" data-i18n="vmRate10">10 per second (maximum)</option>
+    </select>
+  </div>
+  <p class="muted" data-i18n="vmNote">Draws smoothed envelopes and a locally stepped beat counter inside the 10 Hz per-cell limit; raw kick transients are never drawn.</p>
+  <div class="row">
+    <label for="vm-label" data-i18n="label">Label</label>
+    <input id="vm-label" type="text" maxlength="14" placeholder="Automatic (leave blank)" data-i18n-placeholder="placeholderAutomaticBlank" />
+  </div>
+  <div id="direct-shared-sections"></div>
+  <script src="i18n.js"></script>
+  <script src="preset-captions.js"></script>
+  <script src="direct-pi.js"></script>
+  <script>
+    window.initDirectObsPropertyInspector(function (settings, save) {
+      const controller = window.directObsController || "Keypad";
+      const opRow = document.getElementById("vm-operation-row");
+      const rotRow = document.getElementById("vm-dial-rotate-row");
+      const operation = document.getElementById("vm-operation");
+      const rotate = document.getElementById("vm-dial-rotate");
+      const rate = document.getElementById("vm-rate");
+      const label = document.getElementById("vm-label");
+
+      if (opRow) opRow.style.display = controller === "Neo" ? "none" : "";
+      if (rotRow) rotRow.style.display = controller === "Encoder" ? "" : "none";
+
+      const selectedOp = ["tap_tempo", "lock_bpm", "resync_downbeat", "display_only"].indexOf(settings.operation) !== -1
+        ? settings.operation : "tap_tempo";
+      const selectedRot = settings.dialRotate === "none" ? "none" : "adjust_bpm";
+      const rawRate = Number(settings.refreshRate);
+      const selectedRate = rawRate === 2 || rawRate === 5 || rawRate === 10 ? String(rawRate) : "5";
+
+      const generatedLabel = function () {
+        return window.FadesterPresetCaptions.isGenerated("meter", { operation: selectedOp, labelOverride: settings.labelOverride });
+      };
+
+      if (operation && document.activeElement !== operation) operation.value = selectedOp;
+      if (rotate && document.activeElement !== rotate) rotate.value = selectedRot;
+      if (rate && document.activeElement !== rate) rate.value = selectedRate;
+      if (label && document.activeElement !== label) label.value = generatedLabel() ? "" : settings.labelOverride || "";
+
+      if (operation) operation.onchange = function () {
+        const update = { operation: operation.value };
+        if (operation.value !== selectedOp && generatedLabel()) update.labelOverride = "";
+        save(update);
+      };
+      if (rotate) rotate.onchange = function () { save({ dialRotate: rotate.value }); };
+      if (rate) rate.onchange = function () { save({ refreshRate: Number(rate.value) }); };
+      if (label) label.onchange = function () { save({ labelOverride: label.value.trim() }); };
+    });
+  </script>
+</body>
+</html>

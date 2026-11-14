@@ -454,7 +454,8 @@ public sealed class StudioFader
 
     private async Task MoveAsync(double delta)
     {
-        double next = SnapEdge(Math.Clamp(Math.Round(Position + delta, 12), 0, 1));
+        double raw = Math.Clamp(Math.Round(Position + delta, 12), 0, 1);
+        double next = delta < 0 && raw <= Edge ? 0 : delta > 0 && raw >= 1 - Edge ? 1 : raw;
         if (next == Position) return; // Repeated ticks towards a parked rail cannot start a second take.
         if (sweep == null)
         {

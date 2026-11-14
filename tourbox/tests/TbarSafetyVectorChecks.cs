@@ -461,6 +461,18 @@ internal static class TbarSafetyVectorChecks
                 $"host={host}, obs_version={obsVersion} -> expected(eligible={expectedEligible}) vs observed(eligible={eligible})");
         }
 
+        // Directional edge snap: a fine step equal to Edge (0.005) leaves 0 on the first forward tick and snaps to 0 on return.
+        {
+            var fineObs = new VectorObs();
+            var fineFader = new StudioFader(fineObs.Call, step: StudioFader.Edge, nativeMove: fineObs.NativeMove);
+            await fineFader.DispatchAsync("fader.forward");
+            if (fineFader.Position != StudioFader.Edge)
+                throw new InvalidOperationException($"Expected first 0.005 forward step to reach {StudioFader.Edge}, observed {fineFader.Position}.");
+            await fineFader.DispatchAsync("fader.back");
+            if (fineFader.Position != 0)
+                throw new InvalidOperationException($"Expected return step to snap back to 0, observed {fineFader.Position}.");
+        }
+
         Console.WriteLine(
             $"PASS: T-bar safety vectors (Companion): {passed} matched contract, {divergences.Count} failed target contract ({string.Join(", ", divergences)}).");
 

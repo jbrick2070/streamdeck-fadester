@@ -305,9 +305,9 @@ internal static class Program
                                     if (await desk.SlidePlan(ev.Timestamp) is { } slide)
                                     {
                                         tbarMail.Slide(slide.From, slide.Ms); slid = true;
-                                        Console.WriteLine($"Controller: pushing the T-bar while the take is held ({slide.Ms} ms end to end)");
+                                        Console.WriteLine($"Controller: pushing the T-bar while the take is held ({slide.Ms} ms end to end){(slide.NoTempo ? " · NO TEMPO" : "")}");
                                     }
-                                    else if (cfg.GamepadEasy && desk.TbarPosition == 0) { tbarMail.Ordinary(); slid = true; ordinaryPressedAt = ev.Timestamp; }
+                                    else if (cfg.GamepadEasy && desk.TbarPosition == 0 && !desk.IsTakeArmed) { tbarMail.Ordinary(); slid = true; ordinaryPressedAt = ev.Timestamp; }
                                     else Console.WriteLine(await desk.Dispatch("take", ev.Timestamp));
                                 }
                                 catch (Exception e)

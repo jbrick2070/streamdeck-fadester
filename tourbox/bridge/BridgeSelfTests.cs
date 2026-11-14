@@ -293,6 +293,13 @@ internal static class BridgeSelfTests
         string missingLine = await missingDesk.Dispatch("take");
         Check(takesTriggered == 5 && durationsUsedOnTake[^1] == 650 && missingLine.EndsWith(" · NO TEMPO", StringComparison.Ordinal),
             "missing Visual Sidechain fires immediately with fallback ms and shows NO TEMPO");
+
+        // When TakeBeats == 0 (OBS's own duration) and TakeQuantize == next_bar, NO TEMPO preserves OBS's 300 ms duration.
+        var zeroBeatsCfg = new BridgeConfig { TakeBeats = 0, TakeQuantize = "next_bar", TakeFallbackMs = 650 };
+        var zeroBeatsMissing = new DeskActions(zeroBeatsCfg, FakeObs, vsMonitor: vsMissing, clockMs: () => nowMs, delayAsync: FakeDelay);
+        string zeroBeatsLine = await zeroBeatsMissing.Dispatch("take");
+        Check(takesTriggered == 6 && durationsUsedOnTake[^1] == 300 && zeroBeatsLine.EndsWith(" · NO TEMPO", StringComparison.Ordinal),
+            "TakeBeats=0 fallback preserves OBS's own transition duration while showing NO TEMPO");
         vsLoaded = true;
 
         // 4. Low confidence WITH bpm_locked=true still quantizes cleanly.
@@ -303,26 +310,26 @@ internal static class BridgeSelfTests
         });
         var armedDesk = new DeskActions(quantCfg, FakeObs, vsMonitor: vs, onStatus: statusLines.Add, clockMs: () => nowMs, delayAsync: FakeDelay);
         string armedLine = await armedDesk.Dispatch("take");
-        Check(armedLine.EndsWith(" · ARMED", StringComparison.Ordinal) && armedDesk.IsTakeArmed && recordedDelayMs == 1500 && takesTriggered == 5,
+        Check(armedLine.EndsWith(" · ARMED", StringComparison.Ordinal) && armedDesk.IsTakeArmed && recordedDelayMs == 1500 && takesTriggered == 6,
             "next_bar at 120 BPM bar_phase=0.25 arms for 1500 ms");
         pendingDelay!.SetResult(true);
-        for (int i = 0; i < 40 && takesTriggered < 6; i++) await Task.Delay(5);
-        Check(takesTriggered == 6 && durationsUsedOnTake[^1] == 2000 && !armedDesk.IsTakeArmed && statusLines.Count == 1,
+        for (int i = 0; i < 40 && takesTriggered < 7; i++) await Task.Delay(5);
+        Check(takesTriggered == 7 && durationsUsedOnTake[^1] == 2000 && !armedDesk.IsTakeArmed && statusLines.Count == 1,
             "armed take fires at bar boundary with 2000 ms duration");
 
         // 5. Second press while ARMED fires immediately.
         var secondPressDesk = new DeskActions(quantCfg, FakeObs, vsMonitor: vs, clockMs: () => nowMs, delayAsync: FakeDelay);
         await secondPressDesk.Dispatch("take");
-        Check(secondPressDesk.IsTakeArmed && takesTriggered == 6, "armed before second press");
+        Check(secondPressDesk.IsTakeArmed && takesTriggered == 7, "armed before second press");
         string firedNow = await secondPressDesk.Dispatch("take");
-        Check(!secondPressDesk.IsTakeArmed && takesTriggered == 7 && durationsUsedOnTake[^1] == 2000 && !firedNow.Contains("ARMED"),
+        Check(!secondPressDesk.IsTakeArmed && takesTriggered == 8 && durationsUsedOnTake[^1] == 2000 && !firedNow.Contains("ARMED"),
             "second press while ARMED fires immediately");
 
         // 6. fader.cancel while ARMED cancels visibly without firing.
         var cancelDesk = new DeskActions(quantCfg, FakeObs, vsMonitor: vs, clockMs: () => nowMs, delayAsync: FakeDelay);
         await cancelDesk.Dispatch("take");
         string cancelled = await cancelDesk.Dispatch("fader.cancel");
-        Check(!cancelDesk.IsTakeArmed && takesTriggered == 7 && cancelled.EndsWith(" · CANCELLED", StringComparison.Ordinal),
+        Check(!cancelDesk.IsTakeArmed && takesTriggered == 8 && cancelled.EndsWith(" · CANCELLED", StringComparison.Ordinal),
             "fader.cancel while ARMED cancels visibly without firing");
 
         // 7. 4 s cap: at 60 BPM (1 bar = 4000 ms, bar_phase = 0.0), wait is capped at <= 4000 ms.

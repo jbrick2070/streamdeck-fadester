@@ -113,8 +113,8 @@ Vendor name: `visual-sidechain`. Transport: obs-websocket 5 `CallVendorRequest` 
 
 ### Silence hold and beat confidence rules
 
-- Before the first above-gate audio frame, or after `2.0 s` of continuous silence (below the noise gate) or audio starvation (`> 100 ms` with no audio callbacks), Visual Sidechain sets `audio_present: false`, freezes `beat` (`beat_phase`) at `0.0`, and reports `beat_confidence: 0.0`.
-- Once the `2.0 s` silence hold takes effect, every signal sits at `0.0` with `audio_present: false`, so the `1e-3` change gate suppresses further `signals_changed` (and in-process `visual_sidechain_signals`) emissions until above-gate audio returns.
+- Before the first above-gate audio frame, or after `2.0 s` of continuous silence (below the noise gate) or audio starvation (`> 50 ms` with no audio callbacks, `VS_STARVATION_SEC`), Visual Sidechain sets `audio_present: false`, freezes `beat` (`beat_phase`) at `0.0`, and reports `beat_confidence: 0.0`.
+- Once the `2.0 s` silence hold takes effect, every normalized `0.0..1.0` envelope signal sits at `0.0` while `estimated_bpm` (`bpm`) retains its last/default BPM (`120.0`) with `audio_present: false` (consumers must gate tempo displays and sync on `audio_present` / `beat_confidence`), so the `1e-3` change gate suppresses further `signals_changed` (and in-process `visual_sidechain_signals`) emissions until above-gate audio returns.
 - `beat_confidence` (`0.0..1.0`) is computed from inter-onset interval regularity across the eight-interval window and decays when expected beats go missing (for example during a kickless breakdown).
 
 ## In-process bridge (plugin to plugin, inside OBS)

@@ -12,6 +12,6 @@ The gallery attachment is the English preset. The Windows companion ZIP includes
 One-sentence introduction (under 200 characters):
 Cue scenes, ride audio and turn the flat Dial for an OBS Studio dissolve. One Tour menu adds media, overlays and capture tools. Requires the Fadester for TourBox Windows companion.
 
-The matching companion must run locally with OBS WebSocket enabled. Import the single preset and link it to OBS. For the manual crossfader, use OBS Studio 33.0.0 or 33.0.1 in Studio Mode with Fade and distinct Program and Preview scenes. Whole-mix control requires explicit opt-in in the companion.
+The matching companion must run locally with OBS WebSocket enabled. Import the single preset and link it to OBS. For the manual crossfader, use OBS Studio 33 in Studio Mode with Fade and distinct Program and Preview scenes. Whole-mix control requires explicit opt-in in the companion.
 
 Before submission, verify the master preset in Console and rehearse the actual device model. Select that verified model in the form and choose OBS Studio as the application. Provide the accessible companion download and guide. If the form offers no dedicated link field, include the permanent download URL in the introduction within its 200-character limit. Complete the master verification recorded in REHEARSAL.md before making physical compatibility claims.

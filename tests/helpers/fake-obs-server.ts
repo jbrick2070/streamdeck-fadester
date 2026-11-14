@@ -747,6 +747,17 @@ export class FakeObsServer {
     });
   }
 
+  public dropClients(): void {
+    for (const c of this.clients) {
+      try {
+        c.terminate();
+      } catch {
+        // Ignore
+      }
+    }
+    this.clients.clear();
+  }
+
   public async stop(): Promise<void> {
     for (const c of this.clients) {
       try {
@@ -1363,6 +1374,7 @@ export class FakeObsServer {
       }
       const finishesManualTransition = this.studioMode && !enabled && this.manualTransitionActive;
       this.studioMode = enabled;
+      if (!enabled) this.nativeSlider = 0;
       if (!enabled && this.studioDisableDelayMs > 0) await new Promise((r) => setTimeout(r, this.studioDisableDelayMs));
       if (!(!enabled && this.dropStudioDisableResponse)) this.sendResponse(ws, requestId, requestType, true, 100, "", {});
       if (finishesManualTransition) {

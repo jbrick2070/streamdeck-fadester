@@ -32,7 +32,8 @@ internal static class StudioFaderSelfTests
         {
             NativeCalls.Add((expected, target));
             if (NativeCalls.Count == RefuseCall) throw new NativeRefusal("native T-bar disabled or range changed");
-            if (SliderOffscreen || Slider != expected) throw new InvalidOperationException("OBS slider is unavailable or changed.");
+            if (SliderOffscreen) throw new NativeRefusal("Cannot find the OBS T-bar slider.");
+            if (Slider != expected) throw new NativeRefusal($"T-bar moved; actual {Slider}, expected {expected}.");
             if (expected != target)
             {
                 Slider = target;
@@ -79,6 +80,12 @@ internal static class StudioFaderSelfTests
                     if (queuedTransitions.Count == 0) readsRemaining = StaleTransitionReads;
                     queuedTransitions.Enqueue(requested);
                     break;
+                case "SetCurrentProgramScene":
+                    if (Studio && Cursor is > 0 and < 1) break;
+                    string oldProg = Program;
+                    Program = (string)data!["sceneUuid"]!;
+                    if (Studio && oldProg != Program) Preview = oldProg;
+                    break;
                 case "SetCurrentPreviewScene": Preview = (string)data!["sceneUuid"]!; break;
                 case "SetTBarPosition":
                     Check(Studio, "T-bar write with Studio Mode off");
@@ -93,7 +100,7 @@ internal static class StudioFaderSelfTests
                 case "SetStudioModeEnabled":
                     if (IgnoreModeWrite) break;
                     Studio = (bool)data!["studioModeEnabled"]!;
-                    if (!Studio && Origin != null) { Commits++; Origin = null; Cursor = 0; }
+                    if (!Studio && Origin != null) { Commits++; Origin = null; Cursor = 0; Slider = 0; }
                     if (!Studio && LoseLeaveReply) { LoseLeaveReply = false; throw new IOException("Leave acknowledgement lost"); }
                     break;
                 case "TriggerStudioModeTransition":
@@ -174,7 +181,7 @@ internal static class StudioFaderSelfTests
                     throw new IOException("Synthetic cancel release acknowledgement lost after its write");
                 return result;
             }
-            var uncertainCancel = new StudioFader(UncertainRpc, 0.05, UncertainNative);
+            var uncertainCancel = new StudioFader(UncertainRpc, 0.05, UncertainNative, allowAutoCloseout: false);
             await uncertainCancel.DispatchAsync("fader.forward");
             await Blocked(() => uncertainCancel.DispatchAsync("fader.cancel"));
             await Blocked(() => uncertainCancel.DispatchAsync("fader.forward"));
@@ -185,7 +192,27 @@ internal static class StudioFaderSelfTests
                 uncertainCancelObs.Slider == 0 && uncertainCancelObs.Commits == 0 && uncertainCancelObs.Takes == 0 &&
                 uncertainCancelObs.Releases == (loseNativeZeroReply ? 0 : 1) &&
                 uncertainCancelObs.Writes.SequenceEqual(loseNativeZeroReply ? Array.Empty<string>() : ["SetTBarPosition"]),
-                "uncertain native zero or frontend release disarms without replay, fallback or extra take");
+                "strict no-fallback mode (macOS host) disarms without replay, fallback or extra take");
+        }
+        foreach (double lostAt in new[] { 0.3, 0.6 })
+        {
+            var autoObs = new Obs { Transition = "Coupe" };
+            bool killSlider = false;
+            var autoFader = new StudioFader(autoObs.Call, 0.05, (from, to) =>
+                killSlider ? Task.FromException(new IOException("Native helper closed mid-throw")) : autoObs.NativeMove(from, to));
+            await autoFader.MoveToAsync(lostAt);
+            killSlider = true;
+            await Blocked(() => autoFader.MoveToAsync(lostAt + 0.1));
+            string expectedProgram = lostAt >= 0.5 ? "b" : "a";
+            string expectedPreview = lostAt >= 0.5 ? "a" : "b";
+            Check(autoFader.Position == 0 && autoObs.Cursor == 0 && autoObs.Studio &&
+                autoObs.Program == expectedProgram && autoObs.Preview == expectedPreview &&
+                autoObs.Transition == "Coupe",
+                "Windows Companion auto-closes lost native throw (< 0.5 back to Program, >= 0.5 finish to Preview) and repays lent Fade");
+            killSlider = false;
+            await autoFader.MoveToAsync(0.25);
+            Check(autoFader.Position == 0.25 && autoObs.Cursor == 0.25, "next throw works immediately without manual Cancel");
+            await autoFader.MoveToAsync(0);
         }
         await native.DispatchAsync("fader.forward"); await native.DispatchAsync("fader.forward");
         Check(nativeObs.Slider == 0 && nativeObs.Program == "b" && nativeObs.Preview == "a" &&
@@ -627,11 +654,33 @@ internal static class StudioFaderSelfTests
             obs.Releases == 1 && obs.Commits == 0, "a sweep left part-thrown by a lost connection returns to Program");
         await fader.MoveToAsync(0.3);
         Check(fader.Position == 0.3 && obs.Cursor == 0.3, "and the T-bar throws again on the new connection");
-        nativeObs = new(); native = new(nativeObs.Call, 0.5, nativeObs.NativeMove); await native.DispatchAsync("fader.forward");
-        native = new(nativeObs.Call, 0.5, nativeObs.NativeMove, native.Leave());
+        nativeObs = new(); native = new(nativeObs.Call, 0.4, nativeObs.NativeMove); await native.DispatchAsync("fader.forward");
+        native = new(nativeObs.Call, 0.4, nativeObs.NativeMove, native.Leave());
         await native.ResumeAsync();
         Check(native.Position == 0 && nativeObs.Slider == 0 && nativeObs.Program == "a" && nativeObs.Commits == 0 &&
-            nativeObs.NativeCalls.SequenceEqual([(0d, 0d), (0d, 0.5), (0.5, 0d), (0d, 0d)]), "the native widget is walked back from where the old connection left it");
+            nativeObs.NativeCalls.SequenceEqual([(0d, 0d), (0d, 0.4), (0.4, 0d), (0d, 0d)]), "below 0.5 the native widget is walked back from where the old connection left it");
+        var finishReconnectObs = new Obs();
+        var finishReconnect = new StudioFader(finishReconnectObs.Call, 0.5, finishReconnectObs.NativeMove);
+        await finishReconnect.DispatchAsync("fader.forward");
+        finishReconnect = new(finishReconnectObs.Call, 0.5, finishReconnectObs.NativeMove, finishReconnect.Leave());
+        Check((await finishReconnect.ResumeAsync()).Contains("finished Preview") && finishReconnect.Position == 0 &&
+            finishReconnectObs.Slider == 0 && finishReconnectObs.Program == "b" && finishReconnectObs.Preview == "a" && finishReconnectObs.Commits == 1,
+            "at >= 0.5 reconnect finishes Preview automatically");
+        foreach (double reconnectAt in new[] { 0.35, 0.65 })
+        {
+            var nonFadeObs = new Obs();
+            var nonFadeFader = new StudioFader(nonFadeObs.Call, 0.05, nonFadeObs.NativeMove);
+            await nonFadeFader.MoveToAsync(reconnectAt);
+            var carried = nonFadeFader.Leave();
+            nonFadeObs.Transition = "Coupe"; // OBS holds a non-Fade transition on reconnect
+            nonFadeFader = new(nonFadeObs.Call, 0.05, nonFadeObs.NativeMove, carried);
+            var line = await nonFadeFader.ResumeAsync();
+            Check(nonFadeObs.Cursor == 0 && nonFadeObs.Slider == 0 &&
+                nonFadeObs.Program == (reconnectAt >= 0.5 ? "b" : "a") &&
+                nonFadeObs.Preview == (reconnectAt >= 0.5 ? "a" : "b") &&
+                line.Contains(reconnectAt >= 0.5 ? "finished Preview" : "back to Program"),
+                "reconnect with a non-Fade transition closes out using the 0.5 rule");
+        }
         obs = new(); fader = new(obs.Call); await fader.MoveToAsync(0.4);
         var left = fader.Leave();
         obs = new(); fader = new(obs.Call, resume: left); // OBS itself restarted: nothing is part-way any more
@@ -699,6 +748,18 @@ internal static class StudioFaderSelfTests
         await Blocked(() => fader.DispatchAsync("take"));
         obs = new(){Version="32.0.3"}; fader = new(obs.Call);
         Check(await fader.SlidePlanAsync() == null, "an OBS without T-bar support is OBS's own take");
+        foreach (string v33 in new[] { "33.0.0", "33.0.1", "33.0.2", "33.1.0", "33.2.4" })
+        {
+            var obs33 = new Obs { Version = v33 };
+            var fader33 = new StudioFader(obs33.Call);
+            Check(await fader33.SlidePlanAsync() is { Ms: 300 }, $"OBS {v33} is accepted by Companion T-bar gate");
+            await fader33.MoveToAsync(0.35);
+            await fader33.MoveToAsync(StudioFader.Edge);
+            Check(fader33.Position == 0 && obs33.Cursor == 0 && obs33.Program == "a", "StudioFader.Edge (0.005) snaps to 0 cancel");
+            await fader33.MoveToAsync(0.35);
+            await fader33.MoveToAsync(1 - StudioFader.Edge);
+            Check(fader33.Position == 0 && obs33.Cursor == 0 && obs33.Program == "b", "1 - StudioFader.Edge (0.995) snaps to 1 finish");
+        }
         obs = new(); fader = new(obs.Call, 0.25); await fader.DispatchAsync("fader.forward");
         Check(await fader.SlidePlanAsync() is { From: 0.25, Ms: 300 }, "a take during a throw pushes on from where the T-bar is, at the Duration's speed");
         // The push itself is the trigger's path: steps, then the end takes.

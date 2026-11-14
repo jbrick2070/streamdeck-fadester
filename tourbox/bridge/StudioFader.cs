@@ -40,6 +40,27 @@ public sealed class StudioFader
     internal int SelectPolls { get; init; } = 120;
     private int direction = 1;
     private long takeAt;
+    private readonly bool allowAutoCloseout;
+    private Sweep? disconnectedSweep;
+    private double disconnectedPosition;
+
+    public const double Edge = 0.005;
+    public const int SliderMax = 1023;
+    public const int ObsFinishMinTick = 921;
+    public const int ObsCancelMaxTick = 102;
+
+    private static double SnapEdge(double normalized) =>
+        normalized <= Edge ? 0 : normalized >= 1 - Edge ? 1 : normalized;
+
+    public static bool IsSupportedObsVersion(string? version) =>
+        !string.IsNullOrWhiteSpace(version) &&
+        System.Text.RegularExpressions.Regex.IsMatch(version.Trim(), @"^33\.\d+\.\d+(\D|$)");
+
+    public static int ToSliderTick(double normalized)
+    {
+        if (!double.IsFinite(normalized) || normalized < 0 || normalized > 1) throw new ArgumentOutOfRangeException(nameof(normalized));
+        return (int)Math.Round(normalized * SliderMax, MidpointRounding.AwayFromZero);
+    }
 
     public double Position { get; private set; }
 
@@ -57,23 +78,32 @@ public sealed class StudioFader
         internal long TakeAt;
     }
 
-    public Memory Leave() => new() { Owed = owed, Sweep = sweep, Position = Position, Direction = direction, TakeAt = takeAt };
+    public Memory Leave() => new()
+    {
+        Owed = owed,
+        Sweep = sweep ?? disconnectedSweep,
+        Position = sweep != null ? Position : disconnectedSweep != null ? disconnectedPosition : 0,
+        Direction = direction,
+        TakeAt = takeAt
+    };
 
     public StudioFader(Func<string, JsonObject?, Task<JsonObject>> rpc, double step = 0.05,
-        Func<double, double, Task>? nativeMove = null, Memory? resume = null)
+        Func<double, double, Task>? nativeMove = null, Memory? resume = null, bool allowAutoCloseout = true)
     {
         if (!double.IsFinite(step) || step <= 0 || step > 1) throw new ArgumentOutOfRangeException(nameof(step));
         this.rpc = rpc;
         this.nativeMove = nativeMove;
         this.step = step;
+        this.allowAutoCloseout = allowAutoCloseout;
         if (resume == null) return;
         owed = resume.Owed; sweep = resume.Sweep; direction = resume.Direction; takeAt = resume.TakeAt;
         Position = sweep != null ? resume.Position : 0;
     }
 
     /// <summary>
-    /// Run once on a new connection, before any action: a sweep the last connection left part-thrown goes back to
-    /// Program (its trigger or dial is no longer holding it), and a transition a Cut still owes goes back at once.
+    /// Run once on a new connection, before any action: a sweep the last connection left part-thrown closes out
+    /// automatically (finishing to Preview at &gt;= 0.5, returning to Program below 0.5), and a transition a Cut still
+    /// owes goes back at once.
     /// </summary>
     /// <returns>A line for the log, or an empty string when there was nothing to say.</returns>
     public async Task<string> ResumeAsync()
@@ -84,6 +114,8 @@ public sealed class StudioFader
             string said = "";
             if (sweep != null)
             {
+                var carried = sweep;
+                double carriedPos = Position;
                 double cursor = await ReadCursorAsync();
                 bool still = cursor is not (0 or 1);
                 if (still)
@@ -92,16 +124,71 @@ public sealed class StudioFader
                     await Task.Delay(150);
                     still = await ReadCursorAsync() == cursor;
                 }
-                if (!still) { sweep = null; Position = 0; } // OBS restarted, ended it itself, or runs its own
-                else
+                if (!still)
+                {
+                    sweep = null; Position = 0; disconnectedSweep = null; disconnectedPosition = 0;
+                }
+                else if (!allowAutoCloseout)
                 {
                     try { await CancelSweepAsync(); said = "T-bar: back to Program after the reconnect."; }
                     catch (InvalidOperationException e)
                     {
+                        sweep = null; Position = 0; needsReset = false;
+                        said = "T-bar: could not go back to Program after the reconnect. " + e.Message + " Check OBS, then press Cancel.";
+                    }
+                }
+                else
+                {
+                    bool finish = carriedPos >= 0.5;
+                    try
+                    {
+                        var current = await ReadScenesAsync();
+                        bool scenesOurs =
+                            (current.Program == carried.Scenes.Program || current.Program == carried.Scenes.Preview) &&
+                            current.Preview == carried.Scenes.Preview;
+                        if (!scenesOurs)
+                            throw new InvalidOperationException("Program or Preview changed. Fader stopped without taking the new target.");
+
+                        bool transitionMatches = Field(await rpc("GetCurrentSceneTransition", null), "transitionUuid") == carried.Transition;
+                        bool closed = false;
+                        if (transitionMatches)
+                        {
+                            try
+                            {
+                                if (finish) await FinishSweepAsync();
+                                else await CancelSweepAsync();
+                                closed = true;
+                            }
+                            catch (InvalidOperationException)
+                            {
+                                sweep = null; Position = 0; needsReset = false;
+                            }
+                        }
+                        if (!closed)
+                        {
+                            sweep = null; Position = 0; needsReset = false;
+                            if (nativeMove != null)
+                            {
+                                double rail = finish ? 1d : 0d;
+                                try
+                                {
+                                    await nativeMove(carriedPos, rail);
+                                    await rpc("SetTBarPosition", new() { ["position"] = rail, ["release"] = true });
+                                    await nativeMove(0, 0);
+                                }
+                                catch (Exception) { }
+                            }
+                            await CloseSweepOverWebSocketAsync(carried, finish);
+                        }
+                        disconnectedSweep = null; disconnectedPosition = 0;
+                        said = finish ? "T-bar: finished Preview after the reconnect." : "T-bar: back to Program after the reconnect.";
+                    }
+                    catch (InvalidOperationException e)
+                    {
                         // Not ours any more, or OBS would not confirm: nothing is replayed on its own. No latch is set,
                         // so one Cancel press is enough to release a T-bar that still sits part-way.
-                        sweep = null; Position = 0; needsReset = false; // the failed cancel's Disarm set it
-                        said = "T-bar: could not go back to Program after the reconnect. " + e.Message + " Check OBS, then press Cancel.";
+                        sweep = null; Position = 0; needsReset = false; disconnectedSweep = null; disconnectedPosition = 0;
+                        said = $"T-bar: could not {(finish ? "finish Preview" : "go back to Program")} after the reconnect. {e.Message} Check OBS, then press Cancel.";
                     }
                 }
             }
@@ -170,7 +257,7 @@ public sealed class StudioFader
     public async Task<bool> MoveToAsync(double target)
     {
         if (!double.IsFinite(target)) throw new ArgumentOutOfRangeException(nameof(target));
-        target = Math.Clamp(target, 0, 1);
+        target = SnapEdge(Math.Clamp(target, 0, 1));
         await serial.WaitAsync();
         try
         {
@@ -231,7 +318,7 @@ public sealed class StudioFader
 
     private async Task<bool> VersionSupportedAsync()
     {
-        if (!supportedVersion) supportedVersion = Field(await rpc("GetVersion", null), "obsVersion") is "33.0.0" or "33.0.1";
+        if (!supportedVersion) supportedVersion = IsSupportedObsVersion(Field(await rpc("GetVersion", null), "obsVersion"));
         return supportedVersion;
     }
 
@@ -249,6 +336,8 @@ public sealed class StudioFader
                 // With the latch set, this press only clears it: an unconfirmed write is never replayed for the operator.
                 else if (!needsReset) await ReleaseStalledAsync();
                 needsReset = false;
+                disconnectedSweep = null;
+                disconnectedPosition = 0;
                 await RepayAsync();
                 return "";
             }
@@ -365,12 +454,13 @@ public sealed class StudioFader
 
     private async Task MoveAsync(double delta)
     {
-        double next = Math.Clamp(Math.Round(Position + delta, 12), 0, 1);
+        double raw = Math.Clamp(Math.Round(Position + delta, 12), 0, 1);
+        double next = delta < 0 && raw <= Edge ? 0 : delta > 0 && raw >= 1 - Edge ? 1 : raw;
         if (next == Position) return; // Repeated ticks towards a parked rail cannot start a second take.
         if (sweep == null)
         {
             if (!await VersionSupportedAsync())
-                throw new InvalidOperationException("The T-bar works only with OBS 33.0.0 and 33.0.1. With this OBS version, use Take and Cut.");
+                throw new InvalidOperationException("The T-bar works only with OBS 33. With this OBS version, use Take and Cut.");
             var scenes = await ReadScenesAsync();
             if (scenes.Program == scenes.Preview) throw new InvalidOperationException("Choose a different Preview scene first.");
             await RequireIdleAsync();
@@ -385,6 +475,8 @@ public sealed class StudioFader
             if (nativeMove != null) await nativeMove(0, 0);
             if (!fade) transition = await LendFadeAsync(scenes, Field(transition, "transitionName"), sceneOverride);
             sweep = new Sweep(scenes, Field(transition, "transitionUuid"));
+            disconnectedSweep = null;
+            disconnectedPosition = 0;
         }
         bool firstMove = Position == 0;
         try
@@ -418,33 +510,154 @@ public sealed class StudioFader
     private async Task CheckOwnershipAsync()
     {
         var own = sweep ?? throw new InvalidOperationException("No manual sweep.");
+        double activePos = Position;
+        bool rpcCompleted = false;
         try
         {
-            var current = await ReadScenesAsync();
+            if ((await rpc("GetStudioModeEnabled", null))["studioModeEnabled"]?.GetValue<bool>() != true)
+            {
+                rpcCompleted = true;
+                throw new InvalidOperationException("Enable Studio Mode in OBS before using Preview or the T-bar.");
+            }
+            var list = await rpc("GetSceneList", null);
+            var current = new Scenes(Field(list, "currentProgramSceneUuid"), Field(list, "currentPreviewSceneUuid"));
+            string currentTransition = Field(await rpc("GetCurrentSceneTransition", null), "transitionUuid");
+            double cursor = activePos > 0 ? await ReadCursorAsync() : 0;
+            rpcCompleted = true;
             // OBS 33 announces the destination as Program as soon as its manual transition starts.
-            bool programMatches = current.Program == own.Scenes.Program || (Position > 0 && current.Program == own.Scenes.Preview);
+            bool programMatches = current.Program == own.Scenes.Program || (activePos > 0 && current.Program == own.Scenes.Preview);
             if (!programMatches || current.Preview != own.Scenes.Preview ||
-                Field(await rpc("GetCurrentSceneTransition", null), "transitionUuid") != own.Transition ||
-                (Position > 0 && await ReadCursorAsync() is not (> 0 and < 1)))
+                currentTransition != own.Transition ||
+                (activePos > 0 && cursor is not (> 0 and < 1)))
                 throw new InvalidOperationException("Program, Preview or transition changed. Fader stopped without taking the new target.");
         }
-        catch { Disarm(); throw; }
+        catch
+        {
+            if (!rpcCompleted && activePos > 0)
+            {
+                disconnectedSweep = own;
+                disconnectedPosition = activePos;
+            }
+            Disarm();
+            throw;
+        }
     }
 
     private void Disarm() { sweep = null; Position = 0; needsReset = true; }
+
+    private static bool IsOperatorMovedSlider(Exception e) =>
+        e is NativeRefusal && e.Message.StartsWith("T-bar moved", StringComparison.Ordinal);
+
+    private async Task RecoverLostNativeThrowAsync(Sweep broken, double atPosition, Exception cause)
+    {
+        sweep = null;
+        Position = 0;
+        needsReset = false;
+        disconnectedSweep = null;
+        disconnectedPosition = 0;
+        bool finish = atPosition >= 0.5;
+        try
+        {
+            await CloseSweepOverWebSocketAsync(broken, finish);
+        }
+        catch
+        {
+            disconnectedSweep = broken;
+            disconnectedPosition = atPosition;
+            Disarm();
+            throw;
+        }
+        try { await RepayAsync(); }
+        catch (Exception) { } // closing the open T-bar comes first; any owed transition remains recorded
+        throw new InvalidOperationException(
+            finish
+                ? "The OBS T-bar slider was lost mid-throw; finished Preview automatically."
+                : "The OBS T-bar slider was lost mid-throw; returned to Program automatically.",
+            cause);
+    }
+
+    private async Task CloseSweepOverWebSocketAsync(Sweep broken, bool finish)
+    {
+        var current = await ReadScenesAsync();
+        bool programOurs = current.Program == broken.Scenes.Program || current.Program == broken.Scenes.Preview;
+        if (!programOurs || (current.Preview != broken.Scenes.Preview && current.Preview != broken.Scenes.Program))
+            throw new InvalidOperationException("Program or Preview changed during T-bar recovery.");
+
+        double cursor = await ReadCursorAsync();
+        if (finish)
+        {
+            if (cursor is > 0 and < 1)
+            {
+                try { await rpc("SetStudioModeEnabled", new() { ["studioModeEnabled"] = false }); }
+                finally { await RestoreStudioAsync(); }
+            }
+            current = await ReadScenesAsync();
+            if (current.Program != broken.Scenes.Preview)
+                await rpc("SetCurrentProgramScene", new() { ["sceneUuid"] = broken.Scenes.Preview });
+            await ConfirmProgramAsync(broken.Scenes.Preview, parked: true);
+            current = await ReadScenesAsync();
+            if (current.Preview != broken.Scenes.Program)
+                await rpc("SetCurrentPreviewScene", new() { ["sceneUuid"] = broken.Scenes.Program });
+            direction = -direction;
+            takeAt = Stopwatch.GetTimestamp();
+        }
+        else
+        {
+            if (cursor is > 0 and < 1)
+            {
+                if (nativeMove == null)
+                {
+                    await rpc("SetTBarPosition", new() { ["position"] = 0d, ["release"] = true });
+                    for (int i = 0; i < 4; i++)
+                    {
+                        if (await ReadCursorAsync() is 0 or 1) break;
+                        await Task.Delay(25);
+                    }
+                }
+                if (await ReadCursorAsync() is > 0 and < 1)
+                {
+                    try { await rpc("SetStudioModeEnabled", new() { ["studioModeEnabled"] = false }); }
+                    finally { await RestoreStudioAsync(); }
+                }
+            }
+            current = await ReadScenesAsync();
+            if (current.Program != broken.Scenes.Program)
+                await rpc("SetCurrentProgramScene", new() { ["sceneUuid"] = broken.Scenes.Program });
+            await ConfirmProgramAsync(broken.Scenes.Program, parked: true);
+            current = await ReadScenesAsync();
+            if (current.Preview != broken.Scenes.Preview)
+                await rpc("SetCurrentPreviewScene", new() { ["sceneUuid"] = broken.Scenes.Preview });
+        }
+    }
+
     private async Task WritePositionAsync(double value, bool release)
     {
+        var activeSweep = sweep;
+        double activePos = Position;
         bool sent = false;
+        bool nativeFailed = false;
         try
         {
             // Setting the actual Qt slider drives OBS's TBarChanged signal and moves the visible handle.
-            if (nativeMove != null) await nativeMove(Position, value);
+            if (nativeMove != null)
+            {
+                try { await nativeMove(Position, value); }
+                catch { nativeFailed = true; throw; }
+            }
             sent = true;
             if (nativeMove == null || release)
                 await rpc("SetTBarPosition", new() { ["position"] = value, ["release"] = release });
             // OBS-WebSocket has no release-only request. At a rail its release resets the real
             // slider to zero. Equal arguments ask the native adapter to verify without moving it.
-            if (nativeMove != null && release) await nativeMove(0, 0);
+            if (nativeMove != null && release)
+            {
+                try { await nativeMove(0, 0); }
+                catch { nativeFailed = true; throw; }
+            }
+        }
+        catch (Exception ex) when (allowAutoCloseout && nativeFailed && activeSweep != null && activePos > 0 && !IsOperatorMovedSlider(ex))
+        {
+            await RecoverLostNativeThrowAsync(activeSweep, activePos, ex);
         }
         catch (NativeRefusal) when (!sent)
         {
@@ -453,7 +666,16 @@ public sealed class StudioFader
             sweep = null; Position = 0;
             throw;
         }
-        catch { Disarm(); throw; } // An unanswered or unconfirmed write might have reached OBS; never replay it.
+        catch
+        {
+            if (activeSweep != null && activePos > 0)
+            {
+                disconnectedSweep = activeSweep;
+                disconnectedPosition = activePos;
+            }
+            Disarm();
+            throw;
+        } // An unanswered or unconfirmed write might have reached OBS; never replay it.
     }
 
     private async Task CancelSweepAsync()

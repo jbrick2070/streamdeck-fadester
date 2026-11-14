@@ -84,6 +84,18 @@ const PLUGIN_EN = {
   vmDialHintNoTurn: "Push: {op}",
   infobarVsActive: "{bpm} BPM · Beat {beat}/4",
   infobarVsLocked: "{bpm} BPM [LOCK] · Beat {beat}/4",
+  // Tape Deck (P1-6)
+  tdTitle: "Tape Deck",
+  tdOpPlayPause: "Play / pause",
+  tdOpCue: "Cue to start",
+  tdOpNormal: "Normal speed",
+  tdOpSpeedUp: "Speed up",
+  tdOpSpeedDown: "Speed down",
+  tdNoDeck: "NO DECK",
+  tdChooseDeck: "Choose a deck",
+  tdNeedsUpdate: "Update Visual Sidechain",
+  tdErrorNoDeck: "No Tape Deck in OBS.",
+  tdDialHint: "Push: {op} · Turn: speed",
   // OBS Filter keys and dials
   filterChoose: "Choose a filter",
   filterReading: "Reading OBS…",

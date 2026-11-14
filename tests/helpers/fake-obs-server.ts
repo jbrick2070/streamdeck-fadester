@@ -39,8 +39,8 @@ export interface FakeObsServerOptions {
   studioDisableDelayMs?: number;
   dropStudioDisableResponse?: boolean;
   deferStudioModeEvents?: boolean;
-  /** Optional `visual-sidechain` vendor mode: `"none"` (default), `"legacy"` (0.6.0, no safety/tempo requests), `"safety"` (P0-3), or `"tempo"` (P1-2/P1-3). */
-  visualSidechainVendor?: "none" | "legacy" | "safety" | "tempo";
+  /** Optional `visual-sidechain` vendor mode: `"none"` (default), `"legacy"` (0.6.0, no safety/tempo/deck_command requests), `"safety"` (P0-3), `"tempo"` (P1-2/P1-3), or `"decks"` (P1-6). */
+  visualSidechainVendor?: "none" | "legacy" | "safety" | "tempo" | "decks";
 }
 
 /** An OBS input as `GetInputList` reports it (obs-websocket 5.6.3). */
@@ -658,9 +658,10 @@ export class FakeObsServer {
   /** Fails the next `TriggerHotkeyByName` with this OBS comment (code 500), then clears itself. */
   public hotkeyFailNext = "";
   public hotkeyDelayMs: number;
-  public visualSidechainVendor: "none" | "legacy" | "safety" | "tempo";
+  public visualSidechainVendor: "none" | "legacy" | "safety" | "tempo" | "decks";
   public visualSidechainPanic = false;
   public visualSidechainSinceMs = 0;
+  public visualSidechainDecks: Array<Record<string, unknown>> = [];
   public visualSidechainSignals: Record<string, unknown> = {
     audio_present: false,
     level: 0,
@@ -1242,7 +1243,11 @@ export class FakeObsServer {
       this.visualSidechainPanic = false;
       this.visualSidechainSinceMs = 0;
     }
-    if (this.visualSidechainVendor === "safety" || this.visualSidechainVendor === "tempo") {
+    if (
+      this.visualSidechainVendor === "safety" ||
+      this.visualSidechainVendor === "tempo" ||
+      this.visualSidechainVendor === "decks"
+    ) {
       this.emitVendorEvent(
         "safety_changed",
         {
@@ -1264,6 +1269,21 @@ export class FakeObsServer {
         api_version: 1,
         panic: this.visualSidechainPanic,
         ...this.visualSidechainSignals
+      },
+      "visual-sidechain"
+    );
+  }
+
+  public emitVisualSidechainDecksChanged(decks?: Array<Record<string, unknown>>): void {
+    if (decks !== undefined) {
+      this.visualSidechainDecks = decks;
+    }
+    this.emitVendorEvent(
+      "decks_changed",
+      {
+        version: "0.7.0",
+        api_version: 1,
+        decks: this.visualSidechainDecks
       },
       "visual-sidechain"
     );
@@ -1821,7 +1841,10 @@ export class FakeObsServer {
         }
         this.visualSidechainCallLog.push({ requestType: vReqType, requestData: vReqData });
         if (vReqType === "get_signals") {
-          const hasSafety = this.visualSidechainVendor === "safety" || this.visualSidechainVendor === "tempo";
+          const hasSafety =
+            this.visualSidechainVendor === "safety" ||
+            this.visualSidechainVendor === "tempo" ||
+            this.visualSidechainVendor === "decks";
           this.sendResponse(ws, requestId, requestType, true, 100, "", {
             vendorName,
             requestType: vReqType,
@@ -1835,7 +1858,25 @@ export class FakeObsServer {
           });
           return;
         }
-        if (this.visualSidechainVendor === "safety" || this.visualSidechainVendor === "tempo") {
+        if (vReqType === "get_decks") {
+          const hasVersion = this.visualSidechainVendor !== "legacy";
+          this.sendResponse(ws, requestId, requestType, true, 100, "", {
+            vendorName,
+            requestType: vReqType,
+            responseData: {
+              success: true,
+              ...(hasVersion ? { version: "0.7.0" } : {}),
+              api_version: 1,
+              decks: this.visualSidechainDecks
+            }
+          });
+          return;
+        }
+        if (
+          this.visualSidechainVendor === "safety" ||
+          this.visualSidechainVendor === "tempo" ||
+          this.visualSidechainVendor === "decks"
+        ) {
           if (vReqType === "get_safety") {
             this.sendResponse(ws, requestId, requestType, true, 100, "", {
               vendorName,
@@ -1866,7 +1907,110 @@ export class FakeObsServer {
             return;
           }
         }
-        if (this.visualSidechainVendor === "tempo") {
+        if (this.visualSidechainVendor === "tempo" || this.visualSidechainVendor === "decks") {
+          if (vReqType === "deck_command") {
+            const deckArg = typeof vReqData.deck === "string" ? vReqData.deck.trim() : "";
+            const opArg = typeof vReqData.op === "string" ? vReqData.op.trim() : "";
+            const ladder = [25, 50, 75, 100, 125, 150, 200, 300, 400, 600, 800];
+            const failCmd = (error: string): void => {
+              this.sendResponse(ws, requestId, requestType, true, 100, "", {
+                vendorName,
+                requestType: vReqType,
+                responseData: {
+                  success: false,
+                  version: "0.7.0",
+                  api_version: 1,
+                  error
+                }
+              });
+            };
+            if (!deckArg) {
+              failCmd("deck_command requires a non-empty 'deck' Browser Source name or deck_id.");
+              return;
+            }
+            const target = this.visualSidechainDecks.find(
+              (d) =>
+                d.deck_id === deckArg ||
+                (d.source === deckArg && (d.role ?? "owner") === "owner")
+            ) ?? this.visualSidechainDecks.find((d) => d.source === deckArg);
+            if (!target) {
+              failCmd(`Tape Deck '${deckArg}' was not found in OBS.`);
+              return;
+            }
+            const role = String(target.role ?? "owner");
+            if (role !== "owner") {
+              failCmd(
+                role === "waiting"
+                  ? `Tape Deck '${String(target.filter ?? "Tape Deck")}' on '${String(target.source ?? deckArg)}' is waiting behind another Tape Deck on the same Browser Source.`
+                  : `Tape Deck '${String(target.filter ?? "Tape Deck")}' on '${String(target.source ?? deckArg)}' is not driving a Browser Source (${role}).`
+              );
+              return;
+            }
+            let pct = Number(target.speed_percent ?? 100);
+            if (opArg === "play_pause") {
+              const ended = target.state === "ended";
+              target.playing = ended ? true : !Boolean(target.playing);
+              target.state = target.playing ? "playing" : "paused";
+            } else if (opArg === "cue_to_start") {
+              if (!target.tape) {
+                failCmd(`Cue to start needs a tape loaded in '${String(target.source ?? deckArg)}'.`);
+                return;
+              }
+            } else if (opArg === "normal_speed") {
+              pct = 100;
+            } else if (opArg === "speed_set") {
+              const rawPct = vReqData.percent;
+              if (typeof rawPct !== "number" || !Number.isFinite(rawPct) || rawPct < 25 || rawPct > 800) {
+                failCmd("speed_set requires a finite numeric 'percent' from 25 to 800.");
+                return;
+              }
+              pct = Math.max(25, Math.min(800, Math.round(rawPct)));
+            } else if (opArg === "speed_step") {
+              const rawSteps = vReqData.steps;
+              if (typeof rawSteps !== "number" || !Number.isFinite(rawSteps) || Math.trunc(rawSteps) !== rawSteps) {
+                failCmd("speed_step requires an integer 'steps' count.");
+                return;
+              }
+              let steps = rawSteps;
+              while (steps > 0) {
+                pct = ladder.find((r) => r > pct) ?? 800;
+                steps--;
+              }
+              while (steps < 0) {
+                pct = [...ladder].reverse().find((r) => r < pct) ?? 25;
+                steps++;
+              }
+            } else {
+              failCmd("deck_command requires 'op' to be 'play_pause', 'cue_to_start', 'speed_set', 'speed_step', or 'normal_speed'.");
+              return;
+            }
+            target.speed_percent = pct;
+            const sf = (target.speed_fader ?? {}) as Record<string, unknown>;
+            const sfLive = Boolean(sf.live);
+            if (!sfLive) {
+              target.effective_speed_percent = pct;
+            }
+            this.emitVisualSidechainDecksChanged();
+            this.sendResponse(ws, requestId, requestType, true, 100, "", {
+              vendorName,
+              requestType: vReqType,
+              responseData: {
+                success: true,
+                version: "0.7.0",
+                api_version: 1,
+                deck: String(target.deck_id ?? "deck_1"),
+                source: String(target.source ?? deckArg),
+                filter: String(target.filter ?? "Tape Deck"),
+                op: opArg,
+                playing: Boolean(target.playing),
+                speed_percent: pct,
+                effective_speed_percent: Number(target.effective_speed_percent ?? pct),
+                speed_fader_live: sfLive,
+                coalesced: false
+              }
+            });
+            return;
+          }
           if (vReqType === "tap_tempo" || vReqType === "set_bpm" || vReqType === "lock_bpm" || vReqType === "resync_downbeat") {
             if (vReqType === "set_bpm") {
               const rawBpm = Number(vReqData.bpm);

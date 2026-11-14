@@ -594,6 +594,165 @@ export function renderVisualMeterNeoSvg(input: VisualMeterRenderInput): string {
   ].join("");
 }
 
+export interface TapeDeckRenderInput {
+  state: "disconnected" | "not_loaded" | "no_deck" | "active";
+  reason?: string;
+  title?: string;
+  subtitle?: string;
+  problem?: string;
+  speedPercent: number;
+  speedLabel: string;
+  transport: "playing" | "paused" | "ended";
+  accent?: AccentName;
+}
+
+function tapeDeckStateLabel(input: TapeDeckRenderInput): string {
+  switch (input.state) {
+    case "disconnected":
+      return input.reason || t("obsNotConnected");
+    case "not_loaded":
+      return t("vmNotLoaded");
+    case "no_deck":
+      return t("tdNoDeck");
+    default:
+      return input.speedLabel;
+  }
+}
+
+function tapeDeckTransportLabel(transport: "playing" | "paused" | "ended"): string {
+  switch (transport) {
+    case "playing":
+      return t("mediaStatePlaying");
+    case "ended":
+      return t("mediaStateEnded");
+    default:
+      return t("mediaStatePaused");
+  }
+}
+
+function tapeDeckBorderColor(input: TapeDeckRenderInput): string {
+  if (input.problem || input.state === "disconnected") return "#df6d38";
+  if (input.state === "not_loaded") return "#777b86";
+  if (input.state === "no_deck") return "#d6a84b";
+  return accentColor(input.accent);
+}
+
+function tapeDeckSpeedRatio(speedPercent: number): number {
+  const clamped = Number.isFinite(speedPercent) ? Math.max(25, Math.min(800, speedPercent)) : 100;
+  return clampUnit(Math.log(clamped / 25) / Math.log(800 / 25));
+}
+
+/**
+ * Tape Deck key (120x120, P1-6): shows speed in both units ("150% (1.5x)"),
+ * playing / paused / ended transport state, a log-ratio speed bar (with 1x mark),
+ * and plain states NOT LOADED / NO DECK.
+ */
+export function renderTapeDeckKeySvg(input: TapeDeckRenderInput): string {
+  const accent = accentColor(input.accent);
+  const border = tapeDeckBorderColor(input);
+  const head = input.title || t("tdTitle");
+  const headText = boxText(head, 10, 96);
+  const footer = input.problem || input.subtitle || t("tdChooseDeck");
+  const footerText = boxText(footer, 9, 96);
+
+  if (input.state !== "active") {
+    const label = tapeDeckStateLabel(input);
+    const lines = keyTitleLines(label);
+    const stateFill = input.state === "not_loaded" ? P.mutedText : P.orangeAccent;
+    const stateMarkup = lines.lines
+      .map((line, i) => {
+        const lineText = boxText(line, lines.fontSize, 102);
+        return `<text x="60" y="${lines.lines.length > 1 ? 55 + i * 16 : 63}" text-anchor="middle" fill="${stateFill}" ${lineText.attrs} font-weight="800">${lineText.text}</text>`;
+      })
+      .join("");
+    return [
+      `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" data-cell="tape-deck-key" data-state="${input.state}">`,
+      `<title>${escapeXml(head)} — ${escapeXml(label)}</title>`,
+      `<rect x="3" y="3" width="114" height="114" rx="14" fill="${P.bgTop}" stroke="${border}" stroke-width="3"/>`,
+      `<text x="60" y="20" text-anchor="middle" fill="${P.mutedText}" ${headText.attrs} font-weight="700">${headText.text}</text>`,
+      stateMarkup,
+      `<rect x="9" y="94" width="102" height="18" rx="5" fill="${P.trackBg}"/>`,
+      `<text x="60" y="107" text-anchor="middle" fill="${input.problem ? P.orangeAccent : P.mutedText}" ${footerText.attrs} font-weight="600">${footerText.text}</text>`,
+      "</svg>"
+    ].join("");
+  }
+
+  const speedText = boxText(input.speedLabel, 13, 100);
+  const transportRaw = tapeDeckTransportLabel(input.transport);
+  const transportText = boxText(transportRaw, 11, 96);
+  const transportFill =
+    input.transport === "playing" ? accent : input.transport === "ended" ? P.orangeAccent : P.accentYellow;
+  const barWidth = Math.max(4, Math.round(tapeDeckSpeedRatio(input.speedPercent) * 96));
+  const normalX = 12 + Math.round(tapeDeckSpeedRatio(100) * 96);
+
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" data-cell="tape-deck-key" data-state="active" data-transport="${input.transport}" data-speed="${Math.round(input.speedPercent)}">`,
+    `<title>${escapeXml(head)} — ${escapeXml(input.speedLabel)} (${escapeXml(transportRaw)})</title>`,
+    `<rect x="3" y="3" width="114" height="114" rx="14" fill="${P.bgTop}" stroke="${border}" stroke-width="3"/>`,
+    `<text x="60" y="19" text-anchor="middle" fill="${P.mutedText}" ${headText.attrs} font-weight="700">${headText.text}</text>`,
+    `<text x="60" y="47" text-anchor="middle" fill="${P.whiteGlyph}" ${speedText.attrs} font-weight="800">${speedText.text}</text>`,
+    `<text x="60" y="67" text-anchor="middle" fill="${transportFill}" ${transportText.attrs} font-weight="700">${transportText.text}</text>`,
+    `<rect x="12" y="76" width="96" height="10" rx="4" fill="${P.trackBg}"/>`,
+    `<rect x="12" y="76" width="${barWidth}" height="10" rx="4" fill="${accent}" opacity="0.88"/>`,
+    `<line x1="${normalX}" y1="74" x2="${normalX}" y2="88" stroke="${P.whiteGlyph}" stroke-width="1.5" opacity="0.75"/>`,
+    `<rect x="9" y="94" width="102" height="18" rx="5" fill="${P.trackBg}"/>`,
+    `<text x="60" y="107" text-anchor="middle" fill="${input.problem ? P.orangeAccent : P.mutedText}" ${footerText.attrs} font-weight="600">${footerText.text}</text>`,
+    "</svg>"
+  ].join("");
+}
+
+/**
+ * Tape Deck dial / Stream Deck + touch strip (200x100, P1-6): shows speed in
+ * both units ("150% (1.5x)"), playing / paused / ended state, log-ratio speed bar,
+ * and plain states NOT LOADED / NO DECK.
+ */
+export function renderTapeDeckDialSvg(input: TapeDeckRenderInput): string {
+  const accent = accentColor(input.accent);
+  const border = tapeDeckBorderColor(input);
+  const head = input.title || t("tdTitle");
+  const footer = input.problem || input.subtitle || t("tdChooseDeck");
+  const footerText = boxText(footer, 10, 176);
+
+  if (input.state !== "active") {
+    const headText = boxText(head, 14, 176);
+    const label = tapeDeckStateLabel(input);
+    const stateText = boxText(label, 18, 176);
+    const stateFill = input.state === "not_loaded" ? P.mutedText : P.orangeAccent;
+    return [
+      `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100" data-cell="tape-deck-dial" data-state="${input.state}">`,
+      `<defs><linearGradient id="tdDialBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${P.bgTop}"/><stop offset="100%" stop-color="${P.bgBottom}"/></linearGradient></defs>`,
+      `<rect x="2" y="2" width="196" height="96" rx="11" fill="url(#tdDialBg)" stroke="${border}" stroke-width="3"/>`,
+      `<text x="100" y="25" text-anchor="middle" fill="${P.whiteGlyph}" ${headText.attrs} font-weight="700">${headText.text}</text>`,
+      `<text x="100" y="57" text-anchor="middle" fill="${stateFill}" ${stateText.attrs} font-weight="800">${stateText.text}</text>`,
+      `<text x="100" y="88" text-anchor="middle" fill="${input.problem ? P.orangeAccent : P.mutedText}" ${footerText.attrs} font-weight="600">${footerText.text}</text>`,
+      "</svg>"
+    ].join("");
+  }
+
+  const headText = boxText(head, 12, 108);
+  const transportRaw = tapeDeckTransportLabel(input.transport);
+  const transportText = boxText(transportRaw, 12, 66);
+  const transportFill =
+    input.transport === "playing" ? accent : input.transport === "ended" ? P.orangeAccent : P.accentYellow;
+  const speedText = boxText(input.speedLabel, 17, 176);
+  const barWidth = Math.max(6, Math.round(tapeDeckSpeedRatio(input.speedPercent) * 172));
+  const normalX = 14 + Math.round(tapeDeckSpeedRatio(100) * 172);
+
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100" data-cell="tape-deck-dial" data-state="active" data-transport="${input.transport}" data-speed="${Math.round(input.speedPercent)}">`,
+    `<defs><linearGradient id="tdDialBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${P.bgTop}"/><stop offset="100%" stop-color="${P.bgBottom}"/></linearGradient></defs>`,
+    `<rect x="2" y="2" width="196" height="96" rx="11" fill="url(#tdDialBg)" stroke="${border}" stroke-width="3"/>`,
+    `<text x="14" y="22" fill="${P.mutedText}" ${headText.attrs} font-weight="700">${headText.text}</text>`,
+    `<text x="186" y="22" text-anchor="end" fill="${transportFill}" ${transportText.attrs} font-weight="700">${transportText.text}</text>`,
+    `<text x="100" y="49" text-anchor="middle" fill="${P.whiteGlyph}" ${speedText.attrs} font-weight="800">${speedText.text}</text>`,
+    `<rect x="14" y="58" width="172" height="12" rx="4" fill="${P.trackBg}"/>`,
+    `<rect x="14" y="58" width="${barWidth}" height="12" rx="4" fill="${accent}" opacity="0.9"/>`,
+    `<line x1="${normalX}" y1="56" x2="${normalX}" y2="72" stroke="${P.whiteGlyph}" stroke-width="1.5" opacity="0.75"/>`,
+    `<text x="100" y="89" text-anchor="middle" fill="${input.problem ? P.orangeAccent : P.mutedText}" ${footerText.attrs} font-weight="600">${footerText.text}</text>`,
+    "</svg>"
+  ].join("");
+}
+
 /** One line at 14 px, else two lines at 12 px: measured, so a long German
  * word or a CJK title wraps where it no longer fits, not at a character count. */
 export function keyTitleLines(raw: string): { lines: string[]; fontSize: number } {

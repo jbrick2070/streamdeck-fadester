@@ -103,7 +103,8 @@ Visual Sidechain owns audio signals, Tape Deck descriptions, and visual safety (
 | requestType | requestData | responseData | Notes |
 |---|---|---|---|
 | `get_signals` | none | `{ success: true, version, api_version: 1, panic, level, sub_bass, bass, mid, high, kick, snare, beat, beat_phase, beat_index, bar_phase, bar_index, spectral_centroid, spectral_flux, estimated_bpm, bpm, bpm_locked, audio_present, beat_confidence, spectrum: [{ band, value }] }` | Snapshot of the primary audio analyzer's normalized `0.0..1.0` envelopes, `estimated_bpm` (`bpm` alias), `bpm_locked` (`bool`, default `false`), 4-beat bar grid (`beat_index` in `0..3`, `bar_phase` in `0.0..1.0`, monotonic `bar_index >= 0`), 32-band spectrum, `audio_present` (`bool`), `beat_confidence` (`0.0..1.0`), and additive `panic` (`bool`). |
-| `get_decks` | none | `{ success: true, version, api_version: 1, decks: [...] }` | Read-only snapshot of active Tape Deck Browser Sources as last reported by their pages. |
+| `get_decks` | none | `{ success: true, version, api_version: 1, decks: [...] }` | Read-only snapshot of active Tape Deck Browser Sources as last reported by their pages (`source`, `filter`, `deck_id`, `role`, `state`, `tape`, `speed_percent`, `effective_speed_percent`, `speed_fader`, `tape_pitch`, `playing`, `loop`, `start_seconds`, `linked`, `reported?`). |
+| `deck_command` | `{ deck: string, op: "play_pause" \| "cue_to_start" \| "speed_set" \| "speed_step" \| "normal_speed", percent?: number, steps?: number }` | `{ success: true, version, api_version: 1, deck, deck_id, op, playing, speed_percent, effective_speed_percent, speed_fader_live, state }` (`{ success: false, version, api_version: 1, error, comment }` on validation error) | Drives one Tape Deck (`deck` matched by Browser Source `source` name from `get_decks`, preferring the `owner` filter, with `deck_id` accepted as fallback) using the same transport/ladder code paths as the five `tubester_deck.*` hotkeys; commands reach the deck page through the Browser Source's `javascript_event` proc and emit `decks_changed`. |
 | `get_safety` | `{}` | `{ success: true, version, api_version: 1, panic: boolean, since_ms: number }` | `since_ms` is the Unix epoch millisecond timestamp when the active Panic started, or `0` when `panic` is `false`. |
 | `panic` | `{}` | Same payload as `get_safety` with `panic: true` | Immediately enters Panic (passes through Shader Filters, saves and zeroes strobe/flash/modulation amounts on the UI thread, and preserves the original `since_ms` across repeat Panic presses) and emits `safety_changed`. |
 | `restore` | `{}` | `{ success: true, version, api_version: 1, panic: false, since_ms: 0 }` | Immediately clears Panic (restores saved pre-panic amounts on the UI thread) and emits `safety_changed`. |
@@ -118,6 +119,24 @@ Visual Sidechain owns audio signals, Tape Deck descriptions, and visual safety (
 |---|---|---|
 | `signals_changed` | Same signal fields as `get_signals` (without `success`) | Coalesced to at most 30 per second when any signal moves by more than `1e-3` or `audio_present`, `bpm_locked`, `beat_index`, or `bar_index` changes, and emitted immediately on `tap_tempo`, `set_bpm`, `lock_bpm`, `resync_downbeat`, and their frontend hotkeys. |
 | `safety_changed` | `{ version, api_version: 1, panic: boolean, since_ms: number }` | Emitted whenever Panic or Restore is triggered from either a vendor request or the OBS frontend hotkeys (`visual_sidechain_panic` / `visual_sidechain_restore`). |
+| `decks_changed` | `{ success: true, version, api_version: 1, decks: [...] }` (same payload as `get_decks`) | Emitted when a Tape Deck's speed (`speed_percent` / `effective_speed_percent` / `speed_fader.live`), playing/link state (`playing`, `state`, `reported.paused`, `reported.ended`, `reported.rate`), or presence/attachment (`role`, filter add/remove/destroy) changes; tick-driven Speed Fader updates coalesce to at most 30 events/s and ordinary playback time progress (`reported.position`) does not emit. |
+
+### Tape Deck control rules
+
+- `deck_command` never silently ignores bad input; every invalid call returns `{ success: false, version, api_version: 1, error: "<sentence>", comment: "<sentence>" }`:
+  - Missing or empty `deck`: `"Field 'deck' must name an active Tape Deck source."`
+  - Unknown `deck`: `"Tape Deck '<deck>' was not found."`
+  - Missing or unsupported `op`: `"Field 'op' must be one of: play_pause, cue_to_start, speed_set, speed_step, normal_speed."`
+  - `op: "cue_to_start"` with no usable video file selected on that deck: `"Choose a video file in Tape Deck before cueing to start."`
+  - `op: "speed_set"` with missing, non-numeric, or non-finite `percent`: `"Field 'percent' must be a number between 25 and 800."`
+  - `op: "speed_set"` with `percent < 25` or `percent > 800`: `"Field 'percent' must be between 25 and 800."`
+  - `op: "speed_step"` with missing, non-numeric, non-finite, non-integer, or zero `steps`: `"Field 'steps' must be a non-zero integer."`
+- `speed_set` snaps `percent` to integer `1%` (`llround(percent)` in `25..800`), matching the filter Properties integer slider (`obs_properties_add_int_slider(..., 25, 800, 1)`), and returns the applied integer in `speed_percent` (and `effective_speed_percent`, which reflects the bound Midi Fadester Speed Fader while `speed_fader_live` is `true`).
+- Rapid `speed_set` calls within one video frame overwrite the pending target speed in place so `deck_video_tick` sends at most one `rate` command (`javascript_event`) for that video frame, further bounded across frames by the 50 ms rate coalescer (`TUB_COALESCE_INTERVAL_NS`).
+- `speed_step` steps signed rungs along the 11-rung ladder (`25, 50, 75, 100, 125, 150, 200, 300, 400, 600, 800`), clamping at `25` and `800`. `normal_speed` sets `speed_percent` to `100` (`100% (1x)`).
+- `play_pause` flips `playing`, or cues to `start_seconds` and plays again when the current tape has ended (`ended: true`), matching `tubester_deck.play_pause`.
+- Tape Decks remain outside Visual Sidechain's Panic and Restore (`panic` and `restore` leave Tape Deck playback and speed untouched).
+- Surfaces read initial deck state with `get_decks` on connect, subscribe to `decks_changed` (no polling loops), and cap cell redraws inside the 10 redraws/s limit.
 
 ### Silence hold, tempo lock, and beat confidence rules
 

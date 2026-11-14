@@ -63,6 +63,16 @@
       }
     }
   },
+  "io.github.jbrick2070.fadester-for-obs.tape-deck": {
+    "Name": "磁带机",
+    "Tooltip": "沿 25% 至 800%（0.25x 至 8x）速度阶梯调节 Visual Sidechain 磁带机，或执行播放/暂停、回到起点、恢复 100%（1x）及速度步进。",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "沿 25% 至 800%（0.25x 至 8x）阶梯调节速度",
+        "Push": "播放/暂停、回到起点、正常速度或速度步进"
+      }
+    }
+  },
   "io.github.jbrick2070.fadester-for-obs.fader": {
     "Name": "Midi Fadester 推子（可选）",
     "Tooltip": "用于现有 Midi Fadester 槽位的可选增强控制。",
@@ -404,6 +414,17 @@
     "quantizeArmed": "已预备",
     "quantizeNoTempo": "无节拍",
     "quantizeCancelled": "已取消",
+    "tdTitle": "磁带机",
+    "tdOpPlayPause": "播放 / 暂停",
+    "tdOpCue": "回到起点",
+    "tdOpNormal": "正常速度",
+    "tdOpSpeedUp": "加速一档",
+    "tdOpSpeedDown": "减速一档",
+    "tdNoDeck": "无磁带机",
+    "tdChooseDeck": "选择磁带机",
+    "tdNeedsUpdate": "请更新 Visual Sidechain",
+    "tdErrorNoDeck": "OBS 中无磁带机",
+    "tdDialHint": "按: {op} · 转: 速度",
     "pi": {
       "scopeThisKey": "此按键",
       "scopeThisDial": "此旋钮",
@@ -860,7 +881,22 @@
       "quantizeStartNow": "立即",
       "quantizeStartBeat": "下一拍",
       "quantizeStartBar": "下一小节",
-      "quantizeHint": "没有 Visual Sidechain 节拍时，会立即按毫秒备用时长触发并显示“无节拍”。最长等待 1 小节（4 秒）；再按一次立即触发，长按取消。"
+      "quantizeHint": "没有 Visual Sidechain 节拍时，会立即按毫秒备用时长触发并显示“无节拍”。最长等待 1 小节（4 秒）；再按一次立即触发，长按取消。",
+      "tdHeading": "磁带机",
+      "tdIntro": "控制 OBS 浏览器源上的 Visual Sidechain 磁带机滤镜（25% 至 800% / 0.25x 至 8x 实时速度）。",
+      "tdSourceLabel": "磁带机源",
+      "tdAutoFirstDeck": "自动（第一个磁带机）",
+      "tdOptPlayPause": "播放 / 暂停",
+      "tdOptCue": "回到起点",
+      "tdOptNormal": "正常速度 (100% / 1x)",
+      "tdOptSpeedUp": "加速（阶梯）",
+      "tdOptSpeedDown": "减速（阶梯）",
+      "tdNote": "在旋钮上旋转会沿 25% 至 800%（0.25x 至 8x）速度阶梯步进。磁带机不受 Visual Sidechain 紧急停止和恢复影响。",
+      "tdBannerNotLoaded": "OBS 中未安装或未加载 Visual Sidechain。",
+      "tdBannerNeedsUpdate": "请更新 OBS 中的 Visual Sidechain 以从 Fadester for OBS 控制磁带机。",
+      "tdBannerNone": "OBS 中尚未找到磁带机滤镜。请为浏览器源添加 Visual Sidechain: Tape Deck。",
+      "tdBannerMissing": "所选磁带机源当前不在 OBS 中。",
+      "tdBannerSpeedFader": "当前由 Midi Fadester 速度推子控制此磁带机的速度。"
     }
   }
 }

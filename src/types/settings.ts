@@ -413,3 +413,41 @@ export function normalizeDurationMs(raw: unknown, fallback = 1000): number {
   }
   return rounded === 0 ? 0 : Math.max(50, Math.min(20000, rounded));
 }
+
+/** Tape Deck key / dial press operations (P1-6). */
+export type TapeDeckOperation =
+  | "play_pause"
+  | "cue_to_start"
+  | "normal_speed"
+  | "speed_up"
+  | "speed_down";
+
+export const TAPE_DECK_OPERATIONS: readonly TapeDeckOperation[] = [
+  "play_pause",
+  "cue_to_start",
+  "normal_speed",
+  "speed_up",
+  "speed_down"
+];
+
+export interface TapeDeckSettings {
+  [key: string]: string | number | boolean | undefined;
+  /** Browser Source name from `visual-sidechain` `get_decks`; empty selects the first owner deck. */
+  deck?: string;
+  operation?: TapeDeckOperation;
+  labelOverride?: string;
+  accent?: AccentName;
+}
+
+export const DEFAULT_TAPE_DECK_SETTINGS: Required<TapeDeckSettings> = {
+  deck: "",
+  operation: "play_pause",
+  labelOverride: "",
+  accent: "default"
+};
+
+export function normalizeTapeDeckOperation(raw: unknown): TapeDeckOperation {
+  return (TAPE_DECK_OPERATIONS as readonly unknown[]).includes(raw)
+    ? (raw as TapeDeckOperation)
+    : DEFAULT_TAPE_DECK_SETTINGS.operation;
+}

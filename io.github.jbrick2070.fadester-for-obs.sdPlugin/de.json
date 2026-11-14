@@ -63,6 +63,16 @@
       }
     }
   },
+  "io.github.jbrick2070.fadester-for-obs.tape-deck": {
+    "Name": "Banddeck",
+    "Tooltip": "Steuert ein Visual-Sidechain-Banddeck entlang der Tempoleiter von 25 % bis 800 % (0,25x bis 8x) oder startet, pausiert, spult zum Anfang oder setzt 100 % (1x).",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "Tempo auf der Leiter von 25 % bis 800 % (0,25x bis 8x) ändern",
+        "Push": "Wiedergabe/Pause, zum Anfang, Normaltempo oder Tempostufe"
+      }
+    }
+  },
   "io.github.jbrick2070.fadester-for-obs.fader": {
     "Name": "Midi Fadester Fader (optional)",
     "Tooltip": "Optionale erweiterte Steuerung für einen vorhandenen Slot von Midi Fadester.",
@@ -404,6 +414,17 @@
     "quantizeArmed": "BEREIT",
     "quantizeNoTempo": "KEIN TEMPO",
     "quantizeCancelled": "ABGEBROCHEN",
+    "tdTitle": "Banddeck",
+    "tdOpPlayPause": "Start / Pause",
+    "tdOpCue": "Zum Anfang",
+    "tdOpNormal": "Normaltempo",
+    "tdOpSpeedUp": "Schneller",
+    "tdOpSpeedDown": "Langsamer",
+    "tdNoDeck": "KEIN DECK",
+    "tdChooseDeck": "Deck wählen",
+    "tdNeedsUpdate": "Visual Sidechain updaten",
+    "tdErrorNoDeck": "Kein Banddeck in OBS.",
+    "tdDialHint": "Druck: {op} · Dreh: Tempo",
     "pi": {
       "scopeThisKey": "diese Taste",
       "scopeThisDial": "dieser Drehregler",
@@ -860,7 +881,22 @@
       "quantizeStartNow": "Sofort",
       "quantizeStartBeat": "Nächster Schlag",
       "quantizeStartBar": "Nächster Takt",
-      "quantizeHint": "Ohne Tempo von Visual Sidechain wird sofort mit der Ersatzdauer in Millisekunden ausgelöst und KEIN TEMPO angezeigt. Maximale Wartezeit 1 Takt (4 s); erneut drücken zum sofortigen Auslösen, gedrückt halten zum Abbrechen."
+      "quantizeHint": "Ohne Tempo von Visual Sidechain wird sofort mit der Ersatzdauer in Millisekunden ausgelöst und KEIN TEMPO angezeigt. Maximale Wartezeit 1 Takt (4 s); erneut drücken zum sofortigen Auslösen, gedrückt halten zum Abbrechen.",
+      "tdHeading": "Banddeck",
+      "tdIntro": "Steuert einen Visual-Sidechain-Banddeck-Filter auf einer OBS-Browserquelle (25 % bis 800 % / 0,25x bis 8x Live-Tempo).",
+      "tdSourceLabel": "Deck-Quelle",
+      "tdAutoFirstDeck": "Automatisch (erstes Banddeck)",
+      "tdOptPlayPause": "Wiedergabe / Pause",
+      "tdOptCue": "Zum Anfang spulen",
+      "tdOptNormal": "Normaltempo (100 % / 1x)",
+      "tdOptSpeedUp": "Schneller (Leiter)",
+      "tdOptSpeedDown": "Langsamer (Leiter)",
+      "tdNote": "Am Drehregler schaltet Drehen entlang der Tempoleiter von 25 % bis 800 % (0,25x bis 8x). Banddecks bleiben von Panik und Wiederherstellen unberührt.",
+      "tdBannerNotLoaded": "Visual Sidechain ist in OBS nicht installiert oder geladen.",
+      "tdBannerNeedsUpdate": "Aktualisieren Sie Visual Sidechain in OBS, um Banddecks über Fadester for OBS zu steuern.",
+      "tdBannerNone": "Noch kein Banddeck-Filter in OBS gefunden. Fügen Sie einer Browserquelle Visual Sidechain: Tape Deck hinzu.",
+      "tdBannerMissing": "Die gewählte Banddeck-Quelle ist derzeit nicht in OBS vorhanden.",
+      "tdBannerSpeedFader": "Ein Midi-Fadester-Speed-Fader bestimmt derzeit das Tempo dieses Decks."
     }
   }
 }

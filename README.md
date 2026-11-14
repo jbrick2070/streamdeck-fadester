@@ -58,6 +58,8 @@ For a whole-show fade, choose **All OBS mixer inputs** under **Control** on eith
 
 **Playlister Transport** (key). **Previous**, **Next**, **Play/pause**, **Stop**, **Restart** or **Status** for one [Playlister](https://github.com/jbrick2070/obs-playlister) source. The key shows what OBS reports (Playing, Paused, Stopped, with the time), not just that a press was sent. Needs Playlister 0.5 or later in OBS; choose the source in the key's settings page.
 
+**Tape Deck** (key or dial). Drives one [Visual Sidechain](https://github.com/jbrick2070/visual-sidechain) **Tape Deck** filter on an OBS Browser Source (`25% to 800% (0.25x to 8x)` live speed). On a dial, turning steps along the 11-rung speed ladder; pressing a key or dial runs **Play / pause**, **Cue to start**, **Normal speed (100% / 1x)**, **Speed up**, or **Speed down**. The face shows speed in both units (`"150% (1.5x)"`), playing or paused state, and the plain states **NOT LOADED** (Visual Sidechain absent) and **NO DECK** (no deck found), updating from `decks_changed` with no polling loop (capped at 10 redraws/s per cell). Tape Decks remain outside Visual Sidechain's Panic and Restore. *(Direct Fadester Companion / TourBox Tape Deck preset bindings are a planned follow-up.)*
+
 **Visual Panic** (key). [Visual Sidechain](https://github.com/jbrick2070/visual-sidechain)'s own **Panic** (instant) and **Restore** (hold 0.8 s), sent through OBS's hotkeys. After Panic the key reads **PANIC SENT** until a Restore is accepted or the OBS connection drops; meanwhile no Visual Sidechain filter is written from the deck. Needs Visual Sidechain in OBS, and the key looks the same without it. So try it once before the show: hold **Restore**, which changes nothing when no Panic is on. If the key then says **Visual Sidechain missing**, OBS has no Visual Sidechain.
 
 **OBS Scene Info Bar** (Stream Deck Neo). Shows the connection, the live scene and, in Studio Mode, the preview scene. Display only.
@@ -79,10 +81,19 @@ None of these is needed for scenes, transitions, sources, audio or filters.
 | Plugin | What it adds on the deck |
 |---|---|
 | [Playlister](https://github.com/jbrick2070/obs-playlister) 0.5 or later | The Playlister Transport keys and layout. |
-| [Visual Sidechain](https://github.com/jbrick2070/visual-sidechain) | Visual Panic, and the Effect mix and Reactivity dials of the VJ Rig. |
+| [Visual Sidechain](https://github.com/jbrick2070/visual-sidechain) | Visual Panic, Visual Sidechain Meter, Tape Deck, quantized beat/bar fades, and the Effect mix and Reactivity dials of the VJ Rig. |
 | [Midi Fadester](https://github.com/jbrick2070/midi-fadester) | The two actions labelled *(optional)*, for an APC40 or another MIDI controller. |
 
 The [Suite Demo Kit](demo-kit/README.md) is one OBS scene collection with media and two Stream Deck + profiles that show the plugins working together.
+
+## Which video player when
+
+| Player | What it plays | Speed range (both units) | Live speed behavior | Surface controls |
+| :--- | :--- | :--- | :--- | :--- |
+| **VJster (Chrome / Edge tab)** | A YouTube tab (with quality choice) or an HTML5 `<video>` tab captured into OBS | **25% to 200% (0.25x to 2x)** default (up to **400% (4x)** if YouTube lists it; **10% to 1600% (0.1x to 16x)** with **Extended** enabled) | Changes live in place without restarting | **Fadester for OBS** (VJster dials/keys) and **Fadester Companion** |
+| **VJster OBS page** | One YouTube video (`v=`) or playlist (`list=`) in an OBS **Browser Source** | **25% to 200% (0.25x to 2x)** (OBS CEF 150 embed ceiling) | Changes live in place without restarting; speed and play/pause only (no embed quality API) | **Fadester for OBS** (VJster dials/keys) and **Fadester Companion** |
+| **Visual Sidechain: Tape Deck** | One local or network-share video file (`MP4`, `MKV`, `MOV`, `WebM`) on a dedicated OBS **Browser Source** (Windows) | **25% to 800% (0.25x to 8x)** (`100% (1x)` normal) | Changes picture and sound live in place without restarting; optional **Tape pitch** and ratio **Speed Fader** | **Fadester for OBS** (**Tape Deck** key/dial or **OBS Filter**), Midi Fadester **Speed Fader**, OBS hotkeys, `obs-websocket` (`deck_command`). *(Fadester Companion preset support is a follow-up.)* |
+| **OBS Playlister** | Ordered playlists of local files, folders, `.m3u` / `.m3u8` / `.pls` playlists, and stream URLs in an OBS **Playlister** source (Windows & Linux; macOS experimental, not verified on hardware) | **1% to 200% (0.01x to 2x)** (`100% (1x)` normal) | Source setting only: **changing Speed restarts the playing clip from its beginning** | **Fadester for OBS** (**Playlister Transport** key), OBS Media Controls, OBS hotkeys, `obs-websocket` media inputs |
 
 ## Bring your own controller or robot
 

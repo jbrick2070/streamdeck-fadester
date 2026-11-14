@@ -63,6 +63,16 @@
       }
     }
   },
+  "io.github.jbrick2070.fadester-for-obs.tape-deck": {
+    "Name": "テープデッキ",
+    "Tooltip": "Visual Sidechain のテープデッキ速度を 25%〜800% (0.25x〜8x) の段階で操作し、再生/一時停止、頭出し、標準速度 100% (1x) を行います。",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "25%〜800% (0.25x〜8x) の速度段階を変更",
+        "Push": "再生/一時停止、頭出し、標準速度、または速度ステップ"
+      }
+    }
+  },
   "io.github.jbrick2070.fadester-for-obs.fader": {
     "Name": "Midi Fadester フェーダー (オプション)",
     "Tooltip": "既存の Midi Fadester スロット用のオプションの拡張操作です。",
@@ -404,6 +414,17 @@
     "quantizeArmed": "待機中",
     "quantizeNoTempo": "テンポなし",
     "quantizeCancelled": "取消済",
+    "tdTitle": "テープデッキ",
+    "tdOpPlayPause": "再生 / 停止",
+    "tdOpCue": "頭出し",
+    "tdOpNormal": "標準速度",
+    "tdOpSpeedUp": "速度アップ",
+    "tdOpSpeedDown": "速度ダウン",
+    "tdNoDeck": "デッキなし",
+    "tdChooseDeck": "デッキを選択",
+    "tdNeedsUpdate": "VS を更新",
+    "tdErrorNoDeck": "OBS にデッキなし",
+    "tdDialHint": "押: {op} · 回: 速度",
     "pi": {
       "scopeThisKey": "このキー",
       "scopeThisDial": "このダイヤル",
@@ -860,7 +881,22 @@
       "quantizeStartNow": "すぐ開始",
       "quantizeStartBeat": "次の拍",
       "quantizeStartBar": "次の小節",
-      "quantizeHint": "Visual Sidechain のテンポがない場合はミリ秒のフォールバックで即座に実行し、「テンポなし」を表示します。最大待機は 1 小節 (4 秒)。もう一度押すと今すぐ実行、長押しでキャンセルします。"
+      "quantizeHint": "Visual Sidechain のテンポがない場合はミリ秒のフォールバックで即座に実行し、「テンポなし」を表示します。最大待機は 1 小節 (4 秒)。もう一度押すと今すぐ実行、長押しでキャンセルします。",
+      "tdHeading": "テープデッキ",
+      "tdIntro": "OBS ブラウザソース上の Visual Sidechain テープデッキフィルターを操作します（25%〜800% / 0.25x〜8x ライブ速度）。",
+      "tdSourceLabel": "デッキのソース",
+      "tdAutoFirstDeck": "自動（最初のテープデッキ）",
+      "tdOptPlayPause": "再生 / 一時停止",
+      "tdOptCue": "開始位置へ頭出し",
+      "tdOptNormal": "標準速度 (100% / 1x)",
+      "tdOptSpeedUp": "速度アップ（段階）",
+      "tdOptSpeedDown": "速度ダウン（段階）",
+      "tdNote": "ダイヤルを回すと 25%〜800% (0.25x〜8x) の速度段階を移動します。テープデッキは Visual Sidechain の緊急停止と復帰の対象外です。",
+      "tdBannerNotLoaded": "Visual Sidechain が OBS にインストールまたは読み込まれていません。",
+      "tdBannerNeedsUpdate": "Fadester for OBS からテープデッキを操作するには OBS の Visual Sidechain を更新してください。",
+      "tdBannerNone": "OBS にテープデッキフィルターがまだありません。ブラウザソースに Visual Sidechain: Tape Deck を追加してください。",
+      "tdBannerMissing": "選択したテープデッキのソースは現在 OBS にありません。",
+      "tdBannerSpeedFader": "現在 Midi Fadester のスピードフェーダーがこのデッキの速度を制御しています。"
     }
   }
 }

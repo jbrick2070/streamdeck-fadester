@@ -56,16 +56,16 @@ describe("Step 1.1 — Manifest, Layout, Icons & Repository Hygiene", () => {
 
     const actions = manifest.Actions as Array<Record<string, unknown>>;
     expect(Array.isArray(actions)).toBe(true);
-    // Fadester's eleven (the last two optional), then VJster's seven, which the suite assembly adds (scripts/suite/assemble.ts).
-    expect(actions).toHaveLength(18);
+    // Fadester's twelve (the last two optional), then VJster's seven, which the suite assembly adds (scripts/suite/assemble.ts).
+    expect(actions).toHaveLength(19);
     const byId = (id: string) => actions.find((entry) => entry.UUID === `io.github.jbrick2070.fadester-for-obs.${id}`)!;
-    expect(actions.slice(0, 9).every((entry) => !String(entry.Name).includes("optional"))).toBe(true);
-    expect(actions.slice(9, 11).every((entry) => String(entry.Name).includes("optional"))).toBe(true);
-    expect(actions.slice(11).map((entry) => entry.UUID)).toEqual(
+    expect(actions.slice(0, 10).every((entry) => !String(entry.Name).includes("optional"))).toBe(true);
+    expect(actions.slice(10, 12).every((entry) => String(entry.Name).includes("optional"))).toBe(true);
+    expect(actions.slice(12).map((entry) => entry.UUID)).toEqual(
       ["speed", "quality", "speed-preset", "speed-step", "quality-preset", "pin", "transport"].map((kind) => `io.github.jbrick2070.fadester-for-obs.vjster-${kind}`)
     );
-    expect(actions.slice(11).every((entry) => String(entry.Name).startsWith("VJster "))).toBe(true);
-    // The VJ rig's actions (PLAN.md 10.4, P1-3), before the two optional ones.
+    expect(actions.slice(12).every((entry) => String(entry.Name).startsWith("VJster "))).toBe(true);
+    // The VJ rig's actions (PLAN.md 10.4, P1-3, P1-6), before the two optional ones.
     expect(byId("obs-filter")).toMatchObject({
       Controllers: ["Keypad", "Encoder"],
       SupportedInMultiActions: false,
@@ -89,7 +89,15 @@ describe("Step 1.1 — Manifest, Layout, Icons & Repository Hygiene", () => {
       States: [{ Image: "imgs/actions/visual-meter/key" }]
     });
     expect(Object.keys((byId("visual-meter").Encoder as { TriggerDescription: Record<string, string> }).TriggerDescription)).toEqual(["Rotate", "Push"]);
-    for (const folder of ["obs-filter", "visual-panic", "visual-meter"]) {
+    expect(byId("tape-deck")).toMatchObject({
+      Controllers: ["Keypad", "Encoder"],
+      SupportedInMultiActions: false,
+      PropertyInspectorPath: "ui/tape-deck.html",
+      Icon: "imgs/actions/tape-deck/icon",
+      States: [{ Image: "imgs/actions/tape-deck/key" }]
+    });
+    expect(Object.keys((byId("tape-deck").Encoder as { TriggerDescription: Record<string, string> }).TriggerDescription)).toEqual(["Rotate", "Push"]);
+    for (const folder of ["obs-filter", "visual-panic", "visual-meter", "tape-deck"]) {
       for (const icon of ["icon", "key"]) {
         expect(statSync(join(PLUGIN_DIR, "imgs", "actions", folder, `${icon}.svg`)).size).toBeGreaterThan(64);
       }

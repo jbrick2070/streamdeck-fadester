@@ -283,6 +283,17 @@
     "quantizeArmed": "GEREED",
     "quantizeNoTempo": "GEEN TEMPO",
     "quantizeCancelled": "AFGEBROKEN",
+    "tdTitle": "Banddeck",
+    "tdOpPlayPause": "Speel / pauze",
+    "tdOpCue": "Naar begin",
+    "tdOpNormal": "Normaal tempo",
+    "tdOpSpeedUp": "Sneller",
+    "tdOpSpeedDown": "Langzamer",
+    "tdNoDeck": "GEEN DECK",
+    "tdChooseDeck": "Kies een deck",
+    "tdNeedsUpdate": "Werk Visual Sidechain bij",
+    "tdErrorNoDeck": "Geen Tape Deck in OBS.",
+    "tdDialHint": "Druk: {op} · Draai: tempo",
     "pi": {
       "scopeThisKey": "deze toets",
       "scopeThisDial": "deze draaiknop",
@@ -739,7 +750,22 @@
       "quantizeStartNow": "Nu",
       "quantizeStartBeat": "Volgende tel",
       "quantizeStartBar": "Volgende maat",
-      "quantizeHint": "Zonder tempo van Visual Sidechain wordt direct gestart met de terugval in milliseconden en verschijnt GEEN TEMPO. Maximale wachttijd 1 maat (4 s); druk opnieuw om direct te starten, houd ingedrukt om te annuleren."
+      "quantizeHint": "Zonder tempo van Visual Sidechain wordt direct gestart met de terugval in milliseconden en verschijnt GEEN TEMPO. Maximale wachttijd 1 maat (4 s); druk opnieuw om direct te starten, houd ingedrukt om te annuleren.",
+      "tdHeading": "Banddeck",
+      "tdIntro": "Bedient een Visual Sidechain Tape Deck-filter op een OBS-browserbron (25% tot 800% / 0,25x tot 8x live-snelheid).",
+      "tdSourceLabel": "Deckbron",
+      "tdAutoFirstDeck": "Automatisch (eerste banddeck)",
+      "tdOptPlayPause": "Afspelen / pauzeren",
+      "tdOptCue": "Naar begin spoelen",
+      "tdOptNormal": "Normale snelheid (100% / 1x)",
+      "tdOptSpeedUp": "Sneller (ladder)",
+      "tdOptSpeedDown": "Langzamer (ladder)",
+      "tdNote": "Op een draaiknop stapt draaien langs de snelheidsladder van 25% tot 800% (0,25x tot 8x). Banddecks blijven buiten Paniek en Herstellen.",
+      "tdBannerNotLoaded": "Visual Sidechain is niet geïnstalleerd of geladen in OBS.",
+      "tdBannerNeedsUpdate": "Werk Visual Sidechain bij in OBS om banddecks vanuit Fadester for OBS te bedienen.",
+      "tdBannerNone": "Nog geen Tape Deck-filter gevonden in OBS. Voeg Visual Sidechain: Tape Deck toe aan een browserbron.",
+      "tdBannerMissing": "De gekozen banddeckbron staat nu niet in OBS.",
+      "tdBannerSpeedFader": "Een Midi Fadester Speed Fader stuurt momenteel de snelheid van dit deck aan."
     }
   }
 }

@@ -96,6 +96,12 @@ internal static class MixSelfTests
             Check(a.Level == .75 && late.Level == .32 && !(await desk.Status())["active"]!.GetValue<bool>(), "timed restore");
 
             var deskActions = new DeskActions(cfg, Rpc);
+            string persistedId1 = BridgeConfig.ResolveProviderId(cfg.MixStateDirectory);
+            string persistedId2 = BridgeConfig.ResolveProviderId(cfg.MixStateDirectory);
+            string otherDir = Path.Combine(directory, "other-mix-state");
+            string otherId = BridgeConfig.ResolveProviderId(otherDir);
+            Check(Guid.TryParse(persistedId1, out var pGuid) && pGuid != Guid.Empty && persistedId1 == persistedId2 && persistedId1 != otherId,
+                "BridgeConfig.ResolveProviderId persists stable UUID per state directory");
             long nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             var statusEnvelope = new JsonObject
             {
@@ -105,7 +111,7 @@ internal static class MixSelfTests
                 ["sentAtMs"] = nowMs
             };
             Check(MixProtocolServer.Envelope(statusEnvelope, nowMs, out _, out var parsedOp) && parsedOp == "mix.status", "status envelope validation");
-            var statusReply = await MixProtocolServer.BuildReplyAsync(statusEnvelope, parsedOp, deskActions, MixProtocolServer.DefaultProviderId, "Fadester Companion", MixProtocolServer.DefaultProviderVersion);
+            var statusReply = await MixProtocolServer.BuildReplyAsync(statusEnvelope, parsedOp, deskActions, persistedId1, "Fadester Companion", MixProtocolServer.DefaultProviderVersion);
             var provider = statusReply["provider"]?.AsObject();
             Check(provider is not null && Guid.TryParse((string?)provider["id"], out var parsedPid) && parsedPid != Guid.Empty &&
                 (string?)provider["name"] == "Fadester Companion" && !string.IsNullOrWhiteSpace((string?)provider["version"]),
@@ -118,7 +124,7 @@ internal static class MixSelfTests
                 ["sentAtMs"] = nowMs,
                 ["steps"] = -1
             };
-            var errReply = await MixProtocolServer.BuildReplyAsync(errEnvelope, "mix.down", deskActions, MixProtocolServer.DefaultProviderId, "Fadester Companion", MixProtocolServer.DefaultProviderVersion);
+            var errReply = await MixProtocolServer.BuildReplyAsync(errEnvelope, "mix.down", deskActions, persistedId1, "Fadester Companion", MixProtocolServer.DefaultProviderVersion);
             Check((bool?)errReply["ok"] == false && (string?)errReply["provider"]?["id"] == (string?)provider!["id"],
                 "error replies preserve the same provider.id");
             await deskActions.StopMixAsync();

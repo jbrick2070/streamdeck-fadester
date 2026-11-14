@@ -15,6 +15,8 @@ export interface MixState {
 }
 const OFFLINE: MixState = { availability: "offline", db: null };
 const CONFLICT: MixState = { availability: "conflict", db: null };
+const REPIN_SETTLE_MS = 250;
+const LEGACY_PROVIDER_KEY = "__legacy__";
 
 export function mixProblem(state: MixState): string | undefined {
   if (state.availability === "ready") return undefined;
@@ -45,9 +47,11 @@ export class WholeMixClient {
   private lastState = 0;
   private pinnedProviderId: string | null = null;
   private conflict = false;
-  private readonly sentIds = new Set<string>();
+  private readonly sentIds = new Map<string, Set<string>>();
   private readonly pending = new Map<string, {
+    op: MixCommand | "mix.status";
     reply: (ok: boolean, next: MixState) => void;
+    settle: (ok: boolean, next: MixState, providerId: string | null) => void;
     fail: () => void;
     conflict: () => void;
   }>();
@@ -73,7 +77,6 @@ export class WholeMixClient {
   }
 
   public refresh(): void {
-    if (this.conflict) return;
     if (this.watchers && this.connected() && this.pending.size === 0) {
       void this.request("mix.status").catch(() => {});
     }
@@ -105,19 +108,38 @@ export class WholeMixClient {
         typeof event.ok !== "boolean" || typeof event.enabled !== "boolean" || typeof event.message !== "string" ||
         !(event.db === null || (typeof event.db === "number" && Number.isFinite(event.db) && event.db <= 0))) return;
     const provider = parseProvider(event.provider);
-    if (provider === "invalid" || this.conflict) return;
-    if (provider !== null) {
-      if (this.pinnedProviderId !== null && provider.id !== this.pinnedProviderId) {
+    if (provider === "invalid") return;
+    const responders = this.sentIds.get(event.id);
+    if (!responders) return;
+    responders.add(provider ? provider.id : LEGACY_PROVIDER_KEY);
+    if (responders.size >= 2) {
+      this.latchConflict();
+      return;
+    }
+    const inflight = this.pending.get(event.id);
+    if (!inflight) return;
+    const next: MixState = !event.enabled ? { availability: "disabled", db: null }
+      : event.ok ? { availability: "ready", db: event.db } : OFFLINE;
+    const mismatch = provider !== null && this.pinnedProviderId !== null && provider.id !== this.pinnedProviderId;
+    if (inflight.op !== "mix.status") {
+      if (this.conflict || mismatch) {
         this.latchConflict();
         return;
       }
-      if (this.pinnedProviderId === null && this.sentIds.has(event.id)) {
+      if (provider !== null && this.pinnedProviderId === null) {
         this.pinnedProviderId = provider.id;
       }
+      inflight.reply(event.ok, next);
+      return;
     }
-    const next: MixState = !event.enabled ? { availability: "disabled", db: null }
-      : event.ok ? { availability: "ready", db: event.db } : OFFLINE;
-    this.pending.get(event.id)?.reply(event.ok, next);
+    if (this.conflict || mismatch) {
+      inflight.settle(event.ok, next, provider?.id ?? null);
+      return;
+    }
+    if (provider !== null && this.pinnedProviderId === null) {
+      this.pinnedProviderId = provider.id;
+    }
+    inflight.reply(event.ok, next);
   }
 
   private latchConflict(): void {
@@ -130,15 +152,24 @@ export class WholeMixClient {
   private request(op: MixCommand | "mix.status", steps = 1): Promise<void> {
     const id = randomUUID();
     if (this.sentIds.size >= 256) {
-      const oldest = this.sentIds.values().next().value;
+      const oldest = this.sentIds.keys().next().value;
       if (oldest !== undefined) this.sentIds.delete(oldest);
     }
-    this.sentIds.add(id);
+    const responders = new Set<string>();
+    this.sentIds.set(id, responders);
     const order = ++this.serial;
     return new Promise<void>((resolve, reject) => {
+      let settleTimer: ReturnType<typeof setTimeout> | undefined;
+      const clearTimers = (): void => {
+        clearTimeout(timeout);
+        if (settleTimer !== undefined) {
+          clearTimeout(settleTimer);
+          settleTimer = undefined;
+        }
+      };
       const finish = (ok: boolean, next: MixState): void => {
         if (!this.pending.delete(id)) return;
-        clearTimeout(timeout);
+        clearTimers();
         if (this.conflict) {
           reject(new Error(t("mixConflict")));
           return;
@@ -150,14 +181,34 @@ export class WholeMixClient {
         if (ok) resolve();
         else reject(new Error("Mix request unconfirmed"));
       };
-      const fail = (): void => finish(false, OFFLINE);
+      const settle = (ok: boolean, next: MixState, providerId: string | null): void => {
+        if (settleTimer !== undefined) return;
+        settleTimer = setTimeout(() => {
+          settleTimer = undefined;
+          if (responders.size >= 2) {
+            this.latchConflict();
+            return;
+          }
+          this.conflict = false;
+          this.pinnedProviderId = providerId;
+          finish(ok, next);
+        }, REPIN_SETTLE_MS);
+        settleTimer.unref?.();
+      };
+      const fail = (): void => {
+        if (op === "mix.status" && responders.size === 0) {
+          this.pinnedProviderId = null;
+          this.conflict = false;
+        }
+        finish(false, OFFLINE);
+      };
       const conflict = (): void => {
         if (!this.pending.delete(id)) return;
-        clearTimeout(timeout);
+        clearTimers();
         reject(new Error(t("mixConflict")));
       };
       const timeout = setTimeout(fail, op === "mix.status" ? 4000 : 12000);
-      this.pending.set(id, { reply: finish, fail, conflict });
+      this.pending.set(id, { op, reply: finish, settle, fail, conflict });
       // A BroadcastCustomEvent ACK only confirms OBS delivered the envelope. Wait for the owner.
       void this.send({ namespace: MIX_NAMESPACE, id, op, sentAtMs: Date.now(),
         ...(op === "mix.up" || op === "mix.down" ? { steps } : {}) }).catch(fail);

@@ -146,6 +146,7 @@ internal static class MacMixHost
         });
         var stopped = Task.Delay(Timeout.Infinite, stop.Token);
         string? lastError = null;
+        string providerId = BridgeConfig.ResolveProviderId(config.MixStateDirectory);
         while (!stop.IsCancellationRequested)
         {
             try
@@ -155,7 +156,7 @@ internal static class MacMixHost
                     Task.FromException(new InvalidOperationException("Native T-bar control is unavailable in the mix-only host.")));
                 obs.InputLevelChangedById += desk.OnMixInputLevelChanged;
                 desk.StartMixMonitor();
-                var protocol = new MixProtocolServer(obs, desk, "Fadester Mix Host");
+                var protocol = new MixProtocolServer(obs, desk, "Fadester Mix Host", providerId: providerId);
                 lastError = null;
                 Console.WriteLine($"Connected to OBS at {config.Host}:{config.Port}. Grouped mix provider ready.");
                 try { await Task.WhenAny(obs.Disconnected, stopped); }

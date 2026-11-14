@@ -44,13 +44,25 @@ public sealed class StudioFader
     private Sweep? disconnectedSweep;
     private double disconnectedPosition;
 
-    public const double Edge = 0.005;
+    /// <summary>
+    /// The suite's one rail zone (controller_rail_zone in tests/vectors/tbar-safety.json, docs/TBAR-SAFETY-CONTRACT.md). It
+    /// snaps step inputs only. The game controller's trigger applies the same 0.03 itself (PadTbar.Rest and Full) before it
+    /// sends a position, so MoveToAsync must not snap that travel a second time.
+    /// </summary>
+    public const double RailZone = 0.03;
     public const int SliderMax = 1023;
     public const int ObsFinishMinTick = 921;
     public const int ObsCancelMaxTick = 102;
 
-    private static double SnapEdge(double normalized) =>
-        normalized <= Edge ? 0 : normalized >= 1 - Edge ? 1 : normalized;
+    /// <summary>
+    /// Where a step input lands once the rail zone is applied. A forward step that lands in the target rail finishes, and a
+    /// backward step from an open throw that lands in the origin rail cancels. A forward step never lands on 0, so a fine step
+    /// from rest opens a throw rather than collapsing back to 0.
+    /// </summary>
+    internal static double SnapStep(double position, double delta, double raw) =>
+        delta > 0 && raw >= 1 - RailZone ? 1 :
+        delta < 0 && position > 0 && raw <= RailZone ? 0 :
+        raw;
 
     public static bool IsSupportedObsVersion(string? version) =>
         !string.IsNullOrWhiteSpace(version) &&
@@ -251,13 +263,14 @@ public sealed class StudioFader
     /// <summary>
     /// Moves to an absolute position for a spring-loaded control (the game controller's trigger): 0 cancels, 1 takes, and
     /// anything between is a throw from the current Program towards Preview. Unlike the dial, the turn direction never
-    /// swaps after a take: a trigger always pulls from 0 towards 1.
+    /// swaps after a take: a trigger always pulls from 0 towards 1. The position is only clamped: the trigger's own rails
+    /// (PadTbar.Rest and Full) already send an exact 0 or 1, so there is no second rail snap here (see RailZone).
     /// </summary>
     /// <returns>False when the move was ignored as a second take right after a take.</returns>
     public async Task<bool> MoveToAsync(double target)
     {
         if (!double.IsFinite(target)) throw new ArgumentOutOfRangeException(nameof(target));
-        target = SnapEdge(Math.Clamp(target, 0, 1));
+        target = Math.Clamp(target, 0, 1);
         await serial.WaitAsync();
         try
         {
@@ -345,10 +358,10 @@ public sealed class StudioFader
             await RepayAsync();
             switch (action)
             {
-                case "fader.forward": await MoveAsync(direction * step); break;
-                case "fader.back": await MoveAsync(-direction * step); break;
-                case "fader.fineForward": await MoveAsync(direction * step / 4); break;
-                case "fader.fineBack": await MoveAsync(-direction * step / 4); break;
+                case "fader.forward": await MoveAsync(direction * step, snapToRail: true); break;
+                case "fader.back": await MoveAsync(-direction * step, snapToRail: true); break;
+                case "fader.fineForward": await MoveAsync(direction * step / 4, snapToRail: true); break;
+                case "fader.fineBack": await MoveAsync(-direction * step / 4, snapToRail: true); break;
                 case "take": case "take.cut":
                     // A second take within 450 ms of the last is a double press, and so is one pressed before the last
                     // went out (a cut can wait about 1 s for OBS). Measured from the press when it is known.
@@ -452,10 +465,12 @@ public sealed class StudioFader
         }
     }
 
-    private async Task MoveAsync(double delta)
+    /// <param name="snapToRail">True for the dial and hotkey steps, which land on the rails by SnapStep. The trigger's absolute
+    /// move (MoveToAsync) leaves it off: its position is already railed.</param>
+    private async Task MoveAsync(double delta, bool snapToRail = false)
     {
         double raw = Math.Clamp(Math.Round(Position + delta, 12), 0, 1);
-        double next = delta < 0 && raw <= Edge ? 0 : delta > 0 && raw >= 1 - Edge ? 1 : raw;
+        double next = snapToRail ? SnapStep(Position, delta, raw) : raw;
         if (next == Position) return; // Repeated ticks towards a parked rail cannot start a second take.
         if (sweep == null)
         {

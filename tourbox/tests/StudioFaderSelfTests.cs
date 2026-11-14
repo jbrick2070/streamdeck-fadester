@@ -128,6 +128,53 @@ internal static class StudioFaderSelfTests
         throw new Exception("Studio fader test expected the operation to stop.");
     }
 
+    private static string Words(string text) => string.Join(' ', text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
+    private static string FirstDifference(string observed, string onMain)
+    {
+        string[] seen = Words(observed).Split(' '), was = Words(onMain).Split(' ');
+        for (int i = 0; i < Math.Max(seen.Length, was.Length); i++)
+            if (i >= seen.Length || i >= was.Length || seen[i] != was[i])
+                return $"token {i}: observed '{(i < seen.Length ? seen[i] : "(end)")}', main gave '{(i < was.Length ? was[i] : "(end)")}'";
+        return "no difference";
+    }
+
+    // BEGIN trigger-travel-trace
+    // The game controller's trigger end to end: PadTbar turns trigger samples into T-bar targets, and StudioFader.MoveToAsync moves
+    // to each. One token per target sent, in hundredths: target > position held / OBS slider, then o (a throw is open) or i (idle).
+    internal static async Task<string> TriggerTravelTraceAsync()
+    {
+        static double[] Sweep(double from, double to) =>
+            Enumerable.Range(0, (int)Math.Round(Math.Abs(to - from) * 1000) + 1)
+                .Select(i => Math.Round(from + Math.Sign(to - from) * i / 1000.0, 3)).ToArray();
+        var pulls = new (string Name, double[] Samples, bool PadLost)[]
+        {
+            ("rise-to-just-below-full-then-release", [.. Sweep(0, 0.969), .. Sweep(0.969, 0)], false),
+            ("full-pull-and-spring-back", [.. Sweep(0, 1), .. Sweep(1, 0)], false),
+            ("coarse-pull", [0, 0.12, 0.31, 0.58, 0.83, 0.955, 0.97, 0], false),
+            ("half-pull-then-pad-lost", Sweep(0, 0.5), true),
+        };
+        var lines = new List<string>();
+        foreach (var (name, samples, padLost) in pulls)
+        {
+            var obs = new Obs();
+            var fader = new StudioFader(obs.Call, nativeMove: obs.NativeMove);
+            var pad = new PadTbar();
+            var tokens = new List<string>();
+            async Task Send(double? target)
+            {
+                if (target is not double t) return;
+                await fader.MoveToAsync(t);
+                tokens.Add($"{Math.Round(t * 100)}>{Math.Round(fader.Position * 100)}/{Math.Round(obs.Slider * 100)}{(obs.Cursor is > 0 and < 1 ? 'o' : 'i')}");
+            }
+            foreach (double trigger in samples) await Send(pad.Next(trigger));
+            if (padLost) await Send(pad.Lost());
+            lines.Add($"{name}: {string.Join(' ', tokens)} | program={obs.Program} commits={obs.Commits} releases={obs.Releases} slider={obs.Slider}");
+        }
+        return string.Join('\n', lines);
+    }
+    // END trigger-travel-trace
+
     public static async Task RunAsync()
     {
         var nativeObs = new Obs();
@@ -754,11 +801,19 @@ internal static class StudioFaderSelfTests
             var fader33 = new StudioFader(obs33.Call);
             Check(await fader33.SlidePlanAsync() is { Ms: 300 }, $"OBS {v33} is accepted by Companion T-bar gate");
             await fader33.MoveToAsync(0.35);
-            await fader33.MoveToAsync(StudioFader.Edge);
-            Check(fader33.Position == 0 && obs33.Cursor == 0 && obs33.Program == "a", "StudioFader.Edge (0.005) snaps to 0 cancel");
+            await fader33.MoveToAsync(0);
+            Check(fader33.Position == 0 && obs33.Cursor == 0 && obs33.Program == "a", $"OBS {v33}: the trigger pulled back to 0 cancels the throw");
             await fader33.MoveToAsync(0.35);
-            await fader33.MoveToAsync(1 - StudioFader.Edge);
-            Check(fader33.Position == 0 && obs33.Cursor == 0 && obs33.Program == "b", "1 - StudioFader.Edge (0.995) snaps to 1 finish");
+            await fader33.MoveToAsync(1);
+            Check(fader33.Position == 0 && obs33.Cursor == 0 && obs33.Program == "b", $"OBS {v33}: the trigger pulled to 1 takes");
+        }
+        // The trigger's positions are railed by PadTbar (Rest and Full) before they get here, so an absolute move only clamps.
+        foreach (double held in new[] { 0.005, 0.01, 0.02, 0.03, 0.97, 0.98, 0.99 })
+        {
+            obs = new(); fader = new(obs.Call);
+            await fader.MoveToAsync(held);
+            Check(fader.Position == held && obs.Cursor is > 0 and < 1 && obs.Releases == 0 && obs.Commits == 0,
+                $"an absolute move to {held} opens a throw there; it is not snapped to a rail");
         }
         obs = new(); fader = new(obs.Call, 0.25); await fader.DispatchAsync("fader.forward");
         Check(await fader.SlidePlanAsync() is { From: 0.25, Ms: 300 }, "a take during a throw pushes on from where the T-bar is, at the Duration's speed");
@@ -817,5 +872,48 @@ internal static class StudioFaderSelfTests
         Check(await fader.ChooseTransitionAsync("Fondu", "Coupe") == "Coupe", "Cut can be chosen on purpose right after a cut");
         await Task.Delay(500); await fader.DispatchAsync("take");
         Check(obs.TransitionAtTake == "Coupe" && obs.Transition == "Coupe", "and that choice is the operator's: it is not put back");
+
+        // The game controller's trigger must move the T-bar exactly as it did on main, across its whole travel. The rail zone is
+        // written into the contract for step inputs only; the trigger's own rails (PadTbar.Rest and Full) are not applied twice.
+        string travel = await TriggerTravelTraceAsync();
+        Check(Words(travel) == Words(TriggerTravelOnMain),
+            "the trigger path differs from main: " + FirstDifference(travel, TriggerTravelOnMain) + "\nobserved trace:\n" + travel);
     }
+
+    // TriggerTravelTraceAsync as Companion produced it on main (origin/main at 9d164c6), before any rail zone was contracted.
+    private const string TriggerTravelOnMain = """
+        rise-to-just-below-full-then-release: 1>1/1o 2>2/2o 4>4/4o 5>5/5o 7>7/7o 9>9/9o 10>10/10o 12>12/12o
+            13>13/13o 14>14/14o 16>16/16o 17>17/17o 19>19/19o 20>20/20o 22>22/22o 23>23/23o 25>25/25o 26>26/26o
+            27>27/27o 28>28/28o 30>30/30o 31>31/31o 32>32/32o 33>33/33o 34>34/34o 36>36/36o 37>37/37o 38>38/38o
+            39>39/39o 40>40/40o 42>42/42o 43>43/43o 44>44/44o 45>45/45o 46>46/46o 48>48/48o 49>49/49o 50>50/50o
+            51>51/51o 52>52/52o 53>53/53o 54>54/54o 55>55/55o 56>56/56o 58>58/58o 59>59/59o 60>60/60o 61>61/61o
+            62>62/62o 63>63/63o 64>64/64o 65>65/65o 66>66/66o 67>67/67o 68>68/68o 70>70/70o 71>71/71o 72>72/72o
+            73>73/73o 74>74/74o 75>75/75o 76>76/76o 77>77/77o 78>78/78o 79>79/79o 80>80/80o 81>81/81o 83>83/83o
+            84>84/84o 85>85/85o 86>86/86o 87>87/87o 88>88/88o 89>89/89o 90>90/90o 91>91/91o 92>92/92o 93>93/93o
+            95>95/95o 96>96/96o 97>97/97o 98>98/98o 99>99/99o 98>98/98o 97>97/97o 96>96/96o 95>95/95o 94>94/94o
+            92>92/92o 91>91/91o 90>90/90o 89>89/89o 88>88/88o 87>87/87o 86>86/86o 85>85/85o 84>84/84o 83>83/83o
+            82>82/82o 80>80/80o 79>79/79o 78>78/78o 77>77/77o 76>76/76o 75>75/75o 74>74/74o 73>73/73o 72>72/72o
+            71>71/71o 70>70/70o 69>69/69o 67>67/67o 66>66/66o 65>65/65o 64>64/64o 63>63/63o 62>62/62o 61>61/61o
+            60>60/60o 59>59/59o 58>58/58o 57>57/57o 55>55/55o 54>54/54o 53>53/53o 52>52/52o 51>51/51o 50>50/50o
+            49>49/49o 48>48/48o 47>47/47o 45>45/45o 44>44/44o 43>43/43o 42>42/42o 41>41/41o 39>39/39o 38>38/38o
+            37>37/37o 36>36/36o 35>35/35o 33>33/33o 32>32/32o 31>31/31o 30>30/30o 29>29/29o 27>27/27o 26>26/26o
+            25>25/25o 24>24/24o 22>22/22o 21>21/21o 19>19/19o 18>18/18o 16>16/16o 15>15/15o 13>13/13o 12>12/12o
+            10>10/10o 9>9/9o 7>7/7o 6>6/6o 4>4/4o 3>3/3o 1>1/1o 0>0/0i | program=a commits=0 releases=1 slider=0
+        full-pull-and-spring-back: 1>1/1o 2>2/2o 4>4/4o 5>5/5o 7>7/7o 9>9/9o 10>10/10o 12>12/12o 13>13/13o
+            14>14/14o 16>16/16o 17>17/17o 19>19/19o 20>20/20o 22>22/22o 23>23/23o 25>25/25o 26>26/26o 27>27/27o
+            28>28/28o 30>30/30o 31>31/31o 32>32/32o 33>33/33o 34>34/34o 36>36/36o 37>37/37o 38>38/38o 39>39/39o
+            40>40/40o 42>42/42o 43>43/43o 44>44/44o 45>45/45o 46>46/46o 48>48/48o 49>49/49o 50>50/50o 51>51/51o
+            52>52/52o 53>53/53o 54>54/54o 55>55/55o 56>56/56o 58>58/58o 59>59/59o 60>60/60o 61>61/61o 62>62/62o
+            63>63/63o 64>64/64o 65>65/65o 66>66/66o 67>67/67o 68>68/68o 70>70/70o 71>71/71o 72>72/72o 73>73/73o
+            74>74/74o 75>75/75o 76>76/76o 77>77/77o 78>78/78o 79>79/79o 80>80/80o 81>81/81o 83>83/83o 84>84/84o
+            85>85/85o 86>86/86o 87>87/87o 88>88/88o 89>89/89o 90>90/90o 91>91/91o 92>92/92o 93>93/93o 95>95/95o
+            96>96/96o 97>97/97o 98>98/98o 99>99/99o 100>0/0i | program=b commits=1 releases=1 slider=0
+        coarse-pull: 10>10/10o 30>30/30o 59>59/59o 85>85/85o 98>98/98o 100>0/0i | program=b commits=1 releases=1
+            slider=0
+        half-pull-then-pad-lost: 1>1/1o 2>2/2o 4>4/4o 5>5/5o 7>7/7o 9>9/9o 10>10/10o 12>12/12o 13>13/13o
+            14>14/14o 16>16/16o 17>17/17o 19>19/19o 20>20/20o 22>22/22o 23>23/23o 25>25/25o 26>26/26o 27>27/27o
+            28>28/28o 30>30/30o 31>31/31o 32>32/32o 33>33/33o 34>34/34o 36>36/36o 37>37/37o 38>38/38o 39>39/39o
+            40>40/40o 42>42/42o 43>43/43o 44>44/44o 45>45/45o 46>46/46o 48>48/48o 49>49/49o 50>50/50o 0>0/0i |
+            program=a commits=0 releases=1 slider=0
+        """;
 }

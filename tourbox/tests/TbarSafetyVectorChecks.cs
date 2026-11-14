@@ -157,7 +157,10 @@ internal static class TbarSafetyVectorChecks
         Require(StudioFader.SliderMax == (int)constants["slider_max"]!, "slider_max matches StudioFader.SliderMax");
         Require(StudioFader.ObsFinishMinTick == (int)constants["obs_finish_min_tick"]!, "obs_finish_min_tick matches 921");
         Require(StudioFader.ObsCancelMaxTick == (int)constants["obs_cancel_max_tick"]!, "obs_cancel_max_tick matches 102");
-        Require(Math.Abs(StudioFader.Edge - (double)constants["companion_edge"]!) < 1e-12, "companion_edge matches StudioFader.Edge");
+        double railZone = (double)constants["controller_rail_zone"]!;
+        Require(Math.Abs(StudioFader.RailZone - railZone) < 1e-12, "controller_rail_zone matches StudioFader.RailZone");
+        Require(Math.Abs(PadTbar.Rest - railZone) < 1e-12 && Math.Abs(PadTbar.Full - (1 - railZone)) < 1e-12,
+            "controller_rail_zone matches the game controller trigger's Rest and Full");
 
         int passed = 0;
         var divergences = new List<string>();
@@ -191,28 +194,34 @@ internal static class TbarSafetyVectorChecks
                 $"normalized={normalized} -> tick={actualTick} ({actualZone})");
         }
 
-        foreach (var node in root["edge_vectors"]!.AsArray())
+        // Step inputs (the dial and hotkeys) get the rail zone once: a forward step into the target rail finishes, a backward step
+        // from an open throw into the origin rail cancels, a backward step at rest does nothing, and a forward step never snaps to 0.
+        foreach (var node in root["step_vectors"]!.AsArray())
         {
             var vec = node!.AsObject();
             string id = (string)vec["id"]!;
             double startPos = (double)vec["start_position"]!;
-            double targetPos = (double)vec["target_position"]!;
+            double delta = (double)vec["delta"]!;
             var expected = vec["contract_expected"]!.AsObject();
 
             var obs = new VectorObs();
-            var fader = new StudioFader(obs.Call, nativeMove: obs.NativeMove);
+            var fader = new StudioFader(obs.Call, step: Math.Abs(delta), nativeMove: obs.NativeMove);
+            // The start is an absolute move (clamped, never snapped); the step path is what is under test.
             if (startPos > 0) await fader.MoveToAsync(startPos);
-            await fader.MoveToAsync(targetPos);
+            int writesBefore = obs.AcceptedMoves.Count + obs.ObsTbarCalls.Count;
+            await fader.DispatchAsync(delta > 0 ? "fader.forward" : "fader.back");
+            bool wroteNothing = obs.AcceptedMoves.Count + obs.ObsTbarCalls.Count == writesBefore;
 
             bool leftOpen = obs.Cursor is > 0 and < 1;
             string finalScene = obs.Program == "b" ? "preview" : "program";
-            string snappedEndpoint = leftOpen ? "open" : finalScene == "preview" ? "finish" : "cancel";
+            string endpoint = leftOpen ? "open" : finalScene == "preview" ? "finish" : wroteNothing ? "ignored" : "cancel";
 
-            bool ok = snappedEndpoint == (string)expected["snapped_endpoint"]! &&
-                      finalScene == (string)expected["final_scene"]! &&
-                      leftOpen == (bool)expected["transition_left_open"]!;
+            bool ok = endpoint == (string)expected["endpoint"]! &&
+                      leftOpen == (bool)expected["transition_left_open"]! &&
+                      (expected["final_scene"] == null || finalScene == (string)expected["final_scene"]!) &&
+                      (expected["landing_position"] == null || Math.Abs(fader.Position - (double)expected["landing_position"]!) < 1e-9);
             RecordOutcome(id, ok, null, false,
-                $"start={startPos}, target={targetPos} -> endpoint={snappedEndpoint}, final_scene={finalScene}, transition_left_open={leftOpen}");
+                $"start={startPos}, delta={delta} -> endpoint={endpoint}, position={fader.Position}, final_scene={finalScene}, transition_left_open={leftOpen}");
         }
 
         foreach (var node in root["release_once_vectors"]!.AsArray())
@@ -461,16 +470,17 @@ internal static class TbarSafetyVectorChecks
                 $"host={host}, obs_version={obsVersion} -> expected(eligible={expectedEligible}) vs observed(eligible={eligible})");
         }
 
-        // Directional edge snap: a fine step equal to Edge (0.005) leaves 0 on the first forward tick and snaps to 0 on return.
+        // The fine steps (a quarter of the step) take the same rail rule: from rest a fine step opens a throw at its own position,
+        // and the fine step back returns to rest.
         {
             var fineObs = new VectorObs();
-            var fineFader = new StudioFader(fineObs.Call, step: StudioFader.Edge, nativeMove: fineObs.NativeMove);
-            await fineFader.DispatchAsync("fader.forward");
-            if (fineFader.Position != StudioFader.Edge)
-                throw new InvalidOperationException($"Expected first 0.005 forward step to reach {StudioFader.Edge}, observed {fineFader.Position}.");
-            await fineFader.DispatchAsync("fader.back");
-            if (fineFader.Position != 0)
-                throw new InvalidOperationException($"Expected return step to snap back to 0, observed {fineFader.Position}.");
+            var fineFader = new StudioFader(fineObs.Call, step: 0.02, nativeMove: fineObs.NativeMove);
+            await fineFader.DispatchAsync("fader.fineForward");
+            Require(Math.Abs(fineFader.Position - 0.005) < 1e-12 && fineObs.Cursor is > 0 and < 1,
+                $"a fine step of 0.005 from rest opens a throw at 0.005, observed {fineFader.Position}");
+            await fineFader.DispatchAsync("fader.fineBack");
+            Require(fineFader.Position == 0 && fineObs.Cursor == 0 && fineObs.Program == "a",
+                $"the fine step back returns to rest, observed {fineFader.Position}");
         }
 
         Console.WriteLine(

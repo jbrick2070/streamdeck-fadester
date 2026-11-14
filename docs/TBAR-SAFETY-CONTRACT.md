@@ -28,16 +28,30 @@ Three independent implementations drive OBS 33's T-bar without sharing runtime c
 
 ## 2. Slider Range, Rounding, and Rail Thresholds
 
-All implementations share the constants in `tests/vectors/tbar-safety.json` (`constants`, `tick_vectors`, and `edge_vectors`):
+All implementations share the constants in `tests/vectors/tbar-safety.json` (`constants`, `tick_vectors`, and `step_vectors`):
 
 | Constant | Value | Meaning |
 |---|---:|---|
 | `slider_max` | `1023` | Integer range of OBS 33's `slider-tbar` (`0..1023`, `1024` steps). |
 | `obs_finish_min_tick` | `921` | Minimum Qt slider tick at which `OBSBasic::TBarReleased()` completes (`1023 - 102`). Implementations write `1023` (`1.0`) to finish and verify read-back `>= 921` before trusting `release: true`. |
 | `obs_cancel_max_tick` | `102` | Maximum Qt slider tick at which `OBSBasic::TBarReleased()` cancels (`1024 / 10`). Implementations write `0` (`0.0`) to cancel and verify read-back `<= 102` before trusting `release: true`. |
-| `controller_rail_zone` | `0.03` | Normalized controller rail width in Stream Deck (`TBAR_RAIL`) and Midi Fadester (`MFD_TBAR_RAIL_ZONE`): `<= 0.03` is the origin rail; `>= 0.97` is the target rail. |
+| `controller_rail_zone` | `0.03` | Normalized rail width, one value for all three hosts: `<= 0.03` is the origin rail; `>= 0.97` is the target rail. Stream Deck: `TBAR_RAIL`. Midi Fadester: `MFD_TBAR_RAIL_ZONE`. Companion: `StudioFader.RailZone` for step inputs, and the gamepad trigger's own `PadTbar.Rest` (`0.03`) and `PadTbar.Full` (`0.97`). |
 | `midi_start_deadband` | `0.06` | Analog MIDI start band (`Idle -> Throwing` requires `> 0.06` normal or `< 0.94` reversed) so pot jitter near rest never opens a manual transition. Once `Throwing`, `(0.03, 0.06]` stays `Throwing` and aborts only at `<= 0.03`. |
-| `companion_edge` | `0.005` | `StudioFader.Edge` (`DEC-2`, matching Stream Deck's finest `0.005` dial step): Companion snaps normalized targets `<= 0.005` to `0.0` (cancel) and `>= 0.995` to `1.0` (finish) while preserving discrete `0.01..0.99` steps. |
+
+### Rail rule by input type
+
+The rail zone is applied once, where the input is read. No host snaps the same travel a second time.
+
+1. **Step and rotary inputs** (Stream Deck `nudgeTbar`; Companion `StudioFader.DispatchAsync` for `fader.forward`, `fader.back`, `fader.fineForward` and `fader.fineBack`; both run `step_vectors`):
+   - A forward step that lands at `>= 0.97` finishes (take).
+   - A backward step from an open throw that lands at `<= 0.03` cancels (back to Program).
+   - A backward step at rest (position `0`) is ignored and writes nothing.
+   - A forward step from rest never snaps to `0`: fine steps (`0.005`, `0.0125`, `0.02`) open a throw at their own position.
+   - Any other step leaves the throw open at the position it landed on.
+2. **Absolute inputs** apply the rail where the position is read:
+   - Midi Fadester: `tbar-logic` uses the `0.03` rails with the `0.06` start deadband (`midi_start_deadband`).
+   - Stream Deck `writeTbarPosition`: a position `>= 0.97` takes.
+   - Companion's gamepad trigger: `PadTbar` owns the rail zone (`Rest = 0.03`, `Full = 0.97`). It sends exactly `0` or `1` at the rails and `0.01..0.99` between them. `StudioFader.MoveToAsync` only clamps and never snaps again, because a second snap would clip the trigger's travel twice. The `TriggerTravel` self-test pins the trigger path to the positions Companion produced on `main` before this contract, across its full travel.
 
 ### Normalized-to-tick conversion
 
@@ -145,7 +159,7 @@ Out-of-process UIA and Accessibility helpers must verify all of the following be
 | ID | Resolution | Status |
 |---|---|---|
 | **`DEC-1`** | Windows Companion and Stream Deck (`DirectObsClient.recoverFailedNativeThrow`) share symmetric half-way closeout when native slider control is lost mid-throw or across reconnect (`>= 0.5` finishes to Preview, `< 0.5` restores Program/Preview, including reconnect with a non-Fade transition). Experimental `FadesterMacHost` keeps strict no-fallback (`known_exceptions.macos_host`). | **Implemented** |
-| **`DEC-2`** | Companion `StudioFader.Edge` is `0.005` (`<= 0.005` cancels, `>= 0.995` finishes); reconnect closeout codified per surface control model (`adopt_open_throw` on stateful dials, half-rule closeout on Companion). | **Implemented** |
+| **`DEC-2`** | One rail zone for all three hosts: `0.03` (`controller_rail_zone`). Companion step inputs snap directionally at `StudioFader.RailZone` (`>= 0.97` finishes, `<= 0.03` cancels, never to `0` on a forward move from rest); the gamepad trigger keeps its own `PadTbar` `0.03` rails and `MoveToAsync` does not snap. This replaces an earlier `StudioFader.Edge = 0.005` draft that wrongly named `0.005` as the other hosts' rail (it is only Stream Deck's finest dial step). Reconnect closeout is codified per surface control model (`adopt_open_throw` on stateful dials, half-rule closeout on Companion). | **Implemented** |
 | **`DEC-3`** | Companion accepts any OBS `33.x` for `obs-websocket` and native T-bar features, matching Stream Deck, with runtime widget checks as the real guard. | **Implemented** |
 | **`DEC-4`** | Midi Fadester aborts an open T-bar throw to Program once per unexpected MIDI disconnect using `mfd_engine_abort_tbar_for_config_change_locked`, with no automatic resume on reconnect. | **Implemented** |
 

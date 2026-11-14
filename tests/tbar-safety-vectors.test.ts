@@ -26,7 +26,6 @@ interface TbarSafetyVectors {
     obs_finish_min_tick: number;
     obs_cancel_max_tick: number;
     controller_rail_zone: number;
-    companion_edge: number;
     midi_start_deadband: number;
   };
   tick_vectors: Array<{
@@ -34,6 +33,17 @@ interface TbarSafetyVectors {
     normalized: number;
     tick: number;
     obs_release_zone: "cancel" | "open" | "finish";
+  }>;
+  step_vectors: Array<{
+    id: string;
+    start_position: number;
+    delta: number;
+    contract_expected: {
+      endpoint: "open" | "finish" | "cancel" | "ignored";
+      landing_position?: number;
+      final_scene?: "preview" | "program";
+      transition_left_open: boolean;
+    };
   }>;
   release_once_vectors: Array<{
     id: string;
@@ -203,6 +213,41 @@ describe("shared T-bar safety contract vectors (Stream Deck)", () => {
       expect(nativeTbarEligible(vec.platform, vec.host, vec.obs_version)).toBe(vec.contract_expected.eligible);
     }
   );
+
+  it("keeps one rail zone for step inputs and no leftover Companion-only edge constant", () => {
+    expect(vectors.constants.controller_rail_zone).toBe(0.03);
+    expect(Object.keys(vectors.constants)).not.toContain("companion_edge");
+    expect(vectors.step_vectors.length).toBeGreaterThanOrEqual(8);
+  });
+
+  it.each(vectors.step_vectors)("applies the step rail rule to vector $id", async (vec) => {
+    const h = await connectClient();
+    const initialProgram = h.client.getCatalog().currentProgramScene;
+    const initialPreview = h.client.getCatalog().currentPreviewScene;
+    const writes = (): number =>
+      h.server.directCallLog.filter((call) => call.requestType === "SetTBarPosition").length + h.native.moves.length;
+
+    // The start is a first step from rest; the vector's own step is what is under test.
+    if (vec.start_position > 0) await h.client.nudgeTbar(vec.start_position);
+    const writesBefore = writes();
+    await h.client.nudgeTbar(vec.delta);
+
+    const open = h.server.manualTransitionActive;
+    const finalScene = h.server.programSceneName === initialPreview ? "preview" : "program";
+    const endpoint = open ? "open" : finalScene === "preview" ? "finish" : writes() === writesBefore ? "ignored" : "cancel";
+
+    expect(endpoint).toBe(vec.contract_expected.endpoint);
+    expect(open).toBe(vec.contract_expected.transition_left_open);
+    if (vec.contract_expected.final_scene !== undefined) {
+      expect(finalScene).toBe(vec.contract_expected.final_scene);
+      expect(h.server.programSceneName).toBe(
+        vec.contract_expected.final_scene === "preview" ? initialPreview : initialProgram
+      );
+    }
+    if (vec.contract_expected.landing_position !== undefined) {
+      expect(h.client.getCatalog().tbarPosition).toBeCloseTo(vec.contract_expected.landing_position, 9);
+    }
+  });
 
   it.each(vectors.release_once_vectors)("enforces release-once vector $id", async (vec) => {
     const h = await connectClient();

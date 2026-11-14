@@ -49,7 +49,7 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
     {
         bool moving = fader.Position > 0;
         if (!await fader.MoveToAsync(target)) return "Controller T-bar: ignored a second take right after the last one";
-        return target >= 1 - StudioFader.Edge ? "Controller T-bar: take" : target <= StudioFader.Edge && moving ? "Controller T-bar: back to Program" : "";
+        return target >= 1 ? "Controller T-bar: take" : target <= 0 && moving ? "Controller T-bar: back to Program" : "";
     }
 
     /** The game controller's take: how to move the T-bar for it, or null for OBS's own take (StudioFader.SlidePlanAsync). */

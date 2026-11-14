@@ -251,4 +251,84 @@ describe("Visual Panic", () => {
     await panicKey.handleKeyDown();
     await panic.waitImage((svg) => svg.includes("<title>PANIK GESENDET —") && !svg.includes("PANIC"));
   });
+
+  it("uses Visual Sidechain's vendor truth channel (`get_safety`, `panic`, `restore`, `safety_changed`) and recovers Panic state on plugin restart", async () => {
+    const server = new FakeObsServer({ missingPlugin: true, visualSidechainVendor: "safety" });
+    const port = await server.start();
+    const client = new DirectObsClient({ host: "127.0.0.1", port, password: "" });
+    const filters = new FilterController(client);
+    const safety = new VisualSafety(client, filters);
+    cleanup.push(() => client.stop(), () => server.stop());
+    const ready = once(client, "connectionReady", { signal: AbortSignal.timeout(2000) });
+    client.start();
+    await ready;
+    await vi.waitFor(() => expect(safety.getMode()).toBe("vendor"));
+    expect(safety.isLatched()).toBe(false);
+
+    const panic = keySink();
+    const restore = keySink();
+    const panicKey = new VisualPanicInstanceController(safety, client, panic.sink, { operation: "panic" }, 10);
+    const restoreKey = new VisualPanicInstanceController(safety, client, restore.sink, { operation: "restore" }, 10, 200);
+    cleanup.push(() => panicKey.disappear(), () => restoreKey.disappear());
+    panicKey.appear();
+    restoreKey.appear();
+    await panic.waitImage((svg) => svg.includes('data-icon="panic"'));
+
+    // 1. Pressing Panic on the OBS keyboard emits `safety_changed` and flips the Stream Deck key within one event.
+    server.triggerVisualSidechainSafety(true, 1731542400123);
+    await panic.waitImage((svg) => svg.includes('data-icon="panic-sent"'));
+    expect(safety.isLatched()).toBe(true);
+    expect(safety.getSinceMs()).toBe(1731542400123);
+    expect(filters.isPanicLatched()).toBe(true);
+
+    // 2. Restarting the deck plugin mid-Panic reads `get_safety` on connect and comes back showing PANIC SENT.
+    const client2 = new DirectObsClient({ host: "127.0.0.1", port, password: "" });
+    const filters2 = new FilterController(client2);
+    const safety2 = new VisualSafety(client2, filters2);
+    const panic2 = keySink();
+    const panicKey2 = new VisualPanicInstanceController(safety2, client2, panic2.sink, { operation: "panic" }, 10);
+    cleanup.push(() => panicKey2.disappear(), () => client2.stop());
+    panicKey2.appear();
+    client2.start();
+    await panic2.waitImage((svg) => svg.includes('data-icon="panic-sent"'));
+    expect(safety2.isLatched()).toBe(true);
+    expect(safety2.getSinceMs()).toBe(1731542400123);
+    expect(filters2.isPanicLatched()).toBe(true);
+
+    // 3. Pressing Panic on the deck sends vendor request `panic` every time (no hotkey fallback needed).
+    const beforeCalls = server.visualSidechainCallLog.filter((c) => c.requestType === "panic").length;
+    await panicKey.handleKeyDown();
+    await panicKey.handleKeyDown();
+    expect(server.visualSidechainCallLog.filter((c) => c.requestType === "panic")).toHaveLength(beforeCalls + 2);
+    expect(server.hotkeyTriggerLog).toEqual([]);
+
+    // 4. Holding Restore sends vendor request `restore` and clears both decks via `safety_changed`.
+    await restoreKey.handleKeyDown();
+    await vi.waitFor(() => expect(safety.isLatched()).toBe(false), { timeout: 2000 });
+    await vi.waitFor(() => expect(safety2.isLatched()).toBe(false), { timeout: 2000 });
+    await panic.waitImage((svg) => svg.includes('data-icon="panic"'));
+    await panic2.waitImage((svg) => svg.includes('data-icon="panic"'));
+    expect(server.visualSidechainCallLog.at(-1)?.requestType).toBe("restore");
+    expect(safety.getSinceMs()).toBe(0);
+  });
+
+  it("falls back to frontend hotkeys and the local latch when Visual Sidechain 0.6.0 lacks safety vendor requests", async () => {
+    const server = new FakeObsServer({ missingPlugin: true, visualSidechainVendor: "legacy" });
+    const port = await server.start();
+    const client = new DirectObsClient({ host: "127.0.0.1", port, password: "" });
+    const filters = new FilterController(client);
+    const safety = new VisualSafety(client, filters);
+    cleanup.push(() => client.stop(), () => server.stop());
+    const ready = once(client, "connectionReady", { signal: AbortSignal.timeout(2000) });
+    client.start();
+    await ready;
+    await vi.waitFor(() => expect(safety.getMode()).toBe("legacy"));
+
+    await safety.panic();
+    expect(safety.isLatched()).toBe(true);
+    expect(server.hotkeyTriggerLog.map((entry) => entry.hotkeyName)).toEqual([VS_PANIC_HOTKEY]);
+    await safety.restore();
+    expect(safety.isLatched()).toBe(false);
+    expect(server.hotkeyTriggerLog.map((entry) => entry.hotkeyName)).toEqual([VS_PANIC_HOTKEY, VS_RESTORE_HOTKEY]);
+  });
 });

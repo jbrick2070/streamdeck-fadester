@@ -39,6 +39,8 @@ export interface FakeObsServerOptions {
   studioDisableDelayMs?: number;
   dropStudioDisableResponse?: boolean;
   deferStudioModeEvents?: boolean;
+  /** Optional `visual-sidechain` vendor mode: `"none"` (default), `"legacy"` (0.6.0, no safety requests), or `"safety"` (P0-3). */
+  visualSidechainVendor?: "none" | "legacy" | "safety";
 }
 
 /** An OBS input as `GetInputList` reports it (obs-websocket 5.6.3). */
@@ -654,6 +656,11 @@ export class FakeObsServer {
   /** Fails the next `TriggerHotkeyByName` with this OBS comment (code 500), then clears itself. */
   public hotkeyFailNext = "";
   public hotkeyDelayMs: number;
+  public visualSidechainVendor: "none" | "legacy" | "safety";
+  public visualSidechainPanic = false;
+  public visualSidechainSinceMs = 0;
+  public visualSidechainCallLog: Array<{ requestType: string; requestData: Record<string, unknown> }> = [];
+  public visualSidechainFailNext = "";
   /** Delays every `GetSceneList` reply (the catalog read after an identify), so a test can act in between. */
   public sceneListDelayMs = 0;
   public filterWriteDelayMs: number;
@@ -696,6 +703,7 @@ export class FakeObsServer {
     this.studioDisableDelayMs = opts?.studioDisableDelayMs ?? 0;
     this.dropStudioDisableResponse = opts?.dropStudioDisableResponse ?? false;
     this.deferStudioModeEvents = opts?.deferStudioModeEvents ?? false;
+    this.visualSidechainVendor = opts?.visualSidechainVendor ?? "none";
     this.slots = createDefaultSlots(
       this.studioMode,
       supportsFxApi(this.fadesterVersion)
@@ -1172,7 +1180,8 @@ export class FakeObsServer {
 
   public emitVendorEvent(
     eventType: string,
-    eventData: Record<string, unknown>
+    eventData: Record<string, unknown>,
+    vendorName: string = FADESTER_VENDOR_NAME
   ): void {
     const payload = JSON.stringify({
       op: 5,
@@ -1180,7 +1189,7 @@ export class FakeObsServer {
         eventType: "VendorEvent",
         eventIntent: 1 << 9,
         eventData: {
-          vendorName: FADESTER_VENDOR_NAME,
+          vendorName,
           eventType,
           eventData
         }
@@ -1190,6 +1199,30 @@ export class FakeObsServer {
       if (c.readyState === WebSocket.OPEN) {
         c.send(payload);
       }
+    }
+  }
+
+  public triggerVisualSidechainSafety(panic: boolean, nowMs = Date.now()): void {
+    if (panic) {
+      if (!this.visualSidechainPanic || this.visualSidechainSinceMs <= 0) {
+        this.visualSidechainSinceMs = nowMs;
+      }
+      this.visualSidechainPanic = true;
+    } else {
+      this.visualSidechainPanic = false;
+      this.visualSidechainSinceMs = 0;
+    }
+    if (this.visualSidechainVendor === "safety") {
+      this.emitVendorEvent(
+        "safety_changed",
+        {
+          version: "0.7.0",
+          api_version: 1,
+          panic: this.visualSidechainPanic,
+          since_ms: this.visualSidechainPanic ? this.visualSidechainSinceMs : 0
+        },
+        "visual-sidechain"
+      );
     }
   }
 
@@ -1494,6 +1527,11 @@ export class FakeObsServer {
         return;
       }
       this.hotkeyTriggerLog.push({ hotkeyName, at: Date.now() });
+      if (hotkeyName === "visual_sidechain_panic") {
+        this.triggerVisualSidechainSafety(true);
+      } else if (hotkeyName === "visual_sidechain_restore") {
+        this.triggerVisualSidechainSafety(false);
+      }
       this.sendResponse(ws, requestId, requestType, true, 100, "", {});
       return;
     }
@@ -1726,6 +1764,70 @@ export class FakeObsServer {
       const vendorName = String(requestData.vendorName ?? "");
       const vReqType = String(requestData.requestType ?? "");
       const vReqData = (requestData.requestData ?? {}) as Record<string, unknown>;
+
+      if (vendorName === "visual-sidechain" && this.visualSidechainVendor !== "none") {
+        if (this.hotkeyDelayMs > 0) await new Promise((r) => setTimeout(r, this.hotkeyDelayMs));
+        if (this.visualSidechainFailNext) {
+          const comment = this.visualSidechainFailNext;
+          this.visualSidechainFailNext = "";
+          this.sendResponse(ws, requestId, requestType, false, 500, comment);
+          return;
+        }
+        this.visualSidechainCallLog.push({ requestType: vReqType, requestData: vReqData });
+        if (vReqType === "get_signals") {
+          this.sendResponse(ws, requestId, requestType, true, 100, "", {
+            vendorName,
+            requestType: vReqType,
+            responseData: {
+              success: true,
+              version: this.visualSidechainVendor === "safety" ? "0.7.0" : "0.6.0",
+              api_version: 1,
+              ...(this.visualSidechainVendor === "safety" ? { panic: this.visualSidechainPanic } : {})
+            }
+          });
+          return;
+        }
+        if (this.visualSidechainVendor === "safety") {
+          if (vReqType === "get_safety") {
+            this.sendResponse(ws, requestId, requestType, true, 100, "", {
+              vendorName,
+              requestType: vReqType,
+              responseData: {
+                success: true,
+                version: "0.7.0",
+                api_version: 1,
+                panic: this.visualSidechainPanic,
+                since_ms: this.visualSidechainPanic ? this.visualSidechainSinceMs : 0
+              }
+            });
+            return;
+          }
+          if (vReqType === "panic" || vReqType === "restore") {
+            this.triggerVisualSidechainSafety(vReqType === "panic");
+            this.sendResponse(ws, requestId, requestType, true, 100, "", {
+              vendorName,
+              requestType: vReqType,
+              responseData: {
+                success: true,
+                version: "0.7.0",
+                api_version: 1,
+                panic: this.visualSidechainPanic,
+                since_ms: this.visualSidechainPanic ? this.visualSidechainSinceMs : 0
+              }
+            });
+            return;
+          }
+        }
+        this.sendResponse(
+          ws,
+          requestId,
+          requestType,
+          false,
+          604,
+          `No request type '${vReqType}' was found on vendor '${vendorName}'.`
+        );
+        return;
+      }
 
       if (this.missingPlugin || vendorName !== FADESTER_VENDOR_NAME) {
         this.sendResponse(

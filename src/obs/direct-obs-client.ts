@@ -455,7 +455,8 @@ export class DirectObsClient extends ObsVendorClient {
   ) {
     super(initialSettings, {
       ...options,
-      surfaceDisplayName: "Fadester for OBS"
+      surfaceDisplayName: "Fadester for OBS",
+      extraVendorNames: ["visual-sidechain"]
     });
     this.mediaPauseWaitMs = options?.mediaPauseWaitMs ?? MEDIA_PAUSE_WAIT_MS;
     this.nativeOption = options?.nativeTbar ?? defaultNativeTbar;

@@ -47,6 +47,11 @@ internal sealed class BridgeConfig
     /** The controller's speed presets (vjster.speed.fast / vjster.speed.slow), one of YouTube's own rates. */
     public double GamepadFastSpeed { get; set; } = 2.0;
     public double GamepadSlowSpeed { get; set; } = 0.5;
+    /** Quantized, operator-armed Take (P1-4): 0 = OBS's transition duration, or 1/2/4/8/16 beats; start now, next_beat, or next_bar. */
+    public int TakeBeats { get; set; }
+    public string TakeQuantize { get; set; } = "now";
+    public int TakeFallbackMs { get; set; } = 500;
+    public static readonly int[] ValidTakeBeats = [0, 1, 2, 4, 8, 16];
     public static readonly double[] PresetSpeeds = [0.25, 0.5, 0.75, 1.25, 1.5, 1.75, 2.0];
     [JsonIgnore] public string MixStateDirectory { get; set; } = Path.Combine(Path.GetDirectoryName(DefaultPath)!, "mix-state");
     public static readonly JsonSerializerOptions Options = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true };
@@ -78,6 +83,9 @@ internal sealed class BridgeConfig
         config.GamepadMap ??= new();
         if (!PresetSpeeds.Contains(config.GamepadFastSpeed) || !PresetSpeeds.Contains(config.GamepadSlowSpeed))
             throw new InvalidDataException("The controller's speed presets must each be one of " + string.Join(", ", PresetSpeeds.Select(r => r.ToString(System.Globalization.CultureInfo.InvariantCulture))) + ".");
+        config.TakeQuantize = string.IsNullOrWhiteSpace(config.TakeQuantize) ? "now" : config.TakeQuantize.Trim().ToLowerInvariant();
+        if (!ValidTakeBeats.Contains(config.TakeBeats) || config.TakeQuantize is not ("now" or "next_beat" or "next_bar") || config.TakeFallbackMs is < 50 or > 20000)
+            throw new InvalidDataException("Take beats must be 0, 1, 2, 4, 8, or 16; take quantize must be now, next_beat, or next_bar; take fallback must be 50–20000 ms.");
         if (config.GamepadEnabled) PadControls.Build(config.GamepadMap); // refuses an unknown control or action now, not at the first press
         config.MixStateDirectory = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(path))!, "mix-state");
         return config;

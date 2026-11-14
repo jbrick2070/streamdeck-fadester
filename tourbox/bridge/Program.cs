@@ -232,7 +232,7 @@ internal static class Program
                     if (trace != null) { obs.TransitionEvent += trace.OnEvent; rpc = trace.Call; }
                     using var vsMonitor = new VisualSidechainMonitor(obs.Call, panelOwned ? Console.WriteLine : null);
                     vsMonitor.Attach(obs);
-                    var desk = new DeskActions(cfg, rpc, nativeMove: native.MoveAsync, resume: memory); int mine = ++generation;
+                    var desk = new DeskActions(cfg, rpc, nativeMove: native.MoveAsync, resume: memory, vsMonitor: vsMonitor, onStatus: Console.WriteLine); int mine = ++generation;
                     obs.InputVolumeChanged += desk.OnVolumeChanged;
                     obs.InputLevelChangedById += desk.OnMixInputLevelChanged;
                     desk.StartMixMonitor();

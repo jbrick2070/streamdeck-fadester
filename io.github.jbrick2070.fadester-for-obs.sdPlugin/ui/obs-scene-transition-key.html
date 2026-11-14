@@ -27,6 +27,31 @@
     <label for="obs-transition-name" data-i18n="transitionLabel">Transition</label>
     <select id="obs-transition-name"></select>
   </div>
+  <div class="row" id="obs-scene-length-row">
+    <label for="obs-scene-length" data-i18n="quantizeLengthLabel">Length</label>
+    <select id="obs-scene-length">
+      <option value="obs" selected data-i18n="quantizeLengthObs">OBS transition duration</option>
+      <option value="ms" data-i18n="quantizeLengthMs">Milliseconds</option>
+      <option value="1" data-i18n="quantizeBeats1">1 beat</option>
+      <option value="2" data-i18n="quantizeBeats2">2 beats</option>
+      <option value="4" data-i18n="quantizeBeats4">4 beats (1 bar)</option>
+      <option value="8" data-i18n="quantizeBeats8">8 beats (2 bars)</option>
+      <option value="16" data-i18n="quantizeBeats16">16 beats (4 bars)</option>
+    </select>
+  </div>
+  <div class="row" id="obs-scene-duration-row">
+    <label id="obs-scene-duration-label" for="obs-scene-duration" data-i18n="durationMs">Duration (ms)</label>
+    <input id="obs-scene-duration" type="number" min="50" max="20000" step="50" value="500" />
+  </div>
+  <div class="row" id="obs-scene-start-row">
+    <label for="obs-scene-start" data-i18n="quantizeStartLabel">Start</label>
+    <select id="obs-scene-start">
+      <option value="now" selected data-i18n="quantizeStartNow">Now</option>
+      <option value="next_beat" data-i18n="quantizeStartBeat">Next beat</option>
+      <option value="next_bar" data-i18n="quantizeStartBar">Next bar</option>
+    </select>
+  </div>
+  <p id="obs-scene-quantize-hint" class="muted" data-i18n="quantizeHint">Without Visual Sidechain tempo, fires immediately with the millisecond fallback and shows NO TEMPO. Max wait 1 bar (4 s); press again to fire now, hold to cancel.</p>
   <p id="obs-scene-hint" class="muted" data-i18n="sceneHint">Cut and Transition work in regular and Studio Mode. Preview and Current Preview need Studio Mode. A chosen transition applies to this press and preserves the scene’s saved transition override.</p>
   <div class="row">
     <label for="obs-scene-label" data-i18n="label">Label</label>
@@ -43,11 +68,25 @@
       const operation = document.getElementById("obs-scene-operation");
       const transition = document.getElementById("obs-transition-name");
       const transitionRow = document.getElementById("obs-transition-row");
+      const lengthEl = document.getElementById("obs-scene-length");
+      const lengthRow = document.getElementById("obs-scene-length-row");
+      const durationEl = document.getElementById("obs-scene-duration");
+      const durationRow = document.getElementById("obs-scene-duration-row");
+      const durationLabel = document.getElementById("obs-scene-duration-label");
+      const startEl = document.getElementById("obs-scene-start");
+      const startRow = document.getElementById("obs-scene-start-row");
+      const quantizeHint = document.getElementById("obs-scene-quantize-hint");
       const label = document.getElementById("obs-scene-label");
       const banner = document.getElementById("direct-scene-status");
       const catalog = state && state.catalog ? state.catalog : {};
       const selectedOperation = settings.operation || "transition";
+      const selectedTransition = settings.transitionName || "__current_transition__";
       const selectedTarget = typeof settings.sceneTarget === "string" ? settings.sceneTarget : "__next_scene__";
+      const selectedBeats = [1, 2, 4, 8, 16].indexOf(Number(settings.quantizeBeats)) >= 0 ? Number(settings.quantizeBeats) : 0;
+      const selectedDuration = Number(settings.durationMs) > 0 ? Number(settings.durationMs) : 0;
+      const selectedLength = selectedBeats > 0 ? String(selectedBeats) : selectedDuration > 0 ? "ms" : "obs";
+      const selectedStart = settings.quantizeStart === "next_beat" || settings.quantizeStart === "next_bar" ? settings.quantizeStart : "now";
+      const canQuantize = selectedOperation === "transition" && selectedTransition !== "__cut__";
       // A bundled profile's caption is a default: shown empty here, released on retarget.
       const generatedLabel = function () {
         return window.FadesterPresetCaptions.isGenerated("scene", { sceneTarget: selectedTarget, labelOverride: settings.labelOverride });
@@ -67,10 +106,18 @@
         { value: "__cut__", text: T("transitionCut") }
       ].concat((catalog.transitions || []).map(function (name) { return { value: name, text: name }; }));
       window.directObsFillSelect(scene, sceneItems, selectedTarget, T("chooseScene"));
-      window.directObsFillSelect(transition, transitionItems, settings.transitionName || "__current_transition__", T("transitionCurrent"));
+      window.directObsFillSelect(transition, transitionItems, selectedTransition, T("transitionCurrent"));
       if (operation && document.activeElement !== operation) operation.value = selectedOperation;
+      if (lengthEl && document.activeElement !== lengthEl) lengthEl.value = selectedLength;
+      if (durationEl && document.activeElement !== durationEl) durationEl.value = String(selectedDuration > 0 ? selectedDuration : 500);
+      if (startEl && document.activeElement !== startEl) startEl.value = selectedStart;
       if (label && document.activeElement !== label) label.value = generatedLabel() ? "" : settings.labelOverride || "";
       if (transitionRow) transitionRow.style.display = selectedOperation === "transition" ? "" : "none";
+      if (lengthRow) lengthRow.style.display = canQuantize ? "" : "none";
+      if (durationRow) durationRow.style.display = canQuantize && selectedLength !== "obs" ? "" : "none";
+      if (durationLabel) durationLabel.textContent = T(selectedBeats > 0 ? "quantizeFallbackMs" : "durationMs");
+      if (startRow) startRow.style.display = canQuantize ? "" : "none";
+      if (quantizeHint) quantizeHint.style.display = canQuantize && (selectedBeats > 0 || selectedStart !== "now") ? "" : "none";
       if (banner) {
         let text = "";
         const indexMatch = /^__scene_index_(\d+)__$/.exec(selectedTarget);
@@ -88,6 +135,15 @@
       };
       if (operation) operation.onchange = function () { save({ operation: operation.value }); };
       if (transition) transition.onchange = function () { save({ transitionName: transition.value }); };
+      if (lengthEl) lengthEl.onchange = function () {
+        const val = lengthEl.value;
+        const curMs = durationEl && Number(durationEl.value) > 0 ? Number(durationEl.value) : 500;
+        if (val === "obs") save({ quantizeBeats: 0, durationMs: 0 });
+        else if (val === "ms") save({ quantizeBeats: 0, durationMs: curMs });
+        else save({ quantizeBeats: Number(val), durationMs: curMs });
+      };
+      if (durationEl) durationEl.onchange = function () { save({ durationMs: Number(durationEl.value) }); };
+      if (startEl) startEl.onchange = function () { save({ quantizeStart: startEl.value }); };
       if (label) label.onchange = function () { save({ labelOverride: label.value.trim() }); };
       const refresh = document.getElementById("obs-scene-refresh");
       if (refresh) refresh.onclick = function () { window.directObsRefresh(); };

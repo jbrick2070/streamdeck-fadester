@@ -2194,7 +2194,7 @@ export class DirectObsClient extends ObsVendorClient {
         this.catalog.currentProgramScene = live;
       };
       if (this.cutTransitionName) {
-        await this.withSceneTransition(live, this.cutTransitionName, switchBack, generation);
+        await this.withSceneTransition(live, this.cutTransitionName, null, switchBack, generation);
       } else {
         await switchBack();
       }
@@ -2317,11 +2317,12 @@ export class DirectObsClient extends ObsVendorClient {
   public async runSceneAction(
     target: string,
     operation: DirectSceneOperation,
-    transitionName = OBS_TRANSITION_CURRENT
+    transitionName = OBS_TRANSITION_CURRENT,
+    transitionDurationMs?: number
   ): Promise<string> {
     const generation = this.controlGeneration;
     const task = this.sceneQueue.catch(() => {}).then(() =>
-      this.performSceneAction(target, operation, transitionName, generation));
+      this.performSceneAction(target, operation, transitionName, generation, transitionDurationMs));
     this.sceneQueue = task;
     return task;
   }
@@ -2330,7 +2331,8 @@ export class DirectObsClient extends ObsVendorClient {
     target: string,
     operation: DirectSceneOperation,
     transitionName: string,
-    generation: number
+    generation: number,
+    transitionDurationMs?: number
   ): Promise<string> {
     this.requireControlGeneration(generation);
     // Read current scene names inside the queue: repeated Next/Previous keys
@@ -2364,6 +2366,10 @@ export class DirectObsClient extends ObsVendorClient {
       if (isCut && !chosenTransition) {
         throw new DirectObsError(ownText("errorNoCutTransition"), 400);
       }
+      const clampedDurationMs =
+        !isCut && typeof transitionDurationMs === "number" && Number.isFinite(transitionDurationMs) && transitionDurationMs > 0
+          ? Math.max(50, Math.min(20000, Math.round(transitionDurationMs)))
+          : null;
       const switchScene = async (): Promise<void> => {
         // This native request performs a transition in both normal and Studio
         // mode. TriggerStudioModeTransition is only necessary for the OBS UI's
@@ -2374,7 +2380,9 @@ export class DirectObsClient extends ObsVendorClient {
         this.catalog.currentProgramScene = sceneName;
       };
       if (chosenTransition && chosenTransition !== OBS_TRANSITION_CURRENT) {
-        await this.withSceneTransition(sceneName, chosenTransition, switchScene, generation);
+        await this.withSceneTransition(sceneName, chosenTransition, clampedDurationMs, switchScene, generation);
+      } else if (clampedDurationMs !== null) {
+        await this.withCurrentTransitionDuration(sceneName, clampedDurationMs, switchScene, generation);
       } else {
         await switchScene();
       }
@@ -2388,6 +2396,7 @@ export class DirectObsClient extends ObsVendorClient {
   private async withSceneTransition(
     sceneName: string,
     transitionName: string,
+    transitionDuration: number | null,
     switchScene: () => Promise<void>,
     generation: number
   ): Promise<void> {
@@ -2399,7 +2408,53 @@ export class DirectObsClient extends ObsVendorClient {
       await this.sendObsRequest("SetSceneSceneTransitionOverride", {
         sceneName,
         transitionName,
-        transitionDuration: null
+        transitionDuration
+      });
+      this.requireControlGeneration(generation);
+      await switchScene();
+    } finally {
+      if (generation === this.controlGeneration) {
+        await this.sendObsRequest("SetSceneSceneTransitionOverride", {
+          sceneName,
+          transitionName: previous.transitionName ?? null,
+          transitionDuration: previous.transitionDuration ?? null
+        });
+      }
+    }
+  }
+
+  private async withCurrentTransitionDuration(
+    sceneName: string,
+    transitionDuration: number,
+    switchScene: () => Promise<void>,
+    generation: number
+  ): Promise<void> {
+    const previous = await this.sendObsRequest("GetSceneSceneTransitionOverride", { sceneName });
+    this.requireControlGeneration(generation);
+    let effectiveTransition = typeof previous.transitionName === "string" && previous.transitionName.trim()
+      ? previous.transitionName.trim()
+      : "";
+    if (!effectiveTransition) {
+      const current = await this.sendObsRequest("GetCurrentSceneTransition");
+      this.requireControlGeneration(generation);
+      if (current.transitionKind === "cut_transition" || current.transitionFixed === true) {
+        await switchScene();
+        return;
+      }
+      effectiveTransition = typeof current.transitionName === "string" ? current.transitionName.trim() : "";
+    } else if (effectiveTransition === this.cutTransitionName) {
+      await switchScene();
+      return;
+    }
+    if (!effectiveTransition) {
+      await switchScene();
+      return;
+    }
+    try {
+      await this.sendObsRequest("SetSceneSceneTransitionOverride", {
+        sceneName,
+        transitionName: effectiveTransition,
+        transitionDuration
       });
       this.requireControlGeneration(generation);
       await switchScene();

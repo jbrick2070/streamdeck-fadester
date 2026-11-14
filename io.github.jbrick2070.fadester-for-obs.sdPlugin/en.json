@@ -399,6 +399,11 @@
     "vmDialHintNoTurn": "Push: {op}",
     "infobarVsActive": "{bpm} BPM · Beat {beat}/4",
     "infobarVsLocked": "{bpm} BPM [LOCK] · Beat {beat}/4",
+    "fadeUpBeats": "Up {n} beats",
+    "fadeDownBeats": "Down {n} beats",
+    "quantizeArmed": "ARMED",
+    "quantizeNoTempo": "NO TEMPO",
+    "quantizeCancelled": "CANCELLED",
     "pi": {
       "scopeThisKey": "this key",
       "scopeThisDial": "this dial",
@@ -841,7 +846,21 @@
       "vmRate5": "5 per second (default)",
       "vmRate10": "10 per second (maximum)",
       "vmNote": "Draws smoothed envelopes and a locally stepped beat counter inside the 10 Hz per-cell limit; raw kick transients are never drawn.",
-      "infobarShowVs": "Show Visual Sidechain tempo in status line"
+      "infobarShowVs": "Show Visual Sidechain tempo in status line",
+      "quantizeLengthLabel": "Length",
+      "quantizeLengthObs": "OBS transition duration",
+      "quantizeLengthMs": "Milliseconds",
+      "quantizeBeats1": "1 beat",
+      "quantizeBeats2": "2 beats",
+      "quantizeBeats4": "4 beats (1 bar)",
+      "quantizeBeats8": "8 beats (2 bars)",
+      "quantizeBeats16": "16 beats (4 bars)",
+      "quantizeFallbackMs": "Fallback (ms)",
+      "quantizeStartLabel": "Start",
+      "quantizeStartNow": "Now",
+      "quantizeStartBeat": "Next beat",
+      "quantizeStartBar": "Next bar",
+      "quantizeHint": "Without Visual Sidechain tempo, fires immediately with the millisecond fallback and shows NO TEMPO. Max wait 1 bar (4 s); press again to fire now, hold to cancel."
     }
   }
 }

@@ -152,6 +152,8 @@ function drawnTexts(): Array<{ key: StringKey; params?: TextParams; boxes: Box[]
   for (const key of ["sceneControlFailed", "sceneEnableStudio", "sceneUnavailable", "keyOpenInspector", "keyReady",
     "fadeUpNow", "fadeDownNow", "audioInputUnavailable", "layerControlFailed"] as const) add(key, [B.keySub]);
   for (const key of ["fadeUpSeconds", "fadeDownSeconds"] as const) add(key, [B.keySub], { s: "1,25" });
+  for (const key of ["fadeUpBeats", "fadeDownBeats"] as const) add(key, [B.keySub], { n: 16 });
+  for (const key of ["quantizeArmed", "quantizeNoTempo", "quantizeCancelled"] as const) add(key, [B.filterBadge]);
   for (const role of sceneRoles) for (const operation of operations) add("sceneSubtitle", [B.keySub], { role, operation });
   add("audioInputUnavailable", [B.dialReason]);
   for (const key of ["pressNextBlend", "pressPreviousBlend", "pressBlendTake", "pressDisabled"] as const) add(key, [B.dialHint, B.mixerCaption]);

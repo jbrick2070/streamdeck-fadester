@@ -152,14 +152,15 @@ export class QuantizedKeyArm {
   ): Promise<void> {
     if (this.armed !== null) {
       // A second press while ARMED: short tap (< holdMs) fires immediately on keyUp;
-      // holding (>= holdMs) cancels visibly without firing. Pause fireTimer while held
-      // so the bar boundary never fires underneath a cancel hold.
-      this.clearFireTimer();
+      // holding (>= holdMs) cancels visibly without firing. Keep fireTimer running
+      // until either keyUp fires early or holdMs elapses so a press just before the
+      // bar boundary never delays the bar fire.
       this.clearHoldTimer();
       this.armed.secondPressDown = true;
       this.holdTimer = setTimeout(() => {
         this.holdTimer = null;
         if (this.armed === null) return;
+        this.clearFireTimer();
         this.armed = null;
         this.showTransientNotice("cancelled");
       }, this.holdMs);

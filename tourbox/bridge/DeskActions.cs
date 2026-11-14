@@ -74,16 +74,18 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
     }
 
     /** The game controller's take: how to move the T-bar for it, or null for OBS's own take (StudioFader.SlidePlanAsync). */
-    public Task<(double From, int Ms)?> SlidePlan(long pressedAt = 0)
+    public async Task<(double From, int Ms, bool NoTempo)?> SlidePlan(long pressedAt = 0)
     {
-        if (cfg.TakeQuantize is "next_beat" or "next_bar") return Task.FromResult<(double From, int Ms)?>(null);
+        if (IsTakeArmed || cfg.TakeQuantize is "next_beat" or "next_bar") return null;
         int? overrideMs = null;
+        bool noTempo = false;
         if (cfg.TakeBeats > 0)
         {
             var plan = PlanQuantizedTake();
             overrideMs = plan.DurationMs;
+            noTempo = plan.NoTempo;
         }
-        return fader.SlidePlanAsync(pressedAt, overrideMs);
+        return await fader.SlidePlanAsync(pressedAt, overrideMs) is { } s ? (s.From, s.Ms, noTempo) : null;
     }
 
     /// <param name="pressedAt">When the control was pressed (a Stopwatch timestamp), if known; see StudioFader.DispatchAsync.</param>
@@ -240,7 +242,8 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
 
         if (!usable)
         {
-            return new(Math.Clamp(cfg.TakeFallbackMs, 50, 20000), 0, true);
+            int? fallbackDuration = cfg.TakeBeats > 0 ? Math.Clamp(cfg.TakeFallbackMs, 50, 20000) : null;
+            return new(fallbackDuration, 0, true);
         }
 
         var v = snap!.Value;

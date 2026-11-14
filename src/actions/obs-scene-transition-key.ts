@@ -20,10 +20,7 @@ import {
   sceneTargetIndex
 } from "../obs/direct-obs-client.js";
 import { VisualSignals } from "../control/visual-signals.js";
-import {
-  DEFAULT_SCENE_FALLBACK_MS,
-  QuantizedKeyArm
-} from "../control/quantized-fade.js";
+import { QuantizedKeyArm } from "../control/quantized-fade.js";
 import {
   DEFAULT_OBS_SCENE_TRANSITION_KEY_SETTINGS,
   ObsSceneOperation,
@@ -181,12 +178,7 @@ export class ObsSceneTransitionKeyInstanceController {
       return;
     }
 
-    const fallbackMs =
-      this.settings.durationMs > 0
-        ? this.settings.durationMs
-        : this.settings.quantizeBeats > 0
-          ? DEFAULT_SCENE_FALLBACK_MS
-          : undefined;
+    const fallbackMs = this.settings.durationMs > 0 ? this.settings.durationMs : undefined;
 
     await this.arm.handleKeyDown(
       this.settings.quantizeBeats,

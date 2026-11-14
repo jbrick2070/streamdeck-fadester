@@ -399,6 +399,11 @@
     "vmDialHintNoTurn": "Pulsa: {op}",
     "infobarVsActive": "{bpm} BPM · Pulso {beat}/4",
     "infobarVsLocked": "{bpm} BPM [FIJO] · Pulso {beat}/4",
+    "fadeUpBeats": "Subir {n} pulsos",
+    "fadeDownBeats": "Bajar {n} pulsos",
+    "quantizeArmed": "ARMADO",
+    "quantizeNoTempo": "SIN TEMPO",
+    "quantizeCancelled": "CANCELADO",
     "pi": {
       "scopeThisKey": "esta tecla",
       "scopeThisDial": "este dial",
@@ -841,7 +846,21 @@
       "vmRate5": "5 por segundo (predeterminado)",
       "vmRate10": "10 por segundo (máximo)",
       "vmNote": "Dibuja envolventes suavizadas y un contador de pulso interpolado dentro del límite de 10 Hz por celda; nunca dibuja el golpe bruto.",
-      "infobarShowVs": "Mostrar el tempo de Visual Sidechain en la línea de estado"
+      "infobarShowVs": "Mostrar el tempo de Visual Sidechain en la línea de estado",
+      "quantizeLengthLabel": "Duración",
+      "quantizeLengthObs": "Duración de transición de OBS",
+      "quantizeLengthMs": "Milisegundos",
+      "quantizeBeats1": "1 pulso",
+      "quantizeBeats2": "2 pulsos",
+      "quantizeBeats4": "4 pulsos (1 compás)",
+      "quantizeBeats8": "8 pulsos (2 compases)",
+      "quantizeBeats16": "16 pulsos (4 compases)",
+      "quantizeFallbackMs": "Respaldo (ms)",
+      "quantizeStartLabel": "Inicio",
+      "quantizeStartNow": "Ahora",
+      "quantizeStartBeat": "Siguiente pulso",
+      "quantizeStartBar": "Siguiente compás",
+      "quantizeHint": "Sin tempo de Visual Sidechain, se ejecuta de inmediato con el respaldo en milisegundos y muestra SIN TEMPO. Espera máxima de 1 compás (4 s); vuelve a pulsar para ejecutar ya, mantén pulsado para cancelar."
     }
   }
 }

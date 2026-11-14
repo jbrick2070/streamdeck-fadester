@@ -399,6 +399,11 @@
     "vmDialHintNoTurn": "누름: {op}",
     "infobarVsActive": "{bpm} BPM · {beat}/4박",
     "infobarVsLocked": "{bpm} BPM [잠금] · {beat}/4박",
+    "fadeUpBeats": "{n}박자 올리기",
+    "fadeDownBeats": "{n}박자 내리기",
+    "quantizeArmed": "대기 중",
+    "quantizeNoTempo": "템포 없음",
+    "quantizeCancelled": "취소됨",
     "pi": {
       "scopeThisKey": "이 키",
       "scopeThisDial": "이 다이얼",
@@ -841,7 +846,21 @@
       "vmRate5": "초당 5회(기본값)",
       "vmRate10": "초당 10회(최대)",
       "vmNote": "셀당 10 Hz 한도 안에서 스무딩 엔벨로프와 보간된 박자 카운터만 그리며 원시 킥 트랜지언트는 그리지 않습니다.",
-      "infobarShowVs": "상태 줄에 Visual Sidechain 템포 표시"
+      "infobarShowVs": "상태 줄에 Visual Sidechain 템포 표시",
+      "quantizeLengthLabel": "길이",
+      "quantizeLengthObs": "OBS 전환 길이",
+      "quantizeLengthMs": "밀리초",
+      "quantizeBeats1": "1박자",
+      "quantizeBeats2": "2박자",
+      "quantizeBeats4": "4박자 (1마디)",
+      "quantizeBeats8": "8박자 (2마디)",
+      "quantizeBeats16": "16박자 (4마디)",
+      "quantizeFallbackMs": "대체 시간 (ms)",
+      "quantizeStartLabel": "시작 시점",
+      "quantizeStartNow": "지금",
+      "quantizeStartBeat": "다음 박자",
+      "quantizeStartBar": "다음 마디",
+      "quantizeHint": "Visual Sidechain 템포가 없으면 밀리초 대체 시간으로 즉시 실행하고 ‘템포 없음’을 표시합니다. 최대 대기는 1마디(4초)이며, 다시 누르면 즉시 실행되고 길게 누르면 취소됩니다."
     }
   }
 }

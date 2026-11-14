@@ -3,6 +3,7 @@ import {
   action,
   DidReceiveSettingsEvent,
   KeyDownEvent,
+  KeyUpEvent,
   SingletonAction,
   WillAppearEvent,
   WillDisappearEvent
@@ -18,18 +19,26 @@ import {
   automaticSceneTargetLabel,
   sceneTargetIndex
 } from "../obs/direct-obs-client.js";
+import { VisualSignals } from "../control/visual-signals.js";
+import {
+  DEFAULT_SCENE_FALLBACK_MS,
+  QuantizedKeyArm
+} from "../control/quantized-fade.js";
 import {
   DEFAULT_OBS_SCENE_TRANSITION_KEY_SETTINGS,
   ObsSceneOperation,
   ObsSceneTransitionKeySettings,
   normalizeAccent,
-  normalizeLabelOverride
+  normalizeLabelOverride,
+  normalizeQuantizeBeats,
+  normalizeQuantizeStart
 } from "../types/settings.js";
 import { CellRateLimiter } from "../gfx/cell-rate-limiter.js";
 import {
   renderDirectKeySvg,
   toSvgDataUri
 } from "../gfx/direct-obs-renderer.js";
+import { DIAL_HOLD_THRESHOLD_MS } from "./dial-math.js";
 import { LocalText, errorLocalText, ownText, wordText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
 import { statusCellReason } from "../../packages/streamdeck-fadester-shared/src/status-text.js";
 import { onLanguageChanged, t, translate } from "../i18n/strings.js";
@@ -85,7 +94,12 @@ export class ObsSceneTransitionKeyInstanceController {
   private offLanguage: () => void = () => {};
   private lastError: LocalText | null = null;
   private readonly rateLimiter: CellRateLimiter<string>;
+  private readonly arm: QuantizedKeyArm;
+  private readonly clock: () => number;
   private readonly onStateChanged = (): void => {
+    if (!this.client.isConnected()) {
+      this.arm.cancelSilently();
+    }
     this.lastError = null;
     this.renderNow();
   };
@@ -94,12 +108,17 @@ export class ObsSceneTransitionKeyInstanceController {
     private readonly client: DirectObsClient,
     private readonly sink: KeyImageSink,
     initialSettings?: ObsSceneTransitionKeySettings,
-    rateLimitMs = 100
+    rateLimitMs = 100,
+    signals?: VisualSignals,
+    holdMs: number = DIAL_HOLD_THRESHOLD_MS,
+    clock: () => number = Date.now
   ) {
+    this.clock = clock;
     this.settings = this.mergeSettings(initialSettings);
     this.rateLimiter = new CellRateLimiter<string>(async (svg) => {
       await this.sink.setImage(toSvgDataUri(svg));
-    }, rateLimitMs);
+    }, rateLimitMs, clock);
+    this.arm = new QuantizedKeyArm(signals, () => this.renderNow(), holdMs, clock);
   }
 
   public appear(settings?: ObsSceneTransitionKeySettings): void {
@@ -118,33 +137,89 @@ export class ObsSceneTransitionKeyInstanceController {
     this.visible = false;
     this.offLanguage();
     this.offLanguage = () => {};
+    this.arm.dispose();
     this.rateLimiter.dispose();
     this.client.off("statusChanged", this.onStateChanged);
     this.client.off("directStateChanged", this.onStateChanged);
   }
 
   public updateSettings(settings: ObsSceneTransitionKeySettings): void {
+    const prev = this.settings;
     this.settings = this.mergeSettings(settings);
+    if (
+      prev.sceneTarget !== this.settings.sceneTarget ||
+      prev.operation !== this.settings.operation ||
+      prev.transitionName !== this.settings.transitionName ||
+      prev.quantizeBeats !== this.settings.quantizeBeats ||
+      prev.quantizeStart !== this.settings.quantizeStart
+    ) {
+      this.arm.cancelSilently();
+    }
     this.lastError = null;
     this.renderNow();
   }
 
-  public async handleKeyDown(now = Date.now()): Promise<void> {
-    if (!this.settings.sceneTarget) {
-      await this.sink.showAlert();
+  public async handleKeyDown(now = this.clock()): Promise<void> {
+    if (!this.arm.isArmed()) {
+      if (!this.settings.sceneTarget) {
+        await this.sink.showAlert();
+        return;
+      }
+      if (!this.client.isConnected()) {
+        this.client.nudgeReconnect(2000, now);
+        await this.sink.showAlert();
+        return;
+      }
+    }
+
+    const canQuantize =
+      this.settings.operation === "transition" &&
+      this.settings.transitionName !== OBS_TRANSITION_CUT;
+
+    if (!canQuantize) {
+      await this.executeSceneAction(undefined);
       return;
     }
-    if (!this.client.isConnected()) {
-      this.client.nudgeReconnect(2000, now);
-      await this.sink.showAlert();
-      return;
-    }
+
+    const fallbackMs =
+      this.settings.durationMs > 0
+        ? this.settings.durationMs
+        : this.settings.quantizeBeats > 0
+          ? DEFAULT_SCENE_FALLBACK_MS
+          : undefined;
+
+    await this.arm.handleKeyDown(
+      this.settings.quantizeBeats,
+      this.settings.quantizeStart,
+      fallbackMs,
+      async (effectiveMs) => {
+        if (!this.client.isConnected()) return;
+        await this.executeSceneAction(effectiveMs);
+      },
+      now
+    );
+  }
+
+  public async handleKeyUp(): Promise<void> {
+    await this.arm.handleKeyUp();
+  }
+
+  private async executeSceneAction(transitionDurationMs: number | undefined): Promise<void> {
     try {
-      await this.client.runSceneAction(
-        this.settings.sceneTarget,
-        this.settings.operation,
-        this.settings.transitionName
-      );
+      if (transitionDurationMs !== undefined) {
+        await this.client.runSceneAction(
+          this.settings.sceneTarget,
+          this.settings.operation,
+          this.settings.transitionName,
+          transitionDurationMs
+        );
+      } else {
+        await this.client.runSceneAction(
+          this.settings.sceneTarget,
+          this.settings.operation,
+          this.settings.transitionName
+        );
+      }
       this.lastError = null;
     } catch (error) {
       this.lastError = errorLocalText(error, ownText("sceneControlFailed"));
@@ -189,6 +264,15 @@ export class ObsSceneTransitionKeyInstanceController {
           : target === DIRECT_SCENE_RANDOM ? t("sceneRoleRandom")
             : target === DIRECT_SCENE_CURRENT_PREVIEW ? t("sceneRoleTake") : "";
     const subtitle = role ? t("sceneSubtitle", { role, operation }) : operation;
+    const bannerKind = this.arm.getBanner();
+    const badge =
+      bannerKind === "armed"
+        ? { text: t("quantizeArmed"), on: true }
+        : bannerKind === "no_tempo"
+          ? { text: t("quantizeNoTempo"), on: false }
+          : bannerKind === "cancelled"
+            ? { text: t("quantizeCancelled"), on: false }
+            : undefined;
     this.rateLimiter.push(
       renderDirectKeySvg({
         connected: this.client.isConnected() && !reason,
@@ -201,14 +285,21 @@ export class ObsSceneTransitionKeyInstanceController {
               : this.settings.operation === "cut" ? "cut"
                 : this.settings.operation === "transition" ? "take" : "scene",
         configured,
-        accent: this.settings.accent
-      })
+        accent: this.settings.accent,
+        badge
+      }),
+      this.clock()
     );
   }
 
   private mergeSettings(
     raw?: ObsSceneTransitionKeySettings
   ): Required<ObsSceneTransitionKeySettings> {
+    const rawMs = Number(raw?.durationMs ?? DEFAULT_OBS_SCENE_TRANSITION_KEY_SETTINGS.durationMs);
+    const rounded = Math.round(rawMs);
+    const durationMs = Number.isFinite(rounded) && rounded > 0
+      ? Math.max(50, Math.min(20000, rounded))
+      : 0;
     return {
       sceneTarget:
         typeof raw?.sceneTarget === "string" ? raw.sceneTarget.trim() : DEFAULT_OBS_SCENE_TRANSITION_KEY_SETTINGS.sceneTarget,
@@ -217,6 +308,9 @@ export class ObsSceneTransitionKeyInstanceController {
         typeof raw?.transitionName === "string" && raw.transitionName.trim()
           ? raw.transitionName.trim()
           : OBS_TRANSITION_CURRENT,
+      durationMs,
+      quantizeBeats: normalizeQuantizeBeats(raw?.quantizeBeats),
+      quantizeStart: normalizeQuantizeStart(raw?.quantizeStart),
       labelOverride: normalizeLabelOverride(raw?.labelOverride),
       accent: normalizeAccent(raw?.accent)
     };
@@ -230,7 +324,10 @@ export class ObsSceneTransitionKeyAction extends SingletonAction<ObsSceneTransit
     ObsSceneTransitionKeyInstanceController
   >();
 
-  public constructor(private readonly client: DirectObsClient) {
+  public constructor(
+    private readonly client: DirectObsClient,
+    private readonly signals?: VisualSignals
+  ) {
     super();
   }
 
@@ -250,7 +347,9 @@ export class ObsSceneTransitionKeyAction extends SingletonAction<ObsSceneTransit
         setImage: (image) => key.setImage(image),
         showAlert: () => key.showAlert()
       },
-      settings
+      settings,
+      100,
+      this.signals
     );
     this.instances.set(key.id, controller);
     controller.appear(settings);
@@ -277,5 +376,11 @@ export class ObsSceneTransitionKeyAction extends SingletonAction<ObsSceneTransit
     ev: KeyDownEvent<ObsSceneTransitionKeySettings>
   ): Promise<void> {
     await this.instances.get(ev.action.id)?.handleKeyDown();
+  }
+
+  public override async onKeyUp(
+    ev: KeyUpEvent<ObsSceneTransitionKeySettings>
+  ): Promise<void> {
+    await this.instances.get(ev.action.id)?.handleKeyUp();
   }
 }

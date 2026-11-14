@@ -1,16 +1,36 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+using System.Diagnostics;
 using System.Text.Json.Nodes;
 
 namespace Fadester.TourBox;
 
 internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Task<JsonObject>> rpc,
     Func<CancellationToken, IAsyncEnumerable<double>>? rampSteps = null, Func<double, double, Task>? nativeMove = null,
-    DeskActions.Memory? resume = null, bool allowAutoCloseout = true)
+    DeskActions.Memory? resume = null, bool allowAutoCloseout = true,
+    VisualSidechainMonitor? vsMonitor = null, Action<string>? onStatus = null, Func<long>? clockMs = null,
+    Func<int, CancellationToken, Task>? delayAsync = null)
 {
+    public const double MinQuantizeConfidence = 0.35;
+    public const int MaxQuantizeWaitMs = 4000;
+
+    private sealed class ArmedTake(int? durationMs, int waitMs, CancellationTokenSource cts)
+    {
+        public int? DurationMs { get; } = durationMs;
+        public int WaitMs { get; } = waitMs;
+        public CancellationTokenSource Cts { get; } = cts;
+    }
+
+    private readonly object armGate = new();
+    private ArmedTake? armedTake;
+    private readonly Func<long> nowMs = clockMs ?? (() => Stopwatch.GetTimestamp() * 1000L / Stopwatch.Frequency);
+    private readonly Func<int, CancellationToken, Task> waitDelay = delayAsync ?? Task.Delay;
+
     /// <summary>What one connection's desk hands to the next: see StudioFader.Memory and AudioDesk.Leave.</summary>
     public sealed record Memory(StudioFader.Memory Fader, AudioDesk.Duck? Duck);
     public Memory Leave() => new(fader.Leave(), audio.Leave());
     public Task<string> ResumeAsync() => fader.ResumeAsync();
+    public bool IsTakeArmed { get { lock (armGate) return armedTake != null; } }
+    public int ArmedWaitMs { get { lock (armGate) return armedTake?.WaitMs ?? 0; } }
     public static readonly HashSet<string> Supported = new(("music.down music.up music.fineDown music.fineUp content.down content.up music.duck music.restore undo " +
         "fader.back fader.forward fader.fineBack fader.fineForward fader.cancel fader.status take take.cut preview.previous preview.next preview.sync preview.status anchor.1 anchor.2 anchor.3 anchor.4 " +
         "media.previous media.next media.play media.restart overlay.show overlay.hide mic.mute transition.previous transition.next " +
@@ -33,11 +53,11 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
     public void OnMixInputLevelChanged(Guid id, double level) => mix.OnVolume(id, level);
     public Task StopMixAsync() => mix.Stop();
     public void OnVolumeChanged(string source, double level) => audio.OnVolumeChanged(source, level);
-    public Task StopAudioAsync() => Task.WhenAll(audio.Stop(), mix.Stop());
+    public Task StopAudioAsync() { CancelArmedTake(); return Task.WhenAll(audio.Stop(), mix.Stop()); }
     private static string Bound(string? value, string field) => !string.IsNullOrWhiteSpace(value) ? value : throw new InvalidOperationException($"Choose {field} on the Assignments tab first.");
     private Task<JsonObject> Get(string name) => rpc(name, null);
     private static string Str(JsonObject obj, string field) => obj[field]?.GetValue<string>() ?? throw new InvalidDataException($"OBS did not return {field}.");
-    public async Task CancelOwnedAsync() { if (fader.Position > 0) await fader.CancelAsync(); }
+    public async Task CancelOwnedAsync() { CancelArmedTake(); if (fader.Position > 0) await fader.CancelAsync(); }
     /** Where the companion's own T-bar move has the T-bar (0 at rest). */
     public double TbarPosition => fader.Position;
     public Task SettleAsync() => fader.SettleAsync();
@@ -47,13 +67,24 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
     /** The game controller's trigger T-bar. Only a take or a cancel is worth a log line; a throw in progress is quiet. */
     public async Task<string> TbarTo(double target)
     {
+        CancelArmedTake();
         bool moving = fader.Position > 0;
         if (!await fader.MoveToAsync(target)) return "Controller T-bar: ignored a second take right after the last one";
         return target >= 1 - StudioFader.Edge ? "Controller T-bar: take" : target <= StudioFader.Edge && moving ? "Controller T-bar: back to Program" : "";
     }
 
     /** The game controller's take: how to move the T-bar for it, or null for OBS's own take (StudioFader.SlidePlanAsync). */
-    public Task<(double From, int Ms)?> SlidePlan(long pressedAt = 0) => fader.SlidePlanAsync(pressedAt);
+    public Task<(double From, int Ms)?> SlidePlan(long pressedAt = 0)
+    {
+        if (cfg.TakeQuantize is "next_beat" or "next_bar") return Task.FromResult<(double From, int Ms)?>(null);
+        int? overrideMs = null;
+        if (cfg.TakeBeats > 0)
+        {
+            var plan = PlanQuantizedTake();
+            overrideMs = plan.DurationMs;
+        }
+        return fader.SlidePlanAsync(pressedAt, overrideMs);
+    }
 
     /// <param name="pressedAt">When the control was pressed (a Stopwatch timestamp), if known; see StudioFader.DispatchAsync.</param>
     public async Task<string> Dispatch(string id, long pressedAt = 0)
@@ -95,14 +126,22 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
             case "fader.forward":
             case "fader.fineBack":
             case "fader.fineForward":
-            case "fader.cancel":
-            case "take":
             case "take.cut":
                 {
+                    CancelArmedTake();
                     // A take or cut that sent nothing says so, so nobody mistakes it for one that went out.
                     string ignored = await fader.DispatchAsync(id, pressedAt);
                     return ignored.Length > 0 ? ignored : $"{ActionNames.Of(id)} · T-bar {fader.Position:P0}";
                 }
+            case "fader.cancel":
+                {
+                    if (CancelArmedTake() != null && fader.Position == 0)
+                        return $"{ActionNames.Of("take")} · CANCELLED";
+                    string ignored = await fader.DispatchAsync(id, pressedAt);
+                    return ignored.Length > 0 ? ignored : $"{ActionNames.Of(id)} · T-bar {fader.Position:P0}";
+                }
+            case "take":
+                return await DispatchTakeAsync(pressedAt);
             case "fader.status":
                 {
                     bool enabled = (await Get("GetStudioModeEnabled"))["studioModeEnabled"]!.GetValue<bool>();
@@ -168,6 +207,121 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
                 }
             default: throw new InvalidOperationException("Reconnect is handled by the connection manager.");
         }
+    }
+
+    private readonly record struct QuantizedTakePlan(int? DurationMs, int WaitMs, bool NoTempo);
+
+    private ArmedTake? CancelArmedTake()
+    {
+        ArmedTake? current;
+        lock (armGate)
+        {
+            current = armedTake;
+            armedTake = null;
+        }
+        if (current != null)
+        {
+            try { current.Cts.Cancel(); } catch (ObjectDisposedException) { }
+        }
+        return current;
+    }
+
+    private QuantizedTakePlan PlanQuantizedTake()
+    {
+        if (cfg.TakeBeats == 0 && cfg.TakeQuantize == "now") return new(null, 0, false);
+        var snap = vsMonitor?.Sample(nowMs());
+        bool usable = snap is
+        {
+            Loaded: true,
+            State: not VisualSidechainMonitor.MeterState.NotLoaded and not VisualSidechainMonitor.MeterState.Unknown,
+            AudioPresent: true,
+            Bpm: > 0
+        } s && (s.BeatConfidence >= MinQuantizeConfidence || s.BpmLocked);
+
+        if (!usable)
+        {
+            return new(Math.Clamp(cfg.TakeFallbackMs, 50, 20000), 0, true);
+        }
+
+        var v = snap!.Value;
+        double beatMs = 60000.0 / v.Bpm;
+        double barMs = 4.0 * beatMs;
+        int maxWaitMs = (int)Math.Round(Math.Min(barMs, MaxQuantizeWaitMs));
+        int? durationMs = cfg.TakeBeats > 0 ? Math.Clamp((int)Math.Round(cfg.TakeBeats * beatMs), 50, 20000) : null;
+        int waitMs = cfg.TakeQuantize switch
+        {
+            "next_beat" => Math.Clamp((int)Math.Round((1.0 - Math.Clamp(v.BeatPhase, 0.0, 1.0)) * beatMs), 0, maxWaitMs),
+            "next_bar" => Math.Clamp((int)Math.Round((1.0 - Math.Clamp(v.BarPhase, 0.0, 1.0)) * barMs), 0, maxWaitMs),
+            _ => 0
+        };
+        if (waitMs <= 10) waitMs = 0;
+        return new(durationMs, waitMs, false);
+    }
+
+    private async Task<string> DispatchTakeAsync(long pressedAt)
+    {
+        var existing = CancelArmedTake();
+        if (existing != null)
+        {
+            string secondIgnored = await fader.DispatchAsync("take", pressedAt, existing.DurationMs);
+            return secondIgnored.Length > 0 ? secondIgnored : $"{ActionNames.Of("take")} · T-bar {fader.Position:P0}";
+        }
+
+        if (fader.Position > 0 || (cfg.TakeBeats == 0 && cfg.TakeQuantize == "now"))
+        {
+            string plainIgnored = await fader.DispatchAsync("take", pressedAt);
+            return plainIgnored.Length > 0 ? plainIgnored : $"{ActionNames.Of("take")} · T-bar {fader.Position:P0}";
+        }
+
+        var plan = PlanQuantizedTake();
+        if (plan.NoTempo)
+        {
+            string fallbackIgnored = await fader.DispatchAsync("take", pressedAt, plan.DurationMs);
+            string baseLine = fallbackIgnored.Length > 0 ? fallbackIgnored : $"{ActionNames.Of("take")} · T-bar {fader.Position:P0}";
+            return baseLine + " · NO TEMPO";
+        }
+
+        if (plan.WaitMs == 0)
+        {
+            string nowIgnored = await fader.DispatchAsync("take", pressedAt, plan.DurationMs);
+            return nowIgnored.Length > 0 ? nowIgnored : $"{ActionNames.Of("take")} · T-bar {fader.Position:P0}";
+        }
+
+        if ((await Get("GetStudioModeEnabled"))["studioModeEnabled"]?.GetValue<bool>() != true)
+            throw new InvalidOperationException("Enable Studio Mode in OBS before using Preview or the T-bar.");
+        var list = await Get("GetSceneList");
+        if (Str(list, "currentProgramSceneUuid") == Str(list, "currentPreviewSceneUuid"))
+            return "take ignored: Preview is the same scene as Program. Cue another scene first.";
+
+        var cts = new CancellationTokenSource();
+        var entry = new ArmedTake(plan.DurationMs, plan.WaitMs, cts);
+        lock (armGate) armedTake = entry;
+        _ = RunArmedTakeAsync(entry);
+        return $"{ActionNames.Of("take")} · ARMED";
+    }
+
+    private async Task RunArmedTakeAsync(ArmedTake entry)
+    {
+        try
+        {
+            await waitDelay(entry.WaitMs, entry.Cts.Token);
+            bool shouldFire = false;
+            lock (armGate)
+            {
+                if (ReferenceEquals(armedTake, entry))
+                {
+                    armedTake = null;
+                    shouldFire = true;
+                }
+            }
+            if (!shouldFire) return;
+            string ignored = await fader.DispatchAsync("take", 0, entry.DurationMs);
+            string line = ignored.Length > 0 ? ignored : $"{ActionNames.Of("take")} · T-bar {fader.Position:P0}";
+            onStatus?.Invoke(line);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception e) { onStatus?.Invoke(ActionNames.Of("take") + ": " + e.Message); }
+        finally { entry.Cts.Dispose(); }
     }
     /** The scene item a Layer action drives: scene and source from the panel's Assignments. */
     private (string Scene, string Source, string Label) Layer(string id)

@@ -183,6 +183,11 @@ const PLUGIN_EN = {
   fadeDownNow: "Down now",
   fadeUpSeconds: "Up {s}s",
   fadeDownSeconds: "Down {s}s",
+  fadeUpBeats: "Up {n} beats",
+  fadeDownBeats: "Down {n} beats",
+  quantizeArmed: "ARMED",
+  quantizeNoTempo: "NO TEMPO",
+  quantizeCancelled: "CANCELLED",
   roleUnavailable: "{role} unavailable",
   audioInputUnavailable: "Audio input unavailable",
   // OBS Fader dial

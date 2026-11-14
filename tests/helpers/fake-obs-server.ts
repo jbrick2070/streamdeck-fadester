@@ -561,6 +561,7 @@ export class FakeObsServer {
     transitionDuration: number | null;
   }>();
   public lastSceneTransition = "";
+  public lastSceneTransitionDuration: number | null = null;
   public failNextProgramSwitch = false;
   public readonly inputVolumes = new Map<string, number>([
     ["Desktop Audio", 0.8],
@@ -1747,7 +1748,9 @@ export class FakeObsServer {
         this.sendResponse(ws, requestId, requestType, true, 100, "", {});
       } else {
         this.directCallLog.push({ requestType, requestData });
-        this.lastSceneTransition = this.sceneTransitionOverrides.get(sceneName)?.transitionName || this.currentTransitionName;
+        const ov = this.sceneTransitionOverrides.get(sceneName);
+        this.lastSceneTransition = ov?.transitionName || this.currentTransitionName;
+        this.lastSceneTransitionDuration = ov?.transitionDuration ?? null;
         const oldProgram = this.programSceneName;
         this.programSceneName = sceneName;
         this.sendResponse(ws, requestId, requestType, true, 100, "", {});

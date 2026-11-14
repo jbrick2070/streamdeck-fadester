@@ -202,8 +202,9 @@ internal sealed class VisualSidechainMonitor : IDisposable
         {
             loaded = true;
             notLoaded = false;
-            // Older Visual Sidechain builds omit audio_present and beat_confidence.
-            audioPresent = BoolOr(data, "audio_present", !initialRead);
+            // Older Visual Sidechain builds omit audio_present and beat_confidence and report overall level as "level".
+            double level = Clamp01(NumOr(data, "level", NumOr(data, "rms", 0.0)));
+            audioPresent = BoolOr(data, "audio_present", level > 0.001);
             signalPanic = BoolOr(data, "panic", false);
             bpm = ClampBpm(NumOr(data, "bpm", bpm));
             bpmLocked = BoolOr(data, "bpm_locked", bpmLocked);
@@ -213,7 +214,7 @@ internal sealed class VisualSidechainMonitor : IDisposable
             beatIndex = NormalizeBeatIndex(data["beat_index"], nextBarPhase);
             if (data["bar_index"] != null && TryDouble(data["bar_index"], out double rawBar) && rawBar >= 0)
                 barIndex = (long)Math.Truncate(rawBar);
-            beatConfidence = Clamp01(NumOr(data, "beat_confidence", audioPresent ? 1.0 : 0.0));
+            beatConfidence = Clamp01(NumOr(data, "beat_confidence", 0.0));
             // Smoothed band envelopes only — raw kick is intentionally ignored (P1-3).
             subBass = Clamp01(NumOr(data, "sub_bass", 0.0));
             bass = Clamp01(NumOr(data, "bass", 0.0));
@@ -277,7 +278,7 @@ internal sealed class VisualSidechainMonitor : IDisposable
 
     private static int Pct(double v) => Math.Clamp((int)Math.Round(Clamp01(v) * 100.0), 0, 100);
     private static double Clamp01(double v) => double.IsFinite(v) ? Math.Clamp(v, 0.0, 1.0) : 0.0;
-    private static double ClampBpm(double v) => double.IsFinite(v) ? Math.Clamp(v, 60.0, 200.0) : DefaultBpm;
+    private static double ClampBpm(double v) => double.IsFinite(v) ? Math.Clamp(v, 30.0, 300.0) : DefaultBpm;
     private static double PositiveMod(double v, double period) { double m = v % period; return m < 0 ? m + period : m; }
 
     private static int NormalizeBeatIndex(JsonNode? node, double barPhase)

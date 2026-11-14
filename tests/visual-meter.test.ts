@@ -141,18 +141,21 @@ describe("Visual Sidechain Meter (P1-3)", () => {
     await dial.waitSvg((svg) => svg.includes('data-state="no_audio"') && svg.includes(">NO AUDIO<"));
     await neo.waitSvg((svg) => svg.includes('data-state="no_audio"') && svg.includes(">NO AUDIO<"));
 
-    // 2. Active signal frame: BPM + lock icon, beat counter, 4 band bars, and 32-band spectrum on the dial.
+    // 2. Active signal frame: BPM + lock icon, beat counter, 4 band bars, and 32-band { band, value } spectrum + level on the dial.
     nowMs += 200;
-    const spectrum = Array.from({ length: 32 }, (_, i) => Number(((i + 1) / 32).toFixed(3)));
+    const spectrum = Array.from({ length: 32 }, (_, band) => ({
+      band,
+      value: Number(((band + 1) / 32).toFixed(3))
+    }));
     server.emitVisualSidechainSignals({
       audio_present: true,
-      rms: 0.42,
+      level: 0.42,
       sub_bass: 0.85,
       bass: 0.6,
       mid: 0.35,
       high: 0.25,
       kick: 0,
-      bpm: 128,
+      bpm: 220,
       bpm_locked: true,
       beat_phase: 0.1,
       beat_index: 2,
@@ -165,7 +168,7 @@ describe("Visual Sidechain Meter (P1-3)", () => {
     await key.waitSvg(
       (svg) =>
         svg.includes('data-state="active"') &&
-        svg.includes(">128 BPM<") &&
+        svg.includes(">220 BPM<") &&
         svg.includes('data-bpm-locked="true"') &&
         svg.includes('data-beat-index="2"') &&
         svg.includes('data-bands="85,60,35,25"')
@@ -173,17 +176,21 @@ describe("Visual Sidechain Meter (P1-3)", () => {
     await dial.waitSvg(
       (svg) =>
         svg.includes('data-state="active"') &&
-        svg.includes(">128 BPM<") &&
+        svg.includes(">220 BPM<") &&
         svg.includes('data-bpm-locked="true"') &&
         svg.includes('data-spectrum-bins="32"')
     );
     await neo.waitSvg(
       (svg) =>
         svg.includes('data-state="active"') &&
-        svg.includes(">128 BPM<") &&
+        svg.includes(">220 BPM<") &&
         svg.includes('data-bpm-locked="true"')
     );
-    await vi.waitFor(() => expect(neoTexts.at(-1)?.status).toBe("128 BPM [LOCK] · Beat 3/4"));
+    await vi.waitFor(() => expect(neoTexts.at(-1)?.status).toBe("220 BPM [LOCK] · Beat 3/4"));
+    const activeSample = signals.sample(nowMs);
+    expect(activeSample.rms).toBeCloseTo(0.42, 3);
+    expect(activeSample.spectrum[0]).toBeCloseTo(1 / 32, 3);
+    expect(activeSample.spectrum[31]).toBeCloseTo(1, 3);
 
     // 3. Never raw `kick`: changing only `kick` (0 -> 1) never alters the sampled state or SVG!
     const keySvgBeforeKick = key.last();
@@ -204,7 +211,7 @@ describe("Visual Sidechain Meter (P1-3)", () => {
     expect(key.svgs.length).toBe(countBeforeKick);
     expect(keySvgBeforeKick).not.toBe("");
     expect(dialSvgBeforeKick).not.toBe("");
-    expect(sampledBeforeKick.bpm).toBe(128);
+    expect(sampledBeforeKick.bpm).toBe(220);
 
     // 4. Panic overrides active state with plain PANIC, without using solid-red #EF4444 background (reserved for Panic key per R-RIG-8).
     nowMs += 200;
@@ -308,11 +315,11 @@ describe("Visual Sidechain Meter (P1-3)", () => {
     sink5.svgs.length = 0;
     sink10.svgs.length = 0;
 
-    // Feed 20 frames 45 ms apart (~900 ms burst).
-    for (let i = 0; i < 20; i++) {
+    // Feed 18 frames 45 ms apart (~810 ms burst after an open 520 ms quiet window).
+    for (let i = 0; i < 18; i++) {
       server.emitVisualSidechainSignals({
         audio_present: true,
-        rms: 0.4,
+        level: 0.4,
         sub_bass: (i % 10) / 10,
         bass: ((i + 3) % 10) / 10,
         mid: 0.3,
@@ -324,10 +331,10 @@ describe("Visual Sidechain Meter (P1-3)", () => {
       await new Promise((r) => setTimeout(r, 45));
     }
 
-    // Over ~0.9 s of 20 incoming updates, each cell stays strictly inside its configured rate budget (never > 10/s).
-    expect(sink2.svgs.length).toBeLessThanOrEqual(3);
-    expect(sink5.svgs.length).toBeLessThanOrEqual(6);
-    expect(sink10.svgs.length).toBeLessThanOrEqual(11);
+    // Over < 1 s of 18 incoming updates, each cell stays strictly inside its configured rate budget (never > 10/s).
+    expect(sink2.svgs.length).toBeLessThanOrEqual(2);
+    expect(sink5.svgs.length).toBeLessThanOrEqual(5);
+    expect(sink10.svgs.length).toBeLessThanOrEqual(10);
     expect(sink2.svgs.length).toBeLessThan(sink5.svgs.length);
     expect(sink5.svgs.length).toBeLessThan(sink10.svgs.length);
   });

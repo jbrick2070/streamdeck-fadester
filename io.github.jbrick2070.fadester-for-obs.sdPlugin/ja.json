@@ -399,6 +399,11 @@
     "vmDialHintNoTurn": "押: {op}",
     "infobarVsActive": "{bpm} BPM · {beat}/4拍",
     "infobarVsLocked": "{bpm} BPM [固定] · {beat}/4拍",
+    "fadeUpBeats": "{n} 拍で上げる",
+    "fadeDownBeats": "{n} 拍で下げる",
+    "quantizeArmed": "待機中",
+    "quantizeNoTempo": "テンポなし",
+    "quantizeCancelled": "取消済",
     "pi": {
       "scopeThisKey": "このキー",
       "scopeThisDial": "このダイヤル",
@@ -841,7 +846,21 @@
       "vmRate5": "毎秒 5 回（標準）",
       "vmRate10": "毎秒 10 回（上限）",
       "vmNote": "セルあたり 10 Hz の上限内で平滑化エンベロープと補間拍カウンターを描画します。生のキック波形は描画しません。",
-      "infobarShowVs": "ステータス行に Visual Sidechain のテンポを表示"
+      "infobarShowVs": "ステータス行に Visual Sidechain のテンポを表示",
+      "quantizeLengthLabel": "長さ",
+      "quantizeLengthObs": "OBS のトランジション時間",
+      "quantizeLengthMs": "ミリ秒",
+      "quantizeBeats1": "1 拍",
+      "quantizeBeats2": "2 拍",
+      "quantizeBeats4": "4 拍 (1 小節)",
+      "quantizeBeats8": "8 拍 (2 小節)",
+      "quantizeBeats16": "16 拍 (4 小節)",
+      "quantizeFallbackMs": "フォールバック (ms)",
+      "quantizeStartLabel": "開始タイミング",
+      "quantizeStartNow": "すぐ開始",
+      "quantizeStartBeat": "次の拍",
+      "quantizeStartBar": "次の小節",
+      "quantizeHint": "Visual Sidechain のテンポがない場合はミリ秒のフォールバックで即座に実行し、「テンポなし」を表示します。最大待機は 1 小節 (4 秒)。もう一度押すと今すぐ実行、長押しでキャンセルします。"
     }
   }
 }

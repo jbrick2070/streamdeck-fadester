@@ -278,6 +278,11 @@
     "vmDialHintNoTurn": "Druk: {op}",
     "infobarVsActive": "{bpm} BPM · Tel {beat}/4",
     "infobarVsLocked": "{bpm} BPM [VAST] · Tel {beat}/4",
+    "fadeUpBeats": "Omhoog {n} tellen",
+    "fadeDownBeats": "Omlaag {n} tellen",
+    "quantizeArmed": "GEREED",
+    "quantizeNoTempo": "GEEN TEMPO",
+    "quantizeCancelled": "AFGEBROKEN",
     "pi": {
       "scopeThisKey": "deze toets",
       "scopeThisDial": "deze draaiknop",
@@ -720,7 +725,21 @@
       "vmRate5": "5 per seconde (standaard)",
       "vmRate10": "10 per seconde (maximum)",
       "vmNote": "Tekent afgevlakte enveloppen en een lokaal stappende telteller binnen de limiet van 10 Hz per cel; ruwe kick-pieken worden nooit getekend.",
-      "infobarShowVs": "Visual Sidechain-tempo in de statusregel tonen"
+      "infobarShowVs": "Visual Sidechain-tempo in de statusregel tonen",
+      "quantizeLengthLabel": "Lengte",
+      "quantizeLengthObs": "Overgangsduur van OBS",
+      "quantizeLengthMs": "Milliseconden",
+      "quantizeBeats1": "1 tel",
+      "quantizeBeats2": "2 tellen",
+      "quantizeBeats4": "4 tellen (1 maat)",
+      "quantizeBeats8": "8 tellen (2 maten)",
+      "quantizeBeats16": "16 tellen (4 maten)",
+      "quantizeFallbackMs": "Terugval (ms)",
+      "quantizeStartLabel": "Startmoment",
+      "quantizeStartNow": "Nu",
+      "quantizeStartBeat": "Volgende tel",
+      "quantizeStartBar": "Volgende maat",
+      "quantizeHint": "Zonder tempo van Visual Sidechain wordt direct gestart met de terugval in milliseconden en verschijnt GEEN TEMPO. Maximale wachttijd 1 maat (4 s); druk opnieuw om direct te starten, houd ingedrukt om te annuleren."
     }
   }
 }

@@ -279,7 +279,7 @@ public sealed class StudioFader
     /// Preview as Program, a double press, or a fader that needs a Cancel first. The ordinary take then acts or says why.
     /// </summary>
     /// <param name="pressedAt">When the control was pressed (a Stopwatch timestamp), if known; see DispatchAsync.</param>
-    public async Task<(double From, int Ms)?> SlidePlanAsync(long pressedAt = 0)
+    public async Task<(double From, int Ms)?> SlidePlanAsync(long pressedAt = 0, int? durationOverrideMs = null)
     {
         await serial.WaitAsync();
         try
@@ -302,6 +302,7 @@ public sealed class StudioFader
                     if (Milliseconds(sceneOverride["transitionDuration"]) is > 0 and var own) ms = own;
                 }
             }
+            if (durationOverrideMs is int overrideMs and > 0) ms = Math.Clamp(overrideMs, 50, 20000);
             // A fixed-length transition has no Duration; a Fade always has one.
             if (!double.IsFinite(ms) || ms <= 0) return null;
             return (Position, (int)Math.Ceiling(ms));
@@ -324,8 +325,9 @@ public sealed class StudioFader
 
     /// <param name="pressedAt">When the control was pressed (a Stopwatch timestamp), if known. A take or cut pressed while an
     /// earlier one still waited for OBS is then caught as a double press, though it runs only afterwards.</param>
+    /// <param name="durationOverrideMs">Optional one-shot fade duration (50–20000 ms) computed by P1-4 quantized take.</param>
     /// <returns>An empty string, or for a take or cut that sent nothing, the line that says why.</returns>
-    public async Task<string> DispatchAsync(string action, long pressedAt = 0)
+    public async Task<string> DispatchAsync(string action, long pressedAt = 0, int? durationOverrideMs = null)
     {
         await serial.WaitAsync();
         try
@@ -354,7 +356,7 @@ public sealed class StudioFader
                     // went out (a cut can wait about 1 s for OBS). Measured from the press when it is known.
                     if (DoublePress(pressedAt)) return $"{action} ignored: a double press, within 0.45 s of the last take or cut.";
                     if (sweep != null) await FinishAndReturnAsync();
-                    else if (!await TakeAsync(action == "take.cut"))
+                    else if (!await TakeAsync(action == "take.cut", action == "take" ? durationOverrideMs : null))
                         return $"{action} ignored: Preview is the same scene as Program. Cue another scene first.";
                     break;
                 default: throw new ArgumentException("Unknown Studio fader action: " + action, nameof(action));
@@ -806,13 +808,16 @@ public sealed class StudioFader
     }
 
     /// <returns>False when there was nothing to take: Preview is the same scene as Program.</returns>
-    private async Task<bool> TakeAsync(bool cut)
+    private async Task<bool> TakeAsync(bool cut, int? durationOverrideMs = null)
     {
         var scenes = await ReadScenesAsync();
         if (scenes.Program == scenes.Preview) return false;
         await RequireIdleAsync();
         string? previous = null, replacement = null;
         bool requestedCut = false, confirmedCut = false, triggered = false;
+        string? overrideSceneUuid = null, overrideTransitionName = null;
+        int? priorSceneOverrideMs = null, priorGlobalDurationMs = null;
+        bool restoreSceneOverride = false, restoreGlobalDuration = false;
         try
         {
             if (cut)
@@ -832,6 +837,34 @@ public sealed class StudioFader
                     confirmedCut = true;
                 }
             }
+            else if (durationOverrideMs is int rawOverrideMs and > 0)
+            {
+                int clampedMs = Math.Clamp(rawOverrideMs, 50, 20000);
+                var prevOverride = await rpc("GetSceneSceneTransitionOverride", new() { ["sceneUuid"] = scenes.Preview });
+                if (prevOverride["transitionName"]?.GetValue<string>() is { Length: > 0 } ovName)
+                {
+                    overrideSceneUuid = scenes.Preview;
+                    overrideTransitionName = ovName;
+                    priorSceneOverrideMs = Milliseconds(prevOverride["transitionDuration"]) is > 0 and var ovMs ? (int)Math.Round(ovMs) : null;
+                    restoreSceneOverride = true;
+                    await rpc("SetSceneSceneTransitionOverride", new()
+                    {
+                        ["sceneUuid"] = scenes.Preview,
+                        ["transitionName"] = ovName,
+                        ["transitionDuration"] = clampedMs
+                    });
+                }
+                else
+                {
+                    var current = await rpc("GetCurrentSceneTransition", null);
+                    if (current["transitionFixed"]?.GetValue<bool>() != true && (string?)current["transitionKind"] != "cut_transition")
+                    {
+                        priorGlobalDurationMs = Milliseconds(current["transitionDuration"]) is > 0 and var curMs ? (int)Math.Round(curMs) : null;
+                        restoreGlobalDuration = priorGlobalDurationMs is int p && p != clampedMs;
+                        await rpc("SetCurrentSceneTransitionDuration", new() { ["transitionDuration"] = clampedMs });
+                    }
+                }
+            }
             if (await ReadScenesAsync() != scenes) throw new InvalidOperationException("Program or Preview changed before Take.");
             await RequireIdleAsync();
             if (cut && await ReadTransitionNameAsync() != replacement)
@@ -847,6 +880,24 @@ public sealed class StudioFader
         }
         finally
         {
+            if (restoreSceneOverride && overrideSceneUuid != null)
+            {
+                try
+                {
+                    await rpc("SetSceneSceneTransitionOverride", new()
+                    {
+                        ["sceneUuid"] = overrideSceneUuid,
+                        ["transitionName"] = overrideTransitionName,
+                        ["transitionDuration"] = priorSceneOverrideMs is int p ? JsonValue.Create(p) : null
+                    });
+                }
+                catch { }
+            }
+            if (restoreGlobalDuration && priorGlobalDurationMs is int priorMs)
+            {
+                try { await rpc("SetCurrentSceneTransitionDuration", new() { ["transitionDuration"] = priorMs }); }
+                catch { }
+            }
             // Say whether the cut was sent, so nobody presses it again to "retry".
             if (requestedCut) await ReturnAsync(replacement!, previous!, confirmedCut, lent: false, triggered ? "Cut sent, but " : "No cut sent: ");
         }

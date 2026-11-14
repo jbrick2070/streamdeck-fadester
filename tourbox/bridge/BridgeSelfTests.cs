@@ -148,6 +148,199 @@ internal static class BridgeSelfTests
         try { await desk.Dispatch("anchor.1"); throw new Exception("Self-test: anchor changed scene outside Studio Mode"); }
         catch (InvalidOperationException) { }
         await desk.Dispatch("media.play"); Check(media.Single() == "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE", "play toggles a playing source");
+        await RunQuantizedTakeTestsAsync();
         await VjsterSelfTests.RunAsync();
+    }
+
+    private static async Task RunQuantizedTakeTestsAsync()
+    {
+        static void Check(bool ok, string msg) { if (!ok) throw new Exception("Quantized take self-test: " + msg); }
+
+        long nowMs = 10_000;
+        string programUuid = "uuid-one", previewUuid = "uuid-two";
+        int transitionDuration = 300;
+        var durationsUsedOnTake = new List<int>();
+        int takesTriggered = 0;
+        bool vsLoaded = true;
+
+        Task<JsonObject> FakeObs(string op, JsonObject? args)
+        {
+            var reply = new JsonObject();
+            switch (op)
+            {
+                case "GetVersion":
+                    reply["obsVersion"] = "33.0.1";
+                    break;
+                case "GetStudioModeEnabled":
+                    reply["studioModeEnabled"] = true;
+                    break;
+                case "GetSceneList":
+                    reply["currentProgramSceneUuid"] = programUuid;
+                    reply["currentPreviewSceneUuid"] = previewUuid;
+                    reply["currentProgramSceneName"] = programUuid == "uuid-one" ? "One" : "Two";
+                    reply["currentPreviewSceneName"] = previewUuid == "uuid-one" ? "One" : "Two";
+                    break;
+                case "GetCurrentProgramScene":
+                    reply["sceneUuid"] = programUuid;
+                    break;
+                case "GetCurrentSceneTransitionCursor":
+                    reply["transitionCursor"] = 0.0;
+                    break;
+                case "GetCurrentSceneTransition":
+                    reply["transitionName"] = "Fade";
+                    reply["transitionKind"] = "fade_transition";
+                    reply["transitionFixed"] = false;
+                    reply["transitionDuration"] = transitionDuration;
+                    break;
+                case "GetSceneSceneTransitionOverride":
+                    reply["transitionName"] = null;
+                    reply["transitionDuration"] = null;
+                    break;
+                case "SetCurrentSceneTransitionDuration":
+                    transitionDuration = args!["transitionDuration"]!.GetValue<int>();
+                    break;
+                case "TriggerStudioModeTransition":
+                    takesTriggered++;
+                    durationsUsedOnTake.Add(transitionDuration);
+                    (programUuid, previewUuid) = (previewUuid, programUuid);
+                    break;
+                case "CallVendorRequest":
+                    if (!vsLoaded) throw new ObsError("CallVendorRequest", 600, "No vendor");
+                    reply["responseData"] = new JsonObject
+                    {
+                        ["api_version"] = 1,
+                        ["version"] = "0.5.0",
+                        ["audio_present"] = true,
+                        ["bpm"] = 120.0,
+                        ["bpm_locked"] = true,
+                        ["beat_phase"] = 0.5,
+                        ["beat_index"] = 1,
+                        ["bar_phase"] = 0.25,
+                        ["bar_index"] = 4,
+                        ["beat_confidence"] = 0.9,
+                        ["panic"] = false
+                    };
+                    break;
+                default:
+                    throw new Exception("Unexpected OBS request in quantized take self-test: " + op);
+            }
+            return Task.FromResult(reply);
+        }
+
+        // 1. Saved config defaults: immediate take using OBS's own 300 ms duration, no NO TEMPO.
+        var plainCfg = new BridgeConfig();
+        var plainDesk = new DeskActions(plainCfg, FakeObs, clockMs: () => nowMs);
+        string plainLine = await plainDesk.Dispatch("take");
+        Check(takesTriggered == 1 && durationsUsedOnTake[^1] == 300 && !plainLine.Contains("NO TEMPO"),
+            "default take uses OBS duration without NO TEMPO");
+
+        // 2. 120 BPM locked, 4 beats, start now -> 2000 ms fade and restores 300 ms afterwards.
+        using var vs = new VisualSidechainMonitor(FakeObs, clockMs: () => nowMs, enableBackgroundTick: false);
+        await vs.StartAsync();
+        var statusLines = new List<string>();
+        TaskCompletionSource<bool>? pendingDelay = null;
+        int recordedDelayMs = 0;
+        Task FakeDelay(int ms, CancellationToken ct)
+        {
+            recordedDelayMs = ms;
+            var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            ct.Register(() => tcs.TrySetCanceled(ct));
+            pendingDelay = tcs;
+            return tcs.Task;
+        }
+
+        var quantCfg = new BridgeConfig { TakeBeats = 4, TakeQuantize = "now", TakeFallbackMs = 650 };
+        var quantDesk = new DeskActions(quantCfg, FakeObs, vsMonitor: vs, onStatus: statusLines.Add, clockMs: () => nowMs, delayAsync: FakeDelay);
+
+        // Signal events alone never trigger a take.
+        vs.OnVendorEvent(VisualSidechainMonitor.VendorName, "signals_changed", new JsonObject
+        {
+            ["audio_present"] = true, ["bpm"] = 120.0, ["bpm_locked"] = true,
+            ["beat_phase"] = 0.0, ["beat_index"] = 0, ["bar_phase"] = 0.0, ["bar_index"] = 5, ["beat_confidence"] = 0.95
+        });
+        Check(takesTriggered == 1, "audio signal events never originate a Program change");
+
+        string beatLine = await quantDesk.Dispatch("take");
+        Check(takesTriggered == 2 && durationsUsedOnTake[^1] == 2000 && transitionDuration == 300 && !beatLine.Contains("NO TEMPO"),
+            "4-beat take at 120 BPM runs at 2000 ms and restores 300 ms");
+
+        // 3. Fallback branches: audio_present=false, low confidence when unlocked, and missing VS -> immediate fallback + NO TEMPO.
+        vs.OnVendorEvent(VisualSidechainMonitor.VendorName, "signals_changed", new JsonObject
+        {
+            ["audio_present"] = false, ["bpm"] = 120.0, ["bpm_locked"] = true,
+            ["beat_phase"] = 0.2, ["beat_index"] = 0, ["bar_phase"] = 0.05, ["bar_index"] = 5, ["beat_confidence"] = 0.9
+        });
+        quantCfg.TakeQuantize = "next_bar";
+        var noAudioDesk = new DeskActions(quantCfg, FakeObs, vsMonitor: vs, clockMs: () => nowMs, delayAsync: FakeDelay);
+        string noAudioLine = await noAudioDesk.Dispatch("take");
+        Check(takesTriggered == 3 && durationsUsedOnTake[^1] == 650 && transitionDuration == 300 && noAudioLine.EndsWith(" · NO TEMPO", StringComparison.Ordinal),
+            "audio_present=false fires immediately with fallback ms and shows NO TEMPO");
+
+        vs.OnVendorEvent(VisualSidechainMonitor.VendorName, "signals_changed", new JsonObject
+        {
+            ["audio_present"] = true, ["bpm"] = 120.0, ["bpm_locked"] = false,
+            ["beat_phase"] = 0.2, ["beat_index"] = 0, ["bar_phase"] = 0.25, ["bar_index"] = 5, ["beat_confidence"] = 0.15
+        });
+        var lowConfDesk = new DeskActions(quantCfg, FakeObs, vsMonitor: vs, clockMs: () => nowMs, delayAsync: FakeDelay);
+        string lowConfLine = await lowConfDesk.Dispatch("take");
+        Check(takesTriggered == 4 && durationsUsedOnTake[^1] == 650 && lowConfLine.EndsWith(" · NO TEMPO", StringComparison.Ordinal),
+            "low confidence with unlocked tempo fires immediately with fallback ms and shows NO TEMPO");
+
+        vsLoaded = false;
+        using var vsMissing = new VisualSidechainMonitor(FakeObs, clockMs: () => nowMs, enableBackgroundTick: false);
+        await vsMissing.StartAsync();
+        var missingDesk = new DeskActions(quantCfg, FakeObs, vsMonitor: vsMissing, clockMs: () => nowMs, delayAsync: FakeDelay);
+        string missingLine = await missingDesk.Dispatch("take");
+        Check(takesTriggered == 5 && durationsUsedOnTake[^1] == 650 && missingLine.EndsWith(" · NO TEMPO", StringComparison.Ordinal),
+            "missing Visual Sidechain fires immediately with fallback ms and shows NO TEMPO");
+
+        // When TakeBeats == 0 (OBS's own duration) and TakeQuantize == next_bar, NO TEMPO preserves OBS's 300 ms duration.
+        var zeroBeatsCfg = new BridgeConfig { TakeBeats = 0, TakeQuantize = "next_bar", TakeFallbackMs = 650 };
+        var zeroBeatsMissing = new DeskActions(zeroBeatsCfg, FakeObs, vsMonitor: vsMissing, clockMs: () => nowMs, delayAsync: FakeDelay);
+        string zeroBeatsLine = await zeroBeatsMissing.Dispatch("take");
+        Check(takesTriggered == 6 && durationsUsedOnTake[^1] == 300 && zeroBeatsLine.EndsWith(" · NO TEMPO", StringComparison.Ordinal),
+            "TakeBeats=0 fallback preserves OBS's own transition duration while showing NO TEMPO");
+        vsLoaded = true;
+
+        // 4. Low confidence WITH bpm_locked=true still quantizes cleanly.
+        vs.OnVendorEvent(VisualSidechainMonitor.VendorName, "signals_changed", new JsonObject
+        {
+            ["audio_present"] = true, ["bpm"] = 120.0, ["bpm_locked"] = true,
+            ["beat_phase"] = 0.0, ["beat_index"] = 1, ["bar_phase"] = 0.25, ["bar_index"] = 6, ["beat_confidence"] = 0.10
+        });
+        var armedDesk = new DeskActions(quantCfg, FakeObs, vsMonitor: vs, onStatus: statusLines.Add, clockMs: () => nowMs, delayAsync: FakeDelay);
+        string armedLine = await armedDesk.Dispatch("take");
+        Check(armedLine.EndsWith(" · ARMED", StringComparison.Ordinal) && armedDesk.IsTakeArmed && recordedDelayMs == 1500 && takesTriggered == 6,
+            "next_bar at 120 BPM bar_phase=0.25 arms for 1500 ms");
+        pendingDelay!.SetResult(true);
+        for (int i = 0; i < 40 && takesTriggered < 7; i++) await Task.Delay(5);
+        Check(takesTriggered == 7 && durationsUsedOnTake[^1] == 2000 && !armedDesk.IsTakeArmed && statusLines.Count == 1,
+            "armed take fires at bar boundary with 2000 ms duration");
+
+        // 5. Second press while ARMED fires immediately.
+        var secondPressDesk = new DeskActions(quantCfg, FakeObs, vsMonitor: vs, clockMs: () => nowMs, delayAsync: FakeDelay);
+        await secondPressDesk.Dispatch("take");
+        Check(secondPressDesk.IsTakeArmed && takesTriggered == 7, "armed before second press");
+        string firedNow = await secondPressDesk.Dispatch("take");
+        Check(!secondPressDesk.IsTakeArmed && takesTriggered == 8 && durationsUsedOnTake[^1] == 2000 && !firedNow.Contains("ARMED"),
+            "second press while ARMED fires immediately");
+
+        // 6. fader.cancel while ARMED cancels visibly without firing.
+        var cancelDesk = new DeskActions(quantCfg, FakeObs, vsMonitor: vs, clockMs: () => nowMs, delayAsync: FakeDelay);
+        await cancelDesk.Dispatch("take");
+        string cancelled = await cancelDesk.Dispatch("fader.cancel");
+        Check(!cancelDesk.IsTakeArmed && takesTriggered == 8 && cancelled.EndsWith(" · CANCELLED", StringComparison.Ordinal),
+            "fader.cancel while ARMED cancels visibly without firing");
+
+        // 7. 4 s cap: at 60 BPM (1 bar = 4000 ms, bar_phase = 0.0), wait is capped at <= 4000 ms.
+        vs.OnVendorEvent(VisualSidechainMonitor.VendorName, "signals_changed", new JsonObject
+        {
+            ["audio_present"] = true, ["bpm"] = 60.0, ["bpm_locked"] = true,
+            ["beat_phase"] = 0.0, ["beat_index"] = 0, ["bar_phase"] = 0.0, ["bar_index"] = 7, ["beat_confidence"] = 0.95
+        });
+        var capDesk = new DeskActions(quantCfg, FakeObs, vsMonitor: vs, clockMs: () => nowMs, delayAsync: FakeDelay);
+        await capDesk.Dispatch("take");
+        Check(capDesk.IsTakeArmed && recordedDelayMs == 4000, "next_bar wait at 60 BPM is capped at 4000 ms");
+        await capDesk.Dispatch("fader.cancel");
     }
 }

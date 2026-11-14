@@ -24,11 +24,33 @@
     </select>
   </div>
 
+  <div class="row" id="quantize-beats-row">
+    <label for="quantize-beats-select" data-i18n="quantizeLengthLabel">Length</label>
+    <select id="quantize-beats-select">
+      <option value="0" selected data-i18n="quantizeLengthMs">Milliseconds</option>
+      <option value="1" data-i18n="quantizeBeats1">1 beat</option>
+      <option value="2" data-i18n="quantizeBeats2">2 beats</option>
+      <option value="4" data-i18n="quantizeBeats4">4 beats (1 bar)</option>
+      <option value="8" data-i18n="quantizeBeats8">8 beats (2 bars)</option>
+      <option value="16" data-i18n="quantizeBeats16">16 beats (4 bars)</option>
+    </select>
+  </div>
+
   <div class="row">
-    <label for="duration-input" data-i18n="durationMs">Duration (ms)</label>
+    <label id="duration-label" for="duration-input" data-i18n="durationMs">Duration (ms)</label>
     <input type="number" id="duration-input" value="1000" min="0" max="20000" step="50" />
   </div>
   <p class="muted" id="duration-hint" data-i18n="durationHint">0 ms = instant. A T-bar return to 0 % cancels the throw. 50–20000 ms = timed fade following the slot's curve.</p>
+
+  <div class="row" id="quantize-start-row">
+    <label for="quantize-start-select" data-i18n="quantizeStartLabel">Start</label>
+    <select id="quantize-start-select">
+      <option value="now" selected data-i18n="quantizeStartNow">Now</option>
+      <option value="next_beat" data-i18n="quantizeStartBeat">Next beat</option>
+      <option value="next_bar" data-i18n="quantizeStartBar">Next bar</option>
+    </select>
+  </div>
+  <p class="muted" id="quantize-hint" data-i18n="quantizeHint">Without Visual Sidechain tempo, fires immediately with the millisecond fallback and shows NO TEMPO. Max wait 1 bar (4 s); press again to fire now, hold to cancel.</p>
 
   <div class="row">
     <label for="label-input" data-i18n="label">Label</label>
@@ -49,14 +71,21 @@
   <script src="pi-common.js"></script>
   <script>
     function syncAllFxVisibility(settings) {
+      const T = window.FadesterI18n.t;
       const isAllFx = settings.slot === "__all_fx__";
+      const beats = [1, 2, 4, 8, 16].indexOf(Number(settings.quantizeBeats)) >= 0 ? Number(settings.quantizeBeats) : 0;
+      const start = settings.quantizeStart === "next_beat" || settings.quantizeStart === "next_bar" ? settings.quantizeStart : "now";
       const toRow = document.getElementById("to-row");
       const hint = document.getElementById("duration-hint");
       const readoutRow = document.getElementById("readout-row");
+      const durLabel = document.getElementById("duration-label");
+      const qHint = document.getElementById("quantize-hint");
       if (toRow) toRow.style.display = isAllFx ? "none" : "";
       if (readoutRow) readoutRow.style.display = isAllFx ? "none" : "";
+      if (durLabel) durLabel.textContent = T(beats > 0 ? "quantizeFallbackMs" : "durationMs");
+      if (qHint) qHint.style.display = beats > 0 || start !== "now" ? "" : "none";
       if (hint) {
-        hint.textContent = window.FadesterI18n.t(isAllFx ? "durationHintAllFx" : "durationHint");
+        hint.textContent = T(isAllFx ? "durationHintAllFx" : "durationHint");
       }
     }
 
@@ -67,20 +96,33 @@
     window.initFadesterPropertyInspector(function (settings, save) {
       const slotEl = document.getElementById("slot-select");
       const toEl = document.getElementById("to-select");
+      const beatsEl = document.getElementById("quantize-beats-select");
       const durEl = document.getElementById("duration-input");
+      const startEl = document.getElementById("quantize-start-select");
       const labelEl = document.getElementById("label-input");
       const readoutEl = document.getElementById("readout-select");
+      const currentUiSettings = function () {
+        return {
+          slot: slotEl ? slotEl.value : settings.slot,
+          quantizeBeats: beatsEl ? Number(beatsEl.value) : settings.quantizeBeats,
+          quantizeStart: startEl ? startEl.value : settings.quantizeStart
+        };
+      };
 
       if (slotEl && settings.slot) slotEl.value = settings.slot;
       if (toEl) toEl.value = String(settings.to !== undefined ? settings.to : 1);
+      if (beatsEl) beatsEl.value = String([1, 2, 4, 8, 16].indexOf(Number(settings.quantizeBeats)) >= 0 ? Number(settings.quantizeBeats) : 0);
       if (durEl) durEl.value = String(settings.durationMs !== undefined ? settings.durationMs : 1000);
+      if (startEl) startEl.value = settings.quantizeStart === "next_beat" || settings.quantizeStart === "next_bar" ? settings.quantizeStart : "now";
       if (labelEl) labelEl.value = settings.labelOverride || "";
       if (readoutEl) readoutEl.value = settings.readoutStyle === "percent" ? "percent" : "auto";
       syncAllFxVisibility(settings);
 
-      if (slotEl) slotEl.onchange = () => { save({ slot: slotEl.value }); syncAllFxVisibility({ slot: slotEl.value }); };
+      if (slotEl) slotEl.onchange = () => { save({ slot: slotEl.value }); syncAllFxVisibility(currentUiSettings()); };
       if (toEl) toEl.onchange = () => save({ to: Number(toEl.value) === 0 ? 0 : 1 });
+      if (beatsEl) beatsEl.onchange = () => { save({ quantizeBeats: Number(beatsEl.value) }); syncAllFxVisibility(currentUiSettings()); };
       if (durEl) durEl.onchange = () => save({ durationMs: Number(durEl.value) });
+      if (startEl) startEl.onchange = () => { save({ quantizeStart: startEl.value }); syncAllFxVisibility(currentUiSettings()); };
       if (labelEl) labelEl.onchange = () => save({ labelOverride: labelEl.value.trim() });
       if (readoutEl) readoutEl.onchange = () => save({ readoutStyle: readoutEl.value });
     });

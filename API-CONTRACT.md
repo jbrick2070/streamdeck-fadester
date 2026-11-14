@@ -102,23 +102,28 @@ Visual Sidechain owns audio signals, Tape Deck descriptions, and visual safety (
 
 | requestType | requestData | responseData | Notes |
 |---|---|---|---|
-| `get_signals` | none | `{ success: true, version, api_version: 1, panic, level, sub_bass, bass, mid, high, kick, snare, beat, beat_phase, spectral_centroid, spectral_flux, estimated_bpm, bpm, audio_present, beat_confidence, spectrum: [{ band, value }] }` | Snapshot of the primary audio analyzer's normalized `0.0..1.0` envelopes, `estimated_bpm` (`bpm` alias), 32-band spectrum, `audio_present` (`bool`), `beat_confidence` (`0.0..1.0`), and additive `panic` (`bool`). |
+| `get_signals` | none | `{ success: true, version, api_version: 1, panic, level, sub_bass, bass, mid, high, kick, snare, beat, beat_phase, beat_index, bar_phase, bar_index, spectral_centroid, spectral_flux, estimated_bpm, bpm, bpm_locked, audio_present, beat_confidence, spectrum: [{ band, value }] }` | Snapshot of the primary audio analyzer's normalized `0.0..1.0` envelopes, `estimated_bpm` (`bpm` alias), `bpm_locked` (`bool`, default `false`), 4-beat bar grid (`beat_index` in `0..3`, `bar_phase` in `0.0..1.0`, monotonic `bar_index >= 0`), 32-band spectrum, `audio_present` (`bool`), `beat_confidence` (`0.0..1.0`), and additive `panic` (`bool`). |
 | `get_decks` | none | `{ success: true, version, api_version: 1, decks: [...] }` | Read-only snapshot of active Tape Deck Browser Sources as last reported by their pages. |
 | `get_safety` | `{}` | `{ success: true, version, api_version: 1, panic: boolean, since_ms: number }` | `since_ms` is the Unix epoch millisecond timestamp when the active Panic started, or `0` when `panic` is `false`. |
 | `panic` | `{}` | Same payload as `get_safety` with `panic: true` | Immediately enters Panic (passes through Shader Filters, saves and zeroes strobe/flash/modulation amounts on the UI thread, and preserves the original `since_ms` across repeat Panic presses) and emits `safety_changed`. |
 | `restore` | `{}` | `{ success: true, version, api_version: 1, panic: false, since_ms: 0 }` | Immediately clears Panic (restores saved pre-panic amounts on the UI thread) and emits `safety_changed`. |
+| `tap_tempo` | `{}` | `{ success: true, version, api_version: 1, bpm, estimated_bpm, bpm_locked, beat, beat_phase, beat_index, bar_phase, bar_index, tap_count }` | Records an operator tap (up to 8 taps; chains reset after `> 2.5 s`, switch bounces `< 0.20 s` are ignored), updates `bpm` (`30.0..300.0`) once at least two taps are in the chain, steps `beat_index` from `0` on a fresh chain, and emits `signals_changed`. Matching frontend hotkey: `visual_sidechain_tap_tempo`. |
+| `set_bpm` | `{ bpm: number }` | Same tempo payload as `tap_tempo` (`{ success: false, version, api_version: 1, error, comment }` if `bpm` is missing or outside `30.0..300.0`) | Sets `bpm` (`estimated_bpm`) directly in `30.0..300.0`, clears prior automatic IOI history so older kicks do not pull the tempo back, and emits `signals_changed`. (`set_bpm` takes a numeric argument and has no stateless frontend press hotkey.) |
+| `lock_bpm` | `{ locked: boolean }` | Same tempo payload as `tap_tempo` (`{ success: false, version, api_version: 1, error, comment }` if `locked` is missing or not a boolean) | Locks or unlocks tempo (`bpm_locked`). When locked, kicks never change `bpm` and only gently nudge phase within `+/- 0.15` beats of the nearest beat, and the bar clock keeps running across kickless gaps and silence. Matching frontend toggle hotkey: `visual_sidechain_lock_bpm`. |
+| `resync_downbeat` | `{}` | Same tempo payload as `tap_tempo` with `beat: 0`, `beat_phase: 0`, `beat_index: 0`, `bar_phase: 0` | Marks this press as beat 1 (`beat_index: 0`, `bar_phase: 0.0`, advancing `bar_index` when resetting from mid-bar so `bar_index` never decreases) and emits `signals_changed`. Matching frontend hotkey: `visual_sidechain_resync_downbeat`. |
 
 ### Events (`visual-sidechain`)
 
 | eventType | eventData | When |
 |---|---|---|
-| `signals_changed` | Same signal fields as `get_signals` (without `success`) | Coalesced to at most 30 per second when any signal moves by more than `1e-3` or `audio_present` changes. |
+| `signals_changed` | Same signal fields as `get_signals` (without `success`) | Coalesced to at most 30 per second when any signal moves by more than `1e-3` or `audio_present`, `bpm_locked`, `beat_index`, or `bar_index` changes, and emitted immediately on `tap_tempo`, `set_bpm`, `lock_bpm`, `resync_downbeat`, and their frontend hotkeys. |
 | `safety_changed` | `{ version, api_version: 1, panic: boolean, since_ms: number }` | Emitted whenever Panic or Restore is triggered from either a vendor request or the OBS frontend hotkeys (`visual_sidechain_panic` / `visual_sidechain_restore`). |
 
-### Silence hold and beat confidence rules
+### Silence hold, tempo lock, and beat confidence rules
 
-- Before the first above-gate audio frame, or after `2.0 s` of continuous silence (below the noise gate) or audio starvation (`> 50 ms` with no audio callbacks, `VS_STARVATION_SEC`), Visual Sidechain sets `audio_present: false`, freezes `beat` (`beat_phase`) at `0.0`, and reports `beat_confidence: 0.0`.
-- Once the `2.0 s` silence hold takes effect, every normalized `0.0..1.0` envelope signal sits at `0.0` while `estimated_bpm` (`bpm`) retains its last/default BPM (`120.0`) with `audio_present: false` (consumers must gate tempo displays and sync on `audio_present` / `beat_confidence`), so the `1e-3` change gate suppresses further `signals_changed` (and in-process `visual_sidechain_signals`) emissions until above-gate audio returns.
+- Before the first above-gate audio frame, or after `2.0 s` of continuous silence (below the noise gate) or audio starvation (`> 50 ms` with no audio callbacks, `VS_STARVATION_SEC`), Visual Sidechain sets `audio_present: false` and reports `beat_confidence: 0.0`.
+- When `bpm_locked` is `false` (default), the `2.0 s` silence hold also freezes `beat` (`beat_phase`), `bar_phase`, and `beat_index` at `0` while `estimated_bpm` (`bpm`) retains its last/default BPM (`120.0`), so the `1e-3` change gate suppresses further `signals_changed` (and in-process `visual_sidechain_signals`) emissions until above-gate audio returns.
+- When `bpm_locked` is `true`, kicks never alter `bpm` (only nudging phase within `+/- 0.15` beats of the grid) and the beat/bar clock (`beat`, `beat_index`, `bar_phase`, `bar_index`) continues advancing smoothly across kickless breakdowns and silent gaps while `audio_present` still honestly reports `false` after `2.0 s` below gate.
 - `beat_confidence` (`0.0..1.0`) is computed from inter-onset interval regularity across the eight-interval window and decays when expected beats go missing (for example during a kickless breakdown).
 
 ### Safety client compatibility rules
@@ -145,8 +150,8 @@ Visual Sidechain registers:
 
 | proc or signal | calldata in | calldata out |
 |---|---|---|
-| proc `visual_sidechain_get_signals` | none | `float level, bass, mid, high, kick, snare, beat_phase, bpm, beat_confidence`, `bool audio_present`, `bool ok` |
-| signal `visual_sidechain_signals` | none | `float level, bass, mid, high, kick, snare, beat_phase, bpm, beat_confidence`, `bool audio_present`, emitted at most 30 times per second (suppressed after the `2.0 s` silence hold until audio returns) |
+| proc `visual_sidechain_get_signals` | none | `float level, bass, mid, high, kick, snare, beat_phase, bar_phase, bpm, beat_confidence`, `int beat_index, bar_index`, `bool bpm_locked, audio_present`, `bool ok` |
+| signal `visual_sidechain_signals` | none | `float level, bass, mid, high, kick, snare, beat_phase, bar_phase, bpm, beat_confidence`, `int beat_index, bar_index`, `bool bpm_locked, audio_present`, `bool ok`, emitted at most 30 times per second (suppressed after the `2.0 s` silence hold when `bpm_locked` is `false`, or emitted immediately on tempo requests/hotkeys) |
 
 Rules for the bridge:
 

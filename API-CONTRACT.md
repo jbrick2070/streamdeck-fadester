@@ -223,17 +223,20 @@ Rules for provider identity and single ownership:
 - Every reply includes additive `provider: { id: string, name: string, version: string }`, where `id` is a
   non-empty UUID persisted per provider state directory (`mix-state/provider-id` in Fadester Companion, with an
   in-memory UUID fallback when no writable state folder is configured; each local OBS endpoint also holds an OS
-  single-instance mutex/lock), `name` names the provider program, and `version` reports its build version.
+  single-instance mutex/lock: `Global\FadesterMixBridge-<port>` in `tourbox/bridge/Program.cs` and
+  `run/mix-<port>.lock` in `tourbox/macos/{bridge,host}/Program.cs`), `name` names the provider program, and
+  `version` reports its build version.
 - Older providers omit `provider`; clients continue to accept replies without `provider` when no conflicting
   provider has answered the same request.
 - Clients pin the first `provider.id` that answers one of their requests. If two distinct providers answer the
   same request `id` (or a different `provider.id` answers an in-flight mutating command), the client latches a
   conflict, refuses to send or apply mix commands, and displays `"Two mix providers are answering"`.
-- Recovery without restarting OBS: when a provider goes silent (`mix.status` timeout in Stream Deck; `NO_REPLY`
-  timeout, `UNAVAILABLE`, or Master slot reset in Midi Fadester), clients clear their pin so a restarted or
-  replacement provider re-pins cleanly. Stream Deck's periodic read-only `mix.status` probe also clears a
-  latched conflict (or re-pins a replaced `provider.id`) once a `250 ms` responder window on that probe hears
-  exactly one provider. Reconnecting (resetting the session) also clears the pin.
+- Recovery without restarting OBS: when an unconflicted provider goes silent (`mix.status` timeout in Stream Deck;
+  `NO_REPLY` timeout or `UNAVAILABLE` in Midi Fadester), clients clear their pin so a restarted or replacement
+  provider re-pins cleanly. Stream Deck's periodic read-only `mix.status` probe also clears a latched conflict
+  (or re-pins a replaced `provider.id`) once a `250 ms` responder window on that probe hears at most one
+  provider; in Midi Fadester (which sends no background polling traffic), resetting/reconfiguring the Master slot
+  clears a latched conflict. Reconnecting (resetting the session) also clears the pin.
 
 ## Rules
 

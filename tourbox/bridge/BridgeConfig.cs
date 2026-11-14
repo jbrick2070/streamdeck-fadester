@@ -100,8 +100,7 @@ internal sealed class BridgeConfig
                 File.Move(tmp, file, overwrite: true);
                 return created;
             }
-            catch (IOException) { }
-            catch (UnauthorizedAccessException) { }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { }
         }
         return MixProtocolServer.DefaultProviderId;
     }

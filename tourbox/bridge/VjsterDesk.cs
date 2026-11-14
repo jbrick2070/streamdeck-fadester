@@ -179,22 +179,13 @@ internal sealed class VjsterHost : IAsyncDisposable
     async Task Bind(CancellationToken stop)
     {
         string? last = null;
-        bool probedHolder = false;
-        VjsterPortHolder? cachedHolder = null;
         void Once(string message) { if (message != last) { last = message; log(message); } }
         while (!stop.IsCancellationRequested)
         {
             try { await Link.StartAsync(); return; }
             catch (VjsterPortInUseException e)
             {
-                if (!probedHolder)
-                {
-                    probedHolder = true;
-                    cachedHolder = await VjsterLink.ProbePortHolderAsync(e.Port, stop);
-                }
-                Once(cachedHolder is not null
-                    ? $"VJster link is held by {cachedHolder.DisplayName}. Close it or turn off VJster there. Trying again every 30 s."
-                    : $"VJster port {e.Port} is in use, probably by the VJster actions in your Stream Deck or OpenDeck software. Remove them from the deck, or choose another port here and on the extension's options page. Trying again every 30 s.");
+                Once($"VJster port {e.Port} is in use, probably by the VJster actions in your Stream Deck or OpenDeck software. Remove them from the deck, or choose another port here and on the extension's options page. Trying again every 30 s.");
             }
             catch (System.Net.Sockets.SocketException e)
             {

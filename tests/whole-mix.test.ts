@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ObsFadeKeyInstanceController } from "../src/actions/obs-fade-key.js";
 import { ObsFaderDialInstanceController } from "../src/actions/obs-fader-dial.js";
 import { DirectObsClient } from "../src/obs/direct-obs-client.js";
-import { MIX_NAMESPACE, WholeMixClient } from "../src/obs/whole-mix.js";
+import { MIX_NAMESPACE, WholeMixClient, mixProblem } from "../src/obs/whole-mix.js";
 import { FakeObsServer } from "./helpers/fake-obs-server.js";
 
 describe("optional whole mixer controls", () => {
@@ -103,6 +103,63 @@ describe("optional whole mixer controls", () => {
     } finally {
       stop();
       vi.useRealTimers();
+    }
+  });
+
+  it("pins the first provider.id for the session and refuses to act if a second provider answers", async () => {
+    const send = vi.fn(async (_event: Record<string, unknown>) => {});
+    const mix = new WholeMixClient(() => true, send, () => {});
+    const stop = mix.observe();
+    const providerA = { id: "11111111-1111-4111-8111-111111111111", name: "Fadester Companion", version: "1.0.0" };
+    const providerB = { id: "22222222-2222-4222-8222-222222222222", name: "Fadester Companion", version: "1.0.0" };
+    const reply = (id: unknown, extra: Record<string, unknown> = {}) =>
+      mix.receive({
+        id,
+        namespace: MIX_NAMESPACE,
+        op: "reply",
+        ok: true,
+        enabled: true,
+        db: -6,
+        message: "All mixer inputs: -6.0 dB.",
+        ...extra
+      });
+    try {
+      const status = send.mock.calls[0][0];
+      // Malformed provider metadata is ignored cleanly without pinning.
+      reply(status.id, { provider: { id: "", name: "Fadester Companion", version: "1.0.0" } });
+      expect(mix.state.availability).toBe("offline");
+
+      // Provider A answers first and is pinned for the session; a second reply to the same request ID from Provider B latches conflict.
+      reply(status.id, { provider: providerA });
+      expect(mix.state).toEqual({ availability: "ready", db: -6 });
+      reply(status.id, { provider: providerB, db: -9 });
+      expect(mix.state).toEqual({ availability: "conflict", db: null });
+      expect(mixProblem(mix.state)).toBe("Two mix providers are answering");
+
+      const callsBefore = send.mock.calls.length;
+      await expect(mix.command("mix.down", 1)).rejects.toThrow("Two mix providers are answering");
+      expect(send.mock.calls.length).toBe(callsBefore);
+
+      // Even if Provider A answers again during the same session, conflict stays latched until session reset.
+      reply(status.id, { provider: providerA, db: -3 });
+      expect(mix.state).toEqual({ availability: "conflict", db: null });
+
+      // Resetting the session clears the pin; also verify conflict when Provider B answers an in-flight command first.
+      mix.reset();
+      expect(mix.state.availability).toBe("offline");
+      mix.refresh();
+      const status2 = send.mock.calls.at(-1)![0];
+      reply(status2.id, { provider: providerA, db: 0 });
+      expect(mix.state).toEqual({ availability: "ready", db: 0 });
+
+      const inFlight = mix.command("mix.fadeOut");
+      const cmdReq = send.mock.calls.at(-1)![0];
+      const rejected = expect(inFlight).rejects.toThrow("Two mix providers are answering");
+      reply(cmdReq.id, { provider: providerB, db: null });
+      await rejected;
+      expect(mix.state).toEqual({ availability: "conflict", db: null });
+    } finally {
+      stop();
     }
   });
 });

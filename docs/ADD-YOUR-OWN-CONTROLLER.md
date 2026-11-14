@@ -86,11 +86,16 @@ Reply (`eventData` of a `CustomEvent` you receive):
   "db": -12.0,
   "message": "All mixer inputs: -12.0 dB.",
   "active": true, "silent": false, "gain": 0.2512, "fading": false, "targetDb": -12.0,
-  "managed": 4, "skipped": 0, "recovering": false
+  "managed": 4, "skipped": 0, "recovering": false,
+  "provider": {
+    "id": "8a1c0b9a-4f32-4e7b-9a8d-55b0f4f1c201",
+    "name": "Fadester Companion",
+    "version": "1.0.0"
+  }
 }
 ```
 
-Read `enabled` first: `false` means the companion runs but **All OBS mixer inputs** is off, and only `mix.status` is answered with `ok: true`. `db` is the group level in dB and `gain` the same level as the linear multiplier (0 to 1) applied to every managed input's own level; `targetDb` is where a running fade is heading and equals `db` when nothing is fading; `db` and `targetDb` are `null` when that level is silence. `message` is a sentence from the provider ("All mixer inputs: fading to -20.0 dB over 600 ms.", or "Group fade paused. Check Activity before continuing." with `ok: false`). Match replies to your request by `id`, not by order. The request's acknowledgement from OBS only says the envelope was delivered; the deck waits 4 s for a status reply and 12 s for a command reply before showing the control as offline, and sends a `mix.status` probe every 2.5 s while a mix control is visible. Do not set the `client` field: it is the receipt channel for the Midi Fadester plugin inside OBS, which cannot see broadcast events.
+Read `enabled` first: `false` means the companion runs but **All OBS mixer inputs** is off, and only `mix.status` is answered with `ok: true`. `db` is the group level in dB and `gain` the same level as the linear multiplier (0 to 1) applied to every managed input's own level; `targetDb` is where a running fade is heading and equals `db` when nothing is fading; `db` and `targetDb` are `null` when that level is silence. `message` is a sentence from the provider ("All mixer inputs: fading to -20.0 dB over 600 ms.", or "Group fade paused. Check Activity before continuing." with `ok: false`). Every reply also carries additive `provider: { id, name, version }`; pin the first `provider.id` you hear for the OBS session, and if another `provider.id` answers, stop acting and show `"Two mix providers are answering"` (older providers omit `provider`). Match replies to your request by `id`, not by order. The request's acknowledgement from OBS only says the envelope was delivered; the deck waits 4 s for a status reply and 12 s for a command reply before showing the control as offline, and sends a `mix.status` probe every 2.5 s while a mix control is visible. Do not set the `client` field: it is the receipt channel for the Midi Fadester plugin inside OBS, which cannot see broadcast events. Full wire rules live in [API-CONTRACT.md](../API-CONTRACT.md).
 
 ## Door 4: keystrokes to the companion
 

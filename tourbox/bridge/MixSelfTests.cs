@@ -94,6 +94,34 @@ internal static class MixSelfTests
             collection = "Disposable"; await desk.Set(0, 100);
             for (int i = 0; i < 100 && (await desk.Status())["fading"]!.GetValue<bool>(); i++) await Task.Delay(15);
             Check(a.Level == .75 && late.Level == .32 && !(await desk.Status())["active"]!.GetValue<bool>(), "timed restore");
+
+            var deskActions = new DeskActions(cfg, Rpc);
+            long nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            var statusEnvelope = new JsonObject
+            {
+                ["namespace"] = MixProtocolServer.Scope,
+                ["id"] = Guid.NewGuid().ToString("D"),
+                ["op"] = "mix.status",
+                ["sentAtMs"] = nowMs
+            };
+            Check(MixProtocolServer.Envelope(statusEnvelope, nowMs, out _, out var parsedOp) && parsedOp == "mix.status", "status envelope validation");
+            var statusReply = await MixProtocolServer.BuildReplyAsync(statusEnvelope, parsedOp, deskActions, MixProtocolServer.DefaultProviderId, "Fadester Companion", MixProtocolServer.DefaultProviderVersion);
+            var provider = statusReply["provider"]?.AsObject();
+            Check(provider is not null && Guid.TryParse((string?)provider["id"], out var parsedPid) && parsedPid != Guid.Empty &&
+                (string?)provider["name"] == "Fadester Companion" && !string.IsNullOrWhiteSpace((string?)provider["version"]),
+                "reply provider identity { id, name, version }");
+            var errEnvelope = new JsonObject
+            {
+                ["namespace"] = MixProtocolServer.Scope,
+                ["id"] = Guid.NewGuid().ToString("D"),
+                ["op"] = "mix.down",
+                ["sentAtMs"] = nowMs,
+                ["steps"] = -1
+            };
+            var errReply = await MixProtocolServer.BuildReplyAsync(errEnvelope, "mix.down", deskActions, MixProtocolServer.DefaultProviderId, "Fadester Companion", MixProtocolServer.DefaultProviderVersion);
+            Check((bool?)errReply["ok"] == false && (string?)errReply["provider"]?["id"] == (string?)provider!["id"],
+                "error replies preserve the same provider.id");
+            await deskActions.StopMixAsync();
         }
         finally { if (desk != null) await desk.Stop(); Directory.Delete(directory, recursive: true); }
     }

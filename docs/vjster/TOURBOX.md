@@ -4,7 +4,7 @@ The one VJster Chrome extension works from the Stream Deck, OpenDeck and the Tou
 
 ## YouTube must be in Chrome
 
-The TourBox controls YouTube in Chrome only. Nothing can reach a YouTube browser source in OBS from outside, and the OBS page that embeds a player is served by the Stream Deck plugin, not by this companion. To show the video in OBS, use a Window Capture of the Chrome window, plus an Application Audio Capture of Chrome for its sound.
+By default from the Windows Setup tab, the TourBox controls YouTube in Chrome: nothing can reach a plain YouTube browser source in OBS from outside. (`VjsterLink.cs` also serves the `/obs` Browser Source embed page when `vjsterObsToken` is set in `config.json` — exposed in the experimental macOS panel UI, though not yet in the Windows Setup tab — or when the VJster Stream Deck plugin serves it.) Without `/obs`, show the video in OBS with a Window Capture of the Chrome window, plus an Application Audio Capture of Chrome for its sound.
 
 With several videos open, the extension chooses the one playing; among several playing, the active tab of the focused Chrome window, else the one that started last. Pause the others. The TourBox has no pin, because the extension pins only while Chrome is focused.
 

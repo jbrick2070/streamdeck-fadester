@@ -349,7 +349,7 @@ internal static class TbarSafetyVectorChecks
                 }
             }
 
-            string? expectedFinalScene = (string?)expected["companion_final_scene"];
+            string? expectedFinalScene = (string?)expected["final_scene"] ?? (string?)expected["companion_final_scene"];
             bool matchesContract =
                 writesReplayed == (int)expected["writes_replayed"]! &&
                 needsReset == (bool)expected["needs_operator_reset"]! &&

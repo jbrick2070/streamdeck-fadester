@@ -87,19 +87,17 @@ Examples:
 
 ## 5. Recovery Ladder on Mid-Throw Helper Failure (`DEC-1`)
 
-When a native helper fails mid-throw (at 30%, 60%, 95%, or during release confirmation), shipping surfaces follow this recovery ladder:
+When a native helper fails mid-throw (`10%`, `30%`, `49%`, `50%`, `60%`, `90%`, `95%`, or during release confirmation), shipping surfaces follow this recovery ladder:
 
 1. **Freeze input immediately.** Stop movement writes and drop any queued coalesced encoder/trigger steps so stale deltas cannot reopen a closed blend.
 2. **Read OBS's transition cursor (`GetCurrentSceneTransitionCursor`).**
    - If `cursor == 0` or `cursor == 1`, OBS has already finished or cancelled the blend. Reconcile Program/Preview scene names if needed, clear throw state, and **do not** toggle Studio Mode (OBS 33 reports `cursor == 1.0` at rest after a completed transition).
 3. **Reconcile on the real slider if reachable without replaying uncertain writes.**
-   - Stream Deck checks a fresh `read()` when available (`>= 921` finish, `<= 102` cancel, or one endpoint move when reachable). Companion never replays an uncertain native write.
-4. **Guaranteed automatic closeout if still open (`0 < cursor < 1`).**
-   - Close the open manual blend automatically via the **Studio Mode toggle** (`SetStudioModeEnabled(false)` closes OBS's locked manual transition, followed unconditionally by `SetStudioModeEnabled(true)` to restore Studio Mode).
-   - **Windows Companion (`StudioFader`, `allowAutoCloseout: true` default):**
-     - At `Position >= 0.5`: finishes to `Preview` (cues starting `Program` into `Preview`, flips dial direction, arms double-take guard, and repays any lent transition).
-     - At `Position < 0.5`: restores starting `Program` and `Preview` after closing the locked manual transition, and repays any lent transition.
-   - **Stream Deck (`DirectObsClient`):** closes via `performStudioModeToggleTake` when the native slider remains unreachable.
+   - Stream Deck checks a fresh `read()` when available: near-rail release is unchanged (`tick >= 921` finishes via `SetTBarPosition { position: 1, release: true }`; `tick <= 102` without an explicit take request cancels via `SetTBarPosition { position: 0, release: true }`; otherwise one endpoint move is attempted when reachable). Companion never replays an uncertain native write.
+4. **Symmetric half-way automatic closeout if still open (`0 < cursor < 1`).**
+   - Both **Windows Companion** (`StudioFader`, `allowAutoCloseout: true` default) and **Stream Deck** (`DirectObsClient.recoverFailedNativeThrow`) close the open manual blend automatically via the **Studio Mode toggle** (`SetStudioModeEnabled(false)` closes OBS's locked manual transition, followed unconditionally by `SetStudioModeEnabled(true)` to restore Studio Mode), applying the same `0.5` rule on the **last known slider position**:
+   - **At `>= 0.5` (`0.50`, `0.60`, `0.90`, `0.95`):** finishes to `Preview` (cues the prior `Program` or operator's mid-throw Preview pick into `Preview`; Windows Companion also flips dial direction, arms the double-take guard, and repays any lent transition).
+   - **Below `0.5` (`0.10`, `0.30`, `0.49`):** restores the starting `Program` (via an immediate `Cut` override once leaving Studio Mode closes OBS's locked blend, when the starting scene is known) and `Preview` (**no Program change remains committed below `0.5`**; Windows Companion also repays any lent transition).
    - **Acceptance:** OBS's Transition button is usable again within **2 seconds** with **zero operator action** (`transition_left_open = false`, `needs_operator_reset = false`).
 
 ### Documented Exception (`macos_host`, `DEC-1`)
@@ -115,7 +113,7 @@ When an `obs-websocket` session connects or reconnects in Studio Mode:
 1. Read `GetCurrentSceneTransitionCursor` twice across a short sampling window (`100..150 ms`).
 2. **Moving cursor (`c1 != c2`):** OBS is running a timed transition of its own. **Leave it alone** (`leave_alone`).
 3. **Motionless open cursor (`0 < c1 < 1` and `c1 == c2`):** an unattended manual T-bar blend is open in OBS.
-   - **Stream Deck (`DirectObsClient`):** relative rotary encoders adopt the open blend (`adopt_open_throw`) so the next dial turn finishes or cancels it cleanly.
+   - **Stream Deck (`DirectObsClient`):** when OBS's native slider remains reachable on reconnect, relative rotary encoders adopt the open blend (`adopt_open_throw`, preserving the remembered starting `Program` scene across a reconnect of the same client) so the next dial turn finishes or cancels it cleanly. If Stream Deck had a native slider throw open before the disconnect and native slider control is lost on reconnect (or fails or encounters a non-Fade transition when resuming that throw), `recoverFailedNativeThrow` closes the open blend using the same symmetric `< 0.5` restore `Program/Preview` vs `>= 0.5` finish to `Preview` rule.
    - **Fadester Companion on Windows (`StudioFader.ResumeAsync`):** because triggers are spring-loaded at `0` and hotkeys are stateless, Companion closes a remembered open sweep automatically using the `DEC-1` half-way rule (`finish_to_preview` at `Position >= 0.5`, `cancel_to_program` below `0.5`), **including when OBS was switched to a non-Fade transition (`Cut`, `Stinger`, etc.) across the disconnect**, provided Program and Preview still belong to the sweep.
 
 ---
@@ -146,7 +144,7 @@ Out-of-process UIA and Accessibility helpers must verify all of the following be
 
 | ID | Resolution | Status |
 |---|---|---|
-| **`DEC-1`** | Windows Companion adopts automatic mid-throw and reconnect closeout (`>= 0.5` finishes to Preview, `< 0.5` restores Program/Preview, including reconnect with a non-Fade transition). Experimental `FadesterMacHost` keeps strict no-fallback (`known_exceptions.macos_host`). | **Implemented** |
+| **`DEC-1`** | Windows Companion and Stream Deck (`DirectObsClient.recoverFailedNativeThrow`) share symmetric half-way closeout when native slider control is lost mid-throw or across reconnect (`>= 0.5` finishes to Preview, `< 0.5` restores Program/Preview, including reconnect with a non-Fade transition). Experimental `FadesterMacHost` keeps strict no-fallback (`known_exceptions.macos_host`). | **Implemented** |
 | **`DEC-2`** | Companion `StudioFader.Edge` is `0.005` (`<= 0.005` cancels, `>= 0.995` finishes); reconnect closeout codified per surface control model (`adopt_open_throw` on stateful dials, half-rule closeout on Companion). | **Implemented** |
 | **`DEC-3`** | Companion accepts any OBS `33.x` for `obs-websocket` and native T-bar features, matching Stream Deck, with runtime widget checks as the real guard. | **Implemented** |
 | **`DEC-4`** | Midi Fadester aborts an open T-bar throw to Program once per unexpected MIDI disconnect using `mfd_engine_abort_tbar_for_config_change_locked`, with no automatic resume on reconnect. | **Implemented** |

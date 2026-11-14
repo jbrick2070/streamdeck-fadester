@@ -6,7 +6,8 @@ import {
   DirectObsClient,
   NATIVE_CANCEL_MAX_TICK,
   NATIVE_FINISH_MIN_TICK,
-  TBAR_RAIL
+  TBAR_RAIL,
+  TBAR_SETTLE_MS
 } from "../src/obs/direct-obs-client.js";
 import {
   NATIVE_TBAR_MAX,
@@ -54,6 +55,8 @@ interface TbarSafetyVectors {
       needs_operator_reset: boolean;
       transition_left_open: boolean;
       outcome: string;
+      final_scene?: "program" | "preview";
+      companion_final_scene?: "program" | "preview";
     };
     known_divergences?: Record<string, { decision_id: string }>;
   }>;
@@ -247,6 +250,8 @@ describe("shared T-bar safety contract vectors (Stream Deck)", () => {
 
   it.each(vectors.failure_vectors)("satisfies failure recovery vector $id ($kind)", async (vec) => {
     const h = await connectClient();
+    const initialProgram = h.client.getCatalog().currentProgramScene;
+    const initialPreview = h.client.getCatalog().currentPreviewScene;
 
     if (vec.kind === "pre_write_refusal") {
       // Wait for initial post-connect probe to finish, then refuse before any native write lands.
@@ -262,7 +267,7 @@ describe("shared T-bar safety contract vectors (Stream Deck)", () => {
       return;
     }
 
-    // Mid-throw helper death at 30%, 60%, or 95%:
+    // Mid-throw helper death at 10%, 30%, 49%, 50%, 60%, 90%, or 95%:
     await h.client.nudgeTbar(vec.throw_position);
     expect(h.server.manualTransitionActive).toBe(true);
     expect(h.server.nativeSlider).toBe(nativeTick(vec.throw_position));
@@ -277,8 +282,219 @@ describe("shared T-bar safety contract vectors (Stream Deck)", () => {
     expect(h.server.manualTransitionActive).toBe(vec.contract_expected.transition_left_open);
     expect(h.client.getCatalog().tbarPosition).toBe(0);
 
-    // Zero operator reset required: a subsequent take works immediately.
+    const expectedScene = vec.contract_expected.final_scene ?? vec.contract_expected.companion_final_scene;
+    expect(expectedScene).toBeDefined();
+    if (expectedScene === "program") {
+      expect(h.server.programSceneName).toBe(initialProgram);
+      expect(h.server.previewSceneName).toBe(initialPreview);
+      expect(h.server.tbarCompletionCount).toBe(0);
+      expect(
+        h.server.directCallLog.some(
+          (call) => call.requestType === "SetTBarPosition" && call.requestData?.position === 1
+        )
+      ).toBe(false);
+    } else {
+      expect(h.server.programSceneName).toBe(initialPreview);
+      expect(h.server.previewSceneName).toBe(initialProgram);
+    }
+
+    // Zero operator reset required: a subsequent take works immediately (after any post-take settle window).
+    if (expectedScene === "preview") {
+      await new Promise((res) => setTimeout(res, TBAR_SETTLE_MS + 40));
+    }
+    const nextExpectedProgram = h.client.getCatalog().currentPreviewScene;
     await expect(h.client.takeTbar()).resolves.toBe(0);
+    expect(h.server.programSceneName).toBe(nextExpectedProgram);
+  });
+
+  it("never commits a Program change below 0.5 (0.10, 0.49), even if the failed attempt aimed for take, and commits at >= 0.5 (0.50, 0.90)", async () => {
+    for (const throwPos of [0.1, 0.49]) {
+      const h = await connectClient();
+      const live = h.client.getCatalog().currentProgramScene;
+      const next = h.client.getCatalog().currentPreviewScene;
+
+      await h.client.nudgeTbar(throwPos);
+      expect(h.server.nativeSlider).toBe(nativeTick(throwPos));
+      h.native.dead = true;
+
+      // Attempt a full spin to 1.0 while native is dead: last known slider position is still < 0.5,
+      // so recoverFailedNativeThrow must restore Program/Preview without committing a take!
+      await h.client.nudgeTbar(1);
+
+      expect(h.server.manualTransitionActive).toBe(false);
+      expect(h.server.programSceneName).toBe(live);
+      expect(h.server.previewSceneName).toBe(next);
+      expect(h.client.getCatalog().currentProgramScene).toBe(live);
+      expect(h.client.getCatalog().currentPreviewScene).toBe(next);
+      expect(h.server.tbarCompletionCount).toBe(0);
+      expect(
+        h.server.directCallLog.some(
+          (call) => call.requestType === "SetTBarPosition" && call.requestData?.position === 1
+        )
+      ).toBe(false);
+
+      h.client.stop();
+      await h.server.stop();
+      client = undefined;
+      server = undefined;
+    }
+
+    for (const throwPos of [0.5, 0.9]) {
+      const h = await connectClient();
+      const live = h.client.getCatalog().currentProgramScene;
+      const next = h.client.getCatalog().currentPreviewScene;
+
+      await h.client.nudgeTbar(throwPos);
+      expect(h.server.nativeSlider).toBe(nativeTick(throwPos));
+      h.native.dead = true;
+
+      await h.client.nudgeTbar(0.05);
+
+      expect(h.server.manualTransitionActive).toBe(false);
+      expect(h.server.programSceneName).toBe(next);
+      expect(h.server.previewSceneName).toBe(live);
+      expect(h.client.getCatalog().currentProgramScene).toBe(next);
+      expect(h.client.getCatalog().currentPreviewScene).toBe(live);
+
+      h.client.stop();
+      await h.server.stop();
+      client = undefined;
+      server = undefined;
+    }
+  });
+
+  it("keeps near-rail release unchanged at 0.10 (tick 102) and 0.90 (tick 921) when read() remains reachable", async () => {
+    for (const [throwPos, expectedReleasePos, expectPreviewCommitted] of [
+      [0.1, 0, false],
+      [0.9, 1, true]
+    ] as const) {
+      const h = await connectClient();
+      const live = h.client.getCatalog().currentProgramScene;
+      const next = h.client.getCatalog().currentPreviewScene;
+
+      await h.client.nudgeTbar(throwPos);
+      expect(h.server.nativeSlider).toBe(nativeTick(throwPos));
+
+      // Move fails while read() still succeeds: near-rail release closes on the real slider without toggling Studio Mode.
+      h.native.move = async () => {
+        throw new NativeTbarTimeout("Move timed out while slider stayed at near-rail tick.");
+      };
+      await h.client.nudgeTbar(0.05);
+
+      expect(h.server.manualTransitionActive).toBe(false);
+      expect(h.server.directCallLog.some((call) => call.requestType === "SetStudioModeEnabled")).toBe(false);
+      expect(
+        h.server.directCallLog
+          .filter((call) => call.requestType === "SetTBarPosition")
+          .map((call) => call.requestData)
+      ).toEqual([{ position: expectedReleasePos, release: true }]);
+      expect(h.server.programSceneName).toBe(expectPreviewCommitted ? next : live);
+      expect(h.server.previewSceneName).toBe(expectPreviewCommitted ? live : next);
+
+      h.client.stop();
+      await h.server.stop();
+      client = undefined;
+      server = undefined;
+    }
+  });
+
+  it("restores Program/Preview below 0.5 (0.10, 0.49) and finishes at >= 0.5 (0.50, 0.90) on reconnect native loss", async () => {
+    for (const [throwPos, expectFinish] of [
+      [0.1, false],
+      [0.49, false],
+      [0.5, true],
+      [0.9, true]
+    ] as const) {
+      // Case A: Native control is already lost when the client reconnects.
+      const h1 = await connectClient();
+      const live1 = h1.client.getCatalog().currentProgramScene;
+      const next1 = h1.client.getCatalog().currentPreviewScene;
+
+      await h1.client.nudgeTbar(throwPos);
+      expect(h1.server.manualTransitionActive).toBe(true);
+
+      h1.native.dead = true;
+      h1.client.reconnectNow();
+
+      await vi.waitFor(
+        () => {
+          expect(h1.server.manualTransitionActive).toBe(false);
+          expect(h1.server.studioMode).toBe(true);
+          expect(h1.server.programSceneName).toBe(expectFinish ? next1 : live1);
+          expect(h1.server.previewSceneName).toBe(expectFinish ? live1 : next1);
+          expect(h1.client.getCatalog().currentProgramScene).toBe(expectFinish ? next1 : live1);
+          expect(h1.client.getCatalog().currentPreviewScene).toBe(expectFinish ? live1 : next1);
+          expect(h1.client.getCatalog().tbarPosition).toBe(0);
+        },
+        { timeout: 3000 }
+      );
+
+      h1.client.stop();
+      await h1.server.stop();
+      client = undefined;
+      server = undefined;
+
+      // Case B: Reconnect adopts the open throw while healthy, then OBS switches to Cut / native fails on the next turn.
+      const h2 = await connectClient();
+      const live2 = h2.client.getCatalog().currentProgramScene;
+      const next2 = h2.client.getCatalog().currentPreviewScene;
+
+      await h2.client.nudgeTbar(throwPos);
+      expect(h2.server.manualTransitionActive).toBe(true);
+
+      h2.client.reconnectNow();
+      await vi.waitFor(() => expect(h2.client.getCatalog().tbarPosition).toBeCloseTo(throwPos, 1), { timeout: 3000 });
+      expect(h2.server.manualTransitionActive).toBe(true);
+
+      h2.server.currentTransitionName = "Cut";
+      h2.native.dead = true;
+      await h2.client.nudgeTbar(0.05);
+
+      expect(h2.server.manualTransitionActive).toBe(false);
+      expect(h2.server.programSceneName).toBe(expectFinish ? next2 : live2);
+      expect(h2.server.previewSceneName).toBe(expectFinish ? live2 : next2);
+      expect(h2.client.getCatalog().tbarPosition).toBe(0);
+
+      h2.client.stop();
+      await h2.server.stop();
+      client = undefined;
+      server = undefined;
+    }
+
+    for (const [throwPos, expectFinish] of [
+      [0.49, false],
+      [0.5, true]
+    ] as const) {
+      // Case C: Unexpected socket drop triggers statusChanged("reconnecting") and automatic backoff reconnect.
+      const h3 = await connectClient();
+      const live3 = h3.client.getCatalog().currentProgramScene;
+      const next3 = h3.client.getCatalog().currentPreviewScene;
+
+      await h3.client.nudgeTbar(throwPos);
+      expect(h3.server.manualTransitionActive).toBe(true);
+
+      h3.native.dead = true;
+      h3.server.dropClients();
+
+      await vi.waitFor(
+        () => {
+          expect(h3.client.getStatus().kind).toBe("connected");
+          expect(h3.server.manualTransitionActive).toBe(false);
+          expect(h3.server.studioMode).toBe(true);
+          expect(h3.server.programSceneName).toBe(expectFinish ? next3 : live3);
+          expect(h3.server.previewSceneName).toBe(expectFinish ? live3 : next3);
+          expect(h3.client.getCatalog().currentProgramScene).toBe(expectFinish ? next3 : live3);
+          expect(h3.client.getCatalog().currentPreviewScene).toBe(expectFinish ? live3 : next3);
+          expect(h3.client.getCatalog().tbarPosition).toBe(0);
+        },
+        { timeout: 4000 }
+      );
+
+      h3.client.stop();
+      await h3.server.stop();
+      client = undefined;
+      server = undefined;
+    }
   });
 
   it.each(vectors.reconnect_vectors)("satisfies reconnect vector $id", async (vec) => {

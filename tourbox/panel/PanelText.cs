@@ -231,6 +231,11 @@ namespace Fadester.TourBox {
       { "obsUiStudio", new[] { "Studio Mode", "Modo estudio", "Mode studio", "工作室模式" } },
       { "obsUiFade", new[] { "Fade", "Desvanecimiento", "Fondu", "淡入淡出" } },
       { "anchorField", new[] { "Preview anchor {0} (TourBox {1})", "Ancla vista previa {0} (TourBox {1})", "Ancre d’aperçu {0} (TourBox {1})", "预览锚点 {0}（TourBox {1}）" } },
+      { "vsNotLoaded", new[] { "Visual Sidechain: NOT LOADED", "Visual Sidechain: NO CARGADO", "Visual Sidechain : NON CHARGÉ", "Visual Sidechain：未加载" } },
+      { "vsPanic", new[] { "Visual Sidechain: PANIC", "Visual Sidechain: PÁNICO", "Visual Sidechain : PANIQUE", "Visual Sidechain：紧急停止" } },
+      { "vsNoAudio", new[] { "Visual Sidechain: NO AUDIO", "Visual Sidechain: SIN AUDIO", "Visual Sidechain : SANS AUDIO", "Visual Sidechain：无音频" } },
+      { "vsMeterActive", new[] { "Visual Sidechain: {0} BPM · Beat {1}/4 · {2}", "Visual Sidechain: {0} BPM · Pulso {1}/4 · {2}", "Visual Sidechain : {0} BPM · Temps {1}/4 · {2}", "Visual Sidechain：{0} BPM · 第 {1}/4 拍 · {2}" } },
+      { "vsMeterLocked", new[] { "Visual Sidechain: {0} BPM [LOCK] · Beat {1}/4 · {2}", "Visual Sidechain: {0} BPM [FIJO] · Pulso {1}/4 · {2}", "Visual Sidechain : {0} BPM [FIXE] · Temps {1}/4 · {2}", "Visual Sidechain：{0} BPM [锁定] · 第 {1}/4 拍 · {2}" } },
     };
 
     internal PanelText(string requestedLocale) {

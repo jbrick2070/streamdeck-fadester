@@ -33,6 +33,8 @@ import { ObsNeoInfobarAction } from "../src/actions/obs-neo-infobar.js";
 import { PlaylisterTransportKeyAction } from "../src/actions/playlister-transport-key.js";
 import { ObsFilterControlAction } from "../src/actions/obs-filter-control.js";
 import { VisualPanicKeyAction } from "../src/actions/visual-panic-key.js";
+import { VisualMeterAction } from "../src/actions/visual-meter.js";
+import { VisualSignals } from "../src/control/visual-signals.js";
 import { DirectObsPropertyInspectorBridge, InspectorFilterCatalog } from "../src/pi/direct-obs-bridge.js";
 import { PropertyInspectorBridge } from "../src/pi/pi-bridge.js";
 import { FakeObsServer, VS_MODULATOR_KIND, VS_SHADER_KIND } from "./helpers/fake-obs-server.js";
@@ -544,6 +546,8 @@ function allActions(): { actions: Array<{ name: string; action: DeckAction; kind
   const layers = new LayerController(direct);
   const filters = new FilterController(direct);
   const safety = new VisualSafety(direct, filters);
+  const signals = new VisualSignals(direct, safety);
+  const meterAction = new VisualMeterAction(signals, direct);
   const filterAction = new ObsFilterControlAction(filters);
   const layerAction = new ObsLayerControlAction(layers);
   return {
@@ -555,11 +559,14 @@ function allActions(): { actions: Array<{ name: string; action: DeckAction; kind
       { name: "Scene key", action: new ObsSceneTransitionKeyAction(direct), kind: "key" },
       { name: "Layer key", action: layerAction, kind: "key" },
       { name: "Layer dial", action: layerAction, kind: "dial" },
-      { name: "Neo Info Bar", action: new ObsNeoInfobarAction(direct), kind: "infobar" },
+      { name: "Neo Info Bar", action: new ObsNeoInfobarAction(direct, signals), kind: "infobar" },
       { name: "Playlister key", action: new PlaylisterTransportKeyAction(direct), kind: "key" },
       { name: "Filter key", action: filterAction, kind: "key" },
       { name: "Filter dial", action: filterAction, kind: "dial" },
-      { name: "Visual Panic key", action: new VisualPanicKeyAction(safety, direct), kind: "key" }
+      { name: "Visual Panic key", action: new VisualPanicKeyAction(safety, direct), kind: "key" },
+      { name: "Visual Meter key", action: meterAction, kind: "key" },
+      { name: "Visual Meter dial", action: meterAction, kind: "dial" },
+      { name: "Visual Meter Neo", action: meterAction, kind: "infobar" }
     ] as Array<{ name: string; action: DeckAction; kind: "key" | "dial" | "infobar" }>,
     stop() {
       enhanced.stop();

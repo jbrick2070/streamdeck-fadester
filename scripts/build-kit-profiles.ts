@@ -69,6 +69,7 @@ function captionAction(entry: PresetAction): CaptionAction | null {
     case "playlister": return "playlister";
     case "panic": return "panic";
     case "filter": return "filter";
+    case "meter": return "meter";
     case "page": return null;
   }
 }

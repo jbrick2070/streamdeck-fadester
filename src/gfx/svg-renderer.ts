@@ -9,3 +9,9 @@ export {
   renderDialCellSvg,
   renderAutoFadeKeySvg
 } from "../../packages/streamdeck-fadester-shared/src/svg-renderer.js";
+export {
+  type VisualMeterRenderInput,
+  renderVisualMeterKeySvg,
+  renderVisualMeterDialSvg,
+  renderVisualMeterNeoSvg
+} from "./direct-obs-renderer.js";

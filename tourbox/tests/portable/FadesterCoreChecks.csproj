@@ -24,6 +24,7 @@
     <Compile Include="../../bridge/MixJournal.cs" Link="Shared/MixJournal.cs" />
     <Compile Include="../../bridge/MixProtocolServer.cs" Link="Shared/MixProtocolServer.cs" />
     <Compile Include="../../bridge/ObsConnection.cs" Link="Shared/ObsConnection.cs" />
+    <Compile Include="../../bridge/VisualSidechainMonitor.cs" Link="Shared/VisualSidechainMonitor.cs" />
     <Compile Include="../../bridge/StudioFader.cs" Link="Shared/StudioFader.cs" />
     <Compile Include="../../bridge/TransitionTrace.cs" Link="Shared/TransitionTrace.cs" />
     <Compile Include="../../bridge/ConsoleQueue.cs" Link="Shared/ConsoleQueue.cs" />

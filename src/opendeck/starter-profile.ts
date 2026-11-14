@@ -3,7 +3,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-export type PresetKind = "layer" | "scene" | "fader" | "fade" | "playlister" | "filter" | "panic" | "page";
+export type PresetKind = "layer" | "scene" | "fader" | "fade" | "playlister" | "filter" | "panic" | "meter" | "page";
 
 export type PresetAction = {
   controller: "Keypad" | "Encoder";
@@ -80,7 +80,8 @@ const FADESTER_ACTIONS: Record<Exclude<PresetKind, "page">, string> = {
   fade: "obs-fade",
   playlister: "playlister-transport",
   filter: "obs-filter",
-  panic: "visual-panic"
+  panic: "visual-panic",
+  meter: "visual-meter"
 };
 
 export function actionUuidFor(kind: PresetKind, pluginUuid: string): string {

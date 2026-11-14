@@ -3,6 +3,7 @@
 export class CellRateLimiter<TPayload> {
   private readonly minIntervalMs: number;
   private readonly onFlush: (payload: TPayload) => void | Promise<void>;
+  private readonly clock: () => number;
   private lastFlushTime = -Infinity;
   private pendingPayload: TPayload | undefined;
   private hasPending = false;
@@ -10,13 +11,15 @@ export class CellRateLimiter<TPayload> {
 
   public constructor(
     onFlush: (payload: TPayload) => void | Promise<void>,
-    minIntervalMs = 100
+    minIntervalMs = 100,
+    clock: () => number = Date.now
   ) {
     this.onFlush = onFlush;
     this.minIntervalMs = Math.max(16, minIntervalMs);
+    this.clock = clock;
   }
 
-  public push(payload: TPayload, now = Date.now()): void {
+  public push(payload: TPayload, now = this.clock()): void {
     const elapsed = now - this.lastFlushTime;
     if (elapsed >= this.minIntervalMs && this.timer === null) {
       this.lastFlushTime = now;
@@ -36,7 +39,7 @@ export class CellRateLimiter<TPayload> {
           const toSend = this.pendingPayload;
           this.pendingPayload = undefined;
           this.hasPending = false;
-          this.lastFlushTime = Date.now();
+          this.lastFlushTime = this.clock();
           this.flush(toSend);
         }
       }, waitMs);

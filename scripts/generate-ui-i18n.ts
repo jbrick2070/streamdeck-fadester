@@ -49,6 +49,7 @@ export function presetCaptionsScript(): string {
     "    if (action === \"layerDial\") return text(settings, \"dialMode\") || \"select_layer\";",
     "    if (action === \"playlister\") return text(settings, \"operation\") || \"playpause\";",
     "    if (action === \"panic\") return text(settings, \"operation\") || \"panic\";",
+    "    if (action === \"meter\") return text(settings, \"operation\") || \"tap_tempo\";",
     "    if (action === \"filter\") {",
     "      if (text(settings, \"control\") === \"dial\") return \"dial:\" + text(settings, \"setting\");",
     "      var operation = text(settings, \"keyOperation\") || \"toggle\";",

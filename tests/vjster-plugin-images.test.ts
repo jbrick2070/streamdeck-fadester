@@ -44,8 +44,8 @@ describe("the static plugin images are language-neutral (L.6)", () => {
   it("covers both plugins' key images, icons and plugin icons", () => {
     const svgs = imageFiles.filter((f) => f.rel.endsWith(".svg"));
     expect(svgs.filter((f) => f.plugin === VJSTER && f.rel.endsWith("/key.svg"))).toHaveLength(7);
-    // Fadester's eight, and the seven VJster images the suite plugin carries as copies (scripts/suite/assemble.ts).
-    expect(svgs.filter((f) => f.plugin === FADESTER && f.rel.endsWith("/key.svg"))).toHaveLength(15);
+    // Fadester's nine, and the seven VJster images the suite plugin carries as copies (scripts/suite/assemble.ts).
+    expect(svgs.filter((f) => f.plugin === FADESTER && f.rel.endsWith("/key.svg"))).toHaveLength(16);
     expect(imageFiles.filter((f) => f.rel.endsWith(".png")).map((f) => f.rel)).toEqual(
       expect.arrayContaining(["plugin/plugin-icon.png", "plugin/plugin-icon@2x.png"])
     );

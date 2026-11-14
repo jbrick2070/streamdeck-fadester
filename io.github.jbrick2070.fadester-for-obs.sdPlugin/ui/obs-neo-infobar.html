@@ -9,9 +9,19 @@
 <body>
   <h3 data-i18n="infobarHeading">OBS Scene Info Bar</h3>
   <p class="muted" data-i18n="infobarNote">Shows the live scene and, in Studio Mode, the preview scene. The Info Bar is display-only.</p>
+  <div class="row">
+    <label></label>
+    <label class="check"><input id="infobar-vs" type="checkbox" /> <span data-i18n="infobarShowVs">Show Visual Sidechain tempo in status line</span></label>
+  </div>
   <div id="direct-shared-sections"></div>
   <script src="i18n.js"></script>
   <script src="direct-pi.js"></script>
-  <script>window.initDirectObsPropertyInspector(function () {});</script>
+  <script>
+    window.initDirectObsPropertyInspector(function (settings, save) {
+      const box = document.getElementById("infobar-vs");
+      if (box && document.activeElement !== box) box.checked = Boolean(settings.showVisualSidechain);
+      if (box) box.onchange = function () { save({ showVisualSidechain: box.checked }); };
+    });
+  </script>
 </body>
 </html>

@@ -351,7 +351,7 @@
   window.directObsFillSelect = fillSelect;
   window.directObsMixHint = function (state) {
     const availability = state && state.wholeMix && state.wholeMix.availability;
-    return T(availability === "ready" ? "mixHint" : availability === "disabled" ? "mixDisabled" : "mixOffline");
+    return T(availability === "ready" ? "mixHint" : availability === "disabled" ? "mixDisabled" : availability === "conflict" ? "mixConflict" : "mixOffline");
   };
 
   window.directObsAudioItems = function (state) {

@@ -162,6 +162,82 @@ Rules for the bridge:
 - Each side has a headless test with a fake proc handler, and the OBS harness loads both plugins and checks
   one value crossing each way.
 
+## Shared whole-mix protocol (`io.github.jbrick2070.fadester.mix.v1`)
+
+Transport: obs-websocket `BroadcastCustomEvent` (`CustomEvent` on the `General` subscription). Because
+in-process native OBS plugins do not receive `BroadcastCustomEvent` callbacks, a request with
+`"client": "midi-fadester"` also receives a copy of the reply via `CallVendorRequest`
+(`vendorName: "midi-fadester"`, `requestType: "mix_reply"`, `requestData: <reply>`).
+
+### Request envelope (`BroadcastCustomEvent.eventData`)
+
+```json
+{
+  "namespace": "io.github.jbrick2070.fadester.mix.v1",
+  "id": "3f0c6e7e-2b7a-4a1a-9b36-7c3f0c8d2a11",
+  "op": "mix.down",
+  "sentAtMs": 1794160800000,
+  "steps": 2
+}
+```
+
+| Field | Rule |
+| --- | --- |
+| `namespace` | Must equal `"io.github.jbrick2070.fadester.mix.v1"`. |
+| `id` | Non-empty UUID per request; echoed in the reply. Providers ignore repeated `id`s for 12 s. |
+| `op` | `"mix.status"`, `"mix.set"`, `"mix.up"`, `"mix.down"`, `"mix.fadeOut"`, or `"mix.restore"`. |
+| `sentAtMs` | Unix milliseconds. Providers drop envelopes older than 10 s or more than 1.5 s in the future. |
+| `steps` | `"mix.up"` and `"mix.down"` only: integer `1..32` (default `1`). |
+| `db`, `durationMs` | `"mix.set"` only: finite `db` in `-100..0` and integer `durationMs` in `0..10000`. |
+| `client` | Optional `"midi-fadester"` receipt selector for the in-process Midi Fadester plugin; external clients must omit it. |
+
+### Reply envelope (`CustomEvent.eventData` and `midi-fadester` `mix_reply`)
+
+```json
+{
+  "namespace": "io.github.jbrick2070.fadester.mix.v1",
+  "id": "3f0c6e7e-2b7a-4a1a-9b36-7c3f0c8d2a11",
+  "op": "reply",
+  "ok": true,
+  "enabled": true,
+  "db": -12.0,
+  "message": "All mixer inputs: -12.0 dB.",
+  "active": true,
+  "silent": false,
+  "gain": 0.2512,
+  "fading": false,
+  "targetDb": -12.0,
+  "managed": 4,
+  "skipped": 0,
+  "recovering": false,
+  "provider": {
+    "id": "8a1c0b9a-4f32-4e7b-9a8d-55b0f4f1c201",
+    "name": "Fadester Companion",
+    "version": "1.0.0"
+  }
+}
+```
+
+Rules for provider identity and single ownership:
+
+- Every reply includes additive `provider: { id: string, name: string, version: string }`, where `id` is a
+  non-empty UUID persisted per provider state directory (`mix-state/provider-id` in Fadester Companion, with an
+  in-memory UUID fallback when no writable state folder is configured; each local OBS endpoint also holds an OS
+  single-instance mutex/lock: `Global\FadesterMixBridge-<port>` in `tourbox/bridge/Program.cs` and
+  `run/mix-<port>.lock` in `tourbox/macos/{bridge,host}/Program.cs`), `name` names the provider program, and
+  `version` reports its build version.
+- Older providers omit `provider`; clients continue to accept replies without `provider` when no conflicting
+  provider has answered the same request.
+- Clients pin the first `provider.id` that answers one of their requests. If two distinct providers answer the
+  same request `id` (or a different `provider.id` answers an in-flight mutating command), the client latches a
+  conflict, refuses to send or apply mix commands, and displays `"Two mix providers are answering"`.
+- Recovery without restarting OBS: when an unconflicted provider goes silent (`mix.status` timeout in Stream Deck;
+  `NO_REPLY` timeout or `UNAVAILABLE` in Midi Fadester), clients clear their pin so a restarted or replacement
+  provider re-pins cleanly. Stream Deck's periodic read-only `mix.status` probe also clears a latched conflict
+  (or re-pins a replaced `provider.id`) once a `250 ms` responder window on that probe hears at most one
+  provider; in Midi Fadester (which sends no background polling traffic), resetting/reconfiguring the Master slot
+  clears a latched conflict. Reconnecting (resetting the session) also clears the pin.
+
 ## Rules
 
 - Every request is covered by a headless test on the Midi Fadester side (fake websocket) and by the OBS

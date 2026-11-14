@@ -83,6 +83,28 @@ internal sealed class BridgeConfig
         return config;
     }
 
+    /** Stable per-install UUID in MixStateDirectory so restarting Companion keeps one provider.id across restarts. */
+    public static string ResolveProviderId(string? stateDirectory)
+    {
+        if (!string.IsNullOrWhiteSpace(stateDirectory))
+        {
+            try
+            {
+                Directory.CreateDirectory(stateDirectory);
+                string file = Path.Combine(stateDirectory, "provider-id");
+                if (File.Exists(file) && Guid.TryParse(File.ReadAllText(file).Trim(), out var existing) && existing != Guid.Empty)
+                    return existing.ToString("D");
+                string created = Guid.NewGuid().ToString("D");
+                string tmp = file + ".tmp-" + Environment.ProcessId;
+                File.WriteAllText(tmp, created);
+                File.Move(tmp, file, overwrite: true);
+                return created;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { }
+        }
+        return MixProtocolServer.DefaultProviderId;
+    }
+
     /** Only `--listen` hosts the VJster link; a catalog read or mix-only run has no use for its port. */
     public void CheckPorts()
     {

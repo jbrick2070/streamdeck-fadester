@@ -104,7 +104,9 @@ describe("VJster plugin end to end", () => {
     sim.key("key-3-0");
     await until(() => sim.player.s.rate === 2);
     await until(() => sim.svg("key-3-0").includes('stroke-width="6"'));
-    expect(sim.svg("key-2-0")).not.toContain('stroke-width="6"');
+    // Each key is redrawn by its own message, and a slow runner can hand them to this process one at a time:
+    // wait for the 1x key's light to go out as well, instead of reading it the instant the 2x key lights.
+    await until(() => !sim.svg("key-2-0").includes('stroke-width="6"'));
     sim.key("key-2-0");
     await until(() => sim.player.s.rate === 1);
   });

@@ -404,6 +404,8 @@ internal static class VjsterSelfTests
                     lastSet = args;
                     var raw = Convert.ToDouble(args!["filterSettings"]!["opacity"]!.GetValue<object>(), System.Globalization.CultureInfo.InvariantCulture);
                     opacity = legacy ? raw / 100 : raw; break;
+                case "CallVendorRequest":
+                    throw new ObsError("CallVendorRequest", 600, "No vendor");
                 default: throw new Exception("Unexpected OBS request in the layer test: " + op);
             }
             return Task.FromResult(reply);

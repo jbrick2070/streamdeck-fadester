@@ -354,14 +354,70 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
     }
     public static string BlendName(string mode) => mode.StartsWith("OBS_BLEND_") ? char.ToUpperInvariant(mode[10]) + mode[11..].ToLowerInvariant() : mode;
     /**
-     * Opacity rides the source's Color Correction filter: the first one it has, else a new one named OpacityFilterName
-     * at the end of the chain. color_filter_v2 takes 0..1, the legacy color_filter 0..100. `overlay` keeps its other
-     * settings. A disabled filter is reported, not switched on (that could change the look someone set up). The filter
-     * belongs to the source, so it also applies wherever else that source appears, Program included.
+     * Opacity prefers an enabled, available Midi Fadester layer_opacity slot whose source and scene match Layer 2,
+     * driving it through set_fader_value instead of touching Color Correction (P1-8 single-owner rule). Otherwise it
+     * rides the source's Color Correction filter: the first one it has, else a new one named OpacityFilterName at the
+     * end of the chain. color_filter_v2 takes 0..1, the legacy color_filter 0..100. `overlay` keeps its other
+     * settings. A disabled filter is reported, not switched on (that could change the look someone set up). If a
+     * Fadester opacity filter already exists on the source while Midi Fadester owns Layer 2 opacity, nothing on that
+     * filter is changed or deleted and the Activity line says that the two stack.
      */
     private async Task<string> Opacity(string id)
     {
-        var (_, source, label, _) = await LayerItem(id);
+        var (scene, source, label, _) = await LayerItem(id);
+        JsonObject? ownedSlot = null;
+        try
+        {
+            var outer = await rpc("CallVendorRequest", new()
+            {
+                ["vendorName"] = "midi-fadester",
+                ["requestType"] = "get_state",
+                ["requestData"] = new JsonObject()
+            });
+            if (outer["responseData"] is JsonObject state && state["slots"] is JsonArray slots)
+            {
+                ownedSlot = slots.OfType<JsonObject>().FirstOrDefault(s =>
+                    s["enabled"]?.GetValue<bool>() == true &&
+                    s["available"]?.GetValue<bool>() == true &&
+                    s["target_mode"]?.GetValue<string>() == "layer_opacity" &&
+                    s["source_a"]?.GetValue<string>() == source &&
+                    s["scene"]?.GetValue<string>() == scene);
+            }
+        }
+        catch (ObsError e) when (e.Code is 600 or 604)
+        {
+            // Midi Fadester is not loaded; fall through to Color Correction.
+        }
+
+        if (ownedSlot != null)
+        {
+            string slotId = Str(ownedSlot, "id");
+            string slotName = ownedSlot["name"]?.GetValue<string>() is { Length: > 0 } sn ? sn : slotId;
+            double slotCurrent = ownedSlot["value"] is JsonValue sv && sv.TryGetValue<double>(out var curVal) ? curVal : 1.0;
+            double slotNext = Math.Clamp(Math.Round((slotCurrent + (id.EndsWith(".up") ? cfg.OpacityStep : -cfg.OpacityStep)) * 1000) / 1000, 0, 1);
+            var setOuter = await rpc("CallVendorRequest", new()
+            {
+                ["vendorName"] = "midi-fadester",
+                ["requestType"] = "set_fader_value",
+                ["requestData"] = new JsonObject { ["slot"] = slotId, ["value"] = slotNext }
+            });
+            double applied = slotNext;
+            if (setOuter["responseData"] is JsonObject setRes)
+            {
+                if (setRes["ok"]?.GetValue<bool>() == false || setRes["error"] != null)
+                {
+                    string? comment = setRes["comment"]?.GetValue<string>();
+                    throw new InvalidOperationException(!string.IsNullOrEmpty(comment) ? comment : $"{label}: Midi Fadester refused {slotName}.");
+                }
+                if (setRes["value"] is JsonValue av && av.TryGetValue<double>(out var appVal)) applied = appVal;
+            }
+            var sourceFilters = (await rpc("GetSourceFilterList", new() { ["sourceName"] = source }))["filters"]!.AsArray().Select(n => n!.AsObject());
+            bool hasCompanionFilter = sourceFilters.Any(f => f["filterName"]?.GetValue<string>() == OpacityFilterName);
+            return hasCompanionFilter
+                ? $"{label} opacity {Math.Round(applied * 100)} % (Midi Fadester {slotName}; {OpacityFilterName} is also on {source}, so the two stack)"
+                : $"{label} opacity {Math.Round(applied * 100)} % (Midi Fadester {slotName})";
+        }
+
         var filters = (await rpc("GetSourceFilterList", new() { ["sourceName"] = source }))["filters"]!.AsArray().Select(n => n!.AsObject());
         var color = filters.FirstOrDefault(f => f["filterKind"]?.GetValue<string>() is "color_filter_v2" or "color_filter");
         string name, kind;

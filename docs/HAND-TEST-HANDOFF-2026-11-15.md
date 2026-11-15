@@ -73,6 +73,42 @@ Checked on GitHub at 2026-11-15 18:41 UTC.
 have passed. The installers are line J, last. If the owner would rather install first, that is their call:
 make sure the rollback kit (section 4, item 7) exists before they click.
 
+### 3a. If the desk agent's local plan exists, it is the master
+
+Reported on 2026-11-15 from the desk agent's own summary; the author of this file has not read these files.
+`C:\fadester\release-drafts\` holds `human-hardware-test-plan.md` (phases H1 to H8, 42 checks in a GATE and a
+DEEP tier), `desk-checklist.md`, `opus-handoff-prompt.md`, `install-results.json` and
+`all-checks-results.json`. The Suite Demo Kit is imported in the owner's OBS, with its Stream Deck + profiles.
+That plan starts with the installers (its H1.1) and ends with publishing (its H8).
+
+If those files are there, follow that plan and its prompt, with these changes. Where they disagree, this
+section wins.
+
+1. **One list, one driver.** Use section 5 of this file as a cross-check, not as a second list to run end to
+   end. Only one agent drives the session. `run-all-checks.ps1` swaps the OBS settings folder out and back, so
+   a second agent running it would pull the profile from under a session in progress.
+2. **Before the installers:** stage the rollback (section 4, item 7). The owner closes OBS; never force it.
+3. **Flash cap first.** Before any check where the owner looks at a reactive effect, find a flash-cap result
+   for these builds in `all-checks-results.json`. If there is none, run line B1 first.
+4. **Add these lines if the plan lacks them.** The summary of the plan does not mention them, and most are
+   the audit's safety items:
+   - the T-bar slider lost mid-fade (A3, A4), a reconnect mid-fade (A5), and the Companion's helper lost
+     mid-fade (A8). These exercise the recovery that 0.12.0 changed.
+   - Panic pressed on the keyboard, and Panic across a Stream Deck restart (D1, D2).
+   - the whole mix after Stop controls then Start controls, and with the Companion closed (E2, E3).
+   - silence stops the beat (C1), if the plan only checks the meter's label.
+   - TourBox steps at the rails (A6), if a TourBox is at the desk.
+   - the MIDI desk unplugged mid-fade (A9), if a MIDI desk is at the desk.
+5. **Hardware that is not at the desk is "not tested", never "pass".** Say which release ships with that gap.
+   With no MIDI desk, nobody has yet moved a physical fader on Midi Fadester 0.7.0, and A9 cannot be tried.
+   With no TourBox, A6 cannot be tried. Nothing has been tried on a Mac until section 7 is done.
+6. **The publish gate.** Zero failures is not the same as ready. Before asking for "publish", show the
+   not-tested list beside the pass list, release by release. The owner may hold one release and publish the
+   others. `release/suite-pins` pins all the new versions, so check it before it is merged if any release is
+   held.
+7. **Other projects.** Checks for anything outside these four repositories are not part of this sign-off.
+   Keep them out of the go / no-go table.
+
 ## 4. Preparation (skip whatever already exists and checks out)
 
 Needed before the first hardware line:

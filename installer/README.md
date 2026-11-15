@@ -30,7 +30,7 @@ You need Windows, Inno Setup 6, and a finished `tourbox\build.ps1` run (its fold
 
 ```powershell
 .\tourbox\build.ps1 -OutDir $env:TEMP\companion
-.\installer\build-suite.ps1 -CompanionBuild "$env:TEMP\companion\build-<id>\Fadester for TourBox"
+.\installer\build-suite.ps1 -CompanionBuild "$env:TEMP\companion\build-<id>\Fadester Companion"
 ```
 
 - **Pinned inputs.** Everything else comes from the releases pinned in [components.json](components.json), and each file is checked against its SHA-256. A mismatch stops the build.

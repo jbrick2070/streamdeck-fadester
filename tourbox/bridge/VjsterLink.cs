@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// The VJster link, hosted by the TourBox companion: the loopback WebSocket and
+// The VJster link, hosted by Fadester Companion: the loopback WebSocket and
 // optional /obs Browser Source page that the VJster Chrome extension and OBS
 // connect to, so TourBox controls can change video speed and quality in Chrome
 // or directly inside an OBS Browser Source without needing Midi Fadester. A port

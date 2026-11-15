@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// The TourBox companion drives the real VJster extension logic: the built
+// Fadester Companion drives the real VJster extension logic: the built
 // bridge (tourbox/bridge, .NET 8) hosts the VJster link, a stand-in extension
 // (the real Router, LinkClient and Adapter around a fake YouTube player, as
 // scripts/vjster/deck-sim.ts uses them) connects to it, and a "dispatch"
@@ -7,7 +7,7 @@
 // would. No Chrome, no TourBox, no OBS (the bridge stays "Offline" for OBS).
 //
 // Skipped when the bridge is not built or no .NET runtime is found:
-//   dotnet build tourbox/bridge/FadesterTourBoxBridge.csproj -c Release
+//   dotnet build tourbox/bridge/FadesterCompanionBridge.csproj -c Release
 import { spawn, type ChildProcess } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -20,7 +20,7 @@ import { Router } from "../vjster-extension/src/router.js";
 import { fakePlayer } from "../scripts/vjster/deck-sim.js";
 
 const root = join(__dirname, "..");
-const exe = join(root, "tourbox", "bridge", "bin", "Release", "net8.0-windows", "FadesterTourBoxBridge.exe");
+const exe = join(root, "tourbox", "bridge", "bin", "Release", "net8.0-windows", "FadesterCompanionBridge.exe");
 const dotnetRoot = process.env.DOTNET_ROOT ?? join(process.env.LOCALAPPDATA ?? "", "FadesterBuildTools", "dotnet");
 const EXT_ORIGIN = "chrome-extension://abcdefghijklmnopabcdefghijklmnop";
 const available = process.platform === "win32" && existsSync(exe) && existsSync(join(dotnetRoot, "dotnet.exe"));
@@ -76,7 +76,7 @@ async function startBridge(port: number): Promise<{ child: ChildProcess; lines: 
     if (found) return Promise.resolve(found);
     // The bridge registers real global hotkeys: with the operator's own companion running they are taken, and it says so.
     const fatal = lines.find((l) => l.startsWith("ERROR:"));
-    if (fatal) return Promise.reject(new Error(`the bridge failed: ${fatal} (is another Fadester for TourBox running?)`));
+    if (fatal) return Promise.reject(new Error(`the bridge failed: ${fatal} (is another Fadester Companion running?)`));
     return new Promise((resolve, reject) => {
       waiters.push({ needle, resolve });
       setTimeout(() => reject(new Error(`no "${needle}" from the bridge in ${ms} ms; got:\n${lines.join("\n")}`)), ms);
@@ -96,7 +96,7 @@ describe("the live OBS fixture (tourbox/tests/live-obs.py)", () => {
   });
 });
 
-describe.skipIf(!available)("the TourBox companion hosts the VJster link for the real extension logic", () => {
+describe.skipIf(!available)("Fadester Companion hosts the VJster link for the real extension logic", () => {
   it("a dispatched TourBox action reaches the page and the page's answer reaches the panel line", async () => {
     const port = await freePort();
     const bridge = await startBridge(port);

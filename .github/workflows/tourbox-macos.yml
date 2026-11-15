@@ -1,4 +1,4 @@
-name: TourBox macOS core checks
+name: Fadester Companion macOS core checks
 
 on:
   push:

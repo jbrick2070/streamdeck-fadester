@@ -43,7 +43,7 @@ internal static class Program
             bool traceTransitions = args.Remove("--trace-transitions");
             string command = args.FirstOrDefault() ?? "--listen";
             if ((command == "--dispatch" && args.Count != 2) || (command != "--dispatch" && args.Count > 1)) throw new ArgumentException("Invalid arguments. See --help.");
-            if (command == "--help") { Console.WriteLine("FadesterTourBoxBridge [--config PATH] [--map PATH] [--trace-transitions] [--init | --catalog | --check | --self-test | --dispatch ACTION | --listen | --mix-only]\nMix-only serves other controllers without registering shortcuts. Type quit or press Ctrl+C to stop.\n--trace-transitions, with --listen or --mix-only, prints each change of OBS's selected transition with the time and whether the companion asked for it."); return 0; }
+            if (command == "--help") { Console.WriteLine("FadesterCompanionBridge [--config PATH] [--map PATH] [--trace-transitions] [--init | --catalog | --check | --self-test | --dispatch ACTION | --listen | --mix-only]\nMix-only serves other controllers without registering shortcuts. Type quit or press Ctrl+C to stop.\n--trace-transitions, with --listen or --mix-only, prints each change of OBS's selected transition with the time and whether the companion asked for it."); return 0; }
             if (traceTransitions && command is not ("--listen" or "--mix-only")) throw new ArgumentException("--trace-transitions works with --listen or --mix-only.");
             if (command == "--init")
             {

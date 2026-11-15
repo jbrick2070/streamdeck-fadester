@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Opens the companion's panel, captures each of its tabs as a PNG for the Store screenshots, and closes it again.
 # It saves nothing and starts no controls; on opening the panel only reads the scene list from OBS.
-#   .\capture-panel.ps1 -Panel "...\Fadester for TourBox.exe" -OutDir captures
+#   .\capture-panel.ps1 -Panel "...\Fadester Companion.exe" -OutDir captures
 param([Parameter(Mandatory)][string]$Panel, [Parameter(Mandatory)][string]$OutDir)
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing

@@ -4,6 +4,8 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 
 ## Unreleased
 
+## 0.12.0 - 2026-11-15
+
 - **Fadester Companion streamlining and Windows/Mac parity.**
   - **Windows Setup tab, VJster section:** gains the Mac panel's **Target** choice (**Chrome & OBS page**, **Chrome extension only**, **OBS Browser Source only**), an **OBS video URL / ID** field and **Copy OBS Browser Source URL**.
     - The button builds the bridge's existing loopback `/obs` page link, creating the 32-hex `vjsterObsToken` on first use and keeping a saved token in any letter case.

@@ -63,7 +63,7 @@ internal sealed class MixProtocolServer : IAsyncDisposable
         try
         {
             string message;
-            if (op != "mix.status" && !desk.MixEnabled) message="All mixer inputs is off. Enable it in Fadester setup.";
+            if (op != "mix.status" && !desk.MixEnabled) message="All mixer inputs is off. Enable it in Fadester Companion setup.";
             else {
                 switch(op) {
                 case "mix.set":
@@ -87,7 +87,7 @@ internal sealed class MixProtocolServer : IAsyncDisposable
             }
         }
         catch(ArgumentException x) { reply["ok"]=false; reply["message"]=x.Message; }
-        catch(Exception x) { Console.Error.WriteLine("Mix: "+x.Message); reply["ok"]=false; reply["message"]="Could not apply the mix command. Check the companion Activity log."; }
+        catch(Exception x) { Console.Error.WriteLine("Mix: "+x.Message); reply["ok"]=false; reply["message"]="Could not apply the mix command. Check the Fadester Companion Activity log."; }
         return reply;
     }
     void Receive(JsonObject e)

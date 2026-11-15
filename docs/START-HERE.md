@@ -84,9 +84,26 @@ Rows list suite features; columns show which component provides or consumes each
 | Single-owner Layer 2 opacity (`has_internal_opacity`, `opacity_slot`) | first release that includes it: `(placeholder, fill at release)` (reads catalog) | first release that includes it: `(placeholder, fill at release)` | first release that includes it: `(placeholder, fill at release)` | — | — |
 | Whole-mix audio control (`All OBS mixer inputs` / `mix_master` with provider pin) | first release that includes it: `(placeholder, fill at release)` | first release that includes it: `(placeholder, fill at release)` (provider) | first release that includes it: `(placeholder, fill at release)` | — | — |
 | Process-wide 3 Hz flash ceiling & `*_safe` uniforms / Modulator Flash guard | — | — | — | first release that includes it: `(placeholder, fill at release)` | — |
-| Live Panic / Restore truth (`get_safety`, `panic`, `restore`, `safety_changed`, hotkey fallback on older builds) | first release that includes it: `(placeholder, fill at release)` | first release that includes it: `(placeholder, fill at release)` | — | first release that includes it: `(placeholder, fill at release)` | — |
+| Live Panic / Restore visuals truth (`get_safety`, `panic`, `restore`, `safety_changed`, hotkey fallback on older builds) | first release that includes it: `(placeholder, fill at release)` | first release that includes it: `(placeholder, fill at release)` | — | first release that includes it: `(placeholder, fill at release)` | — |
 | Silence hold (`audio_present`, `beat_confidence`), tempo lock, tap tempo, 4-beat bar grid | first release that includes it: `(placeholder, fill at release)` (**Visual Sidechain Meter** & beat-quantized fades) | first release that includes it: `(placeholder, fill at release)` (tempo/meter readout & quantized takes) | — | first release that includes it: `(placeholder, fill at release)` | — |
 | **Tape Deck** deck controls (`deck_command`, `decks_changed`, dual `%` / `x` speed readout) | first release that includes it: `(placeholder, fill at release)` | Follow-up (out of scope until preset map updates) | first release that includes it: `(placeholder, fill at release)` (optional Speed Fader) | first release that includes it: `(placeholder, fill at release)` | — |
 | **Playlister** transport keys (Next, Previous, Play/Pause, Stop, Restart, Status) | first release that includes it: `(placeholder, fill at release)` (detects `obs_playlister_source` input kind; version unknown over WebSocket) | first release that includes it: `(placeholder, fill at release)` (media input transport) | — | — | first release that includes it: `(placeholder, fill at release)` |
 | **VJster** Chrome tab & OBS Browser Source speed/quality + `GET /whoami` port-holder naming | first release that includes it: `(placeholder, fill at release)` | first release that includes it: `(placeholder, fill at release)` | — | — | — |
 | Guided setup checklist & **Use OBS's saved password** button | first release that includes it: `(placeholder, fill at release)` | first release that includes it: `(placeholder, fill at release)` (readiness lights & local password read) | — | — | — |
+
+---
+
+## 5. Names
+
+Every piece of the Fadester Suite uses one consistent set of English terms so controls, settings, and logs never say two names for the same thing or one name for two different things:
+
+| Term | What it means | What it is NOT |
+|---|---|---|
+| **Fadester for OBS** | The Stream Deck and OpenDeck plugin (`io.github.jbrick2070.fadester-for-obs`, including the 7 bundled VJster actions) | Not called bare `"Fadester"`, `"Stream Deck Fadester"`, or `"Stream Deck companion"` |
+| **Fadester Companion** | The desktop app (`streamdeck-fadester/tourbox/`) for Xbox / XInput controllers, TourBox, and the whole-mix audio provider | Not Bitfocus Companion, and not the Stream Deck plugin (its Windows `.exe` remains `Fadester for TourBox.exe` until a Store update adds a compatibility shim) |
+| **Whole mix** | Moving every public OBS mixer input together while keeping their balance (`io.github.jbrick2070.fadester.mix.v1`, Midi Fadester `mix_master` target) | **All OBS mixer inputs** is the picker option that selects **Whole mix**; Midi Fadester's **Master** strip is a separate single-slot fader (Desktop Audio by default) |
+| **Restore visuals** vs **Restore mix** | **Restore visuals** undoes Visual Sidechain's **Panic** (hold `0.8 s`); **Restore mix** returns **Whole mix** inputs to their pre-fade balance | Never bare `"Restore"` without saying whether it restores visuals or the audio mix |
+| **Clean FX** vs **Clean / All FX Off** | **Clean FX** is the short label on deck keys and dials (`0 %`); **Clean / All FX Off** is the full name in settings and sentences for zeroing enabled filter slots (`reset_fx`) | Audio and layer controls stay untouched |
+| **Layer 1 / Layer 2** | Two sources inside a scene (for blend modes, single-owner layer opacity, or Midi Fadester `crossfade_ab` A/B layer crossfading) | Scenes are never called layers or `LIVE` / `NEXT` |
+| **Program / Preview** | OBS Studio Mode's on-air scene (**Program**) and next scene (**Preview**), matching OBS's own window labels | Never `LIVE` / `NEXT` for scenes; `crossfade_ab` and **A/B crossfader** name the two-layer crossfade mode itself |
+| **Cue to start** vs **Preview** | **Cue to start** rewinds a Visual Sidechain **Tape Deck** clip to `0.0 s`; putting an OBS scene on standby in Studio Mode is always called **Preview** | Never bare `"Cue"` for putting a scene in Preview |

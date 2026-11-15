@@ -48,8 +48,8 @@ export const SHARED_EN = {
   cellProgram: "Program",
   cleanFxTitle: "Clean FX",
   cleanFxNeedsUpdate: "Update Midi Fadester to 0.4.0",
-  cleanFxActiveTitle: "CLEAN FX",
-  cleanFxIdleTitle: "FX CLEAN",
+  cleanFxActiveTitle: "Clean FX",
+  cleanFxIdleTitle: "Clean FX",
   cleanFxActiveCount: "{n} ACTIVE",
   cleanFxAllZero: "ALL 0%"
 } as const;

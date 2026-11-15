@@ -1,14 +1,14 @@
 <!-- SPDX-License-Identifier: GPL-2.0-or-later -->
 <!DOCTYPE html>
 <html lang="en">
-<head><meta charset="utf-8" /><title>Fadester — Source &amp; Layer</title><link rel="stylesheet" href="pi.css" /></head>
+<head><meta charset="utf-8" /><title>Fadester for OBS — Source &amp; Layer</title><link rel="stylesheet" href="pi.css" /></head>
 <body>
   <h3><span data-i18n="layerHeading">Source &amp; layer</span> <span class="scope" data-i18n="scopeThisControl">this control</span></h3>
   <p class="muted" data-i18n="layerIntro">Browse the sources already in your scene. The deck shares one selected source per scene until the plugin restarts or the scene collection changes. Browsing keeps your layer order unchanged.</p>
   <div id="layer-status" class="status-banner status-info" data-i18n="layerStatusConnect">Connect OBS to list sources.</div>
   <div class="row"><label for="layer-scope" data-i18n="sceneLabel">Scene</label><select id="layer-scope">
-    <option value="auto" data-i18n="scopeAuto">Follow Preview in Studio Mode, Live otherwise</option>
-    <option value="program" data-i18n="scopeProgram">Always follow Live</option>
+    <option value="auto" data-i18n="scopeAuto">Follow Preview in Studio Mode, Program otherwise</option>
+    <option value="program" data-i18n="scopeProgram">Always follow Program</option>
     <option value="fixed" data-i18n="scopeFixed">A specific scene</option>
   </select></div>
   <div class="row" id="layer-scene-row"><label for="layer-scene" data-i18n="whichScene">Which scene</label><select id="layer-scene"></select></div>

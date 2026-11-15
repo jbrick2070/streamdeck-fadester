@@ -65,14 +65,14 @@ describe("Visual Panic", () => {
     panicKey.appear();
     restoreKey.appear();
     await panic.waitImage((svg) => svg.includes(">PANIC<") && svg.includes('data-icon="panic"') && svg.includes('fill="#EF4444"'));
-    await restore.waitImage((svg) => svg.includes(">Restore<") && svg.includes(">Hold 0.4 s<"));
+    await restore.waitImage((svg) => svg.includes(">Restore visuals<") && svg.includes(">Hold 0.4 s<"));
 
     await panicKey.handleKeyDown();
     await panicKey.handleKeyDown();
     expect(server.hotkeyTriggerLog.map((entry) => entry.hotkeyName)).toEqual([VS_PANIC_HOTKEY, VS_PANIC_HOTKEY]);
     expect(safety.isLatched()).toBe(true);
     expect(filters.isPanicLatched()).toBe(true);
-    await panic.waitImage((svg) => svg.includes("<title>PANIC SENT —") && svg.includes('data-icon="panic-sent"') && svg.includes(">Hold Restore to undo<"));
+    await panic.waitImage((svg) => svg.includes("<title>PANIC SENT —") && svg.includes('data-icon="panic-sent"') && svg.includes(">Hold Restore visuals<"));
 
     // A failed send shows OBS's words and the next press sends again.
     server.hotkeyFailNext = "Hotkey failed.";
@@ -185,7 +185,7 @@ describe("Visual Panic", () => {
     expect(safety.isLatched()).toBe(true);
     expect(filters.isPanicLatched()).toBe(true);
     const mix = { sourceUuid: "scene-uuid", filterName: "Aura", filterKind: "visual_sidechain_shader_filter", setting: "vs_effect_mix_pct" };
-    await expect(filters.nudge(mix, 0.1, Date.now())).rejects.toThrow(/Restore first/);
+    await expect(filters.nudge(mix, 0.1, Date.now())).rejects.toThrow(/Restore visuals first/);
     await panic;
     expect(server.hotkeyTriggerLog.map((entry) => entry.hotkeyName)).toEqual([VS_PANIC_HOTKEY]);
     expect(server.filterRequestLog).toEqual([]);

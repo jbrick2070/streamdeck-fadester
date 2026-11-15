@@ -122,7 +122,7 @@ internal sealed class MixDesk(BridgeConfig cfg, Func<string, JsonObject?, Task<J
         var s = await Status();
         if (!cfg.MixEnabled) return "All mixer inputs: off.";
         return $"All mixer inputs: {Display(s["gain"]!.GetValue<double>())}; {s["managed"]} managed, {s["skipped"]} left to operator." +
-            (s["recovering"]!.GetValue<bool>() ? " Saved mix: choose Restore to recover original levels." : "") +
+            (s["recovering"]!.GetValue<bool>() ? " Saved mix: choose Restore mix to recover original levels." : "") +
             (s["error"] is { } e ? " " + e.GetValue<string>() : "");
     }
 

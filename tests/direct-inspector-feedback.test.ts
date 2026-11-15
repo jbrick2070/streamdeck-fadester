@@ -57,9 +57,9 @@ describe("direct inspector feedback", () => {
     expect(h.text("obs-fader-tbar-hint")).not.toContain("Press to take");
     h.render({ target: "tbar", pressAction: "toggle_source" }, state);
     expect(h.text("obs-fader-tbar-hint")).toContain("show or hide");
-    expect(h.text("obs-fader-press-hint")).not.toContain("then takes Next live");
+    expect(h.text("obs-fader-press-hint")).not.toContain("then takes Preview");
     h.render({ target: "tbar", pressAction: "finish_transition" }, state);
-    expect(h.text("obs-fader-tbar-hint")).toContain("Press to take NEXT live");
+    expect(h.text("obs-fader-tbar-hint")).toContain("Press to take Preview");
   });
 
   it("says under the T-bar settings whether OBS's own slider follows the dial, and why not", () => {

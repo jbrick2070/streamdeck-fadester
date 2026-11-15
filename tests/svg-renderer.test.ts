@@ -40,14 +40,14 @@ describe("Step 1.3 — Playlister Runtime SVG Renderer (Dial Cells & Keys)", () 
       programSceneName: "Camera & Mic", previewSceneName: "Next <Cam>"
     });
     expect(svg).toContain('data-cell="scene-mixer"');
-    expect(svg).toContain('>LIVE</text>');
-    expect(svg).toContain('>NEXT</text>');
+    expect(svg).toContain('>PROGRAM</text>');
+    expect(svg).toContain('>PREVIEW</text>');
     expect(svg).toContain("Next &lt;Cam&gt;");
     expect(svg).toContain(PLAYLISTER_PALETTE.programRed);
     expect(svg).toContain(PLAYLISTER_PALETTE.previewGreen);
     expect(svg).toContain(PLAYLISTER_PALETTE.orangeAccent);
     expect(svg).toContain('stroke-width="4"');
-    expect(svg).toContain("Press to take Next live");
+    expect(svg).toContain("Press to take Preview");
   });
 
   it("shows custom audio press instructions but gives connection problems priority", () => {
@@ -79,7 +79,7 @@ describe("Step 1.3 — Playlister Runtime SVG Renderer (Dial Cells & Keys)", () 
       label: "", value: 0.56,
       programSceneName: "Scene", previewSceneName: "Scene"
     };
-    expect(renderDirectDialSvg(input)).toContain("Choose a different Next scene");
+    expect(renderDirectDialSvg(input)).toContain("Choose a different Preview");
     expect(renderDirectDialSvg({ ...input, studioMode: false })).toContain("Turn on OBS Studio Mode");
     const offline = renderDirectDialSvg({ ...input, connected: false, reason: "Wrong password" });
     expect(offline).toContain("Wrong password");
@@ -441,7 +441,7 @@ describe("Step 1.3 — Playlister Runtime SVG Renderer (Dial Cells & Keys)", () 
     });
     expect(allFxSvg).toContain('data-key="clean-fx"');
     expect(allFxSvg).toContain('data-active-fx="1"');
-    expect(allFxSvg).toContain("CLEAN FX");
+    expect(allFxSvg).toContain("Clean FX");
     assertSvgRules(allFxSvg);
 
     const mixedSlots: FadesterSlot[] = [

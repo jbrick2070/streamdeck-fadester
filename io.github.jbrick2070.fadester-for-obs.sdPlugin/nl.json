@@ -456,7 +456,7 @@
       "sliderTransition": "Kies in OBS de overgang Vervagen om de T-bar te zien bewegen. Overvloeien werkt nog steeds.",
       "sliderPermission": "Om de T-bar van OBS te zien bewegen: geef Stream Deck (of OpenDeck) toegang via Systeeminstellingen → Privacy en beveiliging → Toegankelijkheid. Overvloeien werkt nog steeds.",
       "sliderUnreachable": "Om de T-bar van OBS te zien bewegen: houd het hoofdvenster van OBS open en niet geminimaliseerd (start OBS op Windows normaal, niet als administrator). Overvloeien werkt nog steeds.",
-      "sliderUnavailable": "De T-bar-hulp van Fadester kon niet starten, dus de T-bar van OBS blijft stilstaan. Fadester opnieuw installeren kan helpen. Overvloeien werkt nog steeds.",
+      "sliderUnavailable": "De T-bar-hulp van Fadester for OBS kon niet starten, dus de T-bar van OBS blijft stilstaan. Fadester for OBS opnieuw installeren kan helpen. Overvloeien werkt nog steeds.",
       "tbarMidiFadesterTip": "Voor een vloeiende fade zonder witte flits in het OBS-venster installeer je Midi Fadester en gebruik je de draaiknop Midi Fadester Fader.",
       "faderBannerChoose": "Kies wat deze draaiknop moet bedienen.",
       "layerHeading": "Bron & laag",

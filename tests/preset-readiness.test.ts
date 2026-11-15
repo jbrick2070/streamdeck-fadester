@@ -291,7 +291,7 @@ describe("ready-made presets operate an existing OBS collection", () => {
   });
 
   it.each([
-    [0, "LIVE"], [1, "PREVIEW"], [2, "SCENE"]
+    [0, "PROGRAM"], [1, "PREVIEW"], [2, "SCENE"]
   ] as const)("labels fixed scene %s by its actual OBS role", async (index, role) => {
     const { layers } = await connect(true);
     const settings: LayerSettings = { scope: "fixed", sceneName: sceneNames[index], dialMode: "blend" };

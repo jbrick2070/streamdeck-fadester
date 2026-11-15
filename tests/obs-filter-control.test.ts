@@ -119,7 +119,7 @@ describe("OBS Filter control", () => {
     await dial.controller.dialUp();
     await new Promise((resolve) => setTimeout(resolve, 200));
     expect(dial.alerts()).toBe(1);
-    await dial.waitImage((svg) => svg.includes("Restore first"));
+    await dial.waitImage((svg) => svg.includes("Restore visuals first"));
   });
 
   it("toggles from a fresh read of the filter's state and draws ON or OFF", async () => {
@@ -173,10 +173,10 @@ describe("OBS Filter control", () => {
     // A dial with no setting chosen says so.
     const noSetting = control(filters, true, { ...settings, setting: "" });
     await noSetting.waitImage((svg) => svg.includes(">Choose a setting<"));
-    // Latched by Panic: "Restore first".
+    // Latched by Panic: "Restore visuals first".
     server.sourceFilters.get(sceneUuid)!.splice(1);
     filters.setPanicLatched(true);
-    await dial.waitImage((svg) => svg.includes(">Restore first<"));
+    await dial.waitImage((svg) => svg.includes(">Restore visuals first<"));
     filters.setPanicLatched(false);
     // The modulator is gone: the next read clears the refusal.
     await filters.refresh({ sourceUuid: sceneUuid, filterName: "Aura", filterKind: VS_SHADER_KIND, setting: "vs_effect_mix_pct" });
@@ -249,8 +249,8 @@ describe("OBS Filter control", () => {
       expect(hash(renderDirectKeySvg({ ...key, accent }))).toBe("c919c6bf82fae337");
       expect(hash(renderDirectKeySvg({ ...key, problem: "Missing", accent }))).toBe("fe176bfb49987539");
       expect(hash(renderDirectDialSvg({ ...dial, accent }))).toBe("99d7d9fcdb04c07f");
-      expect(hash(renderDirectDialSvg({ ...mixer, accent }))).toBe("1f55a3a08fcf35d7");
-      expect(hash(renderVisualPanicKeySvg({ ...restore, accent }))).toBe("fbd7bf228a783d94");
+      expect(hash(renderDirectDialSvg({ ...mixer, accent }))).toBe("a9fe2dc8dc3a1d30");
+      expect(hash(renderVisualPanicKeySvg({ ...restore, accent }))).toBe("93642f15a67330bb");
     }
     const brass = renderDirectKeySvg({ ...key, accent: "brass" });
     expect(brass).toContain('stroke="#F5B841" stroke-width="3"/>');

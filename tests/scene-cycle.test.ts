@@ -195,7 +195,7 @@ describe("Scene mixer take on OBS 33.0.1, and the optional queue-next cycle", ()
     await connect();
     server.previewSceneName = server.programSceneName;
     await client.refreshCatalog();
-    await expect(client.takeTbar(true)).rejects.toThrow("Choose a different Next scene");
+    await expect(client.takeTbar(true)).rejects.toThrow("Choose a different Preview");
     expect(calls("SetStudioModeEnabled")).toEqual([]);
     expect(calls("SetTBarPosition")).toEqual([]);
   });

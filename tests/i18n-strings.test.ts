@@ -199,7 +199,7 @@ describe("German on the deck", () => {
     });
     expect(mixer).toContain("NÄCHSTE");
     expect(mixer).toContain("Drücken: Nächste live schalten");
-    expect(mixer).not.toContain("Press to take Next live");
+    expect(mixer).not.toContain("Press to take Preview");
   });
 
   it("words the Midi Fadester cells through the injected translator", () => {

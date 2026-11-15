@@ -74,7 +74,7 @@ export const PRESET_CAPTIONS: Readonly<Record<CaptionAction, Readonly<Record<str
   // The VJ rig's Visual Panic keys (shipped with the rig profiles, PLAN.md 10.6).
   panic: {
     panic: { shipped: ["PANIC"], legacy: [] },
-    restore: { shipped: ["Restore"], legacy: [] }
+    restore: { shipped: ["Restore"], legacy: ["Restore visuals"] }
   },
   meter: {
     tap_tempo: { shipped: [], legacy: ["Tap tempo"] },

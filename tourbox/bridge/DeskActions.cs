@@ -294,7 +294,7 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
             throw new InvalidOperationException("Enable Studio Mode in OBS before using Preview or the T-bar.");
         var list = await Get("GetSceneList");
         if (Str(list, "currentProgramSceneUuid") == Str(list, "currentPreviewSceneUuid"))
-            return "take ignored: Preview is the same scene as Program. Cue another scene first.";
+            return "take ignored: Preview is the same scene as Program. Select another Preview scene first.";
 
         var cts = new CancellationTokenSource();
         var entry = new ArmedTake(plan.DurationMs, plan.WaitMs, cts);
@@ -441,7 +441,7 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
     }
     private async Task<string> Cue(string id)
     {
-        if (!(await Get("GetStudioModeEnabled"))["studioModeEnabled"]!.GetValue<bool>()) throw new InvalidOperationException("Enable Studio Mode to cue Preview; Program was not changed.");
+        if (!(await Get("GetStudioModeEnabled"))["studioModeEnabled"]!.GetValue<bool>()) throw new InvalidOperationException("Enable Studio Mode to select Preview; Program was not changed.");
         string? anchor = id.StartsWith("anchor.") ? Bound(cfg.Anchors[id[^1] - '1'], "Preview anchor " + id[^1]) : null;
         // OBS may report the destination as Program during a manual sweep. Cancel before reading either scene.
         await CancelOwnedAsync();

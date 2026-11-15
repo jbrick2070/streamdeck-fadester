@@ -29,16 +29,16 @@ describe("Neo OBS Info Bar", () => {
       setFeedback: async (payload) => { frames.push({ ...payload }); }
     }, 16);
     controller.appear();
-    expect(frames.at(-1)).toEqual({ status: "OBS disconnected", live: "LIVE  —", preview: "PREVIEW  —" });
+    expect(frames.at(-1)).toEqual({ status: "OBS disconnected", live: "PROGRAM  —", preview: "PREVIEW  —" });
 
     client.start();
     await vi.waitFor(() => expect(frames.at(-1)).toEqual({
-      status: "OBS connected", live: "LIVE  Scene Live", preview: "PREVIEW  Scene Preview"
+      status: "OBS connected", live: "PROGRAM  Scene Live", preview: "PREVIEW  Scene Preview"
     }));
     server.emitObsEvent("CurrentProgramSceneChanged", { sceneName: "Camera" });
     server.emitObsEvent("CurrentPreviewSceneChanged", { sceneName: "Slides" });
     await vi.waitFor(() => expect(frames.at(-1)).toEqual({
-      status: "OBS connected", live: "LIVE  Camera", preview: "PREVIEW  Slides"
+      status: "OBS connected", live: "PROGRAM  Camera", preview: "PREVIEW  Slides"
     }));
 
     server.studioMode = false;
@@ -55,12 +55,12 @@ describe("Neo OBS Info Bar", () => {
 
     await server.stop();
     await vi.waitFor(() => expect(frames.at(-1)).toEqual({
-      status: "OBS disconnected", live: "LIVE  —", preview: "PREVIEW  —"
+      status: "OBS disconnected", live: "PROGRAM  —", preview: "PREVIEW  —"
     }));
     server = new FakeObsServer({ missingPlugin: true });
     await server.start(port);
     await vi.waitFor(() => expect(frames.at(-1)).toEqual({
-      status: "OBS connected", live: "LIVE  Scene Live", preview: "PREVIEW  Scene Preview"
+      status: "OBS connected", live: "PROGRAM  Scene Live", preview: "PREVIEW  Scene Preview"
     }), { timeout: 3000 });
   });
 

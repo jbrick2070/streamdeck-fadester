@@ -198,10 +198,10 @@
       '<div id="profile-result" class="status-banner" style="display:none;"></div>',
       "</details>",
 
-      '<h3><span data-i18n="connHeading">OBS connection</span> <span class="scope" data-i18n="scopeAllControls">all Fadester controls</span></h3>',
+      '<h3><span data-i18n="connHeading">OBS connection</span> <span class="scope" data-i18n="scopeAllControls">all Fadester for OBS controls</span></h3>',
       '<div id="conn-status" class="status-banner status-err" data-i18n="connWaitingPlugin">Waiting for the plugin…</div>',
       '<a id="conn-link" class="release-link" href="https://github.com/jbrick2070/midi-fadester/releases" target="_blank" data-i18n="downloadMf">Download Midi Fadester for OBS Studio 33</a>',
-      '<p class="muted" data-i18n="connIntroMf">Connect once for every Fadester button and dial, including the direct OBS actions.</p>',
+      '<p class="muted" data-i18n="connIntroMf">Connect once for every Fadester for OBS button and dial, including the direct OBS actions.</p>',
       '<details id="conn-editor" class="editor" open><summary data-i18n="connEdit">Edit shared connection</summary>',
       '<div class="row"><label for="conn-host" data-i18n="host">Host</label><input type="text" id="conn-host" value="127.0.0.1" /></div>',
       '<div class="row"><label for="conn-port" data-i18n="port">Port</label><input type="number" id="conn-port" value="4455" min="1" max="65535" /></div>',

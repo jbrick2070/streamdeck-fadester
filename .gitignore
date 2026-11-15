@@ -15,3 +15,6 @@ demo-kit/build/
 __pycache__/
 # dotnet publish output named in tourbox/macos/*/README.md
 /out/
+
+# Fadester Suite Setup build output
+installer/dist/

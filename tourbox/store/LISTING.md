@@ -12,7 +12,7 @@ Got a TourBox? The same companion runs it too: the Dial is your T-bar, Scroll cu
 
 It keeps working while OBS is in front, talks only to OBS and the VJster extension on your own computer, and sends nothing to the internet.
 
-Needs OBS Studio with its WebSocket server turned on (Tools → WebSocket Server Settings). The T-bar needs OBS Studio 33.0.0 or 33.0.1 in Studio Mode. Free and open source (GPL-2.0-or-later).
+Needs OBS Studio with its WebSocket server turned on (Tools → WebSocket Server Settings). The T-bar needs OBS Studio 33 in Studio Mode. Free and open source (GPL-2.0-or-later).
 
 ## Short description
 
@@ -40,7 +40,7 @@ OBS · VJ · vision mixer · game controller · Xbox controller · TourBox · li
 
 ## Additional system requirements
 
-OBS Studio with its WebSocket server on (the T-bar needs OBS Studio 33.0.0 or 33.0.1 in Studio Mode). An Xbox or XInput game controller, a TourBox, or both.
+OBS Studio with its WebSocket server on (the T-bar needs OBS Studio 33 in Studio Mode). An Xbox or XInput game controller, a TourBox, or both.
 
 ## Copyright and trademark info
 
@@ -56,7 +56,7 @@ OBS Studio with its WebSocket server on (the T-bar needs OBS Studio 33.0.0 or 33
 
 Fadester Companion controls OBS Studio, which must run on the same PC. To test:
 
-1. Install OBS Studio 33.0.1 (free, https://obsproject.com). In OBS open Tools → WebSocket Server Settings, tick Enable WebSocket server, keep authentication on and note the password. Turn on Studio Mode, select the Fade transition, and add two scenes.
+1. Install OBS Studio 33 (free, https://obsproject.com). In OBS open Tools → WebSocket Server Settings, tick Enable WebSocket server, keep authentication on and note the password. Turn on Studio Mode, select the Fade transition, and add two scenes.
 2. Open Fadester Companion. It connects by itself: the header says it is connected and how many scenes it found. If it does not connect, type the WebSocket password in OBS password (optional) and click Read scenes and inputs from OBS.
 3. On the Setup tab, tick Use an Xbox or XInput game controller, then click Save & start controls. With an Xbox controller connected, press D-pad down to cue a scene and pull the right trigger: OBS's T-bar follows; pulled all the way, the scene goes to Program. Holding A also pushes the T-bar.
 

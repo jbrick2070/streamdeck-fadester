@@ -599,7 +599,7 @@ describe("dial throws on OBS's real slider", () => {
     expect(client.getCatalog().tbarPosition).toBe(0);
   });
 
-  it("falls back to the Studio Mode toggle take when the UIA backend dies mid-fade with the slider stuck mid-range, never leaving Transition locked", async () => {
+  it("closes via Studio Mode toggle when the UIA backend dies mid-fade with the slider stuck mid-range: restores Program/Preview below 0.5 and finishes at >= 0.5, never leaving Transition locked", async () => {
     await connect();
     const live = client.getCatalog().currentProgramScene;
     const next = client.getCatalog().currentPreviewScene;
@@ -607,7 +607,8 @@ describe("dial throws on OBS's real slider", () => {
     expect(server.manualTransitionActive).toBe(true);
     expect(server.nativeSlider).toBe(nativeTick(0.45));
 
-    // OBS is minimised mid-fade: UIA can neither move nor read the slider, and slider is stuck at ~460 (in 103..920)
+    // OBS is minimised mid-fade below 0.5: UIA can neither move nor read the slider, and slider is stuck at ~460 (in 103..920)
+    const origMove = native.move.bind(native);
     native.refuseReads = true;
     native.move = async () => {
       throw new NativeTbarRefusal("The main OBS window is minimised.", "minimised");
@@ -615,6 +616,24 @@ describe("dial throws on OBS's real slider", () => {
 
     await client.nudgeTbar(0.15);
     expect(server.manualTransitionActive).toBe(false); // Transition button is NOT locked!
+    expect(server.programSceneName).toBe(live); // < 0.5 restores starting Program/Preview!
+    expect(server.previewSceneName).toBe(next);
+    expect(client.getCatalog().tbarPosition).toBe(0);
+    expect(client.getNativeTbarStatus()).toBe("unreachable");
+
+    // Restore window and verify >= 0.5 (0.55) finishes to Next!
+    native.refuseReads = false;
+    native.move = origMove;
+    await client.nudgeTbar(0.55);
+    expect(server.manualTransitionActive).toBe(true);
+    expect(server.nativeSlider).toBe(nativeTick(0.55));
+    native.refuseReads = true;
+    native.move = async () => {
+      throw new NativeTbarRefusal("The main OBS window is minimised.", "minimised");
+    };
+
+    await client.nudgeTbar(0.15);
+    expect(server.manualTransitionActive).toBe(false);
     expect(server.programSceneName).toBe(next);
     expect(server.previewSceneName).toBe(live);
     expect(client.getCatalog().tbarPosition).toBe(0);

@@ -14,7 +14,7 @@ Sie haben eine TourBox? Die steuert derselbe Companion auch: Das Dial ist Ihr T-
 
 Er arbeitet weiter, während OBS im Vordergrund ist, spricht nur mit OBS und der VJster-Erweiterung auf Ihrem eigenen Computer und sendet nichts ins Internet.
 
-Benötigt OBS Studio mit eingeschaltetem WebSocket-Server (Werkzeuge → WebSocket-Servereinstellungen). Der T-Bar benötigt OBS Studio 33.0.0 oder 33.0.1 im Studiomodus. Kostenlos und quelloffen (GPL-2.0-or-later).
+Benötigt OBS Studio mit eingeschaltetem WebSocket-Server (Werkzeuge → WebSocket-Servereinstellungen). Der T-Bar benötigt OBS Studio 33 im Studiomodus. Kostenlos und quelloffen (GPL-2.0-or-later).
 
 **Short description:** Ihr Gamecontroller als Bildmischer für OBS Studio: ein echter T-Bar am rechten Trigger, Szenen auf dem Steuerkreuz, Musik am linken Trigger.
 
@@ -46,7 +46,7 @@ Aprieta el gatillo derecho de un mando de Xbox u otro mando XInput como si fuera
 
 Sigue funcionando con OBS en primer plano, solo se comunica con OBS y con la extensión VJster en tu propio ordenador y no envía nada a internet.
 
-Necesita OBS Studio con su servidor WebSocket activado (Herramientas → Ajustes del servidor WebSocket). El T-bar necesita OBS Studio 33.0.0 o 33.0.1 en modo Estudio. Gratuito y de código abierto (GPL-2.0-or-later).
+Necesita OBS Studio con su servidor WebSocket activado (Herramientas → Ajustes del servidor WebSocket). El T-bar necesita OBS Studio 33 en modo Estudio. Gratuito y de código abierto (GPL-2.0-or-later).
 
 **Short description:** Tu mando de juego, ahora un mezclador de vídeo para OBS Studio: un T-bar de verdad en el gatillo derecho, escenas en la cruceta y música en el gatillo izquierdo.
 
@@ -78,7 +78,7 @@ Vous avez une TourBox ? Le même companion la pilote aussi : le Dial est votre T
 
 Il continue de fonctionner quand OBS est au premier plan, ne communique qu’avec OBS et l’extension VJster sur votre propre ordinateur, et n’envoie rien sur Internet.
 
-Nécessite OBS Studio avec son serveur WebSocket activé (Outils → Paramètres du serveur WebSocket). Le T-bar nécessite OBS Studio 33.0.0 ou 33.0.1 en mode Studio. Gratuit et open source (GPL-2.0-or-later).
+Nécessite OBS Studio avec son serveur WebSocket activé (Outils → Paramètres du serveur WebSocket). Le T-bar nécessite OBS Studio 33 en mode Studio. Gratuit et open source (GPL-2.0-or-later).
 
 **Short description:** Votre manette de jeu devient un mélangeur vidéo pour OBS Studio : un vrai T-bar sur la gâchette droite, les scènes sur le pavé directionnel, la musique sur la gâchette gauche.
 
@@ -110,7 +110,7 @@ Hai una TourBox? Lo stesso companion la controlla: il Dial è il tuo T-bar, Scro
 
 Continua a funzionare con OBS in primo piano, comunica solo con OBS e con l’estensione VJster sul tuo computer e non invia nulla su Internet.
 
-Richiede OBS Studio con il server WebSocket attivo (Strumenti → Impostazioni del server WebSocket). Il T-bar richiede OBS Studio 33.0.0 o 33.0.1 in Modalità studio. Gratuito e open source (GPL-2.0-or-later).
+Richiede OBS Studio con il server WebSocket attivo (Strumenti → Impostazioni del server WebSocket). Il T-bar richiede OBS Studio 33 in Modalità studio. Gratuito e open source (GPL-2.0-or-later).
 
 **Short description:** Il tuo controller di gioco diventa un mixer video per OBS Studio: un vero T-bar sul grilletto destro, le scene sul D-pad, la musica sul grilletto sinistro.
 
@@ -142,7 +142,7 @@ TourBox をお持ちですか？同じコンパニオンで操作できます。
 
 OBS が前面にあっても動作し続け、通信するのは同じコンピューター上の OBS と VJster 拡張機能だけで、インターネットには何も送りません。
 
-WebSocket サーバーを有効にした OBS Studio が必要です（ツール → WebSocket サーバー設定）。T バーには、スタジオモードの OBS Studio 33.0.0 または 33.0.1 が必要です。無料のオープンソース（GPL-2.0-or-later）です。
+WebSocket サーバーを有効にした OBS Studio が必要です（ツール → WebSocket サーバー設定）。T バーには、スタジオモードの OBS Studio 33 が必要です。無料のオープンソース（GPL-2.0-or-later）です。
 
 **Short description:** ゲームコントローラーが OBS Studio のビデオスイッチャーに。右トリガーは本物の T バー、十字キーでシーン、左トリガーで音楽。
 
@@ -174,7 +174,7 @@ TourBox가 있나요? 같은 컴패니언으로 조작할 수 있습니다. Dial
 
 OBS가 앞에 있어도 계속 작동하며, 같은 컴퓨터의 OBS와 VJster 확장 프로그램하고만 통신하고 인터넷으로는 아무것도 보내지 않습니다.
 
-WebSocket 서버가 켜진 OBS Studio가 필요합니다(도구 → WebSocket 서버 설정). T바를 쓰려면 스튜디오 모드의 OBS Studio 33.0.0 또는 33.0.1이 필요합니다. 무료 오픈 소스입니다(GPL-2.0-or-later).
+WebSocket 서버가 켜진 OBS Studio가 필요합니다(도구 → WebSocket 서버 설정). T바를 쓰려면 스튜디오 모드의 OBS Studio 33이 필요합니다. 무료 오픈 소스입니다(GPL-2.0-or-later).
 
 **Short description:** 게임 컨트롤러가 OBS Studio용 비디오 스위처로: 오른쪽 트리거는 진짜 T바, 십자키는 장면, 왼쪽 트리거는 음악.
 
@@ -206,7 +206,7 @@ Fadester Companion превращает контроллеры, которые �
 
 Он продолжает работать, когда OBS на переднем плане, общается только с OBS и расширением VJster на вашем компьютере и ничего не отправляет в интернет.
 
-Нужен OBS Studio с включённым сервером WebSocket (Инструменты → Настройки сервера WebSocket). Для T-bar нужен OBS Studio 33.0.0 или 33.0.1 в Режиме студии. Бесплатно и с открытым исходным кодом (GPL-2.0-or-later).
+Нужен OBS Studio с включённым сервером WebSocket (Инструменты → Настройки сервера WebSocket). Для T-bar нужен OBS Studio 33 в Режиме студии. Бесплатно и с открытым исходным кодом (GPL-2.0-or-later).
 
 **Short description:** Ваш геймпад — теперь видеомикшер для OBS Studio: настоящий T-bar на правом триггере, сцены на крестовине, музыка на левом триггере.
 
@@ -238,7 +238,7 @@ Fadester Companion 把你已有的控制器变成 OBS Studio 的手动视频切�
 
 OBS 在前台时它照样工作，只与你电脑上的 OBS 和 VJster 扩展通信，不向互联网发送任何内容。
 
-需要开启 WebSocket 服务器的 OBS Studio（工具 → WebSocket 服务器设置）。T-bar 需要处于工作室模式的 OBS Studio 33.0.0 或 33.0.1。免费开源（GPL-2.0-or-later）。
+需要开启 WebSocket 服务器的 OBS Studio（工具 → WebSocket 服务器设置）。T-bar 需要处于工作室模式的 OBS Studio 33。免费开源（GPL-2.0-or-later）。
 
 **Short description:** 你的游戏手柄，变身 OBS Studio 视频切换台：右扳机是真正的 T-bar，方向键切换场景，左扳机控制音乐。
 
@@ -270,7 +270,7 @@ Fadester Companion 把你手上的控制器變成 OBS Studio 的手動視訊切�
 
 OBS 在前景時它照樣運作，只與你電腦上的 OBS 和 VJster 擴充功能通訊，不會傳送任何內容到網際網路。
 
-需要開啟 WebSocket 伺服器的 OBS Studio（工具 → WebSocket 伺服器設定）。T-bar 需要處於工作室模式的 OBS Studio 33.0.0 或 33.0.1。免費且開放原始碼（GPL-2.0-or-later）。
+需要開啟 WebSocket 伺服器的 OBS Studio（工具 → WebSocket 伺服器設定）。T-bar 需要處於工作室模式的 OBS Studio 33。免費且開放原始碼（GPL-2.0-or-later）。
 
 **Short description:** 你的遊戲控制器，變身 OBS Studio 視訊切換台：右扳機是真正的 T-bar，十字鍵切換場景，左扳機控制音樂。
 

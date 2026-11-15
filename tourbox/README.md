@@ -10,7 +10,7 @@ Fadester Companion lets you mix OBS Studio scenes on Windows with an Xbox or oth
 2. In OBS, open **Tools → WebSocket Server Settings**, turn on **Enable WebSocket server**, keep **Enable Authentication** on, and click **OK**. The companion connects by itself with the password OBS saved on this PC, and the **OBS** light at the top turns green. If it is amber, click **Show me** beside it: a short animation shows the clicks in OBS.
 3. On the **Setup** tab, under **2 Choose your controller**, tick **Use an Xbox or XInput game controller** and keep **Easy mode** ticked. Skip the TourBox part below it.
 4. Click **Save & start controls** (or **Start** beside the **Controls** light). The lights at the top turn green: *Controller: connected* and *Controls: on*. Keep the window open: closing it stops the controls.
-5. In OBS 33.0.0 or 33.0.1, turn on **Studio Mode**, select the **Fade** transition, and keep the main OBS window open with its T-bar visible.
+5. In OBS 33, turn on **Studio Mode**, select the **Fade** transition, and keep the main OBS window open with its T-bar visible.
 6. Press D-pad down to put the next scene in Preview.
 7. Pull the right trigger: OBS’s T-bar follows. Pull it all the way and Preview goes to Program; let go early and it goes back.
 
@@ -24,7 +24,7 @@ With a full-size TourBox, the Scroll wheel cues the next scene, the flat Dial dr
 
 1. Open Fadester Companion (step 1 above).
 2. Open OBS. In TourBox Console, use **Import** beside **Preset List** to add **OBS Fadester for TourBox.tb**. The panel’s **Import into TourBox Console** button copies the matching language’s preset path and opens Console; paste it into Console’s import window. Do not double-click the `.tb` file, because Windows has no app for it. Import one language only. Enable **Auto Switch** and link **OBS Fadester for TourBox** to the running OBS application. To change languages or update, select this existing preset and use its own menu’s **Import** to replace its contents.
-3. In OBS, enable **Tools → WebSocket Server Settings** with authentication. Use **Studio Mode**, select **Fade**, and keep the main OBS window and its white T-bar visible. The manual fader targets OBS Studio **33.0.0 and 33.0.1**.
+3. In OBS, enable **Tools → WebSocket Server Settings** with authentication. Use **Studio Mode**, select **Fade**, and keep the main OBS window and its white T-bar visible. The manual fader targets OBS Studio **33.x**.
 4. In the Fadester panel, click **Read scenes and inputs from OBS**. If your server uses a different port, set the **OBS port** (OBS usually uses 4455; while VJster is on, the OBS port cannot be the same as the VJster port). Leave **OBS password (optional)** empty: the panel uses the password OBS saved on this PC. Type one only if the connection fails; it is not saved.
 5. Select **OBS Fadester for TourBox**, click **Save & start controls**, and bring OBS to the front. Keep the Fadester panel running.
 

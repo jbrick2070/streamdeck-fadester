@@ -17,7 +17,7 @@
 
     <h2>没有 TourBox？使用游戏手柄</h2>
     <ol>
-      <li>打开 OBS。在<strong>工具 → WebSocket 服务器设置</strong>中启用服务器，并保持身份验证开启。然后打开 <strong>Fadester Companion</strong>：它会自动连接；如果无法连接，窗口会告诉你该怎么做。T-bar 需要 OBS 33.0.0 或 33.0.1，并保持 OBS 主窗口打开且 T-bar 可见。</li>
+      <li>打开 OBS。在<strong>工具 → WebSocket 服务器设置</strong>中启用服务器，并保持身份验证开启。然后打开 <strong>Fadester Companion</strong>：它会自动连接；如果无法连接，窗口会告诉你该怎么做。T-bar 需要 OBS 33，并保持 OBS 主窗口打开且 T-bar 可见。</li>
       <li>在<strong>设置</strong>选项卡中勾选<strong>使用 Xbox 或 XInput 游戏手柄</strong>，保持勾选<strong>简易模式</strong>，然后点击<strong>保存并启动控制</strong>。可以跳过导入预设。</li>
       <li>在 OBS 中进入<strong>工作室模式（Studio Mode）</strong>并选择<strong>淡入淡出（Fade）</strong>转场。按方向键下，将 OBS 列表中的下一个场景放入预览；按方向键上则选择上一个。</li>
       <li>扣下右扳机：OBS 的 T-bar 会跟着移动，扣到底即切换到节目。也可以按住 <strong>A</strong>：0.15 秒后，T-bar 会在你按住时持续推进，推到尽头即切换到节目。中途松开，它会停在原处；再次按住 A 即可继续。</li>
@@ -29,7 +29,7 @@
     <ol>
       <li>从开始菜单打开 <strong>Fadester Companion</strong>。如果使用 ZIP 压缩包，请完整解压，然后运行 <strong>Fadester for TourBox.exe</strong>。</li>
       <li>打开 OBS。在 TourBox Console 中，使用预设列表旁的<strong>导入（Import）</strong>按钮导入 <code>presets/zh-CN/OBS Fadester for TourBox.tb</code>。将预设关联到 OBS，并启用<strong>自动切换（Auto Switch）</strong>。只需导入一个语言版本的预设。 请使用 Fadester 中的<strong>导入到 TourBox Console</strong>按钮；不要双击 <code>.tb</code> 文件。</li>
-      <li>在 OBS 中打开<strong>工具 → WebSocket 服务器设置</strong>，启用服务器和身份验证。要在 OBS Studio <strong>33.0.0 或 33.0.1</strong> 中使用手动推子，请进入<strong>工作室模式（Studio Mode）</strong>，选择<strong>淡入淡出（Fade）</strong>转场，并让预览和输出画面之间的白色推子保持可见。</li>
+      <li>在 OBS 中打开<strong>工具 → WebSocket 服务器设置</strong>，启用服务器和身份验证。要在 OBS Studio <strong>33</strong> 中使用手动推子，请进入<strong>工作室模式（Studio Mode）</strong>，选择<strong>淡入淡出（Fade）</strong>转场，并让预览和输出画面之间的白色推子保持可见。</li>
       <li>在 Fadester 中点击<strong>从 OBS 读取场景和输入</strong>。如有需要，输入 OBS 的端口和密码。要试用音量调节，请在<strong>分配</strong>中选择音乐输入源。点击<strong>保存并启动控制</strong>，在 TourBox Console 中选择 <strong>OBS Fadester for TourBox</strong>，再将 OBS 切回前台。保持 Fadester 运行。</li>
     </ol>
     <p>如果 Windows 的显示语言不是简体中文，请先关闭 Fadester，再从解压后的文件夹中打开 PowerShell，运行 <code>&amp; '.\Fadester for TourBox.exe' --language zh-CN</code>。</p>

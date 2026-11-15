@@ -15,14 +15,16 @@ internal static class CoreChecks
         {
             if (args is ["--help"])
             {
-                Console.WriteLine("FadesterCoreChecks [--map PATH]\nRuns all offline checks. The default is the bundled presets/map.json.");
+                Console.WriteLine("FadesterCoreChecks [--map PATH] [--strict-contract]\nRuns all offline checks. The default is the bundled presets/map.json.");
                 return 0;
             }
-            string map = args switch
+            bool strictContract = args.Contains("--strict-contract", StringComparer.Ordinal);
+            string[] mapArgs = args.Where(a => a != "--strict-contract").ToArray();
+            string map = mapArgs switch
             {
                 [] => Path.Combine(AppContext.BaseDirectory, "presets", "map.json"),
                 ["--map", var path] => Path.GetFullPath(path),
-                _ => throw new ArgumentException("Use no arguments, --map PATH, or --help.")
+                _ => throw new ArgumentException("Use no arguments, --map PATH, --strict-contract, or --help.")
             };
             var bindings = Binding.Load(map);
             if (!bindings.Select(b => b.Action).ToHashSet().SetEquals(DeskActions.Supported))
@@ -33,6 +35,7 @@ internal static class CoreChecks
             Console.WriteLine("PASS: audio rides/undo/ramps, grouped mix and journal recovery.");
             await StudioFaderSelfTests.RunAsync();
             Console.WriteLine("PASS: Studio fader state machine with simulated native callbacks.");
+            await TbarSafetyVectorChecks.RunAsync(strictContract: strictContract);
             await TransitionTraceSelfTests.RunAsync();
             Console.WriteLine("PASS: transition trace attribution with a scripted OBS and clock.");
             await ObsTransportChecks.RunAsync();

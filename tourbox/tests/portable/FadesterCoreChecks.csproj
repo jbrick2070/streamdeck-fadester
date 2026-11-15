@@ -33,8 +33,11 @@
     <Compile Include="../../bridge/BridgeSelfTests.cs" Link="Tests/BridgeSelfTests.cs" />
     <Compile Include="../../bridge/MixSelfTests.cs" Link="Tests/MixSelfTests.cs" />
     <Compile Include="../StudioFaderSelfTests.cs" Link="Tests/StudioFaderSelfTests.cs" />
+    <Compile Include="../TbarSafetyVectorChecks.cs" Link="Tests/TbarSafetyVectorChecks.cs" />
     <Compile Include="../../bridge/TransitionTraceSelfTests.cs" Link="Tests/TransitionTraceSelfTests.cs" />
     <Content Include="../../presets/map.json" Link="presets/map.json"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../../../tests/vectors/tbar-safety.json" Link="vectors/tbar-safety.json"
              CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

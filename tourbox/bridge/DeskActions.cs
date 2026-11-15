@@ -5,7 +5,7 @@ namespace Fadester.TourBox;
 
 internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Task<JsonObject>> rpc,
     Func<CancellationToken, IAsyncEnumerable<double>>? rampSteps = null, Func<double, double, Task>? nativeMove = null,
-    DeskActions.Memory? resume = null)
+    DeskActions.Memory? resume = null, bool allowAutoCloseout = true)
 {
     /// <summary>What one connection's desk hands to the next: see StudioFader.Memory and AudioDesk.Leave.</summary>
     public sealed record Memory(StudioFader.Memory Fader, AudioDesk.Duck? Duck);
@@ -21,7 +21,7 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
     /** OBS scene-item blend modes in the order the Layer rotaries cycle them (obs-websocket SetSceneItemBlendMode). */
     public static readonly string[] BlendModes = ["OBS_BLEND_NORMAL", "OBS_BLEND_ADDITIVE", "OBS_BLEND_SUBTRACT", "OBS_BLEND_SCREEN", "OBS_BLEND_MULTIPLY", "OBS_BLEND_LIGHTEN", "OBS_BLEND_DARKEN"];
     public const string OpacityFilterName = "Fadester opacity";
-    private readonly StudioFader fader = new(rpc, cfg.FaderStep, nativeMove, resume?.Fader);
+    private readonly StudioFader fader = new(rpc, cfg.FaderStep, nativeMove, resume?.Fader, allowAutoCloseout);
     private readonly AudioDesk audio = new(rpc, rampSteps, resume?.Duck);
     private readonly MixDesk mix = new(cfg, rpc);
     public bool MixEnabled => cfg.MixEnabled;

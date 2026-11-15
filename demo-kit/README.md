@@ -4,9 +4,6 @@ One scene collection, a few small media files and a Stream Deck profile that sho
 Visual Sidechain, Fadester for OBS and VJster do together. Import it, switch to it, press the keys.
 The keys are already bound to the kit's sources and filters, so nothing needs picking first.
 
-**For now the kit is for its author and the demo reel.** Fadester for OBS and VJster have no public
-release yet, so others cannot install everything it needs. This note goes when they do.
-
 Windows only (10 or later), OBS Studio 33 in Studio Mode, and a 1920x1080 canvas.
 
 ## What is in the zip
@@ -46,8 +43,8 @@ VJster's: in OBS it plays the video at 0.25x to 2x, set from the deck while it p
 1. Install the plugins:
    - Playlister 0.5.0 or later, and Visual Sidechain 0.6.0 or later (Panic and Restore need 0.6.0),
      both for OBS 33.
-   - Fadester for OBS 0.7.7 or later, in Stream Deck 7.1 or later.
-   - VJster 0.1.0 or later, for the Speed Page.
+   - Fadester for OBS 0.11.0 or later (0.10.0 or later for the kit's plugin ID), in Stream Deck 7.6 or later.
+   - For the optional `Suite Demo Kit Speed +.streamDeckProfile`, VJster 0.2.1 or later (or build a Speed Page key from Fadester for OBS's own built-in VJster actions instead; keep only one VJster link active on port 48150).
 2. Unzip the kit to a short folder of its own, such as `C:\SuiteDemoKit`. Not directly in a drive
    root (`D:\`), not inside the zip, and not in a folder whose path is long: OBS only turns the
    kit's `./media/...` paths into real ones when the result fits in 260 characters. Do not copy the

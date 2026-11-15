@@ -211,9 +211,9 @@ README_MUSTS = [
     COLLECTION_FILE, *PROFILE_FILES, "CREDITS.md", "1920x1080", "not inside the zip", "drive",
     "260 characters", "Scene Collection > Import", "Enable WebSocket server", "Keep the link on",
     "Copy address", "untick Local file", "do not share or export", "Track 1 (Main Mix)",
-    "Properties > Speed", "restarts the clip", "0.25x to 2x", "no public", "Playlister 0.5.0",
+    "Properties > Speed", "restarts the clip", "0.25x to 2x", "Playlister 0.5.0",
     "Studio Mode", "cues that scene in Preview", "fade it in with the dial",
-    "Visual Sidechain 0.6.0", "Fadester for OBS 0.7.7", "VJster 0.1.0",
+    "Visual Sidechain 0.6.0", "Fadester for OBS 0.11.0", "Stream Deck 7.6", "VJster 0.2.1",
 ]
 
 

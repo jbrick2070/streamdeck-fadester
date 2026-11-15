@@ -96,26 +96,36 @@ Because `obs-websocket-api.h`'s `obs_websocket_request_callback_function` (`void
 ## Visual Sidechain vendor API (`visual-sidechain`)
 
 Vendor name: `visual-sidechain`. Transport: obs-websocket 5 `CallVendorRequest` and vendor events.
-`api_version` stays `1`; new fields are additive so older surfaces keep working.
+Visual Sidechain owns audio signals, Tape Deck descriptions, and visual safety (Panic / Restore). All requests and events carry `"version": "<semver>"` and `"api_version": 1`; new fields and requests are additive so older surfaces keep working.
 
 ### Requests (`visual-sidechain`)
 
 | requestType | requestData | responseData | Notes |
 |---|---|---|---|
-| `get_signals` | none | `{ success: true, version, api_version: 1, level, sub_bass, bass, mid, high, kick, snare, beat, beat_phase, spectral_centroid, spectral_flux, estimated_bpm, bpm, audio_present, beat_confidence, spectrum: [{ band, value }] }` | Snapshot of the primary audio analyzer's normalized `0.0..1.0` envelopes, `estimated_bpm` (`bpm` alias), 32-band spectrum, `audio_present` (`bool`), and `beat_confidence` (`0.0..1.0`). |
-| `get_decks` | none | `{ success: true, decks: [...] }` | Read-only snapshot of active Tape Deck Browser Sources as last reported by their pages. |
+| `get_signals` | none | `{ success: true, version, api_version: 1, panic, level, sub_bass, bass, mid, high, kick, snare, beat, beat_phase, spectral_centroid, spectral_flux, estimated_bpm, bpm, audio_present, beat_confidence, spectrum: [{ band, value }] }` | Snapshot of the primary audio analyzer's normalized `0.0..1.0` envelopes, `estimated_bpm` (`bpm` alias), 32-band spectrum, `audio_present` (`bool`), `beat_confidence` (`0.0..1.0`), and additive `panic` (`bool`). |
+| `get_decks` | none | `{ success: true, version, api_version: 1, decks: [...] }` | Read-only snapshot of active Tape Deck Browser Sources as last reported by their pages. |
+| `get_safety` | `{}` | `{ success: true, version, api_version: 1, panic: boolean, since_ms: number }` | `since_ms` is the Unix epoch millisecond timestamp when the active Panic started, or `0` when `panic` is `false`. |
+| `panic` | `{}` | Same payload as `get_safety` with `panic: true` | Immediately enters Panic (passes through Shader Filters, saves and zeroes strobe/flash/modulation amounts on the UI thread, and preserves the original `since_ms` across repeat Panic presses) and emits `safety_changed`. |
+| `restore` | `{}` | `{ success: true, version, api_version: 1, panic: false, since_ms: 0 }` | Immediately clears Panic (restores saved pre-panic amounts on the UI thread) and emits `safety_changed`. |
 
 ### Events (`visual-sidechain`)
 
 | eventType | eventData | When |
 |---|---|---|
 | `signals_changed` | Same signal fields as `get_signals` (without `success`) | Coalesced to at most 30 per second when any signal moves by more than `1e-3` or `audio_present` changes. |
+| `safety_changed` | `{ version, api_version: 1, panic: boolean, since_ms: number }` | Emitted whenever Panic or Restore is triggered from either a vendor request or the OBS frontend hotkeys (`visual_sidechain_panic` / `visual_sidechain_restore`). |
 
 ### Silence hold and beat confidence rules
 
 - Before the first above-gate audio frame, or after `2.0 s` of continuous silence (below the noise gate) or audio starvation (`> 50 ms` with no audio callbacks, `VS_STARVATION_SEC`), Visual Sidechain sets `audio_present: false`, freezes `beat` (`beat_phase`) at `0.0`, and reports `beat_confidence: 0.0`.
 - Once the `2.0 s` silence hold takes effect, every normalized `0.0..1.0` envelope signal sits at `0.0` while `estimated_bpm` (`bpm`) retains its last/default BPM (`120.0`) with `audio_present: false` (consumers must gate tempo displays and sync on `audio_present` / `beat_confidence`), so the `1e-3` change gate suppresses further `signals_changed` (and in-process `visual_sidechain_signals`) emissions until above-gate audio returns.
 - `beat_confidence` (`0.0..1.0`) is computed from inter-onset interval regularity across the eight-interval window and decays when expected beats go missing (for example during a kickless breakdown).
+
+### Safety client compatibility rules
+
+- Clients query `get_safety` on connect, subscribe to `VendorEvent` for `vendorName: "visual-sidechain"` (`eventType: "safety_changed"`), and send `panic` / `restore` over `CallVendorRequest` when Visual Sidechain supports them.
+- If `CallVendorRequest` returns obs-websocket status `600` or `604` (Visual Sidechain 0.6.0 without safety requests, or Visual Sidechain not loaded), clients fall back to `TriggerHotkeyByName` (`visual_sidechain_panic` / `visual_sidechain_restore`) and the local latch (`600` on the hotkey reports `"Visual Sidechain missing"`).
+- Every Panic press sends unconditionally (no debounce); Restore requires its hold before sending.
 
 ## In-process bridge (plugin to plugin, inside OBS)
 

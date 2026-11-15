@@ -56,6 +56,8 @@ export function isObsNotReady(err: unknown): boolean {
 
 export interface ObsVendorClientOptions {
   vendorName?: string;
+  /** Additional obs-websocket vendor names whose `VendorEvent` payloads this client accepts. */
+  extraVendorNames?: readonly string[];
   supportedApiVersion?: number;
   pluginDisplayName?: string;
   pluginReleaseUrl?: string;
@@ -130,6 +132,7 @@ export class ObsVendorClient<
     ...DEFAULT_GLOBAL_CONNECTION_SETTINGS
   };
   protected readonly vendorName: string;
+  protected readonly acceptedVendorNames: ReadonlySet<string>;
   protected readonly supportedApiVersion: number;
   protected readonly pluginDisplayName: string;
   protected readonly pluginReleaseUrl: string;
@@ -165,6 +168,10 @@ export class ObsVendorClient<
       this.applySettingsObject(initialSettings);
     }
     this.vendorName = options?.vendorName ?? "midi-fadester";
+    this.acceptedVendorNames = new Set([
+      this.vendorName,
+      ...(options?.extraVendorNames ?? [])
+    ]);
     this.supportedApiVersion = options?.supportedApiVersion ?? 1;
     this.pluginDisplayName = options?.pluginDisplayName ?? "Midi Fadester";
     this.pluginReleaseUrl =
@@ -294,25 +301,20 @@ export class ObsVendorClient<
     return imageData;
   }
 
-  public async callVendor<TResponse>(
+  public async callNamedVendor<TResponse>(
+    vendorName: string,
     requestType: string,
-    requestData?: Record<string, unknown>,
-    resyncOnError = true
+    requestData?: Record<string, unknown>
   ): Promise<TResponse> {
     let outerResponse: Record<string, unknown>;
     try {
       outerResponse = await this.sendObsRequest("CallVendorRequest", {
-        vendorName: this.vendorName,
+        vendorName,
         requestType,
         ...(requestData !== undefined ? { requestData } : {})
       });
     } catch (err) {
-      const vendorErr = this.normalizeVendorError(err);
-      this.emit("vendorError", vendorErr.comment, vendorErr.text);
-      if (resyncOnError && requestType !== "get_state" && this.identified) {
-        void this.getState().catch(() => {});
-      }
-      throw vendorErr;
+      throw this.normalizeVendorError(err);
     }
 
     const innerData = (outerResponse.responseData ?? {}) as Record<
@@ -324,15 +326,31 @@ export class ObsVendorClient<
         typeof innerData.comment === "string" && innerData.comment.length > 0
           ? innerData.comment
           : innerData.error;
-      const vendorErr = this.createVendorError(comment, 400);
-      this.emit("vendorError", comment, vendorErr.text);
+      throw this.createVendorError(comment, 400);
+    }
+
+    return innerData as TResponse;
+  }
+
+  public async callVendor<TResponse>(
+    requestType: string,
+    requestData?: Record<string, unknown>,
+    resyncOnError = true
+  ): Promise<TResponse> {
+    try {
+      return await this.callNamedVendor<TResponse>(
+        this.vendorName,
+        requestType,
+        requestData
+      );
+    } catch (err) {
+      const vendorErr = this.normalizeVendorError(err);
+      this.emit("vendorError", vendorErr.comment, vendorErr.text);
       if (resyncOnError && requestType !== "get_state" && this.identified) {
         void this.getState().catch(() => {});
       }
       throw vendorErr;
     }
-
-    return innerData as TResponse;
   }
 
   protected createVendorError(comment: string | LocalText, code = -1): ObsVendorError {
@@ -648,14 +666,26 @@ export class ObsVendorClient<
     const eventData = (d.eventData ?? {}) as Record<string, unknown>;
     this.emit("obsEvent", eventType, eventData);
 
-    if (eventType === "VendorEvent" && eventData.vendorName === this.vendorName) {
-      const vendorEventType = String(eventData.eventType ?? "");
-      const vendorEventData = (eventData.eventData ?? {}) as Record<
-        string,
-        unknown
-      >;
-      this.handleVendorEventPayload(vendorEventType, vendorEventData);
-      return;
+    if (eventType === "VendorEvent") {
+      const vendorName =
+        typeof eventData.vendorName === "string" ? eventData.vendorName : "";
+      if (this.acceptedVendorNames.has(vendorName)) {
+        const vendorEventType = String(eventData.eventType ?? "");
+        const vendorEventData = (eventData.eventData ?? {}) as Record<
+          string,
+          unknown
+        >;
+        if (vendorName === this.vendorName) {
+          this.handleVendorEventPayload(vendorEventType, vendorEventData);
+        }
+        this.emit(
+          "namedVendorEvent",
+          vendorName,
+          vendorEventType,
+          vendorEventData
+        );
+        return;
+      }
     }
 
     if (eventType === "CurrentProgramSceneChanged") {

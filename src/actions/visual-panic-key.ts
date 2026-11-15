@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 /**
- * Visual Panic keys (PLAN.md 10.3, R-RIG-6): Panic sends Visual Sidechain's
- * Panic on every press, at once; Restore sends its Restore only after an 800 ms
- * hold. Every Panic key shows the deck's latch ("PANIC SENT") until a Restore
- * clears it. Panic is never gated on a page, a dial or the latch.
+ * Visual Panic keys (PLAN.md 10.3, R-RIG-6, P0-3): Panic sends Visual
+ * Sidechain's Panic on every press, at once; Restore sends its Restore only
+ * after an 800 ms hold. Every Panic key reflects Visual Sidechain's live safety
+ * state (`get_safety` / `safety_changed`) when supported, or the deck's local
+ * latch on older hotkey-only builds, until a Restore clears it. Panic is never
+ * gated on a page, a dial or the latch.
  */
 import {
   action,

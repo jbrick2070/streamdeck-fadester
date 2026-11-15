@@ -5,7 +5,7 @@ lived only in a chat. Read it in full, then start at section 3.
 
 **Why this session exists.** The release candidates pass their headless tests and their Windows and macOS CI.
 Nobody has yet tried them with real OBS, a deck, a TourBox, a game controller or a MIDI desk. This session does
-that, one physical action at a time, and decides which releases may be published.
+that, one physical action at a time: everything on Windows, then everything on the Mac, then one publish.
 
 To start, the owner says:
 
@@ -40,10 +40,12 @@ Checked on GitHub at 2026-11-15 18:41 UTC.
 
 ## 2. Rules for this session
 
-- **Nothing is published.** All four releases stay drafts. No uploads to the Microsoft Store or Elgato, no
-  tags, no change to the suite pins. Publishing needs the owner to say "go" after the results are in.
-- **The code is frozen.** The tagged commits are the release candidates. If a check finds a defect, write it
-  up with evidence and stop on that line. The owner decides whether to re-cut.
+- **Nothing is published until both passes are done.** All four releases stay drafts through the Windows pass
+  and the Mac pass, even with zero failures. No uploads to the Microsoft Store or Elgato, no tags, no change
+  to the suite pins. Publishing happens once, at the end, when the owner says "publish".
+- **The code is frozen while a pass is running.** The tagged commits are the release candidates. If a check
+  finds a defect, write it up with evidence and carry on with the next line. Fixes happen between passes
+  (section 6), never in the middle of one.
 - **Nothing elevated by the agent.** Only the owner's own click runs an installer.
 - **The owner's everyday setup is not touched.** Use a separate OBS profile and scene collection and a
   separate Stream Deck profile, all named "Fadester hand test". Put the everyday OBS settings back byte for
@@ -59,6 +61,19 @@ Checked on GitHub at 2026-11-15 18:41 UTC.
   the owner short: one instruction at a time.
 
 ## 3. Start here
+
+**The order, decided by the owner on 2026-11-15:**
+
+1. **Windows, everything.** Every line, with every device connected: the Stream Deck +, the game controller,
+   the TourBox and the MIDI desk. The owner can connect them all. Ask for a device to be plugged in before
+   its lines; do not mark it "not tested" without asking.
+2. **Fix what failed**, re-cut the candidates and re-run those lines (section 6).
+3. **The Mac, everything** (section 7), in the same way.
+4. **Publish once**, after both passes, on the owner's word.
+
+Only one agent drives a pass.
+
+**For the Windows pass:**
 
 1. **Look.** Check `C:\fadester\hand-test-kit\` and `C:\fadester\release-drafts\`. Tell the owner in a few
    lines what exists and what is missing from section 4.
@@ -99,13 +114,13 @@ section wins.
    - silence stops the beat (C1), if the plan only checks the meter's label.
    - TourBox steps at the rails (A6), if a TourBox is at the desk.
    - the MIDI desk unplugged mid-fade (A9), if a MIDI desk is at the desk.
-5. **Hardware that is not at the desk is "not tested", never "pass".** Say which release ships with that gap.
-   With no MIDI desk, nobody has yet moved a physical fader on Midi Fadester 0.7.0, and A9 cannot be tried.
-   With no TourBox, A6 cannot be tried. Nothing has been tried on a Mac until section 7 is done.
-6. **The publish gate.** Zero failures is not the same as ready. Before asking for "publish", show the
-   not-tested list beside the pass list, release by release. The owner may hold one release and publish the
-   others. `release/suite-pins` pins all the new versions, so check it before it is merged if any release is
-   held.
+5. **Run the plan's full tier.** Every GATE and every DEEP check, not the short list. The owner can connect
+   every device, so ask for the TourBox and the MIDI desk when their lines come up (A6, A9, and the plan's
+   physical MIDI fader checks). "Not tested" is only for something the owner says cannot be connected, and it
+   is never a pass.
+6. **No publishing at the end of the Windows pass.** The plan's last phase (its H8) waits until the Mac pass
+   is also done. Then show the pass, fail and not-tested lists for both passes, release by release, and wait
+   for the owner's "publish".
 7. **Other projects.** Checks for anything outside these four repositories are not part of this sign-off.
    Keep them out of the go / no-go table.
 
@@ -282,36 +297,69 @@ SD `src/vjster/plugin/link-server.ts` (`/whoami`).
 | J1 | Close OBS. Run `run-three-installers-admin.cmd` as administrator. | Three entries in Installed apps. The installed OBS 33 log shows 0.7.0, 0.7.0 and 0.5.1 loading. | The three OBS plugin releases |
 | J2 | Repeat A1, B1 and D1 once on installed OBS. | The same results as on the portable OBS. | The three OBS plugin releases |
 
-## 6. Recording results, and afterwards
+## 6. Recording results, fixing, and publishing
+
+**After each pass**
 
 - Write one draft results file per repo in the kit folder, in the style of
   [tourbox/REHEARSAL.md](../tourbox/REHEARSAL.md): what was done, on what hardware and versions, and what was
   observed or measured. Commit nothing until the owner asks.
-- End with the go / no-go table: each release, the lines that passed, the lines that failed or were not
-  tested, and whether it may be published.
+- End with one table: each release, and the lines that passed, failed or were not tested.
 - Give the owner one "back to normal" script: their everyday OBS profile and scene collection, their Stream
   Deck profile, and which Fadester Companion edition is running.
-- Publishing, the Store, Elgato and the suite pins all wait for the owner's "go".
 
-## 7. The Mac session
+**Fixing what failed**
 
-Visual Sidechain and Playlister have no macOS build, so there is nothing to test for them there.
+- Fix failures in one batch after the pass, not during it. Each fix goes through a pull request with a test
+  that fails without it, and green CI. The audit's rules still hold: protocol changes are additive, and
+  Panic, Restore and the flash cap only ever get stricter.
+- Re-cut the draft releases from the fixed commit. The owner decides whether a version number changes.
+- Re-run every failed line on the re-cut files, and lines A1 to A4 and B1 again as a guard.
+- A fix made after the Windows pass is re-checked on Windows before the Mac pass starts. A fix made after
+  the Mac pass that touches shared code is re-checked on both.
 
-1. **Accessibility grants** for Stream Deck or OpenDeck, and for the experimental Fadester Companion app. An
-   ad-hoc rebuild can need the grant again.
-2. **Stream Deck T-bar:** lines A1 to A5. Both the below-half and the half-or-above closeouts must work.
-3. **Experimental Companion host:** when its helper is lost mid-fade it must stop and ask for a reset, with
-   no Studio Mode toggle.
-4. **Midi Fadester on CoreMIDI:** line A9.
-5. **Keychain:** saving the OBS password failed with -25293 before
-   ([CROSS-PLATFORM-CANDIDATE.md](CROSS-PLATFORM-CANDIDATE.md)). Note whether it still does. Do not claim it works.
-6. **VJster extension** on the Mac: listed as untested.
-7. `scripts/macos/README.md` describes the isolated live suite check.
+**Publishing (once, at the end)**
+
+- Publish only the exact files that were tested. Record the SHA-256 of each tested file during the passes,
+  and compare it with the draft release's file before publishing.
+- Order: the three OBS plugins, then Fadester for OBS, then the suite pins, then the suite installer. Stop
+  for the owner's "yes" before each step that cannot be undone.
+- The Microsoft Store and Elgato submissions are the owner's own uploads. Prepare the files and the texts;
+  upload nothing.
+
+## 7. The Mac pass (after Windows is done)
+
+The same as Windows: every line that applies, with every device connected, one at a time. The agent on the
+Mac builds the exact Mac run sheet first, from the "Real host acceptance" list in
+[CROSS-PLATFORM-CANDIDATE.md](CROSS-PLATFORM-CANDIDATE.md), [tourbox/MACOS.md](../tourbox/MACOS.md),
+[COMPANION-PARITY.md](COMPANION-PARITY.md), `scripts/macos/README.md` and section 5 of this file. Sections 2
+and 6 apply unchanged. Visual Sidechain and Playlister have no macOS build, so on the Mac their keys are
+tested for saying so plainly (line M9).
+
+The sheet must cover at least:
+
+| Line | The owner does | Passes when |
+|---|---|---|
+| M1 | Install the same Fadester for OBS 0.12.0 file that was tested on Windows (compare its SHA-256). | All 19 actions appear, both halves of the plugin start, and the settings pages work. |
+| M2 | Press Use OBS's saved password. Then quit and reopen Stream Deck. | It reads OBS's saved password on request. Note whether the password is still saved after the restart: saving to the Keychain failed with -25293 before ([CROSS-PLATFORM-CANDIDATE.md](CROSS-PLATFORM-CANDIDATE.md)). Do not claim it works unless it is seen to. |
+| M3 | Open the Setup checklist, including its Accessibility line. | Each failing line says its fix. The checklist never raises the macOS permission prompt by itself. |
+| M4 | Grant Accessibility to Stream Deck, then do lines A1 to A5. | As on Windows. The Mac T-bar path is marked experimental: record exactly what happens at each position. |
+| M5 | Install Midi Fadester 0.7.0 from its macOS package and connect the MIDI desk. | OBS loads it, the desk is found, a crossfader throw works, and line A9 passes. |
+| M6 | Scenes, transitions, source visibility, audio faders and fades from the deck. | As the "Real host acceptance" list says. |
+| M7 | Whole mix with the Mac mix host running: lines E1 to E3. | As on Windows. |
+| M8 | VJster on the Mac: the Chrome extension, then the OBS page. | Speed, quality, Play / Pause and Pin Tab work, and the link reconnects. |
+| M9 | Press the keys that need Visual Sidechain or Playlister: Visual Panic, Visual Sidechain Meter, Tape Deck, Playlister Transport, and a fade set to beats. | Each key says plainly what is missing. The fade set to beats fires at once and shows NO TEMPO. Nothing hangs or waits silently. |
+| M10 | The experimental Fadester Companion app with the TourBox: lines A6 and A8, and whatever [COMPANION-PARITY.md](COMPANION-PARITY.md) says the Mac app supports. | Steps follow the same rail rule. When its helper is lost mid-fade it stops and asks for a reset, with no Studio Mode toggle: that is the documented exception. |
+
+Lines M1 to M9 are about files that ship for the Mac. Line M10 is an experimental app that is not among the
+release files: record its results, and the owner says whether they count for the publish. An ad-hoc rebuild of
+a Mac app can need its Accessibility grant again.
 
 ## 8. Open decisions for the owner
 
-- **Publish or hold** each of the four releases, after the results.
+- **"Publish"**, once, after both passes.
+- **Whether line M10 counts** for the publish (the experimental Mac Companion).
 - **Code signing.** Every Windows installer is unsigned, and the suite installer's behaviour under SmartScreen
   and Smart App Control is untested.
-- **P1-1.** Whether to build the whole-mix provider inside Midi Fadester, once lines E1 to E3 have passed.
-- **P2 items** in the audit, one at a time, only after this session is signed off.
+- **Later work, not part of this release:** P1-1 (a whole-mix provider inside Midi Fadester) and the P2 items
+  in the audit.

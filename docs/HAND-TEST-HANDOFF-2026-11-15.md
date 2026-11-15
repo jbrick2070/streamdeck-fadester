@@ -85,7 +85,8 @@ Only one agent drives a pass.
 5. **Record and report** (section 6).
 
 **Use the portable OBS for lines A to I.** It keeps the candidates out of the owner's everyday OBS until they
-have passed. The installers are line J, last. If the owner would rather install first, that is their call:
+have passed. The installers are line J, and lines K to S then run on the installed OBS. If the owner would
+rather install first, that is their call:
 make sure the rollback kit (section 4, item 7) exists before they click.
 
 ### 3a. If the desk agent's local plan exists, it is the master
@@ -112,8 +113,9 @@ section wins.
    - Panic pressed on the keyboard, and Panic across a Stream Deck restart (D1, D2).
    - the whole mix after Stop controls then Start controls, and with the Companion closed (E2, E3).
    - silence stops the beat (C1), if the plan only checks the meter's label.
-   - TourBox steps at the rails (A6), if a TourBox is at the desk.
-   - the MIDI desk unplugged mid-fade (A9), if a MIDI desk is at the desk.
+   - TourBox steps at the rails (A6) and the MIDI desk unplugged mid-fade (A9).
+   - anything in groups K to S that the plan does not cover. The likely gaps are the TourBox rehearsal (R1),
+     the MIDI desk lines (L1 to L5), Playlister edits while a clip plays (P2) and the dress rehearsal (S1).
 5. **Run the plan's full tier.** Every GATE and every DEEP check, not the short list. The owner can connect
    every device, so ask for the TourBox and the MIDI desk when their lines come up (A6, A9, and the plan's
    physical MIDI fader checks). "Not tested" is only for something the owner says cannot be connected, and it
@@ -178,7 +180,19 @@ After items 1 to 7:
 ## 5. Run sheet
 
 Do the lines in this order. "Truth" is where the expected result is defined: read it before giving the line.
-SD is this repo, MF is `midi-fadester`, VS is `visual-sidechain`.
+SD is this repo, MF is `midi-fadester`, VS is `visual-sidechain`, PL is `obs-playlister`.
+
+**Everything means the whole suite.** Lines A to J cover what is new or safety-critical in these candidates.
+Lines K to S cover the rest, on the installed OBS, so that every product and every device is used at least once: Fadester for OBS
+and VJster on the deck, Midi Fadester with the MIDI desk, Visual Sidechain, Playlister, Fadester Companion
+with the TourBox and the game controller, and then everything together.
+
+Each repo also lists its own manual checks. Fold in any that these lines miss: `TESTING.md` and
+`demo-kit/TESTING.md` here, `docs/vjster/TESTING.md`, `tourbox/REHEARSAL.md`, and `TESTING.md` in MF, VS
+(also `BETA-TESTING.md`) and PL.
+
+Before the first line, show the owner one coverage table: product, device, and the lines that cover it. No
+row may be empty.
 
 ### A. The T-bar never locks (first, always)
 
@@ -290,12 +304,84 @@ SD `src/vjster/plugin/link-server.ts` (`/whoami`).
 | I2 | Open the Setup checklist. Turn Studio Mode off, press Check again; turn it on, press again. | The failing line says the fix in one sentence, then clears. | Fadester for OBS 0.12.0 |
 | I3 | Start the Companion with VJster on while the deck plugin holds the VJster link. | The port message names who holds it. | Fadester for OBS 0.12.0 |
 
-### J. Installers (last)
+### J. Installers
 
 | Line | The owner does | Passes when | Blocks |
 |---|---|---|---|
 | J1 | Close OBS. Run `run-three-installers-admin.cmd` as administrator. | Three entries in Installed apps. The installed OBS 33 log shows 0.7.0, 0.7.0 and 0.5.1 loading. | The three OBS plugin releases |
 | J2 | Repeat A1, B1 and D1 once on installed OBS. | The same results as on the portable OBS. | The three OBS plugin releases |
+
+### K. Every deck action once
+
+Truth: SD `io.github.jbrick2070.fadester-for-obs.sdPlugin/manifest.json` (19 actions), SD `TESTING.md`,
+`demo-kit/TESTING.md`, [OPENDECK.md](OPENDECK.md).
+
+| Line | The owner does | Passes when | Blocks |
+|---|---|---|---|
+| K1 | Use each of the 19 actions once on the Stream Deck +: OBS Scene Info Bar, Source & Layer, OBS Fader, Scene & Transition, OBS Fade, Playlister Transport, OBS Filter, Visual Panic, Visual Sidechain Meter, Tape Deck, Midi Fadester Fader, Midi Fadester Auto-fade, and the seven VJster actions. | Each does its job and its face shows the right state. Nothing is cut off on a key or the touch strip. | Fadester for OBS 0.12.0 |
+| K2 | Open each action's settings page once. | The controls work and the text reads properly. | Fadester for OBS 0.12.0 |
+| K3 | If the owner uses OpenDeck: load the plugin there, press one key and turn one dial. | It works as it does in Stream Deck. | Fadester for OBS 0.12.0 |
+
+### L. Midi Fadester with the MIDI desk
+
+Truth: MF `README.md` and `TESTING.md`; `API-CONTRACT.md` (slot `target_mode`, `reset_fx`, soft takeover).
+
+| Line | The owner does | Passes when | Blocks |
+|---|---|---|---|
+| L1 | Crossfader on the T-bar: one full throw, then a part throw and back. | The fade is smooth, it takes at the end, and coming back to the start cancels. The Transition button is never left locked. | Midi Fadester 0.7.0 |
+| L2 | One control for each other job: mix two layers, layer opacity, audio volume, and a filter setting. | Each moves its target smoothly, and the dialog shows the value. | Midi Fadester 0.7.0 |
+| L3 | Press Clean / All FX Off. | Every FX filter setting goes back to its start value. Audio, layers and the T-bar are untouched. | Midi Fadester 0.7.0 |
+| L4 | Move a slot from a Stream Deck dial, then touch the same physical fader. | The fader does nothing until it reaches the current value, then picks up with no jump. | Midi Fadester 0.7.0 |
+| L5 | Master mapped to the whole mix, with the Companion running; then with the Companion closed. | The whole mix follows the fader. With the Companion closed it says it needs Fadester Companion and changes nothing. | Midi Fadester 0.7.0 |
+
+### N. Visual Sidechain (only after B1 has passed)
+
+Truth: VS `README.md`, `TESTING.md`, `BETA-TESTING.md`.
+
+| Line | The owner does | Passes when | Blocks |
+|---|---|---|---|
+| N1 | Put each of the 11 built-in shaders on a source with music playing. | Each one reacts to the music. | Visual Sidechain 0.7.0 |
+| N2 | Audio Modulator on a setting of another filter on the same source; then switch the modulator off. | The setting moves with the audio. Switching off puts it back where it was. | Visual Sidechain 0.7.0 |
+| N3 | Press the Panic hotkey, then Restore. | Panic stops every reactive effect at once. Restore brings them back as they were. | Visual Sidechain 0.7.0 |
+| N4 | Tape Deck clip: speed from 25% up to 800%, tape pitch on and off, Cue to start. | It plays at each speed, and a speed change does not restart the clip. | Visual Sidechain 0.7.0 |
+
+### P. Playlister
+
+Truth: PL `README.md` and `TESTING.md`; SD `src/actions/playlister-transport-key.ts`.
+
+| Line | The owner does | Passes when | Blocks |
+|---|---|---|---|
+| P1 | A Playlister source with a folder and a playlist file: play, Next, Previous, from OBS and from the Playlister Transport keys. | Clips play in order, and both ways of stepping work. | Playlister 0.5.1, Fadester for OBS 0.12.0 |
+| P2 | While a clip plays: add and remove list items, and drop a new file into the watched folder. | The playing clip does not restart. | Playlister 0.5.1 |
+| P3 | Step the playlist from the Companion's media controls. | Previous, next, play and restart work. | Fadester Companion 0.1.4 |
+
+### Q. VJster and YouTube
+
+Truth: `docs/vjster/INSTALL.md`, `docs/vjster/TESTING.md`, SD `src/vjster/`.
+
+| Line | The owner does | Passes when | Blocks |
+|---|---|---|---|
+| Q1 | Chrome extension with a YouTube tab: the VJster Speed and Quality dials, the presets, Speed Step, Play / Pause and Pin Tab. | Each changes the tab, and each face shows the state. | Fadester for OBS 0.12.0 |
+| Q2 | The OBS page: add its link as a Browser Source and set Control to the OBS page. | The video plays inside OBS and its speed follows the dial. Quality says honestly that it is not available there. | Fadester for OBS 0.12.0 |
+| Q3 | Host the VJster link from the deck plugin, then from the Companion's Setup tab (Target, OBS video URL / ID, Copy OBS Browser Source URL). One host at a time. | Each host works alone. If both are started, the second names who holds the port. | Fadester for OBS 0.12.0, Fadester Companion 0.1.4 |
+
+### R. Fadester Companion with the TourBox and the game controller
+
+Truth: [tourbox/REHEARSAL.md](../tourbox/REHEARSAL.md), `tourbox/README.md`, `docs/gamepad/`.
+
+| Line | The owner does | Passes when | Blocks |
+|---|---|---|---|
+| R1 | Every step of "Physical master rehearsal pending" in `tourbox/REHEARSAL.md`, with the TourBox. | As written there. That rehearsal has been pending since the single master preset replaced the older ones. | Fadester Companion 0.1.4 |
+| R2 | Game controller: every mapped control once, then again with Easy mode on. | As the gamepad guide says. In Easy mode a guarded control needs its hold. | Fadester Companion 0.1.4 |
+| R3 | Layer 1 and Layer 2 blend, and the music duck. | Blend steps through the modes and resets. The duck lowers the music and puts it back. | Fadester Companion 0.1.4 |
+
+### S. Dress rehearsal (the last line of each pass)
+
+| Line | The owner does | Passes when | Blocks |
+|---|---|---|---|
+| S1 | With every device connected, the owner starts a recording and, if they choose, a private or unlisted test stream. Then a short set that uses every device: a fade on the T-bar from each controller, a fade on the bar, a whole-mix fade and Restore mix, a clip change in Playlister, a speed ride on Tape Deck and on VJster, Panic and Restore visuals. | Nothing locks. Program never changes without a press. The recording plays back clean, and OBS's log has no errors from the four plugins. | All four releases |
+
+S1 is the only line that runs while OBS is recording or streaming, and only the owner starts it.
 
 ## 6. Recording results, fixing, and publishing
 
@@ -350,6 +436,8 @@ The sheet must cover at least:
 | M8 | VJster on the Mac: the Chrome extension, then the OBS page. | Speed, quality, Play / Pause and Pin Tab work, and the link reconnects. |
 | M9 | Press the keys that need Visual Sidechain or Playlister: Visual Panic, Visual Sidechain Meter, Tape Deck, Playlister Transport, and a fade set to beats. | Each key says plainly what is missing. The fade set to beats fires at once and shows NO TEMPO. Nothing hangs or waits silently. |
 | M10 | The experimental Fadester Companion app with the TourBox: lines A6 and A8, and whatever [COMPANION-PARITY.md](COMPANION-PARITY.md) says the Mac app supports. | Steps follow the same rail rule. When its helper is lost mid-fade it stops and asks for a reset, with no Studio Mode toggle: that is the documented exception. |
+
+Finish the Mac pass with the dress rehearsal (line S1), using what exists on the Mac.
 
 Lines M1 to M9 are about files that ship for the Mac. Line M10 is an experimental app that is not among the
 release files: record its results, and the owner says whether they count for the publish. An ad-hoc rebuild of

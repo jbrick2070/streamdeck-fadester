@@ -399,6 +399,11 @@
     "vmDialHintNoTurn": "按: {op}",
     "infobarVsActive": "{bpm} BPM · 第{beat}/4拍",
     "infobarVsLocked": "{bpm} BPM [鎖定] · 第{beat}/4拍",
+    "fadeUpBeats": "{n} 拍淡入",
+    "fadeDownBeats": "{n} 拍淡出",
+    "quantizeArmed": "已預備",
+    "quantizeNoTempo": "無節拍",
+    "quantizeCancelled": "已取消",
     "pi": {
       "scopeThisKey": "此按鍵",
       "scopeThisDial": "此旋鈕",
@@ -841,7 +846,21 @@
       "vmRate5": "每秒 5 次（預設）",
       "vmRate10": "每秒 10 次（上限）",
       "vmNote": "在每格 10 Hz 上限內繪製平滑包絡與本地步進拍數計數，絕不繪製原始底鼓瞬態。",
-      "infobarShowVs": "在狀態列顯示 Visual Sidechain 速度"
+      "infobarShowVs": "在狀態列顯示 Visual Sidechain 速度",
+      "quantizeLengthLabel": "長度",
+      "quantizeLengthObs": "OBS 轉場時間",
+      "quantizeLengthMs": "毫秒",
+      "quantizeBeats1": "1 拍",
+      "quantizeBeats2": "2 拍",
+      "quantizeBeats4": "4 拍（1 小節）",
+      "quantizeBeats8": "8 拍（2 小節）",
+      "quantizeBeats16": "16 拍（4 小節）",
+      "quantizeFallbackMs": "備用時間 (ms)",
+      "quantizeStartLabel": "觸發時機",
+      "quantizeStartNow": "立即",
+      "quantizeStartBeat": "下一拍",
+      "quantizeStartBar": "下一小節",
+      "quantizeHint": "沒有 Visual Sidechain 節拍時，會立即依毫秒備用時間觸發並顯示「無節拍」。最長等待 1 小節（4 秒）；再按一次立即觸發，長按取消。"
     }
   }
 }

@@ -399,6 +399,11 @@
     "vmDialHintNoTurn": "Appui : {op}",
     "infobarVsActive": "{bpm} BPM · Temps {beat}/4",
     "infobarVsLocked": "{bpm} BPM [FIXE] · Temps {beat}/4",
+    "fadeUpBeats": "Monter {n} temps",
+    "fadeDownBeats": "Baisser {n} temps",
+    "quantizeArmed": "ARMÉ",
+    "quantizeNoTempo": "SANS TEMPO",
+    "quantizeCancelled": "ANNULÉ",
     "pi": {
       "scopeThisKey": "cette touche",
       "scopeThisDial": "cette molette",
@@ -841,7 +846,21 @@
       "vmRate5": "5 par seconde (par défaut)",
       "vmRate10": "10 par seconde (maximum)",
       "vmNote": "Dessine des enveloppes lissées et un compteur de temps interpolé dans la limite de 10 Hz par cellule ; les transitoires brutes ne sont jamais dessinées.",
-      "infobarShowVs": "Afficher le tempo Visual Sidechain sur la ligne d’état"
+      "infobarShowVs": "Afficher le tempo Visual Sidechain sur la ligne d’état",
+      "quantizeLengthLabel": "Longueur",
+      "quantizeLengthObs": "Durée de transition d’OBS",
+      "quantizeLengthMs": "Millisecondes",
+      "quantizeBeats1": "1 temps",
+      "quantizeBeats2": "2 temps",
+      "quantizeBeats4": "4 temps (1 mesure)",
+      "quantizeBeats8": "8 temps (2 mesures)",
+      "quantizeBeats16": "16 temps (4 mesures)",
+      "quantizeFallbackMs": "Repli (ms)",
+      "quantizeStartLabel": "Départ",
+      "quantizeStartNow": "Maintenant",
+      "quantizeStartBeat": "Temps suivant",
+      "quantizeStartBar": "Mesure suivante",
+      "quantizeHint": "Sans tempo Visual Sidechain, se déclenche immédiatement avec le repli en millisecondes et affiche SANS TEMPO. Attente maximale d’1 mesure (4 s) ; appuyez de nouveau pour lancer maintenant, maintenez pour annuler."
     }
   }
 }

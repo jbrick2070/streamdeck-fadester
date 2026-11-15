@@ -232,7 +232,7 @@ internal static class Program
                     if (trace != null) { obs.TransitionEvent += trace.OnEvent; rpc = trace.Call; }
                     using var vsMonitor = new VisualSidechainMonitor(obs.Call, panelOwned ? Console.WriteLine : null);
                     vsMonitor.Attach(obs);
-                    var desk = new DeskActions(cfg, rpc, nativeMove: native.MoveAsync, resume: memory); int mine = ++generation;
+                    var desk = new DeskActions(cfg, rpc, nativeMove: native.MoveAsync, resume: memory, vsMonitor: vsMonitor, onStatus: Console.WriteLine); int mine = ++generation;
                     obs.InputVolumeChanged += desk.OnVolumeChanged;
                     obs.InputLevelChangedById += desk.OnMixInputLevelChanged;
                     desk.StartMixMonitor();
@@ -305,9 +305,9 @@ internal static class Program
                                     if (await desk.SlidePlan(ev.Timestamp) is { } slide)
                                     {
                                         tbarMail.Slide(slide.From, slide.Ms); slid = true;
-                                        Console.WriteLine($"Controller: pushing the T-bar while the take is held ({slide.Ms} ms end to end)");
+                                        Console.WriteLine($"Controller: pushing the T-bar while the take is held ({slide.Ms} ms end to end){(slide.NoTempo ? " · NO TEMPO" : "")}");
                                     }
-                                    else if (cfg.GamepadEasy && desk.TbarPosition == 0) { tbarMail.Ordinary(); slid = true; ordinaryPressedAt = ev.Timestamp; }
+                                    else if (cfg.GamepadEasy && desk.TbarPosition == 0 && !desk.IsTakeArmed) { tbarMail.Ordinary(); slid = true; ordinaryPressedAt = ev.Timestamp; }
                                     else Console.WriteLine(await desk.Dispatch("take", ev.Timestamp));
                                 }
                                 catch (Exception e)

@@ -399,6 +399,11 @@
     "vmDialHintNoTurn": "Druck: {op}",
     "infobarVsActive": "{bpm} BPM · Schlag {beat}/4",
     "infobarVsLocked": "{bpm} BPM [FIX] · Schlag {beat}/4",
+    "fadeUpBeats": "Hoch {n} Schläge",
+    "fadeDownBeats": "Runter {n} Schläge",
+    "quantizeArmed": "BEREIT",
+    "quantizeNoTempo": "KEIN TEMPO",
+    "quantizeCancelled": "ABGEBROCHEN",
     "pi": {
       "scopeThisKey": "diese Taste",
       "scopeThisDial": "dieser Drehregler",
@@ -841,7 +846,21 @@
       "vmRate5": "5 pro Sekunde (Standard)",
       "vmRate10": "10 pro Sekunde (Maximum)",
       "vmNote": "Zeichnet geglättete Hüllkurven und einen lokal fortgeschalteten Taktzähler innerhalb der 10-Hz-Grenze; rohe Kick-Transienten werden nie gezeichnet.",
-      "infobarShowVs": "Visual-Sidechain-Tempo in der Statuszeile zeigen"
+      "infobarShowVs": "Visual-Sidechain-Tempo in der Statuszeile zeigen",
+      "quantizeLengthLabel": "Länge",
+      "quantizeLengthObs": "OBS-Übergangsdauer",
+      "quantizeLengthMs": "Millisekunden",
+      "quantizeBeats1": "1 Schlag",
+      "quantizeBeats2": "2 Schläge",
+      "quantizeBeats4": "4 Schläge (1 Takt)",
+      "quantizeBeats8": "8 Schläge (2 Takte)",
+      "quantizeBeats16": "16 Schläge (4 Takte)",
+      "quantizeFallbackMs": "Ersatzdauer (ms)",
+      "quantizeStartLabel": "Startzeit",
+      "quantizeStartNow": "Sofort",
+      "quantizeStartBeat": "Nächster Schlag",
+      "quantizeStartBar": "Nächster Takt",
+      "quantizeHint": "Ohne Tempo von Visual Sidechain wird sofort mit der Ersatzdauer in Millisekunden ausgelöst und KEIN TEMPO angezeigt. Maximale Wartezeit 1 Takt (4 s); erneut drücken zum sofortigen Auslösen, gedrückt halten zum Abbrechen."
     }
   }
 }

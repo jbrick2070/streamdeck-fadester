@@ -82,11 +82,30 @@ export function normalizeReadoutStyle(raw: unknown): ReadoutStyle {
   return raw === "percent" ? "percent" : "auto";
 }
 
+/** Beat-length choices for quantized fades (P1-4): 0 means milliseconds (or OBS duration on Scene & Transition). */
+export type QuantizeBeats = 0 | 1 | 2 | 4 | 8 | 16;
+export const QUANTIZE_BEATS_CHOICES: readonly QuantizeBeats[] = [0, 1, 2, 4, 8, 16];
+
+/** Quantized start choices for operator-armed fades (P1-4): immediate, next beat, or next 4-beat bar. */
+export type QuantizeStart = "now" | "next_beat" | "next_bar";
+export const QUANTIZE_START_CHOICES: readonly QuantizeStart[] = ["now", "next_beat", "next_bar"];
+
+export function normalizeQuantizeBeats(raw: unknown): QuantizeBeats {
+  const n = Number(raw);
+  return n === 1 || n === 2 || n === 4 || n === 8 || n === 16 ? n : 0;
+}
+
+export function normalizeQuantizeStart(raw: unknown): QuantizeStart {
+  return raw === "next_beat" || raw === "next_bar" ? raw : "now";
+}
+
 export interface AutoFadeKeySettings {
   [key: string]: string | number | boolean | undefined;
   slot?: string;
   to?: 0 | 1;
   durationMs?: number;
+  quantizeBeats?: QuantizeBeats;
+  quantizeStart?: QuantizeStart;
   labelOverride?: string;
   readoutStyle?: ReadoutStyle;
 }
@@ -95,6 +114,8 @@ export const DEFAULT_AUTO_FADE_KEY_SETTINGS: Required<AutoFadeKeySettings> = {
   slot: "crossfader",
   to: 1,
   durationMs: 1000,
+  quantizeBeats: 0,
+  quantizeStart: "now",
   labelOverride: "",
   readoutStyle: "auto"
 };
@@ -140,6 +161,8 @@ export interface ObsFadeKeySettings {
   inputName?: string;
   to?: 0 | 1;
   durationMs?: number;
+  quantizeBeats?: QuantizeBeats;
+  quantizeStart?: QuantizeStart;
   labelOverride?: string;
   accent?: AccentName;
 }
@@ -149,6 +172,8 @@ export const DEFAULT_OBS_FADE_KEY_SETTINGS: Required<ObsFadeKeySettings> = {
   inputName: "__audio_main__",
   to: 1,
   durationMs: 1000,
+  quantizeBeats: 0,
+  quantizeStart: "now",
   labelOverride: "",
   accent: "default"
 };
@@ -162,6 +187,10 @@ export interface ObsSceneTransitionKeySettings {
   operation?: ObsSceneOperation;
   /** __current_transition__, __cut__, or an OBS transition name. */
   transitionName?: string;
+  /** Optional transition duration / millisecond fallback (0 = OBS's own transition duration when quantizeBeats is 0). */
+  durationMs?: number;
+  quantizeBeats?: QuantizeBeats;
+  quantizeStart?: QuantizeStart;
   labelOverride?: string;
   accent?: AccentName;
 }
@@ -170,6 +199,9 @@ export const DEFAULT_OBS_SCENE_TRANSITION_KEY_SETTINGS: Required<ObsSceneTransit
   sceneTarget: "__next_scene__",
   operation: "transition",
   transitionName: "__current_transition__",
+  durationMs: 0,
+  quantizeBeats: 0,
+  quantizeStart: "now",
   labelOverride: "",
   accent: "default"
 };

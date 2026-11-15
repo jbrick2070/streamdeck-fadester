@@ -38,6 +38,8 @@ export interface KeyCellRenderInput<
   durationMs: number;
   labelOverride?: string;
   readoutStyle?: "auto" | "percent";
+  /** Optional operator-armed / fallback banner (`ARMED`, `NO TEMPO`, `CANCELLED`). */
+  statusBanner?: { text: string; active: boolean };
   /** The plugin's translator; English when omitted. */
   t?: Translate;
 }
@@ -449,9 +451,12 @@ export function renderAutoFadeKeySvg<TSlot extends SurfaceSlotBase>(
 
     const eligible = slotList.filter(isResetFxEligible);
     const activeCount = eligible.filter((s) => s.value > 0.005).length;
-    const borderColor = activeCount > 0 ? P.orangeAccent : P.previewGreen;
+    const borderColor = input.statusBanner?.active ? P.accentYellow : activeCount > 0 ? P.orangeAccent : P.previewGreen;
     const line1 = fitted(override || (activeCount > 0 ? t("cleanFxActiveTitle") : t("cleanFxIdleTitle")), 16, KEY_TEXT_WIDTH);
-    const line2 = fitted(activeCount > 0 ? t("cleanFxActiveCount", { n: activeCount }) : t("cleanFxAllZero"), 15, KEY_TEXT_WIDTH);
+    const line2Raw = input.statusBanner?.text || (activeCount > 0 ? t("cleanFxActiveCount", { n: activeCount }) : t("cleanFxAllZero"));
+    const line2Size = input.statusBanner ? 13 : 15;
+    const line2Width = input.statusBanner ? 96 : KEY_TEXT_WIDTH;
+    const line2 = fitted(line2Raw, line2Size, line2Width);
 
     return [
       `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" data-key="clean-fx" data-active-fx="${activeCount}">`,
@@ -463,7 +468,7 @@ export function renderAutoFadeKeySvg<TSlot extends SurfaceSlotBase>(
       `</defs>`,
       `<rect x="3" y="3" width="114" height="114" rx="14" fill="url(#bg)" stroke="${borderColor}" stroke-width="3"/>`,
       `<text x="60" y="50" text-anchor="middle" fill="${P.whiteGlyph}" font-family="${line1.font}" font-size="16" font-weight="800"${line1.attrs}>${line1.text}</text>`,
-      `<text x="60" y="80" text-anchor="middle" fill="${borderColor}" font-family="${line2.font}" font-size="15" font-weight="800"${line2.attrs}>${line2.text}</text>`,
+      `<text x="60" y="80" text-anchor="middle" fill="${input.statusBanner ? (input.statusBanner.active ? P.accentYellow : P.orangeAccent) : borderColor}" font-family="${line2.font}" font-size="${line2Size}" font-weight="800"${line2.attrs}>${line2.text}</text>`,
       `</svg>`
     ].join("");
   }
@@ -500,6 +505,9 @@ export function renderAutoFadeKeySvg<TSlot extends SurfaceSlotBase>(
   const barX = 14;
   const barW = 92;
   const fillW = Math.round(barW * clamped);
+  const banner = input.statusBanner;
+  const bannerText = banner ? fitted(banner.text, 13, 96) : undefined;
+  const borderStroke = banner ? (banner.active ? P.accentYellow : P.orangeAccent) : P.trackBorder;
 
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" data-key="auto-fade">`,
@@ -513,13 +521,13 @@ export function renderAutoFadeKeySvg<TSlot extends SurfaceSlotBase>(
     `<stop offset="100%" stop-color="${gradEnd}"/>`,
     `</linearGradient>`,
     `</defs>`,
-    `<rect x="3" y="3" width="114" height="114" rx="14" fill="url(#bg)" stroke="${P.trackBorder}" stroke-width="3"/>`,
+    `<rect x="3" y="3" width="114" height="114" rx="14" fill="url(#bg)" stroke="${borderStroke}" stroke-width="3"/>`,
     renderCompactKeyTitle(titleLayout, P.mutedText, 32, 24),
     `<text x="60" y="72" text-anchor="middle" fill="${P.whiteGlyph}" font-family="${readout.font}" font-size="${readoutFontSize}" font-weight="800"${readout.attrs}>${readout.text}</text>`,
-    `<rect x="${barX}" y="90" width="${barW}" height="16" rx="6" fill="${P.trackBg}" stroke="${P.trackBorder}" stroke-width="3"/>`,
-    fillW > 0
-      ? `<rect x="${barX}" y="90" width="${fillW}" height="16" rx="6" fill="url(#ab)"/>`
-      : "",
+    banner && bannerText
+      ? `<rect x="9" y="89" width="102" height="20" rx="6" fill="${banner.active ? P.accentYellow : P.trackBg}" stroke="${banner.active ? P.accentYellow : P.orangeAccent}" stroke-width="3"/><text x="60" y="104" text-anchor="middle" fill="${banner.active ? P.bgTop : P.whiteGlyph}" font-family="${bannerText.font}" font-size="13" font-weight="800"${bannerText.attrs}>${bannerText.text}</text>`
+      : `<rect x="${barX}" y="90" width="${barW}" height="16" rx="6" fill="${P.trackBg}" stroke="${P.trackBorder}" stroke-width="3"/>` +
+        (fillW > 0 ? `<rect x="${barX}" y="90" width="${fillW}" height="16" rx="6" fill="url(#ab)"/>` : ""),
     `</svg>`
   ].join("");
 }

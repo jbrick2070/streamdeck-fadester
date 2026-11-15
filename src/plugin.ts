@@ -149,10 +149,10 @@ streamDeck.ui.onSendToPlugin<JsonObject>((ev) => {
 });
 
 streamDeck.actions.registerAction(new FaderDialAction(store));
-streamDeck.actions.registerAction(new AutoFadeKeyAction(store));
+streamDeck.actions.registerAction(new AutoFadeKeyAction(store, visualSignals));
 streamDeck.actions.registerAction(new ObsFaderDialAction(directClient, layers));
-streamDeck.actions.registerAction(new ObsFadeKeyAction(directClient));
-streamDeck.actions.registerAction(new ObsSceneTransitionKeyAction(directClient));
+streamDeck.actions.registerAction(new ObsFadeKeyAction(directClient, visualSignals));
+streamDeck.actions.registerAction(new ObsSceneTransitionKeyAction(directClient, visualSignals));
 streamDeck.actions.registerAction(new ObsLayerControlAction(layers));
 streamDeck.actions.registerAction(new ObsNeoInfobarAction(directClient, visualSignals));
 streamDeck.actions.registerAction(new PlaylisterTransportKeyAction(directClient));

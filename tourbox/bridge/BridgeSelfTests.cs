@@ -42,6 +42,7 @@ internal static class BridgeSelfTests
     public static async Task RunAsync()
     {
         await MixSelfTests.Run();
+        await VisualSidechainMonitor.RunSelfTestsAsync();
         var cfg = new BridgeConfig { MusicInput = "Music", ContentInput = "Clips", MediaInput = "Player", Anchors = ["Two", "", "", ""] };
         var levels = new System.Collections.Concurrent.ConcurrentDictionary<string, double>();
         levels["Music"] = -4; levels["Clips"] = -20;

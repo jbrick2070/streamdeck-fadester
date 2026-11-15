@@ -316,6 +316,14 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
             sceneItems[name] = new JsonArray(items.Select(n => JsonValue.Create(n!["sourceName"]!.GetValue<string>())).ToArray());
         }
         var transitions = (await Get("GetSceneTransitionList"))["transitions"]!.AsArray();
+        string vsLine = "";
+        try
+        {
+            using var vsProbe = new VisualSidechainMonitor(rpc, enableBackgroundTick: false);
+            await vsProbe.StartAsync();
+            vsLine = VisualSidechainMonitor.FormatHudPayload(vsProbe.Sample());
+        }
+        catch (Exception) { }
         return new()
         {
             ["studioMode"] = studio["studioModeEnabled"]?.DeepClone(),
@@ -327,7 +335,8 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
             ["sceneItems"] = sceneItems,
             ["transitions"] = new JsonArray(transitions.Select(n => JsonValue.Create(n!["transitionName"]!.GetValue<string>())).ToArray()),
             ["streamActive"] = (await Get("GetStreamStatus"))["outputActive"]?.DeepClone(),
-            ["recordActive"] = (await Get("GetRecordStatus"))["outputActive"]?.DeepClone()
+            ["recordActive"] = (await Get("GetRecordStatus"))["outputActive"]?.DeepClone(),
+            ["visualSidechain"] = vsLine
         };
     }
 }

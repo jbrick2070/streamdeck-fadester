@@ -121,6 +121,8 @@ describe("bundled profile captions (R-I18N-2)", () => {
       ["playlister", {}],
       ...Object.keys(PRESET_CAPTIONS.panic).map((operation) => ["panic", { operation }] as [CaptionAction, Record<string, string>]),
       ["panic", {}],
+      ...Object.keys(PRESET_CAPTIONS.meter).map((operation) => ["meter", { operation }] as [CaptionAction, Record<string, string>]),
+      ["meter", {}],
       ...Object.keys(PRESET_CAPTIONS.filter).map((context) => {
         const [operation, setting] = context.split(":");
         return ["filter", operation === "dial" ? { control: "dial", setting } : { control: "key", keyOperation: operation, setting }] as

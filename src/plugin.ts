@@ -17,8 +17,10 @@ import { ObsNeoInfobarAction } from "./actions/obs-neo-infobar.js";
 import { PlaylisterTransportKeyAction } from "./actions/playlister-transport-key.js";
 import { FilterController } from "./control/filter-controller.js";
 import { VisualSafety } from "./control/visual-safety.js";
+import { VisualSignals } from "./control/visual-signals.js";
 import { ObsFilterControlAction } from "./actions/obs-filter-control.js";
 import { VisualPanicKeyAction } from "./actions/visual-panic-key.js";
+import { VisualMeterAction } from "./actions/visual-meter.js";
 import {
   PiIncomingMessage,
   PropertyInspectorBridge
@@ -62,6 +64,7 @@ const layers = new LayerController(directClient);
 // The VJ rig (PLAN.md 10): one filter controller and one panic latch for every control.
 const filters = new FilterController(directClient);
 const visualSafety = new VisualSafety(directClient, filters);
+const visualSignals = new VisualSignals(directClient, visualSafety);
 
 // The Language setting (PLAN.md 11.1): a change redraws every visible control and refills the pages.
 const languageChoice = new LanguageChoiceController({
@@ -151,10 +154,11 @@ streamDeck.actions.registerAction(new ObsFaderDialAction(directClient, layers));
 streamDeck.actions.registerAction(new ObsFadeKeyAction(directClient));
 streamDeck.actions.registerAction(new ObsSceneTransitionKeyAction(directClient));
 streamDeck.actions.registerAction(new ObsLayerControlAction(layers));
-streamDeck.actions.registerAction(new ObsNeoInfobarAction(directClient));
+streamDeck.actions.registerAction(new ObsNeoInfobarAction(directClient, visualSignals));
 streamDeck.actions.registerAction(new PlaylisterTransportKeyAction(directClient));
 streamDeck.actions.registerAction(new ObsFilterControlAction(filters));
 streamDeck.actions.registerAction(new VisualPanicKeyAction(visualSafety, directClient));
+streamDeck.actions.registerAction(new VisualMeterAction(visualSignals, directClient));
 
 function offerOpenDeckStarter(device: Pick<Device, "id" | "type" | "size">): void {
   openDeckStarters.delete(device.id);

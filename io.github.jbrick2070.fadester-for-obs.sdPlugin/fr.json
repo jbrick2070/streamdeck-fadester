@@ -53,6 +53,16 @@
     "Name": "Panique visuelle",
     "Tooltip": "Panique (immédiate) et Restaurer (maintenir 0,8 s) de Visual Sidechain, envoyés par les raccourcis clavier d’OBS. Les touches Panique affichent PANIQUE ENVOYÉE jusqu’au déclenchement de Restaurer."
   },
+  "io.github.jbrick2070.fadester-for-obs.visual-meter": {
+    "Name": "Indicateur Visual Sidechain",
+    "Tooltip": "BPM en direct, compteur de temps, quatre barres lissées, spectre 32 bandes et commandes tap, verrouillage et temps 1 pour Visual Sidechain.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "Régler le BPM de 1 par cran",
+        "Push": "Tap tempo, verrouiller le BPM ou recaler le temps 1"
+      }
+    }
+  },
   "io.github.jbrick2070.fadester-for-obs.fader": {
     "Name": "Fader Midi Fadester (facultatif)",
     "Tooltip": "Contrôle avancé facultatif pour un slot existant de Midi Fadester.",
@@ -373,6 +383,22 @@
     "filterPressToggle": "Appui : filtre on/off",
     "filterGlideCancelled": "Fondu annulé",
     "filterChooseSetting": "Choisissez un réglage",
+    "vmTitle": "Indicateur VS",
+    "vmOpTap": "Tap tempo",
+    "vmOpLock": "Figer BPM",
+    "vmOpResync": "Temps 1",
+    "vmNoAudio": "SANS AUDIO",
+    "vmPanic": "PANIQUE",
+    "vmNotLoaded": "NON CHARGÉ",
+    "vmBeatCount": "Temps {beat}/4",
+    "vmLocked": "Verrouillé",
+    "vmUnlocked": "BPM auto",
+    "vmHintTap": "Appui : tempo",
+    "vmHintResync": "Appui : temps 1",
+    "vmDialHint": "Appui : {op} · Tour : BPM",
+    "vmDialHintNoTurn": "Appui : {op}",
+    "infobarVsActive": "{bpm} BPM · Temps {beat}/4",
+    "infobarVsLocked": "{bpm} BPM [FIXE] · Temps {beat}/4",
     "pi": {
       "scopeThisKey": "cette touche",
       "scopeThisDial": "cette molette",
@@ -801,7 +827,21 @@
       "accentMagenta": "Magenta",
       "fxBannerRangeChoose": "Choisissez la plage où cette intensité peut varier.",
       "fxBannerOutOfRange": "OBS a {value}, hors de cette plage : la commande ne le déplace pas tant que la valeur ou la plage ne change pas.",
-      "fxNoteOffTable": "Tout autre réglage numérique, y compris les uniforms propres à un shader, peut être piloté dès que vous saisissez sa plage ; choisissez-la avec soin. OBS n’indique pas au deck quels uniforms sont des listes : ceux nommés …_mode ou déclarés en liste dans le texte du shader sont exclus, vérifiez vous-même les autres."
+      "fxNoteOffTable": "Tout autre réglage numérique, y compris les uniforms propres à un shader, peut être piloté dès que vous saisissez sa plage ; choisissez-la avec soin. OBS n’indique pas au deck quels uniforms sont des listes : ceux nommés …_mode ou déclarés en liste dans le texte du shader sont exclus, vérifiez vous-même les autres.",
+      "vmHeading": "Indicateur Visual Sidechain",
+      "vmIntro": "Affiche le BPM en direct, le compteur de temps, les enveloppes lissées et les états SANS AUDIO, PANIQUE ou NON CHARGÉ de Visual Sidechain.",
+      "vmOptTap": "Tap tempo",
+      "vmOptLock": "Verrouiller / déverrouiller le BPM",
+      "vmOptResync": "Recaler le temps 1",
+      "vmOptDisplay": "Indicateur seul (aucune action à l’appui)",
+      "vmRotateLabel": "Rotation",
+      "vmRotateBpm": "Régler le BPM (1 par cran)",
+      "vmRateLabel": "Cadence",
+      "vmRate2": "2 par seconde",
+      "vmRate5": "5 par seconde (par défaut)",
+      "vmRate10": "10 par seconde (maximum)",
+      "vmNote": "Dessine des enveloppes lissées et un compteur de temps interpolé dans la limite de 10 Hz par cellule ; les transitoires brutes ne sont jamais dessinées.",
+      "infobarShowVs": "Afficher le tempo Visual Sidechain sur la ligne d’état"
     }
   }
 }

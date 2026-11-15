@@ -44,11 +44,14 @@ internal sealed class ObsConnection : IDisposable
     /// <summary>(event type, transition name) for CurrentSceneTransitionChanged, SceneTransitionStarted and
     /// SceneTransitionEnded. Raised only on a connection opened with transitionEvents; a diagnostic, not a control.</summary>
     public event Action<string, string>? TransitionEvent;
+    /// <summary>(vendorName, eventType, eventData) for obs-websocket VendorEvent when opened with vendorEvents.</summary>
+    public event Action<string, string, JsonObject>? VendorEvent;
 
-    // General (1) and Inputs (8); Transitions (16) only for the transition trace.
-    internal static int Subscriptions(bool transitionEvents) => transitionEvents ? 25 : 9;
+    // General (1) and Inputs (8); Transitions (16) only for the transition trace; Vendors (512) when subscribed.
+    internal static int Subscriptions(bool transitionEvents, bool vendorEvents = false) =>
+        (transitionEvents ? 25 : 9) | (vendorEvents ? 512 : 0);
 
-    public static async Task<ObsConnection> Connect(BridgeConfig cfg, CancellationToken stop, bool transitionEvents = false)
+    public static async Task<ObsConnection> Connect(BridgeConfig cfg, CancellationToken stop, bool transitionEvents = false, bool vendorEvents = false)
     {
         var client = new ObsConnection();
         try
@@ -64,7 +67,7 @@ internal sealed class ObsConnection : IDisposable
                 throw ObsSetupException.AuthenticationOff();
             static string Hash(string s) => Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(s)));
             string signature = Hash(Hash(password + auth["salt"]!.GetValue<string>()) + auth["challenge"]!.GetValue<string>());
-            await client.Send(new() { ["op"] = 1, ["d"] = new JsonObject { ["rpcVersion"] = 1, ["eventSubscriptions"] = Subscriptions(transitionEvents), ["authentication"] = signature } }, timeout.Token);
+            await client.Send(new() { ["op"] = 1, ["d"] = new JsonObject { ["rpcVersion"] = 1, ["eventSubscriptions"] = Subscriptions(transitionEvents, vendorEvents), ["authentication"] = signature } }, timeout.Token);
             if ((await client.Receive(timeout.Token))["op"]?.GetValue<int>() != 2) throw new IOException("OBS rejected identification.");
             _ = client.Listen();
             return client;
@@ -124,6 +127,15 @@ internal sealed class ObsConnection : IDisposable
                     // A listener that only watches must never cost the connection, so its failure stops here.
                     if (packet["d"]?["eventData"]?["transitionName"] is JsonValue named && named.TryGetValue<string>(out var transition))
                         try { TransitionEvent?.Invoke(kind, transition); } catch (Exception) { }
+                    continue;
+                }
+                if (packet["op"]?.GetValue<int>() == 5 && packet["d"]?["eventType"]?.GetValue<string>() == "VendorEvent" &&
+                    packet["d"]?["eventData"] is JsonObject vendor &&
+                    vendor["vendorName"]?.GetValue<string>() is string vendorName &&
+                    vendor["eventType"]?.GetValue<string>() is string vendorEventType &&
+                    vendor["eventData"] is JsonObject vendorData)
+                {
+                    try { VendorEvent?.Invoke(vendorName, vendorEventType, vendorData); } catch (Exception) { }
                     continue;
                 }
                 if (packet["op"]?.GetValue<int>() != 7 || packet["d"] is not JsonObject reply) continue;

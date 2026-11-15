@@ -53,6 +53,16 @@
     "Name": "Pánico visual",
     "Tooltip": "Pánico (al instante) y Restaurar (mantén 0,8 s) de Visual Sidechain, enviados con los atajos propios de OBS. Las teclas de pánico muestran PÁNICO ENVIADO hasta Restaurar."
   },
+  "io.github.jbrick2070.fadester-for-obs.visual-meter": {
+    "Name": "Medidor de Visual Sidechain",
+    "Tooltip": "BPM en vivo, contador de pulso, cuatro barras suavizadas, espectro de 32 bandas y controles de marcaje, bloqueo y pulso 1 para Visual Sidechain.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "Ajustar BPM de 1 en 1",
+        "Push": "Marcar tempo, bloquear BPM o fijar pulso 1"
+      }
+    }
+  },
   "io.github.jbrick2070.fadester-for-obs.fader": {
     "Name": "Fader de Midi Fadester (opcional)",
     "Tooltip": "Control avanzado opcional para un slot existente de Midi Fadester.",
@@ -373,6 +383,22 @@
     "filterPressToggle": "Pulsar: filtro on/off",
     "filterGlideCancelled": "Fundido cancelado",
     "filterChooseSetting": "Elige un ajuste",
+    "vmTitle": "Medidor VS",
+    "vmOpTap": "Marcar tempo",
+    "vmOpLock": "Fijar BPM",
+    "vmOpResync": "Pulso 1",
+    "vmNoAudio": "SIN AUDIO",
+    "vmPanic": "PÁNICO",
+    "vmNotLoaded": "NO CARGADO",
+    "vmBeatCount": "Pulso {beat}/4",
+    "vmLocked": "Fijado",
+    "vmUnlocked": "BPM auto",
+    "vmHintTap": "Pulsa: tempo",
+    "vmHintResync": "Pulsa: pulso 1",
+    "vmDialHint": "Pulsa: {op} · Giro: BPM",
+    "vmDialHintNoTurn": "Pulsa: {op}",
+    "infobarVsActive": "{bpm} BPM · Pulso {beat}/4",
+    "infobarVsLocked": "{bpm} BPM [FIJO] · Pulso {beat}/4",
     "pi": {
       "scopeThisKey": "esta tecla",
       "scopeThisDial": "este dial",
@@ -801,7 +827,21 @@
       "accentMagenta": "Magenta",
       "fxBannerRangeChoose": "Elige el rango en que puede moverse esta cantidad.",
       "fxBannerOutOfRange": "OBS tiene {value}, fuera de este rango: el control no lo moverá hasta que cambie el valor o el rango.",
-      "fxNoteOffTable": "Cualquier otro ajuste numérico, incluidos los uniforms propios de un shader, se puede controlar en cuanto escribas su rango; elígelo con cuidado. OBS no indica al deck qué uniforms son listas: se omiten los que terminan en …_mode o figuran como lista en el texto del shader; los demás, compruébalos tú."
+      "fxNoteOffTable": "Cualquier otro ajuste numérico, incluidos los uniforms propios de un shader, se puede controlar en cuanto escribas su rango; elígelo con cuidado. OBS no indica al deck qué uniforms son listas: se omiten los que terminan en …_mode o figuran como lista en el texto del shader; los demás, compruébalos tú.",
+      "vmHeading": "Medidor de Visual Sidechain",
+      "vmIntro": "Muestra el BPM en vivo, el contador de pulso, las envolventes suavizadas y los estados SIN AUDIO, PÁNICO o NO CARGADO de Visual Sidechain.",
+      "vmOptTap": "Marcar tempo",
+      "vmOptLock": "Bloquear / desbloquear BPM",
+      "vmOptResync": "Fijar pulso 1 ahora",
+      "vmOptDisplay": "Solo medidor (sin acción al pulsar)",
+      "vmRotateLabel": "Giro del dial",
+      "vmRotateBpm": "Ajustar BPM (1 por paso)",
+      "vmRateLabel": "Frecuencia",
+      "vmRate2": "2 por segundo",
+      "vmRate5": "5 por segundo (predeterminado)",
+      "vmRate10": "10 por segundo (máximo)",
+      "vmNote": "Dibuja envolventes suavizadas y un contador de pulso interpolado dentro del límite de 10 Hz por celda; nunca dibuja el golpe bruto.",
+      "infobarShowVs": "Mostrar el tempo de Visual Sidechain en la línea de estado"
     }
   }
 }

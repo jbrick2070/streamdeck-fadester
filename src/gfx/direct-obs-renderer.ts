@@ -337,6 +337,263 @@ function renderRestoreKeySvg(input: VisualPanicKeyRenderInput): string {
   ].join("");
 }
 
+export interface VisualMeterRenderInput {
+  state: "disconnected" | "not_loaded" | "panic" | "no_audio" | "active";
+  reason?: string;
+  problem?: string;
+  title?: string;
+  subtitle?: string;
+  bpm: number;
+  bpmLocked: boolean;
+  beatIndex: 0 | 1 | 2 | 3;
+  subBass: number;
+  bass: number;
+  mid: number;
+  high: number;
+  spectrum?: readonly number[];
+  accent?: AccentName;
+}
+
+function clampUnit(value: number): number {
+  return Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0;
+}
+
+function meterPadlockSvg(x: number, y: number, color: string): string {
+  return [
+    `<g data-bpm-locked="true" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">`,
+    `<rect x="${x}" y="${y + 5}" width="10" height="8" rx="2" fill="${color}"/>`,
+    `<path d="M${x + 2.5} ${y + 5}V${y + 2.5}a2.5 2.5 0 0 1 5 0V${y + 5}"/>`,
+    "</g>"
+  ].join("");
+}
+
+function meterBpmLabel(bpm: number): string {
+  return `${Math.round(bpm)} BPM`;
+}
+
+function meterStateLabel(input: VisualMeterRenderInput): string {
+  switch (input.state) {
+    case "disconnected":
+      return input.reason || t("obsNotConnected");
+    case "not_loaded":
+      return t("vmNotLoaded");
+    case "panic":
+      return t("vmPanic");
+    case "no_audio":
+      return t("vmNoAudio");
+    default:
+      return meterBpmLabel(input.bpm);
+  }
+}
+
+function meterBorderColor(input: VisualMeterRenderInput): string {
+  if (input.problem || input.state === "disconnected" || input.state === "panic") return "#df6d38";
+  if (input.state === "not_loaded") return "#777b86";
+  if (input.state === "no_audio") return "#d6a84b";
+  return accentColor(input.accent);
+}
+
+/**
+ * Visual Sidechain Meter key (120x120, P1-3): BPM + lock mark, gentle 4-beat
+ * step row (one low-contrast step per beat), four smoothed band bars (never raw
+ * kick), and plain states NO AUDIO / PANIC / NOT LOADED. Never uses a solid red
+ * background (solid red is reserved for Panic keys, R-RIG-8).
+ */
+export function renderVisualMeterKeySvg(input: VisualMeterRenderInput): string {
+  const accent = accentColor(input.accent);
+  const border = meterBorderColor(input);
+  const head = input.title || t("vmTitle");
+  const headText = boxText(head, 10, 96);
+  const footer = input.problem || input.subtitle || t("vmBeatCount", { beat: input.beatIndex + 1 });
+  const footerText = boxText(footer, 9, 96);
+
+  if (input.state !== "active") {
+    const label = meterStateLabel(input);
+    const lines = keyTitleLines(label);
+    const stateFill = input.state === "not_loaded" ? P.mutedText : P.orangeAccent;
+    const stateMarkup = lines.lines.map((line, i) => {
+      const lineText = boxText(line, lines.fontSize, 102);
+      return `<text x="60" y="${lines.lines.length > 1 ? 55 + i * 16 : 63}" text-anchor="middle" fill="${stateFill}" ${lineText.attrs} font-weight="800">${lineText.text}</text>`;
+    }).join("");
+    return [
+      `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" data-cell="visual-meter-key" data-state="${input.state}">`,
+      `<title>${escapeXml(head)} — ${escapeXml(label)}</title>`,
+      `<rect x="3" y="3" width="114" height="114" rx="14" fill="${P.bgTop}" stroke="${border}" stroke-width="3"/>`,
+      `<text x="60" y="20" text-anchor="middle" fill="${P.mutedText}" ${headText.attrs} font-weight="700">${headText.text}</text>`,
+      stateMarkup,
+      `<rect x="9" y="94" width="102" height="18" rx="5" fill="${P.trackBg}"/>`,
+      `<text x="60" y="107" text-anchor="middle" fill="${input.problem ? P.orangeAccent : P.mutedText}" ${footerText.attrs} font-weight="600">${footerText.text}</text>`,
+      "</svg>"
+    ].join("");
+  }
+
+  const bpmRaw = meterBpmLabel(input.bpm);
+  const bpmText = boxText(bpmRaw, 15, input.bpmLocked ? 82 : 98);
+  const bands = [
+    clampUnit(input.subBass),
+    clampUnit(input.bass),
+    clampUnit(input.mid),
+    clampUnit(input.high)
+  ];
+  const bandsAttr = bands.map((b) => Math.round(b * 100)).join(",");
+  const dots = [0, 1, 2, 3].map((idx) => {
+    const cx = 36 + idx * 16;
+    const on = idx === input.beatIndex;
+    return `<circle cx="${cx}" cy="53" r="3.5" fill="${on ? accent : P.trackBg}" stroke="${on ? P.whiteGlyph : P.trackBorder}" stroke-width="1.5" opacity="${on ? "0.85" : "0.55"}"/>`;
+  }).join("");
+  const bars = bands.map((level, idx) => {
+    const x = 19 + idx * 21;
+    const h = Math.round(level * 24);
+    return `<rect x="${x}" y="64" width="15" height="24" rx="3" fill="${P.trackBg}"/>` +
+      (h > 0 ? `<rect x="${x}" y="${88 - h}" width="15" height="${h}" rx="3" fill="${accent}" opacity="0.88"/>` : "");
+  }).join("");
+
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" data-cell="visual-meter-key" data-state="active" data-beat-index="${input.beatIndex}" data-bands="${bandsAttr}">`,
+    `<title>${escapeXml(head)} — ${escapeXml(bpmRaw)}</title>`,
+    `<rect x="3" y="3" width="114" height="114" rx="14" fill="${P.bgTop}" stroke="${border}" stroke-width="3"/>`,
+    `<text x="60" y="18" text-anchor="middle" fill="${P.mutedText}" ${headText.attrs} font-weight="700">${headText.text}</text>`,
+    `<text x="${input.bpmLocked ? 53 : 60}" y="40" text-anchor="middle" fill="${P.whiteGlyph}" ${bpmText.attrs} font-weight="800">${bpmText.text}</text>`,
+    input.bpmLocked ? meterPadlockSvg(94, 27, P.accentYellow) : "",
+    dots,
+    bars,
+    `<rect x="9" y="94" width="102" height="18" rx="5" fill="${P.trackBg}"/>`,
+    `<text x="60" y="107" text-anchor="middle" fill="${input.problem ? P.orangeAccent : P.mutedText}" ${footerText.attrs} font-weight="600">${footerText.text}</text>`,
+    "</svg>"
+  ].join("");
+}
+
+/**
+ * Visual Sidechain Meter dial / Stream Deck + touch strip (200x100, P1-3):
+ * BPM + lock mark, locally stepped 4-beat dots, four smoothed band bars, and
+ * 32-band spectrum across the touch strip.
+ */
+export function renderVisualMeterDialSvg(input: VisualMeterRenderInput): string {
+  const accent = accentColor(input.accent);
+  const border = meterBorderColor(input);
+  const head = input.title || t("vmTitle");
+  const footer = input.problem || input.subtitle || t("vmBeatCount", { beat: input.beatIndex + 1 });
+  const footerText = boxText(footer, 10, 176);
+
+  if (input.state !== "active") {
+    const headText = boxText(head, 14, 176);
+    const label = meterStateLabel(input);
+    const stateText = boxText(label, 18, 176);
+    const stateFill = input.state === "not_loaded" ? P.mutedText : P.orangeAccent;
+    return [
+      `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100" data-cell="visual-meter-dial" data-state="${input.state}">`,
+      `<defs><linearGradient id="vmDialBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${P.bgTop}"/><stop offset="100%" stop-color="${P.bgBottom}"/></linearGradient></defs>`,
+      `<rect x="2" y="2" width="196" height="96" rx="11" fill="url(#vmDialBg)" stroke="${border}" stroke-width="3"/>`,
+      `<text x="100" y="25" text-anchor="middle" fill="${P.whiteGlyph}" ${headText.attrs} font-weight="700">${headText.text}</text>`,
+      `<text x="100" y="57" text-anchor="middle" fill="${stateFill}" ${stateText.attrs} font-weight="800">${stateText.text}</text>`,
+      `<text x="100" y="88" text-anchor="middle" fill="${input.problem ? P.orangeAccent : P.mutedText}" ${footerText.attrs} font-weight="600">${footerText.text}</text>`,
+      "</svg>"
+    ].join("");
+  }
+
+  const bpmRaw = meterBpmLabel(input.bpm);
+  const bpmText = boxText(bpmRaw, 15, input.bpmLocked ? 98 : 114);
+  const bands = [
+    clampUnit(input.subBass),
+    clampUnit(input.bass),
+    clampUnit(input.mid),
+    clampUnit(input.high)
+  ];
+  const bandsAttr = bands.map((b) => Math.round(b * 100)).join(",");
+  const dots = [0, 1, 2, 3].map((idx) => {
+    const cx = 143 + idx * 14;
+    const on = idx === input.beatIndex;
+    return `<circle cx="${cx}" cy="17" r="3.5" fill="${on ? accent : P.trackBg}" stroke="${on ? P.whiteGlyph : P.trackBorder}" stroke-width="1.5" opacity="${on ? "0.85" : "0.55"}"/>`;
+  }).join("");
+  const bandBars = bands.map((level, idx) => {
+    const x = 12 + idx * 14;
+    const h = Math.round(level * 44);
+    return `<rect x="${x}" y="30" width="11" height="44" rx="2" fill="${P.trackBg}"/>` +
+      (h > 0 ? `<rect x="${x}" y="${74 - h}" width="11" height="${h}" rx="2" fill="${accent}" opacity="0.9"/>` : "");
+  }).join("");
+  const spectrum = input.spectrum ?? [];
+  const specBars: string[] = [];
+  for (let i = 0; i < 32; i++) {
+    const level = clampUnit(spectrum[i] ?? 0);
+    const x = 76 + i * 3.5;
+    const h = Math.round(level * 44);
+    if (h > 0) {
+      specBars.push(`<rect x="${x}" y="${74 - h}" width="2.5" height="${h}" rx="1" fill="${P.blueStart}" opacity="0.85"/>`);
+    }
+  }
+
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100" data-cell="visual-meter-dial" data-state="active" data-beat-index="${input.beatIndex}" data-bands="${bandsAttr}" data-spectrum-bins="32">`,
+    `<defs><linearGradient id="vmDialBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${P.bgTop}"/><stop offset="100%" stop-color="${P.bgBottom}"/></linearGradient></defs>`,
+    `<rect x="2" y="2" width="196" height="96" rx="11" fill="url(#vmDialBg)" stroke="${border}" stroke-width="3"/>`,
+    `<text x="12" y="22" fill="${P.whiteGlyph}" ${bpmText.attrs} font-weight="800">${bpmText.text}</text>`,
+    input.bpmLocked ? meterPadlockSvg(116, 9, P.accentYellow) : "",
+    dots,
+    bandBars,
+    `<rect x="74" y="30" width="114" height="44" rx="4" fill="${P.trackBg}"/>`,
+    specBars.join(""),
+    `<text x="100" y="90" text-anchor="middle" fill="${input.problem ? P.orangeAccent : P.mutedText}" ${footerText.attrs} font-weight="600">${footerText.text}</text>`,
+    "</svg>"
+  ].join("");
+}
+
+/**
+ * Visual Sidechain Meter Stream Deck Neo Info Bar (232x50, P1-3):
+ * BPM + lock mark, locally stepped 4-beat dots, four smoothed band bars, or
+ * plain states NO AUDIO / PANIC / NOT LOADED.
+ */
+export function renderVisualMeterNeoSvg(input: VisualMeterRenderInput): string {
+  const accent = accentColor(input.accent);
+  const border = meterBorderColor(input);
+  const head = input.title || t("vmTitle");
+  const headText = boxText(head, 10, 100);
+
+  if (input.state !== "active") {
+    const label = meterStateLabel(input);
+    const stateText = boxText(label, 14, 150);
+    const stateFill = input.state === "not_loaded" ? P.mutedText : P.orangeAccent;
+    return [
+      `<svg xmlns="http://www.w3.org/2000/svg" width="232" height="50" viewBox="0 0 232 50" data-cell="visual-meter-neo" data-state="${input.state}">`,
+      `<rect x="1" y="1" width="230" height="48" rx="6" fill="${P.bgTop}" stroke="${border}" stroke-width="2"/>`,
+      `<text x="10" y="19" fill="${P.mutedText}" ${headText.attrs} font-weight="700">${headText.text}</text>`,
+      `<text x="10" y="38" fill="${stateFill}" ${stateText.attrs} font-weight="800">${stateText.text}</text>`,
+      "</svg>"
+    ].join("");
+  }
+
+  const bpmRaw = meterBpmLabel(input.bpm);
+  const bpmText = boxText(bpmRaw, 15, input.bpmLocked ? 86 : 102);
+  const bands = [
+    clampUnit(input.subBass),
+    clampUnit(input.bass),
+    clampUnit(input.mid),
+    clampUnit(input.high)
+  ];
+  const bandsAttr = bands.map((b) => Math.round(b * 100)).join(",");
+  const dots = [0, 1, 2, 3].map((idx) => {
+    const cx = 118 + idx * 12;
+    const on = idx === input.beatIndex;
+    return `<circle cx="${cx}" cy="25" r="3.5" fill="${on ? accent : P.trackBg}" stroke="${on ? P.whiteGlyph : P.trackBorder}" stroke-width="1.5" opacity="${on ? "0.85" : "0.55"}"/>`;
+  }).join("");
+  const bandBars = bands.map((level, idx) => {
+    const x = 168 + idx * 14;
+    const h = Math.round(level * 32);
+    return `<rect x="${x}" y="9" width="10" height="32" rx="2" fill="${P.trackBg}"/>` +
+      (h > 0 ? `<rect x="${x}" y="${41 - h}" width="10" height="${h}" rx="2" fill="${accent}" opacity="0.9"/>` : "");
+  }).join("");
+
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="232" height="50" viewBox="0 0 232 50" data-cell="visual-meter-neo" data-state="active" data-beat-index="${input.beatIndex}" data-bands="${bandsAttr}">`,
+    `<rect x="1" y="1" width="230" height="48" rx="6" fill="${P.bgTop}" stroke="${border}" stroke-width="2"/>`,
+    `<text x="10" y="17" fill="${P.mutedText}" ${headText.attrs} font-weight="700">${headText.text}</text>`,
+    `<text x="10" y="38" fill="${P.whiteGlyph}" ${bpmText.attrs} font-weight="800">${bpmText.text}</text>`,
+    input.bpmLocked ? meterPadlockSvg(98, 25, P.accentYellow) : "",
+    dots,
+    bandBars,
+    "</svg>"
+  ].join("");
+}
+
 /** One line at 14 px, else two lines at 12 px: measured, so a long German
  * word or a CJK title wraps where it no longer fits, not at a character count. */
 export function keyTitleLines(raw: string): { lines: string[]; fontSize: number } {

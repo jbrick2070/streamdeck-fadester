@@ -81,7 +81,8 @@ namespace Fadester.TourBox {
     readonly Dictionary<string, ComboBox> boxes = new Dictionary<string, ComboBox>();
     readonly Dictionary<string,Image> glyphs=new Dictionary<string,Image>();
     Dictionary<string, object> config = new Dictionary<string, object>(), catalog = new Dictionary<string, object>();
-    Label state, live, importNote, reminder; TextBox password;
+    Label state, live, vsLive, importNote, reminder; TextBox password;
+    string vsStatus = "";
     // The readiness lights: what is true now, never a log line. OBS from the last scan or the running controls' own lines.
     bool obsConnected; string padState="stPadOff"; ListBox activity; Button connect, start, save, openSettings;
     // What the lights also need from the desktop, read once a second without touching OBS (ShowMe.cs).
@@ -123,6 +124,13 @@ namespace Fadester.TourBox {
           PadState("Game controller connected.","stPadMissing")!="stPadOn" ||
           PadState("Game controller not found. Plug it in or turn it on.","stPadOn")!="stPadMissing" ||
           PadState("Game controller disconnected.","stPadOn")!="stPadMissing" || PadState("Music up","stPadOn")!="stPadOn") throw new Exception();
+      var enText=new PanelText("en"); var deText=new PanelText("de");
+      if (FormatVsMeter(enText,"Music up")!=null ||
+          FormatVsMeter(enText,"VS-METER: not_loaded")!="Visual Sidechain: NOT LOADED" ||
+          FormatVsMeter(deText,"VS-METER: panic")!="Visual Sidechain: PANIK" ||
+          FormatVsMeter(enText,"VS-METER: no_audio")!="Visual Sidechain: NO AUDIO" ||
+          FormatVsMeter(enText,"VS-METER: active 120 1 2 100 50 0 25")!="Visual Sidechain: 120 BPM [LOCK] · Beat 2/4 · █▅▁▃" ||
+          FormatVsMeter(deText,"VS-METER: active 128 0 1 80 60 40 20")!="Visual Sidechain: 128 BPM · Schlag 1/4 · ▇▅▄▂") throw new Exception();
       // Outside a package the settings are where the panel asks for them; a Store install's are in its LocalCache.
       var probe=Path.Combine(Path.GetTempPath(),"fadester-panel-test-"+Guid.NewGuid().ToString("N"),"config.json");
       if (SettingsFolder.Holding(probe)!=Path.GetDirectoryName(probe)) throw new Exception();
@@ -165,6 +173,7 @@ namespace Fadester.TourBox {
       Hint(body,text.Get("passwordHint"));
       connect=AddButton(body,text.Get("discover"),async delegate { await Connect(); });
       live=Hint(body,"");
+      vsLive=Hint(body,"");
       Title(body,text.Get("controllerTitle"));
       SubTitle(body,text.Get("gamepadTitle"));
       enableGamepad=Check(body,text.Get("enableGamepad"));
@@ -233,7 +242,7 @@ namespace Fadester.TourBox {
       var bar=new FlowLayoutPanel {Dock=DockStyle.Fill,Padding=new Padding(0,7,0,0),WrapContents=true,AutoScroll=true};
       start=AddButton(bar,text.Get("saveStart"),async delegate { if(worker==null) StartControls(); else await StopControls(); }); start.BackColor=accent; start.ForeColor=Color.White; start.FlatStyle=FlatStyle.Flat;
       save=AddButton(bar,text.Get("save"),delegate { SaveRequested(); });
-      AddButton(bar,text.Get("feedback"),delegate { if(hud!=null && !hud.IsDisposed) {hud.Close();return;} hud=new Feedback(text.Get("lastAction")); hud.Set(state.Text); hud.Show(); });
+      AddButton(bar,text.Get("feedback"),delegate { if(hud!=null && !hud.IsDisposed) {hud.Close();return;} hud=new Feedback(text.Get("lastAction")); hud.Set(state.Text); hud.SetMeter(vsStatus); hud.Show(); });
       AddButton(bar,text.Get("guide"),delegate { OpenPath(text.GuidePath(folder)); });
       // Shown only when config.json cannot be read, so the file can be found and repaired (a Store install keeps it elsewhere).
       openSettings=AddButton(bar,text.Get("openSettings"),delegate { OpenPath(SettingsFolder.Holding(settings)); }); openSettings.Visible=false;
@@ -523,10 +532,11 @@ namespace Fadester.TourBox {
           bool studioMode, knowsStudio=Boolean.TryParse(Val(next,"studioMode"),out studioMode);
           string studio=knowsStudio ? text.Get(studioMode?"on":"off") : "—";
           live.Text=text.Get("sceneSummary",Val(next,"program","—"),Val(next,"preview","—"),studio);
+          SetVsStatus(FormatVsMeter(text,Val(next,"visualSidechain"))??"");
           obsConnected=true; obsProblem=null; studioOff=knowsStudio && !studioMode; ShowStatus();
           Note(text.Get(worker==null?"obsReady":"obsConnected",List(next,"scenes").Length));
         }
-      }catch(Exception e){live.Text=""; if(worker==null){obsConnected=false; obsProblem=failure??"obs-no-answer"; ShowStatus();} Note(e.Message);}
+      }catch(Exception e){live.Text=""; if(worker==null){SetVsStatus(""); obsConnected=false; obsProblem=failure??"obs-no-answer"; ShowStatus();} Note(e.Message);}
       finally{try{if(tmp!=null && File.Exists(tmp))File.Delete(tmp);}catch(IOException){} refreshing=false; if(!IsDisposed){connect.Enabled=true; start.Enabled=true;}}
     }
     void StartControls() {
@@ -534,11 +544,11 @@ namespace Fadester.TourBox {
       try{
         WriteConfig(); var p=new Process {StartInfo=Command(mixOnly.Checked?"--mix-only":"--listen"),EnableRaisingEvents=true};
         p.OutputDataReceived+=(s,e)=>BridgeLine(p,e.Data); p.ErrorDataReceived+=(s,e)=>BridgeLine(p,e.Data);
-        p.Exited+=delegate { try{BeginInvoke((Action)(()=>{if(worker==p){worker=null; start.Text=text.Get("saveStart"); padState="stPadOff"; ShowStatus(); Note(text.Get(ending==p?"bridgeEnded":p.ExitCode==0?"stopped":"bridgeFailed"));} Entry.Log("controls ended: "+p.ExitCode); try{p.CancelOutputRead();p.CancelErrorRead();}catch(InvalidOperationException){} p.Dispose();}));}catch(InvalidOperationException){} };
+        p.Exited+=delegate { try{BeginInvoke((Action)(()=>{if(worker==p){worker=null; SetVsStatus(""); start.Text=text.Get("saveStart"); padState="stPadOff"; ShowStatus(); Note(text.Get(ending==p?"bridgeEnded":p.ExitCode==0?"stopped":"bridgeFailed"));} Entry.Log("controls ended: "+p.ExitCode); try{p.CancelOutputRead();p.CancelErrorRead();}catch(InvalidOperationException){} p.Dispose();}));}catch(InvalidOperationException){} };
         worker=p; if(!p.Start())throw new Exception(text.Get("bridgeNotStarted")); p.BeginOutputReadLine(); p.BeginErrorReadLine(); start.Text=text.Get("stop");
         // Until the bridge says it found one, a controller that is switched on counts as not found.
         padState=enableGamepad.Checked && !mixOnly.Checked ? "stPadMissing" : "stPadOff"; ShowStatus(); Note(text.Get("starting"));
-      }catch(Exception e){worker=null; start.Text=text.Get("saveStart"); padState="stPadOff"; ShowStatus(); Note(e.Message);}
+      }catch(Exception e){worker=null; SetVsStatus(""); start.Text=text.Get("saveStart"); padState="stPadOff"; ShowStatus(); Note(e.Message);}
     }
     async Task StopControls() {
       var p=worker; if(p==null)return; start.Enabled=false;
@@ -548,15 +558,54 @@ namespace Fadester.TourBox {
         bool done=await Task.Run(()=>WaitForBridge(p,again?3000:8000));
         if(!done && again){ ended=true; ending=p; done=await Task.Run(()=>EndBridge(p,3000)); }
         if(!done){ stopTimedOut=p; Note(text.Get("finishing")); }
-        else if(worker==p){worker=null; stopTimedOut=null; start.Text=text.Get("saveStart"); padState="stPadOff"; ShowStatus(); Note(text.Get(ended?"bridgeEnded":"stopped"));}
+        else if(worker==p){worker=null; stopTimedOut=null; SetVsStatus(""); start.Text=text.Get("saveStart"); padState="stPadOff"; ShowStatus(); Note(text.Get(ended?"bridgeEnded":"stopped"));}
       }catch(InvalidOperationException){}finally{if(!IsDisposed)start.Enabled=true;}
+    }
+    void SetVsStatus(string s) {
+      vsStatus=s??"";
+      if(vsLive!=null) vsLive.Text=vsStatus;
+      if(hud!=null && !hud.IsDisposed) hud.SetMeter(vsStatus);
+    }
+    static string BandBar(int pct) {
+      string blocks="▁▂▃▄▅▆▇█";
+      int idx=Math.Max(0,Math.Min(7,(pct*7+50)/100));
+      return blocks[idx].ToString();
+    }
+    /** Parses a rate-limited VS-METER: line from the bridge into the localized HUD status line, or null for any other line. */
+    internal static string FormatVsMeter(PanelText text,string line) {
+      if(line==null || !line.StartsWith("VS-METER: ",StringComparison.Ordinal)) return null;
+      string body=line.Substring(10).Trim();
+      if(body=="not_loaded") return text.Get("vsNotLoaded");
+      if(body=="panic") return text.Get("vsPanic");
+      if(body=="no_audio") return text.Get("vsNoAudio");
+      if(body.StartsWith("active ",StringComparison.Ordinal)){
+        string[] parts=body.Split(new[]{' '},StringSplitOptions.RemoveEmptyEntries);
+        int bpm, locked, beat, s0, s1, s2, s3;
+        if(parts.Length>=8 &&
+           Int32.TryParse(parts[1],NumberStyles.Integer,CultureInfo.InvariantCulture,out bpm) &&
+           Int32.TryParse(parts[2],NumberStyles.Integer,CultureInfo.InvariantCulture,out locked) &&
+           Int32.TryParse(parts[3],NumberStyles.Integer,CultureInfo.InvariantCulture,out beat) &&
+           Int32.TryParse(parts[4],NumberStyles.Integer,CultureInfo.InvariantCulture,out s0) &&
+           Int32.TryParse(parts[5],NumberStyles.Integer,CultureInfo.InvariantCulture,out s1) &&
+           Int32.TryParse(parts[6],NumberStyles.Integer,CultureInfo.InvariantCulture,out s2) &&
+           Int32.TryParse(parts[7],NumberStyles.Integer,CultureInfo.InvariantCulture,out s3)) {
+          string bars=BandBar(s0)+BandBar(s1)+BandBar(s2)+BandBar(s3);
+          return text.Get(locked!=0?"vsMeterLocked":"vsMeterActive",bpm,beat,bars);
+        }
+      }
+      return "";
     }
     /** One line from the running controls: update the status line from the lines the bridge prints for it, then show the line. */
     void BridgeLine(Process p,string line) {
       if(line==null || IsDisposed || Disposing) return;
       if(InvokeRequired){try{BeginInvoke((Action)(()=>BridgeLine(p,line)));}catch(InvalidOperationException){}return;}
+      if(line.StartsWith("VS-METER: ",StringComparison.Ordinal)){
+        if(worker==p) SetVsStatus(FormatVsMeter(text,line));
+        return;
+      }
       if(worker==p){
         string padNow=PadState(line,padState), problem=PanelText.ProblemCode(line); bool obsNow=ObsState(line,obsConnected);
+        if(!obsNow && obsConnected) SetVsStatus("");
         if(obsNow) problem=null; else if(problem==null) problem=obsProblem;
         if(padNow!=padState || obsNow!=obsConnected || problem!=obsProblem){padState=padNow; obsConnected=obsNow; obsProblem=problem; ShowStatus();}
       }
@@ -635,15 +684,18 @@ namespace Fadester.TourBox {
     }
   }
   internal sealed class Feedback : Form {
-    readonly Label text;
+    readonly Label text, meter;
     protected override bool ShowWithoutActivation {get{return true;}}
     protected override CreateParams CreateParams {get{var cp=base.CreateParams; cp.ExStyle|=0x08000000; return cp;}}
     internal Feedback(string title) {
       Text=title; TopMost=true; ShowInTaskbar=false; StartPosition=FormStartPosition.Manual;
-      FormBorderStyle=FormBorderStyle.FixedToolWindow; ClientSize=new Size(390,58); BackColor=Color.FromArgb(26,34,51);
+      FormBorderStyle=FormBorderStyle.FixedToolWindow; ClientSize=new Size(420,82); BackColor=Color.FromArgb(26,34,51);
       var screen=Screen.FromPoint(Cursor.Position).WorkingArea; Location=new Point(screen.Right-Width-14,screen.Top+14);
-      text=new Label {Dock=DockStyle.Fill,Padding=new Padding(8,3,8,3),TextAlign=ContentAlignment.MiddleLeft,ForeColor=Color.White,Font=new Font("Segoe UI",10,FontStyle.Bold),AutoEllipsis=true}; Controls.Add(text);
+      meter=new Label {Dock=DockStyle.Bottom,Height=26,Padding=new Padding(8,0,8,4),TextAlign=ContentAlignment.MiddleLeft,ForeColor=Color.FromArgb(196,210,232),Font=new Font("Segoe UI",9,FontStyle.Regular),AutoEllipsis=true,UseMnemonic=false};
+      text=new Label {Dock=DockStyle.Fill,Padding=new Padding(8,4,8,2),TextAlign=ContentAlignment.MiddleLeft,ForeColor=Color.White,Font=new Font("Segoe UI",10,FontStyle.Bold),AutoEllipsis=true,UseMnemonic=false};
+      Controls.Add(text); Controls.Add(meter);
     }
     internal void Set(string s){text.Text=s;}
+    internal void SetMeter(string s){meter.Text=s??"";}
   }
 }

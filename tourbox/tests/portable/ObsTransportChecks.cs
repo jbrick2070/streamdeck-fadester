@@ -141,6 +141,9 @@ internal static class ObsTransportChecks
                             ["eventData"] = new JsonObject { ["transitionName"] = 7 } } }, stop);
                         await Send(socket, new() { ["op"] = 5, ["d"] = new JsonObject { ["eventType"] = "SceneTransitionEnded", ["eventIntent"] = 16,
                             ["eventData"] = new JsonObject { ["transitionName"] = "Fixture Fade" } } }, stop);
+                        await Send(socket, new() { ["op"] = 5, ["d"] = new JsonObject { ["eventType"] = "VendorEvent", ["eventIntent"] = 512,
+                            ["eventData"] = new JsonObject { ["vendorName"] = "visual-sidechain", ["eventType"] = "signals_changed",
+                                ["eventData"] = new JsonObject { ["bpm"] = 124.0, ["audio_present"] = true } } } }, stop);
                         await Reply(socket, request, new(), stop);
                         break;
                     case "GetReplayBufferStatus":
@@ -178,6 +181,8 @@ internal static class ObsTransportChecks
         {
             var cfg = new BridgeConfig { Host = "127.0.0.1", Port = port, MusicInput = inputName };
             Check(ObsConnection.Subscriptions(false) == 9, "without the transition trace the connection must subscribe to general and input events only");
+            Check(ObsConnection.Subscriptions(false, vendorEvents: true) == 521 && ObsConnection.Subscriptions(true, vendorEvents: true) == 537,
+                "vendorEvents must add EventSubscription.Vendors (512)");
             using var obs = await ObsConnection.Connect(cfg, stop, transitionEvents: true);
             var version = obs.Call("GetVersion");
             var muted = obs.Call("GetInputMute", new() { ["inputName"] = inputName });
@@ -186,9 +191,16 @@ internal static class ObsTransportChecks
             var named = new TaskCompletionSource<double>(TaskCreationOptions.RunContinuationsAsynchronously);
             var uuid = new TaskCompletionSource<double>(TaskCreationOptions.RunContinuationsAsynchronously);
             var custom = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var vendorSeen = new TaskCompletionSource<double>(TaskCreationOptions.RunContinuationsAsynchronously);
             obs.InputVolumeChanged += (name, db) => { if (name == inputName) named.TrySetResult(db); };
             obs.InputLevelChangedById += (id, mul) => { if (id == inputId) uuid.TrySetResult(mul); };
             obs.CustomEvent += data => { if ((string?)data["fixture"] == "received") custom.TrySetResult(); };
+            obs.VendorEvent += (vendor, evType, data) =>
+            {
+                if (vendor == "visual-sidechain" && evType == "signals_changed" && data["bpm"]?.GetValue<double>() is double bpmVal)
+                    vendorSeen.TrySetResult(bpmVal);
+            };
+            obs.VendorEvent += (_, _, _) => throw new InvalidOperationException("fixture vendor listener");
             var transitions = new List<string>();
             var traced = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             obs.TransitionEvent += (kind, name) => { lock (transitions) transitions.Add(kind + ":" + name); if (kind == "SceneTransitionEnded") traced.TrySetResult(); };
@@ -200,6 +212,7 @@ internal static class ObsTransportChecks
             Check(await named.Task.WaitAsync(stop) == -7 && Math.Abs(await uuid.Task.WaitAsync(stop) - Math.Pow(10, -7d / 20)) < 1e-12, "volume events lost or changed");
             await custom.Task.WaitAsync(stop);
             await traced.Task.WaitAsync(stop);
+            Check(await vendorSeen.Task.WaitAsync(stop) == 124.0, "VendorEvent was not delivered");
             lock (transitions) Check(transitions.Take(2).SequenceEqual(["CurrentSceneTransitionChanged:Fixture Fade", "SceneTransitionEnded:Fixture Fade"]),
                 "transition events lost or changed, or one without a text name was passed on");
             await desk.Dispatch("undo").WaitAsync(stop);

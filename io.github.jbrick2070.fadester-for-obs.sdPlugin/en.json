@@ -53,6 +53,16 @@
     "Name": "Visual Panic",
     "Tooltip": "Visual Sidechain's Panic (instant) and Restore (hold 0.8 s), sent through OBS's own hotkeys. Panic keys show PANIC SENT until Restore."
   },
+  "io.github.jbrick2070.fadester-for-obs.visual-meter": {
+    "Name": "Visual Sidechain Meter",
+    "Tooltip": "Live BPM, beat counter, four smoothed band bars, 32-band strip spectrum, and tap, lock and resync tempo controls for Visual Sidechain.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "Adjust BPM by 1 per click",
+        "Push": "Tap tempo, lock BPM, or resync beat 1"
+      }
+    }
+  },
   "io.github.jbrick2070.fadester-for-obs.fader": {
     "Name": "Midi Fadester Fader (optional)",
     "Tooltip": "Optional enhanced control for an existing Midi Fadester slot.",
@@ -373,6 +383,22 @@
     "filterPressToggle": "Press: filter on/off",
     "filterGlideCancelled": "Glide cancelled",
     "filterChooseSetting": "Choose a setting",
+    "vmTitle": "VS meter",
+    "vmOpTap": "Tap tempo",
+    "vmOpLock": "Lock BPM",
+    "vmOpResync": "Beat 1",
+    "vmNoAudio": "NO AUDIO",
+    "vmPanic": "PANIC",
+    "vmNotLoaded": "NOT LOADED",
+    "vmBeatCount": "Beat {beat}/4",
+    "vmLocked": "Locked",
+    "vmUnlocked": "Auto BPM",
+    "vmHintTap": "Tap · hold locks",
+    "vmHintResync": "Press: beat 1",
+    "vmDialHint": "Push: {op} · Turn: BPM",
+    "vmDialHintNoTurn": "Push: {op}",
+    "infobarVsActive": "{bpm} BPM · Beat {beat}/4",
+    "infobarVsLocked": "{bpm} BPM [LOCK] · Beat {beat}/4",
     "pi": {
       "scopeThisKey": "this key",
       "scopeThisDial": "this dial",
@@ -801,7 +827,21 @@
       "accentMagenta": "Magenta",
       "fxBannerRangeChoose": "Choose the range this amount may move in.",
       "fxBannerOutOfRange": "OBS holds {value}, outside this range: the control does not move it until the value or the range changes.",
-      "fxNoteOffTable": "Any other number setting, a shader's own uniforms included, can be ridden once you type its range; choose it with care. OBS does not tell the deck which uniforms are lists: those named …_mode or marked as a list in the shader text are left out, any other you check yourself."
+      "fxNoteOffTable": "Any other number setting, a shader's own uniforms included, can be ridden once you type its range; choose it with care. OBS does not tell the deck which uniforms are lists: those named …_mode or marked as a list in the shader text are left out, any other you check yourself.",
+      "vmHeading": "Visual Sidechain Meter",
+      "vmIntro": "Shows Visual Sidechain's live BPM, beat counter, smoothed band envelopes, and NO AUDIO, PANIC, or NOT LOADED states.",
+      "vmOptTap": "Tap tempo",
+      "vmOptLock": "Lock / unlock BPM",
+      "vmOptResync": "Resync beat 1",
+      "vmOptDisplay": "Meter only (no press action)",
+      "vmRotateLabel": "Dial turn",
+      "vmRotateBpm": "Adjust BPM (1 per click)",
+      "vmRateLabel": "Redraw rate",
+      "vmRate2": "2 per second",
+      "vmRate5": "5 per second (default)",
+      "vmRate10": "10 per second (maximum)",
+      "vmNote": "Draws smoothed envelopes and a locally stepped beat counter inside the 10 Hz per-cell limit; raw kick transients are never drawn.",
+      "infobarShowVs": "Show Visual Sidechain tempo in status line"
     }
   }
 }

@@ -40,7 +40,7 @@ You need Windows, Inno Setup 6, and a finished `tourbox\build.ps1` run (its fold
 
 ## Test
 
-The **Fadester Suite Setup (Windows)** workflow (`.github/workflows/suite-installer.yml`) runs manually only.
+The **Fadester Suite Setup (Windows)** workflow (`.github/workflows/suite-installer.yml`) runs manually, and on pull requests that change the installer.
 
 1. **Build.** One job builds the setup, plus one copy per guard with that guard switched off.
 2. **End-to-end tests.** On a fresh runner, `tests/Test-Suite.ps1` really installs and uninstalls everything and checks:

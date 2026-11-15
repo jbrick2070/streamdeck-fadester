@@ -1,9 +1,13 @@
 name: Fadester Suite Setup (Windows)
 
-# Manual only: builds the combined Windows installer and tests it end to end on throwaway runners.
-# It never runs on push or pull requests and never publishes a release.
+# Builds the combined Windows installer and tests it end to end on throwaway runners. Runs manually, and on pull
+# requests that change the installer. It never runs on pushes to main and never publishes a release.
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - installer/**
+      - .github/workflows/suite-installer.yml
 
 permissions:
   contents: read

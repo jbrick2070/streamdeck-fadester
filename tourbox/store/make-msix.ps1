@@ -5,8 +5,8 @@
 # The Store refuses a second package with the same version and different contents, even within one draft:
 # raise -Version for every package you upload (0.1.1.0 was the first one submitted). An existing package of the same
 # version is never replaced unless -Overwrite is given. Only a build that build.ps1 finished (build-complete.txt beside
-# its 'Fadester for TourBox' folder) is used; a folder extracted from a release ZIP is refused.
-#   .\make-msix.ps1 [-Build "...\dist\build-...\Fadester for TourBox"] [-Version 0.1.1.0] [-Register] [-Overwrite]
+# its 'Fadester Companion' folder) is used; a folder extracted from a release ZIP is refused.
+#   .\make-msix.ps1 [-Build "...\dist\build-...\Fadester Companion"] [-Version 0.1.1.0] [-Register] [-Overwrite]
 param([string]$Build, [string]$Version = '0.1.1.0', [string]$OutDir = (Join-Path $PSScriptRoot '..\dist'), [switch]$Register, [switch]$Overwrite)
 $ErrorActionPreference = 'Stop'
 # The Store wants Major.Minor.Build with the fourth number 0.
@@ -16,14 +16,14 @@ if ($Version -notmatch '^\d{1,5}\.\d{1,5}\.\d{1,5}\.0$' -or ($Version.Split('.')
 if (-not $Build) {
   $newest = Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot '..\dist') -Directory -Filter 'build-*' | Sort-Object LastWriteTime -Descending | Select-Object -First 1
   if (-not $newest) { throw 'No build found: run tourbox\build.ps1 first, or pass -Build.' }
-  $Build = Join-Path $newest.FullName 'Fadester for TourBox'
+  $Build = Join-Path $newest.FullName 'Fadester Companion'
 }
 $Build = (Resolve-Path -LiteralPath $Build).Path
 # build.ps1 writes this beside the bundle as its very last step; a run that failed part-way leaves a stage without it.
 if (-not (Test-Path -LiteralPath (Join-Path (Split-Path -Parent $Build) 'build-complete.txt') -PathType Leaf)) {
-  throw "$Build is not from a finished tourbox\build.ps1 run: its build folder has no build-complete.txt. Run tourbox\build.ps1, then run this script again without -Build (it takes the newest build in tourbox\dist), or pass the 'Fadester for TourBox' folder of that build. A folder extracted from a release ZIP is refused, because it has no build-complete.txt."
+  throw "$Build is not from a finished tourbox\build.ps1 run: its build folder has no build-complete.txt. Run tourbox\build.ps1, then run this script again without -Build (it takes the newest build in tourbox\dist), or pass the 'Fadester Companion' folder of that build. A folder extracted from a release ZIP is refused, because it has no build-complete.txt."
 }
-foreach ($need in 'Fadester for TourBox.exe', 'FadesterTourBoxBridge.exe', 'FadesterNativeSlider.exe', 'presets\gamepad.json') {
+foreach ($need in 'Fadester Companion.exe', 'FadesterCompanionBridge.exe', 'FadesterNativeSlider.exe', 'presets\gamepad.json') {
   if (-not (Test-Path -LiteralPath (Join-Path $Build $need))) { throw "$Build has no $need." }
 }
 $sdk = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Directory | Where-Object { Test-Path (Join-Path $_.FullName 'x64\makeappx.exe') } |

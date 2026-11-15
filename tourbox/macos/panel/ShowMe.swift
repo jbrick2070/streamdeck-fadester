@@ -316,7 +316,7 @@ import AppKit
             fill(pop, NSColor(srgbRed: 36 / 255, green: 39 / 255, blue: 48 / 255, alpha: 1), radius: 7)
             stroke(pop, muted.withAlphaComponent(0.5), radius: 7, width: 1.2)
             text("Running applications", at: NSPoint(x: 270, y: 58), size: 11, bold: true, color: ink)
-            text("FadesterTourBoxPanel  (skip)", at: NSPoint(x: 276, y: 88), size: 10.2, bold: false, color: muted)
+            text("Fadester Companion  (skip)", at: NSPoint(x: 276, y: 88), size: 10.2, bold: false, color: muted)
             text("Google Chrome", at: NSPoint(x: 276, y: 116), size: 10.2, bold: false, color: muted)
             let obsChosen = t >= 8.2
             fill(obsAppRow, obsChosen ? blue : card, radius: 5)
@@ -718,7 +718,7 @@ private final class SheetBackground: NSView {
             revealBtn.isHidden = true
         }
         openBtn.title = consoleInstalled ? "2. Open TourBox Console" : "2. Download TourBox Console…"
-        stepsSummary.stringValue = "1. In TourBox Console, click the middle Import [↙] icon beside Preset List.\n2. Choose “\(folder)” in the sidebar and open OBS Fadester for TourBox.tb.\n3. With OBS open, click “Not Linked” → pick OBS (not FadesterTourBoxPanel) → click Save, with Auto Switch on."
+        stepsSummary.stringValue = "1. In TourBox Console, click the middle Import [↙] icon beside Preset List.\n2. Choose “\(folder)” in the sidebar and open OBS Fadester for TourBox.tb.\n3. With OBS open, click “Not Linked” → pick OBS (not Fadester Companion) → click Save, with Auto Switch on."
     }
 
     @objc private func selectStep(_ sender: NSButton) {

@@ -4,7 +4,10 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <AssemblyName>FadesterTourBoxBridge</AssemblyName>
+    <AssemblyName>FadesterCompanionBridge</AssemblyName>
+    <Product>Fadester Companion</Product>
+    <AssemblyTitle>Fadester Companion bridge</AssemblyTitle>
+    <Company>Jeffrey Brick</Company>
     <RootNamespace>Fadester.TourBox</RootNamespace>
   </PropertyGroup>
   <ItemGroup><Compile Include="../tests/StudioFaderSelfTests.cs" Link="StudioFaderSelfTests.cs" /></ItemGroup>

@@ -41,9 +41,9 @@ UI Preview.app** bundle. Its Start guard refuses use; a complete build is preser
 
 ```sh
 app='tourbox/macos/panel/build/Fadester Companion.app'
-"$app/Contents/MacOS/FadesterTourBoxPanel" --self-test
-node tourbox/macos/panel/tests/discovery-server.mjs "$app/Contents/MacOS/FadesterTourBoxPanel"
-"$app/Contents/MacOS/FadesterTourBoxPanel" --render-preview /tmp/setup.png /tmp/assignments.png /tmp/control-map.png
+"$app/Contents/MacOS/Fadester Companion" --self-test
+node tourbox/macos/panel/tests/discovery-server.mjs "$app/Contents/MacOS/Fadester Companion"
+"$app/Contents/MacOS/Fadester Companion" --render-preview /tmp/setup.png /tmp/assignments.png /tmp/control-map.png
 ```
 
 Self-tests cover strict settings, Unicode, secret-free serialization, redaction,

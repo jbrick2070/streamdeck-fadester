@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// The VJster side of the TourBox companion: the actions that go to the Chrome
+// The VJster side of Fadester Companion: the actions that go to the Chrome
 // extension over the VJster link (docs/vjster/REQUIREMENTS.md section 2) and
 // the host that keeps the link up, outside the OBS connection loop, so the
 // video can be driven with OBS closed.

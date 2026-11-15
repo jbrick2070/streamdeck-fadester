@@ -485,7 +485,7 @@ private final class PillActionButton: NSControl {
 
         heading("2   Set up TourBox & native T-bar", in: stack)
         subheading("TourBox Console preset", in: stack)
-        paragraph("1. Click “1. Save TourBox Preset (.tb)…” below to save OBS Fadester for TourBox.tb (for example in Downloads).\n2. Click “2. Open TourBox Console”, then click the middle Import [↙] icon beside Preset List and open that .tb file.\n3. With OBS Studio open, click “Not Linked” on the preset row → pick OBS (not FadesterTourBoxPanel) under Running applications → click Save, and keep Auto Switch on.\n(TourBox’s .tb format does not store app links inside the file, so linking OBS once in Console is always required.)", in: stack)
+        paragraph("1. Click “1. Save TourBox Preset (.tb)…” below to save OBS Fadester for TourBox.tb (for example in Downloads).\n2. Click “2. Open TourBox Console”, then click the middle Import [↙] icon beside Preset List and open that .tb file.\n3. With OBS Studio open, click “Not Linked” on the preset row → pick OBS (not Fadester Companion) under Running applications → click Save, and keep Auto Switch on.\n(TourBox’s .tb format does not store app links inside the file, so linking OBS once in Console is always required.)", in: stack)
         savePresetStepButton = button("1. Save TourBox Preset (.tb)…", #selector(saveAndGuidePreset))
         savePresetStepButton.bezelStyle = .rounded
         savePresetStepButton.bezelColor = accentColor

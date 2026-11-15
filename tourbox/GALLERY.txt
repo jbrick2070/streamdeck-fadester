@@ -10,7 +10,7 @@ Artwork: artwork/master-cover.png
 The gallery attachment is the English preset. The Windows companion ZIP includes all ten preset languages, matching panel translations and first-run guides. Select one preset when importing into TourBox Console. The full illustrated operator guide and bridge diagnostics are in English.
 
 One-sentence introduction (under 200 characters):
-Cue scenes, ride audio and turn the flat Dial for an OBS Studio dissolve. One Tour menu adds media, overlays and capture tools. Requires the Fadester for TourBox Windows companion.
+Cue scenes, ride audio and turn the flat Dial for an OBS Studio dissolve. One Tour menu adds media, overlays and capture tools. Requires Fadester Companion for Windows.
 
 The matching companion must run locally with OBS WebSocket enabled. Import the single preset and link it to OBS. For the manual crossfader, use OBS Studio 33 in Studio Mode with Fade and distinct Program and Preview scenes. Whole-mix control requires explicit opt-in in the companion.
 

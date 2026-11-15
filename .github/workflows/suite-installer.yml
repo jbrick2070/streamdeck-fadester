@@ -49,7 +49,7 @@ jobs:
           $out = Join-Path $env:RUNNER_TEMP 'companion'
           & .\tourbox\build.ps1 -OutDir $out
           $build = (Get-ChildItem -LiteralPath $out -Directory -Filter 'build-*' | Select-Object -First 1).FullName
-          "COMPANION_BUILD=$build\Fadester for TourBox" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "COMPANION_BUILD=$build\Fadester Companion" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
       - name: Build the suite setup (pinned inputs verified by SHA-256)
         shell: pwsh
         run: |

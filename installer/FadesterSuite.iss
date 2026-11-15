@@ -291,7 +291,9 @@ begin
     Result := 'OBS Studio is open. Close OBS Studio (File > Exit), then run setup again. Setup never closes OBS for you, so a live show is never cut.';
     Exit;
   end;
-  if WizardIsComponentSelected('companion') and (ProcessRunning('FadesterTourBoxBridge.exe') or ProcessRunning('Fadester for TourBox.exe')) then
+  // Today's names, and the ones the app had up to 0.1.3.
+  if WizardIsComponentSelected('companion') and (ProcessRunning('FadesterCompanionBridge.exe') or ProcessRunning('Fadester Companion.exe')
+    or ProcessRunning('FadesterTourBoxBridge.exe') or ProcessRunning('Fadester for TourBox.exe')) then
   begin
     Log('COMPANION-RUNNING: setup stopped before changing anything.');
     Result := 'Fadester Companion is running. Click Stop in Fadester Companion, close its window, and run setup again.';

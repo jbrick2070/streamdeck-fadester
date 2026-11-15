@@ -1,6 +1,6 @@
 # macOS development checks
 
-The [Mac workflow](https://github.com/jbrick2070/streamdeck-fadester/actions/workflows/tourbox-macos.yml) is configured to build and run the shared Fadester control logic on GitHub-hosted Macs. Its output is a **developer core-check bundle**. A usable Fadester for TourBox Mac application is still to be built.
+The [Mac workflow](https://github.com/jbrick2070/streamdeck-fadester/actions/workflows/tourbox-macos.yml) is configured to build and run the shared Fadester control logic on GitHub-hosted Macs. Its output is a **developer core-check bundle**. A usable Fadester Companion Mac application is still to be built.
 
 > **Status, 2026-11-12.** Everything under `tourbox/macos/` and `tourbox/presets/macos/` is experimental. The Mac preset generator, Mac preset, Mac shortcut helper, Mac action host and Mac **Fadester Companion** (`Fadester Companion.app`) follow the unified master map: `FadesterMacHost` hosts the loopback VJster link (serving both the Chrome `VJster` extension and the bundled `/obs` YouTube Browser Source page so TourBox users never need Midi Fadester), and `macos/panel` provides the Windows-parity Fadester Companion header, live `OBS` / `TourBox` / `VJster` / `Controls` readiness lights, Control map tab, VJster setup + OBS Browser Source URL copy, and Layer 1 & Layer 2 scene-item assignments and opacity step. Physical rehearsal of every modifier combination on Mac hardware remains in progress.
 
@@ -15,7 +15,7 @@ The workflow uses standard macOS 15 runners for both architectures:
 
 GitHub provides these standard runners free for public repositories. This workflow does not use the paid larger-runner labels. See [GitHub’s runner reference](https://docs.github.com/en/actions/reference/runners/github-hosted-runners#standard-github-hosted-runners-for-public-repositories). Private forks have different billing rules.
 
-The workflow, **TourBox macOS core checks**, runs for relevant changes on `main` and pull requests into `main`. It also supports manual dispatch; the **Run workflow** button becomes available after the workflow is on the default branch.
+The workflow, **Fadester Companion macOS core checks**, runs for relevant changes on `main` and pull requests into `main`. It also supports manual dispatch; the **Run workflow** button becomes available after the workflow is on the default branch.
 
 Open the repository’s **Actions** tab, select that workflow and inspect both architecture jobs. The artifacts **FadesterCoreChecks-osx-arm64** and **FadesterCoreChecks-osx-x64** contain a `.tar.gz` with the test executable, preset map, developer README, license, runtime notices and source commit, plus a SHA-256 checksum file. The current workflow also places the optional grouped-mix CLI in a separately labeled `developer-mix-host` subfolder. These artifacts are retained for three days and are not product releases. Check the run’s commit and results before relying on it: the workflow definition alone is not passing test evidence.
 

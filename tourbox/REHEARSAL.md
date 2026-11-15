@@ -1,4 +1,4 @@
-# Fadester for TourBox · rehearsal and submission
+# Fadester Companion with the TourBox · rehearsal and submission
 
 ## Historical evidence from November 4, 2026
 

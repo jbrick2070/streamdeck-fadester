@@ -107,7 +107,7 @@ function Test-Companion {
   $r = Run-Setup $Setup @('/COMPONENTS="companion"') 'companion'
   Check ($r.Code -eq 0) "setup succeeds (exit $($r.Code))"
   Check (Installed $c.companion.appId) 'Fadester Companion has its own uninstall entry'
-  foreach ($exe in 'Fadester for TourBox.exe', 'FadesterTourBoxBridge.exe', 'FadesterNativeSlider.exe') {
+  foreach ($exe in 'Fadester Companion.exe', 'FadesterCompanionBridge.exe', 'FadesterNativeSlider.exe') {
     Check (Test-Path -LiteralPath (Join-Path $companionDir $exe)) "$exe installed under its exact name"
   }
 }
@@ -152,7 +152,7 @@ function Test-Uninstall {
   Check (Test-Path -LiteralPath (Join-Path $pluginDir 'visual-sidechain')) 'Visual Sidechain untouched by Midi Fadester uninstall'
   Uninstall $c.visualSidechain.appId; Uninstall $c.playlister.appId; Uninstall $c.companion.appId; Uninstall $m.suiteAppId
   Check (-not (Installed $c.companion.appId)) 'Fadester Companion uninstall entry removed'
-  Check (-not (Test-Path -LiteralPath (Join-Path $companionDir 'Fadester for TourBox.exe'))) 'Fadester Companion files removed'
+  Check (-not (Test-Path -LiteralPath (Join-Path $companionDir 'Fadester Companion.exe'))) 'Fadester Companion files removed'
   Check (-not (Test-Path -LiteralPath (Join-Path $suiteDir 'packages'))) 'suite shared files removed'
   foreach ($f in $keep) { Check (Test-Path -LiteralPath $f) "kept $f" }
 }

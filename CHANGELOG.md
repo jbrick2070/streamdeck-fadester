@@ -4,11 +4,13 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 
 ## Unreleased
 
-## 0.12.0 - 2026-11-15
+## 0.12.1 - 2026-11-15
+
+0.12.0 was a draft for the hardware test and was never published. Everything it held is listed here. This release ships Fadester Companion 0.1.5.
 
 - **Fadester Companion is one name on every file, on Windows and on the Mac.** The window already said Fadester Companion, but its files did not, which read as a second, TourBox-only app.
   - **Windows:** the app file is now `Fadester Companion.exe` in a `Fadester Companion` folder, the release file is `Fadester-Companion-Windows-x64-<version>.zip`, and the engine is `FadesterCompanionBridge.exe`. They were `Fadester for TourBox.exe`, `Fadester-for-TourBox-Windows-x64-<version>.zip` and `FadesterTourBoxBridge.exe`.
-  - **Mac:** the app's executable is named Fadester Companion as well, so TourBox Console lists it under that name, and the app says version 0.1.4 like the Windows app.
+  - **Mac:** the app's executable is named Fadester Companion as well, so TourBox Console lists it under that name, and the app says version 0.1.5 like the Windows app.
   - **Version:** the Windows files carry the release's version. The app file said 0.1.0.0 in every release, and the engine reported 1.0.0 over the whole-mix protocol and the VJster link's `/whoami`.
   - **Updating:** the standalone installer removes the old-named files of an earlier install. Settings stay where they were. If a shortcut or a TourBox Console Auto Switch link pointed at the old file name, point it at `Fadester Companion.exe`.
   - **Screenshots:** the screenshot action saves into `Pictures\Fadester Companion` (it was `Fadester TourBox`). Pictures already saved stay where they are.

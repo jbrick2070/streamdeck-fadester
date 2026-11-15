@@ -77,7 +77,7 @@ function Test-ObsRunning {
   try {
     $r = Run-Setup $Setup @('/COMPONENTS="obs\mf"') 'obs-running'
     Check ($r.Code -ne 0) "setup exits with an error while obs64.exe runs (exit $($r.Code))"
-    Check ($r.Log -match 'OBS-RUNNING') 'log says why'
+    Check ($r.Log -cmatch 'OBS-RUNNING:') 'log says why'
     Check (-not (Installed $c.midiFadester.appId)) 'Midi Fadester was not installed'
     Check (-not $obs.HasExited) 'obs64.exe is still running'
   } finally { if (-not $obs.HasExited) { Stop-Process -Id $obs.Id -Force } }
@@ -89,7 +89,7 @@ function Test-FullInstallWithStoreEdition {
   try {
     $r = Run-Setup $Setup @() 'full-store'
     Check ($r.Code -eq 0) "setup succeeds (exit $($r.Code))"
-    Check ($r.Log -match 'STORE-EDITION') 'log notes the Store edition'
+    Check ($r.Log -cmatch 'STORE-EDITION:') 'log notes the Store edition'
     Check (-not (Installed $c.companion.appId)) 'standalone Fadester Companion not installed'
     foreach ($p in @(@($c.midiFadester, 'midi-fadester'), @($c.visualSidechain, 'visual-sidechain'), @($c.playlister, 'obs-playlister'))) {
       Check (Installed $p[0].appId) "$($p[0].name) has its own uninstall entry"
@@ -121,8 +121,8 @@ function Test-Downgrade {
   try {
     $r = Run-Setup $Setup @('/COMPONENTS="obs\mf"') 'downgrade'
     Check ($r.Code -eq 0) "setup succeeds (exit $($r.Code))"
-    Check ($r.Log -match 'SKIP-NEWER: Midi Fadester') 'log says the newer copy is kept'
-    Check ($r.Log -notmatch 'INSTALLED: Midi Fadester') 'the bundled Midi Fadester was not run'
+    Check ($r.Log -cmatch 'SKIP-NEWER: Midi Fadester') 'log says the newer copy is kept'
+    Check ($r.Log -cnotmatch 'INSTALLED: Midi Fadester') 'the bundled Midi Fadester was not run'
     Check ((Get-ItemProperty -LiteralPath $key).DisplayVersion -eq '9.9.9') 'installed version untouched'
   } finally { Set-ItemProperty -LiteralPath $key -Name DisplayVersion -Value $old }
 }
@@ -133,7 +133,7 @@ function Test-VjsterClash {
   try {
     $r = Run-Setup $Setup @('/COMPONENTS="streamdeck"') 'vjster-clash'
     Check ($r.Code -eq 0) "setup succeeds (exit $($r.Code))"
-    Check ($r.Log -match 'VJSTER-CLASH') 'log warns about port 48150'
+    Check ($r.Log -cmatch 'VJSTER-CLASH:') 'log warns about port 48150'
     Check (Test-Path -LiteralPath $vjsterDir) 'the standalone VJster plugin is left for the user to remove'
   } finally { Remove-Item -LiteralPath $vjsterDir -Recurse -Force -ErrorAction SilentlyContinue }
 }

@@ -822,6 +822,10 @@ export class DirectObsClient extends ObsVendorClient {
           await this.sendObsRequest("SetCurrentPreviewScene", { sceneName: next });
           this.requireControlGeneration(generation);
           this.catalog.currentPreviewScene = next;
+        } else if (program) {
+          // One scene only: OBS shows it in both Program and Preview. Record that, because a late
+          // StudioModeStateChanged may already have cleared the cached Preview.
+          this.catalog.currentPreviewScene = preview || program;
         }
       }
       this.emitDirectState();

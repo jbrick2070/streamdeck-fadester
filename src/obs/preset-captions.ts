@@ -11,7 +11,7 @@
  * (scripts/generate-ui-i18n.ts; a test keeps it current).
  */
 
-export type CaptionAction = "scene" | "fader" | "fade" | "layerKey" | "layerDial" | "playlister" | "panic" | "meter" | "filter";
+export type CaptionAction = "scene" | "fader" | "fade" | "layerKey" | "layerDial" | "playlister" | "panic" | "meter" | "tapeDeck" | "filter";
 
 /** Captions per action and context, lower case; `shipped` are the ones in profiles/layouts.json. */
 export const PRESET_CAPTIONS: Readonly<Record<CaptionAction, Readonly<Record<string, {
@@ -82,6 +82,13 @@ export const PRESET_CAPTIONS: Readonly<Record<CaptionAction, Readonly<Record<str
     resync_downbeat: { shipped: [], legacy: ["Beat 1"] },
     display_only: { shipped: [], legacy: ["VS meter", "Sidechain"] }
   },
+  tapeDeck: {
+    play_pause: { shipped: [], legacy: ["Play / pause", "Tape Deck"] },
+    cue_to_start: { shipped: [], legacy: ["Cue to start"] },
+    normal_speed: { shipped: [], legacy: ["Normal speed"] },
+    speed_up: { shipped: [], legacy: ["Speed up"] },
+    speed_down: { shipped: [], legacy: ["Speed down"] }
+  },
   // The VJ rig's OBS Filter controls, by control, operation and setting: the dial draws the setting's name,
   // an on/off key the filter's name, a set or step key the setting and its target.
   filter: {
@@ -122,6 +129,8 @@ export function captionContext(action: CaptionAction, settings: Readonly<Record<
       return text("operation") || "panic";
     case "meter":
       return text("operation") || "tap_tempo";
+    case "tapeDeck":
+      return text("operation") || "play_pause";
     case "filter": {
       // A dial by its setting; a key by its operation and (except the on/off toggle) its setting.
       if (text("control") === "dial") return `dial:${text("setting")}`;

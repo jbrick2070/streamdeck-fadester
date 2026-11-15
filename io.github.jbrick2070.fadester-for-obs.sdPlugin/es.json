@@ -63,6 +63,16 @@
       }
     }
   },
+  "io.github.jbrick2070.fadester-for-obs.tape-deck": {
+    "Name": "Platina de cinta",
+    "Tooltip": "Recorre la escala de velocidad de 25 % a 800 % (0,25x a 8x) de Tape Deck de Visual Sidechain, o reproduce/pausa, vuelve al inicio o restablece 100 % (1x).",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "Cambiar velocidad por la escala de 25 % a 800 % (0,25x a 8x)",
+        "Push": "Reproducir/pausar, ir al inicio, velocidad normal o paso"
+      }
+    }
+  },
   "io.github.jbrick2070.fadester-for-obs.fader": {
     "Name": "Fader de Midi Fadester (opcional)",
     "Tooltip": "Control avanzado opcional para un slot existente de Midi Fadester.",
@@ -404,6 +414,17 @@
     "quantizeArmed": "ARMADO",
     "quantizeNoTempo": "SIN TEMPO",
     "quantizeCancelled": "CANCELADO",
+    "tdTitle": "Platina",
+    "tdOpPlayPause": "Repr. / pausa",
+    "tdOpCue": "Ir al inicio",
+    "tdOpNormal": "Vel. normal",
+    "tdOpSpeedUp": "Más rápido",
+    "tdOpSpeedDown": "Más lento",
+    "tdNoDeck": "SIN PLATINA",
+    "tdChooseDeck": "Elige platina",
+    "tdNeedsUpdate": "Actualiza VS",
+    "tdErrorNoDeck": "Sin Tape Deck en OBS.",
+    "tdDialHint": "Pulsa: {op} · Gira: vel.",
     "pi": {
       "scopeThisKey": "esta tecla",
       "scopeThisDial": "este dial",
@@ -860,7 +881,22 @@
       "quantizeStartNow": "Ahora",
       "quantizeStartBeat": "Siguiente pulso",
       "quantizeStartBar": "Siguiente compás",
-      "quantizeHint": "Sin tempo de Visual Sidechain, se ejecuta de inmediato con el respaldo en milisegundos y muestra SIN TEMPO. Espera máxima de 1 compás (4 s); vuelve a pulsar para ejecutar ya, mantén pulsado para cancelar."
+      "quantizeHint": "Sin tempo de Visual Sidechain, se ejecuta de inmediato con el respaldo en milisegundos y muestra SIN TEMPO. Espera máxima de 1 compás (4 s); vuelve a pulsar para ejecutar ya, mantén pulsado para cancelar.",
+      "tdHeading": "Platina de cinta",
+      "tdIntro": "Controla un filtro Tape Deck de Visual Sidechain en una fuente de navegador de OBS (velocidad en vivo de 25 % a 800 % / 0,25x a 8x).",
+      "tdSourceLabel": "Fuente del deck",
+      "tdAutoFirstDeck": "Automático (primer Tape Deck)",
+      "tdOptPlayPause": "Reproducir / pausar",
+      "tdOptCue": "Ir al inicio",
+      "tdOptNormal": "Velocidad normal (100 % / 1x)",
+      "tdOptSpeedUp": "Subir velocidad (escala)",
+      "tdOptSpeedDown": "Bajar velocidad (escala)",
+      "tdNote": "En un dial, girar recorre la escala de 25 % a 800 % (0,25x a 8x). Los Tape Decks quedan fuera de Pánico y Restaurar.",
+      "tdBannerNotLoaded": "Visual Sidechain no está instalado ni cargado en OBS.",
+      "tdBannerNeedsUpdate": "Actualiza Visual Sidechain en OBS para controlar Tape Decks desde Fadester for OBS.",
+      "tdBannerNone": "Aún no hay ningún filtro Tape Deck en OBS. Añade Visual Sidechain: Tape Deck a una fuente de navegador.",
+      "tdBannerMissing": "La fuente de Tape Deck elegida no está en OBS ahora.",
+      "tdBannerSpeedFader": "Un Speed Fader de Midi Fadester controla ahora la velocidad de este deck."
     }
   }
 }

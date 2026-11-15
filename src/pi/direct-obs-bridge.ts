@@ -2,6 +2,7 @@
 import { DirectObsClient, DirectObsError } from "../obs/direct-obs-client.js";
 import { resolveAutomaticInputName } from "../obs/automatic-targets.js";
 import { LayerController, LayerSettings } from "../control/layer-controller.js";
+import type { TapeDecks } from "../control/tape-decks.js";
 import { READY_LAYOUTS, readyLayoutName } from "../types/layouts.js";
 import { LocalText, errorLocalText, errorText, ownText, wordText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
 import { statusCellReason, statusSentence } from "../../packages/streamdeck-fadester-shared/src/status-text.js";
@@ -140,7 +141,8 @@ export class DirectObsPropertyInspectorBridge {
   public constructor(
     private readonly client: DirectObsClient,
     private readonly transport: DirectPiTransport,
-    private readonly layers?: LayerController
+    private readonly layers?: LayerController,
+    private readonly tapeDecks?: TapeDecks
   ) {
     client.on("statusChanged", () => this.broadcast());
     client.on("directStateChanged", () => this.broadcast());
@@ -152,6 +154,7 @@ export class DirectObsPropertyInspectorBridge {
       this.broadcast();
     });
     layers?.on("changed", () => this.broadcast());
+    tapeDecks?.on("changed", () => this.broadcast());
   }
 
   public broadcast(): void {
@@ -187,6 +190,7 @@ export class DirectObsPropertyInspectorBridge {
       filterEpoch: this.filterEpoch,
       layerScenes: Object.fromEntries(Object.entries(this.layers?.getCatalog() ?? {}).map(([name, scene]) =>
         [name, { ...scene, error: wordText(scene.error, translate) }])),
+      ...(this.tapeDecks ? { tapeDecks: this.tapeDecks.getInspectorState() } : {}),
       openDeckStarter: this.transport.getOpenDeckStarter?.(),
       layouts: READY_LAYOUTS.filter((layout) => layout.deviceType === this.transport.getDeviceType?.())
         .map((layout) => ({ ...layout, name: readyLayoutName(layout) })),
@@ -201,6 +205,7 @@ export class DirectObsPropertyInspectorBridge {
       case "directPiReady":
         this.broadcast();
         void this.client.refreshNativeTbar?.(); // an opened inspector reads OBS's slider afresh
+        void this.tapeDecks?.refreshDecks();
         return true;
       case "directUpdateGlobalSettings":
         await this.queueConnection(() => this.updateGlobalSettings(msg));
@@ -210,7 +215,10 @@ export class DirectObsPropertyInspectorBridge {
         return true;
       case "directRefreshCatalog":
         if (this.client.isConnected()) {
-          await this.client.refreshCatalog();
+          await Promise.all([
+            this.client.refreshCatalog(),
+            this.tapeDecks?.refreshDecks()
+          ]);
         }
         this.broadcast();
         return true;

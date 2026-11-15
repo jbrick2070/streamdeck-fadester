@@ -115,6 +115,16 @@ function drawnTexts(): Array<{ key: StringKey; params?: TextParams; boxes: Box[]
   }
   add("infobarVsActive", [B.infobarStatus], { bpm: 200, beat: 4 });
   add("infobarVsLocked", [B.infobarStatus], { bpm: 200, beat: 4 });
+  // Tape Deck (P1-6): key and dial texts.
+  for (const key of ["tdTitle", "tdOpPlayPause", "tdOpCue", "tdOpNormal", "tdOpSpeedUp", "tdOpSpeedDown", "tdNoDeck"] as const) {
+    add(key, [B.keyTitle, B.dialTitle]);
+  }
+  for (const key of ["tdChooseDeck", "tdNeedsUpdate", "tdErrorNoDeck"] as const) {
+    add(key, [B.keySub, B.dialHint]);
+  }
+  for (const opKey of ["tdOpPlayPause", "tdOpCue", "tdOpNormal", "tdOpSpeedUp", "tdOpSpeedDown"] as const) {
+    add("tdDialHint", [B.dialHint], { op: t(opKey) });
+  }
   // The OBS Filter controls: key titles and subtitles, the dial's title, value line and press hint.
   const settingNames = [t("filterSettingEffectMix"), t("filterSettingReactivity"), t("filterSettingOpacity"), t("filterSettingModAmount", { n: 8 })];
   for (const key of ["filterSettingEffectMix", "filterSettingReactivity", "filterSettingOpacity", "filterSettingNone"] as const) add(key, [B.keyTitle, B.filterHead]);

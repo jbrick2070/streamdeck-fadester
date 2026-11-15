@@ -1,0 +1,114 @@
+<!-- SPDX-License-Identifier: GPL-2.0-or-later -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Fadester for OBS — Tape Deck</title>
+  <link rel="stylesheet" href="pi.css" />
+</head>
+<body>
+  <h3><span data-i18n="tdHeading">Tape Deck</span> <span class="scope" data-i18n="scopeThisControl">this control</span></h3>
+  <p class="muted" data-i18n="tdIntro">Drives a Visual Sidechain Tape Deck filter on an OBS Browser Source (25% to 800% / 0.25x to 8x live speed).</p>
+  <div id="td-status" class="status-banner status-info" style="display:none;"></div>
+  <div class="row">
+    <label for="td-deck" data-i18n="tdSourceLabel">Deck source</label>
+    <select id="td-deck"></select>
+    <button id="td-refresh" class="btn secondary" type="button" data-i18n="refresh">Refresh</button>
+  </div>
+  <div class="row">
+    <label for="td-operation" data-i18n="whenPressed">When pressed</label>
+    <select id="td-operation">
+      <option value="play_pause" data-i18n="tdOptPlayPause">Play / pause</option>
+      <option value="cue_to_start" data-i18n="tdOptCue">Cue to start</option>
+      <option value="normal_speed" data-i18n="tdOptNormal">Normal speed (100% / 1x)</option>
+      <option value="speed_up" data-i18n="tdOptSpeedUp">Speed up (ladder)</option>
+      <option value="speed_down" data-i18n="tdOptSpeedDown">Speed down (ladder)</option>
+    </select>
+  </div>
+  <p class="muted" data-i18n="tdNote">On a dial, turning steps along the 25% to 800% (0.25x to 8x) speed ladder. Tape Decks stay outside Visual Sidechain Panic and Restore.</p>
+  <div class="row">
+    <label for="td-label" data-i18n="label">Label</label>
+    <input id="td-label" type="text" maxlength="14" placeholder="Automatic (leave blank)" data-i18n-placeholder="placeholderAutomaticBlank" />
+  </div>
+  <div id="direct-shared-sections"></div>
+  <script src="i18n.js"></script>
+  <script src="preset-captions.js"></script>
+  <script src="direct-pi.js"></script>
+  <script>
+    window.initDirectObsPropertyInspector(function (settings, save, state) {
+      const T = window.FadesterI18n.t;
+      const deckSelect = document.getElementById("td-deck");
+      const operation = document.getElementById("td-operation");
+      const label = document.getElementById("td-label");
+      const banner = document.getElementById("td-status");
+      const connected = Boolean(state && state.status && state.status.kind === "connected");
+      const tdState = state && state.tapeDecks ? state.tapeDecks : { availability: "unknown", deckCommandUnsupported: false, decks: [] };
+      const allDecks = Array.isArray(tdState.decks) ? tdState.decks : [];
+      const ownerDecks = allDecks.filter(function (entry) {
+        return entry.role === "owner" || entry.role === "pending";
+      });
+      const selectedDeck = typeof settings.deck === "string" ? settings.deck.trim() : "";
+      const selectedOp = ["play_pause", "cue_to_start", "normal_speed", "speed_up", "speed_down"].indexOf(settings.operation) !== -1
+        ? settings.operation : "play_pause";
+
+      const generatedLabel = function () {
+        return window.FadesterPresetCaptions.isGenerated("tapeDeck", { operation: selectedOp, labelOverride: settings.labelOverride });
+      };
+
+      const seen = {};
+      const items = [];
+      ownerDecks.forEach(function (entry) {
+        if (entry.source && !seen[entry.source]) {
+          seen[entry.source] = true;
+          items.push({ value: entry.source, text: entry.source });
+        }
+      });
+      window.directObsFillSelect(deckSelect, items, selectedDeck, T("tdAutoFirstDeck"));
+
+      if (operation && document.activeElement !== operation) operation.value = selectedOp;
+      if (label && document.activeElement !== label) label.value = generatedLabel() ? "" : settings.labelOverride || "";
+
+      if (banner) {
+        let text = "";
+        let kind = "status-info";
+        const matched = selectedDeck
+          ? ownerDecks.find(function (entry) { return entry.source === selectedDeck; })
+          : ownerDecks[0];
+        if (connected && tdState.availability === "not_loaded") {
+          text = T("tdBannerNotLoaded");
+          kind = "status-warn";
+        } else if (connected && tdState.deckCommandUnsupported) {
+          text = T("tdBannerNeedsUpdate");
+          kind = "status-warn";
+        } else if (connected && tdState.availability === "loaded" && ownerDecks.length === 0) {
+          text = T("tdBannerNone");
+          kind = "status-info";
+        } else if (connected && tdState.availability === "loaded" && selectedDeck && !matched) {
+          text = T("tdBannerMissing");
+          kind = "status-warn";
+        } else if (matched && matched.speedFaderLive) {
+          text = T("tdBannerSpeedFader");
+          kind = "status-info";
+        }
+        banner.textContent = text;
+        banner.className = "status-banner " + kind;
+        banner.style.display = text ? "block" : "none";
+      }
+
+      if (deckSelect) deckSelect.onchange = function () {
+        const update = { deck: deckSelect.value };
+        if (deckSelect.value !== selectedDeck && generatedLabel()) update.labelOverride = "";
+        save(update);
+      };
+      if (operation) operation.onchange = function () {
+        const update = { operation: operation.value };
+        if (operation.value !== selectedOp && generatedLabel()) update.labelOverride = "";
+        save(update);
+      };
+      if (label) label.onchange = function () { save({ labelOverride: label.value.trim() }); };
+      const refresh = document.getElementById("td-refresh");
+      if (refresh) refresh.onclick = function () { window.directObsRefresh(); };
+    });
+  </script>
+</body>
+</html>

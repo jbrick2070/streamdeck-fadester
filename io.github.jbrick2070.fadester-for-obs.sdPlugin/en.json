@@ -63,6 +63,16 @@
       }
     }
   },
+  "io.github.jbrick2070.fadester-for-obs.tape-deck": {
+    "Name": "Tape Deck",
+    "Tooltip": "Ride a Visual Sidechain Tape Deck along its 25% to 800% (0.25x to 8x) speed ladder, or play/pause, cue to start, reset to 100% (1x), or step speed.",
+    "Encoder": {
+      "TriggerDescription": {
+        "Rotate": "Ride speed along the 25% to 800% (0.25x to 8x) ladder",
+        "Push": "Play/pause, cue to start, normal speed, or step speed"
+      }
+    }
+  },
   "io.github.jbrick2070.fadester-for-obs.fader": {
     "Name": "Midi Fadester Fader (optional)",
     "Tooltip": "Optional enhanced control for an existing Midi Fadester slot.",
@@ -404,6 +414,17 @@
     "quantizeArmed": "ARMED",
     "quantizeNoTempo": "NO TEMPO",
     "quantizeCancelled": "CANCELLED",
+    "tdTitle": "Tape Deck",
+    "tdOpPlayPause": "Play / pause",
+    "tdOpCue": "Cue to start",
+    "tdOpNormal": "Normal speed",
+    "tdOpSpeedUp": "Speed up",
+    "tdOpSpeedDown": "Speed down",
+    "tdNoDeck": "NO DECK",
+    "tdChooseDeck": "Choose a deck",
+    "tdNeedsUpdate": "Update Visual Sidechain",
+    "tdErrorNoDeck": "No Tape Deck in OBS.",
+    "tdDialHint": "Push: {op} · Turn: speed",
     "pi": {
       "scopeThisKey": "this key",
       "scopeThisDial": "this dial",
@@ -860,7 +881,22 @@
       "quantizeStartNow": "Now",
       "quantizeStartBeat": "Next beat",
       "quantizeStartBar": "Next bar",
-      "quantizeHint": "Without Visual Sidechain tempo, fires immediately with the millisecond fallback and shows NO TEMPO. Max wait 1 bar (4 s); press again to fire now, hold to cancel."
+      "quantizeHint": "Without Visual Sidechain tempo, fires immediately with the millisecond fallback and shows NO TEMPO. Max wait 1 bar (4 s); press again to fire now, hold to cancel.",
+      "tdHeading": "Tape Deck",
+      "tdIntro": "Drives a Visual Sidechain Tape Deck filter on an OBS Browser Source (25% to 800% / 0.25x to 8x live speed).",
+      "tdSourceLabel": "Deck source",
+      "tdAutoFirstDeck": "Automatic (first Tape Deck)",
+      "tdOptPlayPause": "Play / pause",
+      "tdOptCue": "Cue to start",
+      "tdOptNormal": "Normal speed (100% / 1x)",
+      "tdOptSpeedUp": "Speed up (ladder)",
+      "tdOptSpeedDown": "Speed down (ladder)",
+      "tdNote": "On a dial, turning steps along the 25% to 800% (0.25x to 8x) speed ladder. Tape Decks stay outside Visual Sidechain Panic and Restore.",
+      "tdBannerNotLoaded": "Visual Sidechain is not installed or loaded in OBS.",
+      "tdBannerNeedsUpdate": "Update Visual Sidechain in OBS to control Tape Decks from Fadester for OBS.",
+      "tdBannerNone": "No Tape Deck filter found in OBS yet. Add Visual Sidechain: Tape Deck to a Browser Source.",
+      "tdBannerMissing": "The chosen Tape Deck source is not in OBS now.",
+      "tdBannerSpeedFader": "A Midi Fadester Speed Fader currently drives this deck's speed."
     }
   }
 }

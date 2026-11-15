@@ -93,6 +93,30 @@ Transport-level errors (unknown `vendorName` or `requestType`) use obs-websocket
 Because `obs-websocket-api.h`'s `obs_websocket_request_callback_function` (`void (*)(obs_data_t *request_data, obs_data_t *response_data, void *priv_data)`) returns `void` and cannot set the outer `requestStatus`, vendor-level validation errors return `{ "error": "<sentence>", "comment": "<sentence>" }` inside `responseData`, with the sentence giving the fix — for example:
 `"Slot 'fader_9' does not exist. Valid slots: crossfader, fader_1 .. fader_8, master, fx_1 .. fx_8."`
 
+## Visual Sidechain vendor API (`visual-sidechain`)
+
+Vendor name: `visual-sidechain`. Transport: obs-websocket 5 `CallVendorRequest` and vendor events.
+`api_version` stays `1`; new fields are additive so older surfaces keep working.
+
+### Requests (`visual-sidechain`)
+
+| requestType | requestData | responseData | Notes |
+|---|---|---|---|
+| `get_signals` | none | `{ success: true, version, api_version: 1, level, sub_bass, bass, mid, high, kick, snare, beat, beat_phase, spectral_centroid, spectral_flux, estimated_bpm, bpm, audio_present, beat_confidence, spectrum: [{ band, value }] }` | Snapshot of the primary audio analyzer's normalized `0.0..1.0` envelopes, `estimated_bpm` (`bpm` alias), 32-band spectrum, `audio_present` (`bool`), and `beat_confidence` (`0.0..1.0`). |
+| `get_decks` | none | `{ success: true, decks: [...] }` | Read-only snapshot of active Tape Deck Browser Sources as last reported by their pages. |
+
+### Events (`visual-sidechain`)
+
+| eventType | eventData | When |
+|---|---|---|
+| `signals_changed` | Same signal fields as `get_signals` (without `success`) | Coalesced to at most 30 per second when any signal moves by more than `1e-3` or `audio_present` changes. |
+
+### Silence hold and beat confidence rules
+
+- Before the first above-gate audio frame, or after `2.0 s` of continuous silence (below the noise gate) or audio starvation (`> 50 ms` with no audio callbacks, `VS_STARVATION_SEC`), Visual Sidechain sets `audio_present: false`, freezes `beat` (`beat_phase`) at `0.0`, and reports `beat_confidence: 0.0`.
+- Once the `2.0 s` silence hold takes effect, every normalized `0.0..1.0` envelope signal sits at `0.0` while `estimated_bpm` (`bpm`) retains its last/default BPM (`120.0`) with `audio_present: false` (consumers must gate tempo displays and sync on `audio_present` / `beat_confidence`), so the `1e-3` change gate suppresses further `signals_changed` (and in-process `visual_sidechain_signals`) emissions until above-gate audio returns.
+- `beat_confidence` (`0.0..1.0`) is computed from inter-onset interval regularity across the eight-interval window and decays when expected beats go missing (for example during a kickless breakdown).
+
 ## In-process bridge (plugin to plugin, inside OBS)
 
 Plugins in the same OBS do not go through obs-websocket. They use `obs_get_proc_handler()` and
@@ -111,8 +135,8 @@ Visual Sidechain registers:
 
 | proc or signal | calldata in | calldata out |
 |---|---|---|
-| proc `visual_sidechain_get_signals` | none | `float level, bass, mid, high, kick, snare, beat_phase, bpm`, `bool ok` |
-| signal `visual_sidechain_signals` | none | `float` fields as above, emitted at most 30 times per second |
+| proc `visual_sidechain_get_signals` | none | `float level, bass, mid, high, kick, snare, beat_phase, bpm, beat_confidence`, `bool audio_present`, `bool ok` |
+| signal `visual_sidechain_signals` | none | `float level, bass, mid, high, kick, snare, beat_phase, bpm, beat_confidence`, `bool audio_present`, emitted at most 30 times per second (suppressed after the `2.0 s` silence hold until audio returns) |
 
 Rules for the bridge:
 

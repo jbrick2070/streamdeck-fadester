@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ObsFadeKeyInstanceController } from "../src/actions/obs-fade-key.js";
 import { ObsFaderDialInstanceController } from "../src/actions/obs-fader-dial.js";
 import { DirectObsClient } from "../src/obs/direct-obs-client.js";
-import { MIX_NAMESPACE, WholeMixClient } from "../src/obs/whole-mix.js";
+import { MIX_NAMESPACE, WholeMixClient, mixProblem } from "../src/obs/whole-mix.js";
 import { FakeObsServer } from "./helpers/fake-obs-server.js";
 
 describe("optional whole mixer controls", () => {
@@ -100,6 +100,132 @@ describe("optional whole mixer controls", () => {
       mix.reset();
       reply(last.id);
       expect(mix.state.availability).toBe("offline");
+    } finally {
+      stop();
+      vi.useRealTimers();
+    }
+  });
+
+  it("pins the first provider.id for the session and refuses to act if a second provider answers", async () => {
+    const send = vi.fn(async (_event: Record<string, unknown>) => {});
+    const mix = new WholeMixClient(() => true, send, () => {});
+    const stop = mix.observe();
+    const providerA = { id: "11111111-1111-4111-8111-111111111111", name: "Fadester Companion", version: "1.0.0" };
+    const providerB = { id: "22222222-2222-4222-8222-222222222222", name: "Fadester Companion", version: "1.0.0" };
+    const reply = (id: unknown, extra: Record<string, unknown> = {}) =>
+      mix.receive({
+        id,
+        namespace: MIX_NAMESPACE,
+        op: "reply",
+        ok: true,
+        enabled: true,
+        db: -6,
+        message: "All mixer inputs: -6.0 dB.",
+        ...extra
+      });
+    try {
+      const status = send.mock.calls[0][0];
+      // Malformed provider metadata is ignored cleanly without pinning.
+      reply(status.id, { provider: { id: "", name: "Fadester Companion", version: "1.0.0" } });
+      expect(mix.state.availability).toBe("offline");
+
+      // Provider A answers first and is pinned for the session; a second reply to the same request ID from Provider B latches conflict.
+      reply(status.id, { provider: providerA });
+      expect(mix.state).toEqual({ availability: "ready", db: -6 });
+      reply(status.id, { provider: providerB, db: -9 });
+      expect(mix.state).toEqual({ availability: "conflict", db: null });
+      expect(mixProblem(mix.state)).toBe("Two mix providers are answering");
+
+      const callsBefore = send.mock.calls.length;
+      await expect(mix.command("mix.down", 1)).rejects.toThrow("Two mix providers are answering");
+      expect(send.mock.calls.length).toBe(callsBefore);
+
+      // Even if Provider A answers again during the same session, conflict stays latched until session reset.
+      reply(status.id, { provider: providerA, db: -3 });
+      expect(mix.state).toEqual({ availability: "conflict", db: null });
+
+      // Resetting the session clears the pin; also verify conflict when Provider B answers an in-flight command first.
+      mix.reset();
+      expect(mix.state.availability).toBe("offline");
+      mix.refresh();
+      const status2 = send.mock.calls.at(-1)![0];
+      reply(status2.id, { provider: providerA, db: 0 });
+      expect(mix.state).toEqual({ availability: "ready", db: 0 });
+
+      const inFlight = mix.command("mix.fadeOut");
+      const cmdReq = send.mock.calls.at(-1)![0];
+      const rejected = expect(inFlight).rejects.toThrow("Two mix providers are answering");
+      reply(cmdReq.id, { provider: providerB, db: null });
+      await rejected;
+      expect(mix.state).toEqual({ availability: "conflict", db: null });
+    } finally {
+      stop();
+    }
+  });
+
+  it("recovers cleanly when a sole provider restarts or when a duplicate provider stops answering", async () => {
+    vi.useFakeTimers();
+    const send = vi.fn(async (_event: Record<string, unknown>) => {});
+    const mix = new WholeMixClient(() => true, send, () => {});
+    const stop = mix.observe();
+    const providerA = { id: "11111111-1111-4111-8111-111111111111", name: "Fadester Companion", version: "1.0.0" };
+    const providerB = { id: "22222222-2222-4222-8222-222222222222", name: "Fadester Mix Host", version: "1.0.0" };
+    const reply = (id: unknown, extra: Record<string, unknown> = {}) =>
+      mix.receive({
+        id,
+        namespace: MIX_NAMESPACE,
+        op: "reply",
+        ok: true,
+        enabled: true,
+        db: -6,
+        message: "All mixer inputs: -6.0 dB.",
+        ...extra
+      });
+    try {
+      // 1. Provider A pins initially.
+      reply(send.mock.calls[0][0].id, { provider: providerA });
+      expect(mix.state).toEqual({ availability: "ready", db: -6 });
+
+      // 2. Provider A stops and Provider B starts immediately (before timeout): a read-only mix.status probe hears ONLY Provider B across 250 ms and re-pins without false conflict.
+      mix.refresh();
+      const replaceStatus = send.mock.calls.at(-1)![0];
+      reply(replaceStatus.id, { provider: providerB, db: -3 });
+      await vi.advanceTimersByTimeAsync(260);
+      expect(mix.state).toEqual({ availability: "ready", db: -3 });
+      const downCmd = mix.command("mix.down", 1);
+      reply(send.mock.calls.at(-1)![0].id, { provider: providerB, db: -6 });
+      await downCmd;
+      expect(mix.state).toEqual({ availability: "ready", db: -6 });
+
+      // 3. Now BOTH Provider A and Provider B answer a single mix.status -> latches conflict.
+      mix.refresh();
+      const dualStatus = send.mock.calls.at(-1)![0];
+      reply(dualStatus.id, { provider: providerA, db: -6 });
+      reply(dualStatus.id, { provider: providerB, db: -6 });
+      expect(mix.state).toEqual({ availability: "conflict", db: null });
+
+      // 4. While both still answer, conflict stays latched.
+      mix.refresh();
+      const stillDual = send.mock.calls.at(-1)![0];
+      reply(stillDual.id, { provider: providerA, db: -6 });
+      reply(stillDual.id, { provider: providerB, db: -6 });
+      await vi.advanceTimersByTimeAsync(260);
+      expect(mix.state).toEqual({ availability: "conflict", db: null });
+
+      // 5. Operator stops Provider B: next mix.status hears only Provider A across 250 ms and recovers to ready.
+      mix.refresh();
+      const singleAgain = send.mock.calls.at(-1)![0];
+      reply(singleAgain.id, { provider: providerA, db: -9 });
+      await vi.advanceTimersByTimeAsync(260);
+      expect(mix.state).toEqual({ availability: "ready", db: -9 });
+
+      // 6. When no provider answers mix.status within 4000 ms, the pin clears and state returns to offline.
+      mix.refresh();
+      await vi.advanceTimersByTimeAsync(4100);
+      expect(mix.state).toEqual({ availability: "offline", db: null });
+      mix.refresh();
+      reply(send.mock.calls.at(-1)![0].id, { provider: providerB, db: 0 });
+      expect(mix.state).toEqual({ availability: "ready", db: 0 });
     } finally {
       stop();
       vi.useRealTimers();

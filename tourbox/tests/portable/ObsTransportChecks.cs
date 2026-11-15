@@ -145,6 +145,21 @@ internal static class ObsTransportChecks
                         break;
                     case "GetReplayBufferStatus":
                         await Reply(socket, request, new(), stop, code: 604);
+                        await Send(socket, new() { ["op"] = 5, ["d"] = new JsonObject { ["eventType"] = "CustomEvent", ["eventIntent"] = 1,
+                            ["eventData"] = new JsonObject { ["namespace"] = MixProtocolServer.Scope, ["id"] = inputId.ToString("D"),
+                                ["op"] = "mix.status", ["sentAtMs"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() } } }, stop);
+                        break;
+                    case "BroadcastCustomEvent":
+                        var eventData = request["requestData"]?["eventData"]?.AsObject();
+                        var prov = eventData?["provider"]?.AsObject();
+                        Check((string?)eventData?["namespace"] == MixProtocolServer.Scope && (string?)eventData?["op"] == "reply" &&
+                            (string?)eventData?["id"] == inputId.ToString("D") && prov is not null &&
+                            Guid.TryParse((string?)prov["id"], out var pid) && pid != Guid.Empty &&
+                            (string?)prov["name"] == "Fadester Companion" && !string.IsNullOrWhiteSpace((string?)prov["version"]),
+                            "MixProtocolServer reply missing provider { id, name, version }");
+                        await Send(socket, new() { ["op"] = 5, ["d"] = new JsonObject { ["eventType"] = "CustomEvent", ["eventIntent"] = 1,
+                            ["eventData"] = eventData!.DeepClone() } }, stop);
+                        await Reply(socket, request, new(), stop);
                         break;
                     case "GetStudioModeEnabled":
                         // Deliberately leave one correlated request unresolved before disconnect.
@@ -189,8 +204,16 @@ internal static class ObsTransportChecks
                 "transition events lost or changed, or one without a text name was passed on");
             await desk.Dispatch("undo").WaitAsync(stop);
             Check(level == -6 && writes == 2, "production dispatcher/undo did not complete its round trip");
+            var mixReply = new TaskCompletionSource<JsonObject>(TaskCreationOptions.RunContinuationsAsynchronously);
+            obs.CustomEvent += data => { if ((string?)data["namespace"] == MixProtocolServer.Scope && (string?)data["op"] == "reply") mixReply.TrySetResult(data); };
+            await using var mixProtocol = new MixProtocolServer(obs, desk);
             try { await obs.Call("GetReplayBufferStatus"); throw new InvalidOperationException("Refused request was accepted."); }
             catch (ObsError e) when (e.Code == 604) { }
+            var observedMixReply = await mixReply.Task.WaitAsync(stop);
+            Check((string?)observedMixReply["provider"]?["id"] == MixProtocolServer.DefaultProviderId &&
+                (string?)observedMixReply["provider"]?["name"] == "Fadester Companion" &&
+                !string.IsNullOrWhiteSpace((string?)observedMixReply["provider"]?["version"]),
+                "MixProtocolServer broadcast reply did not carry provider identity");
             var pending = obs.Call("GetStudioModeEnabled");
             var closing = obs.Call("GetStreamStatus");
             foreach (var request in new[] { pending, closing })

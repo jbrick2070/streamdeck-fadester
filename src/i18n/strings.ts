@@ -18,6 +18,7 @@ const PLUGIN_EN = {
   mixAll: "All OBS mixer inputs",
   mixDisabled: "Whole mix is off",
   mixOffline: "Companion offline",
+  mixConflict: "Two mix providers are answering",
   mixFadeOut: "Fade out mix",
   mixRestore: "Restore mix",
   mixDb: "{db} dB",

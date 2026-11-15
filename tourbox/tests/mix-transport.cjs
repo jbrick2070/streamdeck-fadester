@@ -34,8 +34,10 @@ async function wait(test){for(let i=0;i<150;i++){if(error)throw error;if(test())
  const p2=launch();let err2='';p2.stderr.on('data',s=>err2+=s);await wait(()=>p2.exitCode!==null);assert.notEqual(p2.exitCode,0);assert.match(err2,/already running/i);
  function put(op,fields={}){const e={namespace:ns,id:crypto.randomUUID(),sentAtMs:Date.now(),op,...fields};ws.send(JSON.stringify({op:5,d:{eventType:'CustomEvent',eventData:e}}));return e}
  async function answer(e){await wait(()=>replies.some(r=>r.id===e.id));return replies.find(r=>r.id===e.id)}
- assert.equal((await answer(put('mix.status'))).enabled,true);assert.equal(writes,0);
- const stale=put('mix.down',{sentAtMs:Date.now()-20000});const invalid=await answer(put('mix.down',{steps:-1}));assert.equal(invalid.ok,false);
+ const statusReply=await answer(put('mix.status'));assert.equal(statusReply.enabled,true);assert.equal(writes,0);
+ assert.equal(typeof statusReply.provider?.id,'string');assert(statusReply.provider.id.length>0);
+ assert.equal(statusReply.provider.name,'Fadester Companion');assert.equal(typeof statusReply.provider.version,'string');assert(statusReply.provider.version.length>0);
+ const stale=put('mix.down',{sentAtMs:Date.now()-20000});const invalid=await answer(put('mix.down',{steps:-1}));assert.equal(invalid.ok,false);assert.equal(invalid.provider?.id,statusReply.provider.id);
  const e=put('mix.down',{steps:2});const done=await answer(e);assert(done.ok);assert(Math.abs(done.db+6)<1e-6);assert.equal(writes,1);
  put('mix.down',e);const restored=await answer(put('mix.restore',{client:'midi-fadester'}));assert(restored.ok);assert.equal(level,0.25);
  await wait(()=>vendorReceipts.length===1);assert.deepEqual(vendorReceipts[0],restored);

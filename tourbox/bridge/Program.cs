@@ -215,6 +215,7 @@ internal static class Program
             if (Console.IsInputRedirected) _ = Task.Run(async () => { try { while (!stop.IsCancellationRequested && await Console.In.ReadLineAsync() is { } line) Command(line); if (panelOwned && !stop.IsCancellationRequested) { Console.WriteLine("The control panel closed: stopping."); stop.Cancel(); } } catch (IOException) { } });
             else _ = Task.Run(() => { try { while (!stop.IsCancellationRequested && Console.ReadLine() is { } line) Command(line); } catch (IOException) { } });
             string? lastError = null;
+            string providerId = BridgeConfig.ResolveProviderId(cfg.MixStateDirectory);
             // A duck, a cut's owed transition and a part-thrown T-bar outlive a dropped connection.
             DeskActions.Memory? memory = null;
             // Console.WriteLine is queued for the whole run (ConsoleQueue), so the trace never holds up a request or a reply.
@@ -233,7 +234,7 @@ internal static class Program
                     obs.InputVolumeChanged += desk.OnVolumeChanged;
                     obs.InputLevelChangedById += desk.OnMixInputLevelChanged;
                     desk.StartMixMonitor();
-                    var protocol = new MixProtocolServer(obs,desk);
+                    var protocol = new MixProtocolServer(obs, desk, providerId: providerId);
                     Console.WriteLine($"Connected to OBS at {cfg.Host}:{cfg.Port}."); // the panel reads this line for its status line
                     if (trace != null) await trace.StartAsync();
                     // Before any input is accepted: finish what the last connection left behind.

@@ -286,7 +286,7 @@ internal static class MacDevelopmentHost
             if (!readOnly && !noMixProvider)
             {
                 desk.StartMixMonitor();
-                protocol = new MixProtocolServer(obs, desk);
+                protocol = new MixProtocolServer(obs, desk, providerId: BridgeConfig.ResolveProviderId(config.MixStateDirectory));
             }
             WriteControl(Control.Ready, generation);
             Log(readOnly ? "Read-only host ready; no OBS writes, native moves, mix provider or shortcut registration."

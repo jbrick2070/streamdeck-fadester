@@ -1,0 +1,52 @@
+{
+  "schema": 1,
+  "comment": "Pinned inputs for the Fadester Suite Setup. Every download is verified against its SHA-256 before anything is built; a mismatch stops the build. To ship a newer plugin, publish its own release first, then update its version, url and sha256 here.",
+  "suiteAppId": "3BC61CBD-4EBC-4EF2-B456-6E6DCF21F3F9",
+  "components": {
+    "midiFadester": {
+      "name": "Midi Fadester",
+      "version": "0.6.0",
+      "appId": "8F4A92C1-5B3E-4D17-9A62-3C8E71D40F59",
+      "file": "midi-fadester-0.6.0-windows-x64-Installer.exe",
+      "url": "https://github.com/jbrick2070/midi-fadester/releases/download/0.6.0/midi-fadester-0.6.0-windows-x64-Installer.exe",
+      "sha256": "00fa6d8ed364665a5fb6ac71070cad3cbecdd2a1c8ce5ca57e24707ec4c79f26"
+    },
+    "visualSidechain": {
+      "name": "Visual Sidechain",
+      "version": "0.6.0",
+      "appId": "7C4A92E8-4B19-4F03-9A56-3D8E21B05C7F",
+      "file": "visual-sidechain-0.6.0-windows-x64-Installer.exe",
+      "url": "https://github.com/jbrick2070/visual-sidechain/releases/download/0.6.0/visual-sidechain-0.6.0-windows-x64-Installer.exe",
+      "sha256": "d4dbe8388280564c929c30b8e3251b273a36659bfd02697bbbd287b44635c2c0"
+    },
+    "playlister": {
+      "name": "Playlister",
+      "version": "0.5.0",
+      "appId": "E1214DB1-63FD-4CB4-84CE-825EF8D2C21D",
+      "file": "obs-playlister-0.5.0-windows-x64-Installer.exe",
+      "url": "https://github.com/jbrick2070/obs-playlister/releases/download/0.5.0/obs-playlister-0.5.0-windows-x64-Installer.exe",
+      "sha256": "df85dde0af7f2bb5f705f6221e79be3c63b6a36955502564dbf41ef40c871e0d"
+    },
+    "fadesterForObs": {
+      "name": "Fadester for OBS (Stream Deck and OpenDeck, includes VJster)",
+      "version": "0.11.0",
+      "file": "io.github.jbrick2070.fadester-for-obs.streamDeckPlugin",
+      "url": "https://github.com/jbrick2070/streamdeck-fadester/releases/download/v0.11.0/io.github.jbrick2070.fadester-for-obs.streamDeckPlugin",
+      "sha256": "5da881bf247f1abf458e6e40e75d2d11024040d873b466fb3a23232ece8e44ff"
+    },
+    "vjsterExtension": {
+      "name": "VJster Chrome extension",
+      "version": "0.1.3",
+      "file": "vjster-chrome-extension-0.1.3.zip",
+      "url": "https://github.com/jbrick2070/streamdeck-fadester/releases/download/v0.11.0/vjster-chrome-extension-0.1.3.zip",
+      "sha256": "1f4ff40395e125d7f7b9a5869fe6e58a21fa7fc96052592e78c9f6c88bfaa9e4"
+    },
+    "companion": {
+      "name": "Fadester Companion",
+      "version": "0.1.2",
+      "appId": "18EAD777-F9B7-42AB-BB49-482FB1F46695",
+      "storePackageFamilyPrefix": "Fluxxuuss.FadesterCompanion_",
+      "comment": "Built from this repository by tourbox/build.ps1 (a finished build has build-complete.txt); not downloaded."
+    }
+  }
+}

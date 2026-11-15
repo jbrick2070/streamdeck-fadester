@@ -1,0 +1,130 @@
+name: Fadester Suite Setup (Windows)
+
+# Builds the combined Windows installer and tests it end to end on throwaway runners. Runs manually, and on pull
+# requests that change the installer. It never runs on pushes to main and never publishes a release.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - installer/**
+      - .github/workflows/suite-installer.yml
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build suite setup and guard-test variants
+    runs-on: windows-2025
+    timeout-minutes: 30
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      DOTNET_NOLOGO: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          dotnet-version: 8.0.x
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          architecture: x64
+          package-manager-cache: false
+      - name: Make sure Inno Setup 6 is available
+        shell: pwsh
+        run: |
+          if (-not (Get-Command iscc -ErrorAction SilentlyContinue) -and -not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup -y --no-progress
+          }
+      - name: Build Fadester Companion from this commit
+        shell: pwsh
+        run: |
+          npm ci
+          npm run build:vjster-page
+          $out = Join-Path $env:RUNNER_TEMP 'companion'
+          & .\tourbox\build.ps1 -OutDir $out
+          $build = (Get-ChildItem -LiteralPath $out -Directory -Filter 'build-*' | Select-Object -First 1).FullName
+          "COMPANION_BUILD=$build\Fadester for TourBox" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Build the suite setup (pinned inputs verified by SHA-256)
+        shell: pwsh
+        run: |
+          & .\installer\build-suite.ps1 -CompanionBuild $env:COMPANION_BUILD -OutDir dist\suite
+          foreach ($g in 'OBS', 'STORE', 'DOWNGRADE', 'VJSTER') {
+            & .\installer\build-suite.ps1 -CompanionBuild $env:COMPANION_BUILD -OutDir "dist\broken-$g" -Define "BREAK_$($g)_GUARD"
+          }
+          Get-ChildItem dist -Recurse -Filter '*.exe' | Where-Object { $_.FullName -notmatch '\\stage\\' } | ForEach-Object { $_.FullName }
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: Fadester-Suite-Setup-Windows-x64
+          path: |
+            dist/suite/*.exe
+            dist/suite/*.sha256
+          retention-days: 14
+          if-no-files-found: error
+          compression-level: 0
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: suite-guard-test-variants
+          path: dist/broken-*/Fadester-Suite-Setup-*.exe
+          retention-days: 3
+          if-no-files-found: error
+          compression-level: 0
+
+  test:
+    name: Install, guard and uninstall tests (fresh runner)
+    needs: build
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: Fadester-Suite-Setup-Windows-x64
+          path: setup
+      - name: Run end-to-end tests
+        shell: pwsh
+        run: |
+          $setup = (Get-ChildItem setup -Filter 'Fadester-Suite-Setup-*.exe' | Select-Object -First 1).FullName
+          & .\installer\tests\Test-Suite.ps1 -Setup $setup
+      - name: Keep setup logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: suite-test-logs
+          path: ${{ runner.temp }}/suite-tests-*/*.log
+          retention-days: 7
+          if-no-files-found: ignore
+
+  mutation:
+    name: Guard test catches a broken ${{ matrix.test }} guard
+    needs: build
+    runs-on: windows-2025
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { test: obs-running, guard: OBS }
+          - { test: store-edition, guard: STORE }
+          - { test: downgrade, guard: DOWNGRADE }
+          - { test: vjster-clash, guard: VJSTER }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: suite-guard-test-variants
+          path: variants
+      - name: Expect the test to fail against the broken setup
+        shell: pwsh
+        run: |
+          $setup = (Get-ChildItem "variants\broken-${{ matrix.guard }}" -Filter 'Fadester-Suite-Setup-*.exe' | Select-Object -First 1).FullName
+          & .\installer\tests\Test-Suite.ps1 -Setup $setup -Only '${{ matrix.test }}' -ExpectFail

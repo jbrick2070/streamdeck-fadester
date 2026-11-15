@@ -1,8 +1,12 @@
 # Combined Windows Installer for the Three OBS Plugins — Design Note
 
-> **OWNER DECISION REQUIRED BEFORE BUILDING ANYTHING**
+> **STATUS (2026-11-15): Option B is built.**
 >
-> Per P1-5 step 6, this document records the design options, independent versioning and uninstall rules, and Windows SmartScreen / code-signing trade-offs for a combined Windows OBS plugin installer. **Nothing has been built, packaged, or changed in any installer script.**
+> - **Where:** [`installer/`](../installer/README.md) holds the build, and `.github/workflows/suite-installer.yml` runs the tests (manual only).
+> - **Toolchain:** chaining is done in Inno Setup Pascal rather than WiX Burn, so no new toolchain is added. The properties Option B asks for are kept: each plugin's own AppId, real version, standalone upgrades and individual uninstall.
+> - **Companion:** Fadester Companion gained its own standalone installer for the suite to chain.
+> - **Still open:** code signing, and a run on a real PC with OBS, Stream Deck and OpenDeck (see the installer README).
+> - **History:** the analysis below is unchanged from the original design note.
 
 ---
 

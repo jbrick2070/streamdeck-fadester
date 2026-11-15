@@ -11,6 +11,11 @@ Everything in the Fadester Suite runs locally on your own computer (`127.0.0.1` 
 - **Playlister** (`obs-playlister`) — OBS Studio 33 plugin for persistent multi-clip video playlists with transport controls.
 - **VJster Chrome extension** (`streamdeck-fadester/vjster-extension/`) — Controls playback speed and YouTube quality in Chrome tabs.
 
+**Want several of these at once on Windows?** The **Fadester Suite Setup** ([`installer/`](../installer/README.md)) installs any mix in one pass.
+- Each plugin and Fadester Companion keeps its own version and its own entry in **Installed apps**.
+- It never closes OBS for you, and never replaces a newer installed component.
+- It is built and tested by a manual GitHub Actions workflow, and is not code-signed yet.
+
 ---
 
 ## 1. What do you have?

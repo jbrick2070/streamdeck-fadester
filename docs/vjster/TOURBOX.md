@@ -1,6 +1,6 @@
 # VJster from the TourBox: as built
 
-The one VJster Chrome extension works from the Stream Deck, OpenDeck and the TourBox. The extension never changed for this: it connects to whatever listens on the VJster port on your own computer, and the TourBox companion hosts that link itself.
+The one VJster Chrome extension works from the Stream Deck, OpenDeck and the TourBox. The extension never changed for this: it connects to whatever listens on the VJster port on your own computer, and Fadester Companion hosts that link itself.
 
 ## YouTube must be in Chrome
 
@@ -38,12 +38,12 @@ Everything else is as before. Pin is not on the hardware: the extension pins onl
 
 ## Checks
 
-- `FadesterTourBoxBridge --self-test` and `tourbox/tests/portable` (any OS): the gate and the parser case by case, a loopback connection with a stand-in extension (ClientWebSocket), and the layer actions against a fake OBS.
+- `FadesterCompanionBridge --self-test` and `tourbox/tests/portable` (any OS): the gate and the parser case by case, a loopback connection with a stand-in extension (ClientWebSocket), and the layer actions against a fake OBS.
 - `tests/tourbox-vjster-link.test.ts`: the built bridge, the real extension logic (Router, LinkClient, Adapter over a fake player) and `dispatch <action>` on the bridge's stdin, which runs an action exactly as the hotkey would. Skipped when the bridge is not built.
 - Not yet checked on hardware (see `tourbox/REHEARSAL.md` steps 4, 7 and 11): the Top holds against Top's own Cut on release, press-and-turn on the Knob, opacity and the blend modes in a real OBS, and transport on an OBS Playlister source.
 
 ## What comes next
 
 - New intents for every deck (seek, frame step, loop in/out, tap tempo), which means a Chrome Web Store update.
-- A "desk client" role on the link, so the Stream Deck plugin and the TourBox companion share one host instead of one holding the port.
+- A "desk client" role on the link, so the Stream Deck plugin and Fadester Companion share one host instead of one holding the port.
 - MIDI.

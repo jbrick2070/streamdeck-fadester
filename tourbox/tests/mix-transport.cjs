@@ -1,7 +1,7 @@
 // Packaged --mix-only smoke test. No real OBS, TourBox, foreground app or keyboard input is used.
 const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),crypto=require('node:crypto');
 const {WebSocketServer}=require('ws'),{spawn}=require('node:child_process');
-const exe=process.argv[2];if(!exe)throw Error('Pass the packaged FadesterTourBoxBridge.exe');
+const exe=process.argv[2];if(!exe)throw Error('Pass the packaged FadesterCompanionBridge.exe');
 const ns='io.github.jbrick2070.fadester.mix.v1', pwd=crypto.randomUUID(), salt='lab',challenge='fixture',
   hash=x=>crypto.createHash('sha256').update(x).digest('base64'), delay=ms=>new Promise(r=>setTimeout(r,ms));
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'fadester-mix-test-')), config=path.join(tmp,'lab.json'),input=crypto.randomUUID();

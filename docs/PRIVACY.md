@@ -10,7 +10,7 @@ In `%LOCALAPPDATA%\FadesterTourBox` (or, when installed from the Microsoft Store
 - **`panel.log`:** a short log of what the control panel did, for troubleshooting. It does not contain your password.
 - **`mix-state`:** only if you turn on control of all OBS mixer inputs. For each scene collection it keeps the collection's name and the volume levels of its audio inputs, so **Restore whole mix** can bring them back.
 
-If you use the screenshot action, pictures of OBS's Program output are saved in your Pictures folder, under `Fadester TourBox`, and nowhere else.
+If you use the screenshot action, pictures of OBS's Program output are saved in your Pictures folder, under `Fadester Companion`, and nowhere else.
 
 These files stay on your computer. Uninstalling the Store app removes its own storage. A `%LOCALAPPDATA%\FadesterTourBox` folder (made by the ZIP version, which the Store app then keeps using) stays until you delete it. Screenshots stay in Pictures until you delete them.
 

@@ -3,7 +3,7 @@ param([Parameter(Mandatory=$true)][int]$BridgePid,[Parameter(Mandatory=$true)][i
 # Never sends keystrokes to a foreground application or posts to another process.
 $ErrorActionPreference='Stop'
 $proc=Get-Process -Id $BridgePid
-if ($proc.ProcessName -notin @('FadesterTourBoxBridge','dotnet')) {throw 'Expected the bridge child.'}
+if ($proc.ProcessName -notin @('FadesterCompanionBridge','dotnet')) {throw 'Expected the bridge child.'}
 Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;

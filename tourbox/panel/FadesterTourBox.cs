@@ -15,7 +15,7 @@ using System.Windows.Forms;
 [assembly: System.Reflection.AssemblyTitle("Fadester Companion")]
 [assembly: System.Reflection.AssemblyProduct("Fadester Companion")]
 [assembly: System.Reflection.AssemblyCompany("Jeffrey Brick")]
-[assembly: System.Reflection.AssemblyVersion("0.1.0.0")]
+// The version attributes are written by build.ps1 from its -Version (PanelVersion.g.cs in the build stage).
 
 // Stock Windows .NET Framework. No installer, browser, elevated rights, or bundled password.
 namespace Fadester.TourBox {
@@ -600,7 +600,7 @@ namespace Fadester.TourBox {
       msg=msg.Trim(); state.Text=msg; if(hud!=null && !hud.IsDisposed)hud.Set(msg); if(activity!=null){activity.Items.Add(DateTime.Now.ToString("T")+"  "+msg); if(activity.Items.Count>180)activity.Items.RemoveAt(0); activity.TopIndex=activity.Items.Count-1;}
     }
     ProcessStartInfo Command(string args) {
-      var exe=Path.Combine(folder,"FadesterTourBoxBridge.exe"); if(!File.Exists(exe))throw new FileNotFoundException(text.Get("bridgeMissing"));
+      var exe=Path.Combine(folder,"FadesterCompanionBridge.exe"); if(!File.Exists(exe))throw new FileNotFoundException(text.Get("bridgeMissing"));
       var pi=new ProcessStartInfo(exe,args) {UseShellExecute=false,CreateNoWindow=true,WorkingDirectory=folder,RedirectStandardOutput=true,RedirectStandardError=true,RedirectStandardInput=true,StandardOutputEncoding=Encoding.UTF8,StandardErrorEncoding=Encoding.UTF8};
       if(password.Text.Length!=0) pi.EnvironmentVariables["FADESTER_OBS_PASSWORD"]=password.Text;
       pi.EnvironmentVariables["FADESTER_PANEL"]="1";

@@ -189,7 +189,7 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
                 }
             case "capture.screenshot":
                 {
-                    var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Fadester TourBox");
+                    var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Fadester Companion");
                     Directory.CreateDirectory(folder);
                     var file = Path.Combine(folder, $"Program-{DateTime.Now:yyyyMMdd-HHmmss-fff}-{Guid.NewGuid().ToString("N")[..6]}.png");
                     var scene = Str(await Get("GetCurrentProgramScene"), "currentProgramSceneName");

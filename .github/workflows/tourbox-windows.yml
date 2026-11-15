@@ -1,10 +1,11 @@
-name: TourBox Windows companion build and checks
+name: Fadester Companion Windows build and checks
 
 on:
   push:
     branches: [main]
     paths:
       - .github/workflows/tourbox-windows.yml
+      - installer/components.json
       - tourbox/build.ps1
       - tourbox/make-guide.cjs
       - tourbox/README.md
@@ -26,6 +27,7 @@ on:
     branches: [main]
     paths:
       - .github/workflows/tourbox-windows.yml
+      - installer/components.json
       - tourbox/build.ps1
       - tourbox/make-guide.cjs
       - tourbox/README.md
@@ -83,16 +85,17 @@ jobs:
       - name: Build and self-test Windows Fadester Companion ZIP and MSIX
         shell: pwsh
         run: |
-          $out = Join-Path $env:RUNNER_TEMP 'fadester-tourbox-win'
-          & .\tourbox\build.ps1 -OutDir $out
-          & .\tourbox\store\make-msix.ps1 -Build ((Get-ChildItem -LiteralPath $out -Directory -Filter 'build-*' | Select-Object -First 1).FullName + '\Fadester for TourBox') -OutDir $out -Version '0.1.2.0' -Overwrite
+          $v = (Get-Content -Raw installer\components.json | ConvertFrom-Json).components.companion.version
+          $out = Join-Path $env:RUNNER_TEMP 'fadester-companion-win'
+          & .\tourbox\build.ps1 -OutDir $out -Version $v
+          & .\tourbox\store\make-msix.ps1 -Build ((Get-ChildItem -LiteralPath $out -Directory -Filter 'build-*' | Select-Object -First 1).FullName + '\Fadester Companion') -OutDir $out -Version "$v.0" -Overwrite
           New-Item -ItemType Directory -Force -Path artifacts | Out-Null
-          Copy-Item -Path (Join-Path $out 'Fadester-for-TourBox-Windows-x64-*.zip*') -Destination artifacts
+          Copy-Item -Path (Join-Path $out 'Fadester-Companion-Windows-x64-*.zip*') -Destination artifacts
           Copy-Item -Path (Join-Path $out 'FadesterCompanion_*.msix') -Destination artifacts
           Set-Content -LiteralPath 'artifacts\SOURCE-COMMIT.txt' -Value $env:GITHUB_SHA -Encoding utf8NoBOM
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: Fadester-for-TourBox-Windows-x64
+          name: Fadester-Companion-Windows-x64
           path: artifacts/*
           retention-days: 7
           if-no-files-found: error
@@ -104,11 +107,11 @@ jobs:
           RESULT: ${{ job.status }}
         run: |
           @(
-            '### TourBox Windows x64 companion package',
+            '### Fadester Companion, Windows x64 package',
             '',
             "Result: **$env:RESULT**. Commit: ``$env:GITHUB_SHA``.",
             '',
-            'Builds the native C++ UIA slider helper (`FadesterNativeSlider.exe`), self-contained bridge (`FadesterTourBoxBridge.exe`), 10-locale WinForms panel (`Fadester for TourBox.exe`), VJster `/obs` page assets, ZIP archive, and unsigned MSIX candidate, running both `--self-test` suites.',
+            'Builds the native C++ UIA slider helper (`FadesterNativeSlider.exe`), self-contained bridge (`FadesterCompanionBridge.exe`), 10-locale WinForms panel (`Fadester Companion.exe`), VJster `/obs` page assets, ZIP archive, and unsigned MSIX candidate, running both `--self-test` suites.',
             '',
             '**Developer candidates only.** Store submission remains held until Windows and macOS physical hardware verification are completely signed off.'
           ) | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Encoding utf8NoBOM

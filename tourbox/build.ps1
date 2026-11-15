@@ -9,7 +9,7 @@ if (!(Test-Path -LiteralPath $DotNet)) {throw 'Build requires the .NET 8 SDK; pa
 $out=[IO.Path]::GetFullPath($OutDir)
 $null=New-Item -ItemType Directory -Force -Path $out
 $stage=Join-Path $out ("build-"+[Guid]::NewGuid().ToString('N'))
-$bundle=Join-Path $stage 'Fadester for TourBox'
+$bundle=Join-Path $stage 'Fadester Companion'
 $sources=Join-Path $bundle 'source\tourbox'
 $null=New-Item -ItemType Directory -Force -Path $sources
 $presetDir=Join-Path $PSScriptRoot 'presets'
@@ -26,14 +26,20 @@ foreach($locale in $translations.PSObject.Properties.Name){
 if (!(Test-Path -LiteralPath (Join-Path $guideDir 'quickstart.css') -PathType Leaf)) {throw 'Missing quick start stylesheet.'}
 $map=Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $presetDir 'map.json') | ConvertFrom-Json
 foreach($bank in $map.presets.PSObject.Properties.Value){if (!(Test-Path -LiteralPath (Join-Path $presetDir $bank.file))) {throw "Missing preset: $($bank.file)"}}
-$csproj=Join-Path $PSScriptRoot 'bridge\FadesterTourBoxBridge.csproj'
-& $DotNet publish $csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:IncludeNativeLibrariesForSelfExtract=true -o (Join-Path $stage 'publish') --nologo
+$csproj=Join-Path $PSScriptRoot 'bridge\FadesterCompanionBridge.csproj'
+# One version on every file: the panel's version attributes, and the bridge's (which it also reports over the
+# whole-mix protocol and the VJster link's /whoami).
+$numericVersion=if($Version -match '^(\d+)\.(\d+)\.(\d+)(?:\.(\d+))?'){"$($Matches[1]).$($Matches[2]).$($Matches[3]).$(if($Matches[4]){$Matches[4]}else{'0'})"}else{'0.0.0.0'}
+& $DotNet publish $csproj -c Release -r win-x64 --self-contained true "-p:Version=$Version" "-p:AssemblyVersion=$numericVersion" "-p:FileVersion=$numericVersion" -p:IncludeSourceRevisionInInformationalVersion=false -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:IncludeNativeLibrariesForSelfExtract=true -o (Join-Path $stage 'publish') --nologo
 if($LASTEXITCODE){throw 'Bridge publish failed.'}
-Copy-Item -LiteralPath (Join-Path $stage 'publish\FadesterTourBoxBridge.exe') -Destination $bundle
-$panel=Join-Path $bundle 'Fadester for TourBox.exe'
+Copy-Item -LiteralPath (Join-Path $stage 'publish\FadesterCompanionBridge.exe') -Destination $bundle
+$panel=Join-Path $bundle 'Fadester Companion.exe'
 $csc=Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 & (Join-Path $PSScriptRoot 'native/build.ps1') -OutputPath (Join-Path $bundle 'FadesterNativeSlider.exe')
 $panelSources=@(Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'panel') -Filter '*.cs' -File | Select-Object -ExpandProperty FullName)
+$panelVersion=Join-Path $stage 'PanelVersion.g.cs'
+[IO.File]::WriteAllText($panelVersion,"[assembly: System.Reflection.AssemblyVersion(`"$numericVersion`")]`r`n[assembly: System.Reflection.AssemblyFileVersion(`"$numericVersion`")]`r`n[assembly: System.Reflection.AssemblyInformationalVersion(`"$Version`")]`r`n",[Text.UTF8Encoding]::new($false))
+$panelSources+=$panelVersion
 & $csc /nologo /target:winexe /optimize+ /codepage:65001 "/win32icon:$(Join-Path $PSScriptRoot 'panel\fadester.ico')" "/out:$panel" /r:System.dll /r:System.Core.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.Web.Extensions.dll @panelSources
 if($LASTEXITCODE){throw 'Panel build failed.'}
 $paneltest=Start-Process -WindowStyle Hidden -FilePath $panel -ArgumentList '--self-test' -PassThru -Wait
@@ -58,7 +64,7 @@ $vjObsDest=Join-Path $bundle 'vjster\obs'
 $null=New-Item -ItemType Directory -Force $vjObsDest
 Copy-Item -LiteralPath (Join-Path $vjObsSrc 'player.html') -Destination $vjObsDest
 Copy-Item -LiteralPath (Join-Path $vjObsSrc 'player.js') -Destination $vjObsDest
-& (Join-Path $bundle 'FadesterTourBoxBridge.exe') --self-test --map (Join-Path $presets 'map.json')
+& (Join-Path $bundle 'FadesterCompanionBridge.exe') --self-test --map (Join-Path $presets 'map.json')
 if($LASTEXITCODE){throw 'Packaged bridge self-test failed.'}
 & node (Join-Path $PSScriptRoot 'make-guide.cjs') (Join-Path $bundle 'START-HERE.html')
 if($LASTEXITCODE){throw 'Quick-guide generation failed.'}
@@ -92,7 +98,7 @@ foreach($rel in 'vjster-page','vjster-page\src','src\vjster\shared','vjster-exte
     foreach($file in Get-ChildItem -LiteralPath $src -File){if($file.Extension -in '.ts','.html','.mjs','.json'){Copy-Item -LiteralPath $file.FullName -Destination $dest}}
   }
 }
-$zip=Join-Path $out ("Fadester-for-TourBox-Windows-x64-"+$Version+'.zip')
+$zip=Join-Path $out ("Fadester-Companion-Windows-x64-"+$Version+'.zip')
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $tmpZip=Join-Path $stage 'candidate.zip'
 [IO.Compression.ZipFile]::CreateFromDirectory($bundle,$tmpZip,[IO.Compression.CompressionLevel]::Optimal,$true)

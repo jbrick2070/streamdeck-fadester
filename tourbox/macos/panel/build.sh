@@ -36,7 +36,7 @@ cp README.md "$resources/README.md"
 /usr/bin/swiftc -swift-version 5 -parse-as-library -O -warnings-as-errors \
   -target "$architecture-apple-macosx12.0" -framework AppKit -framework ApplicationServices -framework CryptoKit \
   Model.swift ObsDiscovery.swift HostController.swift ShowMe.swift Panel.swift Main.swift \
-  -o "$app/Contents/MacOS/FadesterTourBoxPanel"
+  -o "$app/Contents/MacOS/Fadester Companion"
 if [[ "$mode" != --ui-only ]]; then
   dotnet="${DOTNET:-}"
   if [[ -z "$dotnet" ]]; then
@@ -69,5 +69,5 @@ if [[ "$mode" != --ui-only ]]; then
 fi
 /usr/bin/codesign --force --sign - --identifier io.github.jbrick2070.fadester-tourbox.panel.experimental "$app"
 /usr/bin/codesign --verify --deep --strict "$app"
-"$app/Contents/MacOS/FadesterTourBoxPanel" --self-test
+"$app/Contents/MacOS/Fadester Companion" --self-test
 echo "Built $app ($architecture). Experimental ad-hoc signature only; not notarized. No live OBS, shortcuts or GUI launched."

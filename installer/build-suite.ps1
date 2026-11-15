@@ -1,6 +1,6 @@
 # Builds the Fadester Suite Setup for Windows x64.
 #
-#   .\installer\build-suite.ps1 -CompanionBuild "<...>\build-<id>\Fadester for TourBox" [-OutDir dist] [-Manifest components.json]
+#   .\installer\build-suite.ps1 -CompanionBuild "<...>\build-<id>\Fadester Companion" [-OutDir dist] [-Manifest components.json]
 #                               [-LocalArtifacts <folder>] [-DownloadOnly] [-Define NAME=VALUE ...]
 #
 # 1. Every pinned input in components.json is taken from -LocalArtifacts (when a file of that name is there) or
@@ -64,12 +64,12 @@ Remove-Item -LiteralPath $sdZip -Force
 if (-not (Test-Path -LiteralPath (Join-Path $sd 'io.github.jbrick2070.fadester-for-obs.sdPlugin\manifest.json'))) { throw 'The Fadester for OBS package has no io.github.jbrick2070.fadester-for-obs.sdPlugin\manifest.json.' }
 
 # Fadester Companion: only a finished build.
-if (-not $CompanionBuild) { throw 'Pass -CompanionBuild with the "Fadester for TourBox" folder of a finished tourbox\build.ps1 run.' }
+if (-not $CompanionBuild) { throw 'Pass -CompanionBuild with the "Fadester Companion" folder of a finished tourbox\build.ps1 run.' }
 $companion = [IO.Path]::GetFullPath($CompanionBuild)
 if (-not (Test-Path -LiteralPath (Join-Path (Split-Path -Parent $companion) 'build-complete.txt') -PathType Leaf)) {
   throw "$companion is not from a finished tourbox\build.ps1 run (no build-complete.txt beside it)."
 }
-foreach ($exe in 'Fadester for TourBox.exe', 'FadesterTourBoxBridge.exe', 'FadesterNativeSlider.exe') {
+foreach ($exe in 'Fadester Companion.exe', 'FadesterCompanionBridge.exe', 'FadesterNativeSlider.exe') {
   if (-not (Test-Path -LiteralPath (Join-Path $companion $exe) -PathType Leaf)) { throw "Fadester Companion build is missing $exe." }
 }
 

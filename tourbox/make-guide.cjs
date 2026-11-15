@@ -183,7 +183,7 @@ const page = `<!doctype html>
 </section>
 <section class="sheet" id="setup" aria-labelledby="setup-title"><p class="eyebrow">Setup and rehearsal <span>/</span> 02</p><h2 id="setup-title">Your first minute at the desk</h2>
 <h3>Set up once</h3><ol class="step-list">
-<li>Open <strong>Fadester Companion</strong> from the Start menu. If you use the ZIP, extract all of it and open <strong>Fadester for TourBox.exe</strong>. Keep its files together.</li>
+<li>Open <strong>Fadester Companion</strong> from the Start menu. If you use the ZIP, extract all of it and open <strong>Fadester Companion.exe</strong>. Keep its files together.</li>
 <li>Open OBS. In TourBox Console, use <b>Import</b> beside <b>Preset List</b> to add <b>OBS Fadester for TourBox.tb</b> from <b>presets</b>. Link it to <b>obs64</b>, enable <b>Auto Switch</b>, and select <b>OBS Fadester for TourBox</b>. For later updates, select this preset and use its own menu’s <b>Import</b> to replace its contents.</li>
 <li>In OBS, enable <b>Tools → WebSocket Server Settings</b> with authentication. Turn on <b>Studio Mode</b>, choose <b>Fade</b>, and keep the main OBS window and its T-bar visible. The manual control targets OBS 33.</li>
 <li>In the Fadester panel, click <b>Read scenes and inputs from OBS</b>. OBS usually uses port 4455: if yours differs, set the <b>OBS port</b> field. Select <b>Save &amp; start controls</b>, keep the panel open, and bring OBS to the front. You can try the fader before assigning audio.</li></ol>

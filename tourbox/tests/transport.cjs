@@ -2,7 +2,7 @@
 // Needs Node and the root repo's dev dependency ws. Never sends an input to the user's desktop or OBS.
 const assert=require('node:assert/strict'), fs=require('node:fs'), os=require('node:os'), path=require('node:path'),crypto=require('node:crypto');
 const {spawn}=require('node:child_process'),{WebSocketServer}=require('ws');
-const executable=process.argv[2]; if(!executable)throw Error('usage: node transport.cjs /path/to/FadesterTourBoxBridge.exe');
+const executable=process.argv[2]; if(!executable)throw Error('usage: node transport.cjs /path/to/FadesterCompanionBridge.exe');
 const repo=path.resolve(__dirname,'..'), mapFile=path.join(repo,'presets','map.json');
 const bindings=new Map(); for(const bank of Object.values(JSON.parse(fs.readFileSync(mapFile)).presets))for(const row of [...bank.bindings,...(bank.menuBindings||[])])if(row.hotkey)bindings.set(row.hotkey,row.action);
 const ids=new Map([...bindings.values()].map((v,i)=>[v,i+1]));

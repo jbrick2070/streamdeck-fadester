@@ -163,7 +163,7 @@ namespace Fadester.TourBox {
         "Asignaciones guardadas. Detén y reinicia los controles para aplicarlas.",
         "Affectations enregistrées. Arrêtez puis redémarrez les commandes pour les appliquer.",
         "分配已保存。请停止并重启控制以应用更改。" } },
-      { "bridgeMissing", new[] { "A file of the app is missing: FadesterTourBoxBridge.exe. Install Fadester Companion again, or extract the whole ZIP again.", "Falta un archivo de la aplicación: FadesterTourBoxBridge.exe. Vuelve a instalar Fadester Companion o vuelve a extraer todo el archivo ZIP.", "Un fichier de l’application est introuvable : FadesterTourBoxBridge.exe. Réinstallez Fadester Companion ou extrayez à nouveau tout le fichier ZIP.", "缺少应用文件：FadesterTourBoxBridge.exe。请重新安装 Fadester Companion，或重新解压整个 ZIP 文件。" } },
+      { "bridgeMissing", new[] { "A file of the app is missing: FadesterCompanionBridge.exe. Install Fadester Companion again, or extract the whole ZIP again.", "Falta un archivo de la aplicación: FadesterCompanionBridge.exe. Vuelve a instalar Fadester Companion o vuelve a extraer todo el archivo ZIP.", "Un fichier de l’application est introuvable : FadesterCompanionBridge.exe. Réinstallez Fadester Companion ou extrayez à nouveau tout le fichier ZIP.", "缺少应用文件：FadesterCompanionBridge.exe。请重新安装 Fadester Companion，或重新解压整个 ZIP 文件。" } },
       { "obsTimeout", new[] {
         "OBS did not answer. Check the port and password.",
         "OBS no responde. Comprueba el puerto y la contraseña.",

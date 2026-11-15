@@ -22,6 +22,7 @@ import {
 import { CellRateLimiter } from "../gfx/cell-rate-limiter.js";
 import { ThumbnailFetcher } from "../gfx/thumbnail-fetcher.js";
 import { renderDialCellSvg, toStripUri } from "../gfx/svg-renderer.js";
+import { isObsVendorRequestMissingError } from "../../packages/streamdeck-fadester-shared/src/obs/obs-vendor-client.js";
 import { onLanguageChanged, t, translate } from "../i18n/strings.js";
 import {
   computeDialDelta,
@@ -49,10 +50,12 @@ export class FaderDialInstanceController {
   private holdingForLongPress = false;
   private longPressFired = false;
   private visible = false;
+  private needsUpdate = false;
   /** Unsubscribes this control from language changes (PLAN.md 11.1). */
   private offLanguage: () => void = () => {};
 
   private readonly onStoreChanged = (): void => {
+    this.needsUpdate = false;
     this.syncThumbnailsAndRender();
   };
 
@@ -142,7 +145,11 @@ export class FaderDialInstanceController {
         slot: this.settings.slot,
         delta
       });
-    } catch {
+    } catch (error) {
+      if (isObsVendorRequestMissingError(error)) {
+        this.needsUpdate = true;
+        this.renderNow();
+      }
       await this.sink.showAlert();
     }
   }
@@ -217,7 +224,11 @@ export class FaderDialInstanceController {
     );
     try {
       await this.store.getClient().setFaderValue(req);
-    } catch {
+    } catch (error) {
+      if (isObsVendorRequestMissingError(error)) {
+        this.needsUpdate = true;
+        this.renderNow();
+      }
       await this.sink.showAlert();
     }
   }
@@ -264,6 +275,7 @@ export class FaderDialInstanceController {
       holdLabel,
       labelOverride: this.settings.labelOverride,
       readoutStyle: this.settings.readoutStyle,
+      ...(this.needsUpdate ? { problemReason: t("mfNeedsUpdate") } : {}),
       t: translate
     });
   }
@@ -319,7 +331,11 @@ export class FaderDialInstanceController {
       } else {
         await this.store.getClient().autoFade(cmd.request);
       }
-    } catch {
+    } catch (error) {
+      if (isObsVendorRequestMissingError(error)) {
+        this.needsUpdate = true;
+        this.renderNow();
+      }
       await this.sink.showAlert();
     }
   }

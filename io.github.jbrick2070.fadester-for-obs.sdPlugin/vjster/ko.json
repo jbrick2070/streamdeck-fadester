@@ -102,6 +102,7 @@
       "statusConnected": "Chrome 확장 프로그램 연결됨",
       "statusWaiting": "연결된 Chrome 확장 프로그램이 없습니다. VJster 확장 프로그램이 설치된 Chrome을 여세요. 포트는 여기와 확장 프로그램 옵션에서 같아야 합니다.",
       "statusPortInUse": "포트 {port}이(가) 사용 중입니다. VJster가 들어 있는 다른 프로그램이 실행 중일 수 있습니다: Fadester for OBS, VJster 플러그인, Fadester Companion. 하나만 실행하세요.",
+      "statusPortInUseHeld": "VJster 연결을 {holder}에서 사용 중입니다. 해당 프로그램을 닫거나 거기서 VJster를 끄세요.",
       "noValidId": "Chrome 확장 프로그램 ID인 항목이 없습니다. 어떤 확장 프로그램도 연결할 수 없습니다",
       "badIdOne": "항목 {n}개 무시됨: Chrome 확장 프로그램 ID가 아닙니다",
       "badIdMany": "항목 {n}개 무시됨: Chrome 확장 프로그램 ID가 아닙니다",

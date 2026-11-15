@@ -45,7 +45,13 @@ internal sealed class VjsterDesk(VjsterLink link, double fastSpeed = 2.0, double
     public async Task<string> Dispatch(string id)
     {
         if (!Actions.Contains(id)) throw new ArgumentException("Unknown VJster action: " + id);
-        if (!link.Running) return $"VJster: the link is not running (port {link.Port} is in use).";
+        if (!link.Running)
+        {
+            var holder = await VjsterLink.ProbePortHolderAsync(link.Port);
+            return holder is not null
+                ? $"VJster link is held by {holder.DisplayName}. Close it or turn off VJster there."
+                : $"VJster: the link is not running (port {link.Port} is in use).";
+        }
         string[] candidates = this.targetChoice switch
         {
             "obs" => ["obs"],

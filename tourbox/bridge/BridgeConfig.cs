@@ -124,16 +124,36 @@ internal sealed class BridgeConfig
     {
         var supplied = Environment.GetEnvironmentVariable("FADESTER_OBS_PASSWORD");
         if (!string.IsNullOrEmpty(supplied)) return supplied;
-        var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "obs-studio", "plugin_config", "obs-websocket", "config.json");
+        var path = ObsWebsocketConfigPath();
         return SavedPassword(File.Exists(path) ? File.ReadAllText(path) : null, Port);
     }
 
+    /** OBS's local `plugin_config/obs-websocket/config.json` path on Windows (`%APPDATA%`) and macOS (`~/Library/Application Support`). */
+    internal static string ObsWebsocketConfigPath(bool? isMacOS = null, string? appData = null, string? userProfile = null)
+    {
+        if (isMacOS ?? OperatingSystem.IsMacOS())
+        {
+            string home = userProfile ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            return Path.Combine(home, "Library", "Application Support", "obs-studio", "plugin_config", "obs-websocket", "config.json");
+        }
+        string roaming = appData ?? Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        return Path.Combine(roaming, "obs-studio", "plugin_config", "obs-websocket", "config.json");
+    }
+
     /** OBS's saved password from its obs-websocket settings, when they are for this port; otherwise what to fix. */
-    internal static string SavedPassword(string? obsSettings, int port)
+    internal static string SavedPassword(string? obsSettings, int port, bool requireEnabledAndAuth = false)
     {
         JsonObject? local = null;
         try { if (obsSettings != null) local = JsonNode.Parse(obsSettings) as JsonObject; }
         catch (JsonException) { } // half-written or hand-edited: ask for the password rather than show a parser error
+        if (requireEnabledAndAuth)
+        {
+            if ((int?)local?["server_port"] != port || (bool?)local?["server_enabled"] != true ||
+                (bool?)local?["auth_required"] != true || local?["server_password"] is not JsonValue strictPw ||
+                !strictPw.TryGetValue<string>(out var strictSaved) || strictSaved.Length == 0)
+                throw new InvalidOperationException("Local OBS must be enabled, authenticated, and match the configured loopback port.");
+            return strictSaved;
+        }
         if (local?["server_port"] is JsonValue portValue && portValue.TryGetValue<int>(out var obsPort) && obsPort > 0)
         {
             if (obsPort != port) throw new InvalidOperationException($"OBS on this PC uses port {obsPort}, but the OBS port in Setup is {port}. Set it to {obsPort}, or for another OBS enter that OBS's password in Setup.");

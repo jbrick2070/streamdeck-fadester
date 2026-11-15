@@ -102,6 +102,7 @@
       "statusConnected": "Chrome 擴充功能已連線",
       "statusWaiting": "沒有已連線的 Chrome 擴充功能。請開啟裝有 VJster 擴充功能的 Chrome。此處的連接埠必須與擴充功能選項中的連接埠相同。",
       "statusPortInUse": "連接埠 {port} 已被使用。可能有另一個含 VJster 的程式正在執行：Fadester for OBS、VJster 外掛程式或 Fadester Companion。請只保留一個。",
+      "statusPortInUseHeld": "VJster 連結正由 {holder} 佔用。請關閉該程式或在那裡停用 VJster。",
       "noValidId": "沒有任何項目是 Chrome 擴充功能 ID：任何擴充功能都無法連線",
       "badIdOne": "已忽略 {n} 個項目：不是 Chrome 擴充功能 ID",
       "badIdMany": "已忽略 {n} 個項目：不是 Chrome 擴充功能 ID",

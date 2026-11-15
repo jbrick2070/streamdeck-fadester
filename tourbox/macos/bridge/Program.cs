@@ -14,8 +14,7 @@ internal static class MacMixHost
         : Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
     static string HostDirectory => Path.Combine(ApplicationSupport, "FadesterTourBox");
     static string DefaultConfig => Path.Combine(HostDirectory, "config.json");
-    static string ObsConfig => Path.Combine(OperatingSystem.IsMacOS() ? ApplicationSupport :
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "obs-studio", "plugin_config", "obs-websocket", "config.json");
+    static string ObsConfig => BridgeConfig.ObsWebsocketConfigPath();
 
     static void Help() => Console.WriteLine("""
         FadesterMixHost [--config PATH] [--enable-mix] --mix-only
@@ -106,13 +105,8 @@ internal static class MacMixHost
     {
         string? supplied = Environment.GetEnvironmentVariable("FADESTER_OBS_PASSWORD");
         if (!string.IsNullOrEmpty(supplied)) return await ObsConnection.Connect(config, stop);
-        // Keep the shared Windows configuration class unchanged. On macOS its
-        // SpecialFolder.ApplicationData can differ from OBS's actual bundle path.
         if (!File.Exists(ObsConfig)) throw new InvalidOperationException("No local OBS authentication config found. Set FADESTER_OBS_PASSWORD for this process.");
-        var obs = JsonNode.Parse(await File.ReadAllTextAsync(ObsConfig, stop));
-        if ((int?)obs?["server_port"] != config.Port || (bool?)obs?["server_enabled"] != true ||
-            (bool?)obs?["auth_required"] != true || obs?["server_password"]?.GetValue<string>() is not { Length: > 0 } password)
-            throw new InvalidOperationException("The local OBS authentication config must be enabled, authenticated, and match the chosen port.");
+        string password = BridgeConfig.SavedPassword(await File.ReadAllTextAsync(ObsConfig, stop), config.Port, requireEnabledAndAuth: true);
         // The credential is process-local and restored after the handshake. No child
         // process is launched and no credential is serialized or included in logs.
         Environment.SetEnvironmentVariable("FADESTER_OBS_PASSWORD", password);

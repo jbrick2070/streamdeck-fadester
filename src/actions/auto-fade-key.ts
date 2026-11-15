@@ -22,6 +22,7 @@ import {
 } from "../types/settings.js";
 import { CellRateLimiter } from "../gfx/cell-rate-limiter.js";
 import { renderAutoFadeKeySvg, toSvgDataUri } from "../gfx/svg-renderer.js";
+import { isObsVendorRequestMissingError } from "../../packages/streamdeck-fadester-shared/src/obs/obs-vendor-client.js";
 import { onLanguageChanged, t, translate } from "../i18n/strings.js";
 import { DIAL_HOLD_THRESHOLD_MS, shouldReleaseRail } from "./dial-math.js";
 
@@ -38,10 +39,12 @@ export class AutoFadeKeyInstanceController {
   private readonly arm: QuantizedKeyArm;
   private readonly clock: () => number;
   private visible = false;
+  private needsUpdate = false;
   /** Unsubscribes this control from language changes (PLAN.md 11.1). */
   private offLanguage: () => void = () => {};
 
   private readonly onStoreChanged = (): void => {
+    this.needsUpdate = false;
     if (!this.store.getClient().isConnected()) {
       this.arm.cancelSilently();
     }
@@ -161,7 +164,11 @@ export class AutoFadeKeyInstanceController {
             to: this.settings.to,
             ms
           });
-        } catch {
+        } catch (error) {
+          if (isObsVendorRequestMissingError(error)) {
+            this.needsUpdate = true;
+            this.renderNow();
+          }
           await this.sink.showAlert();
         }
       },
@@ -194,6 +201,7 @@ export class AutoFadeKeyInstanceController {
       labelOverride: this.settings.labelOverride,
       readoutStyle: this.settings.readoutStyle,
       statusBanner,
+      problemReason: this.needsUpdate ? t("mfNeedsUpdate") : undefined,
       t: translate
     });
   }

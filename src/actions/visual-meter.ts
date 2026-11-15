@@ -42,6 +42,7 @@ import {
   toSvgDataUri
 } from "../gfx/direct-obs-renderer.js";
 import { statusCellReason } from "../../packages/streamdeck-fadester-shared/src/status-text.js";
+import { isObsVendorRequestMissingError } from "../../packages/streamdeck-fadester-shared/src/obs/obs-vendor-client.js";
 import { LocalText, errorLocalText, ownText, wordText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
 import { onLanguageChanged, t, translate } from "../i18n/strings.js";
 
@@ -170,7 +171,9 @@ export class VisualMeterInstanceController {
         await this.signals.resyncDownbeat();
       }
     } catch (error) {
-      this.lastError = errorLocalText(error, ownText("errorRequestFailed", { code: 500 }));
+      this.lastError = isObsVendorRequestMissingError(error)
+        ? ownText("tdNeedsUpdate")
+        : errorLocalText(error, ownText("errorRequestFailed", { code: 500 }));
       this.renderNow();
       await this.sink.showAlert();
       return;
@@ -194,7 +197,9 @@ export class VisualMeterInstanceController {
     try {
       await this.signals.setBpm(targetBpm);
     } catch (error) {
-      this.lastError = errorLocalText(error, ownText("errorRequestFailed", { code: 500 }));
+      this.lastError = isObsVendorRequestMissingError(error)
+        ? ownText("tdNeedsUpdate")
+        : errorLocalText(error, ownText("errorRequestFailed", { code: 500 }));
       this.renderNow();
       await this.sink.showAlert();
       return;
@@ -215,6 +220,14 @@ export class VisualMeterInstanceController {
     const caption = customCaption("meter", this.settings);
     const title = caption || this.defaultTitle();
     const subtitle = this.subtitleFor(sampled);
+    const needsFeatureGate =
+      sampled.availability === "loaded" &&
+      (sampled.needsTempoUpdate || (!sampled.supportsTempoGrid && this.needsTempoFeature()));
+    const problemText = this.lastError
+      ? wordText(this.lastError, translate)
+      : needsFeatureGate
+        ? t("tdNeedsUpdate")
+        : "";
     const input = {
       state: sampled.state,
       reason: statusCellReason(this.client.getStatus(), translate),
@@ -229,11 +242,17 @@ export class VisualMeterInstanceController {
       high: sampled.high,
       spectrum: sampled.spectrum,
       accent: this.settings.accent,
-      ...(this.lastError ? { problem: wordText(this.lastError, translate) } : {})
+      ...(problemText ? { problem: problemText } : {})
     };
     if (this.form === "dial") return renderVisualMeterDialSvg(input);
     if (this.form === "infobar") return renderVisualMeterNeoSvg(input);
     return renderVisualMeterKeySvg(input);
+  }
+
+  private needsTempoFeature(): boolean {
+    if (this.form === "infobar") return false;
+    if (this.settings.operation !== "display_only") return true;
+    return this.form === "dial" && this.settings.dialRotate === "adjust_bpm";
   }
 
   private defaultTitle(): string {

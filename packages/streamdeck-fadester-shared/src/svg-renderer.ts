@@ -23,6 +23,8 @@ export interface DialCellRenderInput<
   labelOverride?: string;
   /** "percent" forces a 0..100 % readout; "auto" prefers display_value. */
   readoutStyle?: "auto" | "percent";
+  /** Optional feature-gate / problem reason (e.g. "Update Midi Fadester"). */
+  problemReason?: string;
   /** The plugin's translator; English when omitted. */
   t?: Translate;
 }
@@ -40,6 +42,8 @@ export interface KeyCellRenderInput<
   readoutStyle?: "auto" | "percent";
   /** Optional operator-armed / fallback banner (`ARMED`, `NO TEMPO`, `CANCELLED`). */
   statusBanner?: { text: string; active: boolean };
+  /** Optional feature-gate / problem reason (e.g. "Update Midi Fadester"). */
+  problemReason?: string;
   /** The plugin's translator; English when omitted. */
   t?: Translate;
 }
@@ -196,6 +200,15 @@ export function renderDialCellSvg<TSlot extends SurfaceSlotBase>(
     return renderDialStatusSvg(
       fallbackTitle,
       statusCellReason(input.status, t) || statusSentence(input.status, t),
+      P.orangeAccent,
+      t
+    );
+  }
+
+  if (input.problemReason) {
+    return renderDialStatusSvg(
+      fallbackTitle,
+      input.problemReason,
       P.orangeAccent,
       t
     );
@@ -440,6 +453,10 @@ export function renderAutoFadeKeySvg<TSlot extends SurfaceSlotBase>(
       statusCellReason(input.status, t) || statusSentence(input.status, t),
       t
     );
+  }
+
+  if (input.problemReason) {
+    return renderKeyStatusSvg(fallbackTitle, input.problemReason, t);
   }
 
   if (isAllFx) {

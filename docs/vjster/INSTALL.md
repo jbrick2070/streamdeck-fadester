@@ -41,7 +41,7 @@ Good to know about the OBS page:
 | The strip or key says | What to do |
 |---|---|
 | **EXTENSION OFF** | Check that Chrome is open with the extension added; that the extension's options page and VJster's settings page name the same port; and that the **Only this extension** field is empty or holds the id the extension's options page shows. |
-| **PORT IN USE** | Port 48150 is in use. Another program with VJster may be running: Fadester for OBS, the VJster plugin or Fadester Companion. Keep only one. If no other VJster runs, choose another port on VJster's settings page and the same port in the extension's options. |
+| **PORT IN USE** | Port 48150 is in use. When another Fadester host holds it (`Fadester for OBS`, the standalone `VJster` plugin, or `Fadester Companion`), the settings page asks `GET http://127.0.0.1:<port>/whoami` and names the holder (`VJster link is held by <product> <version>`), falling back to the generic message when an unrelated program holds the port. Keep only one VJster host enabled on that port, or choose another port on VJster's settings page and the same port in the extension's options. |
 | **NO PAGE** | The target is the OBS page but none is connected. Check that the browser source's URL is the address you copied and that Stream Deck is running; refresh the source. |
 | **N/A** on the quality dial | That video or target offers no quality control (the OBS page never does). |
 | **AD PLAYING** | An ad is playing; your turns are held and applied when the video resumes. |

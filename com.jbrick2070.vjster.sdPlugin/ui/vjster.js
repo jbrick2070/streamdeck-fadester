@@ -254,10 +254,17 @@
   /** The link status and OBS status in the page's language; nothing else is touched. */
   function wordStatus(s) {
     var box = document.getElementById("status");
+    var holder = s.portHolder && typeof s.portHolder.product === "string" && s.portHolder.product
+      ? (typeof s.portHolder.version === "string" && s.portHolder.version
+        ? s.portHolder.product + " " + s.portHolder.version
+        : s.portHolder.product)
+      : "";
     var words = {
       connected: t("statusConnected"),
       "extension-off": t("statusWaiting"),
-      "port-in-use": t("statusPortInUse", { port: s.port })
+      "port-in-use": holder
+        ? t("statusPortInUseHeld", { holder: holder, port: s.port })
+        : t("statusPortInUse", { port: s.port })
     };
     box.textContent = words[s.portInUse ? "port-in-use" : s.browser] || String(s.browser);
     box.className = "status " + (s.browser === "connected" ? "ok" : "bad");

@@ -41,6 +41,10 @@ export interface FakeObsServerOptions {
   deferStudioModeEvents?: boolean;
   /** Optional `visual-sidechain` vendor mode: `"none"` (default), `"legacy"` (0.6.0, no safety/tempo/deck_command requests), `"safety"` (P0-3), `"tempo"` (P1-2/P1-3), or `"decks"` (P1-6). */
   visualSidechainVendor?: "none" | "legacy" | "safety" | "tempo" | "decks";
+  /** Optional `GetInputKindList` reply override (defaults to standard OBS kinds + `obs_playlister_source`). */
+  inputKinds?: string[];
+  /** Whether `midi-fadester` `get_catalog` includes P1-8 `has_internal_opacity` / `opacity_slot` fields (default `true`). */
+  includeLayerOpacityFields?: boolean;
 }
 
 /** An OBS input as `GetInputList` reports it (obs-websocket 5.6.3). */
@@ -155,7 +159,7 @@ const NATIVE_TBAR_CLAMP = 102;
 
 /** Every request type `handleObsRequest` answers; `GetVersion.availableRequests` by default. */
 const FAKE_REQUEST_TYPES = [
-  "GetVersion", "GetStudioModeEnabled", "SetStudioModeEnabled", "GetSceneList", "GetInputList",
+  "GetVersion", "GetStudioModeEnabled", "SetStudioModeEnabled", "GetSceneList", "GetInputList", "GetInputKindList",
   "GetSceneTransitionList", "GetCurrentSceneTransition", "GetCurrentSceneTransitionCursor", "GetSceneSceneTransitionOverride",
   "SetSceneSceneTransitionOverride", "GetCurrentProgramScene", "GetCurrentPreviewScene", "GetInputVolume",
   "SetInputVolume", "SetTBarPosition", "SetCurrentPreviewScene", "SetCurrentProgramScene",
@@ -659,6 +663,9 @@ export class FakeObsServer {
   public hotkeyFailNext = "";
   public hotkeyDelayMs: number;
   public visualSidechainVendor: "none" | "legacy" | "safety" | "tempo" | "decks";
+  public inputKinds: string[];
+  public includeLayerOpacityFields: boolean;
+  public readonly disabledMidiFadesterRequests = new Set<string>();
   public visualSidechainPanic = false;
   public visualSidechainSinceMs = 0;
   public visualSidechainDecks: Array<Record<string, unknown>> = [];
@@ -724,6 +731,14 @@ export class FakeObsServer {
     this.dropStudioDisableResponse = opts?.dropStudioDisableResponse ?? false;
     this.deferStudioModeEvents = opts?.deferStudioModeEvents ?? false;
     this.visualSidechainVendor = opts?.visualSidechainVendor ?? "none";
+    this.inputKinds = opts?.inputKinds ?? [
+      "wasapi_output_capture",
+      "wasapi_input_capture",
+      "ffmpeg_source",
+      "browser_source",
+      "obs_playlister_source"
+    ];
+    this.includeLayerOpacityFields = opts?.includeLayerOpacityFields ?? true;
     this.slots = createDefaultSlots(
       this.studioMode,
       supportsFxApi(this.fadesterVersion)
@@ -1465,6 +1480,13 @@ export class FakeObsServer {
       return;
     }
 
+    if (requestType === "GetInputKindList") {
+      this.sendResponse(ws, requestId, requestType, true, 100, "", {
+        inputKinds: [...this.inputKinds]
+      });
+      return;
+    }
+
     if (requestType === "GetGroupList") {
       // obs-websocket 5.6.3 lists group names only.
       this.sendResponse(ws, requestId, requestType, true, 100, "", { groups: this.groups.map((group) => group.groupName) });
@@ -1845,6 +1867,16 @@ export class FakeObsServer {
             this.visualSidechainVendor === "safety" ||
             this.visualSidechainVendor === "tempo" ||
             this.visualSidechainVendor === "decks";
+          const hasTempoGrid =
+            this.visualSidechainVendor === "tempo" ||
+            this.visualSidechainVendor === "decks";
+          const {
+            beat_index: _bi,
+            bar_phase: _bp,
+            bar_index: _bari,
+            bpm_locked: _bl,
+            ...baseSignals
+          } = this.visualSidechainSignals;
           this.sendResponse(ws, requestId, requestType, true, 100, "", {
             vendorName,
             requestType: vReqType,
@@ -1852,14 +1884,14 @@ export class FakeObsServer {
               success: true,
               version: hasSafety ? "0.7.0" : "0.6.0",
               api_version: 1,
-              ...this.visualSidechainSignals,
+              ...(hasTempoGrid ? this.visualSidechainSignals : baseSignals),
               ...(hasSafety ? { panic: this.visualSidechainPanic } : {})
             }
           });
           return;
         }
         if (vReqType === "get_decks") {
-          const hasVersion = this.visualSidechainVendor !== "legacy";
+          const hasVersion = this.visualSidechainVendor === "decks";
           this.sendResponse(ws, requestId, requestType, true, 100, "", {
             vendorName,
             requestType: vReqType,
@@ -2080,6 +2112,18 @@ export class FakeObsServer {
         return;
       }
 
+      if (this.disabledMidiFadesterRequests.has(vReqType)) {
+        this.sendResponse(
+          ws,
+          requestId,
+          requestType,
+          false,
+          604,
+          `No request type '${vReqType}' was found on vendor '${vendorName}'.`
+        );
+        return;
+      }
+
       this.vendorCallLog.push({ requestType: vReqType, requestData: vReqData });
       const responseData = this.handleVendorCall(vReqType, vReqData);
       this.sendResponse(ws, requestId, requestType, true, 100, "", {
@@ -2122,18 +2166,21 @@ export class FakeObsServer {
       const source =
         typeof vReqData.source === "string" ? vReqData.source : "";
       if (!source) {
+        const layerExtra = this.includeLayerOpacityFields
+          ? { has_internal_opacity: false, opacity_slot: "" }
+          : {};
         return {
           scenes: [
             {
               name: "Scene Live",
               layers: [
-                { name: "Cam 1", has_audio: false },
-                { name: "Logo Overlay", has_audio: false }
+                { name: "Cam 1", has_audio: false, ...layerExtra },
+                { name: "Logo Overlay", has_audio: false, ...layerExtra }
               ]
             },
             {
               name: "Scene Preview",
-              layers: [{ name: "Loop 3", has_audio: false }]
+              layers: [{ name: "Loop 3", has_audio: false, ...layerExtra }]
             }
           ],
           audio_sources: [

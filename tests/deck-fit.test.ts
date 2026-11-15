@@ -82,6 +82,7 @@ function drawnTexts(): Array<{ key: StringKey; params?: TextParams; boxes: Box[]
   for (const key of ["cellPreview", "cellProgram"] as const) add(key, [B.mfTbarName]);
   add("cleanFxTitle", [B.mfKeyTitle]);
   add("cleanFxNeedsUpdate", [B.mfKeyReason]);
+  add("mfNeedsUpdate", [B.mfDialReason, B.mfKeyReason]);
   for (const key of ["cleanFxActiveTitle", "cleanFxIdleTitle"] as const) add(key, [B.cleanFxTitle]);
   add("cleanFxActiveCount", [B.cleanFxCount], { n: 12 });
   add("cleanFxAllZero", [B.cleanFxCount]);
@@ -138,7 +139,7 @@ function drawnTexts(): Array<{ key: StringKey; params?: TextParams; boxes: Box[]
   // Its operation words are titles; the state, pending and busy words its subtitle. The time is drawn
   // only in PLAYING and PAUSED, so a two-hour item with those two words is the longest sample.
   for (const key of ["plOpPrevious", "plOpNext", "plOpPlayPause", "plOpStop", "plOpRestart", "plOpStatus"] as const) add(key, [B.keyTitle]);
-  for (const key of ["plMissing", "plWrongKind", "plUnsupported", "mediaPendingPlay", "mediaPendingPause",
+  for (const key of ["plMissing", "plNotInstalled", "plWrongKind", "plUnsupported", "mediaPendingPlay", "mediaPendingPause",
     "mediaUnconfirmed", "mediaBusy"] as const) add(key, [B.keySub]);
   for (const key of (Object.keys(EN) as StringKey[]).filter((name) => name.startsWith("mediaState"))) add(key, [B.keySub]);
   for (const key of ["mediaStatePlaying", "mediaStatePaused"] as const) {
@@ -201,6 +202,7 @@ const NOT_ON_DECK = new Set<StringKey>([
   "statusConnectedVendor", "statusConnectedVendorBuild", "errorEmptyScreenshot",
   "audioMainAutomatic", "audioMicAutomatic", "audioAuxAutomatic", "audioInputAutomatic",
   "setupErrorStudio", "setupErrorFallback", "piChooseSlot", "piEnabledNotApplied",
+  "mfNeedsUpdateSentence", "vsNeedsUpdateSentence",
   "tierVerified", "tierBeta", "tierCustom", "profileGeneric",
   "modeUnassigned", "modeTbar", "modeCrossfade", "modeLayerOpacity", "modeAudioVolume", "modeFilterParam",
   "curveDipFree", "curveFullCenter", "curveEqualPower", "curveLinear", "curveCut",

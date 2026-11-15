@@ -16,14 +16,18 @@
 import { EventEmitter } from "node:events";
 import { DirectObsClient, DirectObsError } from "../obs/direct-obs-client.js";
 import { VS_VENDOR_NAME, VisualSafety } from "./visual-safety.js";
+import {
+  OBS_VENDOR_NOT_FOUND,
+  OBS_VENDOR_REQUEST_MISSING,
+  isObsVendorMissingError,
+  isObsVendorRequestMissingError
+} from "../../packages/streamdeck-fadester-shared/src/obs/obs-vendor-client.js";
 import { ownText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
 
 export const VS_TAP_TEMPO_HOTKEY = "visual_sidechain_tap_tempo";
 export const VS_LOCK_BPM_HOTKEY = "visual_sidechain_lock_bpm";
 export const VS_RESYNC_DOWNBEAT_HOTKEY = "visual_sidechain_resync_downbeat";
 
-const NOT_FOUND_CODE = 600;
-const INVALID_RESOURCE_TYPE_CODE = 604;
 const SPECTRUM_BINS = 32;
 const DEFAULT_BPM = 120;
 const MIN_BPM = 30;
@@ -51,6 +55,8 @@ export interface VisualSignalsSnapshot {
   readonly barIndex: number;
   readonly beatConfidence: number;
   readonly panic: boolean;
+  readonly supportsTempoGrid?: boolean;
+  readonly needsTempoUpdate?: boolean;
   readonly spectrum: readonly number[];
   readonly receivedAtMs: number;
 }
@@ -119,11 +125,6 @@ function normalizeSpectrum(raw: unknown): readonly number[] {
   return out;
 }
 
-function isMissingVendorOrRequest(error: unknown): boolean {
-  const code = (error as { code?: unknown } | null)?.code;
-  return code === NOT_FOUND_CODE || code === INVALID_RESOURCE_TYPE_CODE;
-}
-
 function emptySnapshot(nowMs: number): VisualSignalsSnapshot {
   return {
     availability: "unknown",
@@ -142,6 +143,8 @@ function emptySnapshot(nowMs: number): VisualSignalsSnapshot {
     barIndex: 0,
     beatConfidence: 0,
     panic: false,
+    supportsTempoGrid: false,
+    needsTempoUpdate: false,
     spectrum: ZERO_SPECTRUM,
     receivedAtMs: nowMs
   };
@@ -285,7 +288,7 @@ export class VisualSignals extends EventEmitter {
       this.applySignalsPayload(reply, true);
     } catch (error) {
       if (gen !== this.connectionGen) return;
-      if (isMissingVendorOrRequest(error) && this.snapshot.availability !== "loaded") {
+      if (isObsVendorMissingError(error) && this.snapshot.availability !== "loaded") {
         this.snapshot = { ...this.snapshot, availability: "not_loaded", panic: this.effectivePanic() };
         this.emit("stateChanged");
         this.emit("updated");
@@ -318,7 +321,7 @@ export class VisualSignals extends EventEmitter {
       const reply = await this.client.callNamedVendor<TempoReply>(VS_VENDOR_NAME, "set_bpm", { bpm: clamped });
       this.applyTempoReply(reply);
     } catch (error) {
-      throw this.tempoFailure(error);
+      throw this.tempoFailure(error, "set_bpm");
     }
   }
 
@@ -333,9 +336,8 @@ export class VisualSignals extends EventEmitter {
       this.applyTempoReply(reply);
       return;
     } catch (error) {
-      const code = (error as { code?: unknown } | null)?.code;
-      if (code !== INVALID_RESOURCE_TYPE_CODE) {
-        throw this.tempoFailure(error);
+      if (!isObsVendorRequestMissingError(error)) {
+        throw this.tempoFailure(error, requestType);
       }
     }
     try {
@@ -355,7 +357,7 @@ export class VisualSignals extends EventEmitter {
       }
       this.emit("updated");
     } catch (error) {
-      throw this.tempoFailure(error);
+      throw this.tempoFailure(error, requestType, true);
     }
   }
 
@@ -366,6 +368,8 @@ export class VisualSignals extends EventEmitter {
     this.snapshot = {
       ...this.snapshot,
       availability: "loaded",
+      supportsTempoGrid: true,
+      needsTempoUpdate: false,
       bpm: clampBpm(reply.bpm, this.snapshot.bpm),
       bpmLocked: typeof reply.bpm_locked === "boolean" ? reply.bpm_locked : this.snapshot.bpmLocked,
       beatPhase: reply.beat_phase !== undefined ? clamp01(reply.beat_phase) : this.snapshot.beatPhase,
@@ -386,6 +390,7 @@ export class VisualSignals extends EventEmitter {
     const prevState = this.plainState();
     const prevLocked = this.snapshot.bpmLocked;
     const prevBpm = Math.round(this.snapshot.bpm);
+    const prevSupportsGrid = this.snapshot.supportsTempoGrid;
 
     if (typeof raw.panic === "boolean") {
       this.remotePanic = raw.panic;
@@ -393,6 +398,8 @@ export class VisualSignals extends EventEmitter {
     const rms = clamp01(raw.level ?? raw.rms);
     const audioPresent = typeof raw.audio_present === "boolean" ? raw.audio_present : rms > 0.001;
     const beatPhase = clamp01(raw.beat_phase);
+    const hasGridFields = typeof raw.beat_index === "number" || typeof raw.bar_phase === "number";
+    const supportsTempoGrid = initial ? hasGridFields : this.snapshot.supportsTempoGrid || hasGridFields;
     const barPhase = raw.bar_phase !== undefined
       ? clamp01(raw.bar_phase)
       : clamp01((normalizeBeatIndex(raw.beat_index, 0) + beatPhase) / 4);
@@ -415,6 +422,8 @@ export class VisualSignals extends EventEmitter {
       barIndex: normalizeBarIndex(raw.bar_index, this.snapshot.barIndex),
       beatConfidence: clamp01(raw.beat_confidence),
       panic: this.effectivePanic(),
+      supportsTempoGrid,
+      needsTempoUpdate: initial ? false : this.snapshot.needsTempoUpdate && !hasGridFields,
       spectrum: normalizeSpectrum(raw.spectrum),
       receivedAtMs: this.clock()
     };
@@ -424,6 +433,7 @@ export class VisualSignals extends EventEmitter {
       initial ||
       nextState !== prevState ||
       this.snapshot.bpmLocked !== prevLocked ||
+      this.snapshot.supportsTempoGrid !== prevSupportsGrid ||
       Math.round(this.snapshot.bpm) !== prevBpm
     ) {
       this.emit("stateChanged");
@@ -443,11 +453,29 @@ export class VisualSignals extends EventEmitter {
     return "active";
   }
 
-  private tempoFailure(error: unknown): unknown {
-    if ((error as { code?: unknown } | null)?.code === NOT_FOUND_CODE) {
+  private tempoFailure(error: unknown, requestType: string, afterVendorMissing = false): unknown {
+    const code = (error as { code?: unknown } | null)?.code;
+    if (
+      isObsVendorRequestMissingError(error) ||
+      (afterVendorMissing && code === OBS_VENDOR_NOT_FOUND && this.snapshot.availability === "loaded")
+    ) {
+      this.snapshot = {
+        ...this.snapshot,
+        availability: "loaded",
+        needsTempoUpdate: true,
+        panic: this.effectivePanic()
+      };
+      this.emit("stateChanged");
+      this.emit("updated");
+      return new DirectObsError(
+        ownText("vsNeedsUpdateSentence", { request: requestType }),
+        OBS_VENDOR_REQUEST_MISSING
+      );
+    }
+    if (code === OBS_VENDOR_NOT_FOUND) {
       this.snapshot = { ...this.snapshot, availability: "not_loaded", panic: this.effectivePanic() };
       this.emit("stateChanged");
-      return new DirectObsError(ownText("vpNotLoaded"), NOT_FOUND_CODE);
+      return new DirectObsError(ownText("vpNotLoaded"), OBS_VENDOR_NOT_FOUND);
     }
     return error;
   }

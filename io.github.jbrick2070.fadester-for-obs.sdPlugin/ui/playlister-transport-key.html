@@ -70,6 +70,7 @@
         let text = "";
         let kind = "status-info";
         if (connected && state.mediaCapability === "unsupported") { text = T("plBannerUnsupported"); kind = "status-err"; }
+        else if (connected && state.playlisterPlugin && state.playlisterPlugin.status === "missing") { text = T("plBannerPluginMissing"); kind = "status-warn"; }
         else if (!selectedUuid) text = T(connected && playlisters.length === 0 ? "plBannerNone" : "plBannerChoose");
         else if (wrongKind) { text = T("plBannerWrongKind"); kind = "status-warn"; }
         else if (missing) { text = T("plBannerMissing"); kind = "status-warn"; }

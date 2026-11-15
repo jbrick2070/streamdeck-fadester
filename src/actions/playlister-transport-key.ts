@@ -13,6 +13,7 @@ import {
   WillDisappearEvent
 } from "@elgato/streamdeck";
 import { DirectObsClient, MEDIA_QUEUE_LIMIT, MediaStateWord, MediaTargetState } from "../obs/direct-obs-client.js";
+import { detectPlaylisterPlugin } from "../obs/setup-checklist.js";
 import { customCaption } from "../obs/preset-captions.js";
 import {
   DEFAULT_PLAYLISTER_TRANSPORT_SETTINGS,
@@ -98,9 +99,20 @@ export class PlaylisterTransportInstanceController {
   private lastObservedState: MediaStateWord = "unknown";
   /** Bumped on a retarget and on disappear: a rejection from an older target is dropped. */
   private settingsGeneration = 0;
+  /** Tracks whether `obs_playlister_source` is registered in OBS (`GetInputKindList`). */
+  private playlisterPluginStatus: "present" | "missing" | "unknown" = "unknown";
+  private probeGeneration = 0;
   /** The cursor moves every poll but the drawn clock once a second: an unchanged picture is not re-sent. */
   private lastSvg = "";
-  private readonly onStatusChanged = (): void => this.renderNow();
+  private readonly onStatusChanged = (): void => {
+    if (this.client.isConnected()) {
+      void this.refreshPluginPresence();
+    } else {
+      this.probeGeneration++;
+      this.playlisterPluginStatus = "unknown";
+    }
+    this.renderNow();
+  };
   private readonly onMediaStateChanged = (inputUuid: string, state: MediaTargetState): void => {
     if (inputUuid !== this.settings.inputUuid) return;
     if (state.mediaState !== this.lastObservedState) {
@@ -134,6 +146,9 @@ export class PlaylisterTransportInstanceController {
     this.client.on("statusChanged", this.onStatusChanged);
     this.client.on("mediaStateChanged", this.onMediaStateChanged);
     this.acquireWatch();
+    if (this.client.isConnected()) {
+      void this.refreshPluginPresence();
+    }
     this.renderNow();
   }
 
@@ -142,6 +157,8 @@ export class PlaylisterTransportInstanceController {
     this.offLanguage();
     this.offLanguage = () => {};
     this.settingsGeneration++;
+    this.probeGeneration++;
+    this.playlisterPluginStatus = "unknown";
     this.lastSvg = "";
     this.rateLimiter.dispose();
     this.client.off("statusChanged", this.onStatusChanged);
@@ -197,6 +214,20 @@ export class PlaylisterTransportInstanceController {
     this.releaseWatch = this.client.watchMedia(this.settings.inputUuid);
   }
 
+  private async refreshPluginPresence(): Promise<void> {
+    if (!this.visible || !this.client.isConnected()) {
+      this.playlisterPluginStatus = "unknown";
+      return;
+    }
+    const gen = ++this.probeGeneration;
+    const info = await detectPlaylisterPlugin(this.client);
+    if (!this.visible || gen !== this.probeGeneration) return;
+    if (info.status !== this.playlisterPluginStatus) {
+      this.playlisterPluginStatus = info.status;
+      this.renderNow();
+    }
+  }
+
   private renderNow(): void {
     if (!this.visible) {
       return;
@@ -207,7 +238,15 @@ export class PlaylisterTransportInstanceController {
     const icon = OPERATION_ICONS[operation];
     const connected = this.client.isConnected();
     const reason = statusCellReason(this.client.getStatus(), translate);
+    const pluginMissing = connected && this.playlisterPluginStatus === "missing";
     if (!uuid) {
+      if (pluginMissing) {
+        this.push(renderDirectKeySvg({
+          connected, reason, title, icon, configured: true, accent: this.settings.accent,
+          subtitle: t("mediaStateUnknown"), problem: t("plNotInstalled")
+        }));
+        return;
+      }
       this.push(renderDirectKeySvg({
         connected, reason, title, icon, configured: false, unboundSubtitle: t("errorMediaChoose"), accent: this.settings.accent
       }));
@@ -216,7 +255,7 @@ export class PlaylisterTransportInstanceController {
     const state = this.client.getMediaState(uuid);
     let problem: string | undefined;
     switch (state.availability) {
-      case "missing": problem = t("plMissing"); break;
+      case "missing": problem = pluginMissing ? t("plNotInstalled") : t("plMissing"); break;
       case "wrong_kind": problem = t("plWrongKind"); break;
       case "unsupported": problem = t("plUnsupported"); break;
       default: problem = this.lastError ? wordText(this.lastError, translate) : undefined;

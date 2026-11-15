@@ -1,6 +1,6 @@
 # Windows and macOS candidate
 
-The same `io.github.jbrick2070.fadester-for-obs.streamDeckPlugin` contains all 17 Fadester and VJster actions for both Windows and macOS. The existing UUID is preserved. The standalone VJster manifest has the same platform declarations, for people who use it separately.
+The same `io.github.jbrick2070.fadester-for-obs.streamDeckPlugin` contains all 19 Fadester and VJster actions for both Windows and macOS. The existing UUID is preserved. The standalone VJster manifest has the same platform declarations, for people who use it separately.
 
 Requirements: Stream Deck 7.6 or later for the suite, Windows 10 or later, or macOS 13.5 or later. The plugin asks Stream Deck to run Node 24; [Node 24's macOS minimum is 13.5](https://nodejs.org/en/blog/migrations/v22-to-v24). One shared JavaScript entry point is used on both operating systems, as supported by the [Stream Deck manifest](https://docs.elgato.com/streamdeck/sdk/references/manifest/).
 
@@ -42,7 +42,7 @@ The actual Stream Deck host log reported **Plugin connected**, confirming host r
 
 Install this exact candidate on each test host and record its checksum, OS and CPU architecture, Stream Deck version, and OBS version. Use a disposable OBS scene collection and do not enable streaming or recording for control tests.
 
-1. Confirm all 17 actions appear, the suite's two child processes start and recover, and property inspectors show usable controls and correct localized text. Check key images, dial strips and longer/CJK scene names for clipping or missing glyphs.
+1. Confirm all 19 actions appear, the suite's two child processes start and recover, and property inspectors show usable controls and correct localized text. Check key images, dial strips and longer/CJK scene names for clipping or missing glyphs.
 2. Authenticate OBS WebSocket locally. Test source visibility, scene selection, Preview/Program guards, transitions and fader endpoints, audio volume/mute/fades, filter ranges, connection loss and reconnection.
 3. Import an included profile deliberately and verify that personal profiles are preserved. Test actual keys, dial turns, holds, presses and touch strips on each device model being claimed. A simulated host cannot establish physical-device behavior.
 4. Load the freshly built VJster Chrome extension. Test tab selection, pinning, transport, speed and available quality changes. Then test the local VJster page as an OBS browser source: YouTube embed rates and its truthful unsupported-quality state. Confirm loopback pairing and reconnection.

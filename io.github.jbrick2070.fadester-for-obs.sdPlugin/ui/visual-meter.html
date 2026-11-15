@@ -9,6 +9,7 @@
 <body>
   <h3><span data-i18n="vmHeading">Visual Sidechain Meter</span></h3>
   <p class="muted" data-i18n="vmIntro">Shows Visual Sidechain's live BPM, beat counter, smoothed band envelopes, and NO AUDIO, PANIC, or NOT LOADED states.</p>
+  <div id="vm-status" class="status-banner status-warn" style="display:none;"></div>
   <div class="row" id="vm-operation-row">
     <label for="vm-operation" data-i18n="whenPressed">When pressed</label>
     <select id="vm-operation">
@@ -43,7 +44,8 @@
   <script src="preset-captions.js"></script>
   <script src="direct-pi.js"></script>
   <script>
-    window.initDirectObsPropertyInspector(function (settings, save) {
+    window.initDirectObsPropertyInspector(function (settings, save, state) {
+      const T = window.FadesterI18n.t;
       const controller = window.directObsController || "Keypad";
       const opRow = document.getElementById("vm-operation-row");
       const rotRow = document.getElementById("vm-dial-rotate-row");
@@ -51,9 +53,27 @@
       const rotate = document.getElementById("vm-dial-rotate");
       const rate = document.getElementById("vm-rate");
       const label = document.getElementById("vm-label");
+      const banner = document.getElementById("vm-status");
 
       if (opRow) opRow.style.display = controller === "Neo" ? "none" : "";
       if (rotRow) rotRow.style.display = controller === "Encoder" ? "" : "none";
+
+      const connected = Boolean(state && state.status && state.status.kind === "connected");
+      const vs = state && state.visualSignals ? state.visualSignals : null;
+      if (banner) {
+        let text = "";
+        let kind = "status-warn";
+        if (connected && vs && vs.availability === "not_loaded") {
+          text = T("tdBannerNotLoaded");
+          kind = "status-info";
+        } else if (connected && vs && vs.availability === "loaded" && (!vs.supportsTempoGrid || vs.needsTempoUpdate)) {
+          text = T("vsBannerTempoNeedsUpdate");
+          kind = "status-warn";
+        }
+        banner.textContent = text;
+        banner.className = "status-banner " + kind;
+        banner.style.display = text ? "block" : "none";
+      }
 
       const selectedOp = ["tap_tempo", "lock_bpm", "resync_downbeat", "display_only"].indexOf(settings.operation) !== -1
         ? settings.operation : "tap_tempo";

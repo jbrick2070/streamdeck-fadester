@@ -24,6 +24,7 @@ import {
 } from "../types/contract.js";
 import { FadesterGlobalSettings } from "../types/settings.js";
 import {
+  OBS_VENDOR_REQUEST_MISSING,
   OBS_WS_DEFAULT_SUBSCRIPTIONS,
   OBS_WS_EVENT_SUB_SCENES,
   OBS_WS_EVENT_SUB_UI,
@@ -32,11 +33,12 @@ import {
   ObsVendorClientOptions,
   ObsVendorError,
   computeObsWebSocketAuth,
+  isObsVendorRequestMissingError,
   makeMissingPluginStatus as makeSharedMissingPluginStatus,
   makeUnreachableStatus,
   makeWrongPasswordStatus
 } from "../../packages/streamdeck-fadester-shared/src/obs/obs-vendor-client.js";
-import type { LocalText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
+import { ownText, type LocalText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
 
 export {
   FADESTER_VENDOR_NAME,
@@ -149,6 +151,35 @@ export class FadesterClient extends ObsVendorClient<GetStateResponse> {
       "reset_fx",
       req?.ms !== undefined ? { ms: req.ms } : {}
     );
+  }
+
+  public override async callVendor<TResponse>(
+    requestType: string,
+    requestData?: Record<string, unknown>,
+    resyncOnError = true
+  ): Promise<TResponse> {
+    if (requestType === "get_state") {
+      return super.callVendor<TResponse>(requestType, requestData, resyncOnError);
+    }
+    try {
+      return await this.callNamedVendor<TResponse>(
+        this.vendorName,
+        requestType,
+        requestData
+      );
+    } catch (err) {
+      const vendorErr = isObsVendorRequestMissingError(err)
+        ? this.createVendorError(
+            ownText("mfNeedsUpdateSentence", { request: requestType }),
+            OBS_VENDOR_REQUEST_MISSING
+          )
+        : this.normalizeVendorError(err);
+      this.emit("vendorError", vendorErr.comment, vendorErr.text);
+      if (resyncOnError && !isObsVendorRequestMissingError(err) && this.identified) {
+        void this.getState().catch(() => {});
+      }
+      throw vendorErr;
+    }
   }
 
   protected override createVendorError(

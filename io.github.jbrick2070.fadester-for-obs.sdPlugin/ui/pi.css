@@ -254,3 +254,67 @@ details.direct-optional {
   margin: 4px 0 8px 0;
   line-height: 1.45;
 }
+.checklist-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 6px 0 8px 0;
+}
+.chk-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  background: var(--surface);
+  border: 1px solid #352546;
+}
+.chk-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 4px;
+  background: #777B86;
+}
+.chk-dot.chk-ok {
+  background: #22C55E;
+}
+.chk-dot.chk-fail {
+  background: #F87185;
+}
+.chk-dot.chk-warn {
+  background: #EAB308;
+}
+.chk-dot.chk-info {
+  background: #60A5FA;
+}
+.chk-dot.chk-unknown,
+.chk-dot.chk-not_applicable {
+  background: #777B86;
+}
+.chk-body {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.35;
+}
+.chk-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.chk-title {
+  font-weight: 600;
+  color: var(--text);
+}
+.chk-detail {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.chk-fix {
+  margin-top: 2px;
+  font-size: 11px;
+  color: #FFF49A;
+}

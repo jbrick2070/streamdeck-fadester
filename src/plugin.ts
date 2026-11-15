@@ -119,7 +119,7 @@ const directBridge = new DirectObsPropertyInspectorBridge(directClient, {
     const device = streamDeck.ui.action?.device;
     if (device) await streamDeck.profiles.switchToProfile(device.id, profilePathForSlug(slug));
   }
-}, layers, tapeDecks);
+}, layers, tapeDecks, visualSignals);
 
 streamDeck.settings.onDidReceiveGlobalSettings<FadesterGlobalSettings>((ev) => {
   settingsStore.replace(ev.settings);

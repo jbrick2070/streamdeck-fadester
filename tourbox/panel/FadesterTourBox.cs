@@ -73,6 +73,63 @@ namespace Fadester.TourBox {
       return File.Exists(Path.Combine(redirected,Path.GetFileName(file))) || !File.Exists(file) ? redirected : dir;
     }
   }
+  /** VJster's OBS Browser Source page: the same link, video-id rules and token format as the Mac panel (Model.swift) and the bridge (BridgeConfig). */
+  internal static class VjsterObsPage {
+    internal static readonly string[] Targets = { "both", "browser", "obs" };
+    static readonly System.Text.RegularExpressions.Regex IdPattern = new System.Text.RegularExpressions.Regex("^[A-Za-z0-9_-]{11}$");
+    static readonly System.Text.RegularExpressions.Regex TokenPattern = new System.Text.RegularExpressions.Regex("^[0-9a-f]{32}$");
+    internal static bool ValidToken(string token) { return token!=null && TokenPattern.IsMatch(token); }
+    /** As the bridge reads it: trimmed and lower-cased, so a saved token in capitals is kept rather than replaced. */
+    internal static string NormalizeToken(string token) { return (token??"").Trim().ToLowerInvariant(); }
+    internal static string NewToken() {
+      var bytes=new byte[16];
+      using(var rng=System.Security.Cryptography.RandomNumberGenerator.Create()) rng.GetBytes(bytes);
+      return String.Concat(bytes.Select(b=>b.ToString("x2",CultureInfo.InvariantCulture)));
+    }
+    /** The 11-character YouTube id in a bare id or a youtube.com / youtu.be / youtube-nocookie.com link; null when there is none. */
+    internal static string VideoId(string input) {
+      string trimmed=(input??"").Trim();
+      if(trimmed.Length==0) return null;
+      if(IdPattern.IsMatch(trimmed)) return trimmed!="videoseries" ? trimmed : null;
+      string lower=trimmed.ToLowerInvariant();
+      Uri uri;
+      if(!Uri.TryCreate(lower.StartsWith("http://",StringComparison.Ordinal) || lower.StartsWith("https://",StringComparison.Ordinal) ? trimmed : "https://"+trimmed,UriKind.Absolute,out uri)) return null;
+      string host=uri.Host.ToLowerInvariant();
+      bool youtube=host=="youtube.com" || host.EndsWith(".youtube.com",StringComparison.Ordinal) || host=="youtube-nocookie.com" || host.EndsWith(".youtube-nocookie.com",StringComparison.Ordinal);
+      string[] segments=uri.AbsolutePath.Split(new[]{'/'},StringSplitOptions.RemoveEmptyEntries);
+      string candidate=null;
+      if(host=="youtu.be") candidate=segments.Length>0 ? segments[0] : null;
+      else if(youtube) {
+        foreach(var pair in uri.Query.TrimStart('?').Split('&')) {
+          int eq=pair.IndexOf('=');
+          if(eq>0 && pair.Substring(0,eq)=="v") { candidate=Uri.UnescapeDataString(pair.Substring(eq+1)); break; }
+        }
+        if(candidate==null && segments.Length>=2 && new[]{"shorts","embed","live","v"}.Contains(segments[0])) candidate=segments[1];
+      }
+      return candidate!=null && candidate!="videoseries" && IdPattern.IsMatch(candidate) ? candidate : null;
+    }
+    internal static string Url(int port,string videoId,string token) {
+      return "http://127.0.0.1:"+port.ToString(CultureInfo.InvariantCulture)+"/obs?v="+(videoId??"VIDEO_ID")+"#token="+token;
+    }
+    internal static void Test() {
+      string[][] cases = {
+        new[]{"dQw4w9WgXcQ","dQw4w9WgXcQ"}, new[]{"  dQw4w9WgXcQ ","dQw4w9WgXcQ"},
+        new[]{"https://youtu.be/dQw4w9WgXcQ","dQw4w9WgXcQ"}, new[]{"youtu.be/dQw4w9WgXcQ?t=42","dQw4w9WgXcQ"},
+        new[]{"https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PL1","dQw4w9WgXcQ"}, new[]{"https://m.youtube.com/watch?feature=x&v=dQw4w9WgXcQ","dQw4w9WgXcQ"},
+        new[]{"https://www.youtube.com/shorts/dQw4w9WgXcQ","dQw4w9WgXcQ"}, new[]{"https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ","dQw4w9WgXcQ"},
+        new[]{"https://www.youtube.com/embed/videoseries?list=PL123",null}, new[]{"https://example.com/watch?v=dQw4w9WgXcQ",null},
+        new[]{"https://notyoutube.com/watch?v=dQw4w9WgXcQ",null}, new[]{"https://www.youtube.com/watch?v=short",null}, new[]{"",null}, new[]{"videoseries",null}
+      };
+      foreach(var c in cases) if(VideoId(c[0])!=c[1]) throw new InvalidOperationException("VJster video id: "+c[0]);
+      string token=NewToken();
+      if(!ValidToken(token) || token==NewToken() || ValidToken("0123456789ABCDEF0123456789abcdef") || ValidToken("") ||
+         NormalizeToken(" 0123456789ABCDEF0123456789abcdef ")!="0123456789abcdef0123456789abcdef" || NormalizeToken(null)!="")
+        throw new InvalidOperationException("VJster OBS page token.");
+      if(Url(48150,"dQw4w9WgXcQ",token)!="http://127.0.0.1:48150/obs?v=dQw4w9WgXcQ#token="+token || !Url(48150,null,token).Contains("v=VIDEO_ID#"))
+        throw new InvalidOperationException("VJster OBS page link.");
+      if(Array.IndexOf(Targets,"both")!=0) throw new InvalidOperationException("VJster target default.");
+    }
+  }
   internal sealed class PanelWindow : Form {
     static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = 16000000 };
     readonly PanelText text;
@@ -101,7 +158,7 @@ namespace Fadester.TourBox {
     readonly Dictionary<string,string> actionLabels = new Dictionary<string,string>();
     List<Choice> padChoices = new List<Choice>(), releaseChoices = new List<Choice>();
     sealed class Choice { public string Id { get; set; } public string Label { get; set; } }
-    NumericUpDown mixStep, mixDuration, vjsterPort, opacityStep; TextBox extensionId;
+    NumericUpDown mixStep, mixDuration, vjsterPort, opacityStep; TextBox extensionId, vjsterVideo; ComboBox vjsterTarget;
     NumericUpDown port,volumeStep,duckLevel,fadeTicks,transitionStep; FlowLayoutPanel body; DataGridView controls; Process worker; Feedback hud; bool closing, refreshing, invalidConfig;
     readonly Color navy = Color.FromArgb(26,34,51), accent = Color.FromArgb(38,90,158);
     static Dictionary<string,object> Decode(string s) { return Json.Deserialize<Dictionary<string,object>>(s); }
@@ -115,6 +172,7 @@ namespace Fadester.TourBox {
     internal static void Test() {
       PanelText.Test();
       Readiness.Test();
+      VjsterObsPage.Test();
       var d=Decode("{\"scenes\":[\"🎬 Studio\",\"Act II\"],\"anchors\":[\"a\",\"\",\"b\",\"\"],\"port\":4455}");
       if (List(d,"scenes")[0]!="🎬 Studio" || Val(d,"port")!="4455" || List(d,"anchors").Length!=4) throw new Exception();
       if (List(d,"missing").Length!=0 || Decode(Json.Serialize(d)).Count!=3) throw new Exception();
@@ -146,7 +204,7 @@ namespace Fadester.TourBox {
       Font=new Font("Segoe UI",10); BackColor=Color.White; StartPosition=FormStartPosition.CenterScreen;
       var grid=new TableLayoutPanel {Dock=DockStyle.Fill,ColumnCount=1,RowCount=5, Padding=new Padding(14)};
       grid.RowStyles.Add(new RowStyle(SizeType.Absolute,80)); grid.RowStyles.Add(new RowStyle(SizeType.AutoSize)); grid.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-      grid.RowStyles.Add(new RowStyle(SizeType.Percent,100)); grid.RowStyles.Add(new RowStyle(SizeType.Absolute,86));
+      grid.RowStyles.Add(new RowStyle(SizeType.Percent,100)); grid.RowStyles.Add(new RowStyle(SizeType.Absolute,104));
       grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100)); // the window's width bounds every row, so the lights wrap
       Controls.Add(grid);
       var head=new Panel {Dock=DockStyle.Fill,BackColor=navy,Padding=new Padding(12)};
@@ -202,7 +260,16 @@ namespace Fadester.TourBox {
       vjRow.Controls.Add(new Label {Text=text.Get("vjsterExtensionId"),AutoSize=true,Margin=new Padding(10,8,4,0)});
       extensionId=new TextBox {Width=290}; vjRow.Controls.Add(extensionId); body.Controls.Add(vjRow);
       Hint(body,text.Get("vjsterIdHint"));
-      Hint(body,text.Get("keepOpen"));
+      // Where VJster sends its commands, and the OBS Browser Source page link (same choices as the Mac panel).
+      var targetRow=new FlowLayoutPanel {AutoSize=true,WrapContents=true,Margin=new Padding(0,3,0,3)};
+      targetRow.Controls.Add(new Label {Text=text.Get("vjsterTarget"),AutoSize=true,UseMnemonic=false,Margin=new Padding(4,8,4,0)});
+      vjsterTarget=new ComboBox {Width=230,DropDownStyle=ComboBoxStyle.DropDownList};
+      foreach(var key in new[]{"vjsterTargetBoth","vjsterTargetBrowser","vjsterTargetObs"}) vjsterTarget.Items.Add(text.Get(key));
+      vjsterTarget.SelectedIndex=0; targetRow.Controls.Add(vjsterTarget); body.Controls.Add(targetRow);
+      var pageRow=new FlowLayoutPanel {AutoSize=true,WrapContents=true,Margin=new Padding(0,3,0,3)};
+      pageRow.Controls.Add(new Label {Text=text.Get("vjsterVideo"),AutoSize=true,UseMnemonic=false,Margin=new Padding(4,8,4,0)});
+      vjsterVideo=new TextBox {Width=260}; pageRow.Controls.Add(vjsterVideo);
+      AddButton(pageRow,text.Get("copyObsUrl"),delegate { CopyObsUrl(); }); body.Controls.Add(pageRow);
       enableGamepad.CheckedChanged+=delegate { ShowStatus(); }; mixOnly.CheckedChanged+=delegate { ShowStatus(); };
       var assign=Page(tabs,text.Get("assignments")); Title(assign,text.Get("assignTitle"));
       Hint(assign,text.Get("assignHint"));
@@ -246,7 +313,14 @@ namespace Fadester.TourBox {
       AddButton(bar,text.Get("guide"),delegate { OpenPath(text.GuidePath(folder)); });
       // Shown only when config.json cannot be read, so the file can be found and repaired (a Store install keeps it elsewhere).
       openSettings=AddButton(bar,text.Get("openSettings"),delegate { OpenPath(SettingsFolder.Holding(settings)); }); openSettings.Visible=false;
-      grid.Controls.Add(bar,0,4);
+      // Always in view under the buttons (it used to sit at the bottom of a long Setup page), matching the Mac panel's footer.
+      var footer=new TableLayoutPanel {Dock=DockStyle.Fill,ColumnCount=1,RowCount=2,Margin=new Padding(0)};
+      footer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));
+      footer.RowStyles.Add(new RowStyle(SizeType.Percent,100)); footer.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+      var keepOpen=new Label {Text=text.Get("keepOpen"),AutoSize=true,UseMnemonic=false,ForeColor=Color.FromArgb(90,98,112),Margin=new Padding(4,2,4,0)};
+      footer.ClientSizeChanged+=delegate { keepOpen.MaximumSize=new Size(Math.Max(200,footer.ClientSize.Width-12),0); };
+      footer.Controls.Add(bar,0,0); footer.Controls.Add(keepOpen,0,1);
+      grid.Controls.Add(footer,0,4);
       ShowStatus();
       watch=new System.Windows.Forms.Timer {Interval=1000}; watch.Tick+=delegate { Watch(); };
       FormClosed+=delegate { watch.Stop(); watch.Dispose(); };
@@ -344,6 +418,7 @@ namespace Fadester.TourBox {
       enableVjster.Checked=!String.Equals(Val(config,"vjsterEnabled"),"false",StringComparison.OrdinalIgnoreCase);
       int vp; if(Int32.TryParse(Val(config,"vjsterPort"),out vp) && vp>=1024 && vp<=65535) vjsterPort.Value=vp;
       extensionId.Text=Val(config,"vjsterExtensionId");
+      vjsterTarget.SelectedIndex=Math.Max(0,Array.IndexOf(VjsterObsPage.Targets,Val(config,"vjsterTarget","both").Trim().ToLowerInvariant()));
       enableGamepad.Checked=String.Equals(Val(config,"gamepadEnabled"),"true",StringComparison.OrdinalIgnoreCase);
       easyMode.Checked=!String.Equals(Val(config,"gamepadEasy"),"false",StringComparison.OrdinalIgnoreCase);
       object os; if(config.TryGetValue("opacityStep",out os) && os!=null) {
@@ -472,6 +547,9 @@ namespace Fadester.TourBox {
       if(invalidConfig)throw new InvalidOperationException(text.Get("cannotWrite"));
       foreach(string k in new[]{"musicInput","contentInput","micInput","mediaInput","overlayScene","overlaySource","layer1Scene","layer1Source","layer2Scene","layer2Source"}) config[k]=boxes[k].Text;
       config["vjsterEnabled"]=enableVjster.Checked; config["vjsterPort"]=(int)vjsterPort.Value; config["vjsterExtensionId"]=extensionId.Text.Trim();
+      config["vjsterTarget"]=VjsterObsPage.Targets[Math.Max(0,vjsterTarget.SelectedIndex)];
+      // The OBS page needs its private link token; make one the first time the page is chosen.
+      if(VjsterObsPage.Targets[Math.Max(0,vjsterTarget.SelectedIndex)]=="obs" && !VjsterObsPage.ValidToken(VjsterObsPage.NormalizeToken(Val(config,"vjsterObsToken")))) config["vjsterObsToken"]=VjsterObsPage.NewToken();
       config["opacityStep"]=(double)opacityStep.Value/100.0;
       config["gamepadEnabled"]=enableGamepad.Checked; config["gamepadEasy"]=easyMode.Checked;
       if(padControls.Length>0){
@@ -499,6 +577,20 @@ namespace Fadester.TourBox {
           if(File.Exists(exe)) OpenPath(exe);
         }
       } catch(InvalidOperationException e) { Note(e.Message); }
+    }
+    /** Builds the bridge's OBS Browser Source link (making its private token if needed) and puts it on the clipboard. */
+    void CopyObsUrl() {
+      if(invalidConfig || PortsClash()) return;
+      bool made=false;
+      string saved=VjsterObsPage.NormalizeToken(Val(config,"vjsterObsToken"));
+      if(VjsterObsPage.ValidToken(saved)) config["vjsterObsToken"]=saved; else { config["vjsterObsToken"]=VjsterObsPage.NewToken(); made=true; }
+      string id=VjsterObsPage.VideoId(vjsterVideo.Text);
+      string url=VjsterObsPage.Url((int)vjsterPort.Value,id,Val(config,"vjsterObsToken"));
+      try { WriteConfig(); } catch(Exception e) { Note(e.Message); return; }
+      try { Clipboard.SetText(url); }
+      catch(ExternalException) { Note(text.Get("obsUrlManual",url)); return; }
+      // A running bridge read its settings at start: a token made just now works after the controls restart.
+      Note(text.Get(made && worker!=null ? "obsUrlRestart" : id==null ? "obsUrlCopiedBlank" : "obsUrlCopied"));
     }
     bool PortsClash() { if(!enableVjster.Checked || port.Value!=vjsterPort.Value) return false; Note(text.Get("portsClash")); return true; }
     void OpenPath(string p) { try {Process.Start(new ProcessStartInfo(p){UseShellExecute=true});} catch(Exception e){Note(e.Message);} }

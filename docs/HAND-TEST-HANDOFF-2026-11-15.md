@@ -15,11 +15,11 @@ To start, the owner says:
 
 ## 1. Where things stand
 
-Checked on GitHub at 2026-11-15 23:45 UTC, after the 0.12.1 re-cut described below.
+Checked on GitHub at 2026-11-16 04:40 UTC, after the 0.12.1 re-cut described below.
 
 | Repo | Release candidate | Release state | Last published |
 |---|---|---|---|
-| `streamdeck-fadester` (Fadester for OBS 0.12.1; Fadester Companion 0.1.5) | tag `v0.12.1`, `main` `d5f6a73` | draft | `v0.11.0` |
+| `streamdeck-fadester` (Fadester for OBS 0.12.1; Fadester Companion 0.1.5) | tag `v0.12.1` (`d5f6a73`); `main` `f20fb0a` | draft | `v0.11.0` |
 | `midi-fadester` | tag `0.7.0`, `main` `4f242a1` | draft | `0.6.0` |
 | `visual-sidechain` | tag `0.7.0`, `main` `b0f79bd` | draft | `0.6.0` |
 | `obs-playlister` | tag `0.5.1`, `main` `5f00ff9` | draft | `0.5.0` |
@@ -38,6 +38,8 @@ Checked on GitHub at 2026-11-15 23:45 UTC, after the 0.12.1 re-cut described bel
   - The Mac app's new executable name was not built in CI. It needs the Mac pass (line M10).
   - Two drafts now exist for Fadester for OBS. `v0.12.1` is the one to publish; the `v0.12.0` draft is
     superseded.
+- **After the tag,** `main` has one more change, to the Microsoft Store listing text only
+  (`tourbox/store/LISTING.md`). No code and no built file differs from `v0.12.1`.
 - **`release/suite-pins`** predates the re-cut: it still pins Fadester for OBS 0.12.0 and Fadester Companion
   0.1.4, and is behind `main`. It must be redone for 0.12.1 and 0.1.5 before it is merged, and it waits
   until the four releases are published.
@@ -472,6 +474,10 @@ a Mac app can need its Accessibility grant again.
 - **"Publish"**, once, after both passes.
 - **The superseded `v0.12.0` draft release:** delete it, or leave it unpublished. It must not be the one that
   is published.
+- **The Store listing texts are not ready.** `tourbox/store/LISTING.md` labels its "What's new" as version
+  0.1.4, but the build to submit is 0.1.5 (0.1.4 was never published) and it also carries the one-name change.
+  The eight translations in `tourbox/store/LISTING-translations.md` still say this is the first release in
+  the Store. Both need bringing up to date before the Store upload.
 - **Whether line M10 counts** for the publish (the experimental Mac Companion).
 - **Code signing.** Every Windows installer is unsigned, and the suite installer's behaviour under SmartScreen
   and Smart App Control is untested.

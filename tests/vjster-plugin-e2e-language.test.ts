@@ -77,8 +77,10 @@ describe("VJster plugin end to end, in another language", () => {
   it("draws a stored fixed language from the start, without any write (R-LANG-1, M-V-90, M-V-93)", async () => {
     const sim = await run("en", sims, { language: "de", obsToken: TOKEN, extensionIds: IDS });
     await until(() => words(sim.svg("key-1-1")).includes("ANHEFTEN"));
-    expect(words(sim.svg("dial-0"))).toEqual(expect.arrayContaining(["TEMPO", "WEB"]));
-    expect(words(sim.svg("key-0-1"))).toContain("PAUSE");
+    // Each control is redrawn by its own message, on its own clock: wait for each of the others as well,
+    // instead of reading them the instant the first one turns German.
+    await until(() => ["TEMPO", "WEB"].every((w) => words(sim.svg("dial-0")).includes(w)));
+    await until(() => words(sim.svg("key-0-1")).includes("PAUSE"));
     sim.pageAppeared("key-1-1");
     await until(() => sim.toPage.some((m) => m.event === "status"));
     expect(sim.toPage.find((m) => m.event === "language")).toEqual({ event: "language", choice: "de", resolved: "de" });
@@ -93,7 +95,7 @@ describe("VJster plugin end to end, in another language", () => {
     // nl.json is there since step L.4: the words are Dutch, not the English fallback.
     expect([dutch.pinTab, dutch.speed]).toEqual(["VASTZETTEN", "TEMPO"]);
     await until(() => words(sim.svg("key-1-1")).includes(dutch.pinTab));
-    expect(words(sim.svg("dial-0"))).toContain(dutch.speed);
+    await until(() => words(sim.svg("dial-0")).includes(dutch.speed)); // each control draws on its own clock
     sim.pageAppeared("key-1-1");
     await until(() => sim.toPage.some((m) => m.event === "language"));
     expect(sim.toPage.find((m) => m.event === "language")).toEqual({ event: "language", choice: "nl", resolved: "nl" });
@@ -107,7 +109,7 @@ describe("VJster plugin end to end, in another language", () => {
     // A settings page's write that sets the language and omits the port and the allow list.
     sim.saveGlobal({ obsToken: TOKEN, language: "de" });
     await until(() => words(sim.svg("key-1-1")).includes("ANHEFTEN"));
-    expect(words(sim.svg("dial-2"))).toContain("QUALITÄT");
+    await until(() => words(sim.svg("dial-2")).includes("QUALITÄT")); // each control draws on its own clock
     await until(() => sim.globalWrites.length > 0);
     expect(sim.globalWrites.at(-1)).toMatchObject({ port, extensionIds: IDS, language: "de", obsToken: TOKEN });
     // A pick on the settings page: the plugin saves it and answers.

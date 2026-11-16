@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { FadesterClient } from "../src/obs/fadester-client.js";
 import { FadesterStore } from "../src/state/fadester-store.js";
 import { FaderDialInstanceController } from "../src/actions/fader-dial.js";
@@ -104,6 +104,15 @@ describe("Step 1.4 — End-to-End Fader Dial & Auto-fade Key Integration", () =>
     ).length;
     expect(setFaderCountAfterUp).toBe(setFaderCountBeforeUp);
 
+    // The hold sends auto_fade when its 800 ms timer runs, and the request then has to reach OBS. Wait until OBS
+    // has it, instead of counting on that within the 50 ms this test leaves after the timer; a slow runner takes longer.
+    await vi.waitFor(
+      () =>
+        expect(server!.vendorCallLog.filter((c) => c.requestType === "auto_fade").length).toBeGreaterThan(
+          autoFadeCountBefore
+        ),
+      { timeout: 3000 }
+    );
     const lastAutoFade = server.vendorCallLog
       .filter((c) => c.requestType === "auto_fade")
       .at(-1);

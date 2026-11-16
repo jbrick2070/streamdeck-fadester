@@ -15,11 +15,11 @@ To start, the owner says:
 
 ## 1. Where things stand
 
-Checked on GitHub at 2026-11-16 04:40 UTC, after the 0.12.1 re-cut described below.
+Checked on GitHub at 2026-11-16 09:35 UTC, after the 0.12.1 re-cut described below.
 
 | Repo | Release candidate | Release state | Last published |
 |---|---|---|---|
-| `streamdeck-fadester` (Fadester for OBS 0.12.1; Fadester Companion 0.1.5) | tag `v0.12.1` (`d5f6a73`); `main` `f20fb0a` | draft | `v0.11.0` |
+| `streamdeck-fadester` (Fadester for OBS 0.12.1; Fadester Companion 0.1.5) | tag `v0.12.1` (`d5f6a73`); `main` `f2aa3fe` | draft | `v0.11.0` |
 | `midi-fadester` | tag `0.7.0`, `main` `4f242a1` | draft | `0.6.0` |
 | `visual-sidechain` | tag `0.7.0`, `main` `b0f79bd` | draft | `0.6.0` |
 | `obs-playlister` | tag `0.5.1`, `main` `5f00ff9` | draft | `0.5.0` |
@@ -38,8 +38,15 @@ Checked on GitHub at 2026-11-16 04:40 UTC, after the 0.12.1 re-cut described bel
   - The Mac app's new executable name was not built in CI. It needs the Mac pass (line M10).
   - Two drafts now exist for Fadester for OBS. `v0.12.1` is the one to publish; the `v0.12.0` draft is
     superseded.
-- **After the tag,** `main` has one more change, to the Microsoft Store listing text only
-  (`tourbox/store/LISTING.md`). No code and no built file differs from `v0.12.1`.
+- **After the tag,** `main` has moved on by two changes that are not in `v0.12.1`:
+  - the Microsoft Store listing text (`tourbox/store/LISTING.md`);
+  - a code change, listed under Unreleased in `CHANGELOG.md`: Fadester Companion shows its version in its
+    title bar and header, and every Fadester for OBS settings page ends with the plugin's version.
+
+  The `v0.12.1` draft was built before the code change, so a build from `main` is not 0.12.1. If the change
+  is wanted in this release it needs another re-cut and the re-checks in section 6, and it adds two things to
+  look at: the version at the end of each settings page (line K2) and in the Companion's title bar (line R5).
+  Otherwise test and publish the `v0.12.1` files as they are.
 - **`release/suite-pins`** predates the re-cut: it still pins Fadester for OBS 0.12.0 and Fadester Companion
   0.1.4, and is behind `main`. It must be redone for 0.12.1 and 0.1.5 before it is merged, and it waits
   until the four releases are published.

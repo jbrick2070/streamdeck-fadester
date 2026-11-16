@@ -196,9 +196,19 @@ namespace Fadester.TourBox {
           @"C:\Users\A\AppData\Local\Packages\Fluxxuuss.FadesterCompanion_x1\LocalCache\Local\FadesterTourBox" ||
           SettingsFolder.Redirected(@"D:\Elsewhere",@"C:\Users\A\AppData\Local","F_x1")!=null) throw new Exception();
     }
+    /// <summary>The build's version (build.ps1 stamps it as the informational version).</summary>
+    internal static string AppVersion() {
+      try {
+        var v=System.Reflection.Assembly.GetExecutingAssembly().GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute),false);
+        var s=v.Length>0 ? ((System.Reflection.AssemblyInformationalVersionAttribute)v[0]).InformationalVersion : "";
+        var plus=s.IndexOf('+'); if (plus>0) s=s.Substring(0,plus);
+        return s.Length>0 ? s : "";
+      } catch { return ""; }
+    }
+
     internal PanelWindow(PanelText text) {
       this.text = text;
-      Text="Fadester Companion"; ClientSize=new Size(780,700); MinimumSize=new Size(620,540);
+      Text="Fadester Companion "+AppVersion(); ClientSize=new Size(780,700); MinimumSize=new Size(620,540);
       // The window and taskbar show the exe's own icon, not WinForms' default one.
       try { Icon=Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch (Exception e) { Entry.Log("icon: "+e.Message); }
       Font=new Font("Segoe UI",10); BackColor=Color.White; StartPosition=FormStartPosition.CenterScreen;
@@ -209,6 +219,9 @@ namespace Fadester.TourBox {
       Controls.Add(grid);
       var head=new Panel {Dock=DockStyle.Fill,BackColor=navy,Padding=new Padding(12)};
       head.Controls.Add(new Label {Text="Fadester Companion",Location=new Point(14,7),Font=new Font("Segoe UI",17,FontStyle.Bold),ForeColor=Color.White,AutoSize=true});
+      // The version, top right, so a screenshot or a question about this window always says which build it is.
+      var version=new Label {Text="v"+AppVersion(),AutoSize=true,UseMnemonic=false,ForeColor=Color.FromArgb(190,200,220),Font=new Font("Segoe UI",10),Anchor=AnchorStyles.Top|AnchorStyles.Right};
+      head.Controls.Add(version); head.ClientSizeChanged+=delegate { version.Location=new Point(Math.Max(0,head.ClientSize.Width-version.Width-14),12); };
       state=new Label {Text=text.Get("lookingForObs"),Location=new Point(16,50),AutoEllipsis=true,UseMnemonic=false,ForeColor=Color.White, Width=680,Anchor=AnchorStyles.Left|AnchorStyles.Right|AnchorStyles.Top}; head.Controls.Add(state); grid.Controls.Add(head,0,0);
       head.ClientSizeChanged+=delegate { state.Width=Math.Max(1,head.ClientSize.Width-32); };
       // Three lights, each with the one button that fixes it, so the next step is always in view.

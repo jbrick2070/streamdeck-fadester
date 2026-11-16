@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { DirectObsClient, DirectObsError } from "../obs/direct-obs-client.js";
 import { resolveAutomaticInputName } from "../obs/automatic-targets.js";
 import { LayerController, LayerSettings } from "../control/layer-controller.js";
@@ -94,6 +97,21 @@ export function labelInspectorFilters(filters: readonly InspectorFilterIdentity[
  * The filters on one source with the settings the deck may write: numbers only,
  * never a denied one, the range table's first (PLAN.md 10.5). Read by UUID.
  */
+let cachedPluginVersion: string | undefined;
+
+/** The plugin's own version (manifest.json sits one folder above bin/); "" when it cannot be read, as in tests. */
+function pluginVersion(): string {
+  if (cachedPluginVersion === undefined) {
+    try {
+      const manifest = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "manifest.json"), "utf8")) as { Version?: string };
+      cachedPluginVersion = String(manifest.Version ?? "").replace(/(\.0)+$/, "");
+    } catch {
+      cachedPluginVersion = "";
+    }
+  }
+  return cachedPluginVersion;
+}
+
 export async function readInspectorFilters(client: DirectObsClient, sourceUuid: string): Promise<InspectorFilter[]> {
   return labelInspectorFilters(await readInspectorFilterIdentities(client, sourceUuid));
 }
@@ -217,6 +235,7 @@ export class DirectObsPropertyInspectorBridge {
       setupChecklist: this.lastChecklist,
       playlisterPlugin,
       catalog,
+      pluginVersion: pluginVersion(),
       // Whether OBS's own slider follows the T-bar dial, or why not (the OBS Fader inspector's status line).
       nativeTbar: this.client.getNativeTbarStatus?.() ?? "off",
       wholeMix: this.client.wholeMix?.state,

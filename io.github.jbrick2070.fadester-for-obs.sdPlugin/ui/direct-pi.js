@@ -623,6 +623,19 @@
     sendToPlugin({ event: "directSelectLayer", sceneName: sceneName, sceneItemId: sceneItemId });
   };
 
+  /** The plugin's version at the foot of every settings page, so a screenshot says which build it is. */
+  function showPluginVersion(version) {
+    if (!version) return;
+    let line = $("direct-plugin-version");
+    if (!line) {
+      line = document.createElement("p");
+      line.id = "direct-plugin-version";
+      line.className = "muted";
+      document.body.appendChild(line);
+    }
+    line.textContent = "Fadester for OBS v" + version;
+  }
+
   window.initDirectObsPropertyInspector = function (callback) {
     bindControls = callback;
     renderSharedSections();
@@ -662,6 +675,7 @@
         }
         if (message.event === "sendToPropertyInspector" && message.payload && message.payload.event === "directObsState") {
           currentState = message.payload;
+          showPluginVersion(currentState.pluginVersion);
           updateLanguage(currentState.language);
           updateConnection(currentState);
           refreshControls();

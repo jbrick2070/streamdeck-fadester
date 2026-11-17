@@ -34,7 +34,8 @@ import AppKit
 
 @main @MainActor enum Main {
     static func main() {
-        let args = Array(CommandLine.arguments.dropFirst())
+        // --language CODE picks the panel's language, as on Windows; without it, the Mac's first preferred language.
+        let args = PanelText.choose(from: Array(CommandLine.arguments.dropFirst()))
         if args == ["--self-test-host-fail-child"] { print("ERROR: synthetic startup failure token-test-only"); fflush(stdout); exit(1) }
         if args == ["--self-test-host-child"] {
             print("Test token-test-only"); print("READY 1"); fflush(stdout)
@@ -44,6 +45,9 @@ import AppKit
         if args == ["--self-test"] {
             Task {
                 do {
+                    try PanelText.selfTest()
+                    // The checks compare English words, whatever language this Mac uses.
+                    PanelText.use("en")
                     try ModelTests.run()
                     try await LifecycleTests.run(executable: URL(fileURLWithPath: CommandLine.arguments[0]))
                     exit(0)
@@ -57,7 +61,8 @@ import AppKit
                     guard let secret = ProcessInfo.processInfo.environment["FADESTER_TEST_PASSWORD"], !secret.isEmpty else { throw PanelFailure.message("Synthetic discovery test password missing.") }
                     let client = try ObsDiscovery(port: port), catalog = try await client.scan(password: secret)
                     guard catalog.scenes == ["Opening", "Guest"], catalog.audio == ["Music • 音楽"], catalog.media == ["Clips"], catalog.items["Guest"] == ["Lower third"], catalog.program == "Opening", catalog.preview == "Guest", catalog.studio else { throw PanelFailure.message("Synthetic catalog did not match expected roles.") }
-                    print("PASS: authenticated read-only WebSocket discovery, non-audio rejection, media NONE handling and Unicode names against the fake server."); exit(0)
+                    guard catalog.visualSidechain == "VS-METER: active 128 1 3 100 50 0 25" else { throw PanelFailure.message("Synthetic Visual Sidechain meter did not match.") }
+                    print("PASS: authenticated read-only WebSocket discovery, non-audio rejection, media NONE handling, the Visual Sidechain meter and Unicode names against the fake server."); exit(0)
                 } catch { fputs("Synthetic discovery check failed.\n", stderr); exit(1) }
             }
             dispatchMain()
@@ -80,11 +85,11 @@ import AppKit
             } catch { fputs("Preview rendering failed: \(error)\n", stderr); exit(1) }
             return
         }
-        guard args.isEmpty else { fputs("Use no arguments for Fadester Companion, or --self-test for offline checks.\n", stderr); exit(2) }
+        guard args.isEmpty else { fputs("Use no arguments for Fadester Companion (optionally --language CODE), or --self-test for offline checks.\n", stderr); exit(2) }
         let app = NSApplication.shared, delegate = Panel()
         app.setActivationPolicy(.regular); app.delegate = delegate
         let menu = NSMenu(), item = NSMenuItem(), application = NSMenu()
-        application.addItem(withTitle: "Quit Fadester Companion", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        application.addItem(withTitle: L("macQuit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         item.submenu = application; menu.addItem(item); app.mainMenu = menu
         withExtendedLifetime(delegate) { app.run() }
     }

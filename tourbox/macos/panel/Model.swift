@@ -16,6 +16,8 @@ struct Settings {
     var volumeStepDb = 1.0, duckDb = -12.0, faderStep = 0.05
     var transitionStepMs = 50, mixStepDb = 3.0, mixFadeMs = 600
     var mixEnabled = false
+    // Stream Deck, OpenDeck and MIDI only: the host runs --mix-only (the Windows panel's "mixOnly").
+    var mixOnly = false
     var vjsterEnabled = true, vjsterPort = 48150
     var vjsterExtensionId = "", vjsterObsToken = Settings.newObsToken(), vjsterTarget = "both"
     var layer1Scene = "", layer1Source = "", layer2Scene = "", layer2Source = ""
@@ -89,6 +91,7 @@ struct Settings {
         volumeStepDb = try number("volumeStepDb", volumeStepDb); duckDb = try number("duckDb", duckDb); faderStep = try number("faderStep", faderStep)
         transitionStepMs = try integer("transitionStepMs", transitionStepMs); mixStepDb = try number("mixStepDb", mixStepDb); mixFadeMs = try integer("mixFadeMs", mixFadeMs)
         mixEnabled = try boolean("mixEnabled", mixEnabled)
+        mixOnly = try boolean("mixOnly", mixOnly)
         vjsterEnabled = try boolean("vjsterEnabled", vjsterEnabled)
         vjsterPort = try integer("vjsterPort", vjsterPort)
         vjsterExtensionId = try text("vjsterExtensionId").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -131,7 +134,7 @@ struct Settings {
             "musicInput":musicInput, "contentInput":contentInput, "micInput":micInput, "mediaInput":mediaInput,
             "overlayScene":overlayScene, "overlaySource":overlaySource, "anchors":anchors,
             "volumeStepDb":volumeStepDb, "duckDb":duckDb, "faderStep":faderStep, "transitionStepMs":transitionStepMs,
-            "mixEnabled":mixEnabled, "mixStepDb":mixStepDb, "mixFadeMs":mixFadeMs,
+            "mixEnabled":mixEnabled, "mixOnly":mixOnly && mixEnabled, "mixStepDb":mixStepDb, "mixFadeMs":mixFadeMs,
             "vjsterEnabled":vjsterEnabled, "vjsterPort":vjsterPort, "vjsterExtensionId":vjsterExtensionId,
             "vjsterObsToken":vjsterObsToken, "vjsterTarget":vjsterTarget,
             "layer1Scene":layer1Scene, "layer1Source":layer1Source, "layer2Scene":layer2Scene, "layer2Source":layer2Source,
@@ -143,6 +146,8 @@ struct Catalog {
     var scenes: [String] = [], audio: [String] = [], media: [String] = []
     var items: [String: [String]] = [:]
     var program = "", preview = "", studio = false
+    /// The Visual Sidechain meter as a VS-METER line ("" when the scan could not tell), as the Windows catalog's "visualSidechain".
+    var visualSidechain = ""
 }
 
 enum PresetSyncState: Equatable { case neverSaved, current, updateAvailable }
@@ -197,65 +202,84 @@ enum Readiness {
     static func obs(connected: Bool, running: Bool, problem: String?, studioOff: Bool, controlsOn: Bool) -> LightState {
         if connected {
             return studioOff && !controlsOn
-                ? LightState(.amber, "OBS: turn on Studio Mode", button: "Show me", action: "studio")
-                : LightState(.green, "OBS: connected")
+                ? LightState(.amber, L("liObsStudio"), button: L("btnShowMe"), action: "studio")
+                : LightState(.green, L("liObsOn"))
         }
         if !running {
-            return LightState(.red, "OBS: not running", button: "Open OBS", action: "openObs")
+            return LightState(.red, L("liObsClosed"), button: L("macBtnOpenObs"), action: "openObs")
         }
         if problem == "obs-bad-password" {
-            return LightState(.amber, "OBS: password not accepted", button: "Show me", action: "password")
+            return LightState(.amber, L("liObsPassword"), button: L("btnShowMe"), action: "password")
         }
         if problem == nil {
-            return LightState(.grey, "OBS: connecting…")
+            return LightState(.grey, L("liObsLooking"))
         }
-        return LightState(.amber, "OBS: one setting to turn on", button: "Show me", action: "server")
+        return LightState(.amber, L("liObsSetting"), button: L("btnShowMe"), action: "server")
     }
 
-    static func tourBox(consoleRunning: Bool, consoleInstalled: Bool = true) -> LightState {
-        if consoleRunning { return LightState(.green, "TourBox: ready") }
-        if !consoleInstalled { return LightState(.amber, "TourBox Console: not installed", button: "Download", action: "downloadConsole") }
-        return LightState(.amber, "TourBox Console: closed", button: "Open Console", action: "openConsole")
+    /// The Windows panel's Readiness.TourBox has the same states (and greys a closed Console while a game controller is in use).
+    static func tourBox(consoleRunning: Bool, consoleInstalled: Bool = true, mixOnly: Bool = false) -> LightState {
+        if mixOnly { return LightState(.grey, L("liTbOff")) }
+        if consoleRunning { return LightState(.green, L("liTbReady")) }
+        if !consoleInstalled { return LightState(.amber, L("liTbMissing"), button: L("btnDownload"), action: "downloadConsole") }
+        return LightState(.amber, L("liTbClosed"), button: L("btnOpenConsole"), action: "openConsole")
     }
 
-    static func vjster(enabled: Bool, controlsOn: Bool, connectedPeers: Int, portBusy: Bool = false) -> LightState {
-        if !enabled { return LightState(.grey, "VJster: off") }
-        if portBusy { return LightState(.red, "VJster: port in use", button: "Show me", action: "vjsterPort") }
-        if !controlsOn { return LightState(.green, "VJster: ready") }
+    static func vjster(enabled: Bool, controlsOn: Bool, connectedPeers: Int, portBusy: Bool = false, mixOnly: Bool = false) -> LightState {
+        if !enabled || mixOnly { return LightState(.grey, L("liVjOff")) }
+        if portBusy { return LightState(.red, L("liVjPort"), button: L("btnShowMe"), action: "vjsterPort") }
+        if !controlsOn { return LightState(.green, L("liVjReady")) }
         return connectedPeers > 0
-            ? LightState(.green, "VJster: connected")
-            : LightState(.amber, "VJster: waiting for video", button: "Show me", action: "vjsterWait")
+            ? LightState(.green, L("liVjOn"))
+            : LightState(.amber, L("liVjWait"), button: L("btnShowMe"), action: "vjsterWait")
     }
 
     static func controls(running: Bool, armed: Bool, axTrusted: Bool = true) -> LightState {
         if !running {
             return axTrusted
-                ? LightState(.grey, "Controls: off", button: "Start", action: "start")
-                : LightState(.amber, "Accessibility: needed", button: "Grant…", action: "grantAx")
+                ? LightState(.grey, L("liCtlOff"), button: L("btnStart"), action: "start")
+                : LightState(.amber, L("macLiAxNeeded"), button: L("macBtnGrant"), action: "grantAx")
         }
-        if !armed { return LightState(.amber, "Controls: starting…", button: "Stop", action: "stop") }
-        return LightState(.green, "Controls: on", button: "Stop", action: "stop")
+        if !armed { return LightState(.amber, L("macLiCtlStarting"), button: L("macBtnStop"), action: "stop") }
+        return LightState(.green, L("liCtlOn"), button: L("macBtnStop"), action: "stop")
     }
 
-    static func reminder(controlsOn: Bool, obsHidden: Bool, consoleRunning: Bool, frontIsObs: Bool) -> String? {
-        guard controlsOn else { return nil }
-        if obsHidden { return "Keep the main OBS window open, not hidden: the T-bar needs it." }
-        if consoleRunning && !frontIsObs { return "TourBox: bring OBS to the front. Its preset only works while OBS is the active window." }
+    /// Like the Windows panel's Readiness.Reminder: nothing in Stream Deck-only mode, which needs neither the T-bar nor the TourBox preset.
+    static func reminder(controlsOn: Bool, obsHidden: Bool, consoleRunning: Bool, frontIsObs: Bool, mixOnly: Bool = false) -> String? {
+        guard controlsOn && !mixOnly else { return nil }
+        if obsHidden { return L("macRemindObsHidden") }
+        if consoleRunning && !frontIsObs { return L("remindObsFront") }
         return nil
     }
 
-    static func banner(controlsOn: Bool, obsHidden: Bool, consoleRunning: Bool, frontIsObs: Bool, axTrusted: Bool = true) -> (text: String, button: String, action: String)? {
+    static func banner(controlsOn: Bool, obsHidden: Bool, consoleRunning: Bool, frontIsObs: Bool, axTrusted: Bool = true, mixOnly: Bool = false) -> (text: String, button: String, action: String)? {
         if !controlsOn && !axTrusted {
-            return (
-                "macOS Accessibility needed: enable Fadester Companion in System Settings → Accessibility (if already on, toggle it OFF then ON) so Start can move OBS’s T-bar.",
-                "Grant Accessibility…",
-                "grantAx"
-            )
+            return (L("macAxBanner"), L("macBtnGrantAx"), "grantAx")
         }
-        if let obsText = reminder(controlsOn: controlsOn, obsHidden: obsHidden, consoleRunning: consoleRunning, frontIsObs: frontIsObs) {
-            return (obsText, "Bring OBS to Front", "openObs")
+        if let obsText = reminder(controlsOn: controlsOn, obsHidden: obsHidden, consoleRunning: consoleRunning, frontIsObs: frontIsObs, mixOnly: mixOnly) {
+            return (obsText, L("btnBringObs"), "openObs")
         }
         return nil
+    }
+
+    /// A VS-METER line from the host (or a scan) as the meter line, in the panel's language; nil for any other line.
+    /// The same words and bars as the Windows panel's FormatVsMeter.
+    static func vsMeter(_ line: String) -> String? {
+        guard line.hasPrefix("VS-METER: ") else { return nil }
+        let body = line.dropFirst(10).trimmingCharacters(in: .whitespaces)
+        switch body {
+        case "not_loaded": return L("vsNotLoaded")
+        case "panic": return L("vsPanic")
+        case "no_audio": return L("vsNoAudio")
+        default: break
+        }
+        let parts = body.split(separator: " ").map(String.init)
+        guard parts.count >= 8, parts[0] == "active" else { return "" }
+        let numbers = parts[1...7].compactMap { Int($0) }
+        guard numbers.count == 7 else { return "" }
+        let blocks = Array("▁▂▃▄▅▆▇█")
+        let bars = numbers[3...6].map { String(blocks[max(0, min(7, ($0 * 7 + 50) / 100))]) }.joined()
+        return L(numbers[1] != 0 ? "vsMeterLocked" : "vsMeterActive", numbers[0], numbers[2], bars)
     }
 
     static func obsProblem(from text: String) -> String {
@@ -296,10 +320,10 @@ enum Readiness {
             guard !summary.isEmpty else { return nil }
             if summary.hasSuffix("· T-bar 0%") {
                 if action == "fader.forward" || action == "fader.fineForward" {
-                    return "T-bar at 0% — turn Dial counterclockwise for this fade."
+                    return L("macTbarCcw")
                 }
                 if action == "fader.back" || action == "fader.fineBack" {
-                    return "T-bar at 0% — turn Dial clockwise for this fade."
+                    return L("macTbarCw")
                 }
             }
             return summary
@@ -308,10 +332,10 @@ enum Readiness {
             guard let sep = line.range(of: ": ") else { return nil }
             let reason = String(line[sep.upperBound...]).trimmingCharacters(in: .whitespaces)
             if reason.localizedCaseInsensitiveContains("Choose a different Preview scene first") || reason.localizedCaseInsensitiveContains("Preview is the same scene as Program") {
-                return "Preview matches Program — turn Scroll to cue a different scene first."
+                return L("macPreviewMatches")
             }
             if reason.localizedCaseInsensitiveContains("cancel/reset the fader") || reason.localizedCaseInsensitiveContains("stuck part-way, press Cancel") {
-                return "T-bar paused — press Side + Dial on TourBox to reset the fader."
+                return L("macTbarPaused")
             }
             return reason.isEmpty ? nil : reason
         }
@@ -352,15 +376,11 @@ struct ControlMapRow: Equatable {
     }
 
     static func formatControl(_ raw: String) -> String {
-        if raw == "Tour menu" { return "Tour menu" }
+        if raw == "Tour menu" { return L("menu") }
         return raw.split(separator: "+").map { token -> String in
             let part = String(token)
             switch part {
-            case "press": return "Press"
-            case "up": return "D-pad Up"
-            case "right": return "D-pad Right"
-            case "down": return "D-pad Down"
-            case "left": return "D-pad Left"
+            case "press", "up", "right", "down", "left": return L(part)
             case "c1", "c2": return part.uppercased()
             default: return part.prefix(1).uppercased() + part.dropFirst()
             }
@@ -369,10 +389,7 @@ struct ControlMapRow: Equatable {
 
     static func formatGesture(_ raw: String) -> String {
         switch raw {
-        case "press": return "Press"
-        case "select": return "Select"
-        case "cw": return "Clockwise"
-        case "ccw": return "Counterclockwise"
+        case "press", "select", "cw", "ccw": return L(raw)
         default: return raw
         }
     }
@@ -445,6 +462,11 @@ enum ModelTests {
         try check(Readiness.banner(controlsOn: false, obsHidden: false, consoleRunning: true, frontIsObs: false, axTrusted: false)?.action == "grantAx", "Accessibility banner before start")
         try check(HostController.explainHostError("ERROR: initialization: guardFailed(\"Accessibility denied; grant the responsible app\")").contains("Grant Accessibility"), "Host Accessibility error explanation")
         try check(Readiness.reminder(controlsOn: true, obsHidden: false, consoleRunning: true, frontIsObs: false) != nil && Readiness.reminder(controlsOn: true, obsHidden: false, consoleRunning: true, frontIsObs: true) == nil, "Frontmost OBS reminder")
+        try check(Readiness.reminder(controlsOn: true, obsHidden: true, consoleRunning: true, frontIsObs: false, mixOnly: true) == nil && Readiness.tourBox(consoleRunning: true, mixOnly: true) == LightState(.grey, "TourBox: off") && Readiness.vjster(enabled: true, controlsOn: true, connectedPeers: 1, mixOnly: true) == LightState(.grey, "VJster: off"), "Stream Deck-only lights and reminder")
+        try check(Readiness.vsMeter("Music up") == nil && Readiness.vsMeter("VS-METER: not_loaded") == "Visual Sidechain: NOT LOADED" && Readiness.vsMeter("VS-METER: no_audio") == "Visual Sidechain: NO AUDIO" && Readiness.vsMeter("VS-METER: active 120 1 2 100 50 0 25") == "Visual Sidechain: 120 BPM [LOCK] · Beat 2/4 · █▅▁▃" && Readiness.vsMeter("VS-METER: active x") == "", "Visual Sidechain meter line")
+        var mixOnlySettings = Settings(); mixOnlySettings.mixEnabled = true; mixOnlySettings.mixOnly = true
+        let mixOnlyRoundtrip = try Settings(data: mixOnlySettings.encoded()), defaultRoundtrip = try Settings(data: Settings().encoded())
+        try check(mixOnlyRoundtrip.mixOnly && !defaultRoundtrip.mixOnly, "Stream Deck-only setting roundtrips")
         var peers = Readiness.vjsterPeers(after: "VJster: the Chrome extension connected", current: [])
         peers = Readiness.vjsterPeers(after: "VJster: the OBS video page connected", current: peers)
         try check(peers.count == 2 && Readiness.vjsterPeers(after: "VJster: the Chrome extension disconnected (closed)", current: peers) == ["obs"], "VJster peer tracking")

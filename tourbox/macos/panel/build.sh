@@ -15,9 +15,18 @@ cp Info.plist "$app/Contents/Info.plist"
 # The version the app shows is the release's: Fadester Companion's in installer/components.json.
 companion_version="$("$python" -c 'import json, sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["components"]["companion"]["version"])' "$repo/installer/components.json")"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $companion_version" "$app/Contents/Info.plist"
-"$python" "$repo/tourbox/presets/build.py" --check
+localized_presets="$PWD/build/localized-presets"
+rm -rf "$localized_presets"
+"$python" "$repo/tourbox/presets/build.py" --check --localized-out "$localized_presets"
 "$python" "$repo/tourbox/presets/build_macos.py" --check
 cp "$repo/tourbox/presets/map.json" "$resources/presets/"
+# The Control map in the panel's language (the Windows .tb files written beside them are not bundled).
+for folder in "$localized_presets"/*/; do
+  locale="$(basename "$folder")"
+  mkdir -p "$resources/presets/$locale"
+  cp "$folder/map.json" "$resources/presets/$locale/map.json"
+done
+rm -rf "$localized_presets"
 cp "$repo/tourbox/presets/macos/OBS Fadester for TourBox.tb" "$resources/presets/"
 cp "$repo/tourbox/artwork/icons/"*.png "$resources/artwork/icons/"
 icon_src="$repo/tourbox/store/assets/Square44x44Logo.targetsize-256.png"
@@ -36,9 +45,11 @@ fi
 cp "$repo/LICENSE" "$resources/LICENSE"
 cp README.md "$resources/README.md"
 "$python" make-guide.py "$resources/START-HERE.html"
+# The panel's 10 languages come from the Windows panel's catalog; refuse a stale PanelStrings.swift.
+if command -v node >/dev/null; then node make-strings.cjs --check; fi
 /usr/bin/swiftc -swift-version 5 -parse-as-library -O -warnings-as-errors \
   -target "$architecture-apple-macosx12.0" -framework AppKit -framework ApplicationServices -framework CryptoKit \
-  Model.swift ObsDiscovery.swift HostController.swift ShowMe.swift Panel.swift Main.swift \
+  PanelStrings.swift PanelText.swift Model.swift ObsDiscovery.swift HostController.swift ShowMe.swift Panel.swift Main.swift \
   -o "$app/Contents/MacOS/Fadester Companion"
 if [[ "$mode" != --ui-only ]]; then
   dotnet="${DOTNET:-}"

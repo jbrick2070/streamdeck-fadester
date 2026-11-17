@@ -135,6 +135,15 @@ namespace Fadester.TourBox {
     readonly PanelText text;
     readonly string folder = AppDomain.CurrentDomain.BaseDirectory;
     readonly string settings = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FadesterTourBox", "config.json");
+    /** Whether the user last started ("on") or stopped ("off") the controls; its own file, since config.json is rewritten by Save and Copy URL. */
+    readonly string controlsState = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FadesterTourBox", "controls.txt");
+    /** Try again was pressed with the controls off: the next scan that reads OBS starts them. */
+    bool startAfterScan;
+    string Remembered() { try { return File.Exists(controlsState) ? File.ReadAllText(controlsState).Trim() : null; } catch(IOException) { return null; } catch(UnauthorizedAccessException) { return null; } }
+    void Remember(string onOff) {
+      try { Directory.CreateDirectory(Path.GetDirectoryName(controlsState)); File.WriteAllText(controlsState, onOff, new UTF8Encoding(false)); }
+      catch(IOException e) { Entry.Log("controls state: "+e.Message); } catch(UnauthorizedAccessException e) { Entry.Log("controls state: "+e.Message); }
+    }
     readonly Dictionary<string, ComboBox> boxes = new Dictionary<string, ComboBox>();
     readonly Dictionary<string,Image> glyphs=new Dictionary<string,Image>();
     Dictionary<string, object> config = new Dictionary<string, object>(), catalog = new Dictionary<string, object>();
@@ -336,7 +345,7 @@ namespace Fadester.TourBox {
       controls.RowTemplate.MinimumHeight=30;
       var logs=new TabPage(text.Get("activity")); tabs.Controls.Add(logs); activity=new ListBox {Dock=DockStyle.Fill,HorizontalScrollbar=true}; logs.Controls.Add(activity);
       var bar=new FlowLayoutPanel {Dock=DockStyle.Fill,Padding=new Padding(0,7,0,0),WrapContents=true,AutoScroll=true};
-      start=AddButton(bar,text.Get("saveStart"),async delegate { if(worker==null) StartControls(); else await StopControls(); }); start.BackColor=accent; start.ForeColor=Color.White; start.FlatStyle=FlatStyle.Flat;
+      start=AddButton(bar,text.Get("saveStart"),async delegate { if(worker==null){ Remember("on"); StartControls(); } else { Remember("off"); await StopControls(); } }); start.BackColor=accent; start.ForeColor=Color.White; start.FlatStyle=FlatStyle.Flat;
       save=AddButton(bar,text.Get("save"),delegate { SaveRequested(); });
       AddButton(bar,text.Get("feedback"),delegate { if(hud!=null && !hud.IsDisposed) {hud.Close();return;} hud=new Feedback(text.Get("lastAction")); hud.Set(state.Text); hud.SetMeter(vsStatus); hud.Show(); });
       AddButton(bar,text.Get("guide"),delegate { OpenPath(text.GuidePath(folder)); });
@@ -666,6 +675,11 @@ namespace Fadester.TourBox {
         }
       }catch(Exception e){live.Text=""; if(worker==null){SetVsStatus(""); obsConnected=false; obsProblem=failure??"obs-no-answer"; ShowStatus();} Note(e.Message);}
       finally{try{if(tmp!=null && File.Exists(tmp))File.Delete(tmp);}catch(IOException){} refreshing=false; if(!IsDisposed){connect.Enabled=true; start.Enabled=true;}}
+      // OBS answered: start the controls now, not when the window opened, so no shortcut is taken while OBS is closed (FIX-5).
+      bool asked=startAfterScan; startAfterScan=false;
+      if(IsDisposed || worker!=null || !obsConnected) return;
+      if(asked){ StartControls(); return; }
+      if(Readiness.AutoStart(File.Exists(settings),!invalidConfig,Remembered(),obsConnected,worker!=null)){ StartControls(); if(worker!=null) Note(text.Get("autoStarted")); }
     }
     void StartControls() {
       if(PortsClash())return;
@@ -765,7 +779,7 @@ namespace Fadester.TourBox {
       tbLight.Display(Readiness.TourBox(tourboxConsole,consoleInstalled,mixOnly.Checked,enableGamepad.Checked),text);
       vjLight.Display(Readiness.Vjster(enableVjster.Checked,mixOnly.Checked,on,vjPeers.Count,vjPortBusy),text);
       padLight.Display(Readiness.Pad(enableGamepad.Checked,mixOnly.Checked,on,padState,padSeen),text);
-      ctlLight.Display(Readiness.Controls(on),text);
+      ctlLight.Display(Readiness.Controls(on,obsConnected),text);
       string key=Readiness.Reminder(on,mixOnly.Checked,obsHidden,tourboxConsole,front);
       if(key!=null) reminder.Text=text.Get(key);
       reminderBar.Visible=key!=null;
@@ -797,7 +811,14 @@ namespace Fadester.TourBox {
       // The same rule as the Save & start button: nothing while a scan, a start or a stop is under way.
       if(!start.Enabled) return;
       try {
-        if(action=="start"){ if(worker==null) StartControls(); return; }
+        if(action=="start"){ if(worker==null){ Remember("on"); StartControls(); } return; }
+        if(action=="tryAgain"){
+          Remember("on");
+          // Controls on: restart them (the bridge reads OBS's saved password, or the one typed, at start). Off: read OBS, then start.
+          if(worker!=null){ await StopControls(); if(worker==null) StartControls(); }
+          else { startAfterScan=true; await Connect(); }
+          return;
+        }
         if(action=="usePad"){
           enableGamepad.Checked=true;
           if(worker!=null){ await StopControls(); if(worker==null) StartControls(); }

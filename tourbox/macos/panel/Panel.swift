@@ -186,6 +186,11 @@ private final class PillActionButton: NSControl {
     private var bundledPresetHash = ""
     private var savedPresetHash: String?
     private var autoTries = 0
+    /// Try again was pressed with the controls off: the next scan that reads OBS starts them.
+    private var startAfterScan = false
+    /// Whether the user last started ("on") or stopped ("off") the controls; kept apart from panel-config.json, which start() rewrites.
+    private var rememberedControls: String? { UserDefaults.standard.string(forKey: "fadester.controlsLastAction") }
+    private func rememberControls(_ onOff: String) { UserDefaults.standard.set(onOff, forKey: "fadester.controlsLastAction") }
     private var nextAutoScan = Date.distantFuture
     private var watchTimer: Timer?
     private var scanTask: Task<Void, Never>?
@@ -436,7 +441,11 @@ private final class PillActionButton: NSControl {
             self.vjsterPeers.removeAll()
             self.vjsterPortBusy = false
             self.updateEnabled()
-            if self.terminating { NSApp.reply(toApplicationShouldTerminate: true) }
+            if self.terminating { NSApp.reply(toApplicationShouldTerminate: true); return }
+            // The host stops when OBS goes away: look for OBS again, and the next scan that reads it starts the controls,
+            // unless the user pressed Stop (FIX-5).
+            self.obsConnected = false
+            if self.obsRunning { self.autoTries = 4; self.nextAutoScan = Date().addingTimeInterval(3.5) }
         }
         if invalidSettings {
             setStatus(L("macSettingsUnreadable"))
@@ -830,7 +839,7 @@ private final class PillActionButton: NSControl {
         let tbState = Readiness.tourBox(consoleRunning: tourboxConsoleRunning, consoleInstalled: consoleReady, mixOnly: onlyMix)
         let vjEnabled = vjster.state == .on
         let vjState = Readiness.vjster(enabled: vjEnabled, controlsOn: controlsOn, connectedPeers: vjsterPeers.count, portBusy: vjsterPortBusy, mixOnly: onlyMix)
-        let ctlState = Readiness.controls(running: controlsOn, armed: host.isArmed, axTrusted: axReady)
+        let ctlState = Readiness.controls(running: controlsOn, armed: host.isArmed, axTrusted: axReady, obsConnected: obsConnected)
 
         let syncState: PresetSyncState = lastSavedPreset != nil
             ? .current
@@ -977,8 +986,13 @@ private final class PillActionButton: NSControl {
     private func handleLightAction(_ action: String) {
         guard !previewMode else { return }
         switch action {
-        case "start": start()
-        case "stop": stop()
+        case "start": rememberControls("on"); start()
+        case "stop": rememberControls("off"); stop()
+        case "tryAgain":
+            rememberControls("on")
+            if host.running { return }
+            startAfterScan = true
+            performScan(silentIfOffline: false)
         case "openObs": bringObsToFront()
         case "openConsole": openTourBoxConsole()
         case "downloadConsole": downloadTourBoxConsole()
@@ -1065,7 +1079,7 @@ private final class PillActionButton: NSControl {
     }
 
     @objc private func toggleControls() {
-        if host.running { stop() } else { start() }
+        if host.running { rememberControls("off"); stop() } else { rememberControls("on"); start() }
     }
 
     @objc private func toggleFeedback() {
@@ -1183,6 +1197,17 @@ private final class PillActionButton: NSControl {
                 }
             }
             self.scanning = false; self.scanTask = nil; self.updateEnabled()
+            // OBS answered: start the controls now, not at launch, so nothing is armed while OBS is closed (FIX-5).
+            let asked = self.startAfterScan
+            self.startAfterScan = false
+            guard self.obsConnected && !self.host.running else { return }
+            if asked { self.start(); return }
+            let axReady = AXIsProcessTrusted() || self.mixOnlyChosen
+            if Readiness.autoStart(settingsSaved: FileManager.default.fileExists(atPath: LocalFiles.settings.path), settingsValid: !self.invalidSettings,
+                                   remembered: self.rememberedControls, obsConnected: self.obsConnected, controlsOn: self.host.running, axReady: axReady) {
+                self.start()
+                if self.host.running { self.setStatus(L("autoStarted")); self.note(L("autoStarted")) }
+            }
         }
     }
 

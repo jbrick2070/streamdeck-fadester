@@ -20,8 +20,9 @@ Your game controller, now a vision mixer for OBS Studio: a real T-bar on the rig
 
 ## What's new in this version
 
-Version 0.1.4:
+Version 0.1.6:
 
+- One name: every file the app installs now carries the name Fadester Companion, and screenshots save to Pictures\Fadester Companion.
 - Setup tab, VJster: choose where YouTube plays (Chrome & OBS page, Chrome extension only, or OBS Browser Source only), paste an OBS video URL or ID, and copy the OBS Browser Source link in one click.
 - The "keep this window open" reminder now stays in view under the buttons.
 - Safer T-bar: if OBS's slider or connection is lost mid-fade, the fade closes by itself (past half way it finishes, before half way it goes back), and a fade never stays stuck.

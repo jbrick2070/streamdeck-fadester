@@ -253,11 +253,17 @@ private final class PillActionButton: NSControl {
         }
     }
 
+    /// The app's version (CFBundleShortVersionString in Info.plist); "" when the bundle does not say.
+    static func appVersion() -> String {
+        (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)?.trimmingCharacters(in: .whitespaces) ?? ""
+    }
+
     func build() {
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 920, height: 856), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
         window.appearance = NSAppearance(named: .aqua)
         window.contentView = PanelBackground(frame: NSRect(x: 0, y: 0, width: 920, height: 856))
-        window.title = "Fadester Companion"
+        let version = Panel.appVersion()
+        window.title = version.isEmpty ? "Fadester Companion" : "Fadester Companion " + version
         window.minSize = NSSize(width: 780, height: 660)
         window.delegate = self
 
@@ -297,6 +303,12 @@ private final class PillActionButton: NSControl {
         headerRow.orientation = .horizontal; headerRow.alignment = .centerY; headerRow.spacing = 12
         headerRow.translatesAutoresizingMaskIntoConstraints = false
         headerCard.addSubview(headerRow)
+        // The version, top right, so a screenshot or a question about this window always says which build it is.
+        let versionLabel = NSTextField(labelWithString: version.isEmpty ? "" : "v" + version)
+        versionLabel.font = .systemFont(ofSize: 12, weight: .regular)
+        versionLabel.textColor = NSColor(srgbRed: 190 / 255, green: 200 / 255, blue: 220 / 255, alpha: 1)
+        versionLabel.translatesAutoresizingMaskIntoConstraints = false
+        headerCard.addSubview(versionLabel)
         root.addArrangedSubview(headerCard)
         NSLayoutConstraint.activate([
             headerCard.widthAnchor.constraint(equalTo: root.widthAnchor, constant: -36),
@@ -304,6 +316,8 @@ private final class PillActionButton: NSControl {
             headerRow.trailingAnchor.constraint(equalTo: headerCard.trailingAnchor, constant: -16),
             headerRow.topAnchor.constraint(equalTo: headerCard.topAnchor, constant: 12),
             headerRow.bottomAnchor.constraint(equalTo: headerCard.bottomAnchor, constant: -12),
+            versionLabel.topAnchor.constraint(equalTo: headerCard.topAnchor, constant: 12),
+            versionLabel.trailingAnchor.constraint(equalTo: headerCard.trailingAnchor, constant: -16),
             status.widthAnchor.constraint(lessThanOrEqualTo: headerCard.widthAnchor, constant: -90)
         ])
 

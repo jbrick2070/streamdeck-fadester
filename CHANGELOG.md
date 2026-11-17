@@ -4,7 +4,8 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 
 ## Unreleased
 
-- **Every window says which version it is.** Fadester Companion shows its version in the title bar and at the top right of its header; every Fadester for OBS settings page ends with "Fadester for OBS v…". A screenshot or a question about any of them now always names the build.
+- **Every window says which version it is.** Fadester Companion, on Windows and on the Mac, shows its version in the title bar and at the top right of its header; every Fadester for OBS settings page ends with "Fadester for OBS v…". A screenshot or a question about any of them now always names the build.
+
 ## 0.12.1 - 2026-11-15
 
 0.12.0 was a draft for the hardware test and was never published. Everything it held is listed here. This release ships Fadester Companion 0.1.5.

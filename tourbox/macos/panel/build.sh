@@ -84,4 +84,4 @@ fi
 /usr/bin/codesign --force --sign - --identifier io.github.jbrick2070.fadester-tourbox.panel.experimental "$app"
 /usr/bin/codesign --verify --deep --strict "$app"
 "$app/Contents/MacOS/Fadester Companion" --self-test
-echo "Built $app ($architecture). Experimental ad-hoc signature only; not notarized. No live OBS, shortcuts or GUI launched."
+echo "Built $app ($architecture). Ad-hoc signature only; not notarized. No live OBS, shortcuts or GUI launched."

@@ -105,7 +105,14 @@ internal sealed class VjsterDesk(VjsterLink link, double fastSpeed = 2.0, double
 
     static Action<JsonObject> Step(double delta) => o => { o["delta"] = delta; o["direct"] = false; o["hold"] = false; };
 
-    /** One line for the panel: what the video is doing now. The title only on a status read. */
+    /** The longest title a panel line shows; a longer one ends in "…". */
+    internal const int LineTitleChars = 60;
+
+    /**
+     * One line for the panel: which video, on which site (when not YouTube), and what it is doing now. Every line names
+     * the video, so the operator can tell which tab VJster follows (hand test 2026-11-17, FIX-6); withTitle is kept for
+     * the callers and the tests, and only a status read without a title says nothing more.
+     */
     public static string Describe(VjsterState s, bool withTitle, string target = "browser")
     {
         if (s.Rate == null && s.Title == null) return target == "obs" ? "VJster: no video is loaded in the OBS page." : "VJster: no video is playing in Chrome.";
@@ -114,8 +121,23 @@ internal sealed class VjsterDesk(VjsterLink link, double fastSpeed = 2.0, double
         parts.Add(s.Playing ? "playing" : "paused");
         if (s.AdPlaying) parts.Add("ad playing");
         if (s.Pinned) parts.Add("pinned tab");
-        if (withTitle && !string.IsNullOrWhiteSpace(s.Title)) parts.Insert(0, s.Title.Trim());
+        var named = new List<string>();
+        if (!string.IsNullOrWhiteSpace(s.Title)) named.Add(ShortTitle(s.Title));
+        if (!string.IsNullOrWhiteSpace(s.Host) && !IsYouTube(s.Host)) named.Add(s.Host.Trim());
+        parts.InsertRange(0, named);
         return string.Join(" · ", parts);
+    }
+
+    static string ShortTitle(string title)
+    {
+        var t = string.Join(" ", title.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        return t.Length <= LineTitleChars ? t : t[..(LineTitleChars - 1)].TrimEnd() + "…";
+    }
+
+    static bool IsYouTube(string host)
+    {
+        var h = host.Trim().ToLowerInvariant();
+        return h == "youtube.com" || h.EndsWith(".youtube.com", StringComparison.Ordinal);
     }
 
     static string Rate(double? rate) => rate == null ? "—" : rate.Value.ToString("0.##", CultureInfo.InvariantCulture) + "x";

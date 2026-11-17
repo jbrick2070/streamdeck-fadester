@@ -1,6 +1,6 @@
 # Fadester Companion: Store listings in nine more languages
 
-Ready to paste once version 1 is live: in Partner Center, start a new submission, add each language under Store listings → Add/remove languages (Additional Store listing languages), and paste its blocks. Reuse the English screenshots and images from `listing/`. Copyright, license terms and "Developed by" stay as in [LISTING.md](LISTING.md). Product features are one per box; keywords are seven, entered one at a time.
+The same listing as [LISTING.md](LISTING.md), for version 0.1.5. In Partner Center, in the submission, add each language under Store listings → Add/remove languages (Additional Store listing languages), and paste its blocks. Reuse the English screenshots and images from `listing/`. Copyright, license terms and "Developed by" stay as in [LISTING.md](LISTING.md). Product features are one per box; keywords are seven, entered one at a time.
 
 ## Deutsch (de)
 
@@ -18,7 +18,17 @@ Benötigt OBS Studio mit eingeschaltetem WebSocket-Server (Werkzeuge → WebSock
 
 **Short description:** Ihr Gamecontroller als Bildmischer für OBS Studio: ein echter T-Bar am rechten Trigger, Szenen auf dem Steuerkreuz, Musik am linken Trigger.
 
-**What's new:** Erste Veröffentlichung im Microsoft Store.
+**What's new:** Version 0.1.5:
+
+- Ein Name: Jede Datei, die die App installiert, trägt jetzt den Namen Fadester Companion, und Bildschirmfotos landen in Bilder\Fadester Companion.
+- Tab Einrichtung, VJster: Wählen Sie, wo YouTube läuft (Chrome und OBS-Seite, Nur Chrome-Erweiterung oder Nur OBS-Browserquelle), fügen Sie eine OBS-Video-URL oder -ID ein und kopieren Sie den Link für die OBS-Browserquelle mit einem Klick.
+- Der Hinweis „Dieses Fenster offen lassen“ bleibt jetzt unter den Schaltflächen sichtbar.
+- Sicherer T-Bar: Geht der Regler oder die Verbindung von OBS mitten in einer Überblendung verloren, schließt sich die Überblendung von selbst (nach der Hälfte wird sie beendet, davor geht sie zurück), und keine Überblendung bleibt hängen.
+- Schritte vom Controller landen sauber an den Enden des T-Bars.
+- Quantisierte Übergänge: Ein Übergang kann auf den nächsten Schlag oder Takt von Visual Sidechain warten, mit Millisekunden als Rückfall, wenn kein Tempo da ist.
+- Eine Live-Zeile von Visual Sidechain (BPM, Schlag, Bänder) in der Statusleiste und im HUD.
+- Die Deckkraft von Ebene 2 nutzt den Deckkraft-Slot von Midi Fadester, wenn einer eingerichtet ist, statt einen zweiten Filter anzulegen.
+- Funktioniert mit jeder Version von OBS Studio 33.x.
 
 **Product features**
 
@@ -50,7 +60,17 @@ Necesita OBS Studio con su servidor WebSocket activado (Herramientas → Ajustes
 
 **Short description:** Tu mando de juego, ahora un mezclador de vídeo para OBS Studio: un T-bar de verdad en el gatillo derecho, escenas en la cruceta y música en el gatillo izquierdo.
 
-**What's new:** Primera versión en Microsoft Store.
+**What's new:** Versión 0.1.5:
+
+- Un solo nombre: todos los archivos que instala la aplicación llevan ahora el nombre Fadester Companion, y las capturas de pantalla se guardan en Imágenes\Fadester Companion.
+- Pestaña Configuración, VJster: elige dónde se reproduce YouTube (Chrome y página de OBS, Solo la extensión de Chrome o Solo la fuente de navegador de OBS), pega una URL o un ID de vídeo de OBS y copia el enlace de la fuente de navegador de OBS con un clic.
+- El aviso «deja esta ventana abierta» ahora queda a la vista bajo los botones.
+- T-bar más seguro: si el control deslizante de OBS o la conexión se pierden a mitad de una transición, la transición se cierra sola (pasada la mitad termina, antes de la mitad vuelve atrás) y nunca se queda atascada.
+- Los pasos desde el mando llegan limpiamente a los extremos del T-bar.
+- Transiciones cuantizadas: una transición puede esperar al siguiente pulso o compás de Visual Sidechain, con milisegundos como alternativa cuando no hay tempo.
+- Una línea en directo de Visual Sidechain (BPM, pulso, bandas) en la franja de estado y en el HUD.
+- La opacidad de la capa 2 usa la ranura de opacidad de Midi Fadester cuando hay una configurada, en lugar de añadir un segundo filtro.
+- Funciona con cualquier versión de OBS Studio 33.x.
 
 **Product features**
 
@@ -82,7 +102,17 @@ Nécessite OBS Studio avec son serveur WebSocket activé (Outils → Paramètres
 
 **Short description:** Votre manette de jeu devient un mélangeur vidéo pour OBS Studio : un vrai T-bar sur la gâchette droite, les scènes sur le pavé directionnel, la musique sur la gâchette gauche.
 
-**What's new:** Première version sur le Microsoft Store.
+**What's new:** Version 0.1.5 :
+
+- Un seul nom : tous les fichiers que l’application installe portent désormais le nom Fadester Companion, et les captures d’écran sont enregistrées dans Images\Fadester Companion.
+- Onglet Configuration, VJster : choisissez où YouTube est lu (Chrome et page OBS, Extension Chrome seule ou Source navigateur OBS seule), collez une URL ou un ID de vidéo OBS et copiez le lien de la source navigateur OBS en un clic.
+- Le rappel « gardez cette fenêtre ouverte » reste désormais visible sous les boutons.
+- T-bar plus sûr : si le curseur d’OBS ou la connexion est perdu en plein fondu, le fondu se termine de lui-même (après la moitié il va au bout, avant la moitié il revient) et un fondu ne reste jamais bloqué.
+- Les pas envoyés depuis la manette tombent pile sur les extrémités du T-bar.
+- Transitions quantifiées : une transition peut attendre le prochain temps ou la prochaine mesure de Visual Sidechain, avec une durée en millisecondes de secours quand il n’y a pas de tempo.
+- Une ligne Visual Sidechain en direct (BPM, temps, bandes) dans la barre d’état et le HUD.
+- L’opacité du calque 2 utilise l’emplacement d’opacité de Midi Fadester quand il est configuré, au lieu d’ajouter un second filtre.
+- Fonctionne avec toutes les versions d’OBS Studio 33.x.
 
 **Product features**
 
@@ -114,7 +144,17 @@ Richiede OBS Studio con il server WebSocket attivo (Strumenti → Impostazioni d
 
 **Short description:** Il tuo controller di gioco diventa un mixer video per OBS Studio: un vero T-bar sul grilletto destro, le scene sul D-pad, la musica sul grilletto sinistro.
 
-**What's new:** Prima versione su Microsoft Store.
+**What's new:** Versione 0.1.5:
+
+- Un solo nome: tutti i file che l’app installa ora portano il nome Fadester Companion, e gli screenshot vengono salvati in Immagini\Fadester Companion.
+- Scheda Configurazione, VJster: scegli dove viene riprodotto YouTube (Chrome e pagina OBS, Solo estensione Chrome o Solo sorgente browser di OBS), incolla un URL o un ID video per OBS e copia il link della sorgente browser di OBS con un clic.
+- Il promemoria «tieni aperta questa finestra» ora resta visibile sotto i pulsanti.
+- T-bar più sicuro: se il cursore di OBS o la connessione si perdono a metà di una dissolvenza, la dissolvenza si chiude da sola (oltre la metà si completa, prima della metà torna indietro) e non resta mai bloccata.
+- I passi dal controller arrivano esattamente agli estremi del T-bar.
+- Transizioni quantizzate: una transizione può attendere il prossimo battito o la prossima battuta di Visual Sidechain, con i millisecondi come riserva quando manca il tempo.
+- Una riga in tempo reale di Visual Sidechain (BPM, battito, bande) nella barra di stato e nell’HUD.
+- L’opacità del livello 2 usa lo slot di opacità di Midi Fadester quando è configurato, invece di aggiungere un secondo filtro.
+- Funziona con qualsiasi versione di OBS Studio 33.x.
 
 **Product features**
 
@@ -146,7 +186,17 @@ WebSocket サーバーを有効にした OBS Studio が必要です（ツール 
 
 **Short description:** ゲームコントローラーが OBS Studio のビデオスイッチャーに。右トリガーは本物の T バー、十字キーでシーン、左トリガーで音楽。
 
-**What's new:** Microsoft Store での初めてのリリースです。
+**What's new:** バージョン 0.1.5：
+
+- 名前を一つに：アプリがインストールするファイルはすべて Fadester Companion という名前になり、スクリーンショットは ピクチャ\Fadester Companion に保存されます。
+- セットアップタブの VJster：YouTube を再生する場所（Chrome と OBS ページ、Chrome 拡張機能のみ、OBS ブラウザソースのみ）を選び、OBS 用の動画 URL または ID を貼り付け、OBS ブラウザソースのリンクをワンクリックでコピーできます。
+- 「このウィンドウを開いたままにしてください」の案内が、ボタンの下に常に表示されるようになりました。
+- より安全な T バー：フェードの途中で OBS のスライダーや接続が失われても、フェードは自動的に完了します（半分を過ぎていれば最後まで進み、手前なら元に戻ります）。フェードが止まったままになることはありません。
+- コントローラーからのステップ操作が T バーの両端にぴったり届きます。
+- クオンタイズされたトランジション：Visual Sidechain の次の拍や小節まで待ってから切り替えられます。テンポがないときはミリ秒指定で動作します。
+- Visual Sidechain のライブ表示（BPM、拍、帯域）をステータス欄と HUD に表示します。
+- Midi Fadester の不透明度スロットが設定されていれば、レイヤー 2 の不透明度はそれを使い、2 つ目のフィルターを追加しません。
+- OBS Studio 33.x のすべてのリリースで動作します。
 
 **Product features**
 
@@ -178,7 +228,17 @@ WebSocket 서버가 켜진 OBS Studio가 필요합니다(도구 → WebSocket �
 
 **Short description:** 게임 컨트롤러가 OBS Studio용 비디오 스위처로: 오른쪽 트리거는 진짜 T바, 십자키는 장면, 왼쪽 트리거는 음악.
 
-**What's new:** Microsoft Store 첫 출시입니다.
+**What's new:** 버전 0.1.5:
+
+- 하나의 이름: 앱이 설치하는 모든 파일이 이제 Fadester Companion이라는 이름을 쓰며, 스크린샷은 사진\Fadester Companion에 저장됩니다.
+- 설정 탭, VJster: YouTube를 재생할 곳(Chrome 및 OBS 페이지, Chrome 확장 프로그램만, OBS 브라우저 소스만)을 고르고, OBS용 동영상 URL 또는 ID를 붙여 넣고, OBS 브라우저 소스 링크를 한 번의 클릭으로 복사할 수 있습니다.
+- "이 창을 열어 두세요" 안내가 이제 버튼 아래에 계속 보입니다.
+- 더 안전한 T바: 페이드 도중 OBS의 슬라이더나 연결이 끊기면 페이드가 저절로 마무리되며(절반을 넘었으면 끝까지 진행하고, 절반 전이면 되돌아갑니다), 페이드가 멈춘 채로 남지 않습니다.
+- 컨트롤러로 단계 이동하면 T바의 양 끝에 정확히 닿습니다.
+- 퀀타이즈 전환: Visual Sidechain의 다음 박이나 마디를 기다렸다가 전환할 수 있으며, 템포가 없으면 밀리초 설정으로 대신 실행합니다.
+- 상태 표시줄과 HUD에 Visual Sidechain 실시간 표시줄(BPM, 박, 대역)이 나타납니다.
+- Midi Fadester의 불투명도 슬롯이 설정되어 있으면 레이어 2 불투명도는 두 번째 필터를 추가하지 않고 그 슬롯을 사용합니다.
+- OBS Studio 33.x의 모든 릴리스에서 작동합니다.
 
 **Product features**
 
@@ -210,7 +270,17 @@ Fadester Companion превращает контроллеры, которые �
 
 **Short description:** Ваш геймпад — теперь видеомикшер для OBS Studio: настоящий T-bar на правом триггере, сцены на крестовине, музыка на левом триггере.
 
-**What's new:** Первый выпуск в Microsoft Store.
+**What's new:** Версия 0.1.5:
+
+- Одно имя: все файлы, которые устанавливает приложение, теперь носят имя Fadester Companion, а снимки экрана сохраняются в Изображения\Fadester Companion.
+- Вкладка «Настройка», VJster: выберите, где воспроизводится YouTube (Chrome и страница OBS, Только расширение Chrome или Только источник «Браузер» OBS), вставьте URL или ID видео для OBS и скопируйте ссылку для источника «Браузер» OBS одним щелчком.
+- Напоминание «не закрывайте это окно» теперь всегда видно под кнопками.
+- Более надёжный T-bar: если ползунок OBS или соединение пропадает посреди перехода, переход завершается сам (после середины доходит до конца, до середины возвращается назад), и переход никогда не зависает.
+- Шаги с геймпада точно попадают в крайние положения T-bar.
+- Квантованные переходы: переход может дождаться следующей доли или такта от Visual Sidechain, а если темпа нет, используется длительность в миллисекундах.
+- Живая строка Visual Sidechain (BPM, доля, полосы) в строке состояния и на HUD.
+- Непрозрачность слоя 2 использует слот непрозрачности Midi Fadester, если он настроен, вместо того чтобы добавлять второй фильтр.
+- Работает с любым выпуском OBS Studio 33.x.
 
 **Product features**
 
@@ -242,7 +312,17 @@ OBS 在前台时它照样工作，只与你电脑上的 OBS 和 VJster 扩展通
 
 **Short description:** 你的游戏手柄，变身 OBS Studio 视频切换台：右扳机是真正的 T-bar，方向键切换场景，左扳机控制音乐。
 
-**What's new:** 首次在 Microsoft Store 发布。
+**What's new:** 版本 0.1.5：
+
+- 统一名称：应用安装的所有文件现在都使用 Fadester Companion 这个名称，截图保存到 图片\Fadester Companion。
+- 设置选项卡中的 VJster：选择 YouTube 在哪里播放（Chrome 和 OBS 页面、仅 Chrome 扩展或仅 OBS 浏览器源），粘贴 OBS 视频 URL 或 ID，一键复制 OBS 浏览器源链接。
+- “请保持此窗口打开”的提示现在始终显示在按钮下方。
+- 更安全的 T-bar：如果在淡变过程中 OBS 的滑块或连接丢失，淡变会自动收尾（过半则完成，未过半则退回），淡变绝不会卡住。
+- 用手柄步进时会准确落在 T-bar 的两端。
+- 量化切换：切换可以等待 Visual Sidechain 的下一拍或下一小节，没有节拍时改用毫秒时长。
+- 状态栏和 HUD 中显示 Visual Sidechain 实时信息（BPM、拍、频段）。
+- 如果已设置 Midi Fadester 的不透明度槽位，图层 2 的不透明度会使用该槽位，而不再添加第二个滤镜。
+- 适用于所有 OBS Studio 33.x 版本。
 
 **Product features**
 
@@ -274,7 +354,17 @@ OBS 在前景時它照樣運作，只與你電腦上的 OBS 和 VJster 擴充功
 
 **Short description:** 你的遊戲控制器，變身 OBS Studio 視訊切換台：右扳機是真正的 T-bar，十字鍵切換場景，左扳機控制音樂。
 
-**What's new:** 首次在 Microsoft Store 推出。
+**What's new:** 版本 0.1.5：
+
+- 統一名稱：應用程式安裝的所有檔案現在都使用 Fadester Companion 這個名稱，螢幕擷圖儲存到 圖片\Fadester Companion。
+- 設定分頁中的 VJster：選擇 YouTube 在哪裡播放（Chrome 與 OBS 頁面、僅 Chrome 擴充功能或僅 OBS 瀏覽器來源），貼上 OBS 影片 URL 或 ID，一鍵複製 OBS 瀏覽器來源連結。
+- 「請保持此視窗開啟」的提示現在會一直顯示在按鈕下方。
+- 更安全的 T-bar：如果在淡變途中 OBS 的滑桿或連線中斷，淡變會自動收尾（過半則完成，未過半則退回），淡變絕不會卡住。
+- 用控制器步進時會準確落在 T-bar 的兩端。
+- 量化切換：切換可以等待 Visual Sidechain 的下一拍或下一小節，沒有節拍時改用毫秒時長。
+- 狀態列和 HUD 中顯示 Visual Sidechain 即時資訊（BPM、拍、頻段）。
+- 如果已設定 Midi Fadester 的不透明度槽位，圖層 2 的不透明度會使用該槽位，而不再新增第二個濾鏡。
+- 適用於所有 OBS Studio 33.x 版本。
 
 **Product features**
 

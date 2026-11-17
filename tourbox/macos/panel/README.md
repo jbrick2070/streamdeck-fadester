@@ -1,6 +1,15 @@
 # Fadester Companion — Mac setup window
 
-**Fadester Companion** (`Fadester Companion.app`) is the Mac AppKit companion matching the Windows Fadester Companion header, live readiness lights (`OBS`, `TourBox`, `VJster`, `Controls` + quick `Start`/`Stop`), live interactive Setup signal-flow diagram, animated `Show me` walkthroughs, contextual foreground reminder banner (`Bring OBS to Front`), Setup, Assignments, Control map, Activity, and non-activating floating feedback HUD for the Mac action host. It is an unpublished developer candidate, not a notarized release. Opening the window performs read-only OBS scene/input discovery when OBS is running, never registers shortcuts until explicit Start, and never overwrites TourBox Console presets automatically.
+**Fadester Companion** (`Fadester Companion.app`) is the Mac AppKit companion matching the Windows Fadester Companion header, live readiness lights (`OBS`, `TourBox`, `VJster`, `Controls` + quick `Start`/`Stop`), live interactive Setup signal-flow diagram, animated `Show me` walkthroughs, contextual foreground reminder banner (`Bring OBS to Front`), Setup, Assignments, Control map, Activity, and non-activating floating feedback HUD for the Mac action host. It ships in every release as `Fadester-Companion-macOS-arm64-<version>.zip` (Apple silicon) and `Fadester-Companion-macOS-x64-<version>.zip` (Intel), built and self-tested on GitHub's macOS runners. It is ad-hoc signed and not notarized. Opening the window performs read-only OBS scene/input discovery when OBS is running, never registers shortcuts until explicit Start, and never overwrites TourBox Console presets automatically.
+
+## Install
+
+1. Download the ZIP for your Mac (Apple silicon: `arm64`; Intel: `x64`; Apple menu → **About This Mac** shows which) and unzip it. The `Fadester Companion` folder holds the app, the TourBox preset `OBS Fadester for TourBox.tb`, the quick guide `START-HERE.html`, this read-me and the license.
+2. Move **Fadester Companion.app** to Applications.
+3. The app is not signed or notarized by Apple, so macOS will refuse to open it the first time. To allow it, right-click (or Control-click) the app and choose **Open**, then **Open** again; or try to open it once, then go to **System Settings → Privacy & Security** and click **Open Anyway**.
+4. Grant Accessibility when Setup asks (see below). TourBox Console needs its own permissions.
+
+Not yet checked on a real Mac: opening a downloaded copy past Gatekeeper, the window on screen, the Accessibility prompt for the bundled helper, and control of OBS from a physical TourBox. CI checks the build and the self-tests only. Please report what you find, with your Mac (Apple silicon or Intel) and macOS version.
 
 Use **1. Save TourBox Preset (.tb)…** to save the embedded `OBS Fadester for TourBox.tb` to a visible folder (such as `Downloads`), then click **2. Open TourBox Console** (or **Show me where to click** for the floating animated 3-step visual guide): click the middle **Import [↙]** icon beside Preset List, open the `.tb`, and click **Not Linked → pick OBS (not Fadester) → Save** with Auto Switch on. Setup also provides direct **Download TourBox Console…** and **TourBox Preset Square…** links and tracks the saved `.tb` SHA-256 (`saved-preset.sha256`) so future app updates flag newer presets automatically. Open the included Quick guide for the full map and rehearsal. Use **Read scenes and inputs from OBS** for bounded, authenticated, read-only discovery. Unavailable saved targets remain visible; they are never silently rebound. Stop before editing assignments.
 
@@ -38,6 +47,14 @@ it is not notarized and does not install or launch the GUI. `DOTNET=/path/to/dot
 selects the existing SDK, and `PYTHON=/path/to/python3` selects Python.
 `--ui-only` omits the runtime and creates the separate **Fadester Companion
 UI Preview.app** bundle. Its Start guard refuses use; a complete build is preserved.
+
+`bash tourbox/macos/package.sh [OUTPUT_DIR]` runs the complete build and packs the
+release ZIP for this Mac's architecture (`Fadester-Companion-macOS-arm64-<version>.zip`
+or `...-x64-...`, plus a `.sha256`). It then extracts the ZIP and runs the panel, host
+and helper self-tests and the discovery check below from the extracted app. The
+macOS workflow and the draft-release workflow both run it, on `macos-15` (Apple
+silicon) and `macos-15-intel`. There is no universal app: the .NET single-file host
+cannot be merged with `lipo`, so each architecture has its own ZIP.
 
 ```sh
 app='tourbox/macos/panel/build/Fadester Companion.app'

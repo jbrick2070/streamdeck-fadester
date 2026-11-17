@@ -2,6 +2,8 @@
 
 Fadester Companion lets you mix OBS Studio scenes on Windows with an Xbox or other XInput game controller, a full-size TourBox, or both. The right trigger of the controller, or the flat Dial of the TourBox, drives OBS’s own Studio Mode T-bar.
 
+On a Mac, download `Fadester-Companion-macOS-arm64-<version>.zip` (Apple silicon) or `Fadester-Companion-macOS-x64-<version>.zip` (Intel) from the same release; it works with a TourBox (there is no game controller on the Mac). See [MACOS.md](MACOS.md) for first open and what has been verified.
+
 <a href="https://apps.microsoft.com/detail/9PN7D3P2X7F4?mode=direct"><img src="https://get.microsoft.com/images/en-us%20dark.svg" alt="Get Fadester Companion from Microsoft" width="200"></a>
 
 ## First five minutes (game controller)

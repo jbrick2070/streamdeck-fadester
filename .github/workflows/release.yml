@@ -3,7 +3,8 @@ name: Release (draft)
 # Pushing a version tag such as v0.12.2 builds the release packages from that commit and creates a DRAFT GitHub
 # release with them. Nothing is published: a person tests the draft on real hardware, then publishes it.
 # The tag must match package.json and the Fadester for OBS manifest. The Companion version comes from
-# installer/components.json (companion.version), so the suite setup, the ZIP and the Store package agree.
+# installer/components.json (companion.version), so the suite setup, the Windows ZIP, the Store package and the
+# two Mac app ZIPs (Apple silicon and Intel, built on GitHub's macOS runners) agree.
 on:
   push:
     tags:
@@ -89,9 +90,60 @@ jobs:
           if-no-files-found: error
           compression-level: 0
 
+  companion-macos:
+    name: Fadester Companion Mac app (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+            machine: arm64
+          - runner: macos-15-intel
+            arch: x64
+            machine: x86_64
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      DOTNET_NOLOGO: '1'
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          dotnet-version: 8.0.x
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Build Fadester Companion.app (self-tests run inside package.sh, on the extracted ZIP)
+        env:
+          EXPECTED_MACHINE: ${{ matrix.machine }}
+        run: |
+          test "$(uname -m)" = "$EXPECTED_MACHINE"
+          npm ci --no-audit --no-fund
+          bash tourbox/macos/package.sh "$RUNNER_TEMP/companion"
+          mkdir -p artifacts
+          cp "$RUNNER_TEMP"/companion/Fadester-Companion-macOS-*.zip artifacts/
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-companion-macos-${{ matrix.arch }}
+          path: artifacts/*
+          retention-days: 7
+          if-no-files-found: error
+          compression-level: 0
+
   draft:
     name: Create the draft release
-    needs: [streamdeck, companion]
+    needs: [streamdeck, companion, companion-macos]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -105,6 +157,13 @@ jobs:
           cd dist
           {
             echo "Draft built from \`$GITHUB_SHA\`. Test on real hardware before publishing."
+            echo
+            echo "### Fadester Companion"
+            echo
+            echo "- Windows: \`$(ls Fadester-Companion-Windows-x64-*.zip)\` (and the Store package \`$(ls FadesterCompanion_*.msix)\`)."
+            echo "- Mac, Apple silicon: \`$(ls Fadester-Companion-macOS-arm64-*.zip)\`. Mac, Intel: \`$(ls Fadester-Companion-macOS-x64-*.zip)\`."
+            echo "  The Mac app is ad-hoc signed and not notarized. Unzip it and move **Fadester Companion.app** to Applications. The first time, right-click (or Control-click) the app and choose **Open**, then **Open** again; or try to open it once, then go to **System Settings → Privacy & Security** and click **Open Anyway**."
+            echo "  Verified in CI on both architectures: the build and the app's self-tests. Not yet verified on a real Mac: the window on screen, physical TourBox control and the Accessibility prompt. Fadester Companion keeps a typed OBS password in memory only; Keychain saving (the Fadester for OBS plugin on macOS failed with -25293 in testing) is still unverified."
             echo
             echo "### Checksums (SHA-256)"
             for f in *; do echo "    $f: $(sha256sum "$f" | cut -d ' ' -f 1)"; done

@@ -18,3 +18,6 @@ __pycache__/
 
 # Fadester Suite Setup build output
 installer/dist/
+
+# Fadester Companion Mac release ZIP (tourbox/macos/package.sh)
+tourbox/macos/build/

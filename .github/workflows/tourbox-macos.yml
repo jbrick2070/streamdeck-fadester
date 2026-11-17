@@ -11,6 +11,13 @@ on:
       - tourbox/tests/StudioFaderSelfTests.cs
       - tourbox/presets/**
       - tourbox/MACOS.md
+      - tourbox/artwork/**
+      - tourbox/panel/PanelText.cs
+      - tourbox/panel/PanelExtraText.cs
+      - installer/components.json
+      - vjster-page/**
+      - package.json
+      - package-lock.json
       - LICENSE
   pull_request:
     branches: [main]
@@ -22,6 +29,13 @@ on:
       - tourbox/tests/StudioFaderSelfTests.cs
       - tourbox/presets/**
       - tourbox/MACOS.md
+      - tourbox/artwork/**
+      - tourbox/panel/PanelText.cs
+      - tourbox/panel/PanelExtraText.cs
+      - installer/components.json
+      - vjster-page/**
+      - package.json
+      - package-lock.json
       - LICENSE
   workflow_dispatch:
 
@@ -37,7 +51,7 @@ jobs:
     name: Core checks (${{ matrix.rid }})
     # Standard public-repository runners. No paid larger runners or signing secrets.
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 15
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
@@ -64,6 +78,10 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.12'
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
       - name: Confirm native Mac architecture
         env:
           EXPECTED_MACHINE: ${{ matrix.machine }}
@@ -109,10 +127,20 @@ jobs:
           python tourbox/macos/host/tests/open-pipe.py "$host/FadesterMacHost"
       - name: Run shared production core checks
         run: dotnet run --project tourbox/tests/portable/FadesterCoreChecks.csproj --configuration Release -- --map tourbox/presets/map.json
-      - name: Build and self-test the experimental Mac setup window (no GUI)
-        # Separate UI-only bundle; synthetic child lifecycle/settings tests only.
-        # It contains no runtime host and cannot register shortcuts or use OBS.
-        run: bash tourbox/macos/panel/build.sh --ui-only
+      - name: Build, pack and self-test Fadester Companion.app (no GUI)
+        # The release ZIP: panel + self-contained FadesterMacHost + native/input helpers, ad-hoc signed.
+        # package.sh extracts the ZIP again and runs the panel, host and helper self-tests and the
+        # fake-OBS discovery check from the extracted app. No live OBS, shortcuts, Accessibility or Keychain.
+        run: |
+          npm ci --no-audit --no-fund
+          bash tourbox/macos/package.sh "$PWD/companion"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: Fadester-Companion-macOS-${{ matrix.rid }}
+          path: companion/*
+          retention-days: 7
+          if-no-files-found: error
+          compression-level: 0
       - name: Build and verify the native developer executables
         env:
           TARGET_RID: ${{ matrix.rid }}
@@ -158,5 +186,6 @@ jobs:
             printf '%s\n' 'Builds and executes the shared production OBS/audio/fader logic with controlled test doubles and a local fake OBS transport.'
             printf '\n%s\n' 'Also validates Windows/Mac preset parity; builds both Swift helpers and runs their synthetic/open-pipe checks plus the C# transport checks; and publishes and self-tests the action host against fake OBS. No shortcuts, GUI or Accessibility access are used by those tests.'
             printf '\n%s\n' 'Also compiles the read-only native probe without launching it, and publishes and runs offline self-tests for the mix-only host in the developer-mix-host subfolder.'
-            printf '\n%s\n' '**Developer executables only.** This is not the Mac TourBox app or a signed/notarized product release. Native TourBox input, the setup window, real OBS audio, OBS slider movement, permissions and physical hardware are not verified by this job.'
+            printf '\n%s\n' 'Also builds the Fadester Companion.app release ZIP (ad-hoc signed, not notarized), extracts it, and runs the panel, host and helper self-tests and the fake-OBS discovery check from the extracted app.'
+            printf '\n%s\n' 'The FadesterCoreChecks bundle is developer-only. Not verified by this job: the app window on screen, physical TourBox control, the Accessibility prompt, Keychain saving, real OBS audio or OBS slider movement.'
           } >> "$GITHUB_STEP_SUMMARY"

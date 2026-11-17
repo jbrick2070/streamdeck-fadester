@@ -143,8 +143,11 @@ namespace Fadester.TourBox {
     // The readiness lights: what is true now, never a log line. OBS from the last scan or the running controls' own lines.
     bool obsConnected; string padState="stPadOff"; ListBox activity; Button connect, start, save, openSettings;
     // What the lights also need from the desktop, read once a second without touching OBS (ShowMe.cs).
-    Light obsLight, padLight, ctlLight; System.Windows.Forms.Timer watch; ShowMeWindow showMe;
-    string obsProblem, front=""; bool obsRunning, obsHidden, padSeen, studioOff, tourboxConsole; DateTime autoConnectAt=DateTime.MaxValue; int autoTries;
+    Light obsLight, tbLight, vjLight, padLight, ctlLight; System.Windows.Forms.Timer watch; ShowMeWindow showMe;
+    string obsProblem, front=""; bool obsRunning, obsHidden, padSeen, studioOff, tourboxConsole, consoleInstalled; DateTime autoConnectAt=DateTime.MaxValue; int autoTries;
+    // VJster, from the running controls' own lines: which of the Chrome extension and the OBS page are connected, and whether its port is taken.
+    HashSet<string> vjPeers=new HashSet<string>(); bool vjPortBusy;
+    TableLayoutPanel reminderBar; Button bringObs;
     // A bridge that a Stop or Close already waited for in vain: the next Stop or Close ends it if it still does not exit.
     // Ending: the bridge the panel is ending, so whichever sees it exit first says so in the same words.
     Process stopTimedOut, ending;
@@ -224,14 +227,24 @@ namespace Fadester.TourBox {
       head.Controls.Add(version); head.ClientSizeChanged+=delegate { version.Location=new Point(Math.Max(0,head.ClientSize.Width-version.Width-14),12); };
       state=new Label {Text=text.Get("lookingForObs"),Location=new Point(16,50),AutoEllipsis=true,UseMnemonic=false,ForeColor=Color.White, Width=680,Anchor=AnchorStyles.Left|AnchorStyles.Right|AnchorStyles.Top}; head.Controls.Add(state); grid.Controls.Add(head,0,0);
       head.ClientSizeChanged+=delegate { state.Width=Math.Max(1,head.ClientSize.Width-32); };
-      // Three lights, each with the one button that fixes it, so the next step is always in view.
+      // The lights, each with the one button that fixes it, so the next step is always in view: OBS, TourBox, VJster and
+      // Controls as on the Mac, plus the game controller (Windows only).
       var lights=new FlowLayoutPanel {Dock=DockStyle.Fill,AutoSize=true,WrapContents=true,BackColor=Color.FromArgb(241,244,249),Padding=new Padding(10,6,10,6),Margin=new Padding(0,6,0,0)};
-      obsLight=new Light(navy,accent,Color.White); padLight=new Light(navy,accent,Color.White); ctlLight=new Light(navy,accent,Color.White);
-      foreach(var l in new[]{obsLight,padLight,ctlLight}){ l.Acted+=Act; lights.Controls.Add(l); }
+      obsLight=new Light(navy,accent,Color.White); tbLight=new Light(navy,accent,Color.White); vjLight=new Light(navy,accent,Color.White);
+      padLight=new Light(navy,accent,Color.White); ctlLight=new Light(navy,accent,Color.White);
+      foreach(var l in new[]{obsLight,tbLight,vjLight,padLight,ctlLight}){ l.Acted+=Act; lights.Controls.Add(l); }
       grid.Controls.Add(lights,0,1);
-      reminder=new Label {AutoSize=true,UseMnemonic=false,Visible=false,BackColor=Color.FromArgb(255,241,214),ForeColor=Color.FromArgb(107,74,0),Font=new Font("Segoe UI",10,FontStyle.Bold),Padding=new Padding(10,7,10,7),Margin=new Padding(0,6,0,0),MaximumSize=new Size(720,0)};
-      grid.Controls.Add(reminder,0,2);
-      grid.ClientSizeChanged+=delegate { reminder.MinimumSize=reminder.MaximumSize=new Size(Math.Max(200,grid.ClientSize.Width-28),0); };
+      // The amber reminder, with the button that does what it asks (as on the Mac).
+      var amberBack=Color.FromArgb(255,241,214);
+      reminderBar=new TableLayoutPanel {Dock=DockStyle.Fill,AutoSize=true,ColumnCount=2,RowCount=1,Visible=false,BackColor=amberBack,Padding=new Padding(10,5,8,5),Margin=new Padding(0,6,0,0)};
+      reminderBar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100)); reminderBar.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+      reminder=new Label {AutoSize=true,UseMnemonic=false,BackColor=amberBack,ForeColor=Color.FromArgb(107,74,0),Font=new Font("Segoe UI",10,FontStyle.Bold),Anchor=AnchorStyles.Left,Margin=new Padding(0,5,8,3),MaximumSize=new Size(560,0)};
+      bringObs=new Button {Text=text.Get("btnBringObs"),AutoSize=true,Height=28,FlatStyle=FlatStyle.Flat,BackColor=accent,ForeColor=Color.White,Font=new Font("Segoe UI",9,FontStyle.Bold),UseMnemonic=false,Cursor=Cursors.Hand,Anchor=AnchorStyles.Right,Padding=new Padding(4,0,4,0),Margin=new Padding(0)};
+      bringObs.FlatAppearance.BorderSize=0;
+      bringObs.Click+=delegate { if(!Desktop.BringObsToFront()) Note(text.Get("obsNotFound")); };
+      reminderBar.Controls.Add(reminder,0,0); reminderBar.Controls.Add(bringObs,1,0);
+      grid.Controls.Add(reminderBar,0,2);
+      grid.ClientSizeChanged+=delegate { reminder.MaximumSize=new Size(Math.Max(150,grid.ClientSize.Width-28-bringObs.Width-40),0); };
       var tabs=new TabControl {Dock=DockStyle.Fill}; grid.Controls.Add(tabs,0,3);
       // Setup reads in the order a newcomer acts: OBS, then the controller in hand, then a first cue with it.
       body=Page(tabs,text.Get("setup"));
@@ -252,7 +265,10 @@ namespace Fadester.TourBox {
       Hint(body,text.Get("gamepadHint"));
       SubTitle(body,"TourBox");
       Hint(body,text.Get("importHint"));
-      AddButton(body,text.Get("openPreset"),delegate { ImportPreset(); }); importNote=Hint(body,"");
+      var importRow=new FlowLayoutPanel {AutoSize=true,WrapContents=true,Margin=new Padding(0)};
+      AddButton(importRow,text.Get("openPreset"),delegate { ImportPreset(); ShowImportGuide(); });
+      AddButton(importRow,text.Get("btnShowWhere"),delegate { ShowImportGuide(); });
+      body.Controls.Add(importRow); importNote=Hint(body,"");
       Title(body,text.Get("cueTitle"));
       Hint(body,text.Get("cueHint"));
       Title(body,text.Get("inputsTitle")); Hint(body,text.Get("inputsHint"));
@@ -283,7 +299,7 @@ namespace Fadester.TourBox {
       pageRow.Controls.Add(new Label {Text=text.Get("vjsterVideo"),AutoSize=true,UseMnemonic=false,Margin=new Padding(4,8,4,0)});
       vjsterVideo=new TextBox {Width=260}; pageRow.Controls.Add(vjsterVideo);
       AddButton(pageRow,text.Get("copyObsUrl"),delegate { CopyObsUrl(); }); body.Controls.Add(pageRow);
-      enableGamepad.CheckedChanged+=delegate { ShowStatus(); }; mixOnly.CheckedChanged+=delegate { ShowStatus(); };
+      enableGamepad.CheckedChanged+=delegate { ShowStatus(); }; mixOnly.CheckedChanged+=delegate { ShowStatus(); }; enableVjster.CheckedChanged+=delegate { ShowStatus(); };
       var assign=Page(tabs,text.Get("assignments")); Title(assign,text.Get("assignTitle"));
       Hint(assign,text.Get("assignHint"));
       foreach (var field in new[] { "musicInput", "contentInput", "micInput", "mediaInput", "overlayScene", "overlaySource" })
@@ -583,14 +599,21 @@ namespace Fadester.TourBox {
       string path=text.PresetPath(folder);
       try { Clipboard.SetText(path); importNote.Text=text.Get("importCopied"); }
       catch(ExternalException) { importNote.Text=text.Get("importManual",path); }
-      try {
-        var running=Process.GetProcessesByName("TourBox Console"); bool open=running.Length>0; foreach(var one in running) one.Dispose();
-        if(!open) {
-          string exe=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),"TourBox Console","TourBox Console.exe");
-          if(File.Exists(exe)) OpenPath(exe);
-        }
-      } catch(InvalidOperationException e) { Note(e.Message); }
+      try { if(!Desktop.Running("TourBox Console")) { string exe=Desktop.ConsoleExe(); if(exe!=null) OpenPath(exe); } }
+      catch(InvalidOperationException e) { Note(e.Message); }
     }
+    /** The "Show me where to click" window for the import: the clicks in Console, animated, with the one button that starts them. */
+    void ShowImportGuide() {
+      if(showMe!=null && !showMe.IsDisposed) showMe.Close();
+      showMe=new ShowMeWindow(text,"tourbox",null,delegate { ImportPreset(); });
+      showMe.Show(this);
+    }
+    /** The TourBox light's buttons: open Console, or its download page when it is not installed. */
+    void OpenConsole() {
+      string exe=Desktop.ConsoleExe();
+      if(exe!=null) OpenPath(exe); else DownloadConsole();
+    }
+    void DownloadConsole() { OpenPath("https://www.tourboxtech.com/en/downloads/"); Note(text.Get("consoleDownloadOpened")); }
     /** Builds the bridge's OBS Browser Source link (making its private token if needed) and puts it on the clipboard. */
     void CopyObsUrl() {
       if(invalidConfig || PortsClash()) return;
@@ -650,6 +673,7 @@ namespace Fadester.TourBox {
         WriteConfig(); var p=new Process {StartInfo=Command(mixOnly.Checked?"--mix-only":"--listen"),EnableRaisingEvents=true};
         p.OutputDataReceived+=(s,e)=>BridgeLine(p,e.Data); p.ErrorDataReceived+=(s,e)=>BridgeLine(p,e.Data);
         p.Exited+=delegate { try{BeginInvoke((Action)(()=>{if(worker==p){worker=null; SetVsStatus(""); start.Text=text.Get("saveStart"); padState="stPadOff"; ShowStatus(); Note(text.Get(ending==p?"bridgeEnded":p.ExitCode==0?"stopped":"bridgeFailed"));} Entry.Log("controls ended: "+p.ExitCode); try{p.CancelOutputRead();p.CancelErrorRead();}catch(InvalidOperationException){} p.Dispose();}));}catch(InvalidOperationException){} };
+        vjPeers=new HashSet<string>(); vjPortBusy=false;
         worker=p; if(!p.Start())throw new Exception(text.Get("bridgeNotStarted")); p.BeginOutputReadLine(); p.BeginErrorReadLine(); start.Text=text.Get("stop");
         // Until the bridge says it found one, a controller that is switched on counts as not found.
         padState=enableGamepad.Checked && !mixOnly.Checked ? "stPadMissing" : "stPadOff"; ShowStatus(); Note(text.Get("starting"));
@@ -709,6 +733,8 @@ namespace Fadester.TourBox {
         return;
       }
       if(worker==p){
+        var peersNow=Readiness.VjsterPeers(line,vjPeers); bool busyNow=Readiness.VjsterPortBusy(line,vjPortBusy);
+        if(busyNow!=vjPortBusy || !peersNow.SetEquals(vjPeers)){ vjPeers=peersNow; vjPortBusy=busyNow; ShowStatus(); }
         string padNow=PadState(line,padState), problem=PanelText.ProblemCode(line); bool obsNow=ObsState(line,obsConnected);
         if(!obsNow && obsConnected) SetVsStatus("");
         if(obsNow) problem=null; else if(problem==null) problem=obsProblem;
@@ -731,14 +757,18 @@ namespace Fadester.TourBox {
       return now;
     }
     void ShowStatus() {
-      if(obsLight==null || enableGamepad==null || mixOnly==null) return;
+      if(obsLight==null || enableGamepad==null || mixOnly==null || enableVjster==null || reminderBar==null) return;
       bool on=worker!=null;
       obsLight.Display(Readiness.Obs(obsConnected,obsRunning,obsProblem,studioOff,on),text);
+      // A stopped bridge has no VJster link: what its lines said no longer holds.
+      if(!on){ vjPeers.Clear(); vjPortBusy=false; }
+      tbLight.Display(Readiness.TourBox(tourboxConsole,consoleInstalled,mixOnly.Checked,enableGamepad.Checked),text);
+      vjLight.Display(Readiness.Vjster(enableVjster.Checked,mixOnly.Checked,on,vjPeers.Count,vjPortBusy),text);
       padLight.Display(Readiness.Pad(enableGamepad.Checked,mixOnly.Checked,on,padState,padSeen),text);
       ctlLight.Display(Readiness.Controls(on),text);
       string key=Readiness.Reminder(on,mixOnly.Checked,obsHidden,tourboxConsole,front);
       if(key!=null) reminder.Text=text.Get(key);
-      reminder.Visible=key!=null;
+      reminderBar.Visible=key!=null;
     }
     /** Once a second: whether OBS runs, has its main window open or is in front, and whether a controller is plugged in. */
     void Watch() {
@@ -752,7 +782,8 @@ namespace Fadester.TourBox {
         obsRunning=running;
         if(!on || !enableGamepad.Checked) padSeen=PadProbe.Any();
         obsHidden=on && running && Desktop.ObsHidden();
-        tourboxConsole=on && Desktop.Running("TourBox Console");
+        tourboxConsole=Desktop.Running("TourBox Console"); // the reminder asks for it only while the controls run
+        consoleInstalled=tourboxConsole || Desktop.ConsoleExe()!=null;
         front=on ? Desktop.Front() : "";
         if(obsConnected || on) autoTries=0;
         if(autoTries>0 && !refreshing && DateTime.Now>=autoConnectAt && (obsProblem==null || obsProblem=="obs-no-answer")){
@@ -772,8 +803,11 @@ namespace Fadester.TourBox {
           if(worker!=null){ await StopControls(); if(worker==null) StartControls(); }
           return;
         }
+        if(action=="openConsole"){ OpenConsole(); return; }
+        if(action=="downloadConsole"){ DownloadConsole(); return; }
         if(showMe!=null && !showMe.IsDisposed) showMe.Close();
-        showMe=new ShowMeWindow(text,action,obsProblem,delegate { var pending=Connect(); });
+        if(action=="vjsterWait" || action=="vjsterPort") showMe=new ShowMeWindow(text,action,null,delegate { CopyObsUrl(); },(int)vjsterPort.Value);
+        else showMe=new ShowMeWindow(text,action,obsProblem,delegate { var pending=Connect(); });
         showMe.Show(this);
       } catch(Exception e) { Entry.Log("light button: "+e); Note(e.Message); }
     }

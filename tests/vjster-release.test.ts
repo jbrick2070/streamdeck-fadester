@@ -135,8 +135,8 @@ describe("the Chrome Web Store zip", () => {
   });
 
   it("keeps everything else of the manifest, and the other files byte for byte", () => {
-    const { optional_host_permissions: _o, permissions: _p, ...kept } = MANIFEST;
-    const { permissions: _q, ...got } = store();
+    const { optional_host_permissions: _o, permissions: _p, host_permissions: _h, ...kept } = MANIFEST as Record<string, unknown>;
+    const { permissions: _q, host_permissions: _r, ...got } = store();
     expect(got).toEqual({ ...kept, version: "0.1.0" });
     const plain = unzip(packExtension(build()).bytes);
     const stored = unzip(packExtension(build(), LOCALES, { store: true }).bytes);
@@ -145,7 +145,8 @@ describe("the Chrome Web Store zip", () => {
   });
 
   it("does not change the zip to load unpacked, and the same build gives the same store bytes", () => {
-    expect(unzip(packExtension(build()).bytes).get("manifest.json")).toContain("optional_host_permissions");
+    // The GitHub zip asks for every site at install ("on at install", hand test 2026-11-17); only the store zip drops it.
+    expect(unzip(packExtension(build()).bytes).get("manifest.json")).toContain("<all_urls>");
     expect(packExtension(build({ touch: 1_000_000_000 }), LOCALES, { store: true }).bytes).toEqual(packExtension(build({ reverse: true, touch: 1_700_000_000 }), LOCALES, { store: true }).bytes);
   });
 

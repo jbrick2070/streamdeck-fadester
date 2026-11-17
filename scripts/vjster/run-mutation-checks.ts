@@ -924,9 +924,9 @@ export const MUTATIONS: readonly Mutation[] = [
   },
   {
     id: "M-V-102",
-    rule: "the options page shows every site as on only with the saved choice and the permission (D-4)",
+    rule: "the options page shows every site as on only when not unticked and with the permission (D-4)",
     file: "vjster-extension/src/settings.ts",
-    from: "  return offered && stored === true && granted;",
+    from: "  return offered && allSitesWanted(stored) && granted;",
     to: "  return offered && granted;",
     tests: ["tests/vjster-ext-wiring.test.ts"]
   },

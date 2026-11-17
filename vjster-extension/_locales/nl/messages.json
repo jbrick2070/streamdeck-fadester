@@ -39,7 +39,7 @@
     "message": "Video's bedienen op elke site, niet alleen op YouTube"
   },
   "allSitesNote": {
-    "message": "Alleen het tempo: voor kwaliteit is de speler van YouTube nodig. Chrome vraagt toestemming om elke site te lezen en te wijzigen."
+    "message": "Alleen snelheid: kwaliteit vraagt de YouTube-speler. Haal het vinkje weg om VJster alleen op YouTube te houden."
   },
   "statusLinkUp": {
     "message": "Verbonden met VJster op poort $PORT$.",

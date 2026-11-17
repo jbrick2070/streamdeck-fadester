@@ -479,6 +479,7 @@ describe("extension settings (R-LNK-1, D-4)", () => {
 
   it("shows every site as on only with the saved choice and Chrome's permission, both (D-4)", () => {
     expect(allSitesChecked(true, true, true)).toBe(true);
+    expect(allSitesChecked(true, undefined, true)).toBe(true); // on at install: nothing saved yet
     expect(allSitesChecked(true, false, true)).toBe(false); // Chrome kept the permission after an untick
     expect(allSitesChecked(true, true, false)).toBe(false);
     expect(allSitesChecked(false, true, true)).toBe(false);

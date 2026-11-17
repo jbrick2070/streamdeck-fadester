@@ -39,7 +39,7 @@
     "message": "Yalnızca YouTube'da değil, tüm sitelerde videoları kontrol et"
   },
   "allSitesNote": {
-    "message": "Yalnızca hız: kalite için YouTube oynatıcısı gerekir. Chrome, tüm sitelerdeki verileri okuma ve değiştirme izni ister."
+    "message": "Yalnızca hız: kalite için YouTube oynatıcısı gerekir. VJster'ı yalnızca YouTube'da tutmak için işareti kaldırın."
   },
   "statusLinkUp": {
     "message": "VJster'e $PORT$ numaralı bağlantı noktasından bağlanıldı.",

@@ -67,7 +67,7 @@ Uninstall the VJster plugin from the Plugins page of Stream Deck's preferences, 
 
 ## For developers: the unpacked extension
 
-The release's `vjster-chrome-extension-<version>.zip` is the same extension with one more option: control videos on every site, not only YouTube. Remove the store version first, so only one copy connects. Unzip the file into a folder that stays put. In Chrome open `chrome://extensions`, turn on **Developer mode**, press **Load unpacked** and pick that folder. This copy also asks for the scripting permission, and Chrome may warn about extensions in developer mode. Its options page has the all-sites option, which Chrome asks you about before adding every site. An unpacked copy has its own id; its options page shows it.
+The release's `vjster-chrome-extension-<version>.zip` is the same extension with one more option: control videos on every site, not only YouTube. It is on from the start, so Chrome's install prompt says it can read and change data on all websites; untick **Control videos on every site** on VJster's options page to keep it to YouTube. Remove the store version first, so only one copy connects. Unzip the file into a folder that stays put. In Chrome open `chrome://extensions`, turn on **Developer mode**, press **Load unpacked** and pick that folder. This copy also asks for the scripting permission, and Chrome may warn about extensions in developer mode. Its options page has the all-sites option, which Chrome asks you about before adding every site. An unpacked copy has its own id; its options page shows it.
 
 ## For developers: building a release
 

@@ -66,8 +66,21 @@ namespace Fadester.TourBox {
       if (line.StartsWith("VJster link listening on ", StringComparison.Ordinal) || line == "VJster link stopped") return false;
       return now;
     }
-    internal static LightState Controls(bool on) {
-      return on ? new LightState(Lamp.Green, "liCtlOn", null, null) : new LightState(Lamp.Grey, "liCtlOff", "btnStart", "start");
+    /**
+     * The Controls light, as on the Mac (Model.swift Readiness.controls). While OBS is not connected the button is Try again:
+     * with the controls off it reads OBS and then starts them; with them on it restarts them (a corrected password is read then).
+     */
+    internal static LightState Controls(bool on, bool obsConnected) {
+      if (on) return obsConnected ? new LightState(Lamp.Green, "liCtlOn", null, null) : new LightState(Lamp.Amber, "liCtlWaiting", "btnTryAgain", "tryAgain");
+      return obsConnected ? new LightState(Lamp.Grey, "liCtlOff", "btnStart", "start") : new LightState(Lamp.Grey, "liCtlOff", "btnTryAgain", "tryAgain");
+    }
+    /**
+     * Whether the controls start by themselves once a scan has read OBS (FIX-5, hand test 2026-11-17), as on the Mac
+     * (Model.swift Readiness.autoStart). Only after setup was saved once (a first run still shows Save & start) and never
+     * after the user pressed Stop: that choice holds until they start the controls again. "remembered" is "on", "off" or null.
+     */
+    internal static bool AutoStart(bool settingsSaved, bool settingsValid, string remembered, bool obsConnected, bool controlsOn) {
+      return settingsSaved && settingsValid && remembered != "off" && obsConnected && !controlsOn;
     }
     /** The one reminder worth a strip while the controls run, or null. The T-bar needs OBS's main window; a TourBox preset needs OBS in front. */
     internal static string Reminder(bool controlsOn, bool mixOnly, bool obsHidden, bool tourboxConsole, string front) {
@@ -91,7 +104,11 @@ namespace Fadester.TourBox {
           s(Pad(true, false, true, "stPadOn", false)) != "Green liPadOn -" || s(Pad(true, false, true, "stPadMissing", true)) != "Amber liPadMissing -" ||
           s(Pad(true, false, false, "stPadOff", true)) != "Green liPadReady -" || s(Pad(true, true, true, "stPadOn", true)) != "Grey liPadOff -")
         throw new InvalidOperationException("Controller light");
-      if (s(Controls(false)) != "Grey liCtlOff start" || s(Controls(true)) != "Green liCtlOn -") throw new InvalidOperationException("Controls light");
+      if (s(Controls(false, true)) != "Grey liCtlOff start" || s(Controls(true, true)) != "Green liCtlOn -" ||
+          s(Controls(false, false)) != "Grey liCtlOff tryAgain" || s(Controls(true, false)) != "Amber liCtlWaiting tryAgain") throw new InvalidOperationException("Controls light");
+      if (!AutoStart(true, true, null, true, false) || !AutoStart(true, true, "on", true, false) || AutoStart(true, true, "off", true, false) ||
+          AutoStart(false, true, null, true, false) || AutoStart(true, false, "on", true, false) || AutoStart(true, true, "on", false, false) ||
+          AutoStart(true, true, "on", true, true)) throw new InvalidOperationException("Auto-start decision");
       if (s(TourBox(true, true, false, false)) != "Green liTbReady -" || s(TourBox(false, true, false, false)) != "Amber liTbClosed openConsole" ||
           s(TourBox(false, false, false, false)) != "Amber liTbMissing downloadConsole" || s(TourBox(false, false, false, true)) != "Grey liTbMissing downloadConsole" ||
           s(TourBox(true, true, true, false)) != "Grey liTbOff -")

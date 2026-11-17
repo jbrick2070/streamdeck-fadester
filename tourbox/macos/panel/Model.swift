@@ -234,14 +234,24 @@ enum Readiness {
             : LightState(.amber, L("liVjWait"), button: L("btnShowMe"), action: "vjsterWait")
     }
 
-    static func controls(running: Bool, armed: Bool, axTrusted: Bool = true) -> LightState {
+    /// As on Windows (ShowMe.cs Readiness.Controls): with the controls off and OBS not connected the button is Try again,
+    /// which reads OBS and then starts them. The Mac host stops when OBS goes away, so "on but waiting" does not arise here.
+    static func controls(running: Bool, armed: Bool, axTrusted: Bool = true, obsConnected: Bool = true) -> LightState {
         if !running {
-            return axTrusted
+            if !axTrusted { return LightState(.amber, L("macLiAxNeeded"), button: L("macBtnGrant"), action: "grantAx") }
+            return obsConnected
                 ? LightState(.grey, L("liCtlOff"), button: L("btnStart"), action: "start")
-                : LightState(.amber, L("macLiAxNeeded"), button: L("macBtnGrant"), action: "grantAx")
+                : LightState(.grey, L("liCtlOff"), button: L("btnTryAgain"), action: "tryAgain")
         }
         if !armed { return LightState(.amber, L("macLiCtlStarting"), button: L("macBtnStop"), action: "stop") }
         return LightState(.green, L("liCtlOn"), button: L("macBtnStop"), action: "stop")
+    }
+
+    /// Whether the controls start by themselves once a scan has read OBS (FIX-5, hand test 2026-11-17), as on Windows
+    /// (ShowMe.cs Readiness.AutoStart), plus one Mac rule: never when Accessibility is still needed, so no system prompt
+    /// appears at launch. Only after setup was saved once, and never after the user pressed Stop ("off").
+    static func autoStart(settingsSaved: Bool, settingsValid: Bool, remembered: String?, obsConnected: Bool, controlsOn: Bool, axReady: Bool) -> Bool {
+        settingsSaved && settingsValid && remembered != "off" && obsConnected && !controlsOn && axReady
     }
 
     /// Like the Windows panel's Readiness.Reminder: nothing in Stream Deck-only mode, which needs neither the T-bar nor the TourBox preset.
@@ -458,6 +468,16 @@ enum ModelTests {
         try check(Readiness.vjster(enabled: true, controlsOn: false, connectedPeers: 0) == LightState(.green, "VJster: ready"), "VJster ready before start")
         try check(Readiness.vjster(enabled: true, controlsOn: true, connectedPeers: 1) == LightState(.green, "VJster: connected") && Readiness.vjster(enabled: true, controlsOn: true, connectedPeers: 0).action == "vjsterWait", "VJster readiness light")
         try check(Readiness.vjster(enabled: true, controlsOn: true, connectedPeers: 0, portBusy: true).action == "vjsterPort", "VJster port busy light")
+        try check(Readiness.controls(running: false, armed: false, obsConnected: false).action == "tryAgain" &&
+                  Readiness.controls(running: false, armed: false, axTrusted: false, obsConnected: false).action == "grantAx", "Controls light offers Try again while OBS is not connected")
+        try check(Readiness.autoStart(settingsSaved: true, settingsValid: true, remembered: nil, obsConnected: true, controlsOn: false, axReady: true) &&
+                  Readiness.autoStart(settingsSaved: true, settingsValid: true, remembered: "on", obsConnected: true, controlsOn: false, axReady: true) &&
+                  !Readiness.autoStart(settingsSaved: true, settingsValid: true, remembered: "off", obsConnected: true, controlsOn: false, axReady: true) &&
+                  !Readiness.autoStart(settingsSaved: false, settingsValid: true, remembered: nil, obsConnected: true, controlsOn: false, axReady: true) &&
+                  !Readiness.autoStart(settingsSaved: true, settingsValid: false, remembered: "on", obsConnected: true, controlsOn: false, axReady: true) &&
+                  !Readiness.autoStart(settingsSaved: true, settingsValid: true, remembered: "on", obsConnected: false, controlsOn: false, axReady: true) &&
+                  !Readiness.autoStart(settingsSaved: true, settingsValid: true, remembered: "on", obsConnected: true, controlsOn: true, axReady: true) &&
+                  !Readiness.autoStart(settingsSaved: true, settingsValid: true, remembered: "on", obsConnected: true, controlsOn: false, axReady: false), "Auto-start decision")
         try check(Readiness.controls(running: false, armed: false).action == "start" && Readiness.controls(running: false, armed: false, axTrusted: false).action == "grantAx" && Readiness.controls(running: true, armed: true) == LightState(.green, "Controls: on", button: "Stop", action: "stop"), "Controls readiness light")
         try check(Readiness.banner(controlsOn: false, obsHidden: false, consoleRunning: true, frontIsObs: false, axTrusted: false)?.action == "grantAx", "Accessibility banner before start")
         try check(HostController.explainHostError("ERROR: initialization: guardFailed(\"Accessibility denied; grant the responsible app\")").contains("Grant Accessibility"), "Host Accessibility error explanation")

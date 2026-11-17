@@ -4,6 +4,11 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 
 ## Unreleased
 
+- **Fadester Companion for Mac ships in every release**, next to the Windows Companion ZIP: `Fadester-Companion-macOS-arm64-<version>.zip` (Apple silicon) and `Fadester-Companion-macOS-x64-<version>.zip` (Intel), at the Companion version in `installer/components.json`. It is no longer an experimental, unreleased build.
+  - Each ZIP holds `Fadester Companion.app` (panel, self-contained `FadesterMacHost`, native slider and shortcut helpers), the Mac TourBox preset, the Mac quick guide, the read-me and the license. Two ZIPs rather than a universal app, because the .NET single-file host cannot be merged with `lipo`.
+  - Ad-hoc signed, not notarized: the first time, right-click (or Control-click) the app and choose **Open**, then **Open** again, or click **Open Anyway** in **System Settings → Privacy & Security**.
+  - **Verified:** `tourbox/macos/package.sh` builds and packs the app on GitHub's macOS runners for both architectures, then extracts the ZIP and runs the panel, host and helper self-tests and the fake-OBS discovery check from the extracted app. The macOS workflow runs it on every change; the draft-release workflow adds both ZIPs and their SHA-256 to the draft.
+  - **Not yet verified, needs a real Mac:** the window on screen, the Accessibility prompt, and physical TourBox control of OBS. The Companion keeps a typed OBS password in memory only; Keychain saving (the plugin's macOS save failed with `-25293`) is still unverified.
 - **Fadester Companion: Windows and Mac parity.** `docs/COMPANION-PARITY.md` has the new state and what is left.
   - **Windows lights:** the light strip now shows OBS, **TourBox**, **VJster**, Controller and Controls, each with the one button that fixes it, in the Mac panel's states and words. TourBox: ready, Console closed (**Open Console**), Console not installed (**Download**), off in Stream Deck-only mode. VJster: off, ready, connected, waiting for video (**Show me**), port in use (**Show me**).
   - **Windows import guide:** **Show me where to click** animates the TourBox Console import (Import, paste the copied path, open, then Not Linked → OBS Studio → Save). **Import into TourBox Console** opens it too.
@@ -11,7 +16,7 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
   - **Mac languages:** the Mac panel speaks the Windows panel's 10 languages (the Mac's first preferred language, or `--language`). Both panels use one catalog: the Windows panel's strings plus the Mac-only `mac-strings.json`, generated into `PanelStrings.swift` by `tourbox/macos/panel/make-strings.cjs` and checked by `tests/companion-mac-strings.test.ts`. The Mac Control map uses each language's `map.json`.
   - **Mac Visual Sidechain meter:** the meter line in the Setup tab and in the feedback window, from a scan and from the running controls. The Mac host now prints the same `VS-METER:` lines as the Windows bridge.
   - **Mac Stream Deck-only mode:** **Use only Stream Deck, OpenDeck or MIDI** runs the new `FadesterMacHost --run --mix-only`: no shortcut helper, native T-bar, Accessibility or VJster.
-  - Every new string is in all 10 panel languages. The Mac changes have not been compiled or run on a Mac yet.
+  - Every new string is in all 10 panel languages. The Mac changes now compile and pass their self-tests in CI (see above); they have not been checked on screen on a real Mac.
 
 ## 0.12.2 - 2026-11-16
 

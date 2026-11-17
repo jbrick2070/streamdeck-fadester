@@ -156,7 +156,7 @@ internal static class HostSelfTests
         var stepObj = JsonNode.Parse(System.Text.Encoding.UTF8.GetString(buf, 0, stepMsg.Count))!.AsObject();
         string replyJson = $$"""{"v":1,"id":"r1","target":"browser","type":"state","inReplyTo":"{{stepObj["id"]!.GetValue<string>()}}","rate":1.25,"rateDirect":false,"availableRates":[1,1.25],"quality":"hd1080","availableQualities":["hd1080"],"qualityAuto":false,"title":"Test","host":"www.youtube.com","playing":true,"adPlaying":false,"capabilities":["speed","quality","transport"],"pinned":false}""";
         await fakeExt.SendAsync(System.Text.Encoding.UTF8.GetBytes(replyJson), System.Net.WebSockets.WebSocketMessageType.Text, true, CancellationToken.None);
-        Check(await vjTask == "Video 1.25x · 1080p · playing", "HostSession routes vjster actions through VjsterDesk");
+        Check(await vjTask == "Test · Video 1.25x · 1080p · playing", "HostSession routes vjster actions through VjsterDesk (the line names the video)");
         Check(ingress.SubmitLine("action vjster.speed.up", out _), "stale vjster rotary admitted before clock advance");
         var staleVj = Pop(ingress); time += 181;
         await Refused(() => withVjster.Dispatch(staleVj));

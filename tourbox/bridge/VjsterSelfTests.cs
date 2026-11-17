@@ -17,9 +17,24 @@ internal static class VjsterSelfTests
     const string OtherExt = "chrome-extension://ppppppppppppppppaaaaaaaaaaaaaaaa";
     static void Check(bool ok, string msg) { if (!ok) throw new Exception("VJster self-test: " + msg); }
 
+    /** Every panel line names the video, and the site when it is not YouTube (FIX-6). */
+    static void Lines()
+    {
+        VjsterState S(string? title, string? host, bool playing = true) =>
+            new(1, false, [1], "hd720", ["hd720"], true, title, host, playing, false, ["quality"], false, null);
+        Check(VjsterDesk.Describe(S("YouTube 60fps Tester", "www.youtube.com"), false) == "YouTube 60fps Tester · Video 1x · Auto (720p) · playing", "title on an automatic line");
+        Check(VjsterDesk.Describe(S("Clip", "m.youtube.com", false), false) == "Clip · Video 1x · Auto (720p) · paused", "no host for YouTube");
+        Check(VjsterDesk.Describe(S("News", "www.example.com"), false) == "News · www.example.com · Video 1x · Auto (720p) · playing", "the site when it is not YouTube");
+        Check(VjsterDesk.Describe(S(null, "www.youtube.com"), false) == "Video 1x · Auto (720p) · playing", "no title, no name");
+        var longLine = VjsterDesk.Describe(S(new string('A', 80) + "  tail", "www.youtube.com"), false);
+        Check(longLine.StartsWith(new string('A', VjsterDesk.LineTitleChars - 1) + "… · Video 1x", StringComparison.Ordinal), "a long title is shortened: " + longLine);
+        Check(VjsterDesk.Describe(S("  two\n  lines  ", "www.youtube.com"), false).StartsWith("two lines · ", StringComparison.Ordinal), "whitespace in a title is folded");
+    }
+
     public static async Task RunAsync()
     {
         Gate();
+        Lines();
         Parser();
         Ports();
         Guards();
@@ -189,22 +204,22 @@ internal static class VjsterSelfTests
         var intent = JsonNode.Parse(await Receive(ext))!.AsObject();
         Check(intent["type"]!.GetValue<string>() == "speed.step" && intent["delta"]!.GetValue<double>() == 0.25 && intent["hold"]!.GetValue<bool>() == false, "speed.step +0.25");
         await SendText(ext, StateJson(intent["id"]!.GetValue<string>(), 1.25));
-        Check(await turn == "Video 1.25x · 1080p · playing", "the panel line comes from the reply: " + await turn);
+        Check(await turn == "Clip · Video 1.25x · 1080p · playing", "the panel line comes from the reply and names the video: " + await turn);
         var fine = desk.Dispatch("vjster.speed.fineDown");
         intent = JsonNode.Parse(await Receive(ext))!.AsObject();
         Check(intent["delta"]!.GetValue<double>() == -0.05, "fine step is 0.05");
         await SendText(ext, StateJson(intent["id"]!.GetValue<string>(), 1.2));
-        Check((await fine).StartsWith("Video 1.2x"), "fine reply");
+        Check((await fine).StartsWith("Clip · Video 1.2x"), "fine reply");
         var fast = desk.Dispatch("vjster.speed.fast");
         intent = JsonNode.Parse(await Receive(ext))!.AsObject();
         Check(intent["type"]!.GetValue<string>() == "speed.set" && intent["rate"]!.GetValue<double>() == 2.0 && intent["direct"]!.GetValue<bool>() == false, "the controller's fast preset sets 2x");
         await SendText(ext, StateJson(intent["id"]!.GetValue<string>(), 2));
-        Check((await fast).StartsWith("Video 2x"), "fast preset reply");
+        Check((await fast).StartsWith("Clip · Video 2x"), "fast preset reply");
         var slow = desk.Dispatch("vjster.speed.slow");
         intent = JsonNode.Parse(await Receive(ext))!.AsObject();
         Check(intent["type"]!.GetValue<string>() == "speed.set" && intent["rate"]!.GetValue<double>() == 0.5, "the slow preset sets 0.5x");
         await SendText(ext, StateJson(intent["id"]!.GetValue<string>(), 0.5));
-        Check((await slow).StartsWith("Video 0.5x"), "slow preset reply");
+        Check((await slow).StartsWith("Clip · Video 0.5x"), "slow preset reply");
         var status = desk.Dispatch("vjster.status");
         intent = JsonNode.Parse(await Receive(ext))!.AsObject();
         Check(intent["type"]!.GetValue<string>() == "state.get", "status asks for state");
@@ -301,7 +316,7 @@ internal static class VjsterSelfTests
             var oIntent = JsonNode.Parse(await Receive(obs))!.AsObject();
             Check(oIntent["type"]!.GetValue<string>() == "speed.step" && oIntent["target"]!.GetValue<string>() == "obs", "obs-only desk targets obs");
             await SendText(obs, StateJson(oIntent["id"]!.GetValue<string>(), 1.25, target: "obs"));
-            Check(await obsStep == "Video 1.25x · 1080p · playing", "obs-only reply");
+            Check(await obsStep == "Clip · Video 1.25x · 1080p · playing", "obs-only reply");
 
             // Dispatch to both sends to both simultaneously.
             var bothStep = bothDesk.Dispatch("vjster.speed.down");
@@ -309,7 +324,7 @@ internal static class VjsterSelfTests
             oIntent = JsonNode.Parse(await Receive(obs))!.AsObject();
             await SendText(browser, StateJson(bIntent["id"]!.GetValue<string>(), 0.75, target: "browser"));
             await SendText(obs, StateJson(oIntent["id"]!.GetValue<string>(), 1.0, target: "obs"));
-            Check(await bothStep == "Chrome: Video 0.75x · 1080p · playing | OBS: Video 1x · 1080p · playing", "both targets reply");
+            Check(await bothStep == "Chrome: Clip · Video 0.75x · 1080p · playing | OBS: Clip · Video 1x · 1080p · playing", "both targets reply");
         }
         finally { Directory.Delete(dir, true); }
     }

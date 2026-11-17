@@ -4,6 +4,10 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 
 ## Unreleased
 
+## 0.12.6 - 2026-11-17
+0.12.5 was a draft for the hardware test and was never published. This release ships Fadester Companion 0.1.10.
+- **Every VJster line names the video** (Windows and Mac): "YouTube 60fps Tester · Video 1x · Auto (720p) · playing", plus the site when it is not YouTube. Before, the title showed only on "Read the video", so with two tabs open you could not tell which one VJster followed. Long titles are shortened to 60 characters.
+
 ## 0.12.5 - 2026-11-17
 0.12.4 was a draft for the hardware test and was never published. This release ships Fadester Companion 0.1.9 and the VJster extension 0.1.4.
 - **Fadester Companion starts its controls by itself** (Windows and Mac) as soon as OBS answers, once setup was saved, unless you pressed Stop last time. Nothing is armed while OBS is closed, and the Mac never asks for Accessibility at launch. While OBS is not connected, the Controls light offers **Try again**.

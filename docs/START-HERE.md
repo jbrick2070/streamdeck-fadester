@@ -59,7 +59,7 @@ Work down this list once. On Stream Deck or OpenDeck, open any **Fadester for OB
    - Open OBS Studio 33.x and click **Tools > WebSocket Server Settings**.
    - Tick **Enable WebSocket server**, keep port `4455` (unless you purposefully changed it), tick **Enable Authentication**, and click **Apply**.
    - **Fadester Companion** reads OBS's saved password from OBS's local config automatically.
-   - **Fadester for OBS** (Stream Deck / OpenDeck): open **OBS connection** on any action's settings page and click **Use OBS's saved password**. It shows the port and confirms a password was found in OBS's local config (`%APPDATA%\obs-studio\plugin_config\obs-websocket\config.json` on Windows, `~/Library/Application Support/obs-studio/plugin_config/obs-websocket/config.json` on macOS) before you click **Fill port & save password** — or paste the password manually and click **Save & test**.
+   - **Fadester for OBS** (Stream Deck / OpenDeck) also reads it automatically when OBS runs on the same computer. To copy OBS's port too, open **OBS connection** on any action's settings page and click **Use OBS's saved password**. It shows the port and confirms a password was found in OBS's local config (`%APPDATA%\obs-studio\plugin_config\obs-websocket\config.json` on Windows, `~/Library/Application Support/obs-studio/plugin_config/obs-websocket/config.json` on macOS) before you click **Fill port & save password** — or paste the password manually and click **Save & test**.
 2. **Turn on Studio Mode.**
    - In OBS click **Studio Mode** (or **View > Studio Mode**) so **Preview** sits on the left and **Program** on the right. T-bar and Preview controls need Studio Mode on.
 3. **Select the Fade transition.**

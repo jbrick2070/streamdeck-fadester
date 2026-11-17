@@ -134,10 +134,10 @@
       '<div id="direct-conn-status" class="status-banner status-err" data-i18n="connWaiting">Waiting for OBS…</div>',
       '<p class="muted" id="direct-conn-hint" data-i18n="connHintOnce">Connect once for every Fadester for OBS button and dial.</p>',
       '<details id="direct-conn-editor" class="editor" open><summary id="direct-conn-summary" data-i18n="connSetupOnce">Set up OBS once</summary>',
-      '<p class="muted" data-i18n="connAppliesAll">These settings apply to all Fadester for OBS controls on all your layouts. Enter the OBS password once here.</p>',
+      '<p class="muted" data-i18n="connAppliesAll">These settings apply to all Fadester for OBS controls on all your layouts. The OBS password is filled in from OBS on this computer; type one only if signing in fails.</p>',
       '<div class="row"><label for="direct-conn-host" data-i18n="host">Host</label><input id="direct-conn-host" type="text" value="127.0.0.1" /></div>',
       '<div class="row"><label for="direct-conn-port" data-i18n="port">Port</label><input id="direct-conn-port" type="number" value="4455" min="1" max="65535" /></div>',
-      '<div class="row"><label for="direct-conn-password" data-i18n="password">Password</label><input id="direct-conn-password" type="password" autocomplete="off" placeholder="Enter the OBS password once" data-i18n-placeholder="passwordPlaceholderOnce" /></div>',
+      '<div class="row"><label for="direct-conn-password" data-i18n="password">OBS password</label><input id="direct-conn-password" type="password" autocomplete="off" placeholder="Filled in from OBS on this computer" data-i18n-placeholder="passwordPlaceholderFromObs" /></div>',
       '<div class="row"><label></label><button id="direct-conn-read-obs" class="btn secondary" type="button" data-i18n="obsSavedReadBtn">Use OBS\'s saved password</button></div>',
       '<p class="muted" id="direct-obs-saved-hint" style="display:none"></p>',
       '<div id="direct-obs-saved-preview" class="status-banner status-info" style="display:none"></div>',
@@ -513,12 +513,14 @@
       ? "connHintRejected"
       : connection.passwordSet
       ? "connHintSaved"
+      : connection.obsSaved && status.kind === "connected"
+      ? "passwordFromObs"
       : "connHintShared");
     if (summary) summary.textContent = T(connection.passwordSet || status.kind === "connected"
       ? "connEdit" : "connSetupOnce");
     if (password && !passwordDirty && document.activeElement !== password) {
       password.value = "";
-      password.placeholder = T(connection.passwordSet ? "passwordPlaceholderSaved" : "passwordPlaceholderOnce");
+      password.placeholder = T(connection.passwordSet ? "passwordPlaceholderSaved" : "passwordPlaceholderFromObs");
     }
     if (editor && !connectionEditorInitialized) {
       editor.open = !(connection.passwordSet || status.kind === "connected") || status.kind === "wrong_password";

@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { isOpenDeckInstall, provisionOpenDeckStarter } from "./opendeck/starter.js";
 import { FadesterClient } from "./obs/fadester-client.js";
 import { DirectObsClient } from "./obs/direct-obs-client.js";
+import { savedObsPasswordFor } from "../packages/streamdeck-fadester-shared/src/obs/obs-websocket-config.js";
 import { FadesterStore } from "./state/fadester-store.js";
 import { FaderDialAction } from "./actions/fader-dial.js";
 import { AutoFadeKeyAction } from "./actions/auto-fade-key.js";
@@ -58,9 +59,11 @@ const settingsStore = new GlobalSettingsStore({
   setGlobalSettings: (settings) => streamDeck.settings.setGlobalSettings(settings)
 }, START_READ_TIMEOUT_MS, (message) => streamDeck.logger.warn(message));
 
-const enhancedClient = new FadesterClient(DEFAULT_GLOBAL_SETTINGS);
+// With no password typed, both clients sign in with the one OBS saved on this computer, as Fadester Companion does.
+const readSavedPassword = (host: string, port: number): string => savedObsPasswordFor(host, port);
+const enhancedClient = new FadesterClient(DEFAULT_GLOBAL_SETTINGS, { readSavedPassword });
 const store = new FadesterStore(enhancedClient);
-const directClient = new DirectObsClient(DEFAULT_GLOBAL_SETTINGS);
+const directClient = new DirectObsClient(DEFAULT_GLOBAL_SETTINGS, { readSavedPassword });
 directClient.on("tbarTurnIgnored", (reason: string) => streamDeck.logger.info(`T-bar dial: ${reason}`));
 const layers = new LayerController(directClient);
 // The VJ rig (PLAN.md 10): one filter controller and one panic latch for every control.

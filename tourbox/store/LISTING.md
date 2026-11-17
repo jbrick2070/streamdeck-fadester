@@ -63,7 +63,7 @@ OBS Studio with its WebSocket server on (the T-bar needs OBS Studio 33 in Studio
 Fadester Companion controls OBS Studio, which must run on the same PC. To test:
 
 1. Install OBS Studio 33 (free, https://obsproject.com). In OBS open Tools → WebSocket Server Settings, tick Enable WebSocket server, keep authentication on and note the password. Turn on Studio Mode, select the Fade transition, and add two scenes.
-2. Open Fadester Companion. It connects by itself: the header says it is connected and how many scenes it found. If it does not connect, type the WebSocket password in OBS password (optional) and click Read scenes and inputs from OBS.
+2. Open Fadester Companion. It connects by itself: the header says it is connected and how many scenes it found. If it does not connect, type the WebSocket password in OBS password (filled in from OBS) and click Read scenes and inputs from OBS.
 3. On the Setup tab, tick Use an Xbox or XInput game controller, then click Save & start controls. With an Xbox controller connected, press D-pad down to cue a scene and pull the right trigger: OBS's T-bar follows; pulled all the way, the scene goes to Program. Holding A also pushes the T-bar.
 
 Without OBS running, the app opens and says that OBS is not answering; the controls do nothing. No account or sign-in is needed, and the app makes no internet connection.

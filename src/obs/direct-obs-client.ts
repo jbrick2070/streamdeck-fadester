@@ -279,7 +279,7 @@ export interface DirectObsCatalog {
 
 export type DirectObsClientOptions = Pick<
   ObsVendorClientOptions,
-  "baseReconnectMs" | "maxReconnectMs" | "requestTimeoutMs" | "notReadyRetryMs" | "keepaliveMs"
+  "baseReconnectMs" | "maxReconnectMs" | "requestTimeoutMs" | "notReadyRetryMs" | "keepaliveMs" | "readSavedPassword"
 > & {
   /** How long a sent PAUSE waits for an observed PAUSED before the key says "unconfirmed" (tests shorten it). */
   mediaPauseWaitMs?: number;

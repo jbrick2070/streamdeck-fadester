@@ -26,7 +26,7 @@ Every profile name carries its mode: **Studio Mode**, **Regular Mode** or **Eith
 ## Import a file by hand
 
 1. Open the `.streamDeckProfile` for your deck. Stream Deck imports it as a new profile.
-2. Open one Fadester key on it and, under **OBS connection**, paste OBS's WebSocket password once and press **Save for all controls & test**. Every Fadester control on every profile shares that connection.
+2. With OBS on the same computer there is nothing to type: Fadester signs in with the password OBS saved. For an OBS elsewhere, open one Fadester key, paste OBS's WebSocket password under **OBS connection** and press **Save for all controls & test**. Every Fadester control on every profile shares that connection.
 3. Press the keys. Scene keys follow your OBS scene list; Music, Mic and Aux controls have found your mixer inputs. Change any of them in the key's settings page; keep both keys of a fade pair on the same input.
 4. Playlister Transport and VJ Rig keys ship unbound: open each one's settings page once and choose the source, filter or Playlister.
 5. Put your other actions on the empty keys and dials.

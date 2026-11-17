@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { DirectObsClient, DirectObsError } from "../obs/direct-obs-client.js";
+import { pluginVersion } from "./plugin-version.js";
 import { resolveAutomaticInputName } from "../obs/automatic-targets.js";
 import { LayerController, LayerSettings } from "../control/layer-controller.js";
 import type { TapeDecks } from "../control/tape-decks.js";
@@ -97,21 +95,6 @@ export function labelInspectorFilters(filters: readonly InspectorFilterIdentity[
  * The filters on one source with the settings the deck may write: numbers only,
  * never a denied one, the range table's first (PLAN.md 10.5). Read by UUID.
  */
-let cachedPluginVersion: string | undefined;
-
-/** The plugin's own version (manifest.json sits one folder above bin/); "" when it cannot be read, as in tests. */
-function pluginVersion(): string {
-  if (cachedPluginVersion === undefined) {
-    try {
-      const manifest = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "manifest.json"), "utf8")) as { Version?: string };
-      cachedPluginVersion = String(manifest.Version ?? "").replace(/(\.0)+$/, "");
-    } catch {
-      cachedPluginVersion = "";
-    }
-  }
-  return cachedPluginVersion;
-}
-
 export async function readInspectorFilters(client: DirectObsClient, sourceUuid: string): Promise<InspectorFilter[]> {
   return labelInspectorFilters(await readInspectorFilterIdentities(client, sourceUuid));
 }

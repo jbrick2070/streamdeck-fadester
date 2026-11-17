@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { PLUGIN_DIR } from "./languages.js";
 
 /** The shared runtimes the vm tests replace with stubs. */
-const STUBBED_RUNTIMES = new Set(["direct-pi.js", "pi-common.js"]);
+const STUBBED_RUNTIMES = new Set(["direct-pi.js", "pi-common.js", "plugin-version.js"]);
 
 /**
  * The code an inspector page runs, in page order, for a vm test: its own

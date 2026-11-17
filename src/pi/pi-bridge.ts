@@ -16,6 +16,7 @@ import { errorText, ownText, type TextParams } from "../../packages/streamdeck-f
 import { statusCellReason, statusSentence } from "../../packages/streamdeck-fadester-shared/src/status-text.js";
 import { currentLanguage, translate } from "../i18n/strings.js";
 import type { LanguageState } from "../i18n/language-choice.js";
+import { pluginVersion } from "./plugin-version.js";
 import {
   DEFAULT_GLOBAL_SETTINGS,
   FadesterGlobalSettings
@@ -58,6 +59,8 @@ export interface PiStatePayload {
   lastErrorComment: string;
   /** The Language setting and the language the deck draws in (PLAN.md 11.1). */
   language: LanguageState;
+  /** This plugin's version, shown at the foot of the page ("" when unknown). */
+  pluginVersion: string;
 }
 
 export type PiSlot = Pick<
@@ -272,7 +275,8 @@ export class PropertyInspectorBridge {
         reason: s.reason
       })),
       lastErrorComment: this.store.getLastErrorComment(this.tr),
-      language: this.transport.getLanguage?.() ?? { choice: "auto", resolved: currentLanguage() }
+      language: this.transport.getLanguage?.() ?? { choice: "auto", resolved: currentLanguage() },
+      pluginVersion: pluginVersion()
     };
   }
 

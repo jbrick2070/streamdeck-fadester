@@ -1136,6 +1136,7 @@
           const p = msg.payload;
           if (p.event === "fadesterState") {
             applyState(p);
+            if (typeof window.showFadesterPluginVersion === "function") window.showFadesterPluginVersion(p.pluginVersion);
           } else if (p.event === "slotValueChanged") {
             applySlotValue(p);
           } else if (p.requestId && pendingReplies.has(p.requestId)) {

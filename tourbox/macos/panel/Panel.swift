@@ -242,7 +242,7 @@ private final class PillActionButton: NSControl {
         if !preview {
             axTrusted = AXIsProcessTrusted()
         }
-        if !preview, let presetBytes = try? Data(contentsOf: paths.preset) {
+        if !preview, let presetBytes = try? Data(contentsOf: paths.localizedPreset) {
             bundledPresetHash = LocalFiles.sha256Hex(presetBytes)
             savedPresetHash = try? String(contentsOf: LocalFiles.presetStamp, encoding: .utf8)
         }
@@ -1230,7 +1230,7 @@ private final class PillActionButton: NSControl {
         save.message = L("macSaveDialogMessage")
         guard save.runModal() == .OK, let url = save.url else { return nil }
         do {
-            let presetBytes = try Data(contentsOf: paths.preset)
+            let presetBytes = try Data(contentsOf: paths.localizedPreset)
             try presetBytes.write(to: url, options: .atomic)
             let hash = LocalFiles.sha256Hex(presetBytes)
             bundledPresetHash = hash
@@ -1298,7 +1298,7 @@ private final class PillActionButton: NSControl {
         }
     }
 
-    @objc private func guide() { if !previewMode { NSWorkspace.shared.open(paths.resources.appendingPathComponent("START-HERE.html")) } }
+    @objc private func guide() { if !previewMode { NSWorkspace.shared.open(paths.guide) } }
 
     func windowShouldClose(_ sender: NSWindow) -> Bool { NSApp.terminate(nil); return false }
 

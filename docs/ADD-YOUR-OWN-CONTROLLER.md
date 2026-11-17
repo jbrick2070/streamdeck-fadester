@@ -10,7 +10,7 @@ OBS Studio is the hub. Its built-in WebSocket server (obs-websocket 5, **Tools >
 |---|---|---|---|
 | 1. Plain OBS requests | Scenes, transitions, Studio Mode, sources, layers, audio levels, filter settings | OBS itself | Nothing but OBS |
 | 2. The Midi Fadester vendor API | 18 fader and FX slots: T-bar throws, A/B crossfades, layer opacity, audio volume, any numeric filter setting, timed fades, Clean / All FX Off | The [Midi Fadester](https://github.com/jbrick2070/midi-fadester) OBS plugin | Midi Fadester in OBS |
-| 3. The shared whole-mix protocol | The whole mixer as one fader: level, steps, fade to silence, restore | Fadester Companion (Windows) whenever **All OBS mixer inputs** is on, with or without a TourBox; also the experimental macOS mix host | The companion running on the OBS computer |
+| 3. The shared whole-mix protocol | The whole mixer as one fader: level, steps, fade to silence, restore | Fadester Companion (Windows) whenever **All OBS mixer inputs** is on, with or without a TourBox; also Fadester Companion for Mac and its mix host | The companion running on the OBS computer |
 | 4. Keystrokes to the companion | Every TourBox action: Preview cueing, the native T-bar, media, overlays, recording, the YouTube video in Chrome through VJster, the two VJ layers | The same companion, in its normal mode | The companion, and a device that can press keys (Windows) |
 
 A controller that only needs door 1 does not need anything from this repository at all. If your platform can host Stream Deck plugins (as [OpenDeck](OPENDECK.md) does), run Fadester for OBS as it is and you are done.

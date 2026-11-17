@@ -5,13 +5,34 @@ import Darwin
 struct RuntimePaths {
     let resources: URL
     var host: URL { resources.appendingPathComponent("runtime/FadesterMacHost") }
-    var native: URL { resources.appendingPathComponent("runtime/Fadester Native Slider Experimental.app") }
-    var input: URL { resources.appendingPathComponent("runtime/Fadester Mac Shortcuts Experimental.app") }
+    var native: URL { resources.appendingPathComponent("runtime/Fadester Companion T-bar.app") }
+    var input: URL { resources.appendingPathComponent("runtime/Fadester Companion Shortcuts.app") }
     var map: URL { resources.appendingPathComponent("presets/map.json") }
     var preset: URL { resources.appendingPathComponent("presets/OBS Fadester for TourBox.tb") }
     var icons: URL { resources.appendingPathComponent("artwork/icons") }
     var vjsterObsHtml: URL { resources.appendingPathComponent("vjster/obs/player.html") }
     var vjsterObsScript: URL { resources.appendingPathComponent("vjster/obs/player.js") }
+    /// The TourBox preset in the panel's language (translated labels, the same shortcuts); English when that language has none.
+    var localizedPreset: URL { localized("presets/\(PanelText.locale)/OBS Fadester for TourBox.tb", fallback: preset) }
+    /// The Mac quick start in the panel's language; the full English guide (START-HERE.html) for English or a missing translation.
+    var guide: URL { localized("guide/\(PanelText.locale).html", fallback: resources.appendingPathComponent("START-HERE.html")) }
+    private func localized(_ path: String, fallback: URL) -> URL {
+        let url = resources.appendingPathComponent(path)
+        return PanelText.locale != "en" && FileManager.default.fileExists(atPath: url.path) ? url : fallback
+    }
+    /// In the built app: every panel language but English has its own Mac preset and quick start, and English falls back.
+    static func selfTest(resources: URL) throws {
+        let paths = RuntimePaths(resources: resources)
+        guard FileManager.default.fileExists(atPath: paths.resources.appendingPathComponent("START-HERE.html").path) else { return } // not run from the app
+        let previous = PanelText.locale
+        defer { PanelText.use(previous) }
+        for locale in PanelStrings.locales {
+            PanelText.use(locale)
+            let presetOk = locale == "en" ? paths.localizedPreset == paths.preset : paths.localizedPreset.path.hasSuffix("/presets/\(locale)/OBS Fadester for TourBox.tb")
+            let guideOk = paths.guide.lastPathComponent == (locale == "en" ? "START-HERE.html" : "\(locale).html")
+            guard presetOk && guideOk else { throw PanelFailure.message("Self-test: the \(locale) TourBox preset or quick guide is missing from the app.") }
+        }
+    }
     func validate() throws {
         for file in [host, native.appendingPathComponent("Contents/MacOS/FadesterNativeSlider"), input.appendingPathComponent("Contents/MacOS/FadesterMacShortcuts"), map, preset, vjsterObsHtml, vjsterObsScript] {
             guard FileManager.default.fileExists(atPath: file.path) else { throw PanelFailure.message(L("macIncomplete")) }

@@ -7,7 +7,7 @@ namespace Fadester.TourBox;
 
 internal sealed record MacShortcutEvent(string Action, int Generation, long UnixMs);
 
-// Optional input transport for the experimental Mac host. It never dispatches an OBS action.
+// Optional input transport for the Mac host. It never dispatches an OBS action.
 internal sealed class MacShortcutInput : IDisposable
 {
     readonly string applicationPath, mapPath;
@@ -59,7 +59,7 @@ internal sealed class MacShortcutInput : IDisposable
         if (Interlocked.Exchange(ref started, 1) != 0) throw new InvalidOperationException("Shortcut input already started.");
         if (!OperatingSystem.IsMacOS()) throw new PlatformNotSupportedException("Native Mac shortcuts require macOS.");
         string executable = Path.Combine(applicationPath, "Contents", "MacOS", "FadesterMacShortcuts");
-        if (!File.Exists(executable)) throw new FileNotFoundException("Experimental Mac shortcut app is missing.", executable);
+        if (!File.Exists(executable)) throw new FileNotFoundException("Fadester Companion Shortcuts.app is missing.", executable);
         var info = new ProcessStartInfo(executable)
         {
             UseShellExecute = false, RedirectStandardInput = true, RedirectStandardOutput = true,

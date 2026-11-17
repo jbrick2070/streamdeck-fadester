@@ -1,14 +1,17 @@
-# Experimental macOS master preset
+# macOS master preset
 
-This is the Mac encoding of the same single **OBS Fadester for TourBox** master: the same physical shortcut assignments, labels, TourMenu entries, native menu controls, UP modes and assignment HUD as `../OBS Fadester for TourBox.tb`, generated from the same `../map.json`. It does not install or start a companion. Use only with the matching experimental Mac companion and verify native Console import and physical gestures before relying on it.
+This is the Mac encoding of the same single **OBS Fadester for TourBox** master: the same physical shortcut assignments, labels, TourMenu entries, native menu controls, UP modes and assignment HUD as `../OBS Fadester for TourBox.tb`, generated from the same `../map.json`. Fadester Companion for Mac bundles it and saves it from **1. Save TourBox Preset (.tb)…**. It does not install or start a companion by itself.
 
-The Mac shortcuts keep the key from the canonical `../map.json` and translate the modifiers bit by bit: the OBS actions' **Ctrl+Alt+Shift** becomes **Control+Option+Shift** (Windows mask 14, Mac mask 7), the video and layer actions' **Ctrl+Shift** becomes **Control+Shift** (10 to 3) and their **Alt+Shift** stays **Option+Shift** (6). **Command is absent.** Mac Console's native modifier encoding differs: Control=1, Shift=2, Option=4, Command=8. Importing the Windows file unchanged is not evidence of equivalent Mac shortcuts. The experimental Mac shortcut helper in `../../macos/input` registers the same three modifier sets from `../map.json`; the Mac host still refuses the video actions (see `../../MACOS.md`).
+The committed file has English labels. The other 9 languages of `../locales.json` are generated at build time, as the Windows ones are: `build_macos.py --localized-out DIR` writes `DIR/<locale>/OBS Fadester for TourBox.tb`, each the Mac master with that language's labels and nothing else changed. `tourbox/macos/panel/build.sh` bundles them in the app (`Contents/Resources/presets/<locale>/`) and `tourbox/macos/package.sh` also puts them beside the app in the ZIP (`presets/<locale>/`). The panel saves the one matching its language.
+
+The Mac shortcuts keep the key from the canonical `../map.json` and translate the modifiers bit by bit: the OBS actions' **Ctrl+Alt+Shift** becomes **Control+Option+Shift** (Windows mask 14, Mac mask 7), the video and layer actions' **Ctrl+Shift** becomes **Control+Shift** (10 to 3) and their **Alt+Shift** stays **Option+Shift** (6). **Command is absent.** Mac Console's native modifier encoding differs: Control=1, Shift=2, Option=4, Command=8. Importing the Windows file unchanged is not evidence of equivalent Mac shortcuts. The Mac shortcut helper in `../../macos/input` (Fadester Companion Shortcuts.app) registers the same three modifier sets from `../map.json`; the Mac host still refuses the video actions (see `../../MACOS.md`).
 
 Generate and check from the repository root with Python 3.10 or newer (the `python3` that comes with Apple's command-line tools may be older):
 
 ```sh
 python3 tourbox/presets/build_macos.py
 python3 tourbox/presets/build_macos.py --check
+python3 tourbox/presets/build_macos.py --check --localized-out /tmp/fadester-mac-presets
 python3 -m unittest discover -s tourbox/presets -p test_build_macos.py
 ```
 

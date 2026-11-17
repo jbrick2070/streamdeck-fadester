@@ -11,7 +11,7 @@ Sources: `tourbox/panel/FadesterTourBox.cs` and `ShowMe.cs` (Windows), `tourbox/
 | | Windows | Mac | Status |
 | --- | --- | --- | --- |
 | Release file | `Fadester-Companion-Windows-x64-<version>.zip`, plus the Microsoft Store package | `Fadester-Companion-macOS-arm64-<version>.zip` and `Fadester-Companion-macOS-x64-<version>.zip` | Same release, same version. **Intentional**: one ZIP per Mac architecture (the .NET single-file host cannot be made universal). |
-| Beside the app | TourBox presets (10 languages), game-controller map, quick guide and translated guides, read-me, rehearsal notes, license | Mac TourBox preset, Mac quick guide, read-me, license | **Gap**: the Mac preset and guide are English only |
+| Beside the app | TourBox presets (10 languages), game-controller map, quick guide and translated guides, read-me, rehearsal notes, license | Mac TourBox preset (10 languages, `presets/<locale>/`), Mac guide and translated Mac quick starts (`guide/`), read-me, license | Same (Unreleased). **Intentional**: no game-controller map or Windows rehearsal notes |
 | Signing | The Store package is signed for the Store; the ZIP is not code-signed | Ad-hoc signed, not notarized: right-click → **Open**, or **Open Anyway** in Privacy & Security | **Gap**: no Developer ID notarization yet |
 
 ## Window layout
@@ -26,7 +26,7 @@ Sources: `tourbox/panel/FadesterTourBox.cs` and `ShowMe.cs` (Windows), `tourbox/
 | "Keep this window open" note | Under the footer buttons, always visible | Under the footer buttons, always visible | Same |
 | Panel languages | 10 (the Windows display language, or `--language`) | The same 10, from the same catalog (the Mac's first preferred language, or `--language`) | Same (Unreleased). See [Panel languages](#panel-languages). |
 | Feedback window | Last action and the Visual Sidechain meter line | Last action and the Visual Sidechain meter line | Same (Unreleased) |
-| Quick guide | Opens the guide in the panel's language (`guide/<locale>.html`) | Opens the English Mac guide (`START-HERE.html`) | **Gap**: the Mac guide is English only. The Windows ZIP's translated guides describe Windows (game controller, Windows shortcuts), so the Mac ZIP does not include them. |
+| Quick guide | Opens the guide in the panel's language (`guide/<locale>.html`) | Opens the Mac quick start in the panel's language (`guide/<locale>.html`); English opens `START-HERE.html` | Same (Unreleased). The Mac quick starts (`tourbox/macos/panel/guide/`) leave out the Windows-only parts (game controller, Windows x64). |
 
 ## Setup tab
 
@@ -64,15 +64,14 @@ Both panels use one catalog:
 - `tourbox/macos/panel/mac-strings.json` holds the Mac-only strings (Accessibility, the `.tb` save, the setup diagram, the Mac host's messages) in the same 10 languages.
 - `node tourbox/macos/panel/make-strings.cjs` writes `tourbox/macos/panel/PanelStrings.swift`. `build.sh` and `tests/companion-mac-strings.test.ts` fail when that file is stale, when the Swift panel asks for a key the catalog lacks, or when a Mac-only string is unused.
 
-Still English on the Mac: the Mac guide, and the rare messages about a damaged settings file (`Settings` validation in `Model.swift`).
+Still English on the Mac: the full Mac guide `START-HERE.html` (the control map and recovery, as on Windows), and the rare messages about a damaged settings file (`Settings` validation in `Model.swift`).
 
 ## Suggested follow-ups, in priority order
 
-1. **Check the Mac app on a real Mac.** CI now builds and self-tests it on both architectures; what is left needs a screen and hardware: open the released ZIP past Gatekeeper, check the lights, the meter line, Stream Deck-only mode and a non-English language (`--language de`, `--language ja`) on screen, grant Accessibility, and rehearse with a TourBox. Long translations in the fixed-width setup diagram may need shorter words.
+1. **Check the Mac app on a real Mac.** CI now builds and self-tests it on both architectures; what is left needs a screen and hardware: open the released ZIP past Gatekeeper, check the lights, the meter line, Stream Deck-only mode and a non-English language (`--language de`, `--language ja`) on screen, grant Accessibility, and rehearse with a TourBox. The setup diagram now fits its labels in all 10 languages by the panel's self-test; confirm the look on screen.
 2. **Shorter Windows Setup page.** See the proposal below. It needs an on-screen review, so it was not changed blind.
-3. **Mac quick guide in the panel's language.** Generate the Mac guide per language, as the Windows guides are.
-4. **Setup diagram on Windows.** The Mac's clickable diagram has no Windows counterpart.
-5. **Game controller on the Mac.** This would be a new feature (Apple's GameController framework), not a parity fix.
+3. **Setup diagram on Windows.** The Mac's clickable diagram has no Windows counterpart.
+4. **Game controller on the Mac.** This would be a new feature (Apple's GameController framework), not a parity fix.
 
 ## Proposal: a shorter Windows Setup page
 

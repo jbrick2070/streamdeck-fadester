@@ -4,7 +4,7 @@ using System.Globalization;
 
 namespace Fadester.TourBox;
 
-// Experimental, not included in the shipping bridge. Authenticate the matching loopback
+// Used by the Mac host (tourbox/macos/host), not by the Windows bridge. Authenticate the matching loopback
 // OBS WebSocket first; create one of these per OBS connection, and dispose on disconnect.
 internal sealed class MacNativeTBar(int port, string applicationPath) : IDisposable
 {
@@ -79,7 +79,7 @@ internal sealed class MacNativeTBar(int port, string applicationPath) : IDisposa
         Close();
         if (!OperatingSystem.IsMacOS()) throw new PlatformNotSupportedException("Mac native slider requires macOS.");
         string executable = Path.Combine(Path.GetFullPath(applicationPath), "Contents", "MacOS", "FadesterNativeSlider");
-        if (!File.Exists(executable)) throw new FileNotFoundException("Experimental native slider app is missing.", executable);
+        if (!File.Exists(executable)) throw new FileNotFoundException("Fadester Companion T-bar.app is missing.", executable);
         int pid = await ListenerPid(port);
         var start = new ProcessStartInfo(executable)
         {
@@ -88,7 +88,7 @@ internal sealed class MacNativeTBar(int port, string applicationPath) : IDisposa
         };
         foreach (string arg in new[] { "--stdio", "--obs-pid", pid.ToString(CultureInfo.InvariantCulture), "--obs-port", port.ToString(CultureInfo.InvariantCulture) }) start.ArgumentList.Add(arg);
         RemoveCredentials(start);
-        helper = Process.Start(start) ?? throw new IOException("Could not start the experimental native slider app.");
+        helper = Process.Start(start) ?? throw new IOException("Could not start Fadester Companion T-bar.app.");
         _ = await Exchange("READ"); // Bind and warm the read-only target before timestamping any write.
     }
     internal static InvalidOperationException ClassifyError(string why) =>

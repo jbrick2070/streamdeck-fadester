@@ -12,7 +12,7 @@ const expected = Object.freeze({pid: 54303, port: 4455, collection: 'Untitled',
   program: '48304718-4337-4fad-9d62-45142dd70a8b', preview: 'a28977bf-f521-4cb0-b06e-eb97b11a3614',
   input: '3be2aa1c-48e3-4d4d-8bd3-898664a6e1cc', transition: 'de66db5c-e44d-42ca-b6f7-755165d1886c'});
 const binary = '/Users/rentamac/Developer/fadester-mac-host/tourbox/macos/host/publish/FadesterMacHost';
-const native = '/Users/rentamac/Developer/fadester-mac-native-fixed/build/Fadester Native Slider Experimental.app';
+const native = '/Users/rentamac/Developer/fadester-mac-native-fixed/build/Fadester Companion T-bar.app';
 const fail = message => { throw new Error(message); };
 function requireThat(value, message) { if (!value) fail(message); }
 const stable = value => JSON.stringify(value, (_, v) => v && typeof v === 'object' && !Array.isArray(v)

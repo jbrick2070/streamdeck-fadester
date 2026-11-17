@@ -116,7 +116,7 @@ When a native helper fails mid-throw (`10%`, `30%`, `49%`, `50%`, `60%`, `90%`, 
 
 ### Documented Exception (`macos_host`, `DEC-1`)
 
-The experimental macOS Companion development host (`tourbox/macos/host/HostSession.cs`, `allowAutoCloseout: false`) intentionally retains strict no-fallback behavior: on an uncertain native failure mid-throw it disarms (`needsReset = true`, `outcome = "latched_needs_reset"`) without toggling Studio Mode. This sole exception is recorded under `known_exceptions.macos_host` in `tests/vectors/tbar-safety.json`.
+The macOS Companion host (`tourbox/macos/host/HostSession.cs`, `allowAutoCloseout: false`) intentionally retains strict no-fallback behavior: on an uncertain native failure mid-throw it disarms (`needsReset = true`, `outcome = "latched_needs_reset"`) without toggling Studio Mode. This sole exception is recorded under `known_exceptions.macos_host` in `tests/vectors/tbar-safety.json`.
 
 ---
 

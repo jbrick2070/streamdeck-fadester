@@ -4,14 +4,14 @@
 
 ## Install
 
-1. Download the ZIP for your Mac (Apple silicon: `arm64`; Intel: `x64`; Apple menu → **About This Mac** shows which) and unzip it. The `Fadester Companion` folder holds the app, the TourBox preset `OBS Fadester for TourBox.tb`, the quick guide `START-HERE.html`, this read-me and the license.
+1. Download the ZIP for your Mac (Apple silicon: `arm64`; Intel: `x64`; Apple menu → **About This Mac** shows which) and unzip it. The `Fadester Companion` folder holds the app, the TourBox preset `OBS Fadester for TourBox.tb` (English labels; `presets/<language>/` holds the same preset with translated labels), the full guide `START-HERE.html`, translated quick starts in `guide/<language>.html`, this read-me and the license.
 2. Move **Fadester Companion.app** to Applications.
 3. The app is not signed or notarized by Apple, so macOS will refuse to open it the first time. To allow it, right-click (or Control-click) the app and choose **Open**, then **Open** again; or try to open it once, then go to **System Settings → Privacy & Security** and click **Open Anyway**.
 4. Grant Accessibility when Setup asks (see below). TourBox Console needs its own permissions.
 
 Not yet checked on a real Mac: opening a downloaded copy past Gatekeeper, the window on screen, the Accessibility prompt for the bundled helper, and control of OBS from a physical TourBox. CI checks the build and the self-tests only. Please report what you find, with your Mac (Apple silicon or Intel) and macOS version.
 
-Use **1. Save TourBox Preset (.tb)…** to save the embedded `OBS Fadester for TourBox.tb` to a visible folder (such as `Downloads`), then click **2. Open TourBox Console** (or **Show me where to click** for the floating animated 3-step visual guide): click the middle **Import [↙]** icon beside Preset List, open the `.tb`, and click **Not Linked → pick OBS (not Fadester) → Save** with Auto Switch on. Setup also provides direct **Download TourBox Console…** and **TourBox Preset Square…** links and tracks the saved `.tb` SHA-256 (`saved-preset.sha256`) so future app updates flag newer presets automatically. Open the included Quick guide for the full map and rehearsal. Use **Read scenes and inputs from OBS** for bounded, authenticated, read-only discovery. Unavailable saved targets remain visible; they are never silently rebound. Stop before editing assignments.
+Use **1. Save TourBox Preset (.tb)…** to save the embedded `OBS Fadester for TourBox.tb`, with labels in the panel's language, to a visible folder (such as `Downloads`), then click **2. Open TourBox Console** (or **Show me where to click** for the floating animated 3-step visual guide): click the middle **Import [↙]** icon beside Preset List, open the `.tb`, and click **Not Linked → pick OBS (not Fadester) → Save** with Auto Switch on. Setup also provides direct **Download TourBox Console…** and **TourBox Preset Square…** links and tracks the saved `.tb` SHA-256 (`saved-preset.sha256`) so future app updates flag newer presets automatically. **Quick guide** opens the quick start in the panel's language (`guide/<language>.html`, made from `tourbox/macos/panel/guide/`), or the full English `START-HERE.html` with the map and rehearsal. Use **Read scenes and inputs from OBS** for bounded, authenticated, read-only discovery. Unavailable saved targets remain visible; they are never silently rebound. Stop before editing assignments.
 
 The panel uses authenticated loopback OBS only. A blank password field reads the
 matching local OBS settings; a typed password stays in process memory and the
@@ -78,6 +78,13 @@ language, or `--language CODE`). Its strings come from `tourbox/panel/PanelText.
 `PanelStrings.swift` by `node tourbox/macos/panel/make-strings.cjs` (build.sh and
 `tests/companion-mac-strings.test.ts` refuse a stale file). TourBox Console's own
 labels (Preset List, Not Linked, Running applications) stay as Console shows them.
+The panel saves the TourBox preset and opens the quick start in its own language:
+build.sh writes each language's Mac preset with `tourbox/presets/build_macos.py
+--localized-out` (the same shortcuts, translated labels, as `build.py` makes the Windows
+ones) and copies `guide/<language>.html`. `--self-test` checks that every language has
+both in the built app, and measures every Setup-diagram label and button in all 10
+languages at the narrowest diagram width, failing if any would need text smaller than
+8 points or leave its box.
 **Use only Stream Deck, OpenDeck or MIDI** runs the host with `--mix-only`: no
 shortcut helper, native T-bar, Accessibility or VJster. The Setup tab and the
 feedback window show the Visual Sidechain meter line (from a scan, and from the
@@ -88,7 +95,7 @@ every older system or Intel hardware.
 
 ## Verified direct bundled-host check — November 4, 2026
 
-On macOS 27.2 Apple Silicon with OBS 33.0.1, the assembled experimental app passed
+On macOS 27.2 Apple Silicon with OBS 33.0.1, the assembled app passed
 deep, strict code-signature verification and contained its host, native/input
 helpers, map and Mac preset. Launching the **bundled host directly** with
 `--read-only` and its **bundled native helper** reached authenticated `READY 1`

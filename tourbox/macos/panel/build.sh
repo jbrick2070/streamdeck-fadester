@@ -16,17 +16,20 @@ cp Info.plist "$app/Contents/Info.plist"
 companion_version="$("$python" -c 'import json, sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["components"]["companion"]["version"])' "$repo/installer/components.json")"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $companion_version" "$app/Contents/Info.plist"
 localized_presets="$PWD/build/localized-presets"
-rm -rf "$localized_presets"
+localized_mac="$PWD/build/localized-mac-presets"
+rm -rf "$localized_presets" "$localized_mac"
 "$python" "$repo/tourbox/presets/build.py" --check --localized-out "$localized_presets"
-"$python" "$repo/tourbox/presets/build_macos.py" --check
+"$python" "$repo/tourbox/presets/build_macos.py" --check --localized-out "$localized_mac"
 cp "$repo/tourbox/presets/map.json" "$resources/presets/"
-# The Control map in the panel's language (the Windows .tb files written beside them are not bundled).
+# Each language's Control map and Mac TourBox preset (the same shortcuts, translated labels), as the Windows
+# ZIP has them in presets/<locale>/. The Windows .tb files written beside those maps are not bundled.
 for folder in "$localized_presets"/*/; do
   locale="$(basename "$folder")"
   mkdir -p "$resources/presets/$locale"
   cp "$folder/map.json" "$resources/presets/$locale/map.json"
+  cp "$localized_mac/$locale/OBS Fadester for TourBox.tb" "$resources/presets/$locale/OBS Fadester for TourBox.tb"
 done
-rm -rf "$localized_presets"
+rm -rf "$localized_presets" "$localized_mac"
 cp "$repo/tourbox/presets/macos/OBS Fadester for TourBox.tb" "$resources/presets/"
 cp "$repo/tourbox/artwork/icons/"*.png "$resources/artwork/icons/"
 icon_src="$repo/tourbox/store/assets/Square44x44Logo.targetsize-256.png"
@@ -45,6 +48,13 @@ fi
 cp "$repo/LICENSE" "$resources/LICENSE"
 cp README.md "$resources/README.md"
 "$python" make-guide.py "$resources/START-HERE.html"
+# The Mac quick start in every preset language (the Quick guide button opens the panel's language).
+mkdir -p "$resources/guide"
+for locale in $("$python" -c 'import json, sys; print(" ".join(sorted(json.load(open(sys.argv[1], encoding="utf-8")))))' "$repo/tourbox/presets/locales.json"); do
+  test -f "guide/$locale.html" || { echo "Missing Mac quick start guide/$locale.html" >&2; exit 1; }
+  cp "guide/$locale.html" "$resources/guide/"
+done
+cp "$repo/tourbox/guide/quickstart.css" "$resources/guide/quickstart.css"
 # The panel's 10 languages come from the Windows panel's catalog; refuse a stale PanelStrings.swift.
 if command -v node >/dev/null; then node make-strings.cjs --check; fi
 /usr/bin/swiftc -swift-version 5 -parse-as-library -O -warnings-as-errors \
@@ -71,17 +81,17 @@ if [[ "$mode" != --ui-only ]]; then
     -p:PublishSingleFile=true -p:DebugType=None -o "$resources/runtime" --nologo
   bash "$repo/tourbox/macos/native/build.sh"
   bash "$repo/tourbox/macos/input/build.sh"
-  /usr/bin/ditto "$repo/tourbox/macos/native/build/Fadester Native Slider Experimental.app" "$resources/runtime/Fadester Native Slider Experimental.app"
-  /usr/bin/ditto "$repo/tourbox/macos/input/build/Fadester Mac Shortcuts Experimental.app" "$resources/runtime/Fadester Mac Shortcuts Experimental.app"
-  /usr/bin/codesign --force --sign - --identifier io.github.jbrick2070.fadester-tourbox.host.experimental "$resources/runtime/FadesterMacHost"
+  /usr/bin/ditto "$repo/tourbox/macos/native/build/Fadester Companion T-bar.app" "$resources/runtime/Fadester Companion T-bar.app"
+  /usr/bin/ditto "$repo/tourbox/macos/input/build/Fadester Companion Shortcuts.app" "$resources/runtime/Fadester Companion Shortcuts.app"
+  /usr/bin/codesign --force --sign - --identifier io.github.jbrick2070.fadester-tourbox.host "$resources/runtime/FadesterMacHost"
   mkdir -p "$resources/runtime-notices"
   sdkroot="${DOTNET_ROOT:-$(dirname "$dotnet")}"
   cp "$sdkroot/LICENSE.txt" "$sdkroot/ThirdPartyNotices.txt" "$resources/runtime-notices/"
   "$resources/runtime/FadesterMacHost" --self-test
-  "$resources/runtime/Fadester Native Slider Experimental.app/Contents/MacOS/FadesterNativeSlider" --self-test
-  "$resources/runtime/Fadester Mac Shortcuts Experimental.app/Contents/MacOS/FadesterMacShortcuts" --self-test --map "$resources/presets/map.json"
+  "$resources/runtime/Fadester Companion T-bar.app/Contents/MacOS/FadesterNativeSlider" --self-test
+  "$resources/runtime/Fadester Companion Shortcuts.app/Contents/MacOS/FadesterMacShortcuts" --self-test --map "$resources/presets/map.json"
 fi
-/usr/bin/codesign --force --sign - --identifier io.github.jbrick2070.fadester-tourbox.panel.experimental "$app"
+/usr/bin/codesign --force --sign - --identifier io.github.jbrick2070.fadester-tourbox.panel "$app"
 /usr/bin/codesign --verify --deep --strict "$app"
 "$app/Contents/MacOS/Fadester Companion" --self-test
 echo "Built $app ($architecture). Ad-hoc signature only; not notarized. No live OBS, shortcuts or GUI launched."

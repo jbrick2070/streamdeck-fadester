@@ -1,0 +1,50 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-2.0-or-later -->
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>快速入门 · Fadester Companion</title>
+  <link rel="stylesheet" href="quickstart.css">
+</head>
+<body>
+  <main>
+    <header>
+      <p>快速入门 · Mac · Apple 芯片和 Intel</p>
+      <h1>Fadester Companion</h1>
+      <p>用 TourBox 在 OBS Studio 中预备场景、手动淡入淡出并调节声音。</p>
+    </header>
+
+    <h2>首次打开</h2>
+    <p>将 <strong>Fadester Companion.app</strong> 移到<strong>应用程序</strong>文件夹。此应用未经 Apple 公证，因此第一次请按住 Control 键点击（或右键点击）该应用，选择<strong>打开</strong>，然后再次点击<strong>打开</strong>。也可以先尝试打开一次，再在<strong>系统设置 → 隐私与安全性</strong>中点击<strong>仍要打开</strong>。</p>
+
+    <h2>将 TourBox 连接到 OBS</h2>
+    <ol>
+      <li>在 OBS 中打开<strong>工具 → WebSocket 服务器设置</strong>，启用服务器和身份验证。要在 OBS Studio <strong>33</strong> 中使用手动推子，请进入<strong>工作室模式（Studio Mode）</strong>，选择<strong>淡入淡出（Fade）</strong>转场，并让预览和输出画面之间的白色推子保持可见。Fadester Companion 会自动读取 OBS 中保存的密码。</li>
+      <li>在 Fadester Companion 中点击<strong>1. 保存 TourBox 预设 (.tb)…</strong>，将您所用语言的预设保存到容易找到的位置，例如“下载”文件夹。</li>
+      <li>点击<strong>2. 打开 TourBox Console</strong>（或<strong>告诉我点哪里</strong>）。在 TourBox Console 中点击预设列表旁的导入图标，打开 <code>OBS Fadester for TourBox.tb</code>，点击 <strong>Not Linked</strong>，选择 <strong>OBS</strong>，再点击 <strong>Save</strong>。保持 <strong>Auto Switch</strong> 开启。只导入一种语言版本，不要导入 Windows 版文件。</li>
+      <li>点击<strong>为 Fadester Companion 授予辅助功能权限…</strong>，在<strong>系统设置 → 隐私与安全性 → 辅助功能</strong>中开启 Fadester Companion。如果其中还列出了 <strong>Fadester Companion T-bar</strong> 和 <strong>Fadester Companion Shortcuts</strong>，也请一并开启。TourBox Console 需要单独授权。</li>
+      <li>在<strong>分配</strong>中选择场景和音乐输入源。点击<strong>保存并启动控制</strong>，等到显示<strong>控制：已开启</strong>后，将 OBS 切到前台。请保持 Fadester Companion 打开。</li>
+    </ol>
+    <p>Mac 版预设的 OBS 操作使用 <strong>Control + Option + Shift</strong>，视频和图层操作使用 <strong>Control + Shift</strong> 或 <strong>Option + Shift</strong>，从不使用 Command。</p>
+
+    <h2>用两个不同的场景试一试</h2>
+    <ul>
+      <li>转动 <strong>Scroll</strong> 滚轮可更换预览场景，当前输出画面保持不变。按下滚轮可在面板中查看两个场景的名称。</li>
+      <li>缓慢转动扁平的 <strong>Dial</strong> 转盘可移动 OBS 推子，在两个场景之间手动淡入淡出。按住 <strong>Side</strong> 再按下 <strong>Dial</strong>，即可取消进行中的转场。</li>
+      <li>在 Chrome 中播放 YouTube 视频（需要免费的 VJster 扩展程序）。转动凸起的 <strong>Knob</strong> 旋钮可改变速度，按住转动可微调，按下可读取视频状态。</li>
+      <li>要直接控制 OBS 中的 YouTube 视频，请在设置中填入该视频，点击<strong>复制 OBS 浏览器源 URL</strong>，再将地址粘贴到 OBS 的浏览器源中。</li>
+      <li>在 Fadester 中指定音乐输入源。按住 <strong>Side</strong> 并转动扁平的 <strong>Dial</strong> 可调节其音量。按住 <strong>Top</strong> 时，Knob、Scroll 和 Dial 控制 VJ 图层（混合模式和不透明度）。</li>
+    </ul>
+
+    <h2>调节整个混音</h2>
+    <p>如果控制已经启动，请先点击<strong>停止控制</strong>。在<strong>设置</strong>中勾选<strong>启用 OBS 混音器全部输入控制</strong>，然后点击<strong>保存并启动控制</strong>。按住 <strong>Side</strong> 并转动 <strong>Knob</strong> 可整体调节音量。打开 <strong>Tour</strong> 菜单可将整个混音淡出至静音，也可以恢复之前的音量。已静音的输入源仍保持静音。</p>
+
+    <h2>帮助</h2>
+    <p>Fadester 桥接程序的诊断信息使用英语。如果控件没有响应，请检查 TourBox Console 当前启用的预设，并查看 Fadester 的<strong>活动</strong>选项卡。</p>
+    <p>在 Mac 上用 TourBox 完整控制 OBS 尚未经过彩排验证。正式直播前请先用测试场景练习。</p>
+    <p>如果 macOS 使用其他语言，请退出 Fadester Companion，然后在“终端”中运行 <code>open -a "Fadester Companion" --args --language zh-CN</code>。</p>
+    <p><a href="../START-HERE.html" hreflang="en">完整指南和控件参考（英语）</a> · <a href="../START-HERE.html#recovery" hreflang="en">故障排查（英语）</a></p>
+  </main>
+</body>
+</html>

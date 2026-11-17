@@ -57,7 +57,7 @@ internal static class MacDevelopmentHost
         FadesterMacHost --run --config PATH --mix-only [--enable-mix]
         FadesterMacHost --help | --self-test | --self-test-stdio
 
-        Experimental Mac command-line host; not a shipping GUI.
+        Fadester Companion's Mac command-line host, started by Fadester Companion.app.
         No-argument startup shows help. --self-test uses only synthetic state/fake OBS.
         --self-test-stdio exercises the real stdin parser and ingress only; accepted
         commands are echoed, never dispatched. It connects to no service or helper.
@@ -345,7 +345,7 @@ internal static class MacDevelopmentHost
             }
             WriteControl(Control.Ready, generation);
             Log(readOnly ? "Read-only host ready; no OBS writes, native moves, mix provider or shortcut registration."
-                : "Experimental host armed; native T-bar available, grouped mix " + (config.MixEnabled ? "enabled." : "disabled.") +
+                : "Host armed; native T-bar available, grouped mix " + (config.MixEnabled ? "enabled." : "disabled.") +
                   (shortcuts is null ? " Stdin input only." : " Exclusive Mac shortcuts enabled."));
             long lastHeldTurn = 0;
             while (!stop.IsCancellationRequested && !obs.Disconnected.IsCompleted)

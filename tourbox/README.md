@@ -111,7 +111,7 @@ For an interview, use **C1** to duck the bed as the guest comes up, hold **Tall*
 
 This edition targets Windows x64. The native preset requires TourBox Console and a full-size desktop TourBox with three pushable rotaries, Side, Tour, C1/C2 and a D-pad. The shared mixer companion includes its runtime, runs on the OBS computer and needs neither TourBox Console nor TourBox hardware with **Use only Stream Deck, OpenDeck or MIDI** ticked. See the rehearsal notes for hardware and software checks.
 
-macOS support is in development ([MACOS.md](MACOS.md) describes the experimental pieces and what they still lack); this package is for Windows.
+Fadester Companion for Mac (Apple silicon and Intel) ships as its own ZIP in each release; see [MACOS.md](MACOS.md) and [macos/panel/README.md](macos/panel/README.md). This package is for Windows.
 
 The source includes the native preset generator and validator, bridge, Windows panel, C++ slider helper, icons and guide generator. Rebuilding on Windows requires an 8.x .NET SDK, Node.js, Python 3, PowerShell, Visual Studio 2022 or later C++ build tools with the Windows SDK and the stock .NET Framework C# compiler. Run `./build.ps1` from the TourBox source folder. Use `-DotNet C:\path\to\dotnet.exe` to select an SDK. The optional transport integration test uses the Node package `ws`. The distribution includes the source license and separate notices for the .NET runtime.
 

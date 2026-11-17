@@ -1,7 +1,8 @@
-# Experimental Mac native T-bar adapter
+# Fadester Companion T-bar (Mac native T-bar adapter)
 
-This unpublished component is integrated into the experimental Mac action host.
-It is not part of the mix-only host, a finished TourBox Mac application, or a release.
+**Fadester Companion T-bar.app** ships inside Fadester Companion.app (`Contents/Resources/runtime/`)
+and is driven by the Mac action host. It is not part of the mix-only host.
+It appears under this name in System Settings → Privacy & Security → Accessibility.
 It builds using the Mac's existing Swift/AppKit/ApplicationServices tools and has
 no third-party runtime dependencies. `MacNativeTBar.cs` is an optional .NET 8 caller
 source; it is not linked into any shipping project.
@@ -19,7 +20,7 @@ return throws, sustained latency and physical controller operation remain unveri
 ```sh
 cd tourbox/macos/native
 /bin/bash build.sh
-"build/Fadester Native Slider Experimental.app/Contents/MacOS/FadesterNativeSlider" --self-test
+"build/Fadester Companion T-bar.app/Contents/MacOS/FadesterNativeSlider" --self-test
 dotnet run --project tests/AdapterChecks.csproj -c Release
 ```
 
@@ -35,7 +36,7 @@ test inspects OBS, sends AX writes, prompts for permission, or changes settings.
 Opening the app normally presents only a permission window. Its explicit request
 button invokes the normal macOS Accessibility prompt; the user grants permission
 manually. This bundle has the separate identifier
-`io.github.jbrick2070.fadester-tourbox.native-slider.experimental`. Neither existing
+`io.github.jbrick2070.fadester-tourbox.native-slider`. Neither existing
 probe bundle is modified, and their grants are not reused. This app is ad-hoc
 signed, not notarized. Rebuilds may require another grant.
 

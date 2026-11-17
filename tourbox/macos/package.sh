@@ -27,9 +27,16 @@ trap 'rm -rf "$stage"' EXIT
 folder="$stage/Fadester Companion"
 mkdir -p "$folder"
 /usr/bin/ditto "$app" "$folder/Fadester Companion.app"
-# Beside the app, as in the Windows ZIP: the TourBox preset to import, the guide, the read-me and the license.
+# Beside the app, as in the Windows ZIP: the TourBox preset to import (English), the guide, the read-me and the license.
 cp "$repo/tourbox/presets/macos/OBS Fadester for TourBox.tb" "$folder/"
 cp "$app/Contents/Resources/START-HERE.html" "$folder/START-HERE.html"
+# Each language's preset in presets/<locale>/ and quick start in guide/, as in the Windows ZIP.
+/usr/bin/ditto "$app/Contents/Resources/guide" "$folder/guide"
+for preset in "$app/Contents/Resources/presets/"*/"OBS Fadester for TourBox.tb"; do
+  locale="$(basename "$(dirname "$preset")")"
+  mkdir -p "$folder/presets/$locale"
+  cp "$preset" "$folder/presets/$locale/"
+done
 cp "$repo/tourbox/macos/panel/README.md" "$folder/README.md"
 cp "$repo/LICENSE" "$folder/LICENSE"
 mkdir -p "$folder/runtime-notices"
@@ -52,17 +59,26 @@ test -f "$check/Fadester Companion/OBS Fadester for TourBox.tb"
 test -f "$check/Fadester Companion/START-HERE.html"
 test -f "$shipped/Contents/Resources/presets/OBS Fadester for TourBox.tb"
 test -f "$shipped/Contents/Resources/vjster/obs/player.html"
+# Every language of tourbox/presets/locales.json: its Mac preset (in the app and beside it) and its quick start.
+for locale in $("$python" -c 'import json, sys; print(" ".join(sorted(json.load(open(sys.argv[1], encoding="utf-8")))))' "$repo/tourbox/presets/locales.json"); do
+  test -f "$shipped/Contents/Resources/presets/$locale/OBS Fadester for TourBox.tb"
+  test -f "$shipped/Contents/Resources/presets/$locale/map.json"
+  test -f "$shipped/Contents/Resources/guide/$locale.html"
+  test -f "$check/Fadester Companion/presets/$locale/OBS Fadester for TourBox.tb"
+  test -f "$check/Fadester Companion/guide/$locale.html"
+done
+test -f "$check/Fadester Companion/guide/quickstart.css"
 test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$shipped/Contents/Info.plist")" = "$version"
 /usr/bin/codesign --verify --deep --strict "$shipped"
 for binary in "$shipped/Contents/MacOS/Fadester Companion" "$runtime/FadesterMacHost" \
-  "$runtime/Fadester Native Slider Experimental.app/Contents/MacOS/FadesterNativeSlider" \
-  "$runtime/Fadester Mac Shortcuts Experimental.app/Contents/MacOS/FadesterMacShortcuts"; do
+  "$runtime/Fadester Companion T-bar.app/Contents/MacOS/FadesterNativeSlider" \
+  "$runtime/Fadester Companion Shortcuts.app/Contents/MacOS/FadesterMacShortcuts"; do
   /usr/bin/file "$binary" | grep -q "$(/usr/bin/uname -m)" || { echo "Wrong architecture: $binary" >&2; exit 1; }
 done
 (cd "$stage" && "$shipped/Contents/MacOS/Fadester Companion" --self-test)
 (cd "$stage" && "$runtime/FadesterMacHost" --self-test)
-"$runtime/Fadester Native Slider Experimental.app/Contents/MacOS/FadesterNativeSlider" --self-test
-"$runtime/Fadester Mac Shortcuts Experimental.app/Contents/MacOS/FadesterMacShortcuts" --self-test --map "$shipped/Contents/Resources/presets/map.json"
+"$runtime/Fadester Companion T-bar.app/Contents/MacOS/FadesterNativeSlider" --self-test
+"$runtime/Fadester Companion Shortcuts.app/Contents/MacOS/FadesterMacShortcuts" --self-test --map "$shipped/Contents/Resources/presets/map.json"
 if command -v node >/dev/null; then
   node "$repo/tourbox/macos/panel/tests/discovery-server.mjs" "$shipped/Contents/MacOS/Fadester Companion"
 else

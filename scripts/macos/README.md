@@ -37,7 +37,7 @@ safety tests passed first. Injected SDK scene, visibility, volume-dial and timed
 fade events affected real OBS; VJster child rendering passed. The whole-mix
 command received its correlated provider confirmation, and actual OBS gain was
 verified and restored. This was an enabled, separately owned headless mix provider,
-not the experimental Mac action host or its UI.
+not the Mac action host or the Fadester Companion app.
 
 The wrapper started and stopped only that provider, kept credentials in Mac-local
 process environment, and removed its private config/journal after success. The

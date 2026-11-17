@@ -22,7 +22,7 @@ foreach (string invalid in new[] {
     try { MacNativeTBar.ParseOwner(invalid, 4455); throw new Exception("accepted invalid listener"); }
     catch (IOException) { }
 }
-Console.WriteLine("PASS: experimental Mac C# adapter compiles; tick conversion and strict listener parsing. No process, AX or OBS access.");
+Console.WriteLine("PASS: Mac C# adapter compiles; tick conversion and strict listener parsing. No process, AX or OBS access.");
 
 namespace Fadester.TourBox
 {

@@ -3,14 +3,14 @@ import AppKit
 import ApplicationServices
 import Foundation
 
-private let bundleID = "io.github.jbrick2070.fadester-tourbox.native-slider.experimental"
+private let bundleID = "io.github.jbrick2070.fadester-tourbox.native-slider"
 
 private final class PermissionWindow: NSObject, NSApplicationDelegate {
     private var window: NSWindow!
     private var state: NSTextField!
     func applicationDidFinishLaunching(_ notification: Notification) {
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 640, height: 240), styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
-        window.title = "Fadester Native Slider — Experimental Component"; window.center()
+        window.title = "Fadester Companion T-bar"; window.center()
         let intro = NSTextField(wrappingLabelWithString: "This development component lets a future Fadester Mac host move OBS's real T-bar. This window does not inspect or control OBS. Permission is granted only through macOS, never automatically. The existing read-only and write probes are separate apps and remain unchanged.")
         state = NSTextField(wrappingLabelWithString: status())
         let request = NSButton(title: "Request Accessibility…", target: self, action: #selector(request))
@@ -69,7 +69,7 @@ private final class PipeDelegate: NSObject, NSApplicationDelegate {
             return
         }
         if args == ["--help"] {
-            print("Experimental Fadester Native Slider: open the app for a manual permission window, or --stdio --obs-pid PID --obs-port PORT for the private protocol. --self-test uses only synthetic state. No automatic permission, release, reset or retry.")
+            print("Fadester Companion T-bar: open the app for a manual permission window, or --stdio --obs-pid PID --obs-port PORT for the private protocol. --self-test uses only synthetic state. No automatic permission, release, reset or retry.")
             return
         }
         let app = NSApplication.shared

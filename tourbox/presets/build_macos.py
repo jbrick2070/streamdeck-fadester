@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""Generate the experimental macOS master without changing the Windows preset."""
+"""Generate the macOS master (and its translations) without changing the Windows preset."""
 
 import argparse
 import base64
@@ -82,9 +82,21 @@ def check(preset, data):
                     "Mac preset differs from the canonical master beyond modifier encoding")
 
 
+def localized(presets):
+    """The Mac master in each language of locales.json, as the Windows build makes them: only the labels differ."""
+    translations = json.loads((HERE / "locales.json").read_text(encoding="utf-8"))
+    for locale, translated, _ in windows.localized_presets(presets, translations):
+        preset = translated["master"]
+        data = build(preset)
+        check(preset, data)
+        yield locale, preset, data
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true", help="verify the saved Mac master without writing")
+    parser.add_argument("--localized-out", type=Path,
+                        help="also write the translated Mac masters into locale subfolders of this folder")
     args = parser.parse_args()
     presets = json.loads((HERE / "map.json").read_text(encoding="utf-8"))["presets"]
     windows.check_master(presets)
@@ -103,6 +115,12 @@ def main():
           f"{len(root.findall('shortCuts/ShortDesc'))} labels, "
           f"{len(root.findall('tourMenuBox/menus/TourMenu/items/TourMenuItem'))} menu entries; "
           f"Mac modifier masks {masks} (no Command)")
+    for locale, translated, data in localized(presets):
+        if args.localized_out:
+            folder = args.localized_out / locale
+            folder.mkdir(parents=True, exist_ok=True)
+            (folder / OUTPUT.name).write_bytes(data)
+        print(f"{locale}: Mac master with translated labels verified against the map")
 
 
 if __name__ == "__main__":

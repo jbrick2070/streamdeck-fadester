@@ -1,6 +1,6 @@
-# Experimental Mac shortcut input
+# Fadester Companion Shortcuts (Mac shortcut input)
 
-This unpublished component receives only the canonical Fadester shortcuts that
+**Fadester Companion Shortcuts.app** ships inside Fadester Companion.app (`Contents/Resources/runtime/`). It receives only the canonical Fadester shortcuts that
 Mac TourBox Console emits. It uses Carbon `RegisterEventHotKey`, not an event tap,
 global keyboard recording, HID ownership or an Accessibility injection API. It
 does not inspect arbitrary keys, touch TourBox USB/forwarding state, connect to OBS,
@@ -22,10 +22,10 @@ live validation tasks.
 ```sh
 cd tourbox/macos/input
 /bin/bash build.sh
-"build/Fadester Mac Shortcuts Experimental.app/Contents/MacOS/FadesterMacShortcuts" \
+"build/Fadester Companion Shortcuts.app/Contents/MacOS/FadesterMacShortcuts" \
   --self-test --map ../../presets/map.json
 dotnet run --project tests/InputChecks.csproj -c Release
-python3 tests/open-pipe.py "build/Fadester Mac Shortcuts Experimental.app/Contents/MacOS/FadesterMacShortcuts"
+python3 tests/open-pipe.py "build/Fadester Companion Shortcuts.app/Contents/MacOS/FadesterMacShortcuts"
 ```
 
 These commands do not register shortcuts or observe hardware. Swift tests parse
@@ -77,8 +77,8 @@ The helper is deliberately not configured with repeat suppression that could
 drop closely spaced rotary shortcut sequences.
 
 EOF, QUIT or protocol failure unregisters every shortcut. No application focus,
-permission prompt or OBS cleanup write is issued. The app has a separate,
-ad-hoc-signed experimental bundle identity and is not a product release.
+permission prompt or OBS cleanup write is issued. The app has its own
+ad-hoc-signed bundle identity, `io.github.jbrick2070.fadester-tourbox.shortcuts`.
 
 ## Optional C# transport
 

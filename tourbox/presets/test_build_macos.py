@@ -86,6 +86,23 @@ class MacPresetTests(unittest.TestCase):
         self.assertEqual(mac.build(self.preset), mac.build(self.preset))
         self.assertEqual(hashlib.sha256(path.read_bytes()).digest(), before)
 
+    def test_every_translation_is_the_mac_master_with_its_own_labels(self):
+        presets = json.loads((mac.HERE / "map.json").read_text(encoding="utf-8"))["presets"]
+        english = ET.fromstring(gzip.decompress(mac.build(self.preset)))
+        locales = json.loads((mac.HERE / "locales.json").read_text(encoding="utf-8"))
+        seen = []
+        for locale, preset, data in mac.localized(presets):
+            seen.append(locale)
+            root = ET.fromstring(gzip.decompress(data))
+            # The same native table (Mac modifier bytes) and menu masks as the English Mac master...
+            self.assertEqual(root.findtext("configBytes"), english.findtext("configBytes"), locale)
+            self.assertEqual({int(e.text) for e in root.findall("shortCuts/ShortDesc/m")} <= {7, 3, 6}, True, locale)
+            # ...with the labels of that language.
+            labels = {e.findtext("d") for e in root.findall("shortCuts/ShortDesc")}
+            self.assertTrue(labels and labels <= set(locales[locale].values()), locale)
+            mac.check(preset, data)
+        self.assertEqual(sorted(seen), sorted(locales))
+
 
 if __name__ == "__main__":
     unittest.main()

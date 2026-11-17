@@ -1,8 +1,8 @@
-# Experimental Mac action host
+# Mac action host
 
 `FadesterMacHost` connects the shared `DeskActions`, audio/mix controllers and
-`StudioFader` to the experimental Mac native T-bar adapter. It is a development
-CLI, not a shipping Mac application. Shortcut registration is optional and requires
+`StudioFader` to the Mac native T-bar adapter (Fadester Companion T-bar.app). It is a
+command-line host that Fadester Companion.app starts; it has no user interface of its own. Shortcut registration is optional and requires
 an explicit input-helper argument. It does not import TourBox presets, change
 permissions or launch OBS. Actual TourBox-to-host shortcut delivery and the complete
 Mac workflow still need live validation.
@@ -51,7 +51,7 @@ not full endpoints, return throws or sustained performance.
 
 Physical Scroll and Dial input was verified separately by a count-only shortcut
 listener. It did not drive OBS. Physical TourBox-to-host-to-OBS operation remains
-unverified; this development CLI is still experimental.
+unverified.
 
 To create a standalone developer binary:
 
@@ -91,7 +91,7 @@ Only an explicit live command connects:
 
 ```sh
 ./out/mac-host/FadesterMacHost --run --config /path/to/development.json \
-  --native-app "/path/to/Fadester Native Slider Experimental.app"
+  --native-app "/path/to/Fadester Companion T-bar.app"
 ```
 
 Authentication uses process-local `FADESTER_OBS_PASSWORD`, or reads the matching,
@@ -140,7 +140,7 @@ To explicitly use the separate `tourbox/macos/input` Carbon shortcut component,
 add both options to the live command:
 
 ```sh
-  --input-app "/path/to/Fadester Mac Shortcuts Experimental.app" \
+  --input-app "/path/to/Fadester Companion Shortcuts.app" \
   --map /path/to/tourbox/presets/map.json
 ```
 

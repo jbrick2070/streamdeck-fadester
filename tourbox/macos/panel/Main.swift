@@ -46,6 +46,8 @@ import AppKit
             Task {
                 do {
                     try PanelText.selfTest()
+                    try RuntimePaths.selfTest(resources: Bundle.main.resourceURL ?? Bundle.main.bundleURL)
+                    try SetupDiagramView.selfTest()
                     // The checks compare English words, whatever language this Mac uses.
                     PanelText.use("en")
                     try ModelTests.run()

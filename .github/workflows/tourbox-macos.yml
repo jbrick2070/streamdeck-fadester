@@ -12,6 +12,7 @@ on:
       - tourbox/presets/**
       - tourbox/MACOS.md
       - tourbox/artwork/**
+      - tourbox/guide/quickstart.css
       - tourbox/panel/PanelText.cs
       - tourbox/panel/PanelExtraText.cs
       - installer/components.json
@@ -30,6 +31,7 @@ on:
       - tourbox/presets/**
       - tourbox/MACOS.md
       - tourbox/artwork/**
+      - tourbox/guide/quickstart.css
       - tourbox/panel/PanelText.cs
       - tourbox/panel/PanelExtraText.cs
       - installer/components.json
@@ -103,13 +105,13 @@ jobs:
         # No NSApplication launch, AX access, OBS inspection or permission prompt.
         run: |
           bash tourbox/macos/native/build.sh
-          "tourbox/macos/native/build/Fadester Native Slider Experimental.app/Contents/MacOS/FadesterNativeSlider" --self-test
+          "tourbox/macos/native/build/Fadester Companion T-bar.app/Contents/MacOS/FadesterNativeSlider" --self-test
           dotnet run --project tourbox/macos/native/tests/AdapterChecks.csproj --configuration Release
       - name: Check the Mac shortcut protocol (no registration)
         # These test modes never register Carbon shortcuts or observe hardware.
         run: |
           bash tourbox/macos/input/build.sh
-          input="tourbox/macos/input/build/Fadester Mac Shortcuts Experimental.app/Contents/MacOS/FadesterMacShortcuts"
+          input="tourbox/macos/input/build/Fadester Companion Shortcuts.app/Contents/MacOS/FadesterMacShortcuts"
           "$input" --self-test --map tourbox/presets/map.json
           python tourbox/macos/input/tests/open-pipe.py "$input"
           dotnet run --project tourbox/macos/input/tests/InputChecks.csproj --configuration Release

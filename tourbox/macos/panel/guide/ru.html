@@ -1,0 +1,50 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-2.0-or-later -->
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Быстрый старт · Fadester Companion</title>
+  <link rel="stylesheet" href="quickstart.css">
+</head>
+<body>
+  <main>
+    <header>
+      <p>Быстрый старт · Mac · Apple silicon и Intel</p>
+      <h1>Fadester Companion</h1>
+      <p>Подготавливайте сцены, выполняйте переходы вручную и регулируйте звук в OBS Studio с помощью TourBox.</p>
+    </header>
+
+    <h2>Первый запуск</h2>
+    <p>Переместите <strong>Fadester Companion.app</strong> в папку <strong>Программы</strong>. Приложение не заверено (не нотаризовано) Apple, поэтому в первый раз щёлкните его, удерживая Control (или правой кнопкой), выберите <strong>Открыть</strong> и ещё раз <strong>Открыть</strong>. Либо попробуйте открыть его один раз, а затем нажмите <strong>Всё равно открыть</strong> в разделе <strong>Системные настройки → Конфиденциальность и безопасность</strong>.</p>
+
+    <h2>Подключите TourBox к OBS</h2>
+    <ol>
+      <li>В OBS откройте <strong>Инструменты → Настройки сервера WebSocket</strong> и включите сервер с аутентификацией. Для ручного перехода в OBS Studio <strong>33</strong> включите <strong>Режим студии</strong>, выберите плавный переход <strong>Fade</strong> и оставьте видимым белый ползунок между предпросмотром и программой. Fadester Companion сам читает пароль, сохранённый в OBS.</li>
+      <li>В Fadester Companion нажмите <strong>1. Сохранить пресет TourBox (.tb)…</strong> и сохраните пресет на своём языке в заметную папку, например «Загрузки».</li>
+      <li>Нажмите <strong>2. Открыть TourBox Console</strong> (или <strong>Показать, где нажать</strong>). В TourBox Console нажмите значок импорта рядом со списком пресетов, откройте <code>OBS Fadester for TourBox.tb</code>, нажмите <strong>Not Linked</strong>, выберите <strong>OBS</strong> и нажмите <strong>Save</strong>. Оставьте <strong>Auto Switch</strong> включённым. Импортируйте только одну языковую версию и не импортируйте файл для Windows.</li>
+      <li>Нажмите <strong>Дать Fadester Companion Универсальный доступ…</strong> и включите Fadester Companion в разделе <strong>Системные настройки → Конфиденциальность и безопасность → Универсальный доступ</strong>. Если там есть также <strong>Fadester Companion T-bar</strong> и <strong>Fadester Companion Shortcuts</strong>, включите и их. У TourBox Console своё разрешение.</li>
+      <li>На вкладке <strong>Назначения</strong> выберите сцены и музыкальный вход. Нажмите <strong>Сохранить &amp; запустить</strong>, дождитесь состояния <strong>Управление: включено</strong> и выведите OBS на передний план. Не закрывайте Fadester Companion.</li>
+    </ol>
+    <p>Пресет для Mac использует <strong>Control + Option + Shift</strong> для действий OBS и <strong>Control + Shift</strong> или <strong>Option + Shift</strong> для видео и слоёв; Command не используется.</p>
+
+    <h2>Попробуйте на двух разных сценах</h2>
+    <ul>
+      <li>Вращайте колесо <strong>Scroll</strong>, чтобы сменить сцену предпросмотра. Сцена в программе останется прежней. Нажмите на колесо, чтобы увидеть названия обеих сцен в панели.</li>
+      <li>Медленно поверните плоский регулятор <strong>Dial</strong>. Ползунок OBS сдвинется, и сцены начнут смешиваться. Чтобы отменить незавершённый переход, удерживайте <strong>Side</strong> и нажмите <strong>Dial</strong>.</li>
+      <li>Запустите видео YouTube в Chrome (с бесплатным расширением VJster). Вращайте выступающую ручку <strong>Knob</strong>, чтобы менять скорость; нажмите и вращайте для точных шагов. Нажмите её, чтобы прочитать состояние видео.</li>
+      <li>Чтобы управлять видео YouTube прямо в OBS, укажите его в настройках, нажмите <strong>Скопировать URL для источника «Браузер» OBS</strong> и вставьте адрес в источник «Браузер» OBS.</li>
+      <li>Назначьте музыкальный вход в Fadester. Удерживайте <strong>Side</strong> и вращайте плоский <strong>Dial</strong>, чтобы отрегулировать громкость. С удержанным <strong>Top</strong> ручка Knob, Scroll и Dial управляют VJ-слоями (режим наложения и непрозрачность).</li>
+    </ul>
+
+    <h2>Регулируйте весь микс</h2>
+    <p>В настройках включите управление всеми входами микшера OBS, затем сохраните настройки и запустите управление. Удерживайте <strong>Side</strong> и вращайте <strong>Knob</strong> для регулировки уровня группы. В меню <strong>Tour</strong> можно плавно убрать весь звук или восстановить прежние уровни. Звук на отключённых входах не включается.</p>
+
+    <h2>Помощь</h2>
+    <p>Диагностические сообщения фонового процесса отображаются на английском. Если команда не срабатывает, проверьте активный пресет в TourBox Console и откройте журнал действий Fadester.</p>
+    <p>Полное управление OBS с TourBox на Mac ещё не проверено на репетиции. Потренируйтесь на тестовых сценах перед эфиром.</p>
+    <p>Если macOS использует другой язык, закройте Fadester Companion и выполните в Терминале <code>open -a "Fadester Companion" --args --language ru</code>.</p>
+    <p><a href="../START-HERE.html" hreflang="en">Полное руководство и список команд (на английском)</a> · <a href="../START-HERE.html#recovery" hreflang="en">Устранение неполадок (на английском)</a></p>
+  </main>
+</body>
+</html>

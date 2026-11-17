@@ -911,14 +911,35 @@ private final class SheetBackground: NSView {
         let rect: NSRect
         let fill: NSColor
         let enabled: Bool
+        let fontSize: CGFloat
+        let fits: Bool
     }
 
     private struct Geometry {
+        let header: NSRect
         let box1: NSRect
         let box2: NSRect
         let box3a: NSRect
         let box3b: NSRect
+        let splitX: CGFloat
+        let box1TextBottom: CGFloat
         let buttons: [ButtonSpec]
+    }
+
+    /// One run of text the diagram draws: lines stacked top to bottom inside rect, word-wrapped and, when needed,
+    /// shrunk together (never below minimumPoint) so the text stays inside its box in every panel language.
+    private struct TextLine {
+        let text: String
+        let size: CGFloat
+        let bold: Bool
+        let color: NSColor
+    }
+
+    private struct TextBlock {
+        let id: String
+        let lines: [TextLine]
+        let rect: NSRect
+        var alignBottom = false
     }
 
     var state = State() {
@@ -932,7 +953,8 @@ private final class SheetBackground: NSView {
     private var pressedId: String?
 
     override var isFlipped: Bool { true }
-    override var intrinsicContentSize: NSSize { NSSize(width: NSView.noIntrinsicMetric, height: 164) }
+    /// 30 + 142 + 8: the caption strip, the boxes and the bottom margin.
+    override var intrinsicContentSize: NSSize { NSSize(width: NSView.noIntrinsicMetric, height: 180) }
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -949,6 +971,79 @@ private final class SheetBackground: NSView {
     private static let red = NSColor(srgbRed: 224 / 255, green: 78 / 255, blue: 68 / 255, alpha: 1)
     private static let grey = NSColor(srgbRed: 148 / 255, green: 156 / 255, blue: 172 / 255, alpha: 1)
     private static let slatePill = NSColor(srgbRed: 58 / 255, green: 68 / 255, blue: 92 / 255, alpha: 1)
+    private static let headerInk = NSColor(srgbRed: 76 / 255, green: 88 / 255, blue: 112 / 255, alpha: 1)
+    private static let lightInk = NSColor(srgbRed: 232 / 255, green: 237 / 255, blue: 247 / 255, alpha: 1)
+    private static let mutedLight = NSColor(srgbRed: 172 / 255, green: 182 / 255, blue: 204 / 255, alpha: 1)
+    private static let mutedDark = NSColor(srgbRed: 96 / 255, green: 106 / 255, blue: 126 / 255, alpha: 1)
+
+    /// The smallest type any diagram label shrinks to; pills go down to minimumPill.
+    private static let minimumPoint: CGFloat = 8
+    private static let pillPoint: CGFloat = 10.5
+    private static let minimumPill: CGFloat = 8.5
+    private static let lineGap: CGFloat = 2
+    private static let wrapping: NSParagraphStyle = {
+        let style = NSMutableParagraphStyle()
+        style.lineBreakMode = .byWordWrapping
+        return style
+    }()
+
+    private static func font(_ size: CGFloat, bold: Bool) -> NSFont {
+        bold ? NSFont.boldSystemFont(ofSize: size) : NSFont.systemFont(ofSize: size)
+    }
+
+    private static func lineHeight(_ size: CGFloat, bold: Bool = false) -> CGFloat {
+        ceil(NSLayoutManager().defaultLineHeight(for: font(size, bold: bold))) + 1
+    }
+
+    private static func attributes(_ line: TextLine, scale: CGFloat) -> [NSAttributedString.Key: Any] {
+        [.font: font(line.size * scale, bold: line.bold), .foregroundColor: line.color, .paragraphStyle: wrapping]
+    }
+
+    /// No word is wider than the box (words split at spaces; CJK text may wrap between any two characters).
+    private static func wordsFit(_ line: TextLine, scale: CGFloat, width: CGFloat) -> Bool {
+        let attrs: [NSAttributedString.Key: Any] = [.font: font(line.size * scale, bold: line.bold)]
+        for word in line.text.split(separator: " ") where !word.unicodeScalars.contains(where: { $0.value >= 0x2E80 }) {
+            if (String(word) as NSString).size(withAttributes: attrs).width > width { return false }
+        }
+        return true
+    }
+
+    private static func height(_ line: TextLine, scale: CGFloat, width: CGFloat) -> CGFloat {
+        let bounds = (line.text as NSString).boundingRect(with: NSSize(width: width, height: 10_000), options: [.usesLineFragmentOrigin], attributes: attributes(line, scale: scale), context: nil)
+        return ceil(bounds.height)
+    }
+
+    private static func floorScale(_ block: TextBlock) -> CGFloat {
+        min(1, minimumPoint / (block.lines.map { $0.size }.min() ?? minimumPoint))
+    }
+
+    /// The largest scale (1, then down in 2% steps to the 8-point floor) at which the block fits; nil when even the floor does not.
+    private static func fit(_ block: TextBlock) -> CGFloat? {
+        let width = block.rect.width
+        var scale: CGFloat = 1
+        let lowest = floorScale(block)
+        while scale >= lowest - 0.0001 {
+            if block.lines.allSatisfy({ wordsFit($0, scale: scale, width: width) }) {
+                let total = block.lines.map { height($0, scale: scale, width: width) }.reduce(0, +) + lineGap * CGFloat(block.lines.count - 1)
+                if total <= block.rect.height + 0.5 { return scale }
+            }
+            scale -= 0.02
+        }
+        return nil
+    }
+
+    private static func pillWidth(_ title: String, size: CGFloat) -> CGFloat {
+        let attrs: [NSAttributedString.Key: Any] = [.font: NSFont.boldSystemFont(ofSize: size)]
+        return max(52, ceil((title as NSString).size(withAttributes: attrs).width) + 16)
+    }
+
+    /// A pill's width and type size: 10.5 points, smaller only if the title would not fit within limit.
+    private static func pill(_ title: String, limit: CGFloat) -> (width: CGFloat, size: CGFloat, fits: Bool) {
+        var size = pillPoint
+        while size > minimumPill, pillWidth(title, size: size) > limit { size -= 0.5 }
+        let width = pillWidth(title, size: size)
+        return (min(width, limit), size, width <= limit)
+    }
 
     private func lampColor(_ lamp: Lamp) -> NSColor {
         switch lamp {
@@ -959,16 +1054,12 @@ private final class SheetBackground: NSView {
         }
     }
 
-    private func pillWidth(_ title: String) -> CGFloat {
-        let attrs: [NSAttributedString.Key: Any] = [.font: NSFont.boldSystemFont(ofSize: 10.5)]
-        return max(52, ceil((title as NSString).size(withAttributes: attrs).width) + 16)
-    }
-
     private func geometry(for totalWidth: CGFloat) -> Geometry {
         let w = max(totalWidth, 700)
         let pad: CGFloat = 12
-        let gap1: CGFloat = 70
+        let gap1: CGFloat = 76
         let gap2: CGFloat = 88
+        let top: CGFloat = 30
         let avail = w - pad * 2 - gap1 - gap2
         let w1 = round(avail * 0.34)
         let w2 = round(avail * 0.30)
@@ -978,14 +1069,15 @@ private final class SheetBackground: NSView {
         let x2 = x1 + w1 + gap1
         let x3 = x2 + w2 + gap2
 
-        let box1 = NSRect(x: x1, y: 28, width: w1, height: 124)
-        let box2 = NSRect(x: x2, y: 28, width: w2, height: 124)
-        let box3a = NSRect(x: x3, y: 28, width: w3, height: 58)
-        let box3b = NSRect(x: x3, y: 94, width: w3, height: 58)
+        let header = NSRect(x: pad, y: 4, width: w - pad * 2, height: top - 6)
+        let box1 = NSRect(x: x1, y: top, width: w1, height: 142)
+        let box2 = NSRect(x: x2, y: top, width: w2, height: 142)
+        let box3a = NSRect(x: x3, y: top, width: w3, height: 67)
+        let box3b = NSRect(x: x3, y: top + 75, width: w3, height: 67)
 
         var buttons: [ButtonSpec] = []
 
-        // Box 1 buttons: Save .tb + Guide/Console
+        // Box 1 buttons: Save .tb + Guide/Console, side by side, or one above the other when a language needs the room.
         let b1Title: String
         let b1Fill: NSColor
         switch state.presetSync {
@@ -993,23 +1085,31 @@ private final class SheetBackground: NSView {
         case .current: b1Title = L("dgSaveTb"); b1Fill = Self.slatePill
         case .updateAvailable: b1Title = L("dgUpdateTb"); b1Fill = Self.amber
         }
-        let b1W = pillWidth(b1Title)
         let b2Title = state.consoleRunning ? L("dgGuide") : (state.consoleInstalled ? L("dgConsole") : L("btnDownload"))
         let b2Action = state.consoleRunning ? "guide" : (state.consoleInstalled ? "openConsole" : "downloadConsole")
-        let b2W = pillWidth(b2Title)
+        let inner1 = box1.width - 20
+        let p1 = Self.pill(b1Title, limit: inner1)
+        let p2 = Self.pill(b2Title, limit: inner1)
+        let rowY = box1.maxY - 31
+        let sideBySide = p1.width + 6 + p2.width <= inner1
+        let firstY = sideBySide ? rowY : rowY - 28
         buttons.append(ButtonSpec(
             id: "savePreset",
             title: b1Title,
-            rect: NSRect(x: box1.minX + 10, y: box1.maxY - 31, width: b1W, height: 22),
+            rect: NSRect(x: box1.minX + 10, y: firstY, width: p1.width, height: 22),
             fill: b1Fill,
-            enabled: true
+            enabled: true,
+            fontSize: p1.size,
+            fits: p1.fits
         ))
         buttons.append(ButtonSpec(
             id: b2Action,
             title: b2Title,
-            rect: NSRect(x: box1.minX + 16 + b1W, y: box1.maxY - 31, width: b2W, height: 22),
+            rect: NSRect(x: sideBySide ? box1.minX + 16 + p1.width : box1.minX + 10, y: rowY, width: p2.width, height: 22),
             fill: state.presetSync == .current && !state.consoleRunning ? Self.accent : Self.slatePill,
-            enabled: true
+            enabled: true,
+            fontSize: p2.size,
+            fits: p2.fits
         ))
 
         // Box 2 button: Start / Stop / Grant Accessibility
@@ -1023,13 +1123,15 @@ private final class SheetBackground: NSView {
         } else {
             ctlTitle = L("dgStart"); ctlAction = "start"; ctlFill = Self.accent
         }
-        let ctlW = pillWidth(ctlTitle)
+        let ctl = Self.pill(ctlTitle, limit: box2.width - 20)
         buttons.append(ButtonSpec(
             id: ctlAction,
             title: ctlTitle,
-            rect: NSRect(x: box2.minX + 10, y: box2.maxY - 31, width: ctlW, height: 22),
+            rect: NSRect(x: box2.minX + 10, y: box2.maxY - 31, width: ctl.width, height: 22),
             fill: ctlFill,
-            enabled: state.controlsRunning || !state.axTrusted || state.canStart
+            enabled: state.controlsRunning || !state.axTrusted || state.canStart,
+            fontSize: ctl.size,
+            fits: ctl.fits
         ))
 
         // Box 3A button: OBS Studio action
@@ -1044,13 +1146,15 @@ private final class SheetBackground: NSView {
         } else {
             obsBtnTitle = L("dgReadObs"); obsBtnAction = "scan"
         }
-        let obsW = pillWidth(obsBtnTitle)
+        let obsPill = Self.pill(obsBtnTitle, limit: box3a.width - 20)
         buttons.append(ButtonSpec(
             id: obsBtnAction,
             title: obsBtnTitle,
-            rect: NSRect(x: box3a.maxX - obsW - 10, y: box3a.maxY - 28, width: obsW, height: 21),
+            rect: NSRect(x: box3a.maxX - obsPill.width - 10, y: box3a.maxY - 28, width: obsPill.width, height: 21),
             fill: Self.accent,
-            enabled: obsBtnAction != "scan" || (!state.controlsRunning && state.canStart)
+            enabled: obsBtnAction != "scan" || (!state.controlsRunning && state.canStart),
+            fontSize: obsPill.size,
+            fits: obsPill.fits
         ))
 
         // Box 3B button: VJster Video action
@@ -1064,17 +1168,90 @@ private final class SheetBackground: NSView {
             } else {
                 vjTitle = L("dgCopyUrl"); vjAction = "copyObsUrl"
             }
-            let vjW = pillWidth(vjTitle)
+            let vjPill = Self.pill(vjTitle, limit: box3b.width - 20)
             buttons.append(ButtonSpec(
                 id: vjAction,
                 title: vjTitle,
-                rect: NSRect(x: box3b.maxX - vjW - 10, y: box3b.maxY - 28, width: vjW, height: 21),
+                rect: NSRect(x: box3b.maxX - vjPill.width - 10, y: box3b.maxY - 28, width: vjPill.width, height: 21),
                 fill: Self.accent,
-                enabled: true
+                enabled: true,
+                fontSize: vjPill.size,
+                fits: vjPill.fits
             ))
         }
 
-        return Geometry(box1: box1, box2: box2, box3a: box3a, box3b: box3b, buttons: buttons)
+        return Geometry(header: header, box1: box1, box2: box2, box3a: box3a, box3b: box3b, splitX: box2.maxX + 18,
+                        box1TextBottom: firstY - 4, buttons: buttons)
+    }
+
+    /// Every label the diagram draws for the current state, each with the room it has.
+    private func textBlocks(_ g: Geometry) -> [TextBlock] {
+        let titleHeight = Self.lineHeight(11.5, bold: true)
+        var blocks: [TextBlock] = []
+        blocks.append(TextBlock(id: "dgHeader", lines: [TextLine(text: L("dgHeader"), size: 10.5, bold: true, color: Self.headerInk)], rect: g.header))
+
+        // Arrow 1 (TourBox + Console → Companion): one line above it, up to two below it.
+        let gap1 = NSRect(x: g.box1.maxX + 7, y: 0, width: g.box2.minX - g.box1.maxX - 10, height: 0)
+        let shortcutsHeight = Self.lineHeight(9.5, bold: true)
+        blocks.append(TextBlock(id: "dgShortcuts", lines: [TextLine(text: L("dgShortcuts"), size: 9.5, bold: true, color: Self.navy)],
+                                rect: NSRect(x: gap1.minX, y: g.box1.midY - 3 - shortcutsHeight, width: gap1.width, height: shortcutsHeight), alignBottom: true))
+        blocks.append(TextBlock(id: "dgObsActive", lines: [TextLine(text: L("dgObsActive"), size: 9.0, bold: false, color: Self.mutedDark)],
+                                rect: NSRect(x: gap1.minX, y: g.box1.midY + 5, width: gap1.width, height: Self.lineHeight(9.0) * 2 + Self.lineGap)))
+
+        // Arrow 2 (Companion → OBS Studio and VJster video).
+        let branchX = g.splitX + 5
+        let branchWidth = g.box3a.minX - 4 - branchX
+        let wsHeight = Self.lineHeight(9.2, bold: true)
+        blocks.append(TextBlock(id: "dgWsTbar", lines: [TextLine(text: L("dgWsTbar"), size: 9.2, bold: true, color: Self.navy)],
+                                rect: NSRect(x: branchX, y: g.box3a.midY - 3 - wsHeight, width: branchWidth, height: wsHeight), alignBottom: true))
+        blocks.append(TextBlock(id: "dgPort", lines: [TextLine(text: L("dgPort", state.vjsterPort), size: 9.2, bold: true, color: Self.mutedDark)],
+                                rect: NSRect(x: branchX, y: g.box3b.midY + 4, width: branchWidth, height: wsHeight)))
+
+        // Box 1: TourBox + Console, beside the small TourBox drawing and above its buttons.
+        blocks.append(TextBlock(id: "dgBox1", lines: [TextLine(text: L("dgBox1"), size: 11.5, bold: true, color: .white)],
+                                rect: NSRect(x: g.box1.minX + 24, y: g.box1.minY + 5, width: g.box1.width - 32, height: titleHeight)))
+        let tbLine1 = state.consoleRunning ? L("dgConsoleOpen") : (state.consoleInstalled ? L("dgConsoleClosed") : L("dgConsoleGet"))
+        blocks.append(TextBlock(id: "box1", lines: [
+            TextLine(text: tbLine1, size: 10.5, bold: true, color: Self.lightInk),
+            TextLine(text: L("dgImportOnce"), size: 9.8, bold: false, color: Self.mutedLight),
+            TextLine(text: L("dgAutoSwitch"), size: 9.8, bold: false, color: Self.mutedLight)
+        ], rect: NSRect(x: g.box1.minX + 62, y: g.box1.minY + 31, width: g.box1.width - 70, height: g.box1TextBottom - (g.box1.minY + 31))))
+
+        // Box 2: Fadester Companion (here).
+        blocks.append(TextBlock(id: "dgBox2", lines: [TextLine(text: L("dgBox2"), size: 11.5, bold: true, color: .white)],
+                                rect: NSRect(x: g.box2.minX + 24, y: g.box2.minY + 5, width: g.box2.width - 32, height: titleHeight)))
+        let ctlText = !state.controlsRunning ? (state.axTrusted ? L("liCtlOff") : L("dgNeedsAccess")) : (state.controlsArmed ? L("dgArmed") : L("macLiCtlStarting"))
+        blocks.append(TextBlock(id: "box2", lines: [
+            TextLine(text: ctlText, size: 10.5, bold: true, color: Self.lightInk),
+            TextLine(text: L("dgDrives"), size: 9.8, bold: false, color: Self.mutedLight),
+            TextLine(text: L("dgKeepOpen"), size: 9.8, bold: false, color: Self.mutedLight)
+        ], rect: NSRect(x: g.box2.minX + 10, y: g.box2.minY + 31, width: g.box2.width - 18, height: g.box2.maxY - 35 - (g.box2.minY + 31))))
+
+        // Box 3A: OBS Studio; one line between the title and the button.
+        let noteHeight = Self.lineHeight(10.0)
+        blocks.append(TextBlock(id: "dgBox3", lines: [TextLine(text: L("dgBox3"), size: 11.5, bold: true, color: Self.navy)],
+                                rect: NSRect(x: g.box3a.minX + 24, y: g.box3a.minY + 5, width: g.box3a.width - 32, height: titleHeight)))
+        let obsNote: String
+        if !state.obsRunning { obsNote = L("dgObsNotRunning") }
+        else if !state.obsConnected { obsNote = L("dgObsSetup") }
+        else if state.studioOff && !state.controlsRunning { obsNote = L("dgObsStudio") }
+        else if state.controlsRunning && !state.frontIsObs { obsNote = L("dgObsFront") }
+        else { obsNote = L("dgObsLive") }
+        blocks.append(TextBlock(id: "obsNote", lines: [TextLine(text: obsNote, size: 10.0, bold: false, color: Self.mutedDark)],
+                                rect: NSRect(x: g.box3a.minX + 10, y: g.box3a.minY + 23, width: g.box3a.width - 20, height: noteHeight)))
+
+        // Box 3B: VJster video.
+        blocks.append(TextBlock(id: "dgBox4", lines: [TextLine(text: L("dgBox4"), size: 11.5, bold: true, color: Self.navy)],
+                                rect: NSRect(x: g.box3b.minX + 24, y: g.box3b.minY + 5, width: g.box3b.width - 32, height: titleHeight)))
+        let vjNote: String
+        if !state.vjsterEnabled { vjNote = L("dgVjOff") }
+        else if state.vjsterPortBusy { vjNote = L("dgVjBusy", state.vjsterPort) }
+        else if state.controlsRunning && !state.vjsterConnected { vjNote = L("dgVjOpen") }
+        else if state.controlsRunning { vjNote = L("dgVjConnected") }
+        else { vjNote = L("dgVjReady") }
+        blocks.append(TextBlock(id: "vjNote", lines: [TextLine(text: vjNote, size: 10.0, bold: false, color: Self.mutedDark)],
+                                rect: NSRect(x: g.box3b.minX + 10, y: g.box3b.minY + 23, width: g.box3b.width - 20, height: noteHeight)))
+        return blocks
     }
 
     override func resetCursorRects() {
@@ -1104,12 +1281,25 @@ private final class SheetBackground: NSView {
         p.stroke()
     }
 
-    private func drawText(_ text: String, at point: NSPoint, size: CGFloat, bold: Bool = false, color: NSColor) {
-        let attrs: [NSAttributedString.Key: Any] = [
-            .font: bold ? NSFont.boldSystemFont(ofSize: size) : NSFont.systemFont(ofSize: size),
-            .foregroundColor: color
-        ]
-        (text as NSString).draw(at: point, withAttributes: attrs)
+    /// Draws a block at its fitted size, clipped to its rect, so no language can run past a box or the diagram's edge.
+    private func drawBlock(_ block: TextBlock) {
+        let scale = Self.fit(block) ?? Self.floorScale(block)
+        let width = block.rect.width
+        let heights = block.lines.map { Self.height($0, scale: scale, width: width) }
+        let total = heights.reduce(0, +) + Self.lineGap * CGFloat(max(0, heights.count - 1))
+        var y = block.alignBottom ? max(block.rect.minY, block.rect.maxY - total) : block.rect.minY
+        NSGraphicsContext.saveGraphicsState()
+        NSBezierPath(rect: block.rect.insetBy(dx: -1, dy: -1)).addClip()
+        for (line, lineHeight) in zip(block.lines, heights) {
+            let room = min(lineHeight, block.rect.maxY + 1 - y)
+            if room > 0 {
+                (line.text as NSString).draw(with: NSRect(x: block.rect.minX, y: y, width: width, height: room),
+                                             options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine],
+                                             attributes: Self.attributes(line, scale: scale), context: nil)
+            }
+            y += lineHeight + Self.lineGap
+        }
+        NSGraphicsContext.restoreGraphicsState()
     }
 
     private func drawDot(_ lamp: Lamp, x: CGFloat, y: CGFloat) {
@@ -1149,18 +1339,6 @@ private final class SheetBackground: NSView {
         fill(bounds, outerBg, radius: 8)
         stroke(bounds.insetBy(dx: 0.5, dy: 0.5), outerBorder, radius: 8, width: 1)
 
-        drawText(
-            L("dgHeader"),
-            at: NSPoint(x: 12, y: 7),
-            size: 10.5,
-            bold: true,
-            color: NSColor(srgbRed: 76 / 255, green: 88 / 255, blue: 112 / 255, alpha: 1)
-        )
-
-        let lightInk = NSColor(srgbRed: 232 / 255, green: 237 / 255, blue: 247 / 255, alpha: 1)
-        let mutedLight = NSColor(srgbRed: 172 / 255, green: 182 / 255, blue: 204 / 255, alpha: 1)
-        let mutedDark = NSColor(srgbRed: 96 / 255, green: 106 / 255, blue: 126 / 255, alpha: 1)
-
         // --- Arrow 1: TourBox + Console -> Fadester Companion ---
         let a1Active = state.consoleRunning
         let a1Color = a1Active ? Self.green : Self.grey
@@ -1174,11 +1352,8 @@ private final class SheetBackground: NSView {
         a1Color.setStroke()
         p1.stroke()
         drawArrowHead(tip: a1End, color: a1Color)
-        drawText(L("dgShortcuts"), at: NSPoint(x: a1Start.x + 8, y: a1Start.y - 17), size: 9.5, bold: true, color: Self.navy)
-        drawText(L("dgObsActive"), at: NSPoint(x: a1Start.x + 7, y: a1Start.y + 5), size: 9.0, bold: false, color: mutedDark)
 
         // --- Arrow 2: Fadester Companion -> OBS Studio (top) & VJster Video (bottom) ---
-        let splitX = g.box2.maxX + 18
         let trunkY = g.box2.midY
         let topY = g.box3a.midY
         let botY = g.box3b.midY
@@ -1188,73 +1363,46 @@ private final class SheetBackground: NSView {
         pTop.lineWidth = 2.0
         if !state.obsConnected { pTop.setLineDash([4, 3], count: 2, phase: 0) }
         pTop.move(to: NSPoint(x: g.box2.maxX + 2, y: trunkY))
-        pTop.line(to: NSPoint(x: splitX, y: trunkY))
-        pTop.line(to: NSPoint(x: splitX, y: topY))
+        pTop.line(to: NSPoint(x: g.splitX, y: trunkY))
+        pTop.line(to: NSPoint(x: g.splitX, y: topY))
         pTop.line(to: NSPoint(x: g.box3a.minX - 8, y: topY))
         obsLinkColor.setStroke()
         pTop.stroke()
         drawArrowHead(tip: NSPoint(x: g.box3a.minX - 3, y: topY), color: obsLinkColor)
-        drawText(L("dgWsTbar"), at: NSPoint(x: splitX + 5, y: topY - 15), size: 9.2, bold: true, color: Self.navy)
 
         let vjActive = state.vjsterEnabled && !state.vjsterPortBusy && (!state.controlsRunning || state.vjsterConnected)
         let vjLinkColor = !state.vjsterEnabled ? Self.grey : (state.vjsterPortBusy ? Self.red : (vjActive ? Self.green : Self.amber))
         let pBot = NSBezierPath()
         pBot.lineWidth = 2.0
         if !vjActive { pBot.setLineDash([4, 3], count: 2, phase: 0) }
-        pBot.move(to: NSPoint(x: splitX, y: trunkY))
-        pBot.line(to: NSPoint(x: splitX, y: botY))
+        pBot.move(to: NSPoint(x: g.splitX, y: trunkY))
+        pBot.line(to: NSPoint(x: g.splitX, y: botY))
         pBot.line(to: NSPoint(x: g.box3b.minX - 8, y: botY))
         vjLinkColor.setStroke()
         pBot.stroke()
         drawArrowHead(tip: NSPoint(x: g.box3b.minX - 3, y: botY), color: vjLinkColor)
-        drawText(L("dgPort", state.vjsterPort), at: NSPoint(x: splitX + 5, y: botY + 4), size: 9.2, bold: true, color: mutedDark)
 
         // --- Box 1: TourBox + Console ---
         fill(g.box1, Self.darkCard, radius: 7)
         stroke(g.box1, lampColor(state.tourBoxLamp).withAlphaComponent(0.85), radius: 7, width: 1.4)
         drawDot(state.tourBoxLamp, x: g.box1.minX + 10, y: g.box1.minY + 10)
-        drawText(L("dgBox1"), at: NSPoint(x: g.box1.minX + 24, y: g.box1.minY + 7), size: 11.5, bold: true, color: .white)
         drawMiniTourBox(in: NSRect(x: g.box1.minX + 10, y: g.box1.minY + 32, width: 45, height: 47))
-        let tbLine1 = state.consoleRunning ? L("dgConsoleOpen") : (state.consoleInstalled ? L("dgConsoleClosed") : L("dgConsoleGet"))
-        drawText(tbLine1, at: NSPoint(x: g.box1.minX + 62, y: g.box1.minY + 33), size: 10.5, bold: true, color: lightInk)
-        drawText(L("dgImportOnce"), at: NSPoint(x: g.box1.minX + 62, y: g.box1.minY + 49), size: 9.8, bold: false, color: mutedLight)
-        drawText(L("dgAutoSwitch"), at: NSPoint(x: g.box1.minX + 62, y: g.box1.minY + 63), size: 9.8, bold: false, color: mutedLight)
 
         // --- Box 2: Fadester Companion (Here) ---
         fill(g.box2, Self.navy, radius: 7)
         stroke(g.box2, state.controlsArmed ? Self.green : (!state.axTrusted ? Self.amber : Self.accent), radius: 7, width: 1.5)
         drawDot(state.controlsLamp, x: g.box2.minX + 10, y: g.box2.minY + 10)
-        drawText(L("dgBox2"), at: NSPoint(x: g.box2.minX + 24, y: g.box2.minY + 7), size: 11.5, bold: true, color: .white)
-        let ctlText = !state.controlsRunning ? (state.axTrusted ? L("liCtlOff") : L("dgNeedsAccess")) : (state.controlsArmed ? L("dgArmed") : L("macLiCtlStarting"))
-        drawText(ctlText, at: NSPoint(x: g.box2.minX + 10, y: g.box2.minY + 33), size: 10.5, bold: true, color: lightInk)
-        drawText(L("dgDrives"), at: NSPoint(x: g.box2.minX + 10, y: g.box2.minY + 49), size: 9.8, bold: false, color: mutedLight)
-        drawText(L("dgKeepOpen"), at: NSPoint(x: g.box2.minX + 10, y: g.box2.minY + 63), size: 9.8, bold: false, color: mutedLight)
 
-        // --- Box 3A: OBS Studio ---
+        // --- Box 3A: OBS Studio, Box 3B: VJster Video ---
         fill(g.box3a, .white, radius: 7)
         stroke(g.box3a, lampColor(state.obsLamp), radius: 7, width: 1.4)
         drawDot(state.obsLamp, x: g.box3a.minX + 10, y: g.box3a.minY + 9)
-        drawText(L("dgBox3"), at: NSPoint(x: g.box3a.minX + 24, y: g.box3a.minY + 6), size: 11.5, bold: true, color: Self.navy)
-        let obsNote: String
-        if !state.obsRunning { obsNote = L("dgObsNotRunning") }
-        else if !state.obsConnected { obsNote = L("dgObsSetup") }
-        else if state.studioOff && !state.controlsRunning { obsNote = L("dgObsStudio") }
-        else if state.controlsRunning && !state.frontIsObs { obsNote = L("dgObsFront") }
-        else { obsNote = L("dgObsLive") }
-        drawText(obsNote, at: NSPoint(x: g.box3a.minX + 10, y: g.box3a.minY + 32), size: 10.0, bold: false, color: mutedDark)
-
-        // --- Box 3B: VJster Video ---
         fill(g.box3b, .white, radius: 7)
         stroke(g.box3b, lampColor(state.vjsterLamp), radius: 7, width: 1.4)
         drawDot(state.vjsterLamp, x: g.box3b.minX + 10, y: g.box3b.minY + 9)
-        drawText(L("dgBox4"), at: NSPoint(x: g.box3b.minX + 24, y: g.box3b.minY + 6), size: 11.5, bold: true, color: Self.navy)
-        let vjNote: String
-        if !state.vjsterEnabled { vjNote = L("dgVjOff") }
-        else if state.vjsterPortBusy { vjNote = L("dgVjBusy", state.vjsterPort) }
-        else if state.controlsRunning && !state.vjsterConnected { vjNote = L("dgVjOpen") }
-        else if state.controlsRunning { vjNote = L("dgVjConnected") }
-        else { vjNote = L("dgVjReady") }
-        drawText(vjNote, at: NSPoint(x: g.box3b.minX + 10, y: g.box3b.minY + 32), size: 10.0, bold: false, color: mutedDark)
+
+        // --- Every label, fitted to its room ---
+        for block in textBlocks(g) { drawBlock(block) }
 
         // --- Interactive pill buttons inside all boxes ---
         for btn in g.buttons {
@@ -1269,12 +1417,68 @@ private final class SheetBackground: NSView {
             }
             fill(btn.rect, bg, radius: 5)
             let attrs: [NSAttributedString.Key: Any] = [
-                .font: NSFont.boldSystemFont(ofSize: 10.5),
+                .font: NSFont.boldSystemFont(ofSize: btn.fontSize),
                 .foregroundColor: NSColor.white
             ]
             let sz = (btn.title as NSString).size(withAttributes: attrs)
-            let textPt = NSPoint(x: btn.rect.minX + (btn.rect.width - sz.width) / 2, y: btn.rect.minY + (btn.rect.height - sz.height) / 2)
+            let textPt = NSPoint(x: btn.rect.minX + max(0, (btn.rect.width - sz.width) / 2), y: btn.rect.minY + (btn.rect.height - sz.height) / 2)
+            NSGraphicsContext.saveGraphicsState()
+            NSBezierPath(rect: btn.rect).addClip()
             (btn.title as NSString).draw(at: textPt, withAttributes: attrs)
+            NSGraphicsContext.restoreGraphicsState()
         }
+    }
+
+    /// What does not fit at this width: labels that would need less than 8 points, pills too wide for their box,
+    /// pills outside their box or over a label.
+    private func layoutProblems(width: CGFloat) -> [String] {
+        let g = geometry(for: width)
+        let blocks = textBlocks(g)
+        var problems: [String] = []
+        for block in blocks where Self.fit(block) == nil {
+            problems.append("\(block.id) “\(block.lines.map { $0.text }.joined(separator: " / "))” does not fit \(Int(block.rect.width))×\(Int(block.rect.height)) points")
+        }
+        let boxes = [g.box1, g.box2, g.box3a, g.box3b]
+        for (index, btn) in g.buttons.enumerated() {
+            if !btn.fits { problems.append("button “\(btn.title)” is wider than its box") }
+            if !boxes.contains(where: { $0.insetBy(dx: 4, dy: 4).contains(btn.rect) }) { problems.append("button “\(btn.title)” leaves its box") }
+            for block in blocks where block.rect.intersects(btn.rect) { problems.append("button “\(btn.title)” covers \(block.id)") }
+            for other in g.buttons[(index + 1)...] where other.rect.intersects(btn.rect) { problems.append("buttons “\(btn.title)” and “\(other.title)” overlap") }
+        }
+        return problems
+    }
+
+    /// Measures every diagram label and button in all 10 panel languages, in every state that changes a label,
+    /// at the narrowest diagram (700 points) and a wide one. Runs in --self-test; no window is shown.
+    static func selfTest() throws {
+        let previous = PanelText.locale
+        defer { PanelText.use(previous) }
+        var states: [State] = []
+        for sync in [PresetSyncState.neverSaved, .current, .updateAvailable] {
+            for (running, installed) in [(false, true), (true, true), (false, false)] {
+                var s = State(); s.presetSync = sync; s.consoleRunning = running; s.consoleInstalled = installed; states.append(s)
+            }
+        }
+        var off = State(); off.vjsterEnabled = false; states.append(off)
+        var setup = State(); setup.axTrusted = false; setup.obsRunning = true; setup.vjsterPortBusy = true; states.append(setup)
+        var studio = State(); studio.obsRunning = true; studio.obsConnected = true; studio.studioOff = true; states.append(studio)
+        var armed = State(); armed.controlsRunning = true; armed.controlsArmed = true; armed.obsRunning = true; armed.obsConnected = true; states.append(armed)
+        var live = State(); live.controlsRunning = true; live.obsRunning = true; live.obsConnected = true; live.frontIsObs = true; live.vjsterConnected = true; states.append(live)
+        let view = SetupDiagramView(frame: NSRect(x: 0, y: 0, width: 700, height: 180))
+        var problems: [String] = [], seen = Set<String>()
+        for locale in PanelStrings.locales {
+            PanelText.use(locale)
+            for state in states {
+                view.state = state
+                for width in [700, 940] as [CGFloat] {
+                    for problem in view.layoutProblems(width: width) {
+                        let line = "\(locale) at \(Int(width)) points: \(problem)"
+                        if seen.insert(line).inserted { problems.append(line) }
+                    }
+                }
+            }
+        }
+        if !problems.isEmpty { throw PanelFailure.message("Self-test: setup diagram text does not fit:\n" + problems.joined(separator: "\n")) }
+        print("PASS: setup diagram labels and buttons fit in all \(PanelStrings.locales.count) panel languages at 700 and 940 points.")
     }
 }

@@ -87,7 +87,7 @@ private final class Listener: NSObject, NSApplicationDelegate {
     static func main() {
         let args = Array(CommandLine.arguments.dropFirst())
         if args.isEmpty || args == ["--help"] {
-            print("Experimental Fadester Mac shortcuts. --listen MAP explicitly registers the map's chords (Ctrl, Alt and Shift become Control, Option and Shift; never Command), initially disarmed. --self-test --map MAP performs synthetic checks only. No event tap, unrelated-key capture, Accessibility prompt or OBS connection.")
+            print("Fadester Companion Shortcuts. --listen MAP explicitly registers the map's chords (Ctrl, Alt and Shift become Control, Option and Shift; never Command), initially disarmed. --self-test --map MAP performs synthetic checks only. No event tap, unrelated-key capture, Accessibility prompt or OBS connection.")
             return
         }
         do {

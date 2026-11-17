@@ -1,6 +1,6 @@
 # Fadester Companion: Store listings in nine more languages
 
-The same listing as [LISTING.md](LISTING.md), for version 0.1.5. In Partner Center, in the submission, add each language under Store listings → Add/remove languages (Additional Store listing languages), and paste its blocks. Reuse the English screenshots and images from `listing/`. Copyright, license terms and "Developed by" stay as in [LISTING.md](LISTING.md). Product features are one per box; keywords are seven, entered one at a time.
+The same listing as [LISTING.md](LISTING.md), for version 0.1.6. In Partner Center, in the submission, add each language under Store listings → Add/remove languages (Additional Store listing languages), and paste its blocks. Reuse the English screenshots and images from `listing/`. Copyright, license terms and "Developed by" stay as in [LISTING.md](LISTING.md). Product features are one per box; keywords are seven, entered one at a time.
 
 ## Deutsch (de)
 
@@ -18,7 +18,7 @@ Benötigt OBS Studio mit eingeschaltetem WebSocket-Server (Werkzeuge → WebSock
 
 **Short description:** Ihr Gamecontroller als Bildmischer für OBS Studio: ein echter T-Bar am rechten Trigger, Szenen auf dem Steuerkreuz, Musik am linken Trigger.
 
-**What's new:** Version 0.1.5:
+**What's new:** Version 0.1.6:
 
 - Ein Name: Jede Datei, die die App installiert, trägt jetzt den Namen Fadester Companion, und Bildschirmfotos landen in Bilder\Fadester Companion.
 - Tab Einrichtung, VJster: Wählen Sie, wo YouTube läuft (Chrome und OBS-Seite, Nur Chrome-Erweiterung oder Nur OBS-Browserquelle), fügen Sie eine OBS-Video-URL oder -ID ein und kopieren Sie den Link für die OBS-Browserquelle mit einem Klick.
@@ -60,7 +60,7 @@ Necesita OBS Studio con su servidor WebSocket activado (Herramientas → Ajustes
 
 **Short description:** Tu mando de juego, ahora un mezclador de vídeo para OBS Studio: un T-bar de verdad en el gatillo derecho, escenas en la cruceta y música en el gatillo izquierdo.
 
-**What's new:** Versión 0.1.5:
+**What's new:** Versión 0.1.6:
 
 - Un solo nombre: todos los archivos que instala la aplicación llevan ahora el nombre Fadester Companion, y las capturas de pantalla se guardan en Imágenes\Fadester Companion.
 - Pestaña Configuración, VJster: elige dónde se reproduce YouTube (Chrome y página de OBS, Solo la extensión de Chrome o Solo la fuente de navegador de OBS), pega una URL o un ID de vídeo de OBS y copia el enlace de la fuente de navegador de OBS con un clic.
@@ -102,7 +102,7 @@ Nécessite OBS Studio avec son serveur WebSocket activé (Outils → Paramètres
 
 **Short description:** Votre manette de jeu devient un mélangeur vidéo pour OBS Studio : un vrai T-bar sur la gâchette droite, les scènes sur le pavé directionnel, la musique sur la gâchette gauche.
 
-**What's new:** Version 0.1.5 :
+**What's new:** Version 0.1.6 :
 
 - Un seul nom : tous les fichiers que l’application installe portent désormais le nom Fadester Companion, et les captures d’écran sont enregistrées dans Images\Fadester Companion.
 - Onglet Configuration, VJster : choisissez où YouTube est lu (Chrome et page OBS, Extension Chrome seule ou Source navigateur OBS seule), collez une URL ou un ID de vidéo OBS et copiez le lien de la source navigateur OBS en un clic.
@@ -144,7 +144,7 @@ Richiede OBS Studio con il server WebSocket attivo (Strumenti → Impostazioni d
 
 **Short description:** Il tuo controller di gioco diventa un mixer video per OBS Studio: un vero T-bar sul grilletto destro, le scene sul D-pad, la musica sul grilletto sinistro.
 
-**What's new:** Versione 0.1.5:
+**What's new:** Versione 0.1.6:
 
 - Un solo nome: tutti i file che l’app installa ora portano il nome Fadester Companion, e gli screenshot vengono salvati in Immagini\Fadester Companion.
 - Scheda Configurazione, VJster: scegli dove viene riprodotto YouTube (Chrome e pagina OBS, Solo estensione Chrome o Solo sorgente browser di OBS), incolla un URL o un ID video per OBS e copia il link della sorgente browser di OBS con un clic.
@@ -186,7 +186,7 @@ WebSocket サーバーを有効にした OBS Studio が必要です（ツール 
 
 **Short description:** ゲームコントローラーが OBS Studio のビデオスイッチャーに。右トリガーは本物の T バー、十字キーでシーン、左トリガーで音楽。
 
-**What's new:** バージョン 0.1.5：
+**What's new:** バージョン 0.1.6：
 
 - 名前を一つに：アプリがインストールするファイルはすべて Fadester Companion という名前になり、スクリーンショットは ピクチャ\Fadester Companion に保存されます。
 - セットアップタブの VJster：YouTube を再生する場所（Chrome と OBS ページ、Chrome 拡張機能のみ、OBS ブラウザソースのみ）を選び、OBS 用の動画 URL または ID を貼り付け、OBS ブラウザソースのリンクをワンクリックでコピーできます。
@@ -228,7 +228,7 @@ WebSocket 서버가 켜진 OBS Studio가 필요합니다(도구 → WebSocket �
 
 **Short description:** 게임 컨트롤러가 OBS Studio용 비디오 스위처로: 오른쪽 트리거는 진짜 T바, 십자키는 장면, 왼쪽 트리거는 음악.
 
-**What's new:** 버전 0.1.5:
+**What's new:** 버전 0.1.6:
 
 - 하나의 이름: 앱이 설치하는 모든 파일이 이제 Fadester Companion이라는 이름을 쓰며, 스크린샷은 사진\Fadester Companion에 저장됩니다.
 - 설정 탭, VJster: YouTube를 재생할 곳(Chrome 및 OBS 페이지, Chrome 확장 프로그램만, OBS 브라우저 소스만)을 고르고, OBS용 동영상 URL 또는 ID를 붙여 넣고, OBS 브라우저 소스 링크를 한 번의 클릭으로 복사할 수 있습니다.
@@ -270,7 +270,7 @@ Fadester Companion превращает контроллеры, которые �
 
 **Short description:** Ваш геймпад — теперь видеомикшер для OBS Studio: настоящий T-bar на правом триггере, сцены на крестовине, музыка на левом триггере.
 
-**What's new:** Версия 0.1.5:
+**What's new:** Версия 0.1.6:
 
 - Одно имя: все файлы, которые устанавливает приложение, теперь носят имя Fadester Companion, а снимки экрана сохраняются в Изображения\Fadester Companion.
 - Вкладка «Настройка», VJster: выберите, где воспроизводится YouTube (Chrome и страница OBS, Только расширение Chrome или Только источник «Браузер» OBS), вставьте URL или ID видео для OBS и скопируйте ссылку для источника «Браузер» OBS одним щелчком.
@@ -312,7 +312,7 @@ OBS 在前台时它照样工作，只与你电脑上的 OBS 和 VJster 扩展通
 
 **Short description:** 你的游戏手柄，变身 OBS Studio 视频切换台：右扳机是真正的 T-bar，方向键切换场景，左扳机控制音乐。
 
-**What's new:** 版本 0.1.5：
+**What's new:** 版本 0.1.6：
 
 - 统一名称：应用安装的所有文件现在都使用 Fadester Companion 这个名称，截图保存到 图片\Fadester Companion。
 - 设置选项卡中的 VJster：选择 YouTube 在哪里播放（Chrome 和 OBS 页面、仅 Chrome 扩展或仅 OBS 浏览器源），粘贴 OBS 视频 URL 或 ID，一键复制 OBS 浏览器源链接。
@@ -354,7 +354,7 @@ OBS 在前景時它照樣運作，只與你電腦上的 OBS 和 VJster 擴充功
 
 **Short description:** 你的遊戲控制器，變身 OBS Studio 視訊切換台：右扳機是真正的 T-bar，十字鍵切換場景，左扳機控制音樂。
 
-**What's new:** 版本 0.1.5：
+**What's new:** 版本 0.1.6：
 
 - 統一名稱：應用程式安裝的所有檔案現在都使用 Fadester Companion 這個名稱，螢幕擷圖儲存到 圖片\Fadester Companion。
 - 設定分頁中的 VJster：選擇 YouTube 在哪裡播放（Chrome 與 OBS 頁面、僅 Chrome 擴充功能或僅 OBS 瀏覽器來源），貼上 OBS 影片 URL 或 ID，一鍵複製 OBS 瀏覽器來源連結。

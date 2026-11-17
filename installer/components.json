@@ -43,7 +43,7 @@
     },
     "companion": {
       "name": "Fadester Companion",
-      "version": "0.1.5",
+      "version": "0.1.6",
       "appId": "18EAD777-F9B7-42AB-BB49-482FB1F46695",
       "storePackageFamilyPrefix": "Fluxxuuss.FadesterCompanion_",
       "comment": "Built from this repository by tourbox/build.ps1 (a finished build has build-complete.txt); not downloaded."

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Re-pins the Fadester Suite Setup inputs to newly PUBLISHED releases.
 //
-//   node installer/update-pins.mjs --midi 0.7.1 --vs 0.7.1 --playlister 0.5.1 --sd 0.12.2 [--ext 0.1.3 --ext-tag v0.11.0]
+//   node installer/update-pins.mjs --midi 0.7.2 --vs 0.7.2 --playlister 0.5.2 --sd 0.12.3 [--ext 0.1.3 --ext-tag v0.11.0]
 //
 // For each component named, it downloads the public release asset, computes its SHA-256 and rewrites that entry's
 // version, file, url and sha256 in installer/components.json. Components not named keep their pins. Draft releases

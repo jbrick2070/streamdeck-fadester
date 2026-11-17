@@ -2,7 +2,7 @@
 
 > **Setting up the Fadester Suite?** Start with **[docs/START-HERE.md](docs/START-HERE.md)** for what to install for your controller, which video player to pick, first-run OBS settings, and the compatibility matrix.
 
-**Fadester for OBS 0.12.2** puts OBS Studio on your Stream Deck: scenes, transitions, sources, filters and audio on keys and dials. It talks to OBS's built-in WebSocket server, so you need no MIDI desk and no extra OBS plugin for the main controls. Fourteen ready-made layouts open from any control's settings page. Nine languages.
+**Fadester for OBS 0.12.3** puts OBS Studio on your Stream Deck: scenes, transitions, sources, filters and audio on keys and dials. It talks to OBS's built-in WebSocket server, so you need no MIDI desk and no extra OBS plugin for the main controls. Fourteen ready-made layouts open from any control's settings page. Nine languages.
 
 ![Photo of a Stream Deck + running Fadester for OBS in Dutch: scene keys, two Playlister keys, the red PANIEK (Panic) key, a crossfader strip and a Desktop Audio dial on the touch strip. Several keys still ask for Studio Mode or a Playlister to be picked.](docs/images/streamdeck-fadester-hero.jpg)
 
@@ -95,7 +95,7 @@ The [Suite Demo Kit](demo-kit/README.md) is one OBS scene collection with media 
 | **VJster (Chrome / Edge tab)** | A YouTube tab (with quality choice) or an HTML5 `<video>` tab captured into OBS | **25% to 200% (0.25x to 2x)** default (up to **400% (4x)** if YouTube lists it; **10% to 1600% (0.1x to 16x)** with **Extended** enabled) | Changes live in place without restarting | **Fadester for OBS** (VJster dials/keys) and **Fadester Companion** |
 | **VJster OBS page** | One YouTube video (`v=`) or playlist (`list=`) in an OBS **Browser Source** | **25% to 200% (0.25x to 2x)** (OBS CEF 150 embed ceiling) | Changes live in place without restarting; speed and play/pause only (no embed quality API) | **Fadester for OBS** (VJster dials/keys) and **Fadester Companion** |
 | **Visual Sidechain: Tape Deck** | One local or network-share video file (`MP4`, `MKV`, `MOV`, `WebM`) on a dedicated OBS **Browser Source** (Windows) | **25% to 800% (0.25x to 8x)** (`100% (1x)` normal) | Changes picture and sound live in place without restarting; optional **Tape pitch** and ratio **Speed Fader** | **Fadester for OBS** (**Tape Deck** key/dial or **OBS Filter**), Midi Fadester **Speed Fader**, OBS hotkeys, `obs-websocket` (`deck_command`). *(Fadester Companion preset support is a follow-up.)* |
-| **OBS Playlister** | Ordered playlists of local files, folders, `.m3u` / `.m3u8` / `.pls` playlists, and stream URLs in an OBS **Playlister** source (Windows & Linux; macOS experimental, not verified on hardware) | **1% to 200% (0.01x to 2x)** (`100% (1x)` normal) | Source setting only: **changing Speed restarts the playing clip from its beginning** | **Fadester for OBS** (**Playlister Transport** key), OBS Media Controls, OBS hotkeys, `obs-websocket` media inputs |
+| **OBS Playlister** | Ordered playlists of local files, folders, `.m3u` / `.m3u8` / `.pls` playlists, and stream URLs in an OBS **Playlister** source (Windows, Linux and macOS; on a Mac it loads and creates its source, the hands-on test is still to come) | **1% to 200% (0.01x to 2x)** (`100% (1x)` normal) | Source setting only: **changing Speed restarts the playing clip from its beginning** | **Fadester for OBS** (**Playlister Transport** key), OBS Media Controls, OBS hotkeys, `obs-websocket` media inputs |
 
 ## Bring your own controller or robot
 

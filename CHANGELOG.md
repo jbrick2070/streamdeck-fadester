@@ -4,6 +4,10 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 
 ## Unreleased
 
+## 0.12.3 - 2026-11-17
+
+0.12.2 was a draft for the hardware test and was never published. This release ships Fadester Companion 0.1.7.
+
 - **Fadester Companion for Mac ships in every release**, next to the Windows Companion ZIP: `Fadester-Companion-macOS-arm64-<version>.zip` (Apple silicon) and `Fadester-Companion-macOS-x64-<version>.zip` (Intel), at the Companion version in `installer/components.json`. It is no longer an experimental, unreleased build.
   - Each ZIP holds `Fadester Companion.app` (panel, self-contained `FadesterMacHost`, native slider and shortcut helpers), the Mac TourBox preset, the Mac quick guide, the read-me and the license. Two ZIPs rather than a universal app, because the .NET single-file host cannot be merged with `lipo`.
   - Ad-hoc signed, not notarized: the first time, right-click (or Control-click) the app and choose **Open**, then **Open** again, or click **Open Anyway** in **System Settings → Privacy & Security**.

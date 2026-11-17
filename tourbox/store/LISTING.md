@@ -20,17 +20,13 @@ Your game controller, now a vision mixer for OBS Studio: a real T-bar on the rig
 
 ## What's new in this version
 
-Version 0.1.6:
+Version 0.1.7:
 
-- One name: every file the app installs now carries the name Fadester Companion, and screenshots save to Pictures\Fadester Companion.
-- Setup tab, VJster: choose where YouTube plays (Chrome & OBS page, Chrome extension only, or OBS Browser Source only), paste an OBS video URL or ID, and copy the OBS Browser Source link in one click.
-- The "keep this window open" reminder now stays in view under the buttons.
-- Safer T-bar: if OBS's slider or connection is lost mid-fade, the fade closes by itself (past half way it finishes, before half way it goes back), and a fade never stays stuck.
-- Steps from the controller land cleanly on the ends of the T-bar.
-- Quantized takes: a take can wait for the next beat or bar from Visual Sidechain, with a millisecond fallback when there is no tempo.
-- A live Visual Sidechain line (BPM, beat, bands) in the setup strip and HUD.
-- Layer 2 opacity uses Midi Fadester's opacity slot when one is set up, instead of adding a second filter.
-- Works with any OBS Studio 33.x release.
+- A Mac version: Fadester Companion for Mac (Apple silicon and Intel) now comes with every release on GitHub.
+- New TourBox and VJster lights in the status strip, each with the one button that fixes it, such as Open Console or Show me.
+- Show me where to click: an animated guide walks you through importing the preset into TourBox Console.
+- Bring OBS to Front: a button on the reminder, and in the tray menu, brings OBS's main window back.
+- The Mac app speaks the same 10 languages as the Windows app.
 
 ## Product features
 

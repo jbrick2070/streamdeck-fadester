@@ -6,7 +6,7 @@
 import { DEFAULT_LINK_PORT } from "../../src/vjster/shared/protocol.js";
 import { message, translatePage } from "./i18n.js";
 import { LINK_STATUS_REQUEST, linkLine, readLinkStatus, type LinkStatus } from "./messages.js";
-import { ALL_SITES_IDS, ALL_SITES_KEY, ALL_SITES_SCRIPTS, PORT_KEY, allSitesChecked, readPort } from "./settings.js";
+import { ALL_SITES_IDS, ALL_SITES_KEY, ALL_SITES_SCRIPTS, PORT_KEY, allSitesChecked, allSitesOffered, readPort } from "./settings.js";
 
 const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
 
@@ -14,8 +14,11 @@ async function show(): Promise<void> {
   const stored = await chrome.storage.local.get([PORT_KEY, ALL_SITES_KEY]);
   $<HTMLInputElement>("port").value = String(readPort(stored[PORT_KEY]));
   $<HTMLElement>("ext-id").textContent = chrome.runtime.id;
-  // The Chrome Web Store build is YouTube only: with no optional all-sites permission in the manifest, the option is not offered.
-  const offered = (chrome.runtime.getManifest().optional_host_permissions ?? []).includes("<all_urls>");
+  const manifest = chrome.runtime.getManifest();
+  // Every window shows its version (suite goal).
+  $<HTMLElement>("version").textContent = `v${manifest.version}`;
+  // The Chrome Web Store build is YouTube only: with no all-sites permission in the manifest, the option is not offered.
+  const offered = allSitesOffered(manifest);
   $<HTMLElement>("all-sites-row").hidden = !offered;
   const granted = offered && (await chrome.permissions.contains({ origins: ["<all_urls>"] }));
   $<HTMLInputElement>("all-sites").checked = allSitesChecked(offered, stored[ALL_SITES_KEY], granted);

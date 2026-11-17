@@ -13,7 +13,7 @@ declare namespace chrome {
       url?: string;
     }
     const id: string;
-    function getManifest(): { optional_host_permissions?: string[] };
+    function getManifest(): { version: string; host_permissions?: string[]; optional_host_permissions?: string[] };
     const lastError: { message?: string } | undefined;
     function sendMessage(message: unknown): Promise<unknown>;
     function getURL(path: string): string;

@@ -39,7 +39,7 @@
     "message": "Piloter les vidéos sur tous les sites, pas seulement YouTube"
   },
   "allSitesNote": {
-    "message": "Vitesse uniquement : la qualité nécessite le lecteur de YouTube. Chrome demande l'autorisation de lire et de modifier tous les sites."
+    "message": "Vitesse seulement : la qualité nécessite le lecteur YouTube. Décochez pour garder VJster sur YouTube uniquement."
   },
   "statusLinkUp": {
     "message": "Connecté à VJster sur le port $PORT$.",

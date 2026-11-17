@@ -22,6 +22,7 @@ export const ALSO_NEEDED = ["options.js"] as const;
 interface ExtensionManifest {
   version?: unknown;
   permissions?: unknown;
+  host_permissions?: unknown;
   optional_host_permissions?: unknown;
   default_locale?: unknown;
   background?: { service_worker?: unknown };
@@ -59,14 +60,15 @@ export function neededFiles(manifest: ExtensionManifest, locales: readonly strin
 }
 
 /**
- * The manifest of the Chrome Web Store build: YouTube only. The optional all-sites permission goes, and with it
+ * The manifest of the Chrome Web Store build: YouTube only. The all-sites permission goes, and with it
  * `scripting`, which only that option uses; a smaller list of permissions is a quicker review. No `key` is added:
  * the store refuses one on a first upload and gives the extension its id (docs/vjster/STORE.md).
  */
 export function storeManifest<T extends ExtensionManifest>(manifest: T): T {
   const { optional_host_permissions: _optional, ...rest } = manifest;
   const permissions = Array.isArray(manifest.permissions) ? manifest.permissions.filter((p) => p !== "scripting") : manifest.permissions;
-  return { ...rest, ...(permissions === undefined ? {} : { permissions }) } as T;
+  const hosts = Array.isArray(manifest.host_permissions) ? manifest.host_permissions.filter((p) => p !== "<all_urls>") : manifest.host_permissions;
+  return { ...rest, ...(permissions === undefined ? {} : { permissions }), ...(hosts === undefined ? {} : { host_permissions: hosts }) } as T;
 }
 
 function files(dir: string): string[] {

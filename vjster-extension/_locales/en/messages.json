@@ -39,7 +39,7 @@
     "message": "Control videos on every site, not only YouTube"
   },
   "allSitesNote": {
-    "message": "Speed only: quality needs YouTube's player. Chrome asks for permission to read and change every site."
+    "message": "Speed only: quality needs YouTube's player. Untick to keep VJster on YouTube only."
   },
   "statusLinkUp": {
     "message": "Connected to VJster on port $PORT$.",

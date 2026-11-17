@@ -39,7 +39,7 @@
     "message": "控制所有網站上的影片，而不只是 YouTube"
   },
   "allSitesNote": {
-    "message": "僅限速度：畫質需要 YouTube 的播放器。Chrome 會要求讀取和變更所有網站資料的權限。"
+    "message": "僅限速度：畫質需要 YouTube 播放器。取消勾選可讓 VJster 只用於 YouTube。"
   },
   "statusLinkUp": {
     "message": "已透過連接埠 $PORT$ 連線到 VJster。",

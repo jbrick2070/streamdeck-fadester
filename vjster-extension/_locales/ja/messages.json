@@ -39,7 +39,7 @@
     "message": "YouTube だけでなく、すべてのサイトの動画を操作する"
   },
   "allSitesNote": {
-    "message": "速度のみ: 画質の変更には YouTube のプレーヤーが必要です。Chrome から、すべてのサイトのデータの読み取りと変更の許可を求められます。"
+    "message": "速度のみ：画質には YouTube のプレーヤーが必要です。YouTube だけで使うにはチェックを外してください。"
   },
   "statusLinkUp": {
     "message": "ポート $PORT$ で VJster に接続済みです。",

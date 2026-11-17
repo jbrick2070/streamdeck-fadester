@@ -39,7 +39,7 @@
     "message": "Controlar vídeos em todos os sites, não só no YouTube"
   },
   "allSitesNote": {
-    "message": "Só a velocidade: a qualidade precisa do player do YouTube. O Chrome pede permissão para ler e alterar todos os sites."
+    "message": "Só velocidade: a qualidade precisa do player do YouTube. Desmarque para deixar o VJster só no YouTube."
   },
   "statusLinkUp": {
     "message": "Conectado ao VJster na porta $PORT$.",

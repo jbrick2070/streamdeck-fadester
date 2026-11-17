@@ -9,7 +9,7 @@ npx rollup -c vjster-extension/rollup.config.mjs
 node --import tsx scripts/vjster/pack-extension.ts --store
 ```
 
-This writes `release/vjster-chrome-extension-<version>-store.zip`. It is the same extension as the zip to load unpacked, with one difference: **YouTube only**. The optional "every site" permission and `scripting`, which only it uses, are left out, so the review is shorter. The options page hides the "every site" box when the permission is not in the manifest.
+This writes `release/vjster-chrome-extension-<version>-store.zip`. It is the same extension as the zip to load unpacked, with one difference: **YouTube only**. The "every site" permission (`<all_urls>`, which the unpacked zip asks for at install) and `scripting`, which only it uses, are left out, so the review is shorter. The options page hides the "every site" box when the permission is not in the manifest.
 
 The zip has no `key`: the store refuses one on a first upload and gives the extension its own id.
 

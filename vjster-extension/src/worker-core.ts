@@ -8,7 +8,7 @@ import { LinkClient, type SocketLike } from "./link-client.js";
 import { isLinkStatusRequest, readBridgeToWorker, plainIntent, type LinkStatus } from "./messages.js";
 import { NO_VIDEO } from "./page-state.js";
 import { Router } from "./router.js";
-import { ALL_SITES_IDS, ALL_SITES_KEY, ALL_SITES_SCRIPTS, PIN_KEY, PORT_KEY, linkUrl, readPort } from "./settings.js";
+import { ALL_SITES_IDS, ALL_SITES_KEY, ALL_SITES_SCRIPTS, PIN_KEY, PORT_KEY, allSitesWanted, linkUrl, readPort } from "./settings.js";
 import { isYouTubeHost } from "./youtube.js";
 
 export const ALARM = "vjster-link";
@@ -132,7 +132,7 @@ export function installWorker(env: WorkerEnv): Worker {
 
   async function applyAllSitesNow(stored: unknown): Promise<void> {
     const scripting = c.scripting;
-    const wanted = scripting !== undefined && stored === true && (await c.permissions.contains({ origins: ["<all_urls>"] }).catch(() => false));
+    const wanted = scripting !== undefined && allSitesWanted(stored) && (await c.permissions.contains({ origins: ["<all_urls>"] }).catch(() => false));
     allSites = wanted;
     if (!wanted) router.forgetHosts((host) => !(host !== null && isYouTubeHost(host)));
     if (!scripting) return;

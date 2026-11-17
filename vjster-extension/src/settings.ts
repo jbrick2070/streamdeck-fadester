@@ -41,7 +41,20 @@ export const ALL_SITES_SCRIPTS = [
 /** The ids of the all-sites scripts. */
 export const ALL_SITES_IDS = ALL_SITES_SCRIPTS.map((s) => s.id);
 
-/** Whether the options page shows "every site" as on: the operator's saved choice and Chrome's permission, both (D-4). */
+/**
+ * Whether this build offers "every site": the GitHub build asks for every site at install, the Chrome Web Store
+ * build is YouTube only (scripts/vjster/pack-extension.ts storeManifest).
+ */
+export function allSitesOffered(manifest: { host_permissions?: string[]; optional_host_permissions?: string[] }): boolean {
+  return [...(manifest.host_permissions ?? []), ...(manifest.optional_host_permissions ?? [])].includes("<all_urls>");
+}
+
+/** "Every site" is on unless the operator unticked it: on at install (owner's choice, hand test 2026-11-17). */
+export function allSitesWanted(stored: unknown): boolean {
+  return stored !== false;
+}
+
+/** Whether the options page shows "every site" as on: the operator's choice (on unless unticked) and Chrome's permission, both (D-4). */
 export function allSitesChecked(offered: boolean, stored: unknown, granted: boolean): boolean {
-  return offered && stored === true && granted;
+  return offered && allSitesWanted(stored) && granted;
 }

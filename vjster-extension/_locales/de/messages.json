@@ -39,7 +39,7 @@
     "message": "Videos auf allen Websites steuern, nicht nur auf YouTube"
   },
   "allSitesNote": {
-    "message": "Nur Tempo: Die Qualität braucht den Player von YouTube. Chrome fragt nach der Berechtigung, alle Websites zu lesen und zu ändern."
+    "message": "Nur Geschwindigkeit: Die Qualität braucht den YouTube-Player. Entfernen Sie das Häkchen, damit VJster nur auf YouTube bleibt."
   },
   "statusLinkUp": {
     "message": "Mit VJster auf Port $PORT$ verbunden.",

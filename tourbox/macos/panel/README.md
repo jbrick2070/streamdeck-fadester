@@ -55,7 +55,17 @@ show no window, read no user settings and make no connection.
 
 Accessibility attribution from the GUI, source assignments, menu/modifier behavior, fast
 rotary input and end-to-end OBS actions still need a supervised Mac rehearsal.
-English strings and US/ABC keyboard mappings are the initial scope. The source
+The panel speaks the Windows panel's 10 languages (the Mac's first preferred
+language, or `--language CODE`). Its strings come from `tourbox/panel/PanelText.cs`,
+`PanelExtraText.cs` and the Mac-only `mac-strings.json`, generated into
+`PanelStrings.swift` by `node tourbox/macos/panel/make-strings.cjs` (build.sh and
+`tests/companion-mac-strings.test.ts` refuse a stale file). TourBox Console's own
+labels (Preset List, Not Linked, Running applications) stay as Console shows them.
+**Use only Stream Deck, OpenDeck or MIDI** runs the host with `--mix-only`: no
+shortcut helper, native T-bar, Accessibility or VJster. The Setup tab and the
+feedback window show the Visual Sidechain meter line (from a scan, and from the
+host's `VS-METER:` lines while the controls run), as on Windows.
+US/ABC keyboard mappings are the initial scope. The source
 targets macOS 12 for compilation, but that does not establish tested support for
 every older system or Intel hardware.
 

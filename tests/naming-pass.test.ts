@@ -52,7 +52,8 @@ describe("P1-7 suite naming invariants", () => {
     expect(panelText).not.toContain('"Fadester · last action"');
     expect(panelExtra).toContain('{ "lastAction", "Fadester Companion · ');
     expect(panelExtra).not.toContain('{ "lastAction", "Fadester · ');
-    expect(macPanel).toContain('panel.title = "Fadester Companion · last action"');
+    // The Mac panel takes the same words from the shared catalog (PanelText.cs, via PanelStrings.swift).
+    expect(macPanel).toContain('panel.title = L("lastAction")');
     expect(macPanel).not.toContain('"Fadester · last action"');
   });
 
@@ -144,7 +145,7 @@ describe("P1-7 suite naming invariants", () => {
     const macPanel = readRepoFile("tourbox/macos/panel/Panel.swift");
     const deskActions = readRepoFile("tourbox/bridge/DeskActions.cs");
     expect(panelText).toContain('{ "cueTitle", new[] { "3   Try Preview"');
-    expect(macPanel).toContain('heading("3   Try Preview"');
+    expect(macPanel).toContain('heading(L("cueTitle")');
     expect(deskActions).toContain("Select another Preview scene first.");
     expect(deskActions).not.toContain("Cue another scene first.");
   });

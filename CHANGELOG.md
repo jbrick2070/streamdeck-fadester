@@ -4,6 +4,15 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 
 ## Unreleased
 
+- **Fadester Companion: Windows and Mac parity.** `docs/COMPANION-PARITY.md` has the new state and what is left.
+  - **Windows lights:** the light strip now shows OBS, **TourBox**, **VJster**, Controller and Controls, each with the one button that fixes it, in the Mac panel's states and words. TourBox: ready, Console closed (**Open Console**), Console not installed (**Download**), off in Stream Deck-only mode. VJster: off, ready, connected, waiting for video (**Show me**), port in use (**Show me**).
+  - **Windows import guide:** **Show me where to click** animates the TourBox Console import (Import, paste the copied path, open, then Not Linked → OBS Studio → Save). **Import into TourBox Console** opens it too.
+  - **Windows reminder:** the amber reminder has a **Bring OBS to Front** button that restores OBS's main window, also from the tray.
+  - **Mac languages:** the Mac panel speaks the Windows panel's 10 languages (the Mac's first preferred language, or `--language`). Both panels use one catalog: the Windows panel's strings plus the Mac-only `mac-strings.json`, generated into `PanelStrings.swift` by `tourbox/macos/panel/make-strings.cjs` and checked by `tests/companion-mac-strings.test.ts`. The Mac Control map uses each language's `map.json`.
+  - **Mac Visual Sidechain meter:** the meter line in the Setup tab and in the feedback window, from a scan and from the running controls. The Mac host now prints the same `VS-METER:` lines as the Windows bridge.
+  - **Mac Stream Deck-only mode:** **Use only Stream Deck, OpenDeck or MIDI** runs the new `FadesterMacHost --run --mix-only`: no shortcut helper, native T-bar, Accessibility or VJster.
+  - Every new string is in all 10 panel languages. The Mac changes have not been compiled or run on a Mac yet.
+
 ## 0.12.2 - 2026-11-16
 
 0.12.1 was a draft for the hardware test and was never published. This release ships Fadester Companion 0.1.6.

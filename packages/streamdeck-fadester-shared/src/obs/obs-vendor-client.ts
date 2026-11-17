@@ -88,6 +88,12 @@ export interface ObsVendorClientOptions {
   notReadyRetryMs?: number;
   /** How often the link to OBS is checked with a ping. 0 turns the check off. */
   keepaliveMs?: number;
+  /**
+   * Reads the WebSocket password OBS saved on this computer, for the host and port in use; "" when there is
+   * none. Used only when no password was typed and OBS asks for one, as Fadester Companion does. The plugin
+   * passes the reader; without one (the tests) nothing is read from disk.
+   */
+  readSavedPassword?: (host: string, port: number) => string;
 }
 
 export interface ObsVendorStateMeta {
@@ -160,6 +166,9 @@ export class ObsVendorClient<
   protected readonly maxReconnectMs: number;
   protected readonly notReadyRetryMs: number;
   protected readonly requestTimeoutMs: number;
+  private readonly readSavedPassword: ((host: string, port: number) => string) | undefined;
+  /** The last sign-in used the password OBS saved on this computer (none was typed). */
+  private signedInWithSavedPassword = false;
 
   private ws: WebSocket | null = null;
   private nextRequestId = 1;
@@ -202,6 +211,12 @@ export class ObsVendorClient<
     this.requestTimeoutMs = options?.requestTimeoutMs ?? 4000;
     this.notReadyRetryMs = options?.notReadyRetryMs ?? 250;
     this.keepaliveMs = options?.keepaliveMs ?? 20000;
+    this.readSavedPassword = options?.readSavedPassword;
+  }
+
+  /** True when no password was typed and the client signs in with the one OBS saved on this computer. */
+  public usesSavedObsPassword(): boolean {
+    return this.signedInWithSavedPassword;
   }
 
   public getStatus(): ConnectionStatusInfo {
@@ -509,19 +524,24 @@ export class ObsVendorClient<
         typeof authObj.challenge === "string" &&
         typeof authObj.salt === "string"
       ) {
-        if (!this.settings.password) {
-          authentication = computeObsWebSocketAuth(
-            "",
-            authObj.salt,
-            authObj.challenge
-          );
-        } else {
-          authentication = computeObsWebSocketAuth(
-            this.settings.password,
-            authObj.salt,
-            authObj.challenge
-          );
+        let password = this.settings.password;
+        this.signedInWithSavedPassword = false;
+        if (!password && this.readSavedPassword) {
+          // No password typed: sign in with the one OBS saved on this computer, read fresh on each sign-in.
+          try {
+            password = this.readSavedPassword(this.settings.host, this.settings.port);
+          } catch {
+            password = "";
+          }
+          this.signedInWithSavedPassword = password.length > 0;
         }
+        authentication = computeObsWebSocketAuth(
+          password,
+          authObj.salt,
+          authObj.challenge
+        );
+      } else {
+        this.signedInWithSavedPassword = false;
       }
       this.sendRaw({
         op: 1,

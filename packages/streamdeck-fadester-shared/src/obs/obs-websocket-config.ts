@@ -220,3 +220,17 @@ export function toObsWebsocketConfigPreview(
     passwordFound: false
   };
 }
+
+/**
+ * The password OBS saved on this computer for the given host and port, or "" (another host, another port,
+ * authentication off, no file). Kept in memory by the caller only; never logged or sent to a page.
+ */
+export function savedObsPasswordFor(
+  host: string,
+  port: number,
+  options?: Omit<ReadObsWebsocketConfigOptions, "host">
+): string {
+  const read = readObsWebsocketConfig({ ...options, host });
+  if (!read.ok || read.serverPort !== port || read.authRequired === false) return "";
+  return read.password;
+}

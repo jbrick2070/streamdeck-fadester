@@ -37,7 +37,7 @@ export interface PiStatePayload {
     fadesterVersion: string;
     buildCommit: string;
   };
-  connection: { host: string; port: number; passwordSet: boolean };
+  connection: { host: string; port: number; passwordSet: boolean; obsSaved: boolean };
   studioMode: boolean;
   profile: {
     slug: string;
@@ -217,7 +217,9 @@ export class PropertyInspectorBridge {
       connection: {
         host: settings.host,
         port: settings.port,
-        passwordSet: settings.password.length > 0
+        passwordSet: settings.password.length > 0,
+        // Signed in with the password OBS saved on this computer (no password typed); the password itself never travels.
+        obsSaved: this.client.usesSavedObsPassword?.() ?? false
       },
       studioMode: this.store.isStudioMode(),
       profile: {

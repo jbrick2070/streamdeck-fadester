@@ -77,7 +77,8 @@ describe("Property Inspector bridge", () => {
     expect(state.connection).toEqual({
       host: "127.0.0.1",
       port: h.server["wss"] ? state.connection.port : state.connection.port,
-      passwordSet: true
+      passwordSet: true,
+      obsSaved: false
     });
     expect(state.status.kind).toBe("connected");
     expect(state.status.buildCommit).toBe("abc1234");

@@ -205,7 +205,7 @@
       '<details id="conn-editor" class="editor" open><summary data-i18n="connEdit">Edit shared connection</summary>',
       '<div class="row"><label for="conn-host" data-i18n="host">Host</label><input type="text" id="conn-host" value="127.0.0.1" /></div>',
       '<div class="row"><label for="conn-port" data-i18n="port">Port</label><input type="number" id="conn-port" value="4455" min="1" max="65535" /></div>',
-      '<div class="row"><label for="conn-password" data-i18n="password">Password</label><input type="password" id="conn-password" autocomplete="off" placeholder="Leave blank if authentication is off" data-i18n-placeholder="passwordPlaceholderAuthOff" /></div>',
+      '<div class="row"><label for="conn-password" data-i18n="password">OBS password</label><input type="password" id="conn-password" autocomplete="off" placeholder="Filled in from OBS on this computer" data-i18n-placeholder="passwordPlaceholderFromObs" /></div>',
       '<div class="row"><label></label><button id="conn-test-btn" class="btn" type="button" data-i18n="saveAndTest">Save for all controls &amp; test</button><span class="hint" id="conn-hint"></span></div>',
       '</details>'
     ].join("");
@@ -360,12 +360,13 @@
         passEl.value = "";
         passEl.placeholder = T(state.connection.passwordSet
           ? "passwordPlaceholderSavedAll"
-          : "passwordPlaceholderAuthOff");
+          : "passwordPlaceholderFromObs");
       }
     }
     const connEditor = $("conn-editor");
     if (connEditor && !connEditor.dataset.initialized && state.connection) {
-      connEditor.open = !state.connection.passwordSet || state.status.kind === "wrong_password";
+      // Closed once OBS answers: with no password typed, the plugin signs in with the one OBS saved here.
+      connEditor.open = !(state.connection.passwordSet || state.status.kind === "connected") || state.status.kind === "wrong_password";
       connEditor.dataset.initialized = "true";
     }
     if (statusEl && state.status) {
@@ -379,7 +380,8 @@
     if (hintEl) {
       hintEl.textContent = state.lastErrorComment && state.status.kind === "connected"
         ? T("lastObsError", { comment: state.lastErrorComment })
-        : state.connection && state.connection.passwordSet ? T("passwordSavedAll") : "";
+        : state.connection && state.connection.passwordSet ? T("passwordSavedAll")
+        : state.connection && state.connection.obsSaved && state.status.kind === "connected" ? T("passwordFromObs") : "";
     }
   }
 

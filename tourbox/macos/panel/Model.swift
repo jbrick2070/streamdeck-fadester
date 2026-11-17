@@ -349,7 +349,8 @@ enum Readiness {
             }
             return reason.isEmpty ? nil : reason
         }
-        if line.hasPrefix("Video ") {
+        // A VJster line: "Video 1x · …", or since FIX-6 "<title> · [site · ]Video 1x · …" (bridge/VjsterDesk.cs Describe).
+        if line.hasPrefix("Video ") || line.contains(" · Video ") {
             return line
         }
         return nil
@@ -492,6 +493,8 @@ enum ModelTests {
         try check(peers.count == 2 && Readiness.vjsterPeers(after: "VJster: the Chrome extension disconnected (closed)", current: peers) == ["obs"], "VJster peer tracking")
         try check(Readiness.vjsterPeers(after: "VJster: the OBS video page disconnected (closed)", current: ["obs"]).isEmpty, "VJster OBS peer disconnect tracking")
         try check(Readiness.hostFeedback(from: "RESULT vjster.speed.up: Video 1.25x · 1080p · playing") == "Video 1.25x · 1080p · playing", "Host RESULT feedback")
+        try check(Readiness.hostFeedback(from: "Clip · Video 1x · Auto (720p) · playing") == "Clip · Video 1x · Auto (720p) · playing" &&
+                  Readiness.hostFeedback(from: "News · www.example.com · Video 1x · paused") == "News · www.example.com · Video 1x · paused", "VJster lines that name the video are feedback")
         try check(Readiness.hostFeedback(from: "RESULT fader.forward: T-bar right · T-bar 0%")?.contains("counterclockwise") == true, "Alternating T-bar throw hint")
         try check(Readiness.hostFeedback(from: "REFUSED fader.forward: Choose a different Preview scene first.")?.contains("Scroll") == true, "Same-scene Preview hint")
         let busy = Readiness.vjsterPortBusy(after: "VJster port 48150 is in use, probably by the VJster actions in your Stream Deck or OpenDeck software.", current: false)

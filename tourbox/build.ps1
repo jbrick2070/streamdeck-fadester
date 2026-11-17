@@ -1,5 +1,7 @@
-param([string]$DotNet, [string]$OutDir=(Join-Path $PSScriptRoot 'dist'), [string]$Version='0.1.0-rc6')
+param([string]$DotNet, [string]$OutDir=(Join-Path $PSScriptRoot 'dist'), [string]$Version)
 $ErrorActionPreference='Stop'
+# Without -Version, the release's own: Fadester Companion's version in installer/components.json, as the workflows pass it.
+if (!$Version) { $Version=(Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $PSScriptRoot '..\installer\components.json') | ConvertFrom-Json).components.companion.version }
 if ($Version -notmatch '^[a-zA-Z0-9.-]+$') { throw 'Invalid version.' }
 if (!$DotNet) {
   $dot=Get-Command dotnet -ErrorAction SilentlyContinue

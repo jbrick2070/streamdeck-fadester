@@ -12,6 +12,9 @@ python="${PYTHON:-python3}"
 resources="$app/Contents/Resources"
 mkdir -p "$app/Contents/MacOS" "$resources/presets" "$resources/artwork/icons"
 cp Info.plist "$app/Contents/Info.plist"
+# The version the app shows is the release's: Fadester Companion's in installer/components.json.
+companion_version="$("$python" -c 'import json, sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["components"]["companion"]["version"])' "$repo/installer/components.json")"
+/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $companion_version" "$app/Contents/Info.plist"
 "$python" "$repo/tourbox/presets/build.py" --check
 "$python" "$repo/tourbox/presets/build_macos.py" --check
 cp "$repo/tourbox/presets/map.json" "$resources/presets/"

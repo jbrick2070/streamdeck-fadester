@@ -4,6 +4,11 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 
 ## Unreleased
 
+## 0.12.5 - 2026-11-17
+0.12.4 was a draft for the hardware test and was never published. This release ships Fadester Companion 0.1.9 and the VJster extension 0.1.4.
+- **Fadester Companion starts its controls by itself** (Windows and Mac) as soon as OBS answers, once setup was saved, unless you pressed Stop last time. Nothing is armed while OBS is closed, and the Mac never asks for Accessibility at launch. While OBS is not connected, the Controls light offers **Try again**.
+- **VJster 0.1.4**: the GitHub download controls videos on every site from the start (Chrome asks once at install; untick the box to keep it to YouTube). The Chrome Web Store copy stays YouTube only. The options page shows its version.
+
 ## 0.12.4 - 2026-11-17
 0.12.3 was a draft for the hardware test and was never published. This release ships Fadester Companion 0.1.8.
 - **No password to type.** With OBS on the same computer and no password typed, Fadester for OBS signs in with the password OBS saved, on Windows and macOS, as Fadester Companion does. The OBS connection box says "Signed in with the password OBS saved on this computer". A typed password still wins; the password is kept in memory only and never shown on a settings page.

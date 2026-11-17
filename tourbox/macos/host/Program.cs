@@ -54,6 +54,7 @@ internal static class MacDevelopmentHost
     static void Help() => Console.WriteLine("""
         FadesterMacHost --run --config PATH --native-app APP [--enable-mix]
                         [--input-app APP --map PATH] [--read-only | --no-mix-provider]
+        FadesterMacHost --run --config PATH --mix-only [--enable-mix]
         FadesterMacHost --help | --self-test | --self-test-stdio
 
         Experimental Mac command-line host; not a shipping GUI.
@@ -74,6 +75,11 @@ internal static class MacDevelopmentHost
         --enable-mix and --input-app. Native startup inspection is still read-only.
         --no-mix-provider disables grouped mixing and its event server for a
         controlled action rehearsal; individual explicit actions remain available.
+        --mix-only serves only Stream Deck, OpenDeck and MIDI (the grouped mix provider),
+        like the Windows companion's --mix-only: no shortcut helper, native T-bar,
+        Accessibility or VJster. It needs config mixEnabled:true or --enable-mix.
+        Stdin actions are refused in this mode; quit still stops it.
+        While connected, Visual Sidechain meter lines (VS-METER: ...) are printed for the panel.
 
         After READY <generation>, stdin accepts:
           action preview.status
@@ -104,10 +110,11 @@ internal static class MacDevelopmentHost
                 return 0;
             }
             string? configPath = null, nativeApp = null, inputApp = null, mapPath = null;
-            bool run = false, enableMix = false, readOnly = false, noMixProvider = false;
+            bool run = false, enableMix = false, readOnly = false, noMixProvider = false, mixOnly = false;
             for (int i = 0; i < args.Length; i++)
             {
                 if (args[i] == "--run" && !run) run = true;
+                else if (args[i] == "--mix-only" && !mixOnly) mixOnly = true;
                 else if (args[i] == "--enable-mix" && !enableMix) enableMix = true;
                 else if (args[i] == "--read-only" && !readOnly) readOnly = true;
                 else if (args[i] == "--no-mix-provider" && !noMixProvider) noMixProvider = true;
@@ -123,20 +130,23 @@ internal static class MacDevelopmentHost
                 }
                 else throw new ArgumentException("Invalid arguments; use --help.");
             }
-            if (!run || configPath is null || nativeApp is null) throw new ArgumentException("--run requires --config PATH and --native-app APP.");
+            if (mixOnly && (readOnly || noMixProvider || inputApp is not null || mapPath is not null))
+                throw new ArgumentException("--mix-only cannot be combined with --read-only, --no-mix-provider, --input-app or --map.");
+            if (!run || configPath is null || (nativeApp is null && !mixOnly)) throw new ArgumentException("--run requires --config PATH and --native-app APP (or --mix-only).");
             if ((inputApp is null) != (mapPath is null)) throw new ArgumentException("--input-app and --map must be supplied together.");
             if (readOnly && (enableMix || inputApp is not null)) throw new ArgumentException("--read-only cannot enable mixing or register shortcuts.");
             if (noMixProvider && enableMix) throw new ArgumentException("--no-mix-provider cannot enable grouped mixing.");
             if (!OperatingSystem.IsMacOS()) throw new PlatformNotSupportedException("Live host sessions require macOS. --self-test remains portable.");
             if (!File.Exists(configPath)) throw new FileNotFoundException("Create a development configuration explicitly before running the host.");
-            if (!File.Exists(Path.Combine(nativeApp, "Contents", "MacOS", "FadesterNativeSlider"))) throw new FileNotFoundException("The separately built native slider app is missing.");
+            if (!mixOnly && !File.Exists(Path.Combine(nativeApp!, "Contents", "MacOS", "FadesterNativeSlider"))) throw new FileNotFoundException("The separately built native slider app is missing.");
             if (inputApp is not null && (!File.Exists(Path.Combine(inputApp, "Contents", "MacOS", "FadesterMacShortcuts")) || !File.Exists(mapPath)))
                 throw new FileNotFoundException("The separate shortcut app or canonical map is missing.");
             var config = BridgeConfig.Load(configPath);
             if (enableMix) config.MixEnabled = true;
             if (readOnly || noMixProvider) config.MixEnabled = false;
+            if (mixOnly && !config.MixEnabled) throw new ArgumentException("Enable All OBS mixer inputs in Setup first.");
             obsTokenSecret = config.VjsterObsToken.Length > 0 ? config.VjsterObsToken : null;
-            if (!readOnly) config.CheckPorts();
+            if (!readOnly && !mixOnly) config.CheckPorts();
             using var stop = new CancellationTokenSource();
             var ingress = new CommandIngress();
             int stopping = 0;
@@ -150,13 +160,14 @@ internal static class MacDevelopmentHost
             // Console's synchronized TextReader may block before returning an async
             // task. Keep stdin on its own worker so startup can authenticate first.
             _ = Task.Run(() => ReadInput(ingress, Stop, stop.Token));
-            await using var vjster = !readOnly && config.VjsterEnabled ? new VjsterHost(config, Log) : null;
+            await using var vjster = !readOnly && !mixOnly && config.VjsterEnabled ? new VjsterHost(config, Log) : null;
             Task vjsterBinder = vjster?.StartBinding(stop.Token) ?? Task.CompletedTask;
             try
             {
-                do
+                if (mixOnly) await RunMixOnlySession(config, ingress, stop.Token);
+                else do
                 {
-                    if (!await RunSession(config, nativeApp, inputApp, mapPath, ingress, stop.Token, readOnly, noMixProvider, vjster?.Desk)) break;
+                    if (!await RunSession(config, nativeApp!, inputApp, mapPath, ingress, stop.Token, readOnly, noMixProvider, vjster?.Desk)) break;
                 } while (!stop.IsCancellationRequested);
             }
             finally
@@ -238,14 +249,60 @@ internal static class MacDevelopmentHost
     static async Task<ObsConnection> Connect(BridgeConfig config, CancellationToken stop)
     {
         string? supplied = Environment.GetEnvironmentVariable("FADESTER_OBS_PASSWORD");
-        if (!string.IsNullOrEmpty(supplied)) { secret = supplied; return await ObsConnection.Connect(config, stop); }
+        // Vendor events carry Visual Sidechain's meter (as the Windows bridge's --listen).
+        if (!string.IsNullOrEmpty(supplied)) { secret = supplied; return await ObsConnection.Connect(config, stop, vendorEvents: true); }
         if (!File.Exists(ObsConfig)) throw new InvalidOperationException("No local OBS authentication config found; set FADESTER_OBS_PASSWORD for this process.");
         string password = BridgeConfig.SavedPassword(await File.ReadAllTextAsync(ObsConfig, stop), config.Port, requireEnabledAndAuth: true);
         secret = password;
         // No child process is launched during this temporary process-local credential scope.
         Environment.SetEnvironmentVariable("FADESTER_OBS_PASSWORD", password);
-        try { return await ObsConnection.Connect(config, stop); }
+        try { return await ObsConnection.Connect(config, stop, vendorEvents: true); }
         finally { Environment.SetEnvironmentVariable("FADESTER_OBS_PASSWORD", supplied); }
+    }
+    /** The Visual Sidechain meter lines (VS-METER: ...) the panel shows in Setup and in its feedback window, as on Windows. Never in read-only. */
+    static async Task<VisualSidechainMonitor?> StartMeter(ObsConnection obs, bool readOnly, CancellationToken stop)
+    {
+        if (readOnly) return null;
+        var meter = new VisualSidechainMonitor(obs.Call, Log);
+        meter.Attach(obs);
+        await meter.StartAsync(stop);
+        return meter;
+    }
+    /** --mix-only: the grouped mix provider for Stream Deck, OpenDeck and MIDI, with no shortcuts, native T-bar or VJster (the Windows bridge's --mix-only). */
+    static async Task RunMixOnlySession(BridgeConfig config, CommandIngress ingress, CancellationToken stop)
+    {
+        ingress.Disarm();
+        using var obs = await Connect(config, stop);
+        int generation = ingress.Activate();
+        _ = obs.Disconnected.ContinueWith(_ => ingress.Disarm(generation), TaskScheduler.Default);
+        var desk = new DeskActions(config, obs.Call, nativeMove: (_, _) =>
+            Task.FromException(new InvalidOperationException("Native T-bar control is unavailable in mix-only mode.")), allowAutoCloseout: false);
+        obs.InputLevelChangedById += desk.OnMixInputLevelChanged;
+        desk.StartMixMonitor();
+        var protocol = new MixProtocolServer(obs, desk, providerId: BridgeConfig.ResolveProviderId(config.MixStateDirectory));
+        using var meter = await StartMeter(obs, false, stop);
+        try
+        {
+            WriteControl(Control.Ready, generation);
+            Log("The controls are on for Stream Deck, OpenDeck and MIDI only: no TourBox shortcuts, native T-bar or VJster.");
+            while (!stop.IsCancellationRequested && !obs.Disconnected.IsCompleted)
+            {
+                var available = ingress.Commands.Reader.WaitToReadAsync(stop).AsTask();
+                if (await Task.WhenAny(available, obs.Disconnected) != available) break;
+                if (!await available) break;
+                while (ingress.Commands.Reader.TryRead(out var command)) Log("DROPPED: " + command.Action + " (mix-only mode takes no controller input).");
+            }
+        }
+        catch (OperationCanceledException) when (stop.IsCancellationRequested) { }
+        finally
+        {
+            ingress.Disarm();
+            WriteControl(Control.Disarmed, generation);
+            await protocol.DisposeAsync();
+            await desk.StopMixAsync();
+            obs.InputLevelChangedById -= desk.OnMixInputLevelChanged;
+        }
+        if (obs.Disconnected.IsCompleted) Log("OFFLINE: OBS disconnected. Restart explicitly; queued actions will not be replayed.");
     }
     static async Task<bool> RunSession(BridgeConfig config, string nativeApp, string? inputApp, string? mapPath, CommandIngress ingress, CancellationToken stop, bool readOnly, bool noMixProvider, VjsterDesk? vjster = null)
     {
@@ -274,6 +331,7 @@ internal static class MacDevelopmentHost
             () => !obs.Disconnected.IsCompleted && (shortcuts is null || !shortcuts.Done.IsCompleted), stop, readOnly, native.ReadAsync, vjster);
         var desk = session.Desk;
         obs.InputVolumeChanged += desk.OnVolumeChanged; obs.InputLevelChangedById += desk.OnMixInputLevelChanged;
+        using var meter = await StartMeter(obs, readOnly, stop);
         MixProtocolServer? protocol = null;
         bool reconnect = false;
         try

@@ -102,6 +102,15 @@ import AppKit
         (string as NSString).draw(at: point, withAttributes: attrs)
     }
 
+    /// Text wrapped inside rect (translations are longer than the English this canvas was drawn for).
+    private func text(_ string: String, in rect: NSRect, size: CGFloat = 11.5, bold: Bool = false, color: NSColor) {
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: bold ? NSFont.boldSystemFont(ofSize: size) : NSFont.systemFont(ofSize: size),
+            .foregroundColor: color
+        ]
+        (string as NSString).draw(with: rect, options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine], attributes: attrs, context: nil)
+    }
+
     private func textWidth(_ string: String, size: CGFloat = 11.5, bold: Bool = false) -> CGFloat {
         let attrs: [NSAttributedString.Key: Any] = [
             .font: bold ? NSFont.boldSystemFont(ofSize: size) : NSFont.systemFont(ofSize: size)
@@ -264,7 +273,7 @@ import AppKit
         if importHot {
             let callout = NSRect(x: 258, y: 50, width: 176, height: 28)
             fill(callout, NSColor(srgbRed: 244 / 255, green: 176 / 255, blue: 48 / 255, alpha: 1), radius: 6)
-            text("1. Click middle Import icon", at: NSPoint(x: callout.minX + 10, y: callout.minY + 6), size: 11.2, bold: true, color: NSColor(srgbRed: 32 / 255, green: 24 / 255, blue: 8 / 255, alpha: 1))
+            text(L("macTbCallout"), at: NSPoint(x: callout.minX + 10, y: callout.minY + 6), size: 11.2, bold: true, color: NSColor(srgbRed: 32 / 255, green: 24 / 255, blue: 8 / 255, alpha: 1))
         }
 
         // Auto Switch card below Preset List
@@ -320,7 +329,7 @@ import AppKit
             text("Google Chrome", at: NSPoint(x: 276, y: 116), size: 10.2, bold: false, color: muted)
             let obsChosen = t >= 8.2
             fill(obsAppRow, obsChosen ? blue : card, radius: 5)
-            text("●  OBS   ← Pick OBS!", at: NSPoint(x: 278, y: 151), size: 11, bold: true, color: .white)
+            text("●  OBS   " + L("macTbPickObs"), at: NSPoint(x: 278, y: 151), size: 11, bold: true, color: .white)
             fill(NSRect(x: 286, y: 208, width: 96, height: 24), card, radius: 5)
             text("Cancel", at: NSPoint(x: 315, y: 213), size: 10.5, bold: false, color: muted)
             fill(saveLinkBtn, obsChosen ? blue : card, radius: 5)
@@ -357,9 +366,9 @@ import AppKit
 
             let cancelBtn = NSRect(x: 320, y: 198, width: 64, height: 26)
             fill(cancelBtn, NSColor(srgbRed: 234 / 255, green: 238 / 255, blue: 244 / 255, alpha: 1), radius: 5)
-            text("Cancel", at: NSPoint(x: 333, y: 204), size: 11, bold: false, color: .darkGray)
+            text(L("macUiCancel"), at: NSPoint(x: 333, y: 204), size: 11, bold: false, color: .darkGray)
             fill(openBtn, blue, radius: 5)
-            text("Open", at: NSPoint(x: 410, y: 204), size: 11, bold: true, color: .white)
+            text(L("macUiOpen"), at: NSPoint(x: 410, y: 204), size: 11, bold: true, color: .white)
         }
 
         if t >= 9.4 {
@@ -398,10 +407,10 @@ import AppKit
             fill(NSRect(x: x, y: 19, width: w, height: 6), ghost, radius: 3)
             x += w + 12
         }
-        let toolsW = textWidth("Tools", size: 11, bold: true) + 14
+        let toolsW = textWidth(L("obsUiTools"), size: 11, bold: true) + 14
         let tools = NSRect(x: x - 4, y: 12, width: toolsW, height: 20)
         if menuHot { fill(tools, blue, radius: 4) }
-        text("Tools", at: NSPoint(x: tools.minX + 7, y: 15), size: 11, bold: true, color: ink)
+        text(L("obsUiTools"), at: NSPoint(x: tools.minX + 7, y: 15), size: 11, bold: true, color: ink)
 
         fill(NSRect(x: 14, y: 40, width: 512, height: 212), frame, radius: 8)
         drawTrafficLights(x: 26, y: 49)
@@ -448,7 +457,7 @@ import AppKit
                 fill(NSRect(x: menuBox.minX + 12, y: menuBox.minY + 12 + CGFloat(i) * 22, width: 105, height: 6), ghost, radius: 3)
             }
             if t >= 2.85 { fill(wsRow, blue, radius: 4) }
-            text("WebSocket Server Settings", at: NSPoint(x: wsRow.minX + 8, y: wsRow.minY + 4), size: 11, bold: true, color: ink)
+            text(L("obsUiWsSettings"), at: NSPoint(x: wsRow.minX + 8, y: wsRow.minY + 4), size: 11, bold: true, color: ink)
         }
 
         let box = NSRect(x: 96, y: 60, width: 348, height: 176)
@@ -461,14 +470,14 @@ import AppKit
         if dialogOpen {
             fill(box, bar, radius: 6)
             stroke(box, ghost, radius: 6, width: 1)
-            text("WebSocket Server Settings", at: NSPoint(x: box.minX + 18, y: box.minY + 12), size: 11.5, bold: true, color: ink)
+            text(L("obsUiWsSettings"), at: NSPoint(x: box.minX + 18, y: box.minY + 12), size: 11.5, bold: true, color: ink)
             drawCheckbox(in: enableBox, checked: passwordMode || t >= 4.5)
-            text("Enable WebSocket server", at: NSPoint(x: enableBox.maxX + 8, y: enableBox.minY - 1), size: 11, bold: false, color: ink)
+            text(L("obsUiEnable"), at: NSPoint(x: enableBox.maxX + 8, y: enableBox.minY - 1), size: 11, bold: false, color: ink)
             drawCheckbox(in: authBox, checked: true)
-            text("Enable Authentication", at: NSPoint(x: authBox.maxX + 8, y: authBox.minY - 1), size: 11, bold: false, color: ink)
+            text(L("obsUiAuth"), at: NSPoint(x: authBox.maxX + 8, y: authBox.minY - 1), size: 11, bold: false, color: ink)
             if passwordMode {
                 fill(infoBtn, (t >= 4.35 && t < 4.75) ? blue : ghost, radius: 4)
-                text("Show Connect Info", at: NSPoint(x: infoBtn.minX + 10, y: infoBtn.minY + 5), size: 10.8, bold: true, color: ink)
+                text(L("obsUiConnectInfo"), at: NSPoint(x: infoBtn.minX + 10, y: infoBtn.minY + 5), size: 10.8, bold: true, color: ink)
             }
             fill(okBtn, (!passwordMode && t >= 5.95 && t < 6.3) ? blue : ghost, radius: 4)
             text("OK", at: NSPoint(x: okBtn.minX + 21, y: okBtn.minY + 5), size: 11, bold: true, color: ink)
@@ -480,7 +489,7 @@ import AppKit
             stroke(pop, blue, radius: 5, width: 1.2)
             text("••••••••••••", at: NSPoint(x: pop.minX + 12, y: pop.minY + 9), size: 12, bold: true, color: ink)
             fill(copyBtn, t >= 6.05 ? blue : ghost, radius: 4)
-            text("Copy", at: NSPoint(x: copyBtn.minX + 11, y: copyBtn.minY + 4), size: 10.5, bold: true, color: ink)
+            text(L("macUiCopy"), at: NSPoint(x: copyBtn.minX + 11, y: copyBtn.minY + 4), size: 10.5, bold: true, color: ink)
         }
 
         if passwordMode && t >= 6.9 {
@@ -488,7 +497,7 @@ import AppKit
             let card = NSRect(x: 530 - 224 * k, y: 92, width: 208, height: 74)
             fill(card, .white, radius: 8)
             stroke(card, blue, radius: 8, width: 1.2)
-            text("OBS password (optional)", at: NSPoint(x: card.minX + 12, y: card.minY + 10), size: 11, bold: true, color: NSColor(srgbRed: 26 / 255, green: 34 / 255, blue: 51 / 255, alpha: 1))
+            text(L("password"), at: NSPoint(x: card.minX + 12, y: card.minY + 10), size: 11, bold: true, color: NSColor(srgbRed: 26 / 255, green: 34 / 255, blue: 51 / 255, alpha: 1))
             let field = NSRect(x: card.minX + 12, y: card.minY + 36, width: 184, height: 24)
             fill(field, NSColor(srgbRed: 244 / 255, green: 246 / 255, blue: 250 / 255, alpha: 1), radius: 4)
             stroke(field, blue, radius: 4, width: 1)
@@ -537,10 +546,10 @@ import AppKit
             fill(NSRect(x: 261, y: 82 + 80 * bar, width: 18, height: 8), ink, radius: 3)
         }
         fill(studioBtn, t >= 1.9 ? blue : ghost, radius: 4)
-        text("Studio Mode", at: NSPoint(x: studioBtn.minX + 14, y: studioBtn.minY + 5), size: 11, bold: true, color: ink)
+        text(L("obsUiStudio"), at: NSPoint(x: studioBtn.minX + 14, y: studioBtn.minY + 5), size: 11, bold: true, color: ink)
         fill(fadeBox, NSColor(srgbRed: 30 / 255, green: 32 / 255, blue: 41 / 255, alpha: 1), radius: 4)
         stroke(fadeBox, (t >= 3.85 && t < 4.7) ? blue : ghost, radius: 4, width: 1.2)
-        text("Fade", at: NSPoint(x: fadeBox.minX + 10, y: fadeBox.minY + 5), size: 11, bold: true, color: ink)
+        text(L("obsUiFade"), at: NSPoint(x: fadeBox.minX + 10, y: fadeBox.minY + 5), size: 11, bold: true, color: ink)
         let rest = NSPoint(x: 340, y: 135)
         let steps: [Hop] = [
             Hop(from: 1.0, to: 1.8, target: Self.center(studioBtn)),
@@ -558,25 +567,25 @@ import AppKit
         fill(card, navy, radius: 8)
         drawTrafficLights(x: 38, y: 34)
         if let port = busyPort {
-            text("Port \(port) is currently held by another app (such as Stream Deck)", at: NSPoint(x: 38, y: 58), size: 13, bold: true, color: .white)
+            text(L("vjCardPortHead", port), in: NSRect(x: 38, y: 56, width: 464, height: 36), size: 13, bold: true, color: .white)
             let box1 = NSRect(x: 38, y: 94, width: 224, height: 124)
             let box2 = NSRect(x: 278, y: 94, width: 224, height: 124)
             fill(box1, NSColor(srgbRed: 39 / 255, green: 48 / 255, blue: 69 / 255, alpha: 1), radius: 6)
             fill(box2, NSColor(srgbRed: 39 / 255, green: 48 / 255, blue: 69 / 255, alpha: 1), radius: 6)
-            text("Option A: Quit Stream Deck", at: NSPoint(x: 50, y: 108), size: 12, bold: true, color: green)
-            text("Quit Elgato Stream Deck (or remove\nVJster actions from the active\npage), then click Stop & Start.", at: NSPoint(x: 50, y: 134), size: 11, bold: false, color: .white)
-            text("Option B: Pick a second port", at: NSPoint(x: 290, y: 108), size: 12, bold: true, color: blue)
-            text("Change VJster port (e.g. 48151)\nin Setup and in the Chrome\nVJster extension Options page.", at: NSPoint(x: 290, y: 134), size: 11, bold: false, color: .white)
+            text(L("vjCardPortA"), in: NSRect(x: 50, y: 104, width: 202, height: 30), size: 12, bold: true, color: green)
+            text(L("vjCardPortABody"), in: NSRect(x: 50, y: 134, width: 202, height: 80), size: 11, color: .white)
+            text(L("vjCardPortB"), in: NSRect(x: 290, y: 104, width: 202, height: 30), size: 12, bold: true, color: blue)
+            text(L("vjCardPortBBody"), in: NSRect(x: 290, y: 134, width: 202, height: 80), size: 11, color: .white)
         } else {
-            text("Connect a YouTube video to Fadester Companion", at: NSPoint(x: 38, y: 58), size: 13, bold: true, color: .white)
+            text(L("vjCardWaitHead"), in: NSRect(x: 38, y: 56, width: 464, height: 36), size: 13, bold: true, color: .white)
             let box1 = NSRect(x: 38, y: 94, width: 224, height: 124)
             let box2 = NSRect(x: 278, y: 94, width: 224, height: 124)
             fill(box1, NSColor(srgbRed: 39 / 255, green: 48 / 255, blue: 69 / 255, alpha: 1), radius: 6)
             fill(box2, NSColor(srgbRed: 39 / 255, green: 48 / 255, blue: 69 / 255, alpha: 1), radius: 6)
-            text("In Google Chrome", at: NSPoint(x: 50, y: 108), size: 12, bold: true, color: green)
-            text("1. Ensure VJster extension is on.\n2. Open or refresh a YouTube video\n    and press Play.", at: NSPoint(x: 50, y: 134), size: 11, bold: false, color: .white)
-            text("Or directly in OBS Studio", at: NSPoint(x: 290, y: 108), size: 12, bold: true, color: blue)
-            text("1. Click Copy OBS Browser Source URL.\n2. Add a Browser Source in OBS and\n    paste that URL.", at: NSPoint(x: 290, y: 134), size: 11, bold: false, color: .white)
+            text(L("vjCardChrome"), in: NSRect(x: 50, y: 104, width: 202, height: 30), size: 12, bold: true, color: green)
+            text(L("vjCardChromeBody"), in: NSRect(x: 50, y: 134, width: 202, height: 80), size: 11, color: .white)
+            text(L("vjCardObs"), in: NSRect(x: 290, y: 104, width: 202, height: 30), size: 12, bold: true, color: blue)
+            text(L("vjCardObsBody"), in: NSRect(x: 290, y: 134, width: 202, height: 80), size: 11, color: .white)
             if t >= 4.5 {
                 drawCheckBadge(center: NSPoint(x: 270, y: 66), scale: Self.ease(t, 4.5, 4.9))
             }
@@ -625,7 +634,7 @@ private final class SheetBackground: NSView {
             defer: false
         )
         panel.appearance = NSAppearance(named: .aqua)
-        panel.title = "Import into TourBox Console — 3 quick clicks"
+        panel.title = L("showTbTitle")
         panel.level = .floating
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
@@ -650,7 +659,7 @@ private final class SheetBackground: NSView {
         whyLabel.widthAnchor.constraint(equalToConstant: 540).isActive = true
 
         // Interactive step selector pills (click any step to pause & inspect, or Loop animation)
-        let titles = ["1. Click Import [↙]", "2. Pick .tb File", "3. Not Linked → OBS", "▶ Loop"]
+        let titles = [L("macTbStep1"), L("macTbStep2"), L("macTbStep3"), L("macTbLoop")]
         stepButtons = titles.enumerated().map { idx, title in
             let b = NSButton(title: title, target: self, action: #selector(selectStep(_:)))
             b.tag = idx
@@ -673,13 +682,13 @@ private final class SheetBackground: NSView {
         stack.addArrangedSubview(stepsSummary)
         stepsSummary.widthAnchor.constraint(equalToConstant: 540).isActive = true
 
-        saveBtn = NSButton(title: "1. Save Preset (.tb)…", target: self, action: #selector(saveTapped))
+        saveBtn = NSButton(title: L("macSavePresetShort"), target: self, action: #selector(saveTapped))
         saveBtn.bezelStyle = .rounded
-        openBtn = NSButton(title: "2. Open TourBox Console", target: self, action: #selector(primaryTapped))
+        openBtn = NSButton(title: L("macOpenConsoleStep"), target: self, action: #selector(primaryTapped))
         openBtn.bezelStyle = .rounded
-        revealBtn = NSButton(title: "Show in Finder", target: self, action: #selector(revealFile))
+        revealBtn = NSButton(title: L("macShowInFinder"), target: self, action: #selector(revealFile))
         revealBtn.bezelStyle = .rounded
-        let closeBtn = NSButton(title: "Close", target: self, action: #selector(closeTapped))
+        let closeBtn = NSButton(title: L("btnClose"), target: self, action: #selector(closeTapped))
         let actions = NSStackView(views: [saveBtn, openBtn, revealBtn, NSView(), closeBtn])
         actions.orientation = .horizontal; actions.spacing = 10
         stack.addArrangedSubview(actions)
@@ -689,9 +698,9 @@ private final class SheetBackground: NSView {
     }
 
     private static func folderLabel(for url: URL?) -> String {
-        guard let url else { return "Downloads" }
+        guard let url else { return L("macDownloads") }
         let name = url.deletingLastPathComponent().lastPathComponent
-        return name.isEmpty || name == "/" ? "Downloads" : name
+        return name.isEmpty || name == "/" ? L("macDownloads") : name
     }
 
     func update(savedPreset: URL?, consoleInstalled: Bool) {
@@ -705,20 +714,20 @@ private final class SheetBackground: NSView {
         let accent = NSColor(srgbRed: 38 / 255, green: 90 / 255, blue: 158 / 255, alpha: 1)
         canvas.mode = .tourboxImport(folderName: folder)
         if savedPreset != nil {
-            whyLabel.stringValue = "Saved OBS Fadester for TourBox.tb in “\(folder)”! Now do these 3 quick clicks in TourBox Console (this window floats beside Console while you click):"
-            saveBtn.title = "Save Another Copy…"
+            whyLabel.stringValue = L("macImportWhySaved", folder)
+            saveBtn.title = L("macSaveAnother")
             saveBtn.bezelColor = nil
             openBtn.bezelColor = accent
             revealBtn.isHidden = false
         } else {
-            whyLabel.stringValue = "Step 1: Click “1. Save Preset (.tb)…” below to save OBS Fadester for TourBox.tb to Downloads (or any folder). Step 2: Import it in TourBox Console in 3 quick clicks:"
-            saveBtn.title = "1. Save Preset (.tb)…"
+            whyLabel.stringValue = L("macImportWhy")
+            saveBtn.title = L("macSavePresetShort")
             saveBtn.bezelColor = accent
             openBtn.bezelColor = nil
             revealBtn.isHidden = true
         }
-        openBtn.title = consoleInstalled ? "2. Open TourBox Console" : "2. Download TourBox Console…"
-        stepsSummary.stringValue = "1. In TourBox Console, click the middle Import [↙] icon beside Preset List.\n2. Choose “\(folder)” in the sidebar and open OBS Fadester for TourBox.tb.\n3. With OBS open, click “Not Linked” → pick OBS (not Fadester Companion) → click Save, with Auto Switch on."
+        openBtn.title = consoleInstalled ? L("macOpenConsoleStep") : L("macDownloadConsoleStep")
+        stepsSummary.stringValue = L("macImportSteps", folder)
     }
 
     @objc private func selectStep(_ sender: NSButton) {
@@ -840,7 +849,7 @@ private final class SheetBackground: NSView {
             buttons.append(act)
         }
         buttons.append(NSView())
-        buttons.append(NSButton(title: "Close", target: self, action: #selector(closeTapped)))
+        buttons.append(NSButton(title: L("btnClose"), target: self, action: #selector(closeTapped)))
         let bar = NSStackView(views: buttons)
         bar.orientation = .horizontal; bar.spacing = 10
         stack.addArrangedSubview(bar)
@@ -980,12 +989,12 @@ private final class SheetBackground: NSView {
         let b1Title: String
         let b1Fill: NSColor
         switch state.presetSync {
-        case .neverSaved: b1Title = "1. Save .tb"; b1Fill = Self.accent
-        case .current: b1Title = "Save .tb"; b1Fill = Self.slatePill
-        case .updateAvailable: b1Title = "Update .tb!"; b1Fill = Self.amber
+        case .neverSaved: b1Title = L("dgSaveTbFirst"); b1Fill = Self.accent
+        case .current: b1Title = L("dgSaveTb"); b1Fill = Self.slatePill
+        case .updateAvailable: b1Title = L("dgUpdateTb"); b1Fill = Self.amber
         }
         let b1W = pillWidth(b1Title)
-        let b2Title = state.consoleRunning ? "Guide" : (state.consoleInstalled ? "2. Console" : "Download")
+        let b2Title = state.consoleRunning ? L("dgGuide") : (state.consoleInstalled ? L("dgConsole") : L("btnDownload"))
         let b2Action = state.consoleRunning ? "guide" : (state.consoleInstalled ? "openConsole" : "downloadConsole")
         let b2W = pillWidth(b2Title)
         buttons.append(ButtonSpec(
@@ -1008,11 +1017,11 @@ private final class SheetBackground: NSView {
         let ctlAction: String
         let ctlFill: NSColor
         if state.controlsRunning {
-            ctlTitle = "Stop Controls"; ctlAction = "stop"; ctlFill = Self.stopRed
+            ctlTitle = L("dgStop"); ctlAction = "stop"; ctlFill = Self.stopRed
         } else if !state.axTrusted {
-            ctlTitle = "Grant Access…"; ctlAction = "grantAx"; ctlFill = Self.amber
+            ctlTitle = L("dgGrant"); ctlAction = "grantAx"; ctlFill = Self.amber
         } else {
-            ctlTitle = "Start Controls"; ctlAction = "start"; ctlFill = Self.accent
+            ctlTitle = L("dgStart"); ctlAction = "start"; ctlFill = Self.accent
         }
         let ctlW = pillWidth(ctlTitle)
         buttons.append(ButtonSpec(
@@ -1027,13 +1036,13 @@ private final class SheetBackground: NSView {
         let obsBtnTitle: String
         let obsBtnAction: String
         if !state.obsRunning {
-            obsBtnTitle = "Open OBS"; obsBtnAction = "openObs"
+            obsBtnTitle = L("macBtnOpenObs"); obsBtnAction = "openObs"
         } else if !state.obsConnected || (state.studioOff && !state.controlsRunning) {
-            obsBtnTitle = "Show me"; obsBtnAction = state.obsAction
+            obsBtnTitle = L("btnShowMe"); obsBtnAction = state.obsAction
         } else if state.controlsRunning && !state.frontIsObs {
-            obsBtnTitle = "Focus OBS"; obsBtnAction = "openObs"
+            obsBtnTitle = L("dgFocusObs"); obsBtnAction = "openObs"
         } else {
-            obsBtnTitle = "Read OBS"; obsBtnAction = "scan"
+            obsBtnTitle = L("dgReadObs"); obsBtnAction = "scan"
         }
         let obsW = pillWidth(obsBtnTitle)
         buttons.append(ButtonSpec(
@@ -1049,11 +1058,11 @@ private final class SheetBackground: NSView {
             let vjTitle: String
             let vjAction: String
             if state.vjsterPortBusy {
-                vjTitle = "Show me"; vjAction = "vjsterPort"
+                vjTitle = L("btnShowMe"); vjAction = "vjsterPort"
             } else if state.controlsRunning && !state.vjsterConnected {
-                vjTitle = "Show me"; vjAction = "vjsterWait"
+                vjTitle = L("btnShowMe"); vjAction = "vjsterWait"
             } else {
-                vjTitle = "Copy URL"; vjAction = "copyObsUrl"
+                vjTitle = L("dgCopyUrl"); vjAction = "copyObsUrl"
             }
             let vjW = pillWidth(vjTitle)
             buttons.append(ButtonSpec(
@@ -1141,7 +1150,7 @@ private final class SheetBackground: NSView {
         stroke(bounds.insetBy(dx: 0.5, dy: 0.5), outerBorder, radius: 8, width: 1)
 
         drawText(
-            "HOW EVERYTHING CONNECTS   ·   Click any button inside the diagram to save the preset, open apps, or start controls",
+            L("dgHeader"),
             at: NSPoint(x: 12, y: 7),
             size: 10.5,
             bold: true,
@@ -1165,8 +1174,8 @@ private final class SheetBackground: NSView {
         a1Color.setStroke()
         p1.stroke()
         drawArrowHead(tip: a1End, color: a1Color)
-        drawText("Shortcuts", at: NSPoint(x: a1Start.x + 8, y: a1Start.y - 17), size: 9.5, bold: true, color: Self.navy)
-        drawText("OBS active", at: NSPoint(x: a1Start.x + 7, y: a1Start.y + 5), size: 9.0, bold: false, color: mutedDark)
+        drawText(L("dgShortcuts"), at: NSPoint(x: a1Start.x + 8, y: a1Start.y - 17), size: 9.5, bold: true, color: Self.navy)
+        drawText(L("dgObsActive"), at: NSPoint(x: a1Start.x + 7, y: a1Start.y + 5), size: 9.0, bold: false, color: mutedDark)
 
         // --- Arrow 2: Fadester Companion -> OBS Studio (top) & VJster Video (bottom) ---
         let splitX = g.box2.maxX + 18
@@ -1185,7 +1194,7 @@ private final class SheetBackground: NSView {
         obsLinkColor.setStroke()
         pTop.stroke()
         drawArrowHead(tip: NSPoint(x: g.box3a.minX - 3, y: topY), color: obsLinkColor)
-        drawText("WS + T-bar", at: NSPoint(x: splitX + 5, y: topY - 15), size: 9.2, bold: true, color: Self.navy)
+        drawText(L("dgWsTbar"), at: NSPoint(x: splitX + 5, y: topY - 15), size: 9.2, bold: true, color: Self.navy)
 
         let vjActive = state.vjsterEnabled && !state.vjsterPortBusy && (!state.controlsRunning || state.vjsterConnected)
         let vjLinkColor = !state.vjsterEnabled ? Self.grey : (state.vjsterPortBusy ? Self.red : (vjActive ? Self.green : Self.amber))
@@ -1198,53 +1207,53 @@ private final class SheetBackground: NSView {
         vjLinkColor.setStroke()
         pBot.stroke()
         drawArrowHead(tip: NSPoint(x: g.box3b.minX - 3, y: botY), color: vjLinkColor)
-        drawText("Port \(state.vjsterPort)", at: NSPoint(x: splitX + 5, y: botY + 4), size: 9.2, bold: true, color: mutedDark)
+        drawText(L("dgPort", state.vjsterPort), at: NSPoint(x: splitX + 5, y: botY + 4), size: 9.2, bold: true, color: mutedDark)
 
         // --- Box 1: TourBox + Console ---
         fill(g.box1, Self.darkCard, radius: 7)
         stroke(g.box1, lampColor(state.tourBoxLamp).withAlphaComponent(0.85), radius: 7, width: 1.4)
         drawDot(state.tourBoxLamp, x: g.box1.minX + 10, y: g.box1.minY + 10)
-        drawText("1. TourBox + Console", at: NSPoint(x: g.box1.minX + 24, y: g.box1.minY + 7), size: 11.5, bold: true, color: .white)
+        drawText(L("dgBox1"), at: NSPoint(x: g.box1.minX + 24, y: g.box1.minY + 7), size: 11.5, bold: true, color: .white)
         drawMiniTourBox(in: NSRect(x: g.box1.minX + 10, y: g.box1.minY + 32, width: 45, height: 47))
-        let tbLine1 = state.consoleRunning ? "Console: open" : (state.consoleInstalled ? "Console: closed" : "Console: get app")
+        let tbLine1 = state.consoleRunning ? L("dgConsoleOpen") : (state.consoleInstalled ? L("dgConsoleClosed") : L("dgConsoleGet"))
         drawText(tbLine1, at: NSPoint(x: g.box1.minX + 62, y: g.box1.minY + 33), size: 10.5, bold: true, color: lightInk)
-        drawText("Import Mac .tb once", at: NSPoint(x: g.box1.minX + 62, y: g.box1.minY + 49), size: 9.8, bold: false, color: mutedLight)
-        drawText("Auto Switch → OBS", at: NSPoint(x: g.box1.minX + 62, y: g.box1.minY + 63), size: 9.8, bold: false, color: mutedLight)
+        drawText(L("dgImportOnce"), at: NSPoint(x: g.box1.minX + 62, y: g.box1.minY + 49), size: 9.8, bold: false, color: mutedLight)
+        drawText(L("dgAutoSwitch"), at: NSPoint(x: g.box1.minX + 62, y: g.box1.minY + 63), size: 9.8, bold: false, color: mutedLight)
 
         // --- Box 2: Fadester Companion (Here) ---
         fill(g.box2, Self.navy, radius: 7)
         stroke(g.box2, state.controlsArmed ? Self.green : (!state.axTrusted ? Self.amber : Self.accent), radius: 7, width: 1.5)
         drawDot(state.controlsLamp, x: g.box2.minX + 10, y: g.box2.minY + 10)
-        drawText("2. Companion (Here)", at: NSPoint(x: g.box2.minX + 24, y: g.box2.minY + 7), size: 11.5, bold: true, color: .white)
-        let ctlText = !state.controlsRunning ? (state.axTrusted ? "Controls: off" : "Needs Mac Access") : (state.controlsArmed ? "Controls: armed" : "Controls: starting…")
+        drawText(L("dgBox2"), at: NSPoint(x: g.box2.minX + 24, y: g.box2.minY + 7), size: 11.5, bold: true, color: .white)
+        let ctlText = !state.controlsRunning ? (state.axTrusted ? L("liCtlOff") : L("dgNeedsAccess")) : (state.controlsArmed ? L("dgArmed") : L("macLiCtlStarting"))
         drawText(ctlText, at: NSPoint(x: g.box2.minX + 10, y: g.box2.minY + 33), size: 10.5, bold: true, color: lightInk)
-        drawText("Drives OBS & VJster", at: NSPoint(x: g.box2.minX + 10, y: g.box2.minY + 49), size: 9.8, bold: false, color: mutedLight)
-        drawText("Keep this app open", at: NSPoint(x: g.box2.minX + 10, y: g.box2.minY + 63), size: 9.8, bold: false, color: mutedLight)
+        drawText(L("dgDrives"), at: NSPoint(x: g.box2.minX + 10, y: g.box2.minY + 49), size: 9.8, bold: false, color: mutedLight)
+        drawText(L("dgKeepOpen"), at: NSPoint(x: g.box2.minX + 10, y: g.box2.minY + 63), size: 9.8, bold: false, color: mutedLight)
 
         // --- Box 3A: OBS Studio ---
         fill(g.box3a, .white, radius: 7)
         stroke(g.box3a, lampColor(state.obsLamp), radius: 7, width: 1.4)
         drawDot(state.obsLamp, x: g.box3a.minX + 10, y: g.box3a.minY + 9)
-        drawText("3. OBS Studio", at: NSPoint(x: g.box3a.minX + 24, y: g.box3a.minY + 6), size: 11.5, bold: true, color: Self.navy)
+        drawText(L("dgBox3"), at: NSPoint(x: g.box3a.minX + 24, y: g.box3a.minY + 6), size: 11.5, bold: true, color: Self.navy)
         let obsNote: String
-        if !state.obsRunning { obsNote = "Not running" }
-        else if !state.obsConnected { obsNote = "Setup WebSocket" }
-        else if state.studioOff && !state.controlsRunning { obsNote = "Turn Studio Mode on" }
-        else if state.controlsRunning && !state.frontIsObs { obsNote = "Bring OBS to front" }
-        else { obsNote = "Keep in front live" }
+        if !state.obsRunning { obsNote = L("dgObsNotRunning") }
+        else if !state.obsConnected { obsNote = L("dgObsSetup") }
+        else if state.studioOff && !state.controlsRunning { obsNote = L("dgObsStudio") }
+        else if state.controlsRunning && !state.frontIsObs { obsNote = L("dgObsFront") }
+        else { obsNote = L("dgObsLive") }
         drawText(obsNote, at: NSPoint(x: g.box3a.minX + 10, y: g.box3a.minY + 32), size: 10.0, bold: false, color: mutedDark)
 
         // --- Box 3B: VJster Video ---
         fill(g.box3b, .white, radius: 7)
         stroke(g.box3b, lampColor(state.vjsterLamp), radius: 7, width: 1.4)
         drawDot(state.vjsterLamp, x: g.box3b.minX + 10, y: g.box3b.minY + 9)
-        drawText("4. VJster Video", at: NSPoint(x: g.box3b.minX + 24, y: g.box3b.minY + 6), size: 11.5, bold: true, color: Self.navy)
+        drawText(L("dgBox4"), at: NSPoint(x: g.box3b.minX + 24, y: g.box3b.minY + 6), size: 11.5, bold: true, color: Self.navy)
         let vjNote: String
-        if !state.vjsterEnabled { vjNote = "Optional (off)" }
-        else if state.vjsterPortBusy { vjNote = "Port \(state.vjsterPort) busy" }
-        else if state.controlsRunning && !state.vjsterConnected { vjNote = "Open YouTube / /obs" }
-        else if state.controlsRunning { vjNote = "Player connected" }
-        else { vjNote = "Chrome or /obs ready" }
+        if !state.vjsterEnabled { vjNote = L("dgVjOff") }
+        else if state.vjsterPortBusy { vjNote = L("dgVjBusy", state.vjsterPort) }
+        else if state.controlsRunning && !state.vjsterConnected { vjNote = L("dgVjOpen") }
+        else if state.controlsRunning { vjNote = L("dgVjConnected") }
+        else { vjNote = L("dgVjReady") }
         drawText(vjNote, at: NSPoint(x: g.box3b.minX + 10, y: g.box3b.minY + 32), size: 10.0, bold: false, color: mutedDark)
 
         // --- Interactive pill buttons inside all boxes ---

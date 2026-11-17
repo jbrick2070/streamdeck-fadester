@@ -30,6 +30,8 @@ server.on('connection', socket=>{
       case 'GetSceneItemList':responseData={sceneItems:requestData.sceneName==='Guest'?[{sourceName:'Lower third'}]:[]};break;
       case 'GetInputVolume':if(requestData.inputName==='Music • 音楽')responseData={inputVolumeDb:-12};else{code=605;result=false;}break;
       case 'GetMediaInputStatus':responseData={mediaState:requestData.inputName==='Clips'?'OBS_MEDIA_STATE_PAUSED':'OBS_MEDIA_STATE_NONE'};break;
+      // The one vendor read: Visual Sidechain's meter, as the Windows catalog reads it.
+      case 'CallVendorRequest':assert.equal(requestData.vendorName,'visual-sidechain');assert.equal(requestData.requestType,'get_signals');responseData={vendorName:'visual-sidechain',requestType:'get_signals',responseData:{bpm:128,bpm_locked:true,beat_index:2,audio_present:true,sub_bass:1,bass:0.5,mid:0,high:0.25}};break;
       default:throw Error('Discovery attempted a request outside its read-only vocabulary: '+requestType);
     }
     // Keep the music input generic for this fixture: only Clips is a media role.
@@ -42,6 +44,6 @@ let output='';child.stdout.on('data',data=>output+=data);child.stderr.on('data',
 const timer=setTimeout(()=>child.kill('SIGKILL'),15000);
 try{
   const [code]=await once(child,'exit'); assert.equal(code,0,output);
-  assert.equal(calls.length,11);assert(calls.every(name=>name.startsWith('Get')));
-  process.stdout.write(output);console.log('PASS: 11 authenticated discovery requests, all read-only; no installed OBS accessed.');
+  assert.equal(calls.length,12);assert(calls.every(name=>name.startsWith('Get')||name==='CallVendorRequest'));
+  process.stdout.write(output);console.log('PASS: 12 authenticated discovery requests, all read-only (11 Get requests and Visual Sidechain get_signals); no installed OBS accessed.');
 }finally{clearTimeout(timer);for(const socket of server.clients)socket.terminate();server.close();}

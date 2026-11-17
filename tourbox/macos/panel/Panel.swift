@@ -129,16 +129,17 @@ private final class PillActionButton: NSControl {
 @MainActor private final class FeedbackHud {
     private let panel: NSPanel
     private let textField = NSTextField(wrappingLabelWithString: "")
+    private let meterField = NSTextField(labelWithString: "")
     var isVisible: Bool { panel.isVisible }
 
     init() {
         panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 400, height: 60),
+            contentRect: NSRect(x: 0, y: 0, width: 420, height: 82),
             styleMask: [.titled, .closable, .utilityWindow, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
-        panel.title = "Fadester Companion · last action"
+        panel.title = L("lastAction")
         panel.level = .floating
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
@@ -149,10 +150,18 @@ private final class PillActionButton: NSControl {
         textField.maximumNumberOfLines = 2
         textField.translatesAutoresizingMaskIntoConstraints = false
         card.addSubview(textField)
+        meterField.font = .systemFont(ofSize: 11.5)
+        meterField.textColor = NSColor(srgbRed: 196 / 255, green: 210 / 255, blue: 232 / 255, alpha: 1)
+        meterField.lineBreakMode = .byTruncatingTail
+        meterField.translatesAutoresizingMaskIntoConstraints = false
+        card.addSubview(meterField)
         NSLayoutConstraint.activate([
             textField.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 12),
             textField.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -12),
-            textField.centerYAnchor.constraint(equalTo: card.centerYAnchor)
+            textField.topAnchor.constraint(equalTo: card.topAnchor, constant: 10),
+            meterField.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 12),
+            meterField.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -12),
+            meterField.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -8)
         ])
         if let screen = NSScreen.main?.visibleFrame {
             panel.setFrameOrigin(NSPoint(x: screen.maxX - 416, y: screen.maxY - 92))
@@ -160,6 +169,7 @@ private final class PillActionButton: NSControl {
     }
 
     func set(_ value: String) { textField.stringValue = value }
+    func setMeter(_ value: String) { meterField.stringValue = value }
     func show() { panel.orderFrontRegardless() }
     func close() { panel.close() }
 }
@@ -191,12 +201,17 @@ private final class PillActionButton: NSControl {
     private var reminderCard = RoundedCardView(fill: reminderBgColor, radius: 5)
     private var reminderLabel = NSTextField(wrappingLabelWithString: "")
     private var reminderAction = PillActionButton()
-    private var status = NSTextField(labelWithString: "Looking for OBS on this Mac…")
-    private var snapshot = NSTextField(wrappingLabelWithString: "Read OBS to load real scene and source names. This scan changes nothing in OBS.")
+    private var status = NSTextField(labelWithString: L("macLookingForObs"))
+    private var snapshot = NSTextField(wrappingLabelWithString: L("macSnapshotHint"))
+    // The Visual Sidechain meter (P1-3), from a scan or the running controls' VS-METER lines, as on Windows.
+    private var vsLine = NSTextField(labelWithString: "")
+    private var vsStatus = ""
     private var importNote = NSTextField(wrappingLabelWithString: "")
     private var port = NSTextField(string: "4455"), password = NSSecureTextField(string: "")
-    private var mix = NSButton(checkboxWithTitle: "Enable All OBS mixer inputs", target: nil, action: nil)
-    private var vjster = NSButton(checkboxWithTitle: "Enable VJster video control", target: nil, action: nil)
+    private var mix = NSButton(checkboxWithTitle: L("enableMix"), target: nil, action: nil)
+    // Stream Deck, OpenDeck and MIDI only (the host's --mix-only), as on Windows.
+    private var mixOnly = NSButton(checkboxWithTitle: L("mixOnly"), target: nil, action: nil)
+    private var vjster = NSButton(checkboxWithTitle: L("enableVjster"), target: nil, action: nil)
     private var vjsterPort = NSTextField(string: "48150"), vjsterExtensionId = NSTextField(string: ""), vjsterVideo = NSTextField(string: "")
     private var vjsterTarget = NSPopUpButton(frame: .zero, pullsDown: false)
     private var fields: [String: NSTextField] = [:], choices: [String: NSPopUpButton] = [:]
@@ -220,8 +235,9 @@ private final class PillActionButton: NSControl {
             settings.overlayScene = "Guest"; settings.overlaySource = "Lower third"; settings.anchors = ["Opening", "Guest", "Closing", ""]
             settings.layer1Scene = "Guest"; settings.layer1Source = "Guest camera"; settings.layer2Scene = "Guest"; settings.layer2Source = "Lower third"
             obsConnected = true; obsRunning = true; tourboxConsoleRunning = true
-            status.stringValue = "Connected to OBS. Scenes found: 3. Your controller does nothing until you click Save & start controls."
-            snapshot.stringValue = "Program: Opening   •   Preview: Guest   •   Studio Mode: On"
+            status.stringValue = L("obsReady", 3)
+            snapshot.stringValue = L("sceneSummary", "Opening", "Guest", L("on"))
+            vsStatus = Readiness.vsMeter("VS-METER: active 120 1 2 80 60 40 20") ?? ""
         }
         if !preview {
             axTrusted = AXIsProcessTrusted()
@@ -249,7 +265,7 @@ private final class PillActionButton: NSControl {
         if !invalidSettings && obsRunning {
             performScan(silentIfOffline: true)
         } else if !invalidSettings && !obsRunning {
-            status.stringValue = "Start OBS Studio to read your scenes, or review assignments below."
+            status.stringValue = L("macStartObs")
         }
     }
 
@@ -342,7 +358,7 @@ private final class PillActionButton: NSControl {
         // 3. Contextual amber reminder strip (shown only when OBS is hidden or behind another app while controls run).
         reminderLabel.font = .boldSystemFont(ofSize: 12.5)
         reminderLabel.textColor = reminderFgColor
-        reminderAction.titleText = "Bring OBS to Front"
+        reminderAction.titleText = L("btnBringObs")
         reminderAction.fill = accentColor
         reminderAction.onClick = { [weak self] in
             guard let self else { return }
@@ -363,7 +379,7 @@ private final class PillActionButton: NSControl {
         ])
 
         // 4. Tab navigation (Setup, Assignments, Control map, Activity).
-        navigation = ["Setup", "Assignments", "Control map", "Activity"].enumerated().map { index, name in
+        navigation = [L("setup"), L("assignments"), L("controlMap"), L("activity")].enumerated().map { index, name in
             let control = button(name, #selector(selectTab(_:)))
             control.tag = index; control.setButtonType(.pushOnPushOff)
             control.widthAnchor.constraint(equalToConstant: 132).isActive = true
@@ -373,10 +389,10 @@ private final class PillActionButton: NSControl {
         root.addArrangedSubview(horizontal(navigation))
 
         tabs = NSTabView(); tabs.tabViewType = .noTabsNoBorder; tabs.translatesAutoresizingMaskIntoConstraints = false
-        addTab(tabs, "Setup", setup())
-        addTab(tabs, "Assignments", assignments())
-        addTab(tabs, "Control map", controlMapPage())
-        addTab(tabs, "Activity", activityPage())
+        addTab(tabs, L("setup"), setup())
+        addTab(tabs, L("assignments"), assignments())
+        addTab(tabs, L("controlMap"), controlMapPage())
+        addTab(tabs, L("activity"), activityPage())
         root.addArrangedSubview(tabs)
         NSLayoutConstraint.activate([
             tabs.widthAnchor.constraint(equalTo: root.widthAnchor, constant: -36),
@@ -385,18 +401,20 @@ private final class PillActionButton: NSControl {
         tabs.setContentHuggingPriority(.defaultLow, for: .vertical)
 
         // 5. Footer bar (matches Windows Fadester Companion).
-        primaryButton = button("Save & start controls", #selector(toggleControls))
+        primaryButton = button(L("saveStart"), #selector(toggleControls))
         primaryButton.bezelStyle = .rounded
         primaryButton.bezelColor = accentColor
         primaryButton.contentTintColor = .white
         primaryButton.keyEquivalent = ""
-        saveButton = button("Save assignments", #selector(save))
-        let feedbackButton = button("Show / hide feedback", #selector(toggleFeedback))
-        let guideButton = button("Quick guide", #selector(guide))
+        saveButton = button(L("save"), #selector(save))
+        let feedbackButton = button(L("feedback"), #selector(toggleFeedback))
+        let guideButton = button(L("guide"), #selector(guide))
         root.addArrangedSubview(horizontal([primaryButton, saveButton, feedbackButton, guideButton]))
-        root.addArrangedSubview(label("Keep this window open while you work. Closing it stops the controls without resetting OBS scenes or audio levels.", small: true))
+        root.addArrangedSubview(label(L("keepOpen"), small: true))
 
         vjster.target = self; vjster.action = #selector(vjsterToggled)
+        mix.target = self; mix.action = #selector(mixToggled)
+        mixOnly.target = self; mixOnly.action = #selector(mixOnlyToggled)
         loadFields(); fillChoices(); readControlMap()
 
         host.line = { [weak self] rawLine in
@@ -414,14 +432,15 @@ private final class PillActionButton: NSControl {
         }
         host.exited = { [weak self] in
             guard let self else { return }
+            self.setMeter("")
             self.vjsterPeers.removeAll()
             self.vjsterPortBusy = false
             self.updateEnabled()
             if self.terminating { NSApp.reply(toApplicationShouldTerminate: true) }
         }
         if invalidSettings {
-            setStatus("Saved settings could not be read. Nothing will be overwritten.")
-            note("Repair or remove panel-config.json in ~/Library/Application Support/FadesterTourBox before saving. Your file has not been changed.")
+            setStatus(L("macSettingsUnreadable"))
+            note(L("macSettingsRepair"))
         }
         updateEnabled()
     }
@@ -429,6 +448,14 @@ private final class PillActionButton: NSControl {
     private func setStatus(_ text: String) {
         status.stringValue = text
         hud?.set(text)
+    }
+
+    /// The Visual Sidechain meter line in Setup and in the feedback window ("" hides it).
+    private func setMeter(_ text: String) {
+        vsStatus = text
+        vsLine.stringValue = text
+        vsLine.isHidden = text.isEmpty
+        hud?.setMeter(text)
     }
 
     private func label(_ text: String, small: Bool = false) -> NSTextField {
@@ -482,35 +509,40 @@ private final class PillActionButton: NSControl {
         stack.addArrangedSubview(diagramView)
         diagramView.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
 
-        heading("1   Connect to OBS", in: stack)
-        paragraph("In OBS, open Tools → WebSocket Server Settings and turn on Enable WebSocket server. Keep authentication on. The T-bar needs OBS 33. Turn on Studio Mode, choose the Fade transition, and keep the main OBS window open with its T-bar visible.", in: stack)
+        heading(L("connectTitle"), in: stack)
+        paragraph(L("connectHint"), in: stack)
         port.widthAnchor.constraint(equalToConstant: 86).isActive = true
         password.widthAnchor.constraint(equalToConstant: 220).isActive = true
-        password.placeholderString = "Optional session password"
-        stack.addArrangedSubview(horizontal([label("OBS port"), port, label("OBS password (optional)"), password]))
+        password.placeholderString = L("macPasswordPlaceholder")
+        stack.addArrangedSubview(horizontal([label(L("port")), port, label(L("password")), password]))
         edits += [port, password]
-        paragraph("Leave the password empty. Fadester Companion reads the password that OBS saved on this Mac. Type a password here only if the connection fails (Tools → WebSocket Server Settings → Show Connect Info). A typed password is never saved.", in: stack)
-        scanButton = button("Read scenes and inputs from OBS", #selector(scan))
+        paragraph(L("macPasswordHint"), in: stack)
+        scanButton = button(L("discover"), #selector(scan))
         stack.addArrangedSubview(scanButton)
         snapshot.font = .boldSystemFont(ofSize: 12.5)
         snapshot.textColor = navyColor
         stack.addArrangedSubview(snapshot)
         snapshot.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
+        vsLine.font = .systemFont(ofSize: 12.5, weight: .medium)
+        vsLine.textColor = accentColor
+        vsLine.stringValue = vsStatus
+        vsLine.isHidden = vsStatus.isEmpty
+        stack.addArrangedSubview(vsLine)
 
-        heading("2   Set up TourBox & native T-bar", in: stack)
-        subheading("TourBox Console preset", in: stack)
-        paragraph("1. Click “1. Save TourBox Preset (.tb)…” below to save OBS Fadester for TourBox.tb (for example in Downloads).\n2. Click “2. Open TourBox Console”, then click the middle Import [↙] icon beside Preset List and open that .tb file.\n3. With OBS Studio open, click “Not Linked” on the preset row → pick OBS (not Fadester Companion) under Running applications → click Save, and keep Auto Switch on.\n(TourBox’s .tb format does not store app links inside the file, so linking OBS once in Console is always required.)", in: stack)
-        savePresetStepButton = button("1. Save TourBox Preset (.tb)…", #selector(saveAndGuidePreset))
+        heading(L("macControllerTitle"), in: stack)
+        subheading(L("macPresetTitle"), in: stack)
+        paragraph(L("macPresetSteps"), in: stack)
+        savePresetStepButton = button(L("macSavePreset"), #selector(saveAndGuidePreset))
         savePresetStepButton.bezelStyle = .rounded
         savePresetStepButton.bezelColor = accentColor
-        openConsoleStepButton = button("2. Open TourBox Console", #selector(openOrDownloadConsole))
-        let showGuideBtn = button("Show me where to click", #selector(showImportGuide))
+        openConsoleStepButton = button(L("macOpenConsoleStep"), #selector(openOrDownloadConsole))
+        let showGuideBtn = button(L("btnShowWhere"), #selector(showImportGuide))
         stack.addArrangedSubview(horizontal([savePresetStepButton, openConsoleStepButton, showGuideBtn]))
-        let downloadConsoleBtn = button("Download TourBox Console…", #selector(downloadTourBoxConsole))
-        let presetSquareBtn = button("TourBox Preset Square…", #selector(openPresetSquare))
-        stack.addArrangedSubview(horizontal([label("TourBox software & info:", small: true), downloadConsoleBtn, presetSquareBtn]))
+        let downloadConsoleBtn = button(L("macDownloadConsole"), #selector(downloadTourBoxConsole))
+        let presetSquareBtn = button(L("macPresetSquare"), #selector(openPresetSquare))
+        stack.addArrangedSubview(horizontal([label(L("macTourBoxInfo"), small: true), downloadConsoleBtn, presetSquareBtn]))
         if LocalFiles.presetSyncState(bundledHash: bundledPresetHash, savedHash: savedPresetHash) == .updateAvailable {
-            importNote.stringValue = "This version of Fadester Companion includes an updated Mac TourBox preset (.tb). Click 1. Save Updated Preset (.tb)… and re-import it in TourBox Console."
+            importNote.stringValue = L("macPresetUpdated")
             importNote.isHidden = false
         } else {
             importNote.isHidden = true
@@ -520,39 +552,41 @@ private final class PillActionButton: NSControl {
         stack.addArrangedSubview(importNote)
         importNote.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
 
-        subheading("macOS Accessibility permission", in: stack)
-        paragraph("Fadester Companion needs macOS Accessibility permission to drive OBS’s visible T-bar (TourBox Console has its own separate permission). After an app update, if Fadester Companion already appears switched ON in System Settings → Privacy & Security → Accessibility, toggle it OFF and back ON once.", in: stack)
-        grantAxButton = button("Grant Accessibility to Fadester Companion…", #selector(grantAccessibility))
+        subheading(L("macAxTitle"), in: stack)
+        paragraph(L("macAxHint"), in: stack)
+        grantAxButton = button(L("macAxGrant"), #selector(grantAccessibility))
         grantAxButton.bezelStyle = .rounded
         axStatusLabel.font = .systemFont(ofSize: 12, weight: .semibold)
-        stack.addArrangedSubview(horizontal([grantAxButton, button("Native helper window…", #selector(permission)), axStatusLabel]))
+        stack.addArrangedSubview(horizontal([grantAxButton, button(L("macNativeHelper"), #selector(permission)), axStatusLabel]))
 
-        heading("3   Try Preview", in: stack)
-        paragraph("Click Save & start controls (or Start in the top bar) and bring OBS to the front. Turn Scroll one step: Preview changes while Program stays put. Turn the Dial to fade smoothly between them.", in: stack)
+        heading(L("cueTitle"), in: stack)
+        paragraph(L("macCueHint"), in: stack)
 
-        heading("Optional   VJster: YouTube from TourBox (Chrome & OBS Browser Source)", in: stack)
+        heading(L("vjsterTitle"), in: stack)
         vjsterPort.widthAnchor.constraint(equalToConstant: 86).isActive = true
         vjsterTarget.widthAnchor.constraint(greaterThanOrEqualToConstant: 205).isActive = true
         vjsterTarget.removeAllItems()
-        for (titleText, code) in [("Chrome & OBS page", "both"), ("Chrome extension only", "browser"), ("OBS Browser Source only", "obs")] {
+        for (titleText, code) in [(L("vjsterTargetBoth"), "both"), (L("vjsterTargetBrowser"), "browser"), (L("vjsterTargetObs"), "obs")] {
             vjsterTarget.addItem(withTitle: titleText); vjsterTarget.lastItem?.representedObject = code
         }
-        stack.addArrangedSubview(horizontal([vjster, label("VJster port"), vjsterPort, label("Target"), vjsterTarget]))
+        stack.addArrangedSubview(vjster)
+        stack.addArrangedSubview(horizontal([label(L("vjsterPort")), vjsterPort, label(L("vjsterTarget")), vjsterTarget]))
         vjsterExtensionId.widthAnchor.constraint(equalToConstant: 300).isActive = true
-        vjsterExtensionId.placeholderString = "Optional 32-letter Chrome extension ID"
-        stack.addArrangedSubview(horizontal([label("Only this extension"), vjsterExtensionId]))
+        vjsterExtensionId.placeholderString = L("macExtensionPlaceholder")
+        stack.addArrangedSubview(horizontal([label(L("vjsterExtensionId")), vjsterExtensionId]))
         vjsterVideo.widthAnchor.constraint(equalToConstant: 300).isActive = true
-        vjsterVideo.placeholderString = "YouTube URL or 11-character video ID"
-        copyObsUrlButton = button("Copy OBS Browser Source URL", #selector(copyObsUrl))
-        stack.addArrangedSubview(horizontal([label("OBS video URL / ID"), vjsterVideo, copyObsUrlButton]))
+        vjsterVideo.placeholderString = L("macVideoPlaceholder")
+        copyObsUrlButton = button(L("copyObsUrl"), #selector(copyObsUrl))
+        stack.addArrangedSubview(horizontal([label(L("vjsterVideo")), vjsterVideo, copyObsUrlButton]))
         edits += [vjster, vjsterPort, vjsterTarget, vjsterExtensionId]
-        paragraph("The raised Knob changes YouTube playback speed (press + turn for fine 0.05x steps, Side + Knob press to return to 1x); press + turn Scroll steps quality; Side + D-pad Up plays or pauses. Works with the VJster Chrome extension and/or directly in an OBS Browser Source using the copied URL.", in: stack)
+        paragraph(L("macVjsterHint"), in: stack)
 
-        heading("Optional   Fade all OBS mixer inputs", in: stack)
+        heading(L("mixTitle"), in: stack)
         stack.addArrangedSubview(mix); edits.append(mix)
-        paragraph("Off by default. One relative fade (Side + Knob) for public OBS audio inputs in this scene collection while preserving their balance. Stop never raises audio levels.", in: stack)
-        number("Group step (dB)", key: "mixStepDb", in: stack)
-        number("Group fade (ms)", key: "mixFadeMs", in: stack)
+        paragraph(L("mixHint"), in: stack)
+        stack.addArrangedSubview(mixOnly); edits.append(mixOnly)
+        number(L("mixStep"), key: "mixStepDb", in: stack)
+        number(L("mixFade"), key: "mixFadeMs", in: stack)
         return scrolling(stack)
     }
 
@@ -573,40 +607,28 @@ private final class PillActionButton: NSControl {
 
     private func assignments() -> NSView {
         let stack = column()
-        heading("Choose the OBS sources you want to control", in: stack)
-        paragraph("Assignments apply after Save & start, or after restarting controls. Choose scenes and inputs by name; unassigned roles do nothing and missing saved targets stay visible as unavailable.", in: stack)
-        for (name, key) in [
-            ("Music / bed", "musicInput"),
-            ("Content / guest", "contentInput"),
-            ("Microphone", "micInput"),
-            ("Media / Playlister", "mediaInput"),
-            ("Overlay scene", "overlayScene"),
-            ("Overlay source", "overlaySource")
-        ] { choice(name, key: key, in: stack) }
-        for (index, name) in ["D-pad Up", "D-pad Right", "D-pad Down", "D-pad Left"].enumerated() {
-            choice("Preview anchor \(index + 1) (TourBox \(name))", key: "anchor\(index)", in: stack)
+        heading(L("assignTitle"), in: stack)
+        paragraph(L("assignHint"), in: stack)
+        for key in ["musicInput", "contentInput", "micInput", "mediaInput", "overlayScene", "overlaySource"] { choice(L(key), key: key, in: stack) }
+        for (index, direction) in ["up", "right", "down", "left"].enumerated() {
+            choice(L("anchorField", index + 1, L(direction)), key: "anchor\(index)", in: stack)
         }
-        firstFourButton = button("Assign the first four OBS scenes to anchors 1 to 4", #selector(assignFirstFour))
+        firstFourButton = button(L("assignFirstFour"), #selector(assignFirstFour))
         stack.addArrangedSubview(firstFourButton); edits.append(firstFourButton)
 
-        heading("VJ layers: blend modes and opacity", in: stack)
-        paragraph("Two sources in your mix scene. Hold Top and turn the Knob to cycle Layer 1’s blend mode, Scroll for Layer 2’s blend mode, and the Dial to ride Layer 2’s opacity through a Color Correction filter.", in: stack)
-        for (name, key) in [
-            ("Layer 1 scene", "layer1Scene"),
-            ("Layer 1 source", "layer1Source"),
-            ("Layer 2 scene", "layer2Scene"),
-            ("Layer 2 source", "layer2Source")
-        ] { choice(name, key: key, in: stack) }
+        heading(L("layersTitle"), in: stack)
+        paragraph(L("layersHint"), in: stack)
+        for key in ["layer1Scene", "layer1Source", "layer2Scene", "layer2Source"] { choice(L(key), key: key, in: stack) }
 
-        heading("Adjust the feel", in: stack)
+        heading(L("adjust"), in: stack)
         for (name, key) in [
-            ("Music step (dB)", "volumeStepDb"),
-            ("Duck ceiling (dB)", "duckDb"),
-            ("Ticks per full fade", "ticks"),
-            ("Timing step (ms)", "transitionStepMs"),
-            ("Opacity step (%)", "opacityPct")
-        ] { number(name, key: key, in: stack) }
-        paragraph("Press and turn the Dial for a quarter fade step; hold Short and turn the Knob for a quarter Music step. Duck never raises a quiet input.", in: stack)
+            ("musicStep", "volumeStepDb"),
+            ("duckCeiling", "duckDb"),
+            ("fadeTicks", "ticks"),
+            ("timingStep", "transitionStepMs"),
+            ("opacityStep", "opacityPct")
+        ] { number(L(name), key: key, in: stack) }
+        paragraph(L("adjustHint"), in: stack)
         return scrolling(stack)
     }
 
@@ -621,11 +643,11 @@ private final class PillActionButton: NSControl {
         let iconCol = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("icon"))
         iconCol.title = ""; iconCol.width = 32; iconCol.minWidth = 32; iconCol.maxWidth = 32
         let ctlCol = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("control"))
-        ctlCol.title = "Control"; ctlCol.width = 185; ctlCol.minWidth = 120
+        ctlCol.title = L("control"); ctlCol.width = 185; ctlCol.minWidth = 120
         let gesCol = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("gesture"))
-        gesCol.title = "Gesture"; gesCol.width = 155; gesCol.minWidth = 100
+        gesCol.title = L("gesture"); gesCol.width = 155; gesCol.minWidth = 100
         let actCol = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("action"))
-        actCol.title = "Action"; actCol.width = 430; actCol.minWidth = 200
+        actCol.title = L("action"); actCol.width = 430; actCol.minWidth = 200
         for col in [iconCol, ctlCol, gesCol, actCol] { mapTable.addTableColumn(col) }
         mapTable.dataSource = self
         mapTable.delegate = self
@@ -677,12 +699,15 @@ private final class PillActionButton: NSControl {
     }
 
     private func readControlMap() {
-        guard FileManager.default.fileExists(atPath: paths.map.path) else { return }
+        // The action names in the panel's language: build.sh bundles each language's map.json, as the Windows panel has them.
+        let localized = paths.resources.appendingPathComponent("presets/\(PanelText.locale)/map.json")
+        let file = PanelText.locale != "en" && FileManager.default.fileExists(atPath: localized.path) ? localized : paths.map
+        guard FileManager.default.fileExists(atPath: file.path) else { return }
         do {
-            mapRows = try ControlMapRow.load(data: Data(contentsOf: paths.map))
+            mapRows = try ControlMapRow.load(data: Data(contentsOf: file))
             mapTable.reloadData()
         } catch {
-            note("Control map could not be loaded from presets/map.json.")
+            note(L("mapUnreadable"))
         }
     }
 
@@ -696,6 +721,7 @@ private final class PillActionButton: NSControl {
 
     private func loadFields() {
         port.stringValue = String(settings.port); mix.state = settings.mixEnabled ? .on : .off
+        mixOnly.state = settings.mixEnabled && settings.mixOnly ? .on : .off
         vjster.state = settings.vjsterEnabled ? .on : .off; vjsterPort.stringValue = String(settings.vjsterPort)
         vjsterExtensionId.stringValue = settings.vjsterExtensionId
         if let item = vjsterTarget.itemArray.first(where: { $0.representedObject as? String == settings.vjsterTarget }) { vjsterTarget.select(item) }
@@ -716,9 +742,9 @@ private final class PillActionButton: NSControl {
     private func fill(_ key: String, _ values: [String], keep: String) {
         guard let popup = choices[key] else { return }
         popup.removeAllItems()
-        popup.addItem(withTitle: "Unassigned"); popup.lastItem?.representedObject = ""
+        popup.addItem(withTitle: L("macUnassigned")); popup.lastItem?.representedObject = ""
         for value in Array(Set(values)).sorted() { popup.addItem(withTitle: value); popup.lastItem?.representedObject = value }
-        if !keep.isEmpty && !values.contains(keep) { popup.addItem(withTitle: "Unavailable — " + keep); popup.lastItem?.representedObject = keep }
+        if !keep.isEmpty && !values.contains(keep) { popup.addItem(withTitle: L("macUnavailable", keep)); popup.lastItem?.representedObject = keep }
         if let item = popup.itemArray.first(where: { $0.representedObject as? String == keep }) { popup.select(item) }
     }
 
@@ -744,10 +770,17 @@ private final class PillActionButton: NSControl {
     @objc private func layer1Changed() { fill("layer1Source", catalog.items[selected("layer1Scene")] ?? [], keep: "") }
     @objc private func layer2Changed() { fill("layer2Source", catalog.items[selected("layer2Scene")] ?? [], keep: "") }
     @objc private func vjsterToggled() { refreshIndicators() }
+    @objc private func mixToggled() {
+        if mix.state != .on { mixOnly.state = .off }
+        updateEnabled()
+    }
+    @objc private func mixOnlyToggled() { refreshIndicators() }
+    /// Stream Deck-only mode: chosen, and possible (it needs All OBS mixer inputs).
+    private var mixOnlyChosen: Bool { mix.state == .on && mixOnly.state == .on }
 
     @objc private func assignFirstFour() {
         guard !catalog.scenes.isEmpty else {
-            let msg = "Read the scene list from OBS first."
+            let msg = L("discoverFirst")
             setStatus(msg); note(msg); return
         }
         for index in 0..<4 {
@@ -756,14 +789,14 @@ private final class PillActionButton: NSControl {
                 popup.select(item)
             }
         }
-        let msg = "Anchors 1 to 4 are filled in. Save to keep them."
+        let msg = L("assignPreviewed")
         setStatus(msg); note(msg)
     }
 
     private func current() throws -> Settings {
         var result = settings
-        guard let value = Int(port.stringValue.trimmingCharacters(in: .whitespaces)) else { throw PanelFailure.message("Enter a whole-number local port.") }; result.port = value
-        guard let vjPort = Int(vjsterPort.stringValue.trimmingCharacters(in: .whitespaces)) else { throw PanelFailure.message("Enter a whole-number VJster port (1024–65535).") }; result.vjsterPort = vjPort
+        guard let value = Int(port.stringValue.trimmingCharacters(in: .whitespaces)) else { throw PanelFailure.message(L("macErrPort")) }; result.port = value
+        guard let vjPort = Int(vjsterPort.stringValue.trimmingCharacters(in: .whitespaces)) else { throw PanelFailure.message(L("macErrVjPort")) }; result.vjsterPort = vjPort
         result.vjsterEnabled = vjster.state == .on
         result.vjsterTarget = vjsterTarget.selectedItem?.representedObject as? String ?? "both"
         result.vjsterExtensionId = vjsterExtensionId.stringValue.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -774,14 +807,15 @@ private final class PillActionButton: NSControl {
         result.layer2Scene = selected("layer2Scene"); result.layer2Source = selected("layer2Source")
         result.anchors = (0..<4).map { selected("anchor\($0)") }
         func number(_ key: String) throws -> Double {
-            guard let text = fields[key]?.stringValue, let value = Double(text.trimmingCharacters(in: .whitespaces)), value.isFinite else { throw PanelFailure.message("Enter a valid number for \(key). Use a decimal point.") }; return value
+            guard let text = fields[key]?.stringValue, let value = Double(text.trimmingCharacters(in: .whitespaces)), value.isFinite else { throw PanelFailure.message(L("macErrNumber", key)) }; return value
         }
         result.volumeStepDb = try number("volumeStepDb"); result.duckDb = try number("duckDb")
-        let ticks = try number("ticks"); guard (1...1000).contains(ticks) else { throw PanelFailure.message("Use 1–1000 ticks per full fade.") }; result.faderStep = 1 / ticks
-        let opacityPct = try number("opacityPct"); guard (1...50).contains(opacityPct) else { throw PanelFailure.message("Use 1–50% for Opacity step.") }; result.opacityStep = opacityPct / 100.0
+        let ticks = try number("ticks"); guard (1...1000).contains(ticks) else { throw PanelFailure.message(L("macErrTicks")) }; result.faderStep = 1 / ticks
+        let opacityPct = try number("opacityPct"); guard (1...50).contains(opacityPct) else { throw PanelFailure.message(L("macErrOpacity")) }; result.opacityStep = opacityPct / 100.0
         let timing = try number("transitionStepMs"), duration = try number("mixFadeMs")
-        guard timing.rounded() == timing, (1...5000).contains(timing), duration.rounded() == duration, (0...10000).contains(duration) else { throw PanelFailure.message("Timing and group fade must be whole milliseconds in the shown ranges.") }
+        guard timing.rounded() == timing, (1...5000).contains(timing), duration.rounded() == duration, (0...10000).contains(duration) else { throw PanelFailure.message(L("macErrTiming")) }
         result.transitionStepMs = Int(timing); result.mixFadeMs = Int(duration); result.mixStepDb = try number("mixStepDb"); result.mixEnabled = mix.state == .on
+        result.mixOnly = mixOnlyChosen
         try result.validate(); return result
     }
 
@@ -790,10 +824,13 @@ private final class PillActionButton: NSControl {
         let canAct = !scanning && !invalidSettings && !previewMode
         let consoleReady = tourboxConsoleInstalled || tourboxConsoleRunning
         let obsState = Readiness.obs(connected: obsConnected, running: obsRunning, problem: obsProblem, studioOff: studioOff, controlsOn: controlsOn)
-        let tbState = Readiness.tourBox(consoleRunning: tourboxConsoleRunning, consoleInstalled: consoleReady)
+        let onlyMix = mixOnlyChosen
+        // Stream Deck-only mode needs no Accessibility: it moves no T-bar.
+        let axReady = axTrusted || onlyMix
+        let tbState = Readiness.tourBox(consoleRunning: tourboxConsoleRunning, consoleInstalled: consoleReady, mixOnly: onlyMix)
         let vjEnabled = vjster.state == .on
-        let vjState = Readiness.vjster(enabled: vjEnabled, controlsOn: controlsOn, connectedPeers: vjsterPeers.count, portBusy: vjsterPortBusy)
-        let ctlState = Readiness.controls(running: controlsOn, armed: host.isArmed, axTrusted: axTrusted)
+        let vjState = Readiness.vjster(enabled: vjEnabled, controlsOn: controlsOn, connectedPeers: vjsterPeers.count, portBusy: vjsterPortBusy, mixOnly: onlyMix)
+        let ctlState = Readiness.controls(running: controlsOn, armed: host.isArmed, axTrusted: axReady)
 
         let syncState: PresetSyncState = lastSavedPreset != nil
             ? .current
@@ -801,11 +838,12 @@ private final class PillActionButton: NSControl {
         obsLight.display(obsState, enabled: !scanning)
         tourboxLight.display(tbState, enabled: true)
         vjsterLight.display(vjState, enabled: true)
-        controlsLight.display(ctlState, enabled: controlsOn || !axTrusted || canAct)
-        savePresetStepButton?.title = syncState == .updateAvailable ? "1. Save Updated Preset (.tb)…" : "1. Save TourBox Preset (.tb)…"
-        openConsoleStepButton?.title = consoleReady ? "2. Open TourBox Console" : "2. Download TourBox Console…"
+        controlsLight.display(ctlState, enabled: controlsOn || !axReady || canAct)
+        mixOnly.isEnabled = mix.state == .on && !controlsOn && !scanning
+        savePresetStepButton?.title = syncState == .updateAvailable ? L("macSavePresetUpdated") : L("macSavePreset")
+        openConsoleStepButton?.title = consoleReady ? L("macOpenConsoleStep") : L("macDownloadConsoleStep")
         grantAxButton?.bezelColor = axTrusted ? nil : accentColor
-        axStatusLabel.stringValue = axTrusted ? "✓ Accessibility granted" : "Needed — enable Fadester Companion in Accessibility"
+        axStatusLabel.stringValue = axTrusted ? L("macAxGranted") : L("macAxNeeded")
         axStatusLabel.textColor = axTrusted ? NSColor(srgbRed: 40 / 255, green: 140 / 255, blue: 72 / 255, alpha: 1) : reminderFgColor
         importGuideWindow?.update(savedPreset: lastSavedPreset, consoleInstalled: consoleReady)
 
@@ -829,11 +867,11 @@ private final class PillActionButton: NSControl {
             controlsLamp: ctlState.lamp,
             controlsRunning: controlsOn,
             controlsArmed: host.isArmed,
-            axTrusted: axTrusted,
+            axTrusted: axReady,
             canStart: canAct
         )
 
-        if let banner = Readiness.banner(controlsOn: controlsOn, obsHidden: obsHidden, consoleRunning: tourboxConsoleRunning, frontIsObs: frontIsObs, axTrusted: axTrusted) {
+        if let banner = Readiness.banner(controlsOn: controlsOn, obsHidden: obsHidden, consoleRunning: tourboxConsoleRunning, frontIsObs: frontIsObs, axTrusted: axReady, mixOnly: onlyMix) {
             reminderLabel.stringValue = banner.text
             reminderAction.titleText = banner.button
             bannerActionId = banner.action
@@ -870,7 +908,8 @@ private final class PillActionButton: NSControl {
         }
         if !obsRunning && !host.running {
             obsConnected = false; studioOff = false; obsProblem = nil; autoTries = 0
-            snapshot.stringValue = "OBS Studio is not running."
+            snapshot.stringValue = L("macObsNotRunning")
+            if !vsStatus.isEmpty { setMeter("") }
         }
         if obsConnected || host.running { autoTries = 0 }
         if autoTries > 0 && !scanning && !invalidSettings && Date() >= nextAutoScan && (obsProblem == nil || obsProblem == "obs-no-answer") {
@@ -882,10 +921,16 @@ private final class PillActionButton: NSControl {
     }
 
     private func handleHostLine(_ safeLine: String) {
+        // The meter's lines come up to 5 times a second: they update the meter line, never Activity (as on Windows).
+        if let meter = Readiness.vsMeter(safeLine) {
+            setMeter(meter)
+            return
+        }
         vjsterPeers = Readiness.vjsterPeers(after: safeLine, current: vjsterPeers)
         vjsterPortBusy = Readiness.vjsterPortBusy(after: safeLine, current: vjsterPortBusy)
         if safeLine.hasPrefix("OFFLINE:") {
             obsConnected = false
+            setMeter("")
             let problem = Readiness.obsProblem(from: safeLine)
             obsProblem = problem == "obs-no-answer" ? nil : problem
         } else if safeLine.hasPrefix("ERROR:") {
@@ -914,7 +959,7 @@ private final class PillActionButton: NSControl {
         if FileManager.default.fileExists(atPath: obsUrl.path) {
             NSWorkspace.shared.openApplication(at: obsUrl, configuration: .init(), completionHandler: nil)
         } else {
-            setStatus("OBS.app was not found in /Applications. Start OBS Studio manually.")
+            setStatus(L("macObsAppMissing"))
         }
     }
 
@@ -954,34 +999,34 @@ private final class PillActionButton: NSControl {
         switch mode {
         case "studio":
             canvasMode = .obsStudio
-            title = "Turn on Studio Mode in OBS"
-            detail = "In OBS Studio, click Studio Mode under Controls (bottom right of the main OBS window), select the Fade transition beside it, and keep at least two scenes in the list."
-            buttonTitle = "Read scenes and inputs from OBS"
+            title = L("showStudioTitle")
+            detail = L("showStudioHint")
+            buttonTitle = L("discover")
             action = { [weak self] in self?.scan() }
         case "password":
             canvasMode = .obsPassword
-            title = "Check OBS’s WebSocket password"
-            detail = "In OBS Studio, open Tools → WebSocket Server Settings → Show Connect Info, copy the Server Password, and paste it into OBS password (optional) on the Setup tab."
-            buttonTitle = "Read scenes and inputs from OBS"
+            title = L("showPasswordTitle")
+            detail = L("obsBadPassword")
+            buttonTitle = L("discover")
             action = { [weak self] in self?.scan() }
         case "vjsterWait":
             canvasMode = .vjsterWait
-            title = "Connect a YouTube video to VJster"
-            detail = "Either open a YouTube video in Google Chrome with the VJster extension enabled, or click Copy OBS Browser Source URL on the Setup tab and paste that URL into an OBS Browser Source."
-            buttonTitle = "Copy OBS Browser Source URL"
+            title = L("showVjWaitTitle")
+            detail = L("showVjWaitHint")
+            buttonTitle = L("copyObsUrl")
             action = { [weak self] in self?.copyObsUrl() }
         case "vjsterPort":
             let activePort = Int(vjsterPort.stringValue.trimmingCharacters(in: .whitespaces)) ?? settings.vjsterPort
             canvasMode = .vjsterPort(port: activePort)
-            title = "VJster port \(activePort) is in use"
-            detail = "Quit Stream Deck (or remove VJster actions from its active profile), or stop controls and change VJster port on the Setup tab and in the Chrome VJster extension Options."
+            title = L("showVjPortTitle", activePort)
+            detail = L("showVjPortHint")
             buttonTitle = nil
             action = nil
         default:
             canvasMode = .obsServer
-            title = "Turn on OBS’s WebSocket server"
-            detail = "In OBS Studio, open Tools → WebSocket Server Settings, check Enable WebSocket server (port 4455), keep Enable Authentication checked, click OK, then click Read scenes and inputs from OBS."
-            buttonTitle = "Read scenes and inputs from OBS"
+            title = L("showServerTitle")
+            detail = obsProblem == "obs-no-password" ? L("obsNoPassword") : obsProblem == "obs-auth-off" ? L("obsAuthOff") : L("obsNoAnswer")
+            buttonTitle = L("discover")
             action = { [weak self] in self?.scan() }
         }
         let win = ObsShowMeWindow(mode: canvasMode, title: title, detail: detail, actionTitle: buttonTitle, onAction: action)
@@ -995,11 +1040,11 @@ private final class PillActionButton: NSControl {
         scanButton?.isEnabled = editable && !invalidSettings && !previewMode
         saveButton?.isEnabled = editable && !invalidSettings && !previewMode
         if host.running {
-            primaryButton?.title = "Stop controls"
+            primaryButton?.title = L("stop")
             primaryButton?.bezelColor = NSColor(srgbRed: 184 / 255, green: 58 / 255, blue: 52 / 255, alpha: 1)
             primaryButton?.isEnabled = !previewMode
         } else {
-            primaryButton?.title = "Save & start controls"
+            primaryButton?.title = L("saveStart")
             primaryButton?.bezelColor = accentColor
             primaryButton?.isEnabled = editable && !invalidSettings && !previewMode
         }
@@ -1015,7 +1060,7 @@ private final class PillActionButton: NSControl {
     }
 
     private func failure(_ error: Error) {
-        let text = (error as? PanelFailure)?.description ?? "Could not complete this step. Check local OBS, its authenticated port, permissions and Activity."
+        let text = (error as? PanelFailure)?.description ?? L("macErrGeneric")
         setStatus(text); note(text)
     }
 
@@ -1030,6 +1075,7 @@ private final class PillActionButton: NSControl {
         }
         if hud == nil { hud = FeedbackHud() }
         hud?.set(status.stringValue)
+        hud?.setMeter(vsStatus)
         hud?.show()
     }
 
@@ -1037,7 +1083,7 @@ private final class PillActionButton: NSControl {
         guard !invalidSettings && !host.running && !previewMode else { return }
         do {
             settings = try current(); try LocalFiles.save(settings)
-            setStatus("Assignments saved. Controls remain stopped."); note(status.stringValue)
+            setStatus(L("saved")); note(status.stringValue)
         } catch { failure(error) }
     }
 
@@ -1047,14 +1093,14 @@ private final class PillActionButton: NSControl {
             let proposed = try current(), secret = try LocalFiles.password(port: proposed.port, override: password.stringValue)
             try paths.validate(); try LocalFiles.save(proposed); settings = proposed
             axTrusted = AXIsProcessTrusted()
-            if !axTrusted {
+            if !axTrusted && !proposed.mixOnly {
                 grantAccessibility()
                 updateEnabled()
                 return
             }
             vjsterPeers.removeAll()
             vjsterPortBusy = false
-            try host.start(paths: paths, config: LocalFiles.settings, password: secret, mixEnabled: proposed.mixEnabled, extraSecrets: [proposed.vjsterObsToken])
+            try host.start(paths: paths, config: LocalFiles.settings, password: secret, mixEnabled: proposed.mixEnabled, mixOnly: proposed.mixOnly, extraSecrets: [proposed.vjsterObsToken])
             updateEnabled()
         } catch { failure(error); updateEnabled() }
     }
@@ -1076,7 +1122,7 @@ private final class PillActionButton: NSControl {
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(url, forType: .string)
             let hasId = Settings.videoId(from: vjsterVideo.stringValue) != nil
-            setStatus(hasId ? "Copied OBS Browser Source URL to clipboard." : "Copied OBS Browser Source URL (replace VIDEO_ID if left blank).")
+            setStatus(L(hasId ? "obsUrlCopied" : "obsUrlCopiedBlank"))
             note(status.stringValue)
         } catch { failure(error) }
     }
@@ -1089,7 +1135,7 @@ private final class PillActionButton: NSControl {
         if let parsed = Int(port.stringValue.trimmingCharacters(in: .whitespaces)), (1...65535).contains(parsed) {
             targetPort = parsed
         } else {
-            if !silentIfOffline { failure(PanelFailure.message("Enter a whole-number local port.")) }
+            if !silentIfOffline { failure(PanelFailure.message(L("macErrPort"))) }
             return
         }
         let secret: String
@@ -1109,7 +1155,7 @@ private final class PillActionButton: NSControl {
         scanning = true
         obsProblem = nil
         updateEnabled()
-        setStatus("Reading OBS… No scenes or levels are being changed.")
+        setStatus(L("macReading"))
         scanTask = Task { [weak self] in
             guard let self else { return }
             do {
@@ -1119,8 +1165,9 @@ private final class PillActionButton: NSControl {
                 self.obsRunning = true
                 self.obsProblem = nil
                 self.studioOff = !self.catalog.studio
-                self.snapshot.stringValue = "Program: \(self.catalog.program)   •   Preview: \(self.catalog.preview)   •   Studio Mode: \(self.catalog.studio ? "On" : "Off")"
-                let readyMsg = "Connected to OBS. Scenes found: \(self.catalog.scenes.count). Your controller does nothing until you click Save & start controls."
+                self.snapshot.stringValue = L("sceneSummary", self.catalog.program, self.catalog.preview, L(self.catalog.studio ? "on" : "off"))
+                self.setMeter(Readiness.vsMeter(self.catalog.visualSidechain) ?? "")
+                let readyMsg = L("obsReady", self.catalog.scenes.count)
                 self.setStatus(readyMsg)
                 self.note(readyMsg)
             } catch {
@@ -1128,10 +1175,11 @@ private final class PillActionButton: NSControl {
                 let desc = (error as? PanelFailure)?.description ?? error.localizedDescription
                 self.obsProblem = Readiness.obsProblem(from: desc)
                 self.snapshot.stringValue = ""
+                self.setMeter("")
                 if !silentIfOffline || self.obsProblem == "obs-bad-password" || self.obsProblem == "obs-auth-off" {
                     self.failure(error)
                 } else {
-                    self.setStatus(self.obsRunning ? "OBS is open, waiting for WebSocket server on port \(targetPort)…" : "OBS Studio is not running.")
+                    self.setStatus(self.obsRunning ? L("macWaitingWs", targetPort) : L("macObsNotRunning"))
                 }
             }
             self.scanning = false; self.scanTask = nil; self.updateEnabled()
@@ -1150,21 +1198,21 @@ private final class PillActionButton: NSControl {
     @objc private func downloadTourBoxConsole() {
         guard !previewMode, let url = URL(string: "https://www.tourboxtech.com/en/downloads/") else { return }
         NSWorkspace.shared.open(url)
-        setStatus("Opened TourBox Console download page in your browser.")
-        note("Opened TourBox Console download page: https://www.tourboxtech.com/en/downloads/")
+        setStatus(L("consoleDownloadOpened"))
+        note(L("consoleDownloadOpened") + " https://www.tourboxtech.com/en/downloads/")
     }
 
     @objc private func openPresetSquare() {
         guard !previewMode, let url = URL(string: "https://www.tourboxtech.com/en/presets/") else { return }
         NSWorkspace.shared.open(url)
-        setStatus("Opened TourBox Preset Square in your browser.")
-        note("Opened TourBox Preset Square: https://www.tourboxtech.com/en/presets/")
+        setStatus(L("macPresetSquareOpened"))
+        note(L("macPresetSquareOpened") + " https://www.tourboxtech.com/en/presets/")
     }
 
     @objc private func openOrDownloadConsole() {
         guard !previewMode else { return }
         if lastSavedPreset == nil && savedPresetHash == nil {
-            importNote.stringValue = "Need the preset file? Click “1. Save TourBox Preset (.tb)…” or “Show me where to click”."
+            importNote.stringValue = L("macNeedPreset")
             importNote.isHidden = false
         }
         if tourboxConsoleInstalled || tourboxConsoleRunning {
@@ -1178,8 +1226,8 @@ private final class PillActionButton: NSControl {
         guard !previewMode else { return nil }
         let save = NSSavePanel()
         save.nameFieldStringValue = "OBS Fadester for TourBox.tb"
-        save.title = "Save the Mac TourBox preset (.tb)"
-        save.message = "Choose a visible folder such as Downloads, then import this file in TourBox Console."
+        save.title = L("macSaveDialogTitle")
+        save.message = L("macSaveDialogMessage")
         guard save.runModal() == .OK, let url = save.url else { return nil }
         do {
             let presetBytes = try Data(contentsOf: paths.preset)
@@ -1190,10 +1238,10 @@ private final class PillActionButton: NSControl {
             try? LocalFiles.recordPresetSaved(bundledHash: hash)
             lastSavedPreset = url
             let folder = url.deletingLastPathComponent().lastPathComponent
-            importNote.stringValue = "Saved: \(url.path) — in TourBox Console, import it beside Preset List, click “Not Linked” → pick OBS → click Save."
+            importNote.stringValue = L("macPresetSaved", url.path)
             importNote.isHidden = false
-            setStatus("Saved Mac TourBox preset in “\(folder)”.")
-            note("Saved Mac preset: \(url.path) (import it in TourBox Console; no Console settings were changed automatically).")
+            setStatus(L("macPresetSavedStatus", folder))
+            note(L("macPresetSaved", url.path))
             refreshIndicators()
             return url
         } catch {
@@ -1235,8 +1283,8 @@ private final class PillActionButton: NSControl {
             NSWorkspace.shared.open(settingsUrl)
         }
         let msg = axTrusted
-            ? "macOS Accessibility permission is granted! Click Start to arm controls."
-            : "Enable Fadester Companion in System Settings → Privacy & Security → Accessibility (if already on, toggle OFF then ON), then click Start."
+            ? L("macAxGrantedMsg")
+            : L("macAxEnableMsg")
         setStatus(msg)
         note(msg)
         refreshIndicators()
@@ -1244,9 +1292,9 @@ private final class PillActionButton: NSControl {
 
     @objc private func permission() {
         guard !previewMode else { return }
-        guard FileManager.default.fileExists(atPath: paths.native.path) else { failure(PanelFailure.message("The native permission component is missing from this bundle.")); return }
+        guard FileManager.default.fileExists(atPath: paths.native.path) else { failure(PanelFailure.message(L("macNativeMissing"))); return }
         NSWorkspace.shared.openApplication(at: paths.native, configuration: .init()) { _, error in
-            if error != nil { DispatchQueue.main.async { self.note("Could not open the native permission window. Check that the complete app was extracted.") } }
+            if error != nil { DispatchQueue.main.async { self.note(L("macNativeOpenFailed")) } }
         }
     }
 

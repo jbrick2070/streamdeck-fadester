@@ -14,7 +14,7 @@ struct RuntimePaths {
     var vjsterObsScript: URL { resources.appendingPathComponent("vjster/obs/player.js") }
     func validate() throws {
         for file in [host, native.appendingPathComponent("Contents/MacOS/FadesterNativeSlider"), input.appendingPathComponent("Contents/MacOS/FadesterMacShortcuts"), map, preset, vjsterObsHtml, vjsterObsScript] {
-            guard FileManager.default.fileExists(atPath: file.path) else { throw PanelFailure.message("Fadester Companion is incomplete. Rebuild or extract the entire app bundle.") }
+            guard FileManager.default.fileExists(atPath: file.path) else { throw PanelFailure.message(L("macIncomplete")) }
         }
     }
 }
@@ -37,16 +37,16 @@ struct RuntimePaths {
 
     nonisolated static func explainHostError(_ text: String) -> String {
         if text.localizedCaseInsensitiveContains("Accessibility denied") {
-            return "Accessibility needed: click Grant Accessibility… below (if Fadester Companion is already on, toggle it OFF then ON)."
+            return L("macHostAx")
         }
         if text.localizedCaseInsensitiveContains("expected one OBS window") {
-            return "Close open OBS dialog or plugin windows so only the main OBS window is open, then click Start."
+            return L("macHostOneWindow")
         }
         if text.localizedCaseInsensitiveContains("not parked at zero") {
-            return "Move OBS’s T-bar slider back to the left/top end in Studio Mode, then click Start."
+            return L("macHostTbarZero")
         }
         if text.localizedCaseInsensitiveContains("expected exactly one native OBS T-bar") {
-            return "Turn on Studio Mode in OBS and keep the main OBS window visible, then click Start."
+            return L("macHostStudio")
         }
         var clean = text
         if clean.hasPrefix("ERROR: ") { clean = String(clean.dropFirst(7)) }
@@ -55,14 +55,20 @@ struct RuntimePaths {
             clean = String(clean.dropFirst(13).dropLast(2))
         }
         clean = clean.trimmingCharacters(in: .whitespacesAndNewlines)
-        return clean.isEmpty ? "Controls stopped. Review Activity for the reason." : "Controls stopped: \(clean)"
+        return clean.isEmpty ? L("macHostStopped") : L("macHostStoppedReason", clean)
     }
 
-    func start(paths: RuntimePaths, config: URL, password: String, mixEnabled: Bool, extraSecrets: [String] = []) throws {
+    func start(paths: RuntimePaths, config: URL, password: String, mixEnabled: Bool, mixOnly: Bool = false, extraSecrets: [String] = []) throws {
         try paths.validate()
         guard process == nil else { throw PanelFailure.message("Stop the current controls first.") }
-        var args = ["--run", "--config", config.path, "--native-app", paths.native.path, "--input-app", paths.input.path, "--map", paths.map.path]
-        if !mixEnabled { args.append("--no-mix-provider") }
+        var args: [String]
+        if mixOnly {
+            // Stream Deck, OpenDeck and MIDI only: no shortcut helper, native T-bar or VJster (the host's --mix-only).
+            args = ["--run", "--config", config.path, "--mix-only"]
+        } else {
+            args = ["--run", "--config", config.path, "--native-app", paths.native.path, "--input-app", paths.input.path, "--map", paths.map.path]
+            if !mixEnabled { args.append("--no-mix-provider") }
+        }
         try launch(executable: paths.host, arguments: args, password: password, extraSecrets: extraSecrets)
     }
     func launch(executable: URL, arguments: [String], password: String, extraSecrets: [String] = []) throws {
@@ -80,17 +86,17 @@ struct RuntimePaths {
                 _ = drained.wait(timeout: .now() + 2)
                 DispatchQueue.main.async {
                     guard let self, self.process === owned else { return }
-                    let reason = self.lastError ?? "Controls stopped. Review Activity for the reason."
+                    let reason = self.lastError ?? L("macHostStopped")
                     self.input = nil; self.process = nil; self.secret = ""; self.armed = false; self.stopping = false; self.lastError = nil
-                    self.changed?(owned.terminationStatus == 0 ? "Controls stopped." : reason, false)
+                    self.changed?(owned.terminationStatus == 0 ? L("stopped") : reason, false)
                     self.exited?()
                 }
             }
         }
         drained.enter()
         do { try child.run() }
-        catch { drained.leave(); process = nil; input = nil; secret = ""; throw PanelFailure.message("The bundled control host could not start.") }
-        changed?("Connecting… Controls are not armed yet.", true)
+        catch { drained.leave(); process = nil; input = nil; secret = ""; throw PanelFailure.message(L("macHostNoStart")) }
+        changed?(L("macHostConnecting"), true)
         let redactionSecrets = [password] + extraSecrets
         DispatchQueue.global(qos: .utility).async { [weak self] in
             defer { drained.leave() }
@@ -117,11 +123,11 @@ struct RuntimePaths {
                                 self.armed = true
                                 self.reachedReady = true
                                 self.lastError = nil
-                                self.changed?("Connected — controls armed. Keep OBS in front.", true)
+                                self.changed?(L("macHostArmed"), true)
                             } else if disarmed {
                                 self.armed = false
                                 if !self.stopping {
-                                    self.changed?("Controls disarmed. Check Activity before restarting.", true)
+                                    self.changed?(L("macHostDisarmed"), true)
                                 }
                             }
                         }
@@ -134,14 +140,14 @@ struct RuntimePaths {
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 30) { [weak self, weak child] in
             guard let self, let child, self.process === child, child.isRunning, !self.reachedReady else { return }
-            self.line?("Startup did not reach Connected within 30 seconds. Stopping this host; check OBS, permission and Activity.")
+            self.line?(L("macHostTimeout"))
             self.stop()
         }
     }
     func stop() {
         guard let owned = process else { return }
         stopping = true
-        changed?("Stopping controls… No fade or volume reset will be sent.", true)
+        changed?(L("macHostStopping"), true)
         try? input?.fileHandleForWriting.write(contentsOf: Data("quit\n".utf8))
         try? input?.fileHandleForWriting.close(); input = nil
         DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self, weak owned] in
@@ -149,7 +155,7 @@ struct RuntimePaths {
             owned.terminate()
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self, weak owned] in
                 guard let self, let owned, self.process === owned, owned.isRunning else { return }
-                self.line?("The owned host did not exit after Stop; terminating that child. Check OBS before restarting.")
+                self.line?(L("macHostKilled"))
                 _ = kill(owned.processIdentifier, SIGKILL)
             }
         }

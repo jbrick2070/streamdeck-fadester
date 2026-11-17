@@ -6,6 +6,8 @@ import CryptoKit
 enum ReadRequest: String {
     case scenes = "GetSceneList", inputs = "GetInputList", studio = "GetStudioModeEnabled"
     case items = "GetSceneItemList", volume = "GetInputVolume", media = "GetMediaInputStatus"
+    // Only ever Visual Sidechain's read-only get_signals (visualSidechain()), as the Windows bridge's catalog does.
+    case vendor = "CallVendorRequest"
 }
 struct ObsReadFailure: Error { let code: Int }
 
@@ -90,6 +92,41 @@ final class ObsDiscovery {
                 if state != "OBS_MEDIA_STATE_NONE" || ["ffmpeg_source","vlc_source","obs_playlister_source"].contains(kind) { result.media.append(name) }
             } catch let error as ObsReadFailure where [600,602,604,605,606].contains(error.code) { }
         }
+        result.visualSidechain = await visualSidechain()
         return result
+    }
+
+    /// The Visual Sidechain meter now, as the VS-METER line the host prints (DeskActions.Catalog's "visualSidechain" on Windows);
+    /// "" when OBS could not say. A missing plugin is "not loaded".
+    private func visualSidechain() async -> String {
+        do {
+            let reply = try await call(.vendor, ["vendorName": "visual-sidechain", "requestType": "get_signals", "requestData": [String: Any]()])
+            guard let data = reply["responseData"] as? [String: Any] else { return "VS-METER: not_loaded" }
+            if let error = data["error"] as? String, !error.isEmpty { return "VS-METER: not_loaded" }
+            return Self.meterLine(data)
+        } catch let error as ObsReadFailure where [600, 604].contains(error.code) {
+            return "VS-METER: not_loaded"
+        } catch {
+            return ""
+        }
+    }
+
+    /// get_signals' reply as a VS-METER line, read as VisualSidechainMonitor.ApplySignals and FormatHudPayload read it.
+    static func meterLine(_ data: [String: Any]) -> String {
+        func number(_ key: String, _ fallback: Double) -> Double {
+            guard let value = (data[key] as? NSNumber)?.doubleValue, value.isFinite else { return fallback }
+            return value
+        }
+        func unit(_ value: Double) -> Double { value.isFinite ? min(1, max(0, value)) : 0 }
+        func percent(_ key: String) -> Int { Int((unit(number(key, 0)) * 100).rounded()) }
+        let level = unit(number("level", number("rms", 0)))
+        if (data["panic"] as? Bool) ?? false { return "VS-METER: panic" }
+        if !((data["audio_present"] as? Bool) ?? (level > 0.001)) { return "VS-METER: no_audio" }
+        let bpm = min(300, max(30, number("bpm", 120)))
+        let locked = (data["bpm_locked"] as? Bool) ?? false
+        let barPhase = unit(number("bar_phase", unit(number("beat_phase", 0)) / 4))
+        var beat = min(3, Int((barPhase * 4).rounded(.down)))
+        if let raw = (data["beat_index"] as? NSNumber)?.doubleValue, raw.isFinite, abs(raw) < 1e9 { beat = ((Int(raw.rounded(.towardZero)) % 4) + 4) % 4 }
+        return "VS-METER: active \(Int(bpm.rounded())) \(locked ? 1 : 0) \(beat + 1) \(percent("sub_bass")) \(percent("bass")) \(percent("mid")) \(percent("high"))"
     }
 }

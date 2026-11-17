@@ -4,6 +4,11 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 
 ## Unreleased
 
+## 0.12.4 - 2026-11-17
+0.12.3 was a draft for the hardware test and was never published. This release ships Fadester Companion 0.1.8.
+- **No password to type.** With OBS on the same computer and no password typed, Fadester for OBS signs in with the password OBS saved, on Windows and macOS, as Fadester Companion does. The OBS connection box says "Signed in with the password OBS saved on this computer". A typed password still wins; the password is kept in memory only and never shown on a settings page.
+- **One wording for the OBS password everywhere.** The Stream Deck pages now say "OBS password" with "Filled in from OBS on this computer"; the fade, fader and Panic keys no longer say "Leave blank if authentication is off", which failed with OBS's default settings. Fadester Companion (Windows and Mac) says "OBS password (filled in from OBS)" in all ten languages.
+
 ## 0.12.3 - 2026-11-17
 
 0.12.2 was a draft for the hardware test and was never published. This release ships Fadester Companion 0.1.7.

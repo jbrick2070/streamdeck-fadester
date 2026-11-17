@@ -8,7 +8,11 @@
 import { Adapter, type MediaControl } from "./adapter-core.js";
 import { chooseVideo, videoControl } from "./generic-video.js";
 import { claimPage, listenToBridge, postReport, type PageWindow } from "./page-wiring.js";
+import { forEachShadowRoot } from "./shadow-scan.js";
 import { findYouTubePlayer, isYouTubeHost, youTubeControl, type YouTubePlayerElement } from "./youtube.js";
+
+/** The shortest gap between two searches of the page for shadow roots. */
+const SHADOW_RESCAN_MS = 300;
 
 function start(): void {
   // Run once per page, even if the script is injected twice.
@@ -22,7 +26,13 @@ function start(): void {
   let adObserver: MutationObserver | null = null;
   let grow: MutationObserver | null = null;
 
-  const pickVideo = (): HTMLVideoElement | null => chooseVideo([...document.querySelectorAll("video")]);
+  // Open shadow roots found on this page (web-component players keep their <video> there).
+  const shadows = new Set<ShadowRoot>();
+  const pickVideo = (): HTMLVideoElement | null => {
+    const videos: HTMLVideoElement[] = [...document.querySelectorAll("video")];
+    for (const shadow of shadows) if (shadow.host.isConnected) videos.push(...shadow.querySelectorAll("video"));
+    return chooseVideo(videos);
+  };
   const genericControl = videoControl(pickVideo);
 
   const control = (): MediaControl | null => {
@@ -95,7 +105,34 @@ function start(): void {
     bindPlayer();
   } else {
     // Any page: follow whichever video is current; media events reach the document in the capture phase.
-    for (const type of MEDIA_EVENTS) document.addEventListener(type, (e) => e.target instanceof HTMLVideoElement && onMediaEvent(e), true);
+    const onAnyMedia = (e: Event): void => {
+      if (e.target instanceof HTMLVideoElement) onMediaEvent(e);
+    };
+    for (const type of MEDIA_EVENTS) document.addEventListener(type, onAnyMedia, true);
+    // Media events do not leave a shadow root, so each open one gets the same listeners, and is watched for
+    // players added later. Busy pages change all the time, so a rescan runs at most once per SHADOW_RESCAN_MS.
+    let rescanTimer: ReturnType<typeof setTimeout> | null = null;
+    const grown = new MutationObserver(() => {
+      rescanTimer ??= setTimeout(() => {
+        rescanTimer = null;
+        rescan();
+      }, SHADOW_RESCAN_MS);
+    });
+    const rescan = (): void => {
+      for (const shadow of shadows) if (!shadow.host.isConnected) shadows.delete(shadow);
+      let added = false;
+      forEachShadowRoot(document, (found) => {
+        const shadow = found as unknown as ShadowRoot;
+        if (shadows.has(shadow)) return;
+        shadows.add(shadow);
+        added = true;
+        for (const type of MEDIA_EVENTS) shadow.addEventListener(type, onAnyMedia, true);
+        grown.observe(shadow, { childList: true, subtree: true });
+      });
+      if (added) adapter.changed();
+    };
+    grown.observe(document.documentElement, { childList: true, subtree: true });
+    rescan();
   }
   adapter.changed();
 }

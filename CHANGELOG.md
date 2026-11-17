@@ -4,6 +4,10 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 
 ## Unreleased
 
+## 0.12.7 - 2026-11-17
+0.12.6 was a draft for the hardware test and was never published. This release ships the VJster extension 0.1.5; Fadester Companion stays 0.1.10.
+- **VJster 0.1.5 finds videos inside web-component players** (archive.org's player, for one). These players keep their video inside a shadow root, where VJster did not look and where play, pause and speed changes never reached it, so the video stayed invisible with "Control videos on every site" on. VJster now looks inside every open shadow root on the page, and keeps watching for players added later.
+
 ## 0.12.6 - 2026-11-17
 0.12.5 was a draft for the hardware test and was never published. This release ships Fadester Companion 0.1.10.
 - **Every VJster line names the video** (Windows and Mac): "YouTube 60fps Tester · Video 1x · Auto (720p) · playing", plus the site when it is not YouTube. Before, the title showed only on "Read the video", so with two tabs open you could not tell which one VJster followed. Long titles are shortened to 60 characters.

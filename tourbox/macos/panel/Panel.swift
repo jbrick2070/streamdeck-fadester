@@ -1253,7 +1253,7 @@ private final class PillActionButton: NSControl {
         catch { if !silentIfOffline { failure(error) }; return }
 
         scanning = true
-        obsProblem = nil
+        if !listsOnly { obsProblem = nil } // a list refresh changes no light
         updateEnabled()
         if !listsOnly { setStatus(L("macReading")) }
         scanTask = Task { [weak self] in
@@ -1263,7 +1263,7 @@ private final class PillActionButton: NSControl {
                 self.fillChoices(preserveEdits: true)
                 self.catalogAt = Date()
                 if listsOnly {
-                    if loud { let msg = L("obsReady", self.catalog.scenes.count); self.setStatus(msg); self.note(msg) }
+                    if loud { let msg = L("obsConnected", self.catalog.scenes.count); self.setStatus(msg); self.note(msg) } // controls already on
                     self.scanning = false; self.scanTask = nil; self.updateEnabled(); return
                 }
                 self.obsConnected = true

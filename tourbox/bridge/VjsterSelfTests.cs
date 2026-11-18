@@ -220,6 +220,75 @@ internal static class VjsterSelfTests
         Check(intent["type"]!.GetValue<string>() == "speed.set" && intent["rate"]!.GetValue<double>() == 0.5, "the slow preset sets 0.5x");
         await SendText(ext, StateJson(intent["id"]!.GetValue<string>(), 0.5));
         Check((await slow).StartsWith("Clip · Video 0.5x"), "slow preset reply");
+
+        // Midi Fadester's APC40 Tempo knob: steps of 0.05x as one speed.set from the speed last asked for, kept within
+        // 0.25x..4x, so steps that come faster than the replies still add up.
+        var by = desk.SpeedBy(3);
+        intent = JsonNode.Parse(await Receive(ext))!.AsObject();
+        Check(intent["type"]!.GetValue<string>() == "speed.set" && Math.Abs(intent["rate"]!.GetValue<double>() - 0.65) < 1e-9, "3 steps from 0.5x ask for 0.65x");
+        await SendText(ext, StateJson(intent["id"]!.GetValue<string>(), 0.65));
+        Check((await by).StartsWith("Clip · Video 0.65x"), "step reply");
+        by = desk.SpeedBy(-20);
+        intent = JsonNode.Parse(await Receive(ext))!.AsObject();
+        Check(Math.Abs(intent["rate"]!.GetValue<double>() - 0.25) < 1e-9, "steps stop at 0.25x");
+        await SendText(ext, StateJson(intent["id"]!.GetValue<string>(), 0.25));
+        await by;
+        by = desk.SpeedBy(80);
+        intent = JsonNode.Parse(await Receive(ext))!.AsObject();
+        Check(Math.Abs(intent["rate"]!.GetValue<double>() - 4.0) < 1e-9, "steps stop at 4x");
+        await SendText(ext, StateJson(intent["id"]!.GetValue<string>(), 4));
+        await by;
+        // Tap Tempo (or any other speed change) in between: the next step starts from the video's speed, not the last step.
+        var reset = desk.Dispatch("vjster.speed.reset");
+        intent = JsonNode.Parse(await Receive(ext))!.AsObject();
+        await SendText(ext, StateJson(intent["id"]!.GetValue<string>(), 1));
+        await reset;
+        by = desk.SpeedBy(1);
+        intent = JsonNode.Parse(await Receive(ext))!.AsObject();
+        Check(Math.Abs(intent["rate"]!.GetValue<double>() - 1.05) < 1e-9, "a step after a reset starts from 1x");
+        await SendText(ext, StateJson(intent["id"]!.GetValue<string>(), 1.05));
+        await by;
+        var remoteLines = new List<string>();
+        var remote = new VjsterRemote(desk, l => { lock (remoteLines) remoteLines.Add(l); });
+        remote.OnVendorEvent("other-vendor", VjsterRemote.EventType, new JsonObject { ["action"] = "vjster.speed.reset" });
+        remote.OnVendorEvent(VjsterRemote.Vendor, VjsterRemote.EventType, new JsonObject { ["action"] = "not.an.action" });
+        remote.OnVendorEvent(VjsterRemote.Vendor, VjsterRemote.EventType, new JsonObject { ["action"] = "vjster.speed.reset" });
+        intent = JsonNode.Parse(await Receive(ext))!.AsObject();
+        Check(intent["type"]!.GetValue<string>() == "speed.reset", "the APC40's Tap Tempo resets the speed (other vendors and unknown actions ignored)");
+        await SendText(ext, StateJson(intent["id"]!.GetValue<string>(), 1));
+        for (int i = 0; i < 50; i++) { lock (remoteLines) if (remoteLines.Count > 0) break; await Task.Delay(20); }
+        lock (remoteLines) Check(remoteLines.Count == 1 && remoteLines[0].StartsWith("APC40: Clip · Video 1x"), "the APC40 line says where it came from");
+        // While one request waits for its reply, what the APC40 asks for queues in order: steps in a row add up, Tap
+        // Tempo drops the steps queued before it, and at most 16 wait.
+        JsonObject Step(int n) => new() { ["action"] = "vjster.speed.step", ["steps"] = n };
+        JsonObject Act(string id) => new() { ["action"] = id };
+        void Send(JsonObject d) => remote.OnVendorEvent(VjsterRemote.Vendor, VjsterRemote.EventType, d);
+        async Task<JsonObject> Answer(double rate)
+        {
+            var got = JsonNode.Parse(await Receive(ext))!.AsObject();
+            await SendText(ext, StateJson(got["id"]!.GetValue<string>(), rate));
+            return got;
+        }
+        Send(Step(2));
+        var held = JsonNode.Parse(await Receive(ext))!.AsObject();
+        Check(Math.Abs(held["rate"]!.GetValue<double>() - 1.10) < 1e-9, "the first step run asks for 1.10x");
+        Send(Step(3)); Send(Step(1)); Send(Act("vjster.playPause")); Send(Step(-1));
+        Check(remote.QueuedCount == 3, "steps in a row are one entry: " + remote.QueuedCount);
+        await SendText(ext, StateJson(held["id"]!.GetValue<string>(), 1.10));
+        var next = await Answer(1.30);
+        Check(next["type"]!.GetValue<string>() == "speed.set" && Math.Abs(next["rate"]!.GetValue<double>() - 1.30) < 1e-9, "the queued +4 steps follow as 1.30x");
+        Check((await Answer(1.30))["type"]!.GetValue<string>() == "transport.toggle", "then play/pause, in order");
+        Check(Math.Abs((await Answer(1.25))["rate"]!.GetValue<double>() - 1.25) < 1e-9, "then the last step");
+        Send(Act("vjster.playPause"));
+        held = JsonNode.Parse(await Receive(ext))!.AsObject();
+        Send(Step(5)); Send(Act("vjster.speed.reset"));
+        Check(remote.QueuedCount == 1, "Tap Tempo drops the steps queued before it");
+        for (int i = 0; i < 20; i++) Send(Act("vjster.playPause"));
+        Check(remote.QueuedCount == 16, "at most 16 wait: " + remote.QueuedCount);
+        await SendText(ext, StateJson(held["id"]!.GetValue<string>(), 1.25));
+        Check((await Answer(1))["type"]!.GetValue<string>() == "speed.reset", "the reset follows");
+        for (int i = 0; i < 15; i++) await Answer(1);
+        for (int i = 0; i < 50 && remote.QueuedCount > 0; i++) await Task.Delay(20);
         var status = desk.Dispatch("vjster.status");
         intent = JsonNode.Parse(await Receive(ext))!.AsObject();
         Check(intent["type"]!.GetValue<string>() == "state.get", "status asks for state");

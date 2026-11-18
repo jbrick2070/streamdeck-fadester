@@ -29,6 +29,81 @@ internal static class KeyGuards
     public static bool IsStrayFaderTick(string action, long lastHeldTurn, long at) => IsFaderTick(action) && lastHeldTurn != 0 && Stopwatch.GetElapsedTime(lastHeldTurn, at) < AfterHeldTurn;
 }
 
+/**
+ * Midi Fadester's APC40 mkII transport (Tempo knob, Nudge, Tap Tempo, Play) reaches VJster as obs-websocket vendor
+ * events ("midi-fadester", "vjster_action"). One request goes out at a time, off the OBS session's own loop; steps that
+ * arrive meanwhile add up and the next request carries them all, so a fast spin never floods VJster.
+ */
+internal sealed class VjsterRemote(VjsterDesk desk, Action<string> log)
+{
+    public const string Vendor = "midi-fadester", EventType = "vjster_action";
+    const int MaxQueued = 16;
+    readonly object gate = new();
+    bool busy;
+    /** What the APC40 asked for, in order: an action id, or (null, n) for n speed steps. Steps in a row add up. */
+    readonly List<(string? Action, int Steps)> queued = new();
+    string lastLine = "";
+    long lastLineAt;
+
+    internal int QueuedCount { get { lock (gate) return queued.Count; } }
+
+    public void OnVendorEvent(string vendorName, string eventType, JsonObject data)
+    {
+        if (vendorName != Vendor || eventType != EventType) return;
+        string? action = data["action"] is JsonValue a && a.TryGetValue<string>(out var text) ? text : null;
+        long steps = data["steps"] is JsonValue n ? Math.Clamp(n.TryGetValue<long>(out var l) ? l : n.TryGetValue<int>(out var i) ? i : n.TryGetValue<double>(out var f) && double.IsFinite(f) ? (long)Math.Clamp(f, -80, 80) : 0, -80, 80) : 0;
+        lock (gate)
+        {
+            if (action == "vjster.speed.step")
+            {
+                if (steps == 0) return;
+                if (queued.Count > 0 && queued[^1].Action is null)
+                    queued[^1] = (null, (int)Math.Clamp(queued[^1].Steps + steps, -80, 80));
+                else if (queued.Count < MaxQueued) queued.Add((null, (int)steps));
+                else return;
+            }
+            else if (action is not null && VjsterDesk.Actions.Contains(action))
+            {
+                if (action == "vjster.speed.reset") queued.RemoveAll(q => q.Action is null); // steps before 1x are overtaken
+                if (queued.Count >= MaxQueued) return;
+                queued.Add((action, 0));
+            }
+            else return;
+            if (busy) return;
+            busy = true;
+        }
+        _ = Task.Run(Drain);
+    }
+
+    /** One Activity line per answer; the same line again within 3 s (a knob turned with no video open) is said once. */
+    void Say(string line)
+    {
+        if (line.Length == 0) return;
+        if (line == lastLine && Stopwatch.GetElapsedTime(lastLineAt) < TimeSpan.FromSeconds(3)) return;
+        lastLine = line;
+        lastLineAt = Stopwatch.GetTimestamp();
+        log("APC40: " + line);
+    }
+
+    async Task Drain()
+    {
+        while (true)
+        {
+            (string? Action, int Steps) next;
+            lock (gate)
+            {
+                if (queued.Count == 0) { busy = false; return; }
+                next = queued[0];
+                queued.RemoveAt(0);
+            }
+            string line;
+            try { line = next.Action is not null ? await desk.Dispatch(next.Action) : await desk.SpeedBy(next.Steps); }
+            catch (Exception e) { line = e.Message; }
+            Say(line);
+        }
+    }
+}
+
 internal sealed class VjsterDesk(VjsterLink link, double fastSpeed = 2.0, double slowSpeed = 0.5, string targetChoice = "browser")
 {
     readonly string targetChoice = targetChoice is "obs" or "both" ? targetChoice : "browser";
@@ -45,6 +120,18 @@ internal sealed class VjsterDesk(VjsterLink link, double fastSpeed = 2.0, double
     public async Task<string> Dispatch(string id)
     {
         if (!Actions.Contains(id)) throw new ArgumentException("Unknown VJster action: " + id);
+        // Any other speed change (Tap Tempo, Nudge, the TourBox) makes the speed steps last asked for out of date:
+        // the next step starts from the video's reported speed.
+        bool speed = id.StartsWith("vjster.speed.", StringComparison.Ordinal);
+        if (speed) ForgetAsked();
+        try { return await DispatchCore(id); }
+        finally { if (speed) ForgetAsked(); }
+    }
+
+    void ForgetAsked() { lock (lastAsked) lastAsked.Clear(); }
+
+    async Task<string> DispatchCore(string id)
+    {
         if (!link.Running)
         {
             var holder = await VjsterLink.ProbePortHolderAsync(link.Port);
@@ -102,6 +189,38 @@ internal sealed class VjsterDesk(VjsterLink link, double fastSpeed = 2.0, double
     }
 
     static Action<JsonObject> Rate(double rate) => o => { o["rate"] = rate; o["direct"] = false; o["hold"] = false; };
+
+    /** The speed a run of steps last asked each target for, so steps that follow faster than the replies still add up. */
+    readonly Dictionary<string, (double Rate, long At)> lastAsked = new();
+    public const double StepRate = 0.05, MinRemoteRate = 0.25, MaxRemoteRate = 4.0;
+
+    /**
+     * Moves the video speed by steps of 0.05x (negative: slower) with one speed.set per target: Midi Fadester's APC40
+     * Tempo knob and Nudge buttons (VjsterRemote). The base is the speed last asked for within 1.5 s, else the video's
+     * reported speed, else 1x.
+     */
+    public async Task<string> SpeedBy(int steps)
+    {
+        if (steps == 0) return "";
+        if (!link.Running) return await Dispatch("vjster.status");
+        string[] candidates = this.targetChoice switch { "obs" => ["obs"], "both" => ["browser", "obs"], _ => ["browser"] };
+        string[] open = candidates.Where(link.IsConnected).ToArray();
+        if (open.Length == 0) return await Dispatch("vjster.status");
+        var replies = new List<string>();
+        foreach (var target in open)
+        {
+            double rate;
+            lock (lastAsked)
+            {
+                double baseRate = lastAsked.TryGetValue(target, out var asked) && Stopwatch.GetElapsedTime(asked.At) < TimeSpan.FromSeconds(1.5)
+                    ? asked.Rate : link.GetLastState(target)?.Rate ?? 1.0;
+                rate = Math.Clamp(Math.Round((baseRate + steps * StepRate) * 100) / 100, MinRemoteRate, MaxRemoteRate);
+                lastAsked[target] = (rate, Stopwatch.GetTimestamp());
+            }
+            replies.Add(FormatReply("vjster.speed.step", target, await link.Request("speed.set", Rate(rate), ReplyTimeout, target)));
+        }
+        return open.Length == 1 ? replies[0] : $"Chrome: {replies[0]} | OBS: {replies[1]}";
+    }
 
     static Action<JsonObject> Step(double delta) => o => { o["delta"] = delta; o["direct"] = false; o["hold"] = false; };
 

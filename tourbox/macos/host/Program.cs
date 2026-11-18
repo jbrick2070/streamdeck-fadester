@@ -457,6 +457,8 @@ internal static class MacDevelopmentHost
             () => !obs.Disconnected.IsCompleted && (shortcuts is null || !shortcuts.Done.IsCompleted), stop, readOnly, native.ReadAsync, vjster);
         var desk = session.Desk;
         obs.InputVolumeChanged += desk.OnVolumeChanged; obs.InputLevelChangedById += desk.OnMixInputLevelChanged;
+        // Midi Fadester's APC40 transport drives VJster off this session's loop (VjsterRemote), as on Windows.
+        if (!readOnly && vjster is not null) obs.VendorEvent += new VjsterRemote(vjster, Log).OnVendorEvent;
         using var meter = await StartMeter(obs, readOnly, stop);
         MixProtocolServer? protocol = null;
         bool reconnect = false;

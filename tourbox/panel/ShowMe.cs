@@ -29,11 +29,15 @@ namespace Fadester.TourBox {
       if (problem == null) return new LightState(Lamp.Grey, "liObsLooking", null, null); // OBS is starting, or a scan is under way
       return new LightState(Lamp.Amber, "liObsSetting", "btnShowMe", "server");
     }
-    internal static LightState Pad(bool enabled, bool mixOnly, bool controlsOn, string padState, bool padSeen) {
+    /** padSeen: a controller is plugged in now (read while the controls are off); padEver: one was plugged in this session. */
+    internal static LightState Pad(bool enabled, bool mixOnly, bool controlsOn, string padState, bool padSeen, bool padEver = false) {
       if (mixOnly) return new LightState(Lamp.Grey, "liPadOff", null, null);
       if (!enabled) return padSeen ? new LightState(Lamp.Amber, "liPadIdle", "btnUseIt", "usePad") : new LightState(Lamp.Grey, "liPadOff", null, null);
-      if (controlsOn) return padState == "stPadOn" ? new LightState(Lamp.Green, "liPadOn", null, null) : new LightState(Lamp.Amber, "liPadMissing", null, null);
-      return padSeen ? new LightState(Lamp.Green, "liPadReady", null, null) : new LightState(Lamp.Amber, "liPadMissing", null, null);
+      // No controller plugged in is a normal setup (TourBox or Stream Deck only), so it reads grey, not amber (FIX-2, hand
+      // test 2026-11-17). Amber only for one that was plugged in this session and is gone now.
+      if (controlsOn) return padState == "stPadOn" ? new LightState(Lamp.Green, "liPadOn", null, null)
+        : padSeen || padEver ? new LightState(Lamp.Amber, "liPadMissing", null, null) : new LightState(Lamp.Grey, "liPadNone", null, null);
+      return padSeen ? new LightState(Lamp.Green, "liPadReady", null, null) : new LightState(Lamp.Grey, "liPadNone", null, null);
     }
     /** The TourBox light, as on the Mac (Model.swift Readiness.tourBox). Grey instead of amber while a game controller is in use, so a panel without a TourBox does not nag. */
     internal static LightState TourBox(bool consoleRunning, bool consoleInstalled, bool mixOnly, bool otherController, bool oldPreset = false) {
@@ -90,12 +94,22 @@ namespace Fadester.TourBox {
      * The one reminder worth a strip while the controls run, or null. The T-bar needs OBS's main window; a TourBox preset
      * needs OBS in front, except that Chrome in front is VJster's turn (FIX-8), and with OBS closed there is nothing to bring forward.
      */
-    internal static string Reminder(bool controlsOn, bool mixOnly, bool obsHidden, bool tourboxConsole, string front, bool obsRunning, bool vjsterOn = true) {
-      if (!controlsOn || mixOnly || !obsRunning) return null;
+    internal static string Reminder(bool controlsOn, bool mixOnly, bool obsHidden, bool tourboxConsole, string front, bool obsRunning, bool vjsterOn = true,
+                                    bool? autoSwitch = null, bool? activeFadester = null) {
+      if (!controlsOn || mixOnly) return null;
+      // Auto Switch off (TourBox Console's customConfig): the selected preset serves every app in front, so OBS need not be
+      // in front; but another selected preset makes every TourBox control do something else (hand test 2026-11-17).
+      if (tourboxConsole && autoSwitch == false && activeFadester == false) return "remindSelectPreset";
+      if (!obsRunning) return null;
       if (obsHidden) return "remindObsOpen";
-      if (tourboxConsole && !IsObs(front) && !(vjsterOn && IsChrome(front))) return "remindObsFront";
+      // Auto Switch unknown (Console's settings unreadable or in a new format): no strip rather than a wrong one.
+      if (tourboxConsole && autoSwitch == true && !IsObs(front) && !(vjsterOn && IsChrome(front))) return "remindObsFront";
       return null;
     }
+    /** The layers the bridge picked by itself in this line (DeskActions.FillLayers); on the Mac the lines arrive joined. */
+    internal static readonly System.Text.RegularExpressions.Regex PickedLayer =
+      new System.Text.RegularExpressions.Regex(@"Layer ([12]) = (.+?) › (.+?) \(picked automatically", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+    internal static System.Text.RegularExpressions.MatchCollection PickedLayers(string line) { return PickedLayer.Matches(line ?? ""); }
     internal static bool IsObs(string process) {
       return String.Equals(process, "obs64", StringComparison.OrdinalIgnoreCase) || String.Equals(process, "obs", StringComparison.OrdinalIgnoreCase);
     }
@@ -112,8 +126,12 @@ namespace Fadester.TourBox {
         throw new InvalidOperationException("OBS light");
       if (s(Pad(false, false, false, "stPadOff", true)) != "Amber liPadIdle usePad" || s(Pad(false, false, false, "stPadOff", false)) != "Grey liPadOff -" ||
           s(Pad(true, false, true, "stPadOn", false)) != "Green liPadOn -" || s(Pad(true, false, true, "stPadMissing", true)) != "Amber liPadMissing -" ||
-          s(Pad(true, false, false, "stPadOff", true)) != "Green liPadReady -" || s(Pad(true, true, true, "stPadOn", true)) != "Grey liPadOff -")
+          s(Pad(true, false, false, "stPadOff", true)) != "Green liPadReady -" || s(Pad(true, true, true, "stPadOn", true)) != "Grey liPadOff -" ||
+          s(Pad(true, false, true, "stPadMissing", false)) != "Grey liPadNone -" || s(Pad(true, false, false, "stPadOff", false)) != "Grey liPadNone -" ||
+          s(Pad(true, false, true, "stPadMissing", false, true)) != "Amber liPadMissing -")
         throw new InvalidOperationException("Controller light");
+      if (ActivityText.Counted("Music up", 1) != "Music up" || ActivityText.Counted("Music up", 3) != "Music up (×3)")
+        throw new InvalidOperationException("Activity repeats");
       if (s(Controls(false, true)) != "Grey liCtlOff start" || s(Controls(true, true)) != "Green liCtlOn -" ||
           s(Controls(false, false)) != "Grey liCtlOff tryAgain" || s(Controls(true, false)) != "Amber liCtlWaiting tryAgain") throw new InvalidOperationException("Controls light");
       if (!AutoStart(true, true, null, true, false, false) || !AutoStart(true, true, "on", true, false, false) || AutoStart(true, true, "off", true, false, false) ||
@@ -121,9 +139,9 @@ namespace Fadester.TourBox {
           AutoStart(true, true, "on", false, false, true) || !AutoStart(true, true, "on", true, false, true) ||
           AutoStart(true, true, "on", true, true, false) || AutoStart(true, true, "on", false, false, false, false) ||
           !AutoStart(true, true, "on", true, false, false, false)) throw new InvalidOperationException("Auto-start decision");
-      if (Reminder(true, false, false, true, "chrome", true, false) != "remindObsFront") throw new InvalidOperationException("Reminder with VJster off");
+      if (Reminder(true, false, false, true, "chrome", true, false, true) != "remindObsFront") throw new InvalidOperationException("Reminder with VJster off");
       if (Reminder(true, false, false, true, "obs64", true) != null || Reminder(true, false, false, true, "chrome", true) != null ||
-          Reminder(true, false, false, true, "explorer", true) != "remindObsFront" || Reminder(true, false, false, true, "explorer", false) != null ||
+          Reminder(true, false, false, true, "explorer", true, true, true) != "remindObsFront" || Reminder(true, false, false, true, "explorer", false) != null ||
           Reminder(true, false, true, true, "chrome", true) != "remindObsOpen" || Reminder(false, false, false, true, "explorer", true) != null)
         throw new InvalidOperationException("Reminder strip");
       if (s(TourBox(true, true, false, false)) != "Green liTbReady -" || s(TourBox(false, true, false, false)) != "Amber liTbClosed openConsole" ||
@@ -145,11 +163,24 @@ namespace Fadester.TourBox {
           !VjsterPortBusy("The VJster port could not be opened (AccessDenied). Trying again every 30 s.", false) || VjsterPortBusy("Music up", false))
         throw new InvalidOperationException("VJster port");
       if (Reminder(false, false, true, true, "x", true) != null || Reminder(true, true, true, true, "x", true) != null ||
-          Reminder(true, false, true, true, "obs64", true) != "remindObsOpen" || Reminder(true, false, false, true, "explorer", true) != "remindObsFront" ||
+          Reminder(true, false, true, true, "obs64", true) != "remindObsOpen" || Reminder(true, false, false, true, "explorer", true, true, true) != "remindObsFront" ||
           Reminder(true, false, false, true, "obs64", true) != null || Reminder(true, false, false, false, "explorer", true) != null)
         throw new InvalidOperationException("Reminder");
+      if (Reminder(true, false, false, true, "explorer", true, true, false, true) != null || Reminder(true, false, false, true, "explorer", true, true, true, true) != "remindObsFront" ||
+          Reminder(true, false, false, true, "explorer", false, true, false, false) != "remindSelectPreset" ||
+          Reminder(true, false, false, true, "explorer", true, true, null, null) != null || Reminder(true, false, true, true, "obs64", true, true, false, true) != "remindObsOpen" ||
+          Reminder(true, false, false, false, "explorer", true, true, false, false) != null || Reminder(false, false, false, true, "explorer", true, true, false, false) != null)
+        throw new InvalidOperationException("Reminder with Auto Switch");
+      var picked = PickedLayers("Layer 1 blend: Add\nLayer 1 = Kit Visuals › Kit Motion (picked automatically; change it on the Assignments tab) Layer 2 = Kit Visuals › Kit Title (picked automatically; x)");
+      if (picked.Count != 2 || picked[0].Groups[3].Value != "Kit Motion" || picked[1].Groups[2].Value != "Kit Visuals" || PickedLayers("Layer 1 blend: Add").Count != 0)
+        throw new InvalidOperationException("Picked layers");
       PresetAge.Test();
     }
+  }
+
+  /** Activity lines: the same message again becomes one line with a count (hand test 2026-11-17), as on the Mac. */
+  internal static class ActivityText {
+    internal static string Counted(string message, int count) { return count <= 1 ? message : message + " (×" + count + ")"; }
   }
 
   /** What the panel can see of the desktop without touching OBS: whether it runs, whether its main window is open, what is in front. */
@@ -225,6 +256,19 @@ namespace Fadester.TourBox {
       ShowWindow(main, IsIconic(main) ? 9 : 5); // SW_RESTORE, SW_SHOW
       SetForegroundWindow(main);
       return true;
+    }
+    /** Restores and fronts a running program's main window; false when it does not run or has no window. */
+    internal static bool BringToFront(string name) {
+      var found = Process.GetProcessesByName(name);
+      try {
+        foreach (var p in found) {
+          IntPtr h;
+          try { h = p.MainWindowHandle; } catch (InvalidOperationException) { continue; } catch (System.ComponentModel.Win32Exception) { continue; }
+          if (h == IntPtr.Zero) continue;
+          ShowWindow(h, IsIconic(h) ? 9 : 5); SetForegroundWindow(h); return true;
+        }
+      } finally { foreach (var p in found) p.Dispose(); }
+      return false;
     }
     internal static string Front() {
       try {
@@ -348,7 +392,7 @@ namespace Fadester.TourBox {
       }
     }
 
-    // TourBox Console: Import, paste the copied path, open, then link the preset to OBS (the Mac's drawTourBoxImport, with Windows' file dialog).
+    // TourBox Console: Import, paste the copied path, open, then select the preset with Auto Switch off (the Mac's drawTourBoxImport, with Windows' file dialog).
     // Console's own labels stay as Console shows them, as the panel's texts name them.
     void TourBoxImport(Graphics g, float t) {
       Color card = Color.FromArgb(47, 52, 68), side = Color.FromArgb(34, 38, 50), amber = Color.FromArgb(244, 176, 48), muted = Color.FromArgb(148, 156, 176);
@@ -371,15 +415,16 @@ namespace Fadester.TourBox {
       }
       Fill(g, Color.FromArgb(190, card), new RectangleF(28, 74, 210, 34), 5);
       Words(g, "Auto Switch", new PointF(36, 82), Ink, Font9b);
-      Fill(g, Blue, new RectangleF(198, 82, 32, 17), 8); Fill(g, Color.White, new RectangleF(215, 84, 13, 13), 6);
-      bool imported = t >= 6.8f, popover = t >= 7.55f && t < 9.15f, linked = t >= 9.15f;
+      // Off: one preset serves every app in front (hand test 2026-11-17).
+      Fill(g, Color.FromArgb(107, 112, 128), new RectangleF(198, 82, 32, 17), 8); Fill(g, Color.White, new RectangleF(200, 84, 13, 13), 6);
+      // With Auto Switch off the preset is selected, not linked to an app (hand test 2026-11-17).
+      bool imported = t >= 6.8f, popover = false, linked = t >= 7.6f;
       var row = new RectangleF(28, 116, 210, 34);
       var notLinked = new RectangleF(170, 123, 64, 20);
       if (imported) {
-        Fill(g, Color.FromArgb(72, 76, 88), row, 5);
+        Fill(g, linked ? Blue : Color.FromArgb(72, 76, 88), row, 5);
         Words(g, "OBS Fadester for…", new PointF(36, 125), Color.White, Font9b);
-        if (linked) { Fill(g, Good, notLinked, 4); Words(g, "✓ OBS", new PointF(notLinked.X + 14, notLinked.Y + 3), Color.White, Font9b); }
-        else { Fill(g, Color.FromArgb(238, 229, 174), notLinked, 4); Words(g, "Not Linked", new PointF(notLinked.X + 4, notLinked.Y + 3), Color.FromArgb(32, 28, 14), Font9); }
+        if (linked) { Fill(g, Good, notLinked, 4); Words(g, "✓", new PointF(notLinked.X + 27, notLinked.Y + 3), Color.White, Font9b); }
       } else {
         Fill(g, card, row, 5); Words(g, "Default Preset", new PointF(36, 125), muted, Font9);
       }
@@ -420,9 +465,8 @@ namespace Fadester.TourBox {
       }
       if (t >= 9.4f) Tick(g, t, 9.4f);
       var rest = new PointF(360, 160);
-      var steps = new[] { Step(0.8f, 1.9f, Centre(importBtn)), Step(3.5f, 4.0f, Centre(field)), Step(6.9f, 7.5f, Centre(notLinked)),
-        Step(7.7f, 8.15f, Centre(obsRow)), Step(8.4f, 8.85f, Centre(saveBtn)), Step(9.4f, 10.2f, rest) };
-      Pointer(g, Walk(t, rest, steps), new[] { 2.0f, 4.1f, 7.6f, 8.2f, 8.95f }, t);
+      var steps = new[] { Step(0.8f, 1.9f, Centre(importBtn)), Step(3.5f, 4.0f, Centre(field)), Step(6.9f, 7.5f, Centre(row)), Step(9.4f, 10.2f, rest) };
+      Pointer(g, Walk(t, rest, steps), new[] { 2.0f, 4.1f, 7.6f }, t);
     }
     static void Key(Graphics g, string label, PointF at, bool down) {
       var size = TextRenderer.MeasureText(g, label, Font9b, Size.Empty, TextFormatFlags.NoPadding);

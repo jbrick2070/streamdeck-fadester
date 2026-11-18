@@ -100,7 +100,7 @@ It refuses while any `obs64` runs or the lock exists. Delete the lock file when 
 
 ### 2.2 The Stream Deck + (hardware)
 
-With Fadester for OBS 0.12.10 (or later) and VJster 0.2.1 installed in Stream Deck 7.6 or later, OBS running
+With Fadester for OBS 0.12.11 (or later) and VJster 0.2.1 installed in Stream Deck 7.6 or later, OBS running
 the imported collection in Studio Mode with the WebSocket server on, and one Fadester key given
 its address and password:
 

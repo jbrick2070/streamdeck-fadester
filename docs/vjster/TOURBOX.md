@@ -14,7 +14,7 @@ With several videos open, the extension chooses the one playing; among several p
 
 `tourbox/bridge/VjsterDesk.cs` turns the `vjster.*` actions into intents and waits up to 600 ms for the report that answers each one, so the panel's Activity line says what the video is doing now ("Video 1.25x · 1080p · playing"). `VjsterHost` keeps the link bound and runs those actions on their own queue, outside the companion's OBS loop: the video works with OBS closed, and a taken port is reported every 30 s, never taken over.
 
-The two VJ layers (`layer1.*`, `layer2.*` in `DeskActions.cs`) are OBS actions over obs-websocket: `SetSceneItemBlendMode` cycles Normal, Additive, Subtract, Screen, Multiply, Lighten, Darken; opacity rides the source's first Color Correction filter (`color_filter_v2`, 0 to 1; the legacy `color_filter`, 0 to 100) through `SetSourceFilterSettings` with `overlay`, adding a filter named "Fadester opacity" when the source has none, and refusing a disabled filter rather than switching it on.
+The two VJ layers (`layer1.*`, `layer2.*` in `DeskActions.cs`) are OBS actions over obs-websocket: `SetSceneItemBlendMode` cycles Normal, Additive, Subtract, Screen, Multiply, Lighten, Darken; opacity rides the source's first Color Correction filter (`color_filter_v2`, 0 to 1; the legacy `color_filter`, 0 to 100) through `SetSourceFilterSettings` with `overlay`, adding a filter named "Fadester opacity" when the source has none, and refusing a disabled filter rather than switching it on. A layer nobody chose fills itself in from the live scene the first time a layer control is used (Layer 1 = the topmost visible picture, Layer 2 = the next one down; sound-only and hidden sources are skipped) and is saved to the Assignments tab.
 
 ## The layout
 
@@ -25,6 +25,7 @@ One preset, `OBS Fadester for TourBox`. Every original action keeps its Ctrl+Alt
 | Raised Knob turn | video speed, 0.25 per detent |
 | Knob press and turn | video speed, 0.05 |
 | Knob press | play or pause the video |
+| Side tap | speed back to 1x |
 | Side + Knob press | speed back to 1x |
 | Side + Dial turn | Music |
 | Scroll press and turn | video quality down / up |
@@ -36,7 +37,7 @@ One preset, `OBS Fadester for TourBox`. Every original action keeps its Ctrl+Alt
 | Top + Dial turn | Layer 2 opacity down / up |
 | Tour menu | video status, speed 1x, quality Auto, both blend modes Normal, media play/pause, whole-mix level |
 
-Everything else is as before. Pin is not on the hardware: the extension pins only while Chrome is the focused window, and Console switches presets to follow OBS.
+Everything else is as before. Pin is not on the hardware: the extension pins only while Chrome is the focused window, and with Auto Switch off (the recommended setup) the one preset works whichever app is in front.
 
 ## Checks
 

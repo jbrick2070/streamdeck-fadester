@@ -517,9 +517,49 @@ internal static class VjsterSelfTests
         catch (InvalidOperationException e) { Check(e.Message.Contains("disabled"), "a disabled filter is reported, not enabled"); }
         filters[0]["filterEnabled"] = true; filters[0]["filterKind"] = "color_filter"; legacy = true; opacity = 0.5;
         Check(await desk.Dispatch("layer2.opacity.up") == "Layer 2 opacity 55 %" && Convert.ToInt32(lastSet!["filterSettings"]!["opacity"]!.GetValue<object>()) == 55, "the legacy filter takes 0..100");
-        var bare = new DeskActions(new BridgeConfig(), Fake);
-        try { await bare.Dispatch("layer1.blend.next"); throw new Exception("VJster self-test: an unassigned layer was driven"); }
-        catch (InvalidOperationException e) { Check(e.Message.Contains("Choose Layer 1 scene on the Assignments tab"), "an unassigned layer says what to set and where"); }
+        // Unassigned layers fill themselves in from the live scene (hand test 2026-11-17): top visible picture first,
+        // skipping a sound file (no size), a hidden item and an audio-only input.
+        var scene = new[] { ("Backdrop", 1, 1, true, 1920.0), ("Beat", 2, 2, true, 0.0), ("Hidden", 3, 3, false, 640.0), ("Mic", 4, 4, true, 0.0),
+                            ("Title", 5, 5, true, 1280.0), ("Motion", 6, 6, true, 1920.0) };
+        string bareBlend = "OBS_BLEND_NORMAL"; int bareItem = 0;
+        Task<JsonObject> BareFake(string op, JsonObject? args)
+        {
+            JsonObject reply = new();
+            switch (op)
+            {
+                case "GetCurrentProgramScene": reply["currentProgramSceneName"] = "Live"; break;
+                case "GetInputList":
+                    reply["inputs"] = new JsonArray(scene.Select(i => (JsonNode)new JsonObject { ["inputName"] = i.Item1, ["inputKindCaps"] = i.Item1 == "Mic" ? 2 : 3 }).ToArray()); break;
+                case "GetSceneItemList":
+                    reply["sceneItems"] = new JsonArray(scene.Select(i => (JsonNode)new JsonObject { ["sourceName"] = i.Item1, ["sceneItemId"] = i.Item2, ["sceneItemIndex"] = i.Item3,
+                        ["sceneItemEnabled"] = i.Item4, ["sourceType"] = "OBS_SOURCE_TYPE_INPUT" }).ToArray()); break;
+                case "GetSceneItemTransform":
+                    double w = scene.First(i => i.Item2 == args!["sceneItemId"]!.GetValue<int>()).Item5;
+                    reply["sceneItemTransform"] = new JsonObject { ["sourceWidth"] = w, ["sourceHeight"] = w > 0 ? 720.0 : 0.0 }; break;
+                case "GetSceneItemBlendMode": reply["sceneItemBlendMode"] = bareBlend; break;
+                case "SetSceneItemBlendMode": bareBlend = args!["sceneItemBlendMode"]!.GetValue<string>(); bareItem = args["sceneItemId"]!.GetValue<int>(); break;
+                default: throw new Exception("Unexpected OBS request in the layer pick test: " + op);
+            }
+            return Task.FromResult(reply);
+        }
+        var picked = new BridgeConfig();
+        var bare = new DeskActions(picked, BareFake);
+        string first = await bare.Dispatch("layer1.blend.next");
+        Check(first.StartsWith("Layer 1 blend: Additive") && bareItem == 6 &&
+              first.Contains("Layer 1 = Live › Motion (picked automatically") && first.Contains("Layer 2 = Live › Title (picked automatically") &&
+              picked.Layer1Source == "Motion" && picked.Layer2Source == "Title" && picked.Layer2Scene == "Live", "unassigned layers are picked from the live scene, top picture first");
+        Check(!(await bare.Dispatch("layer1.blend.next")).Contains("picked automatically"), "a picked layer is said once");
+        var chosen = new BridgeConfig { Layer1Scene = "Live", Layer1Source = "Backdrop" };
+        var half = new DeskActions(chosen, BareFake);
+        string second = await half.Dispatch("layer1.blend.next");
+        Check(chosen.Layer1Source == "Backdrop" && chosen.Layer2Source == "Motion" && !second.Contains("Layer 1 ="), "a chosen layer is kept; only the empty one is picked");
+        scene = [("Beat", 2, 2, true, 0.0)];
+        try { await new DeskActions(new BridgeConfig(), BareFake).Dispatch("layer1.blend.next"); throw new Exception("VJster self-test: a layer was picked from a scene with no picture"); }
+        catch (InvalidOperationException e) { Check(e.Message.Contains("has no picture"), "a scene with no picture says what to set and where"); }
+        scene = [("Motion", 6, 6, true, 1920.0), ("Title", 5, 5, true, 1280.0)];
+        var topChosen = new BridgeConfig { Layer1Scene = "Live", Layer1Source = "Motion" };
+        await new DeskActions(topChosen, BareFake).Dispatch("layer1.blend.next");
+        Check(topChosen.Layer2Source == "Title", "with Layer 1 chosen as the top picture, Layer 2 is the next one down");
         try { await desk.Dispatch("vjster.speed.up"); throw new Exception("VJster self-test: OBS desk took a VJster action"); }
         catch (InvalidOperationException) { }
         Check(DeskActions.BlendName("OBS_BLEND_SCREEN") == "Screen", "blend names");

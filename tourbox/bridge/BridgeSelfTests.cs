@@ -143,6 +143,11 @@ internal static class BridgeSelfTests
         await desk.Dispatch("preview.previous"); Check(preview == "Three", "wrap to last OBS scene");
         await desk.Dispatch("preview.next"); Check(preview == "One", "wrap to first OBS scene");
         await desk.Dispatch("anchor.1"); Check(preview == "Two" && program == "Three", "anchor cues preview only");
+        cfg.Anchors = ["Two", "", "", ""];
+        await desk.Dispatch("anchor.3"); Check(preview == "Three", "an anchor nobody chose is the scene at that place in OBS's list");
+        try { await desk.Dispatch("anchor.4"); throw new Exception("Self-test: an empty anchor past the last scene cued something"); }
+        catch (InvalidOperationException e) { Check(e.Message.Contains("only 3 scene"), "an empty anchor past the last scene says so"); }
+        await desk.Dispatch("anchor.1");
         await desk.Dispatch("preview.sync"); Check(preview == program, "sync preview to program");
         studio = false;
         try { await desk.Dispatch("anchor.1"); throw new Exception("Self-test: anchor changed scene outside Studio Mode"); }

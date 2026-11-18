@@ -47,6 +47,8 @@ internal sealed class AudioDesk(Func<string, JsonObject?, Task<JsonObject>> rpc,
     private readonly SemaphoreSlim gate = new(1);
     private volatile Ramp? active;
     private Duck? duck = resume;
+    /// <summary>The source whose duck a hand change (a ride, or an edit during a fade) dropped, so a restore can say so.</summary>
+    private string? duckLostBy;
     /// <summary>The duck to hand to the next connection's desk. Restore still refuses if the level changed meanwhile.</summary>
     public Duck? Leave() => duck;
     private Edit? undo;
@@ -83,7 +85,7 @@ internal sealed class AudioDesk(Func<string, JsonObject?, Task<JsonObject>> rpc,
         try
         {
             Interrupt(source);
-            if (duck?.Source == source) duck = null;
+            if (duck?.Source == source) { duck = null; duckLostBy = source; }
             double now = await Read(source), next = Math.Clamp(now + delta, -100, 26);
             if (!Near(now, next))
             {
@@ -123,13 +125,17 @@ internal sealed class AudioDesk(Func<string, JsonObject?, Task<JsonObject>> rpc,
             if (active?.Source == source && active.Restore == restore) return $"Already fading {source}.";
             Interrupt(source);
             double now = await Read(source);
-            if (duck is not null && (!Near(duck.Last, now) || duck.Source != source)) duck = null;
-            if (restore && duck is null) return "No unchanged pre-duck level to restore.";
+            bool movedByHand = (duck is not null && duck.Source == source && !Near(duck.Last, now)) || (duck is null && duckLostBy == source);
+            if (duck is not null && (movedByHand || duck.Source != source)) duck = null;
+            duckLostBy = null;
+            if (restore && duck is null)
+                return movedByHand ? $"{source} was changed by hand after the duck; restore skipped."
+                                   : $"{source} was not ducked; nothing to restore.";
             double target = restore ? duck!.Start : Math.Min(ceiling, now);
             if (Near(target, now))
             {
-                if (restore) duck = null;
-                return $"{source} already at {target:F2} dB.";
+                if (restore) { duck = null; return $"{source} is already back at {target:F2} dB."; }
+                return $"{source} is already at or below the duck level ({now:F2} dB, duck level {ceiling:F2} dB); nothing to duck.";
             }
             duck ??= new(source, now, now);
             var ramp = new Ramp(source, now, target, restore);
@@ -161,6 +167,7 @@ internal sealed class AudioDesk(Func<string, JsonObject?, Task<JsonObject>> rpc,
         void Disarm()
         {
             if (undo?.Id == id) undo = null;
+            if (duck is not null) duckLostBy = duck.Source;
             duck = null;
             Console.WriteLine($"Fade stopped: {ramp.Source} was adjusted elsewhere.");
         }

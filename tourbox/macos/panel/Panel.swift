@@ -190,6 +190,10 @@ private final class PillActionButton: NSControl {
     private var startAfterScan = false
     // Whether Console holds an older OBS Fadester preset than ours (Model.swift PresetAge, FIX-9): read every few seconds, said once.
     private var presetState = PresetState.none, shippedShortcuts: Set<String>?, presetCheckAt = Date.distantPast, toldOldPreset = false
+    /// TourBox Console's Auto Switch and whether its selected preset is ours (Model.swift PresetAge): they decide the reminder strip.
+    private var startedWith: Settings?
+    private var catalogAt = Date.distantPast
+    private var consoleAutoSwitch: Bool?, activeFadester: Bool?, shippedLayout: String?
     /// Whether the user last started ("on") or stopped ("off") the controls; kept apart from panel-config.json, which start() rewrites.
     private var rememberedControls: String? { UserDefaults.standard.string(forKey: "fadester.controlsLastAction") }
     private func rememberControls(_ onOff: String) { UserDefaults.standard.set(onOff, forKey: "fadester.controlsLastAction") }
@@ -434,8 +438,10 @@ private final class PillActionButton: NSControl {
             guard let self else { return }
             // Armed with OBS (READY), or for Chrome's videos only while OBS is away (VIDEO-READY, FIX-8).
             if self.host.isArmed {
+                let wasLive = self.obsConnected
                 self.obsConnected = self.host.isObsLive
                 if self.host.isObsLive { self.obsProblem = nil }
+                if self.host.isObsLive && !wasLive { self.performScan(silentIfOffline: true, listsOnly: true) }
             }
             self.setStatus(text)
             self.updateEnabled()
@@ -502,6 +508,8 @@ private final class PillActionButton: NSControl {
     @objc private func selectTab(_ sender: NSButton) {
         tabs.selectTabViewItem(at: sender.tag)
         for item in navigation { item.state = item.tag == sender.tag ? .on : .off }
+        // An old list is read again on the way to a page, as on Windows when Assignments opens (hand test 2026-11-17).
+        if host.running && obsConnected && Date().timeIntervalSince(catalogAt) > 10 { performScan(silentIfOffline: true, listsOnly: true) }
     }
     private func scrolling(_ stack: NSStackView) -> NSScrollView {
         let scroll = NSScrollView(); scroll.hasVerticalScroller = true; scroll.drawsBackground = true; scroll.backgroundColor = .white
@@ -552,9 +560,7 @@ private final class PillActionButton: NSControl {
         openConsoleStepButton = button(L("macOpenConsoleStep"), #selector(openOrDownloadConsole))
         let showGuideBtn = button(L("btnShowWhere"), #selector(showImportGuide))
         stack.addArrangedSubview(horizontal([savePresetStepButton, openConsoleStepButton, showGuideBtn]))
-        // The Chrome video copy: the same full map, to link to Google Chrome (Console links one preset to one app).
-        stack.addArrangedSubview(horizontal([button(L("btnImportChrome"), #selector(saveChromePreset))]))
-        paragraph(L("importChromeHint"), in: stack)
+        paragraph(L("importAutoHint"), in: stack)
         let downloadConsoleBtn = button(L("macDownloadConsole"), #selector(downloadTourBoxConsole))
         let presetSquareBtn = button(L("macPresetSquare"), #selector(openPresetSquare))
         stack.addArrangedSubview(horizontal([label(L("macTourBoxInfo"), small: true), downloadConsoleBtn, presetSquareBtn]))
@@ -889,7 +895,8 @@ private final class PillActionButton: NSControl {
         )
 
         if let banner = Readiness.banner(controlsOn: controlsOn, obsHidden: obsHidden, consoleRunning: tourboxConsoleRunning, frontIsObs: frontIsObs, axTrusted: axReady, mixOnly: onlyMix,
-                                           frontIsChrome: frontIsChrome && vjster.state == .on, obsRunning: obsRunning) {
+                                           frontIsChrome: frontIsChrome && vjster.state == .on, obsRunning: obsRunning,
+                                           autoSwitch: consoleAutoSwitch, activeFadester: activeFadester) {
             reminderLabel.stringValue = banner.text
             reminderAction.titleText = banner.button
             bannerActionId = banner.action
@@ -905,9 +912,11 @@ private final class PillActionButton: NSControl {
         // An unreadable shipped preset is read again next time rather than turning the check off for good.
         if shippedShortcuts?.isEmpty ?? true { shippedShortcuts = PresetAge.shipped(paths.localizedPreset) }
         // A preset Console is still writing (or a file it holds) keeps the last answer instead of a false one.
-        let (stored, complete) = PresetAge.stored()
+        consoleAutoSwitch = PresetAge.autoSwitch(); activeFadester = PresetAge.activeIsFadester(shipped: shippedShortcuts ?? [])
+        if shippedLayout == nil { shippedLayout = PresetAge.layout(PresetAge.unzip(paths.localizedPreset)) }
+        let (stored, complete, layouts) = PresetAge.stored()
         guard complete else { return }
-        presetState = PresetAge.judge(shipped: shippedShortcuts ?? [], stored: stored)
+        presetState = PresetAge.judge(shipped: shippedShortcuts ?? [], stored: stored, shippedLayout: shippedLayout, layouts: layouts)
         // Said once, and only where the TourBox light shows it: Console running and not in Stream Deck-only mode.
         if presetState == .old && !toldOldPreset && tourboxConsoleRunning && !mixOnlyChosen { toldOldPreset = true; note(L("tbOldNote")) }
         if presetState != .old { toldOldPreset = false }
@@ -955,6 +964,7 @@ private final class PillActionButton: NSControl {
     }
 
     private func handleHostLine(_ safeLine: String) {
+        if safeLine == "SETTINGS-RELOADED" { return } // the Save note already said so, as on Windows
         // The meter's lines come up to 5 times a second: they update the meter line, never Activity (as on Windows).
         if let meter = Readiness.vsMeter(safeLine) {
             setMeter(meter)
@@ -976,8 +986,24 @@ private final class PillActionButton: NSControl {
         if let feedback = Readiness.hostFeedback(from: safeLine) {
             setStatus(feedback)
         }
+        takePickedLayers(safeLine)
         refreshIndicators()
         note(safeLine)
+    }
+
+    /// A layer the host picked by itself (DeskActions.FillLayers, "Layer 1 = scene › source (picked automatically…"), as on
+    /// Windows: shown on the Assignments page and saved, so the next start keeps it. The host already uses it.
+    private func takePickedLayers(_ line: String) {
+        let picks = Readiness.pickedLayers(line)
+        guard !picks.isEmpty else { return }
+        for pick in picks {
+            if pick.layer == 1 { settings.layer1Scene = pick.scene; settings.layer1Source = pick.source }
+            else { settings.layer2Scene = pick.scene; settings.layer2Source = pick.source }
+            fill("layer\(pick.layer)Scene", catalog.scenes.contains(pick.scene) ? catalog.scenes : catalog.scenes + [pick.scene], keep: pick.scene)
+            let items = catalog.items[pick.scene] ?? []
+            fill("layer\(pick.layer)Source", items.contains(pick.source) ? items : items + [pick.source], keep: pick.source)
+        }
+        do { try LocalFiles.save(settings) } catch { failure(error) }
     }
 
     private func bringObsToFront() {
@@ -1075,7 +1101,8 @@ private final class PillActionButton: NSControl {
     }
 
     private func updateEnabled() {
-        let editable = !host.running && !scanning
+        // Editing and Save stay open while the controls run: Save hands the new settings to the running host.
+        let editable = !scanning
         edits.forEach { $0.isEnabled = editable }
         scanButton?.isEnabled = editable && !invalidSettings && !previewMode
         saveButton?.isEnabled = editable && !invalidSettings && !previewMode
@@ -1091,11 +1118,24 @@ private final class PillActionButton: NSControl {
         refreshIndicators()
     }
 
+    /// The last Activity line, so the same message again becomes one line with a count, as on Windows (ActivityText).
+    private var lastNote = "", lastNoteCount = 0, lastNoteRange: NSRange?
+
     private func note(_ text: String) {
         let safe = redact(text, secrets: [password.stringValue, settings.vjsterObsToken])
-        let line = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .medium) + "  " + safe + "\n"
-        activity.textStorage?.append(NSAttributedString(string: line))
-        if activity.string.count > 60_000 { activity.string = String(activity.string.suffix(45_000)) }
+        let repeated = safe == lastNote && lastNoteRange != nil
+        lastNoteCount = repeated ? lastNoteCount + 1 : 1; lastNote = safe
+        let shown = lastNoteCount > 1 ? safe + " (×\(lastNoteCount))" : safe
+        let line = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .medium) + "  " + shown + "\n"
+        guard let storage = activity.textStorage else { return }
+        if repeated, let range = lastNoteRange, NSMaxRange(range) <= storage.length {
+            storage.replaceCharacters(in: range, with: line)
+            lastNoteRange = NSRange(location: range.location, length: (line as NSString).length)
+        } else {
+            lastNoteRange = NSRange(location: storage.length, length: (line as NSString).length)
+            storage.append(NSAttributedString(string: line))
+        }
+        if activity.string.count > 60_000 { activity.string = String(activity.string.suffix(45_000)); lastNoteRange = nil }
         activity.scrollToEndOfDocument(nil)
     }
 
@@ -1119,11 +1159,21 @@ private final class PillActionButton: NSControl {
         hud?.show()
     }
 
+    /// Save. Running controls take the new assignments, inputs, anchors and steps at once ("reload", hand test 2026-11-17),
+    /// as on Windows; the settings the host sets up at start (port, VJster, the mixer mode, the fade step) need Stop and Start.
     @objc private func save() {
-        guard !invalidSettings && !host.running && !previewMode else { return }
+        guard !invalidSettings && !previewMode else { return }
         do {
-            settings = try current(); try LocalFiles.save(settings)
-            setStatus(L("saved")); note(status.stringValue)
+            let next = try current()
+            settings = next; try LocalFiles.save(settings)
+            if host.running {
+                host.reload()
+                // Compared with what the running host started with, so a second Save still says a restart is due.
+                setStatus(L(Settings.sameAtStart(startedWith ?? next, next) ? "savedApplied" : "savedRestart"))
+            } else {
+                setStatus(L("saved"))
+            }
+            note(status.stringValue)
         } catch { failure(error) }
     }
 
@@ -1145,6 +1195,7 @@ private final class PillActionButton: NSControl {
             vjsterPeers.removeAll()
             vjsterPortBusy = false
             try host.start(paths: paths, config: LocalFiles.settings, password: secret, mixEnabled: proposed.mixEnabled, mixOnly: proposed.mixOnly, extraSecrets: [proposed.vjsterObsToken])
+            startedWith = proposed
             updateEnabled()
         } catch { failure(error); updateEnabled() }
     }
@@ -1171,12 +1222,16 @@ private final class PillActionButton: NSControl {
         } catch { failure(error) }
     }
 
-    @objc private func scan() { performScan(silentIfOffline: false) }
+    /// The Read scenes button: while the controls run it reads the saved port and changes no light, but still says what happened.
+    @objc private func scan() { performScan(silentIfOffline: false, listsOnly: host.running, loud: true) }
 
-    private func performScan(silentIfOffline: Bool) {
-        guard !host.running && !scanning && !previewMode && !invalidSettings else { return }
+    /// listsOnly: a refresh of the Assignments lists by itself while the controls run (OBS just answered the host, hand test
+    /// 2026-11-17: the lists stayed empty until Read scenes was clicked). It changes no light and starts nothing.
+    private func performScan(silentIfOffline: Bool, listsOnly: Bool = false, loud: Bool = false) {
+        guard (listsOnly || !host.running) && !scanning && !previewMode && !invalidSettings else { return }
         let targetPort: Int
-        if let parsed = Int(port.stringValue.trimmingCharacters(in: .whitespaces)), (1...65535).contains(parsed) {
+        // A refresh while the controls run asks the OBS the host uses (the saved port), not an unsaved edit.
+        if listsOnly { targetPort = settings.port } else if let parsed = Int(port.stringValue.trimmingCharacters(in: .whitespaces)), (1...65535).contains(parsed) {
             targetPort = parsed
         } else {
             if !silentIfOffline { failure(PanelFailure.message(L("macErrPort"))) }
@@ -1186,6 +1241,7 @@ private final class PillActionButton: NSControl {
         do {
             secret = try LocalFiles.password(port: targetPort, override: password.stringValue)
         } catch {
+            if listsOnly { if loud { failure(error) }; return } // a refresh changes no light
             obsConnected = false
             obsProblem = Readiness.obsProblem(from: (error as? PanelFailure)?.description ?? "")
             refreshIndicators()
@@ -1197,14 +1253,19 @@ private final class PillActionButton: NSControl {
         catch { if !silentIfOffline { failure(error) }; return }
 
         scanning = true
-        obsProblem = nil
+        if !listsOnly { obsProblem = nil } // a list refresh changes no light
         updateEnabled()
-        setStatus(L("macReading"))
+        if !listsOnly { setStatus(L("macReading")) }
         scanTask = Task { [weak self] in
             guard let self else { return }
             do {
                 self.catalog = try await client.scan(password: secret)
                 self.fillChoices(preserveEdits: true)
+                self.catalogAt = Date()
+                if listsOnly {
+                    if loud { let msg = L("obsConnected", self.catalog.scenes.count); self.setStatus(msg); self.note(msg) } // controls already on
+                    self.scanning = false; self.scanTask = nil; self.updateEnabled(); return
+                }
                 self.obsConnected = true
                 self.obsRunning = true
                 self.obsProblem = nil
@@ -1215,6 +1276,7 @@ private final class PillActionButton: NSControl {
                 self.setStatus(readyMsg)
                 self.note(readyMsg)
             } catch {
+                if listsOnly { if loud { self.failure(error) }; self.scanning = false; self.scanTask = nil; self.updateEnabled(); return }
                 self.obsConnected = false
                 let desc = (error as? PanelFailure)?.description ?? error.localizedDescription
                 self.obsProblem = Readiness.obsProblem(from: desc)
@@ -1284,22 +1346,6 @@ private final class PillActionButton: NSControl {
         }
     }
 
-    /// Save the Chrome video preset (the same map as the OBS one, its own name) and open Console to import and link it.
-    @objc private func saveChromePreset() {
-        guard !previewMode else { return }
-        let save = NSSavePanel()
-        save.nameFieldStringValue = paths.localizedChromePreset.lastPathComponent
-        save.title = L("macSaveDialogTitle")
-        save.message = L("macSaveDialogMessage")
-        guard save.runModal() == .OK, let url = save.url else { return }
-        do {
-            try Data(contentsOf: paths.localizedChromePreset).write(to: url, options: .atomic)
-            importNote.stringValue = L("macPresetSavedChrome", url.path)
-            importNote.isHidden = false
-            note(L("macPresetSavedChrome", url.path))
-        } catch { failure(error); return }
-        if tourboxConsoleInstalled || tourboxConsoleRunning { openTourBoxConsole() } else { downloadTourBoxConsole() }
-    }
 
     private func savePresetDialog() -> URL? {
         guard !previewMode else { return nil }

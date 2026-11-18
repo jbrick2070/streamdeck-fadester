@@ -266,11 +266,12 @@ internal static class StudioFaderSelfTests
             nativeObs.Commits == 1 && nativeObs.NativeCalls.TakeLast(2).SequenceEqual([(0.5, 1d), (0d, 0d)]) &&
             nativeObs.Writes.SequenceEqual(["SetTBarPosition", "SetTBarPosition"]),
             "native endpoint commits once in Studio Mode and verifies the widget reset");
-        await native.DispatchAsync("fader.forward");
-        await native.DispatchAsync("fader.back"); await native.DispatchAsync("fader.back");
+        // Clockwise always throws towards Preview, also for the return throw (hand test 2026-11-17); back at rest does nothing.
+        await native.DispatchAsync("fader.back"); await Task.Delay(native.SettleMs + 100);
+        await native.DispatchAsync("fader.forward"); await native.DispatchAsync("fader.forward");
         Check(nativeObs.Commits == 2 && nativeObs.Program == "a" && nativeObs.Preview == "b" &&
-            nativeObs.Writes.Count == 3 && nativeObs.Studio, "reverse native throw and no duplicate take");
-        nativeObs.SliderOffscreen = true;
+            nativeObs.Writes.Count == 3 && nativeObs.Studio, "return throw is clockwise too, with no duplicate take");
+        nativeObs.SliderOffscreen = true; await Task.Delay(native.SettleMs + 100);
         await Blocked(() => native.DispatchAsync("fader.forward"));
         Check(nativeObs.Writes.Count == 3 && nativeObs.Cursor == 0 && nativeObs.Slider == 0,
             "a hidden native widget never falls back to an invisible WebSocket move");
@@ -338,7 +339,10 @@ internal static class StudioFaderSelfTests
         await fader.DispatchAsync("take");
         Check(obs.Takes == 0, "stray press after endpoint cannot take twice");
         for (int i = 0; i < 5; i++) await fader.DispatchAsync("fader.back");
-        Check(obs.Program == "a" && obs.Preview == "b" && obs.Commits == 2, "opposite sweep returns live without another tap");
+        Check(obs.Program == "b" && obs.Commits == 1, "counter-clockwise at rest after a take does nothing");
+        await Task.Delay(fader.SettleMs + 100);
+        for (int i = 0; i < 5; i++) await fader.DispatchAsync("fader.forward");
+        Check(obs.Program == "a" && obs.Preview == "b" && obs.Commits == 2, "after a pause the next clockwise sweep returns live without another tap");
         obs = new(); fader = new(obs.Call);
         await fader.DispatchAsync("fader.forward"); await fader.DispatchAsync("fader.cancel");
         Check(obs.Program == "a" && obs.Commits == 0, "explicit cancel");

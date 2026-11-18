@@ -28,19 +28,20 @@
     <h2>Collega TourBox a OBS</h2>
     <ol>
       <li>Apri <strong>Fadester Companion</strong> dal menu Start. Se usi lo ZIP, estrailo per intero e avvia <strong>Fadester Companion.exe</strong>.</li>
-      <li>Apri OBS. In TourBox Console, usa il comando di importazione accanto all’elenco dei preset per caricare <code>presets/it/OBS Fadester for TourBox.tb</code>. Associa il preset a OBS e attiva il cambio automatico (<strong>Auto Switch</strong>). Importa una sola versione linguistica. Usa il pulsante <strong>Importa in TourBox Console</strong> di Fadester; non fare doppio clic sul file <code>.tb</code>.</li>
+      <li>Apri OBS. In TourBox Console, usa il comando di importazione accanto all’elenco dei preset per caricare <code>presets/it/OBS Fadester for TourBox.tb</code>. Disattiva il cambio automatico (<strong>Auto Switch</strong>) e seleziona <strong>OBS Fadester for TourBox</strong>: così un solo preset funziona qualunque applicazione sia in primo piano (OBS, Chrome o altre). Solo se lasci attivo Auto Switch, associa il preset a OBS e anche a Google Chrome per controllare i video con Chrome in primo piano. Importa una sola versione linguistica. Usa il pulsante <strong>Importa in TourBox Console</strong> di Fadester; non fare doppio clic sul file <code>.tb</code>.</li>
       <li>In OBS, apri <strong>Strumenti → Impostazioni del server WebSocket</strong> e abilita il server con l’autenticazione attiva. Per la dissolvenza manuale in OBS Studio <strong>33</strong>, attiva la <strong>Modalità studio</strong>, scegli <strong>Dissolvenza (Fade)</strong> e lascia visibile il cursore bianco tra Anteprima e Programma.</li>
-      <li>In Fadester, leggi le scene e gli ingressi da OBS. Se necessario, inserisci la porta e la password impostate in OBS. Seleziona <strong>OBS Fadester for TourBox</strong> in TourBox Console, salva e avvia i controlli in Fadester, poi torna a OBS. Lascia Fadester aperto.</li>
+      <li>In Fadester, leggi le scene e gli ingressi da OBS. Se necessario, inserisci la porta e la password impostate in OBS. Seleziona <strong>OBS Fadester for TourBox</strong> in TourBox Console, poi salva e avvia i controlli in Fadester. Lascia Fadester aperto.</li>
     </ol>
     <p>Se la lingua di visualizzazione di Windows è diversa, chiudi Fadester ed esegui <code>&amp; '.\Fadester Companion.exe' --language it</code> in PowerShell dalla cartella estratta.</p>
 
     <h2>Fai una prova con due scene diverse</h2>
     <ul>
       <li>Gira la rotella <strong>Scroll</strong> per cambiare la scena in Anteprima. La scena in Programma resta la stessa. Premi la rotella per vedere i nomi di entrambe le scene nel pannello.</li>
-      <li>Gira lentamente il <strong>Dial</strong> piatto per spostare il cursore di OBS e passare da una scena all’altra. Per annullare una dissolvenza in corso, tieni premuto <strong>Side</strong> e premi <strong>Dial</strong>.</li>
-      <li>Riproduci un video YouTube in Chrome (con l’estensione gratuita VJster). Gira la manopola rialzata <strong>Knob</strong> per cambiare la velocità; premi e ruota per passi fini. Premila per avviare o mettere in pausa il video.</li>
+      <li>Gira lentamente il <strong>Dial</strong> piatto per spostare il cursore di OBS e passare da una scena all’altra. Per annullare una dissolvenza in corso, tieni premuto <strong>Side</strong> e premi <strong>Dial</strong>. In senso orario il cursore va sempre verso l’anteprima, anche per la dissolvenza successiva. Dopo una dissolvenza completa, attendi un attimo prima di girare di nuovo.</li>
+      <li>Riproduci un video YouTube in Chrome (con l’estensione gratuita VJster). Gira la manopola rialzata <strong>Knob</strong> per cambiare la velocità; premi e ruota per passi fini. Premila per avviare o mettere in pausa il video. Tocca <strong>Side</strong> per riportare la velocità a 1x.</li>
       <li>VJster controlla YouTube solo in Chrome, non una sorgente browser con YouTube in OBS. Mostra il video in OBS con una cattura finestra di Chrome. Per il suono, aggiungi una cattura audio applicazione di Chrome.</li>
-      <li>Assegna un ingresso musicale nel pannello di Fadester. Tieni premuto <strong>Side</strong> e gira il <strong>Dial</strong> piatto per regolarne il volume. Con <strong>Top</strong> premuto, Knob, Scroll e Dial controllano i livelli VJ (metodo di fusione e opacità).</li>
+      <li>Assegna un ingresso musicale nel pannello di Fadester. Tieni premuto <strong>Side</strong> e gira il <strong>Dial</strong> piatto per regolarne il volume. Con <strong>Top</strong> premuto, Knob, Scroll e Dial controllano i livelli VJ (metodo di fusione e opacità). I livelli non scelti si compilano da soli dalla scena in onda la prima volta che li usi (livello 1 = l’immagine visibile più in alto, livello 2 = quella successiva) e vengono salvati in <strong>Assegnazioni</strong>.</li>
+      <li>Un tocco su <strong>Short</strong> mostra solo lo stato della registrazione. <strong>Annulla mod. audio</strong> si trova nel menu <strong>Tour</strong>.</li>
     </ul>
 
     <h2>Regola tutto il mix</h2>

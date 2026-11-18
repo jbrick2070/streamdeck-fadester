@@ -53,9 +53,9 @@ These match on both systems:
 | --- | --- | --- |
 | OBS WebSocket server, password, Studio Mode | Animation with OBS's labels in the panel's language | Same |
 | VJster waiting for video, VJster port in use | Two-way card (Chrome or OBS page; quit Stream Deck or pick another port) | Same words |
-| TourBox import | Animation: Import, paste the copied path, open, then **Not Linked** → OBS Studio → Save | Animation: Import, pick the file in the Finder dialog, then **Not Linked** → OBS → Save, with step buttons |
+| TourBox import | Animation: Import, paste the copied path, open, then select the preset (Auto Switch off) | Animation: Import, pick the file in the Finder dialog, open, then select the preset (Auto Switch off), with step buttons |
 
-TourBox Console's own labels (Preset List, Import, Not Linked, Running applications, Save) stay in English in both animations and texts, as Console shows them.
+TourBox Console's own labels (Preset List, Import, Auto Switch) stay in English in both animations and texts, as Console shows them.
 
 ## Panel languages
 

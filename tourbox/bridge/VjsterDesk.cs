@@ -42,12 +42,16 @@ internal sealed class VjsterRemote(VjsterDesk desk, Action<string> log)
     bool busy;
     /** What the APC40 asked for, in order: an action id, or (null, n) for n speed steps. Steps in a row add up. */
     readonly List<(string? Action, int Steps)> queued = new();
+    string lastLine = "";
+    long lastLineAt;
+
+    internal int QueuedCount { get { lock (gate) return queued.Count; } }
 
     public void OnVendorEvent(string vendorName, string eventType, JsonObject data)
     {
         if (vendorName != Vendor || eventType != EventType) return;
         string? action = data["action"] is JsonValue a && a.TryGetValue<string>(out var text) ? text : null;
-        long steps = data["steps"] is JsonValue n && n.TryGetValue<long>(out var count) ? Math.Clamp(count, -80, 80) : 0;
+        long steps = data["steps"] is JsonValue n ? Math.Clamp(n.TryGetValue<long>(out var l) ? l : n.TryGetValue<int>(out var i) ? i : n.TryGetValue<double>(out var f) && double.IsFinite(f) ? (long)Math.Clamp(f, -80, 80) : 0, -80, 80) : 0;
         lock (gate)
         {
             if (action == "vjster.speed.step")
@@ -71,6 +75,16 @@ internal sealed class VjsterRemote(VjsterDesk desk, Action<string> log)
         _ = Task.Run(Drain);
     }
 
+    /** One Activity line per answer; the same line again within 3 s (a knob turned with no video open) is said once. */
+    void Say(string line)
+    {
+        if (line.Length == 0) return;
+        if (line == lastLine && Stopwatch.GetElapsedTime(lastLineAt) < TimeSpan.FromSeconds(3)) return;
+        lastLine = line;
+        lastLineAt = Stopwatch.GetTimestamp();
+        log("APC40: " + line);
+    }
+
     async Task Drain()
     {
         while (true)
@@ -82,11 +96,10 @@ internal sealed class VjsterRemote(VjsterDesk desk, Action<string> log)
                 next = queued[0];
                 queued.RemoveAt(0);
             }
-            try
-            {
-                log("APC40: " + (next.Action is not null ? await desk.Dispatch(next.Action) : await desk.SpeedBy(next.Steps)));
-            }
-            catch (Exception e) { log("APC40: " + e.Message); }
+            string line;
+            try { line = next.Action is not null ? await desk.Dispatch(next.Action) : await desk.SpeedBy(next.Steps); }
+            catch (Exception e) { line = e.Message; }
+            Say(line);
         }
     }
 }

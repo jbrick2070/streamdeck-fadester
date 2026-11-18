@@ -287,19 +287,16 @@ import AppKit
 
         // Preset row: OBS Fadester for TourBox + [Not Linked] -> [OBS]
         let imported = t >= 6.8
-        let linkPopoverOpen = t >= 7.55 && t < 9.15
-        let linked = t >= 9.15
+        // With Auto Switch off the preset is selected, not linked to an app (hand test 2026-11-17).
+        let linked = t >= 7.6
         let presetRow = NSRect(x: 32, y: 124, width: 210, height: 34)
         let notLinkedBtn = NSRect(x: 176, y: 131, width: 60, height: 20)
         if imported {
-            fill(presetRow, NSColor(srgbRed: 72 / 255, green: 76 / 255, blue: 88 / 255, alpha: 1), radius: 5)
+            fill(presetRow, linked ? blue : NSColor(srgbRed: 72 / 255, green: 76 / 255, blue: 88 / 255, alpha: 1), radius: 5)
             text("OBS Fadester for…", at: NSPoint(x: 40, y: 133), size: 10.8, bold: true, color: .white)
             if linked {
                 fill(notLinkedBtn, green, radius: 4)
-                text("✓ OBS", at: NSPoint(x: notLinkedBtn.minX + 12, y: notLinkedBtn.minY + 2.5), size: 10.2, bold: true, color: .white)
-            } else {
-                fill(notLinkedBtn, NSColor(srgbRed: 238 / 255, green: 229 / 255, blue: 174 / 255, alpha: 1), radius: 4)
-                text("Not Linked", at: NSPoint(x: notLinkedBtn.minX + 5, y: notLinkedBtn.minY + 3), size: 9.8, bold: true, color: NSColor(srgbRed: 32 / 255, green: 28 / 255, blue: 14 / 255, alpha: 1))
+                text("✓", at: NSPoint(x: notLinkedBtn.minX + 25, y: notLinkedBtn.minY + 2.5), size: 10.2, bold: true, color: .white)
             }
         } else {
             let row1 = NSRect(x: 32, y: 124, width: 210, height: 32)
@@ -317,25 +314,6 @@ import AppKit
         fill(NSRect(x: 396, y: 140, width: 32, height: 32), frame, radius: 16)
         fill(NSRect(x: 348, y: 138, width: 30, height: 16), frame, radius: 5)
         fill(NSRect(x: 404, y: 186, width: 26, height: 12), blue.withAlphaComponent(0.75), radius: 4)
-
-        // Scene 3 (7.55 .. 9.15s): TourBox Console "Running applications" link popover
-        let obsAppRow = NSRect(x: 270, y: 146, width: 232, height: 26)
-        let saveLinkBtn = NSRect(x: 396, y: 208, width: 96, height: 24)
-        if linkPopoverOpen {
-            let pop = NSRect(x: 258, y: 48, width: 256, height: 194)
-            fill(pop, NSColor(srgbRed: 36 / 255, green: 39 / 255, blue: 48 / 255, alpha: 1), radius: 7)
-            stroke(pop, muted.withAlphaComponent(0.5), radius: 7, width: 1.2)
-            text("Running applications", at: NSPoint(x: 270, y: 58), size: 11, bold: true, color: ink)
-            text("Fadester Companion  (skip)", at: NSPoint(x: 276, y: 88), size: 10.2, bold: false, color: muted)
-            text("Google Chrome", at: NSPoint(x: 276, y: 116), size: 10.2, bold: false, color: muted)
-            let obsChosen = t >= 8.2
-            fill(obsAppRow, obsChosen ? blue : card, radius: 5)
-            text("●  OBS   " + L("macTbPickObs"), at: NSPoint(x: 278, y: 151), size: 11, bold: true, color: .white)
-            fill(NSRect(x: 286, y: 208, width: 96, height: 24), card, radius: 5)
-            text("Cancel", at: NSPoint(x: 315, y: 213), size: 10.5, bold: false, color: muted)
-            fill(saveLinkBtn, obsChosen ? blue : card, radius: 5)
-            text("Save", at: NSPoint(x: 430, y: 213), size: 10.8, bold: true, color: .white)
-        }
 
         // Scene 2 (3.4 .. 6.8s): macOS File Open sheet slides down
         let openSheetVisible = t >= 3.4 && t < 6.8
@@ -382,12 +360,10 @@ import AppKit
             Hop(from: 3.5, to: 4.2, target: Self.center(folderItem)),
             Hop(from: 4.5, to: 5.15, target: Self.center(fileItem)),
             Hop(from: 5.5, to: 6.2, target: Self.center(openBtn)),
-            Hop(from: 6.95, to: 7.5, target: Self.center(notLinkedBtn)),
-            Hop(from: 7.7, to: 8.15, target: Self.center(obsAppRow)),
-            Hop(from: 8.45, to: 8.95, target: Self.center(saveLinkBtn)),
+            Hop(from: 6.95, to: 7.5, target: Self.center(presetRow)),
             Hop(from: 9.3, to: 9.9, target: NSPoint(x: 460, y: 210))
         ]
-        let clicks: [CGFloat] = [2.0, 4.25, 5.2, 6.25, 7.55, 8.2, 9.0]
+        let clicks: [CGFloat] = [2.0, 4.25, 5.2, 6.25, 7.55]
         drawPointer(at: Self.walk(t, start: rest, steps: steps), clicks: clicks, t: t)
     }
 

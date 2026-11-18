@@ -360,7 +360,8 @@ enum Readiness {
             let action = String(line[line.index(line.startIndex, offsetBy: 7)..<sep.lowerBound])
             let summary = String(line[sep.upperBound...]).trimmingCharacters(in: .whitespaces)
             guard !summary.isEmpty else { return nil }
-            if summary.hasSuffix("· T-bar 0%") {
+            // P0 formats by the host's culture: "0%", or "0 %" with a (narrow) no-break space.
+            if summary.range(of: #"· T-bar 0[\s\x{00A0}\x{202F}]?%$"#, options: .regularExpression) != nil {
                 if action == "fader.forward" || action == "fader.fineForward" {
                     return L("macTbarPause") // clockwise always throws; this click was the end of the last spin
                 }
@@ -603,6 +604,15 @@ enum PresetAge {
         guard let xml = xml, let start = xml.range(of: "<configBytes>"), let end = xml.range(of: "</configBytes>", range: start.upperBound..<xml.endIndex) else { return nil }
         return String(xml[start.upperBound..<end.lowerBound].filter { !$0.isWhitespace })
     }
+    /// An import copy's layout, read again only when the file changes: the check runs every 5 s on the main thread.
+    private static var layoutCache: [String: (Date, String?)] = [:]
+    static func cachedLayout(_ url: URL) -> String? {
+        guard let changed = (try? FileManager.default.attributesOfItem(atPath: url.path))?[.modificationDate] as? Date else { return nil }
+        if let hit = layoutCache[url.path], hit.0 == changed { return hit.1 }
+        let found = layout(unzip(url))
+        layoutCache[url.path] = (changed, found)
+        return found
+    }
     /// The gzip of Console's XML (a shipped .tb, or Console's import copy), as text; nil when it cannot be read.
     static func unzip(_ url: URL) -> String? {
         let gzip = Process(), out = Pipe()
@@ -639,8 +649,7 @@ enum PresetAge {
         for name in names where !name.isEmpty && name.allSatisfy(\.isNumber) {
             guard let xml = try? String(contentsOf: dir.appendingPathComponent(name), encoding: .utf8), xml.contains("</Preset>") else { complete = false; continue }
             presets.append(shortcuts(xml))
-            let copy = dir.deletingLastPathComponent().appendingPathComponent("import/\(name)")
-            layouts.append(FileManager.default.fileExists(atPath: copy.path) ? layout(unzip(copy)) : nil)
+            layouts.append(cachedLayout(dir.deletingLastPathComponent().appendingPathComponent("import/\(name)")))
         }
         return (presets, complete, layouts)
     }

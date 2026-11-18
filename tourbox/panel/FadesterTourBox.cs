@@ -620,12 +620,22 @@ namespace Fadester.TourBox {
      */
     void SaveRequested() {
       if(PortsClash())return;
-      string before=RestartSettings();
       try { WriteConfig(); } catch(Exception e){ Note(e.Message); return; }
       var p=worker;
       if(p==null){ Note(text.Get("saved")); return; }
       try { p.StandardInput.WriteLine("reload"); p.StandardInput.Flush(); } catch(IOException) {} catch(InvalidOperationException) {}
-      Note(text.Get(RestartSettings()==before ? "savedApplied" : "savedRestart"));
+      // Compared with what the running controls started with, so a second Save still says a restart is due.
+      Note(text.Get(RestartSettings()==startedWith ? "savedApplied" : "savedRestart"));
+    }
+    /** Writes only these keys into the saved settings, leaving other edits on the page unsaved (a layer the bridge picked). */
+    void SaveKeys(Dictionary<string,object> keys) {
+      try {
+        var saved=File.Exists(settings) ? (Decode(File.ReadAllText(settings,Encoding.UTF8)) ?? new Dictionary<string,object>()) : new Dictionary<string,object>();
+        foreach(var k in keys) saved[k.Key]=k.Value;
+        string tmp=settings+"."+Guid.NewGuid().ToString("N")+".tmp";
+        try { File.WriteAllText(tmp,Json.Serialize(saved),new UTF8Encoding(false)); if(File.Exists(settings)) File.Replace(tmp,settings,null); else File.Move(tmp,settings); }
+        finally { if(File.Exists(tmp)) File.Delete(tmp); }
+      } catch(Exception e) { Note(e.Message); }
     }
     /** The saved settings a running bridge only reads at start (BridgeConfig.ApplyLive leaves them alone), as one string to compare. */
     string RestartSettings() {
@@ -695,7 +705,7 @@ namespace Fadester.TourBox {
         activity.TopIndex=activity.Items.Count-1;
       }
     }
-    string lastNote; int lastNoteCount; DateTime catalogAt=DateTime.MinValue;
+    string lastNote; int lastNoteCount; DateTime catalogAt=DateTime.MinValue; string startedWith;
     ProcessStartInfo Command(string args) {
       var exe=Path.Combine(folder,"FadesterCompanionBridge.exe"); if(!File.Exists(exe))throw new FileNotFoundException(text.Get("bridgeMissing"));
       var pi=new ProcessStartInfo(exe,args) {UseShellExecute=false,CreateNoWindow=true,WorkingDirectory=folder,RedirectStandardOutput=true,RedirectStandardError=true,RedirectStandardInput=true,StandardOutputEncoding=Encoding.UTF8,StandardErrorEncoding=Encoding.UTF8};
@@ -729,6 +739,7 @@ namespace Fadester.TourBox {
       }catch(Exception e){if(quiet){ Entry.Log("list refresh: "+e.Message); } else { live.Text=""; if(worker==null){SetVsStatus(""); obsConnected=false; obsProblem=failure??"obs-no-answer"; ShowStatus();} Note(e.Message);}}
       finally{try{if(tmp!=null && File.Exists(tmp))File.Delete(tmp);}catch(IOException){} refreshing=false; if(!IsDisposed){connect.Enabled=true; if(!quiet) start.Enabled=true;}}
       // After the scan, OBS or not: VJster controls Chrome's videos without OBS, and the bridge connects to OBS when it appears (FIX-8).
+      if(quiet) return; // a refresh of the lists starts nothing and leaves a pending start for the scan that asked
       bool asked=startAfterScan; startAfterScan=false;
       if(IsDisposed || worker!=null) return;
       if(asked){ if(obsConnected || (enableVjster.Checked && !mixOnly.Checked)) StartControls(); return; }
@@ -737,7 +748,7 @@ namespace Fadester.TourBox {
     void StartControls() {
       if(PortsClash())return;
       try{
-        WriteConfig(); var p=new Process {StartInfo=Command(mixOnly.Checked?"--mix-only":"--listen"),EnableRaisingEvents=true};
+        WriteConfig(); startedWith=RestartSettings(); var p=new Process {StartInfo=Command(mixOnly.Checked?"--mix-only":"--listen"),EnableRaisingEvents=true};
         p.OutputDataReceived+=(s,e)=>BridgeLine(p,e.Data); p.ErrorDataReceived+=(s,e)=>BridgeLine(p,e.Data);
         p.Exited+=delegate { try{BeginInvoke((Action)(()=>{if(worker==p){worker=null; SetVsStatus(""); start.Text=text.Get("saveStart"); padState="stPadOff"; ShowStatus(); Note(text.Get(ending==p?"bridgeEnded":p.ExitCode==0?"stopped":"bridgeFailed"));} Entry.Log("controls ended: "+p.ExitCode); try{p.CancelOutputRead();p.CancelErrorRead();}catch(InvalidOperationException){} p.Dispose();}));}catch(InvalidOperationException){} };
         vjPeers=new HashSet<string>(); vjPortBusy=false;
@@ -823,7 +834,7 @@ namespace Fadester.TourBox {
         string n=m.Groups[1].Value, scene=m.Groups[2].Value, source=m.Groups[3].Value;
         config["layer"+n+"Scene"]=scene; config["layer"+n+"Source"]=source;
         boxes["layer"+n+"Scene"].Text=scene; PopulateLayer(int.Parse(n)); boxes["layer"+n+"Source"].Text=source;
-        try { WriteConfig(); } catch(Exception e){ Note(e.Message); }
+        SaveKeys(new Dictionary<string,object>{{"layer"+n+"Scene",scene},{"layer"+n+"Source",source}});
       }
     }
     /**
@@ -831,9 +842,10 @@ namespace Fadester.TourBox {
      * throw is the end of that spin (StudioFader.SettleMs), back at rest has nothing to undo.
      */
     string TbarHint(string line) {
-      const string rest=" · T-bar 0%";
-      if(line==null || !line.EndsWith(rest,StringComparison.Ordinal)) return null;
-      string label=line.Substring(0,line.Length-rest.Length); string a;
+      // P0 formats by the bridge's culture: "0%", or "0 %" with a (narrow) no-break space in French or German.
+      var m=line==null ? null : System.Text.RegularExpressions.Regex.Match(line,@"^(.*) · T-bar 0[\s  ]?%$");
+      if(m==null || !m.Success) return null;
+      string label=m.Groups[1].Value; string a;
       foreach(var id in new[]{"fader.forward","fader.fineForward"}) if(actionLabels.TryGetValue(id,out a) && a==label) return text.Get("tbarPause");
       foreach(var id in new[]{"fader.back","fader.fineBack"}) if(actionLabels.TryGetValue(id,out a) && a==label) return text.Get("tbarCw");
       return null;

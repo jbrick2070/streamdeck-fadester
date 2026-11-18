@@ -404,14 +404,14 @@ namespace Fadester.TourBox {
       Words(g, "Auto Switch", new PointF(36, 82), Ink, Font9b);
       // Off: one preset serves every app in front (hand test 2026-11-17).
       Fill(g, Color.FromArgb(107, 112, 128), new RectangleF(198, 82, 32, 17), 8); Fill(g, Color.White, new RectangleF(200, 84, 13, 13), 6);
-      bool imported = t >= 6.8f, popover = t >= 7.55f && t < 9.15f, linked = t >= 9.15f;
+      // With Auto Switch off the preset is selected, not linked to an app (hand test 2026-11-17).
+      bool imported = t >= 6.8f, popover = false, linked = t >= 7.6f;
       var row = new RectangleF(28, 116, 210, 34);
       var notLinked = new RectangleF(170, 123, 64, 20);
       if (imported) {
-        Fill(g, Color.FromArgb(72, 76, 88), row, 5);
+        Fill(g, linked ? Blue : Color.FromArgb(72, 76, 88), row, 5);
         Words(g, "OBS Fadester for…", new PointF(36, 125), Color.White, Font9b);
-        if (linked) { Fill(g, Good, notLinked, 4); Words(g, "✓ OBS", new PointF(notLinked.X + 14, notLinked.Y + 3), Color.White, Font9b); }
-        else { Fill(g, Color.FromArgb(238, 229, 174), notLinked, 4); Words(g, "Not Linked", new PointF(notLinked.X + 4, notLinked.Y + 3), Color.FromArgb(32, 28, 14), Font9); }
+        if (linked) { Fill(g, Good, notLinked, 4); Words(g, "✓", new PointF(notLinked.X + 27, notLinked.Y + 3), Color.White, Font9b); }
       } else {
         Fill(g, card, row, 5); Words(g, "Default Preset", new PointF(36, 125), muted, Font9);
       }
@@ -452,9 +452,8 @@ namespace Fadester.TourBox {
       }
       if (t >= 9.4f) Tick(g, t, 9.4f);
       var rest = new PointF(360, 160);
-      var steps = new[] { Step(0.8f, 1.9f, Centre(importBtn)), Step(3.5f, 4.0f, Centre(field)), Step(6.9f, 7.5f, Centre(notLinked)),
-        Step(7.7f, 8.15f, Centre(obsRow)), Step(8.4f, 8.85f, Centre(saveBtn)), Step(9.4f, 10.2f, rest) };
-      Pointer(g, Walk(t, rest, steps), new[] { 2.0f, 4.1f, 7.6f, 8.2f, 8.95f }, t);
+      var steps = new[] { Step(0.8f, 1.9f, Centre(importBtn)), Step(3.5f, 4.0f, Centre(field)), Step(6.9f, 7.5f, Centre(row)), Step(9.4f, 10.2f, rest) };
+      Pointer(g, Walk(t, rest, steps), new[] { 2.0f, 4.1f, 7.6f }, t);
     }
     static void Key(Graphics g, string label, PointF at, bool down) {
       var size = TextRenderer.MeasureText(g, label, Font9b, Size.Empty, TextFormatFlags.NoPadding);

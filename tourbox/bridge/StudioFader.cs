@@ -47,6 +47,13 @@ public sealed class StudioFader
     internal int SettleMs { get; init; } = 700;
     /// <summary>When a Dial throw last reached its end; a take or cut by button leaves the Dial free at once.</summary>
     private long sweepEndAt;
+    /// <summary>A forward Dial click; when it finishes the throw, the clicks that follow are the end of the same spin.</summary>
+    private async Task DialForwardAsync(double delta)
+    {
+        long before = takeAt;
+        await MoveAsync(delta, snapToRail: true);
+        if (takeAt != before && sweep == null && Position == 0) sweepEndAt = takeAt;
+    }
     private bool Settling => sweep == null && Position == 0 && sweepEndAt != 0 && Stopwatch.GetElapsedTime(sweepEndAt).TotalMilliseconds < SettleMs;
     private readonly bool allowAutoCloseout;
     private Sweep? disconnectedSweep;
@@ -370,14 +377,15 @@ public sealed class StudioFader
             {
                 // With clockwise always towards Preview, a spin that overshoots the end of a throw would start the next one;
                 // clicks right after a take are that spin, so the next throw starts after a short pause.
-                case "fader.forward": if (!Settling) await MoveAsync(direction * step, snapToRail: true); break;
+                case "fader.forward": if (!Settling) await DialForwardAsync(direction * step); break;
                 case "fader.back": await MoveAsync(-direction * step, snapToRail: true); break;
-                case "fader.fineForward": if (!Settling) await MoveAsync(direction * step / 4, snapToRail: true); break;
+                case "fader.fineForward": if (!Settling) await DialForwardAsync(direction * step / 4); break;
                 case "fader.fineBack": await MoveAsync(-direction * step / 4, snapToRail: true); break;
                 case "take": case "take.cut":
                     // A second take within 450 ms of the last is a double press, and so is one pressed before the last
                     // went out (a cut can wait about 1 s for OBS). Measured from the press when it is known.
                     if (DoublePress(pressedAt)) return $"{action} ignored: a double press, within 0.45 s of the last take or cut.";
+                    sweepEndAt = 0; // a take or cut by button leaves the Dial free at once
                     if (sweep != null) await FinishAndReturnAsync();
                     else if (!await TakeAsync(action == "take.cut", action == "take" ? durationOverrideMs : null))
                         return $"{action} ignored: Preview is the same scene as Program. Cue another scene first.";
@@ -793,7 +801,7 @@ public sealed class StudioFader
                     await rpc("SetCurrentPreviewScene", new() { ["sceneUuid"] = original.Program });
             }
             else await ConfirmNativeReleaseAsync(original, completed: true);
-            takeAt = sweepEndAt = Stopwatch.GetTimestamp();
+            takeAt = Stopwatch.GetTimestamp();
             sweep = null; Position = 0;
         }
         catch { Disarm(); throw; }

@@ -555,7 +555,11 @@ internal static class VjsterSelfTests
         Check(chosen.Layer1Source == "Backdrop" && chosen.Layer2Source == "Motion" && !second.Contains("Layer 1 ="), "a chosen layer is kept; only the empty one is picked");
         scene = [("Beat", 2, 2, true, 0.0)];
         try { await new DeskActions(new BridgeConfig(), BareFake).Dispatch("layer1.blend.next"); throw new Exception("VJster self-test: a layer was picked from a scene with no picture"); }
-        catch (InvalidOperationException e) { Check(e.Message.Contains("shows no picture"), "a scene with no picture says what to set and where"); }
+        catch (InvalidOperationException e) { Check(e.Message.Contains("has no picture"), "a scene with no picture says what to set and where"); }
+        scene = [("Motion", 6, 6, true, 1920.0), ("Title", 5, 5, true, 1280.0)];
+        var topChosen = new BridgeConfig { Layer1Scene = "Live", Layer1Source = "Motion" };
+        await new DeskActions(topChosen, BareFake).Dispatch("layer1.blend.next");
+        Check(topChosen.Layer2Source == "Title", "with Layer 1 chosen as the top picture, Layer 2 is the next one down");
         try { await desk.Dispatch("vjster.speed.up"); throw new Exception("VJster self-test: OBS desk took a VJster action"); }
         catch (InvalidOperationException) { }
         Check(DeskActions.BlendName("OBS_BLEND_SCREEN") == "Screen", "blend names");

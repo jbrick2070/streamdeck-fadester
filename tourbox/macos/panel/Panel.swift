@@ -191,6 +191,7 @@ private final class PillActionButton: NSControl {
     // Whether Console holds an older OBS Fadester preset than ours (Model.swift PresetAge, FIX-9): read every few seconds, said once.
     private var presetState = PresetState.none, shippedShortcuts: Set<String>?, presetCheckAt = Date.distantPast, toldOldPreset = false
     /// TourBox Console's Auto Switch and whether its selected preset is ours (Model.swift PresetAge): they decide the reminder strip.
+    private var startedWith: Settings?
     private var consoleAutoSwitch: Bool?, activeFadester: Bool?, shippedLayout: String?
     /// Whether the user last started ("on") or stopped ("off") the controls; kept apart from panel-config.json, which start() rewrites.
     private var rememberedControls: String? { UserDefaults.standard.string(forKey: "fadester.controlsLastAction") }
@@ -960,6 +961,7 @@ private final class PillActionButton: NSControl {
     }
 
     private func handleHostLine(_ safeLine: String) {
+        if safeLine == "SETTINGS-RELOADED" { return } // the Save note already said so, as on Windows
         // The meter's lines come up to 5 times a second: they update the meter line, never Activity (as on Windows).
         if let meter = Readiness.vsMeter(safeLine) {
             setMeter(meter)
@@ -1159,11 +1161,12 @@ private final class PillActionButton: NSControl {
     @objc private func save() {
         guard !invalidSettings && !previewMode else { return }
         do {
-            let before = settings, next = try current()
+            let next = try current()
             settings = next; try LocalFiles.save(settings)
             if host.running {
                 host.reload()
-                setStatus(L(Settings.sameAtStart(before, next) ? "savedApplied" : "savedRestart"))
+                // Compared with what the running host started with, so a second Save still says a restart is due.
+                setStatus(L(Settings.sameAtStart(startedWith ?? next, next) ? "savedApplied" : "savedRestart"))
             } else {
                 setStatus(L("saved"))
             }
@@ -1189,6 +1192,7 @@ private final class PillActionButton: NSControl {
             vjsterPeers.removeAll()
             vjsterPortBusy = false
             try host.start(paths: paths, config: LocalFiles.settings, password: secret, mixEnabled: proposed.mixEnabled, mixOnly: proposed.mixOnly, extraSecrets: [proposed.vjsterObsToken])
+            startedWith = proposed
             updateEnabled()
         } catch { failure(error); updateEnabled() }
     }

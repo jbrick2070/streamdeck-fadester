@@ -97,14 +97,18 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
         {
             case "layer2.opacity.down":
             case "layer2.opacity.up":
-                layersPicked = ""; { string done = await Opacity(id); return done + layersPicked; }
+                layersPicked = "";
+                try { string done = await Opacity(id); return done + layersPicked; }
+                catch (InvalidOperationException e) when (layersPicked.Length > 0 && !e.Message.Contains("picked automatically")) { throw new InvalidOperationException(e.Message + layersPicked, e); }
             case "layer1.blend.previous":
             case "layer1.blend.next":
             case "layer1.blend.reset":
             case "layer2.blend.previous":
             case "layer2.blend.next":
             case "layer2.blend.reset":
-                layersPicked = ""; { string done = await Blend(id); return done + layersPicked; }
+                layersPicked = "";
+                try { string done = await Blend(id); return done + layersPicked; }
+                catch (InvalidOperationException e) when (layersPicked.Length > 0 && !e.Message.Contains("picked automatically")) { throw new InvalidOperationException(e.Message + layersPicked, e); }
             case "mix.up": return await StepMixAsync(1);
             case "mix.down": return await StepMixAsync(-1);
             case "mix.fadeOut": return await SetMixAsync(-100, cfg.MixFadeMs);
@@ -341,7 +345,7 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
      * file has none) and the only item of that name in the scene. Only empty layers are filled, in memory; the line
      * returned tells the panel, which shows the choice on the Assignments tab and saves it.
      */
-    private async Task<string> FillLayers()
+    private async Task<string> FillLayers(string id)
     {
         bool one = string.IsNullOrWhiteSpace(cfg.Layer1Scene) || string.IsNullOrWhiteSpace(cfg.Layer1Source);
         bool two = string.IsNullOrWhiteSpace(cfg.Layer2Scene) || string.IsNullOrWhiteSpace(cfg.Layer2Source);
@@ -362,19 +366,24 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
             if ((size?["sourceWidth"]?.GetValue<double>() ?? 0) <= 0 || (size?["sourceHeight"]?.GetValue<double>() ?? 0) <= 0) continue;
             picks.Add(name);
         }
+        // A layer already chosen is never picked again for the other one.
+        if (!one) picks.Remove(cfg.Layer1Source);
+        if (!two) picks.Remove(cfg.Layer2Source);
         string said = "";
-        if (one)
+        if (one && picks.Count > 0)
         {
-            picks.Remove(cfg.Layer2Source);
-            if (picks.Count == 0) throw new InvalidOperationException($"Layer 1: {scene} shows no picture to use. Choose a scene and source on the Assignments tab.");
             cfg.Layer1Scene = scene; cfg.Layer1Source = picks[0]; picks.RemoveAt(0);
             said += $"\nLayer 1 = {scene} › {cfg.Layer1Source} (picked automatically; change it on the Assignments tab)";
         }
-        if (two && picks.Count > 0 && picks[0] != cfg.Layer1Source)
+        if (two && picks.Count > 0)
         {
             cfg.Layer2Scene = scene; cfg.Layer2Source = picks[0];
             said += $"\nLayer 2 = {scene} › {cfg.Layer2Source} (picked automatically; change it on the Assignments tab)";
         }
+        // Only the layer this control drives must exist; a pick for the other one is still said.
+        bool forTwo = id.StartsWith("layer2");
+        if (forTwo ? string.IsNullOrWhiteSpace(cfg.Layer2Source) : string.IsNullOrWhiteSpace(cfg.Layer1Source))
+            throw new InvalidOperationException($"Layer {(forTwo ? 2 : 1)}: {scene} has no {(forTwo && !string.IsNullOrWhiteSpace(cfg.Layer1Source) ? "second " : "")}picture to use. Choose a scene and source on the Assignments tab.{said}");
         return said;
     }
     /** The line FillLayers added to the last layer action, for that action's result. */
@@ -382,7 +391,7 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
     /** The one scene item a layer names. None or several is an error, so a layer never acts on the wrong copy or on a source that left the scene. */
     private async Task<(string Scene, string Source, string Label, int Item)> LayerItem(string id)
     {
-        layersPicked = await FillLayers();
+        layersPicked = await FillLayers(id);
         var (scene, source, label) = Layer(id);
         var rows = (await rpc("GetSceneItemList", new() { ["sceneName"] = scene }))["sceneItems"]!.AsArray()
             .Where(n => n?["sourceName"]?.GetValue<string>() == source).ToArray();
@@ -503,7 +512,7 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
         else if (anchorIndex >= 0)
         {
             if (anchorIndex >= scenes.Count)
-                throw new InvalidOperationException($"Preview anchor {anchorIndex + 1} puts a chosen scene into Preview: OBS has only {scenes.Count} scene(s), so choose one on the Assignments tab.");
+                throw new InvalidOperationException($"Preview anchor {anchorIndex + 1}: OBS has only {scenes.Count} scene(s). Choose a scene for it on the Assignments tab.");
             target = scenes[anchorIndex];
         }
         else if (id == "preview.sync") target = Str(list, "currentProgramSceneName");

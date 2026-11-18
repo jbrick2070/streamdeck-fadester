@@ -675,11 +675,11 @@ namespace Fadester.TourBox {
         }
       }catch(Exception e){live.Text=""; if(worker==null){SetVsStatus(""); obsConnected=false; obsProblem=failure??"obs-no-answer"; ShowStatus();} Note(e.Message);}
       finally{try{if(tmp!=null && File.Exists(tmp))File.Delete(tmp);}catch(IOException){} refreshing=false; if(!IsDisposed){connect.Enabled=true; start.Enabled=true;}}
-      // OBS answered: start the controls now, not when the window opened, so no shortcut is taken while OBS is closed (FIX-5).
+      // After the scan, OBS or not: VJster controls Chrome's videos without OBS, and the bridge connects to OBS when it appears (FIX-8).
       bool asked=startAfterScan; startAfterScan=false;
-      if(IsDisposed || worker!=null || !obsConnected) return;
-      if(asked){ StartControls(); return; }
-      if(Readiness.AutoStart(File.Exists(settings),!invalidConfig,Remembered(),obsConnected,worker!=null)){ StartControls(); if(worker!=null) Note(text.Get("autoStarted")); }
+      if(IsDisposed || worker!=null) return;
+      if(asked){ if(obsConnected || !mixOnly.Checked) StartControls(); return; }
+      if(Readiness.AutoStart(File.Exists(settings),!invalidConfig,Remembered(),obsConnected,worker!=null,mixOnly.Checked)){ StartControls(); if(worker!=null) Note(text.Get("autoStarted")); }
     }
     void StartControls() {
       if(PortsClash())return;
@@ -780,7 +780,7 @@ namespace Fadester.TourBox {
       vjLight.Display(Readiness.Vjster(enableVjster.Checked,mixOnly.Checked,on,vjPeers.Count,vjPortBusy),text);
       padLight.Display(Readiness.Pad(enableGamepad.Checked,mixOnly.Checked,on,padState,padSeen),text);
       ctlLight.Display(Readiness.Controls(on,obsConnected),text);
-      string key=Readiness.Reminder(on,mixOnly.Checked,obsHidden,tourboxConsole,front);
+      string key=Readiness.Reminder(on,mixOnly.Checked,obsHidden,tourboxConsole,front,obsRunning);
       if(key!=null) reminder.Text=text.Get(key);
       reminderBar.Visible=key!=null;
     }

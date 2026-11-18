@@ -75,22 +75,30 @@ namespace Fadester.TourBox {
       return obsConnected ? new LightState(Lamp.Grey, "liCtlOff", "btnStart", "start") : new LightState(Lamp.Grey, "liCtlOff", "btnTryAgain", "tryAgain");
     }
     /**
-     * Whether the controls start by themselves once a scan has read OBS (FIX-5, hand test 2026-11-17), as on the Mac
-     * (Model.swift Readiness.autoStart). Only after setup was saved once (a first run still shows Save & start) and never
-     * after the user pressed Stop: that choice holds until they start the controls again. "remembered" is "on", "off" or null.
+     * Whether the controls start by themselves at launch (FIX-5 and FIX-8, hand test 2026-11-17), as on the Mac
+     * (Model.swift Readiness.autoStart). OBS need not be open: VJster controls Chrome's videos without it, and the bridge
+     * connects to OBS whenever OBS appears. Mix-only serves OBS's mixer and nothing else, so it still waits for OBS.
+     * Only after setup was saved once (a first run still shows Save & start) and never after the user pressed Stop: that
+     * choice holds until they start the controls again. "remembered" is "on", "off" or null.
      */
-    internal static bool AutoStart(bool settingsSaved, bool settingsValid, string remembered, bool obsConnected, bool controlsOn) {
-      return settingsSaved && settingsValid && remembered != "off" && obsConnected && !controlsOn;
+    internal static bool AutoStart(bool settingsSaved, bool settingsValid, string remembered, bool obsConnected, bool controlsOn, bool mixOnly) {
+      return settingsSaved && settingsValid && remembered != "off" && !controlsOn && (obsConnected || !mixOnly);
     }
-    /** The one reminder worth a strip while the controls run, or null. The T-bar needs OBS's main window; a TourBox preset needs OBS in front. */
-    internal static string Reminder(bool controlsOn, bool mixOnly, bool obsHidden, bool tourboxConsole, string front) {
-      if (!controlsOn || mixOnly) return null;
+    /**
+     * The one reminder worth a strip while the controls run, or null. The T-bar needs OBS's main window; a TourBox preset
+     * needs OBS in front, except that Chrome in front is VJster's turn (FIX-8), and with OBS closed there is nothing to bring forward.
+     */
+    internal static string Reminder(bool controlsOn, bool mixOnly, bool obsHidden, bool tourboxConsole, string front, bool obsRunning) {
+      if (!controlsOn || mixOnly || !obsRunning) return null;
       if (obsHidden) return "remindObsOpen";
-      if (tourboxConsole && !IsObs(front)) return "remindObsFront";
+      if (tourboxConsole && !IsObs(front) && !IsChrome(front)) return "remindObsFront";
       return null;
     }
     internal static bool IsObs(string process) {
       return String.Equals(process, "obs64", StringComparison.OrdinalIgnoreCase) || String.Equals(process, "obs", StringComparison.OrdinalIgnoreCase);
+    }
+    internal static bool IsChrome(string process) {
+      return String.Equals(process, "chrome", StringComparison.OrdinalIgnoreCase);
     }
     internal static void Test() {
       Func<LightState, string> s = l => l.Lamp + " " + l.Text + " " + (l.Action ?? "-");
@@ -106,9 +114,14 @@ namespace Fadester.TourBox {
         throw new InvalidOperationException("Controller light");
       if (s(Controls(false, true)) != "Grey liCtlOff start" || s(Controls(true, true)) != "Green liCtlOn -" ||
           s(Controls(false, false)) != "Grey liCtlOff tryAgain" || s(Controls(true, false)) != "Amber liCtlWaiting tryAgain") throw new InvalidOperationException("Controls light");
-      if (!AutoStart(true, true, null, true, false) || !AutoStart(true, true, "on", true, false) || AutoStart(true, true, "off", true, false) ||
-          AutoStart(false, true, null, true, false) || AutoStart(true, false, "on", true, false) || AutoStart(true, true, "on", false, false) ||
-          AutoStart(true, true, "on", true, true)) throw new InvalidOperationException("Auto-start decision");
+      if (!AutoStart(true, true, null, true, false, false) || !AutoStart(true, true, "on", true, false, false) || AutoStart(true, true, "off", true, false, false) ||
+          AutoStart(false, true, null, true, false, false) || AutoStart(true, false, "on", true, false, false) || !AutoStart(true, true, "on", false, false, false) ||
+          AutoStart(true, true, "on", false, false, true) || !AutoStart(true, true, "on", true, false, true) ||
+          AutoStart(true, true, "on", true, true, false)) throw new InvalidOperationException("Auto-start decision");
+      if (Reminder(true, false, false, true, "obs64", true) != null || Reminder(true, false, false, true, "chrome", true) != null ||
+          Reminder(true, false, false, true, "explorer", true) != "remindObsFront" || Reminder(true, false, false, true, "explorer", false) != null ||
+          Reminder(true, false, true, true, "chrome", true) != "remindObsOpen" || Reminder(false, false, false, true, "explorer", true) != null)
+        throw new InvalidOperationException("Reminder strip");
       if (s(TourBox(true, true, false, false)) != "Green liTbReady -" || s(TourBox(false, true, false, false)) != "Amber liTbClosed openConsole" ||
           s(TourBox(false, false, false, false)) != "Amber liTbMissing downloadConsole" || s(TourBox(false, false, false, true)) != "Grey liTbMissing downloadConsole" ||
           s(TourBox(true, true, true, false)) != "Grey liTbOff -")
@@ -126,9 +139,9 @@ namespace Fadester.TourBox {
       if (!busy || VjsterPortBusy("VJster link listening on 127.0.0.1:48150", busy) ||
           !VjsterPortBusy("The VJster port could not be opened (AccessDenied). Trying again every 30 s.", false) || VjsterPortBusy("Music up", false))
         throw new InvalidOperationException("VJster port");
-      if (Reminder(false, false, true, true, "x") != null || Reminder(true, true, true, true, "x") != null ||
-          Reminder(true, false, true, true, "obs64") != "remindObsOpen" || Reminder(true, false, false, true, "chrome") != "remindObsFront" ||
-          Reminder(true, false, false, true, "obs64") != null || Reminder(true, false, false, false, "chrome") != null)
+      if (Reminder(false, false, true, true, "x", true) != null || Reminder(true, true, true, true, "x", true) != null ||
+          Reminder(true, false, true, true, "obs64", true) != "remindObsOpen" || Reminder(true, false, false, true, "explorer", true) != "remindObsFront" ||
+          Reminder(true, false, false, true, "obs64", true) != null || Reminder(true, false, false, false, "explorer", true) != null)
         throw new InvalidOperationException("Reminder");
     }
   }

@@ -226,7 +226,7 @@ namespace Fadester.TourBox {
       { "btnUseIt", new[] { "Use it", "Usarlo", "L’utiliser", "启用" } },
       { "btnStart", new[] { "Start", "Iniciar", "Démarrer", "启动" } },
       { "btnTryAgain", new[] { "Try again", "Reintentar", "Réessayer", "重试" } },
-      { "liCtlWaiting", new[] { "Controls: waiting for OBS", "Controles: esperando a OBS", "Commandes : en attente d’OBS", "控制：等待 OBS" } },
+      { "liCtlWaiting", new[] { "Controls: on, waiting for OBS", "Controles: activos, esperando a OBS", "Commandes : actives, en attente d’OBS", "控制：已开启，等待 OBS" } },
       { "autoStarted", new[] { "Controls started by themselves. Press Stop controls to turn them off.", "Los controles se iniciaron solos. Pulsa Detener controles para apagarlos.", "Les commandes ont démarré d’elles-mêmes. Appuyez sur Arrêter les commandes pour les couper.", "控制已自动启动。按“停止控制”可关闭。" } },
       { "btnClose", new[] { "Close", "Cerrar", "Fermer", "关闭" } },
       { "remindObsOpen", new[] { "Keep the main OBS window open, not minimised: the T-bar needs it.", "Mantén abierta la ventana principal de OBS, sin minimizar: el T-bar la necesita.", "Gardez la fenêtre principale d’OBS ouverte, pas réduite : le T-bar en a besoin.", "请保持 OBS 主窗口打开，不要最小化：T-bar 需要它。" } },

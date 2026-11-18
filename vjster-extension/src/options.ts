@@ -49,6 +49,8 @@ async function showLink(): Promise<void> {
   line.textContent = message((n, s) => chrome.i18n.getMessage(n, s), next.name, [String(answer.port)]);
   // The line's colour: the class is the state, "up", "down" or "connecting" (the page's own colour).
   line.className = next.state;
+  // Not connected: one item per program that can host the link, since the extension cannot tell which one is meant.
+  $<HTMLElement>("link-help").hidden = next.state !== "down";
 }
 
 $<HTMLButtonElement>("save").addEventListener("click", async () => {

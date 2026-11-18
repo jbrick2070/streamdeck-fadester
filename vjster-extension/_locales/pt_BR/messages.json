@@ -50,7 +50,16 @@
     }
   },
   "statusLinkDown": {
-    "message": "Não conectado. Abra o Stream Deck, o OpenDeck ou o Fadester Companion neste computador. A porta aqui deve ser a mesma das configurações do VJster."
+    "message": "Não conectado. Verifique o programa que você usa:"
+  },
+  "linkDownCompanion": {
+    "message": "Fadester Companion: abra-o neste computador e confira se os controles estão ligados."
+  },
+  "linkDownDeck": {
+    "message": "Stream Deck ou OpenDeck: mostre uma página com uma tecla ou um botão giratório do VJster, ou marque “Manter a conexão ligada” nas configurações do VJster."
+  },
+  "linkDownPort": {
+    "message": "A porta aqui deve ser a mesma das configurações do VJster desse programa."
   },
   "statusLinkChecking": {
     "message": "Conectando ao VJster…"

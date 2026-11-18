@@ -50,7 +50,16 @@
     }
   },
   "statusLinkDown": {
-    "message": "接続されていません。このパソコンで Stream Deck、OpenDeck、または Fadester Companion を起動してください。ここのポートは VJster 設定のポートと同じにする必要があります。"
+    "message": "接続されていません。お使いのプログラムを確認してください："
+  },
+  "linkDownCompanion": {
+    "message": "Fadester Companion：このパソコンで開き、コントロールがオンになっているか確認してください。"
+  },
+  "linkDownDeck": {
+    "message": "Stream Deck または OpenDeck：VJster のキーまたはダイヤルがあるページを表示するか、VJster 設定で「接続を常にオンにする」をオンにしてください。"
+  },
+  "linkDownPort": {
+    "message": "ここのポートは、そのプログラムの VJster 設定のポートと同じである必要があります。"
   },
   "statusLinkChecking": {
     "message": "VJster に接続中…"

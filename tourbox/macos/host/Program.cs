@@ -22,7 +22,8 @@ internal static class MacDevelopmentHost
         if (!string.IsNullOrEmpty(second)) message = message.Replace(second, "[redacted]", StringComparison.Ordinal);
         Console.WriteLine(message.Replace('\r', ' ').Replace('\n', ' '));
     }
-    enum Control { Ready, Disarmed, Stopped }
+    /// <summary>Ready: armed with OBS. VideoReady: armed without OBS, video controls only (FIX-8).</summary>
+    enum Control { Ready, VideoReady, Disarmed, Stopped }
     static void WriteControl(Control kind, int generation = 0)
     {
         // Protocol frames contain only fixed literals and our generation counter.
@@ -30,6 +31,7 @@ internal static class MacDevelopmentHost
         string frame = kind switch
         {
             Control.Ready when generation > 0 => "READY " + generation.ToString(CultureInfo.InvariantCulture),
+            Control.VideoReady when generation > 0 => "VIDEO-READY " + generation.ToString(CultureInfo.InvariantCulture),
             Control.Disarmed when generation > 0 => "DISARMED " + generation.ToString(CultureInfo.InvariantCulture),
             Control.Stopped when generation == 0 => "STOPPED",
             _ => throw new InvalidOperationException("Invalid host control frame.")
@@ -43,12 +45,12 @@ internal static class MacDevelopmentHost
         try
         {
             Console.SetOut(output); secret = "1"; obsTokenSecret = "0123456789abcdef0123456789abcdef";
-            WriteControl(Control.Ready, 1); WriteControl(Control.Disarmed, 1);
+            WriteControl(Control.Ready, 1); WriteControl(Control.VideoReady, 2); WriteControl(Control.Disarmed, 1);
             Log("Synthetic secret 1 and 0123456789abcdef0123456789abcdef"); secret = "STOPPED"; WriteControl(Control.Stopped);
         }
         finally { secret = previousSecret; obsTokenSecret = previousToken; Console.SetOut(previousOutput); }
         string[] lines = output.ToString().Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
-        if (!lines.SequenceEqual(new[] { "READY 1", "DISARMED 1", "Synthetic secret [redacted] and [redacted]", "STOPPED" }))
+        if (!lines.SequenceEqual(new[] { "READY 1", "VIDEO-READY 2", "DISARMED 1", "Synthetic secret [redacted] and [redacted]", "STOPPED" }))
             throw new InvalidOperationException("Host control frames or human-text secret redaction failed.");
     }
     static void Help() => Console.WriteLine("""
@@ -165,10 +167,11 @@ internal static class MacDevelopmentHost
             try
             {
                 if (mixOnly) await RunMixOnlySession(config, ingress, stop.Token);
-                else do
+                else if (readOnly || vjster is null) do
                 {
-                    if (!await RunSession(config, nativeApp!, inputApp, mapPath, ingress, stop.Token, readOnly, noMixProvider, vjster?.Desk)) break;
+                    if (!await RunSession(config, await Connect(config, stop.Token), nativeApp!, inputApp, mapPath, ingress, stop.Token, readOnly, noMixProvider, vjster?.Desk)) break;
                 } while (!stop.IsCancellationRequested);
+                else await RunWithOrWithoutObs(config, nativeApp!, inputApp, mapPath, ingress, stop.Token, noMixProvider, vjster.Desk);
             }
             finally
             {
@@ -304,10 +307,115 @@ internal static class MacDevelopmentHost
         }
         if (obs.Disconnected.IsCompleted) Log("OFFLINE: OBS disconnected. Restart explicitly; queued actions will not be replayed.");
     }
-    static async Task<bool> RunSession(BridgeConfig config, string nativeApp, string? inputApp, string? mapPath, CommandIngress ingress, CancellationToken stop, bool readOnly, bool noMixProvider, VjsterDesk? vjster = null)
+    /// <summary>
+    /// VJster on (FIX-8, hand test 2026-11-17): Chrome's videos need no OBS. While OBS cannot be reached the host stays up
+    /// in an offline session (shortcuts armed, VJster actions served, OBS actions refused) and looks for OBS every few
+    /// seconds; a lost OBS drops back to it instead of ending the host. Failures that are not about reaching OBS (the
+    /// native T-bar not parked, the shortcut helper gone) still end the host, as before.
+    /// </summary>
+    static async Task RunWithOrWithoutObs(BridgeConfig config, string nativeApp, string? inputApp, string? mapPath, CommandIngress ingress, CancellationToken stop, bool noMixProvider, VjsterDesk vjster)
+    {
+        string? told = null;
+        // OBS's port open but the sign-in failing (wrong password, authentication off): wait longer each time, up to a minute.
+        var wait = OfflineFirstWait;
+        while (!stop.IsCancellationRequested)
+        {
+            ObsConnection obs;
+            try { obs = await Connect(config, stop); }
+            catch (Exception error) when (error is not OperationCanceledException)
+            {
+                if (error.Message != told) { told = error.Message; Log("OFFLINE: OBS is not connected (" + error.Message + "). Video controls work; OBS controls wait for OBS."); }
+                if (!await RunOfflineSession(config, inputApp, mapPath, ingress, stop, wait, vjster)) return;
+                wait = TimeSpan.FromTicks(Math.Min(wait.Ticks * 2, OfflineLongestWait.Ticks));
+                continue;
+            }
+            told = null; wait = OfflineFirstWait;
+            try { await RunSession(config, obs, nativeApp, inputApp, mapPath, ingress, stop, readOnly: false, noMixProvider, vjster); }
+            catch (IOException error) when (obs.Disconnected.IsCompleted) { Log("OFFLINE: " + error.Message); }
+        }
+    }
+    static readonly TimeSpan OfflineFirstWait = TimeSpan.FromSeconds(5), OfflineLongestWait = TimeSpan.FromSeconds(60);
+    /// <summary>
+    /// The host without OBS: the same shortcuts and HostSession, whose OBS calls are refused, so VJster's actions behave
+    /// exactly as with OBS. Returns true to look for OBS again (OBS's port opened after at least minWait, or Reconnect),
+    /// false when the host is stopping.
+    /// </summary>
+    static async Task<bool> RunOfflineSession(BridgeConfig config, string? inputApp, string? mapPath, CommandIngress ingress, CancellationToken stop, TimeSpan minWait, VjsterDesk vjster)
     {
         ingress.Disarm();
-        using var obs = await Connect(config, stop);
+        using var shortcuts = inputApp is null ? null : new MacShortcutInput(inputApp, mapPath!, input =>
+        {
+            if (!ingress.SubmitEvent(input.Action, input.Generation, input.UnixMs, out string reason)) Log("DROPPED: " + reason);
+        });
+        if (shortcuts is not null)
+        {
+            shortcuts.Start(stop);
+            await shortcuts.Ready.WaitAsync(TimeSpan.FromSeconds(5), stop);
+        }
+        int generation = ingress.Activate();
+        if (shortcuts is not null) _ = shortcuts.Done.ContinueWith(_ => ingress.Disarm(generation), TaskScheduler.Default);
+        var session = new HostSession(config, ingress, generation,
+            (_, _) => throw new InvalidOperationException("OBS is not connected."),
+            (_, _) => throw new InvalidOperationException("OBS is not connected."),
+            () => shortcuts is null || !shortcuts.Done.IsCompleted, stop, readOnly: false, nativeRead: null, vjster);
+        var since = System.Diagnostics.Stopwatch.StartNew();
+        try
+        {
+            if (shortcuts is not null) await shortcuts.ArmAsync(generation);
+            WriteControl(Control.VideoReady, generation);
+            Log("Host armed without OBS: video controls work" + (shortcuts is null ? "." : ", exclusive Mac shortcuts enabled.") + " OBS controls start when OBS answers.");
+            Task<bool>? available = null;
+            while (!stop.IsCancellationRequested)
+            {
+                available ??= ingress.Commands.Reader.WaitToReadAsync(stop).AsTask();
+                var tick = Task.Delay(1000, stop);
+                Task completed = shortcuts is null ? await Task.WhenAny(available, tick) : await Task.WhenAny(available, tick, shortcuts.Done);
+                if (shortcuts is not null && shortcuts.Done.IsCompleted)
+                {
+                    await shortcuts.Done;
+                    throw new IOException("Shortcut input stopped; host disarmed without fallback.");
+                }
+                if (completed == tick)
+                {
+                    if (since.Elapsed >= minWait && await ObsListening(config.Port, stop)) return true;
+                    continue;
+                }
+                bool more = await available; available = null;
+                if (!more || !ingress.Commands.Reader.TryRead(out var command)) continue;
+                if (!ingress.Current(command) || !ingress.Fresh(command)) { Log("DROPPED: expired input or old connection generation."); continue; }
+                if (command.Action == "bridge.reconnect") return true;
+                try { Log("RESULT " + command.Action + ": " + await session.Dispatch(command)); }
+                catch (Exception error) when (error is not OperationCanceledException) { Log("REFUSED " + command.Action + ": " + error.Message); }
+            }
+            return false;
+        }
+        finally
+        {
+            ingress.Disarm();
+            WriteControl(Control.Disarmed, generation);
+            if (shortcuts is not null)
+            {
+                try { if (!shortcuts.Done.IsCompleted && !stop.IsCancellationRequested) await shortcuts.DisarmAsync(); }
+                catch (Exception error) { Log("Input disarm: " + error.Message); }
+                finally { shortcuts.Dispose(); }
+                try { await shortcuts.Done.WaitAsync(TimeSpan.FromSeconds(2)); }
+                catch (Exception error) { Log("Input closed: " + error.Message); }
+            }
+        }
+    }
+    /// <summary>Whether something accepts connections on OBS's WebSocket port on this Mac; the sign-in is Connect's job.</summary>
+    static async Task<bool> ObsListening(int port, CancellationToken stop)
+    {
+        using var client = new System.Net.Sockets.TcpClient();
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(stop);
+        timeout.CancelAfter(TimeSpan.FromSeconds(1));
+        try { await client.ConnectAsync(System.Net.IPAddress.Loopback, port, timeout.Token); return true; }
+        catch (Exception error) when (error is System.Net.Sockets.SocketException or OperationCanceledException && !stop.IsCancellationRequested) { return false; }
+    }
+    static async Task<bool> RunSession(BridgeConfig config, ObsConnection connection, string nativeApp, string? inputApp, string? mapPath, CommandIngress ingress, CancellationToken stop, bool readOnly, bool noMixProvider, VjsterDesk? vjster = null)
+    {
+        ingress.Disarm();
+        using var obs = connection;
         using var native = new MacNativeTBar(config.Port, nativeApp);
         // This is a read-only warmup. Never force an operator-owned handle to zero.
         if (await native.ReadAsync() != 0) throw new InvalidOperationException("OBS's native T-bar is not parked at zero; check OBS before starting this host.");
@@ -386,7 +494,8 @@ internal static class MacDevelopmentHost
             obs.InputVolumeChanged -= desk.OnVolumeChanged; obs.InputLevelChangedById -= desk.OnMixInputLevelChanged;
             // Do not invoke CancelOwnedAsync: exit must not unexpectedly change the picture.
         }
-        if (obs.Disconnected.IsCompleted && !reconnect) Log("OFFLINE: OBS disconnected. Restart explicitly; queued actions will not be replayed.");
+        if (obs.Disconnected.IsCompleted && !reconnect) Log(vjster is null ? "OFFLINE: OBS disconnected. Restart explicitly; queued actions will not be replayed."
+            : "OFFLINE: OBS disconnected. Video controls keep working; OBS controls come back when OBS does. Queued OBS actions are not replayed.");
         return reconnect;
     }
 }

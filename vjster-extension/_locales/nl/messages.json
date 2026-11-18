@@ -50,7 +50,16 @@
     }
   },
   "statusLinkDown": {
-    "message": "Niet verbonden. Start Stream Deck, OpenDeck of Fadester Companion op deze computer. De poort hier moet gelijk zijn aan de poort in de VJster-instellingen."
+    "message": "Niet verbonden. Controleer het programma dat u gebruikt:"
+  },
+  "linkDownCompanion": {
+    "message": "Fadester Companion: open het op deze computer en controleer dat de bediening aan staat."
+  },
+  "linkDownDeck": {
+    "message": "Stream Deck of OpenDeck: toon een pagina met een VJster-toets of -draaiknop, of vink ‘Verbinding aanhouden’ aan in de VJster-instellingen."
+  },
+  "linkDownPort": {
+    "message": "De poort hier moet gelijk zijn aan de poort in de VJster-instellingen van dat programma."
   },
   "statusLinkChecking": {
     "message": "Verbinden met VJster…"

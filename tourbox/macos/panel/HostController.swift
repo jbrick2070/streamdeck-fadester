@@ -15,7 +15,7 @@ struct RuntimePaths {
     /// The TourBox preset in the panel's language (translated labels, the same shortcuts); English when that language has none.
     var localizedPreset: URL { localized("presets/\(PanelText.locale)/OBS Fadester for TourBox.tb", fallback: preset) }
     /// The Chrome video copy: the same full map under its own name, to link to Google Chrome in Console (presets/build.py).
-    var localizedChromePreset: URL { localized("presets/\(PanelText.locale)/Chrome Video Fadester for TourBox.tb", fallback: resources.appendingPathComponent("presets/Chrome Video Fadester for TourBox.tb")) }
+    var localizedChromePreset: URL { localized("presets/\(PanelText.locale)/OBS Fadester for TourBox (Chrome Video).tb", fallback: resources.appendingPathComponent("presets/OBS Fadester for TourBox (Chrome Video).tb")) }
     /// The Mac quick start in the panel's language; the full English guide (START-HERE.html) for English or a missing translation.
     var guide: URL { localized("guide/\(PanelText.locale).html", fallback: resources.appendingPathComponent("START-HERE.html")) }
     private func localized(_ path: String, fallback: URL) -> URL {

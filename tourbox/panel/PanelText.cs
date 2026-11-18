@@ -9,7 +9,7 @@ namespace Fadester.TourBox {
   internal sealed class PanelText {
     static readonly string[] Locales = { "en", "es", "fr", "zh-CN" };
     const string PresetName = "OBS Fadester for TourBox.tb";
-    const string ChromePresetName = "Chrome Video Fadester for TourBox.tb";
+    const string ChromePresetName = "OBS Fadester for TourBox (Chrome Video).tb";
     static readonly Regex Placeholder = new Regex(@"\{\d+\}");
     readonly Dictionary<string,string> extra;
 
@@ -254,7 +254,7 @@ namespace Fadester.TourBox {
       { "liTbClosed", new[] { "TourBox Console: closed", "TourBox Console: cerrado", "TourBox Console : fermé", "TourBox Console：未打开" } },
       { "btnImportObs", new[] { "Import OBS preset", "Importar preajuste de OBS", "Importer le préréglage OBS", "导入 OBS 预设" } },
       { "btnImportChrome", new[] { "Import Chrome video preset", "Importar preajuste de vídeo de Chrome", "Importer le préréglage vidéo Chrome", "导入 Chrome 视频预设" } },
-      { "importCopiedChrome", new[] { "Path copied. In TourBox Console, click Import at the top of Preset List, press Ctrl+V, then Enter, and link Chrome Video Fadester for TourBox to Google Chrome.", "Ruta copiada. En TourBox Console, haz clic en Importar arriba de la lista de preajustes, pulsa Ctrl+V y luego Intro, y vincula Chrome Video Fadester for TourBox a Google Chrome.", "Chemin copié. Dans TourBox Console, cliquez sur Importer en haut de la liste des préréglages, appuyez sur Ctrl+V puis Entrée, et liez Chrome Video Fadester for TourBox à Google Chrome.", "路径已复制。在 TourBox Console 中，点击预设列表顶部的“导入”，按 Ctrl+V，然后按 Enter，并将 Chrome Video Fadester for TourBox 关联到 Google Chrome。" } },
+      { "importCopiedChrome", new[] { "Path copied. In TourBox Console, click Import at the top of Preset List, press Ctrl+V, then Enter, and link OBS Fadester for TourBox (Chrome Video) to Google Chrome.", "Ruta copiada. En TourBox Console, haz clic en Importar arriba de la lista de preajustes, pulsa Ctrl+V y luego Intro, y vincula OBS Fadester for TourBox (Chrome Video) a Google Chrome.", "Chemin copié. Dans TourBox Console, cliquez sur Importer en haut de la liste des préréglages, appuyez sur Ctrl+V puis Entrée, et liez OBS Fadester for TourBox (Chrome Video) à Google Chrome.", "路径已复制。在 TourBox Console 中，点击预设列表顶部的“导入”，按 Ctrl+V，然后按 Enter，并将 OBS Fadester for TourBox (Chrome Video) 关联到 Google Chrome。" } },
       { "importChromeHint", new[] { "Using the TourBox with Chrome in front too? Also import the Chrome video preset and link it to Google Chrome. It has every control, so OBS and the video both work. (A TourBox Console preset links to one app.)", "¿Usas también el TourBox con Chrome al frente? Importa también el preajuste de vídeo de Chrome y vincúlalo a Google Chrome. Tiene todos los controles, así que OBS y el vídeo funcionan. (Un preajuste de TourBox Console se vincula a una sola app.)", "Vous utilisez aussi le TourBox avec Chrome au premier plan ? Importez aussi le préréglage vidéo Chrome et liez-le à Google Chrome. Il a toutes les commandes, donc OBS et la vidéo fonctionnent. (Un préréglage TourBox Console se lie à une seule app.)", "Chrome 在前台时也要用 TourBox？请同时导入 Chrome 视频预设并关联到 Google Chrome。它包含所有控件，OBS 和视频都能控制。（TourBox Console 的一个预设只能关联一个应用。）" } },
       { "liTbOld", new[] { "TourBox: old preset", "TourBox: preajuste antiguo", "TourBox : ancien préréglage", "TourBox：预设已过时" } },
       { "btnImportNew", new[] { "Import new preset", "Importar el nuevo", "Importer le nouveau", "导入新预设" } },

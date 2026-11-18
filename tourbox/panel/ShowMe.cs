@@ -392,7 +392,7 @@ namespace Fadester.TourBox {
       }
     }
 
-    // TourBox Console: Import, paste the copied path, open, then link the preset to OBS (the Mac's drawTourBoxImport, with Windows' file dialog).
+    // TourBox Console: Import, paste the copied path, open, then select the preset with Auto Switch off (the Mac's drawTourBoxImport, with Windows' file dialog).
     // Console's own labels stay as Console shows them, as the panel's texts name them.
     void TourBoxImport(Graphics g, float t) {
       Color card = Color.FromArgb(47, 52, 68), side = Color.FromArgb(34, 38, 50), amber = Color.FromArgb(244, 176, 48), muted = Color.FromArgb(148, 156, 176);

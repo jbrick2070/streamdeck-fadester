@@ -1222,11 +1222,12 @@ private final class PillActionButton: NSControl {
         } catch { failure(error) }
     }
 
-    @objc private func scan() { performScan(silentIfOffline: false, listsOnly: host.running) }
+    /// The Read scenes button: while the controls run it reads the saved port and changes no light, but still says what happened.
+    @objc private func scan() { performScan(silentIfOffline: false, listsOnly: host.running, loud: true) }
 
     /// listsOnly: a refresh of the Assignments lists by itself while the controls run (OBS just answered the host, hand test
     /// 2026-11-17: the lists stayed empty until Read scenes was clicked). It changes no light and starts nothing.
-    private func performScan(silentIfOffline: Bool, listsOnly: Bool = false) {
+    private func performScan(silentIfOffline: Bool, listsOnly: Bool = false, loud: Bool = false) {
         guard (listsOnly || !host.running) && !scanning && !previewMode && !invalidSettings else { return }
         let targetPort: Int
         // A refresh while the controls run asks the OBS the host uses (the saved port), not an unsaved edit.
@@ -1240,7 +1241,7 @@ private final class PillActionButton: NSControl {
         do {
             secret = try LocalFiles.password(port: targetPort, override: password.stringValue)
         } catch {
-            if listsOnly { return } // a refresh changes no light
+            if listsOnly { if loud { failure(error) }; return } // a refresh changes no light
             obsConnected = false
             obsProblem = Readiness.obsProblem(from: (error as? PanelFailure)?.description ?? "")
             refreshIndicators()
@@ -1261,7 +1262,10 @@ private final class PillActionButton: NSControl {
                 self.catalog = try await client.scan(password: secret)
                 self.fillChoices(preserveEdits: true)
                 self.catalogAt = Date()
-                if listsOnly { self.scanning = false; self.scanTask = nil; self.updateEnabled(); return }
+                if listsOnly {
+                    if loud { let msg = L("obsReady", self.catalog.scenes.count); self.setStatus(msg); self.note(msg) }
+                    self.scanning = false; self.scanTask = nil; self.updateEnabled(); return
+                }
                 self.obsConnected = true
                 self.obsRunning = true
                 self.obsProblem = nil
@@ -1272,7 +1276,7 @@ private final class PillActionButton: NSControl {
                 self.setStatus(readyMsg)
                 self.note(readyMsg)
             } catch {
-                if listsOnly { self.scanning = false; self.scanTask = nil; self.updateEnabled(); return }
+                if listsOnly { if loud { self.failure(error) }; self.scanning = false; self.scanTask = nil; self.updateEnabled(); return }
                 self.obsConnected = false
                 let desc = (error as? PanelFailure)?.description ?? error.localizedDescription
                 self.obsProblem = Readiness.obsProblem(from: desc)

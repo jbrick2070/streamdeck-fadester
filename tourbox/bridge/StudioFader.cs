@@ -54,8 +54,15 @@ public sealed class StudioFader
         await MoveAsync(delta, snapToRail: true);
         if (takeAt != before && sweep == null && Position == 0) sweepEndAt = takeAt;
     }
-    private static string SettlingNote(string action) =>
-        $"{ActionNames.Of(action)} ignored: the last throw just finished. Pause a moment, then turn clockwise for the next one.";
+    /// <summary>
+    /// Each ignored click starts the pause again, so a spin that keeps going, or a held controller button that repeats,
+    /// never runs into the next throw: that waits for the hand to stop.
+    /// </summary>
+    private string SettlingNote(string action)
+    {
+        sweepEndAt = Stopwatch.GetTimestamp();
+        return $"{ActionNames.Of(action)} ignored: the last throw just finished. Pause a moment, then turn clockwise for the next one.";
+    }
     private bool Settling => sweep == null && Position == 0 && sweepEndAt != 0 && Stopwatch.GetElapsedTime(sweepEndAt).TotalMilliseconds < SettleMs;
     private readonly bool allowAutoCloseout;
     private Sweep? disconnectedSweep;

@@ -731,7 +731,10 @@ namespace Fadester.TourBox {
       try {
         // A read-only discovery must not overwrite the user's saved assignments.
         tmp=Path.Combine(Path.GetTempPath(),"fadester-discover-"+Guid.NewGuid().ToString("N")+".json");
-        File.WriteAllText(tmp,Json.Serialize(new {host="127.0.0.1",port=(int)port.Value}),new UTF8Encoding(false));
+        // While the controls run, read the OBS they use (the saved port), not an unsaved edit in the Port box.
+        int readPort=(int)port.Value; object savedPort;
+        if(worker!=null && config.TryGetValue("port",out savedPort)){ try { readPort=Convert.ToInt32(savedPort,CultureInfo.InvariantCulture); } catch(FormatException) {} catch(InvalidCastException) {} }
+        File.WriteAllText(tmp,Json.Serialize(new {host="127.0.0.1",port=readPort}),new UTF8Encoding(false));
         using(var proc=Process.Start(Command("--catalog --config \""+tmp+"\""))){
           var output=proc.StandardOutput.ReadToEndAsync(); var error=proc.StandardError.ReadToEndAsync();
           bool done=await Task.Run(()=>proc.WaitForExit(25000)); if(!done){proc.Kill(); throw new Exception(text.Get("obsTimeout"));}

@@ -190,6 +190,15 @@ namespace Fadester.TourBox {
       PanelText.Test();
       Readiness.Test();
       VjsterObsPage.Test();
+      // The wheel over a closed drop-down or number box scrolls the page and leaves the value alone.
+      using (var page=new Panel {AutoScroll=true,Size=new Size(200,100)}) {
+        var tall=new Panel {Height=1000,Width=150}; var pick=new ComboBox {DropDownStyle=ComboBoxStyle.DropDownList}; var num=new NumericUpDown {Maximum=10,Value=5};
+        pick.Items.Add("a"); pick.Items.Add("b"); pick.SelectedIndex=0; tall.Controls.Add(pick); page.Controls.Add(tall);
+        KeepWheelForScrolling(page); tall.Controls.Add(num); page.CreateControl();
+        var wheel=new HandledMouseEventArgs(MouseButtons.None,0,10,10,-120); PassWheelToPage(pick,wheel);
+        var wheel2=new HandledMouseEventArgs(MouseButtons.None,0,10,10,-120); PassWheelToPage(num,wheel2);
+        if (!wheel.Handled || !wheel2.Handled || pick.SelectedIndex!=0 || num.Value!=5 || -page.AutoScrollPosition.Y<=0) throw new Exception();
+      }
       var d=Decode("{\"scenes\":[\"🎬 Studio\",\"Act II\"],\"anchors\":[\"a\",\"\",\"b\",\"\"],\"port\":4455}");
       if (List(d,"scenes")[0]!="🎬 Studio" || Val(d,"port")!="4455" || List(d,"anchors").Length!=4) throw new Exception();
       if (List(d,"missing").Length!=0 || Decode(Json.Serialize(d)).Count!=3) throw new Exception();
@@ -374,6 +383,7 @@ namespace Fadester.TourBox {
       ShowStatus();
       watch=new System.Windows.Forms.Timer {Interval=1000}; watch.Tick+=delegate { Watch(); };
       FormClosed+=delegate { watch.Stop(); watch.Dispose(); };
+      KeepWheelForScrolling(this);
       Load += async delegate { ReadSettings(); ReadMap(); ReadPad(); Watch(); watch.Start(); if(!invalidConfig) await Connect(); };
       FormClosing+=async (s,e)=>{
         Entry.Log("closing: "+e.CloseReason+(worker==null?"":", controls running")); if(worker==null)return;
@@ -382,6 +392,22 @@ namespace Fadester.TourBox {
         if(e.CloseReason==CloseReason.WindowsShutDown){ var p=worker; worker=null; AskToStop(p); if(!WaitForBridge(p,1000)) EndBridge(p,0); return; }
         e.Cancel=true; if(closing)return; closing=true; await StopControls(); closing=false; if(worker==null)Close(); else Note(text.Get("stillClosing"));
       };
+    }
+    /** The mouse wheel scrolls the page, not the drop-down or number box under the pointer: scrolling past the Assignments
+    once turned every anchor into the same scene. A drop-down that is open still takes the wheel. Rows added later get it too. */
+    static void KeepWheelForScrolling(Control root) {
+      if(root is ComboBox||root is NumericUpDown) root.MouseWheel+=PassWheelToPage;
+      foreach(Control c in root.Controls) KeepWheelForScrolling(c);
+      root.ControlAdded+=delegate(object s,ControlEventArgs e){ if(e.Control!=null) KeepWheelForScrolling(e.Control); };
+    }
+    static void PassWheelToPage(object sender,MouseEventArgs e) {
+      var combo=sender as ComboBox; var h=e as HandledMouseEventArgs;
+      if((combo!=null&&combo.DroppedDown)||h==null) return;
+      h.Handled=true;
+      for(var p=((Control)sender).Parent;p!=null;p=p.Parent){
+        var sc=p as ScrollableControl;
+        if(sc!=null&&sc.AutoScroll&&sc.VerticalScroll.Visible){ sc.AutoScrollPosition=new Point(-sc.AutoScrollPosition.X,-sc.AutoScrollPosition.Y-e.Delta); return; }
+      }
     }
     FlowLayoutPanel Page(TabControl t,string title) {
       var p=new TabPage(title); t.Controls.Add(p);

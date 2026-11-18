@@ -4,6 +4,11 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 
 ## Unreleased
 
+## 0.12.12 - 2026-11-18
+This release ships Fadester Companion 0.1.15; the VJster extension stays 0.1.6.
+- **The APC40 mkII sets the video speed** (with Midi Fadester 0.7.4): the Tempo knob speeds the video up or down in steps of 0.05x (Shift + Tempo: 0.25x), Nudge − / + by 0.25x, Tap Tempo puts it back to 1x and Play plays or pauses it, through the Companion, between 0.25x and 4x. Steps turned faster than the video answers still add up.
+- **Windows: the mouse wheel scrolls the Companion's pages** instead of changing the drop-down or number under the pointer. In the hand test, scrolling past the Assignments turned every Preview anchor into the same scene. An open drop-down still takes the wheel.
+
 ## 0.12.11 - 2026-11-17
 This release ships Fadester Companion 0.1.14; the VJster extension stays 0.1.6. Fixes from the TourBox hand test (Windows and Mac alike, every language), with a plan reviewed by Antigravity:
 - **One TourBox preset again.** The Chrome Video copy is gone. Turn **Auto Switch off** in TourBox Console and select **OBS Fadester for TourBox**: one preset then works whichever app is in front. The yellow "bring OBS to the front" strip appears only while Auto Switch is on (the Companion reads Console's setting); with Auto Switch off and another preset selected, it says to select ours instead. The old-preset warning now also compares the button layout Console keeps from the import, so it flags a preset whose buttons moved.

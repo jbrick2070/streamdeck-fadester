@@ -50,6 +50,8 @@ $null=New-Item -ItemType Directory -Force $presets
 Copy-Item -LiteralPath (Join-Path $presetDir 'map.json') -Destination $presets
 Copy-Item -LiteralPath (Join-Path $presetDir 'gamepad.json') -Destination $presets
 foreach($bank in $map.presets.PSObject.Properties.Value){Copy-Item -LiteralPath (Join-Path $presetDir $bank.file) -Destination $presets}
+# The Chrome copy of the master (same map, its own name, to link to Google Chrome in TourBox Console).
+Copy-Item -LiteralPath (Join-Path $presetDir 'OBS Fadester for TourBox (Chrome Video).tb') -Destination $presets
 $repoRoot=Split-Path $PSScriptRoot
 $vjObsCandidates=@(
   (Join-Path $repoRoot 'io.github.jbrick2070.fadester-for-obs.sdPlugin\bin\vjster\obs'),

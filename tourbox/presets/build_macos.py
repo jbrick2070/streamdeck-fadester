@@ -14,6 +14,8 @@ import build as windows
 
 HERE = Path(__file__).resolve().parent
 OUTPUT = HERE / "macos" / (windows.MASTER_NAME + ".tb")
+# The Chrome copy: the same Mac map under its own name, to link to Chrome in Console (build.py CHROME_NAME).
+CHROME = OUTPUT.with_name(windows.CHROME_NAME + ".tb")
 # Console stores keyboard modifiers as a bit mask whose bits differ by platform.
 # Windows (build.py MODS): Ctrl=8, Alt=4, Shift=2. Mac: Control=1, Shift=2,
 # Option=4, Command=8. The conversion goes bit by bit, so the OBS actions'
@@ -106,9 +108,11 @@ def main():
     if args.check:
         check(preset, OUTPUT.read_bytes())
         windows.require(OUTPUT.read_bytes() == candidate, "Rebuild the Mac master")
+        windows.check_copy(candidate, CHROME.read_bytes())
     else:
         OUTPUT.parent.mkdir(parents=True, exist_ok=True)
         OUTPUT.write_bytes(candidate)
+        CHROME.write_bytes(windows.renamed(candidate, windows.CHROME_NAME))
     root = ET.fromstring(gzip.decompress(candidate))
     masks = sorted({int(e.text) for e in root.findall("shortCuts/ShortDesc/m")})
     print(f"{OUTPUT.relative_to(HERE)}: {len(preset['bindings'])} physical shortcuts, "
@@ -120,6 +124,7 @@ def main():
             folder = args.localized_out / locale
             folder.mkdir(parents=True, exist_ok=True)
             (folder / OUTPUT.name).write_bytes(data)
+            (folder / CHROME.name).write_bytes(windows.renamed(data, windows.CHROME_NAME))
         print(f"{locale}: Mac master with translated labels verified against the map")
 
 

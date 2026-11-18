@@ -154,6 +154,8 @@ namespace Fadester.TourBox {
     // What the lights also need from the desktop, read once a second without touching OBS (ShowMe.cs).
     Light obsLight, tbLight, vjLight, padLight, ctlLight; System.Windows.Forms.Timer watch; ShowMeWindow showMe;
     string obsProblem, front=""; bool obsRunning, obsHidden, padSeen, studioOff, tourboxConsole, consoleInstalled; DateTime autoConnectAt=DateTime.MaxValue; int autoTries;
+    // Whether Console holds an older OBS Fadester preset than ours (PresetAge.cs, FIX-9): read every few seconds, said once in Activity.
+    PresetState presetState=PresetState.None; HashSet<string> shippedShortcuts; DateTime presetCheckAt=DateTime.MinValue; bool toldOldPreset;
     // VJster, from the running controls' own lines: which of the Chrome extension and the OBS page are connected, and whether its port is taken.
     HashSet<string> vjPeers=new HashSet<string>(); bool vjPortBusy;
     TableLayoutPanel reminderBar; Button bringObs;
@@ -275,9 +277,11 @@ namespace Fadester.TourBox {
       SubTitle(body,"TourBox");
       Hint(body,text.Get("importHint"));
       var importRow=new FlowLayoutPanel {AutoSize=true,WrapContents=true,Margin=new Padding(0)};
-      AddButton(importRow,text.Get("openPreset"),delegate { ImportPreset(); ShowImportGuide(); });
+      AddButton(importRow,text.Get("btnImportObs"),delegate { ImportPreset(); ShowImportGuide(); });
+      AddButton(importRow,text.Get("btnImportChrome"),delegate { ImportPreset(true); });
       AddButton(importRow,text.Get("btnShowWhere"),delegate { ShowImportGuide(); });
       body.Controls.Add(importRow); importNote=Hint(body,"");
+      Hint(body,text.Get("importChromeHint"));
       Title(body,text.Get("cueTitle"));
       Hint(body,text.Get("cueHint"));
       Title(body,text.Get("inputsTitle")); Hint(body,text.Get("inputsHint"));
@@ -604,9 +608,9 @@ namespace Fadester.TourBox {
     }
     void SaveRequested() { if(PortsClash())return; try {WriteConfig(); Note(text.Get(worker==null?"saved":"savedRestart"));}catch(Exception e){Note(e.Message);} }
     /** Console has no way in from outside: no file type, no command line. Hand over the path, open Console, say what to do there. */
-    void ImportPreset() {
-      string path=text.PresetPath(folder);
-      try { Clipboard.SetText(path); importNote.Text=text.Get("importCopied"); }
+    void ImportPreset(bool chrome=false) {
+      string path=chrome ? text.ChromePresetPath(folder) : text.PresetPath(folder);
+      try { Clipboard.SetText(path); importNote.Text=text.Get(chrome ? "importCopiedChrome" : "importCopied"); }
       catch(ExternalException) { importNote.Text=text.Get("importManual",path); }
       try { if(!Desktop.Running("TourBox Console")) { string exe=Desktop.ConsoleExe(); if(exe!=null) OpenPath(exe); } }
       catch(InvalidOperationException e) { Note(e.Message); }
@@ -616,6 +620,14 @@ namespace Fadester.TourBox {
       if(showMe!=null && !showMe.IsDisposed) showMe.Close();
       showMe=new ShowMeWindow(text,"tourbox",null,delegate { ImportPreset(); });
       showMe.Show(this);
+    }
+    /** Compare Console's stored presets with the one this Companion ships, every 5 s (Console writes them when they change). */
+    void CheckPresetAge() {
+      presetCheckAt=DateTime.Now.AddSeconds(5);
+      if(shippedShortcuts==null) shippedShortcuts=PresetAge.Shipped(text.PresetPath(folder));
+      presetState=PresetAge.Judge(shippedShortcuts,PresetAge.Stored());
+      if(presetState==PresetState.Old && !toldOldPreset){ toldOldPreset=true; Note(text.Get("tbOldNote")); }
+      if(presetState!=PresetState.Old) toldOldPreset=false;
     }
     /** The TourBox light's buttons: open Console, or its download page when it is not installed. */
     void OpenConsole() {
@@ -776,7 +788,7 @@ namespace Fadester.TourBox {
       obsLight.Display(Readiness.Obs(obsConnected,obsRunning,obsProblem,studioOff,on),text);
       // A stopped bridge has no VJster link: what its lines said no longer holds.
       if(!on){ vjPeers.Clear(); vjPortBusy=false; }
-      tbLight.Display(Readiness.TourBox(tourboxConsole,consoleInstalled,mixOnly.Checked,enableGamepad.Checked),text);
+      tbLight.Display(Readiness.TourBox(tourboxConsole,consoleInstalled,mixOnly.Checked,enableGamepad.Checked,presetState==PresetState.Old),text);
       vjLight.Display(Readiness.Vjster(enableVjster.Checked,mixOnly.Checked,on,vjPeers.Count,vjPortBusy),text);
       padLight.Display(Readiness.Pad(enableGamepad.Checked,mixOnly.Checked,on,padState,padSeen),text);
       ctlLight.Display(Readiness.Controls(on,obsConnected),text);
@@ -800,6 +812,7 @@ namespace Fadester.TourBox {
         consoleInstalled=tourboxConsole || Desktop.ConsoleExe()!=null;
         front=on ? Desktop.Front() : "";
         if(obsConnected || on) autoTries=0;
+        if(DateTime.Now>=presetCheckAt) CheckPresetAge();
         if(autoTries>0 && !refreshing && DateTime.Now>=autoConnectAt && (obsProblem==null || obsProblem=="obs-no-answer")){
           autoTries--; autoConnectAt=DateTime.Now.AddSeconds(5); var pending=Connect();
         }
@@ -825,6 +838,7 @@ namespace Fadester.TourBox {
           return;
         }
         if(action=="openConsole"){ OpenConsole(); return; }
+        if(action=="importPreset"){ ShowImportGuide(); return; }
         if(action=="downloadConsole"){ DownloadConsole(); return; }
         if(showMe!=null && !showMe.IsDisposed) showMe.Close();
         if(action=="vjsterWait" || action=="vjsterPort") showMe=new ShowMeWindow(text,action,null,delegate { CopyObsUrl(); },(int)vjsterPort.Value);

@@ -29,6 +29,7 @@ mkdir -p "$folder"
 /usr/bin/ditto "$app" "$folder/Fadester Companion.app"
 # Beside the app, as in the Windows ZIP: the TourBox preset to import (English), the guide, the read-me and the license.
 cp "$repo/tourbox/presets/macos/OBS Fadester for TourBox.tb" "$folder/"
+cp "$repo/tourbox/presets/macos/OBS Fadester for TourBox (Chrome Video).tb" "$folder/"
 cp "$app/Contents/Resources/START-HERE.html" "$folder/START-HERE.html"
 # Each language's preset in presets/<locale>/ and quick start in guide/, as in the Windows ZIP.
 /usr/bin/ditto "$app/Contents/Resources/guide" "$folder/guide"
@@ -36,6 +37,7 @@ for preset in "$app/Contents/Resources/presets/"*/"OBS Fadester for TourBox.tb";
   locale="$(basename "$(dirname "$preset")")"
   mkdir -p "$folder/presets/$locale"
   cp "$preset" "$folder/presets/$locale/"
+  cp "$(dirname "$preset")/OBS Fadester for TourBox (Chrome Video).tb" "$folder/presets/$locale/"
 done
 cp "$repo/tourbox/macos/panel/README.md" "$folder/README.md"
 cp "$repo/LICENSE" "$folder/LICENSE"
@@ -56,6 +58,7 @@ mkdir -p "$check"
 shipped="$check/Fadester Companion/Fadester Companion.app"
 runtime="$shipped/Contents/Resources/runtime"
 test -f "$check/Fadester Companion/OBS Fadester for TourBox.tb"
+test -f "$check/Fadester Companion/OBS Fadester for TourBox (Chrome Video).tb"
 test -f "$check/Fadester Companion/START-HERE.html"
 test -f "$shipped/Contents/Resources/presets/OBS Fadester for TourBox.tb"
 test -f "$shipped/Contents/Resources/vjster/obs/player.html"
@@ -65,6 +68,8 @@ for locale in $("$python" -c 'import json, sys; print(" ".join(sorted(json.load(
   test -f "$shipped/Contents/Resources/presets/$locale/map.json"
   test -f "$shipped/Contents/Resources/guide/$locale.html"
   test -f "$check/Fadester Companion/presets/$locale/OBS Fadester for TourBox.tb"
+  test -f "$check/Fadester Companion/presets/$locale/OBS Fadester for TourBox (Chrome Video).tb"
+  test -f "$shipped/Contents/Resources/presets/$locale/OBS Fadester for TourBox (Chrome Video).tb"
   test -f "$check/Fadester Companion/guide/$locale.html"
 done
 test -f "$check/Fadester Companion/guide/quickstart.css"

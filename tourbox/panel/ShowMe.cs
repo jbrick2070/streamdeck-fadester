@@ -36,8 +36,10 @@ namespace Fadester.TourBox {
       return padSeen ? new LightState(Lamp.Green, "liPadReady", null, null) : new LightState(Lamp.Amber, "liPadMissing", null, null);
     }
     /** The TourBox light, as on the Mac (Model.swift Readiness.tourBox). Grey instead of amber while a game controller is in use, so a panel without a TourBox does not nag. */
-    internal static LightState TourBox(bool consoleRunning, bool consoleInstalled, bool mixOnly, bool otherController) {
+    internal static LightState TourBox(bool consoleRunning, bool consoleInstalled, bool mixOnly, bool otherController, bool oldPreset = false) {
       if (mixOnly) return new LightState(Lamp.Grey, "liTbOff", null, null);
+      // An older Fadester preset in Console: some controls do other things than the panel's map says (FIX-9).
+      if (consoleRunning && oldPreset) return new LightState(Lamp.Amber, "liTbOld", "btnImportNew", "importPreset");
       if (consoleRunning) return new LightState(Lamp.Green, "liTbReady", null, null);
       var lamp = otherController ? Lamp.Grey : Lamp.Amber;
       if (!consoleInstalled) return new LightState(lamp, "liTbMissing", "btnDownload", "downloadConsole");
@@ -124,7 +126,8 @@ namespace Fadester.TourBox {
         throw new InvalidOperationException("Reminder strip");
       if (s(TourBox(true, true, false, false)) != "Green liTbReady -" || s(TourBox(false, true, false, false)) != "Amber liTbClosed openConsole" ||
           s(TourBox(false, false, false, false)) != "Amber liTbMissing downloadConsole" || s(TourBox(false, false, false, true)) != "Grey liTbMissing downloadConsole" ||
-          s(TourBox(true, true, true, false)) != "Grey liTbOff -")
+          s(TourBox(true, true, true, false)) != "Grey liTbOff -" || s(TourBox(true, true, false, false, true)) != "Amber liTbOld importPreset" ||
+          s(TourBox(false, true, false, false, true)) != "Amber liTbClosed openConsole" || s(TourBox(true, true, true, false, true)) != "Grey liTbOff -")
         throw new InvalidOperationException("TourBox light");
       if (s(Vjster(false, false, true, 1, false)) != "Grey liVjOff -" || s(Vjster(true, true, true, 1, false)) != "Grey liVjOff -" ||
           s(Vjster(true, false, false, 0, false)) != "Green liVjReady -" || s(Vjster(true, false, true, 1, false)) != "Green liVjOn -" ||
@@ -143,6 +146,7 @@ namespace Fadester.TourBox {
           Reminder(true, false, true, true, "obs64", true) != "remindObsOpen" || Reminder(true, false, false, true, "explorer", true) != "remindObsFront" ||
           Reminder(true, false, false, true, "obs64", true) != null || Reminder(true, false, false, false, "explorer", true) != null)
         throw new InvalidOperationException("Reminder");
+      PresetAge.Test();
     }
   }
 

@@ -188,6 +188,8 @@ private final class PillActionButton: NSControl {
     private var autoTries = 0
     /// Try again was pressed with the controls off: the next scan that reads OBS starts them.
     private var startAfterScan = false
+    // Whether Console holds an older OBS Fadester preset than ours (Model.swift PresetAge, FIX-9): read every few seconds, said once.
+    private var presetState = PresetState.none, shippedShortcuts: Set<String>?, presetCheckAt = Date.distantPast, toldOldPreset = false
     /// Whether the user last started ("on") or stopped ("off") the controls; kept apart from panel-config.json, which start() rewrites.
     private var rememberedControls: String? { UserDefaults.standard.string(forKey: "fadester.controlsLastAction") }
     private func rememberControls(_ onOff: String) { UserDefaults.standard.set(onOff, forKey: "fadester.controlsLastAction") }
@@ -550,6 +552,9 @@ private final class PillActionButton: NSControl {
         openConsoleStepButton = button(L("macOpenConsoleStep"), #selector(openOrDownloadConsole))
         let showGuideBtn = button(L("btnShowWhere"), #selector(showImportGuide))
         stack.addArrangedSubview(horizontal([savePresetStepButton, openConsoleStepButton, showGuideBtn]))
+        // The Chrome video copy: the same full map, to link to Google Chrome (Console links one preset to one app).
+        stack.addArrangedSubview(horizontal([button(L("btnImportChrome"), #selector(saveChromePreset))]))
+        paragraph(L("importChromeHint"), in: stack)
         let downloadConsoleBtn = button(L("macDownloadConsole"), #selector(downloadTourBoxConsole))
         let presetSquareBtn = button(L("macPresetSquare"), #selector(openPresetSquare))
         stack.addArrangedSubview(horizontal([label(L("macTourBoxInfo"), small: true), downloadConsoleBtn, presetSquareBtn]))
@@ -839,7 +844,7 @@ private final class PillActionButton: NSControl {
         let onlyMix = mixOnlyChosen
         // Stream Deck-only mode needs no Accessibility: it moves no T-bar.
         let axReady = axTrusted || onlyMix
-        let tbState = Readiness.tourBox(consoleRunning: tourboxConsoleRunning, consoleInstalled: consoleReady, mixOnly: onlyMix)
+        let tbState = Readiness.tourBox(consoleRunning: tourboxConsoleRunning, consoleInstalled: consoleReady, mixOnly: onlyMix, oldPreset: presetState == .old)
         let vjEnabled = vjster.state == .on
         let vjState = Readiness.vjster(enabled: vjEnabled, controlsOn: controlsOn, connectedPeers: vjsterPeers.count, portBusy: vjsterPortBusy, mixOnly: onlyMix)
         let ctlState = Readiness.controls(running: controlsOn, armed: host.isArmed, axTrusted: axReady, obsConnected: obsConnected)
@@ -894,7 +899,17 @@ private final class PillActionButton: NSControl {
         }
     }
 
+    /// Compare Console's stored presets with the one this Companion ships, every 5 s (Console writes them when they change), FIX-9.
+    private func checkPresetAge() {
+        presetCheckAt = Date().addingTimeInterval(5)
+        if shippedShortcuts == nil { shippedShortcuts = PresetAge.shipped(paths.localizedPreset) }
+        presetState = PresetAge.judge(shipped: shippedShortcuts ?? [], stored: PresetAge.stored())
+        if presetState == .old && !toldOldPreset { toldOldPreset = true; note(L("tbOldNote")) }
+        if presetState != .old { toldOldPreset = false }
+    }
+
     private func watchDesktop() {
+        if !previewMode && Date() >= presetCheckAt { checkPresetAge() }
         guard !previewMode else { return }
         axTrusted = AXIsProcessTrusted()
         let apps = NSWorkspace.shared.runningApplications
@@ -1000,6 +1015,7 @@ private final class PillActionButton: NSControl {
             performScan(silentIfOffline: false)
         case "openObs": bringObsToFront()
         case "openConsole": openTourBoxConsole()
+        case "importPreset": saveAndGuidePreset()
         case "downloadConsole": downloadTourBoxConsole()
         case "grantAx": grantAccessibility()
         case "studio", "password", "server", "vjsterWait", "vjsterPort":
@@ -1261,6 +1277,23 @@ private final class PillActionButton: NSControl {
         } else {
             downloadTourBoxConsole()
         }
+    }
+
+    /// Save the Chrome video preset (the same map as the OBS one, its own name) and open Console to import and link it.
+    @objc private func saveChromePreset() {
+        guard !previewMode else { return }
+        let save = NSSavePanel()
+        save.nameFieldStringValue = paths.localizedChromePreset.lastPathComponent
+        save.title = L("macSaveDialogTitle")
+        save.message = L("macSaveDialogMessage")
+        guard save.runModal() == .OK, let url = save.url else { return }
+        do {
+            try Data(contentsOf: paths.localizedChromePreset).write(to: url, options: .atomic)
+            importNote.stringValue = L("macPresetSavedChrome", url.path)
+            importNote.isHidden = false
+            note(L("macPresetSavedChrome", url.path))
+        } catch { failure(error); return }
+        if tourboxConsoleInstalled || tourboxConsoleRunning { openTourBoxConsole() } else { downloadTourBoxConsole() }
     }
 
     private func savePresetDialog() -> URL? {

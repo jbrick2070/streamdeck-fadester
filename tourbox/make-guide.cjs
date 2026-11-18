@@ -173,7 +173,7 @@ const page = `<!doctype html>
 <div class="surface"><figure>${surfaceDiagram()}<figcaption>Full-size TourBox, top view. The small Tour button sits between the flat Dial and the raised Knob.</figcaption></figure>
 <dl class="roles"><dt>Scroll wheel · choose the shot</dt><dd>Turn to browse Preview. Press to read the Program and Preview names.</dd>
 <dt>Flat Dial · mix the shot</dt><dd>The large, low wheel at lower left drives the native T-bar between the two OBS panes. Stop turning to hold a blend.</dd>
-<dt>Raised Knob · ride the video</dt><dd>The smaller central Knob changes the speed of the YouTube video playing in Chrome, through the free VJster extension. Press it to read the video’s title, speed and quality; hold Side and press it to return to 1x. Music is on Side + Dial.</dd></dl></div>
+<dt>Raised Knob · ride the video</dt><dd>The smaller central Knob changes the speed of the YouTube video playing in Chrome, through the free VJster extension. Press it to play or pause the video; hold Side and press it to return to 1x, or hold Side and press D-pad Up to read the video’s title, speed and quality. Music is on Side + Dial.</dd></dl></div>
 <h3 class="subhead">Three gestures on the same control</h3>
 <p><strong>Turn</strong> for a normal step. <strong>Press and release</strong> for the tap action. <strong>Press and keep the rotary down as you turn</strong> for its second action. The Dial moves in quarter steps this way, the Knob in 0.05 speed steps. Pressing and turning Scroll steps through the video’s quality levels.</p>
 <h3 class="subhead">Hold one modifier for another control</h3>

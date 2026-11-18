@@ -34,7 +34,11 @@ With a full-size TourBox, the Scroll wheel selects the next scene in Preview, th
 
 VJster's controls (the Knob's speed, play and pause) work on a video in Chrome whether or not OBS is open. From the second launch on, Fadester Companion starts its controls by itself, OBS or not, unless you pressed **Stop controls** last time. While OBS is closed the Controls light reads **Controls: on, waiting for OBS**; the OBS controls start as soon as OBS answers.
 
-A TourBox Console preset links to one application, so for the TourBox to work while Chrome is in front, import the preset a second time (Console names the copy **OBS Fadester for TourBox 02**) and link that copy to **Google Chrome**, the first to OBS. The yellow “bring OBS to the front” strip stays hidden while Chrome is in front or OBS is closed.
+A TourBox Console preset links to one application, so the Companion ships two presets with the same full map: **OBS Fadester for TourBox**, linked to OBS, and **OBS Fadester for TourBox (Chrome Video)**, linked to **Google Chrome**. Import the second with **Import Chrome video preset** (Mac: save it, then import it) and link it to Chrome. Because both hold every control, the OBS T-bar and scenes still work with Chrome in front, and the Knob still rides the video with OBS in front. If you use your TourBox with no other app, turning **Auto Switch** off and importing only the OBS preset also works: one preset then serves every app. With Auto Switch on, the TourBox does nothing while an app without a linked preset is in front (Discord, Explorer, the Companion itself). The yellow “bring OBS to the front” strip stays hidden while Chrome is in front or OBS is closed.
+
+### Updating the preset
+
+A new Fadester Companion can ship a new preset (for example, older presets put the whole mix level on the Knob; now it rides the video speed). The panel compares the presets TourBox Console has stored with its own: if one is older, the TourBox light turns amber and reads **TourBox: old preset**. Click **Import new preset** and import it into each OBS Fadester preset with that preset's own menu **Import**, which keeps its link to OBS or Chrome. The light turns green again once Console holds no older copy.
 
 ## Rehearse the first throw
 
@@ -54,7 +58,7 @@ Stream Deck, OpenDeck and MIDI users can tick **Use only Stream Deck, OpenDeck o
 
 | Control | Action |
 | --- | --- |
-| Raised Knob | Turn to change the YouTube video’s speed (needs the VJster extension). Tap to read the video. Press and turn for 0.05 steps. |
+| Raised Knob | Turn to change the video’s speed (needs the VJster extension). Tap to play or pause the video. Press and turn for 0.05 steps. |
 | Flat Dial | Turn for a manual blend. Tap to read the current fade. Press and turn for quarter steps. |
 | Scroll wheel | Turn to select Preview. Tap for Program and Preview names. Press and turn for the video’s quality. |
 | D-pad | Put assigned scenes in Preview. Up, Right, Down and Left correspond to anchors 1–4. |
@@ -70,14 +74,14 @@ Hold one of the four prime buttons while turning a rotary for these additional c
 | --- | --- | --- | --- |
 | Side | Whole mix level | Previous / next media | Music level |
 | Tall | Content level | Previous / next transition | Fine scene blend |
-| Short | Fine Music level | Previous / next Preview scene | Fine scene blend |
+| Short | Fine Music level | Shorter / longer transition | Fine video speed |
 | Top | Layer 1 blend mode | Layer 2 blend mode | Layer 2 opacity |
 
 **Side, Tall, Short and Top** use Console’s **UP** mode. Their single-button actions happen on release. Hold the modifier first, operate the second control, then release. The expanded modifier combinations need a physical hold/release rehearsal on the actual device. Follow **REHEARSAL.md** before using them during a show. [TourBox UP mode](https://www.tourboxtech.com/en/news/up-mode-and-rep-mode.html)
 
-**Side + Dial press** cancels a manual mix, and **Side + Scroll press** sets Preview to the current Program scene. Side + Tall and Side + Short provide the same cancel and sync actions. Hold Side and press D-pad Up to play or pause the YouTube video, Down to restart media, or Left/Right for previous/next media; Side + Knob press returns the video to 1x. OBS media play/pause and the transition duration steps are in the Tour menu.
+**Side + Dial press** cancels a manual mix, and **Side + Scroll press** sets Preview to the current Program scene. Side + Tall and Side + Short provide the same cancel and sync actions. Hold Side and press D-pad Up to read the video (title, speed, quality), Down to restart media, or Left/Right for previous/next media; Side + Knob press returns the video to 1x. OBS media play/pause is in the Tour menu.
 
-For direct production shortcuts, **Side + Top** saves a screenshot, **Top + Tall** adds a recording chapter, and **Top + Short** saves the running replay buffer. **Tall + Short** reads the audio levels. **Top + D-pad Up / Down** shows or hides the assigned overlay; Top + Left / Right selects the previous or next transition. With **Top** held, the Knob, Scroll and Dial drive the VJ layers (see below). With whole-mix control enabled, **Side + C1 / C2** fades the mix to silence or restores it. The generated reference lists every assigned combination.
+For direct production shortcuts, **Side + Top** saves a screenshot, **Top + Tall** adds a recording chapter, and **Top + Short** saves the running replay buffer. **Tall + Short** reads the audio levels. **Top + D-pad Up / Down** shows or hides the assigned overlay; Top + Left / Right sets Layer 1 / Layer 2 back to the Normal blend mode. With **Top** held, the Knob, Scroll and Dial drive the VJ layers (see below). With whole-mix control enabled, **Side + C1 / C2** fades the mix to silence or restores it. The generated reference lists every assigned combination.
 
 **Tour** and **Side + Tour** open the same menu at the pointer. Scroll through its entries, then press Tall or click the choice to run it. Short dismisses the menu. It provides scene and fade readouts, soundcheck, Preview sync, duck/restore, whole-mix fades, transition selection and duration, media transport, overlay visibility, mic mute, screenshot, recording status, chapters, replay and reconnect. Select **Mute microphone** to mute the assigned mic; unmute it in OBS.
 

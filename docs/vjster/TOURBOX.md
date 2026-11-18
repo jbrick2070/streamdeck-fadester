@@ -24,11 +24,13 @@ One preset, `OBS Fadester for TourBox`. Every original action keeps its Ctrl+Alt
 |---|---|
 | Raised Knob turn | video speed, 0.25 per detent |
 | Knob press and turn | video speed, 0.05 |
-| Knob press | read the video (title, speed, quality) |
+| Knob press | play or pause the video |
 | Side + Knob press | speed back to 1x |
 | Side + Dial turn | Music |
 | Scroll press and turn | video quality down / up |
-| Side + D-pad Up | play or pause the video |
+| Side + D-pad Up | read the video (title, speed, quality) |
+| Short + Dial turn | video speed, 0.05 (fine) |
+| Top + D-pad Left / Right | Layer 1 / Layer 2 blend mode Normal |
 | Top + Knob turn | Layer 1 blend mode previous / next |
 | Top + Scroll turn | Layer 2 blend mode previous / next |
 | Top + Dial turn | Layer 2 opacity down / up |

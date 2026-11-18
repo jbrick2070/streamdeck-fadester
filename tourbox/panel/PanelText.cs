@@ -9,6 +9,7 @@ namespace Fadester.TourBox {
   internal sealed class PanelText {
     static readonly string[] Locales = { "en", "es", "fr", "zh-CN" };
     const string PresetName = "OBS Fadester for TourBox.tb";
+    const string ChromePresetName = "OBS Fadester for TourBox (Chrome Video).tb";
     static readonly Regex Placeholder = new Regex(@"\{\d+\}");
     readonly Dictionary<string,string> extra;
 
@@ -251,6 +252,13 @@ namespace Fadester.TourBox {
       { "vsMeterLocked", new[] { "Visual Sidechain: {0} BPM [LOCK] · Beat {1}/4 · {2}", "Visual Sidechain: {0} BPM [FIJO] · Pulso {1}/4 · {2}", "Visual Sidechain : {0} BPM [FIXE] · Temps {1}/4 · {2}", "Visual Sidechain：{0} BPM [锁定] · 第 {1}/4 拍 · {2}" } },
       { "liTbReady", new[] { "TourBox: ready", "TourBox: listo", "TourBox : prêt", "TourBox：就绪" } },
       { "liTbClosed", new[] { "TourBox Console: closed", "TourBox Console: cerrado", "TourBox Console : fermé", "TourBox Console：未打开" } },
+      { "btnImportObs", new[] { "Import OBS preset", "Importar preajuste de OBS", "Importer le préréglage OBS", "导入 OBS 预设" } },
+      { "btnImportChrome", new[] { "Import Chrome video preset", "Importar preajuste de vídeo de Chrome", "Importer le préréglage vidéo Chrome", "导入 Chrome 视频预设" } },
+      { "importCopiedChrome", new[] { "Path copied. In TourBox Console, click Import at the top of Preset List, press Ctrl+V, then Enter, and link OBS Fadester for TourBox (Chrome Video) to Google Chrome.", "Ruta copiada. En TourBox Console, haz clic en Importar arriba de la lista de preajustes, pulsa Ctrl+V y luego Intro, y vincula OBS Fadester for TourBox (Chrome Video) a Google Chrome.", "Chemin copié. Dans TourBox Console, cliquez sur Importer en haut de la liste des préréglages, appuyez sur Ctrl+V puis Entrée, et liez OBS Fadester for TourBox (Chrome Video) à Google Chrome.", "路径已复制。在 TourBox Console 中，点击预设列表顶部的“导入”，按 Ctrl+V，然后按 Enter，并将 OBS Fadester for TourBox (Chrome Video) 关联到 Google Chrome。" } },
+      { "importChromeHint", new[] { "Using the TourBox with Chrome in front too? Also import the Chrome video preset and link it to Google Chrome. It has every control, so OBS and the video both work. (A TourBox Console preset links to one app.)", "¿Usas también el TourBox con Chrome al frente? Importa también el preajuste de vídeo de Chrome y vincúlalo a Google Chrome. Tiene todos los controles, así que OBS y el vídeo funcionan. (Un preajuste de TourBox Console se vincula a una sola app.)", "Vous utilisez aussi le TourBox avec Chrome au premier plan ? Importez aussi le préréglage vidéo Chrome et liez-le à Google Chrome. Il a toutes les commandes, donc OBS et la vidéo fonctionnent. (Un préréglage TourBox Console se lie à une seule app.)", "Chrome 在前台时也要用 TourBox？请同时导入 Chrome 视频预设并关联到 Google Chrome。它包含所有控件，OBS 和视频都能控制。（TourBox Console 的一个预设只能关联一个应用。）" } },
+      { "liTbOld", new[] { "TourBox: old preset", "TourBox: preajuste antiguo", "TourBox : ancien préréglage", "TourBox：预设已过时" } },
+      { "btnImportNew", new[] { "Import new preset", "Importar el nuevo", "Importer le nouveau", "导入新预设" } },
+      { "tbOldNote", new[] { "TourBox Console has an older OBS Fadester preset: some controls do other things (the Knob may change the mix level instead of the video speed). Click Import new preset on the TourBox light and import it into each OBS Fadester preset in Console.", "TourBox Console tiene un preajuste OBS Fadester antiguo: algunos controles hacen otra cosa (el Knob puede cambiar el nivel de la mezcla en vez de la velocidad del vídeo). Haz clic en Importar el nuevo en la luz de TourBox e impórtalo en cada preajuste OBS Fadester de Console.", "TourBox Console contient un ancien préréglage OBS Fadester : certaines commandes font autre chose (le Knob peut changer le niveau du mixage au lieu de la vitesse de la vidéo). Cliquez sur Importer le nouveau sur le voyant TourBox et importez-le dans chaque préréglage OBS Fadester de Console.", "TourBox Console 中有旧版 OBS Fadester 预设：部分控件的作用不同（Knob 可能调整混音电平而不是视频速度）。点击 TourBox 指示灯上的“导入新预设”，并将其导入 Console 中的每个 OBS Fadester 预设。" } },
       { "liTbMissing", new[] { "TourBox Console: not installed", "TourBox Console: no instalado", "TourBox Console : non installé", "TourBox Console：未安装" } },
       { "liTbOff", new[] { "TourBox: off", "TourBox: desactivado", "TourBox : désactivé", "TourBox：已关闭" } },
       { "liVjOff", new[] { "VJster: off", "VJster: desactivado", "VJster : désactivé", "VJster：已关闭" } },
@@ -360,6 +368,8 @@ namespace Fadester.TourBox {
     }
 
     internal string PresetPath(string folder) { return Path.Combine(PresetFolder(folder), PresetName); }
+    /** The Chrome copy: the same full map under its own name, to link to Google Chrome in Console (presets/build.py CHROME_NAME). */
+    internal string ChromePresetPath(string folder) { return Path.Combine(PresetFolder(folder), ChromePresetName); }
 
     internal string MapPath(string folder) {
       var localized = Path.Combine(PresetFolder(folder), "map.json");

@@ -137,7 +137,8 @@ struct RuntimePaths {
                         let text = redact(raw, secrets: redactionSecrets)
                         let ready = raw.range(of: "^(VIDEO-)?READY [1-9][0-9]*$", options: .regularExpression) != nil
                         let withObs = !raw.hasPrefix("VIDEO-")
-                        let disarmed = raw.hasPrefix("DISARMED ") || raw.hasPrefix("OFFLINE:")
+                        // DISARMED alone: with VJster on, OFFLINE: is followed by VIDEO-READY, and every session that ends writes DISARMED.
+                        let disarmed = raw.hasPrefix("DISARMED ")
                         pending.removeAll(keepingCapacity: true); truncated = false
                         DispatchQueue.main.async {
                             guard let self, self.process === child else { return }

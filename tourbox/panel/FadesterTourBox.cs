@@ -625,8 +625,12 @@ namespace Fadester.TourBox {
     void CheckPresetAge() {
       presetCheckAt=DateTime.Now.AddSeconds(5);
       if(shippedShortcuts==null) shippedShortcuts=PresetAge.Shipped(text.PresetPath(folder));
-      presetState=PresetAge.Judge(shippedShortcuts,PresetAge.Stored());
-      if(presetState==PresetState.Old && !toldOldPreset){ toldOldPreset=true; Note(text.Get("tbOldNote")); }
+      // A preset Console is still writing (or a file it holds) keeps the last answer instead of a false one.
+      bool complete; var stored=PresetAge.Stored(out complete);
+      if(!complete) return;
+      presetState=PresetAge.Judge(shippedShortcuts,stored);
+      // Said once, and only where the TourBox light shows it: Console running and not in Stream Deck-only mode.
+      if(presetState==PresetState.Old && !toldOldPreset && tourboxConsole && !mixOnly.Checked){ toldOldPreset=true; Note(text.Get("tbOldNote")); }
       if(presetState!=PresetState.Old) toldOldPreset=false;
     }
     /** The TourBox light's buttons: open Console, or its download page when it is not installed. */
@@ -690,8 +694,8 @@ namespace Fadester.TourBox {
       // After the scan, OBS or not: VJster controls Chrome's videos without OBS, and the bridge connects to OBS when it appears (FIX-8).
       bool asked=startAfterScan; startAfterScan=false;
       if(IsDisposed || worker!=null) return;
-      if(asked){ if(obsConnected || !mixOnly.Checked) StartControls(); return; }
-      if(Readiness.AutoStart(File.Exists(settings),!invalidConfig,Remembered(),obsConnected,worker!=null,mixOnly.Checked)){ StartControls(); if(worker!=null) Note(text.Get("autoStarted")); }
+      if(asked){ if(obsConnected || (enableVjster.Checked && !mixOnly.Checked)) StartControls(); return; }
+      if(Readiness.AutoStart(File.Exists(settings),!invalidConfig,Remembered(),obsConnected,worker!=null,mixOnly.Checked,enableVjster.Checked)){ StartControls(); if(worker!=null) Note(text.Get("autoStarted")); }
     }
     void StartControls() {
       if(PortsClash())return;
@@ -792,7 +796,7 @@ namespace Fadester.TourBox {
       vjLight.Display(Readiness.Vjster(enableVjster.Checked,mixOnly.Checked,on,vjPeers.Count,vjPortBusy),text);
       padLight.Display(Readiness.Pad(enableGamepad.Checked,mixOnly.Checked,on,padState,padSeen),text);
       ctlLight.Display(Readiness.Controls(on,obsConnected),text);
-      string key=Readiness.Reminder(on,mixOnly.Checked,obsHidden,tourboxConsole,front,obsRunning);
+      string key=Readiness.Reminder(on,mixOnly.Checked,obsHidden,tourboxConsole,front,obsRunning,enableVjster.Checked);
       if(key!=null) reminder.Text=text.Get(key);
       reminderBar.Visible=key!=null;
     }

@@ -4,6 +4,12 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 
 ## Unreleased
 
+## 0.12.10 - 2026-11-17
+0.12.9 was a draft for the hardware test and was never published. This release ships Fadester Companion 0.1.13; the VJster extension stays 0.1.6. Fixes from a regression review of 0.12.8 and 0.12.9:
+- **Mac: Chrome's videos keep working through OBS trouble.** OBS timing out, or a session that cannot start (OBS's T-bar not parked at zero), no longer ends the Companion's host: it keeps the video controls and tries OBS again after a growing pause. Turning the Knob nonstop no longer delays noticing that OBS has opened. Only a stopped shortcut helper (Accessibility withdrawn) still ends it.
+- **Windows: with VJster off, the controls still wait for OBS**, as on the Mac, and Chrome in front hides the "bring OBS to the front" strip only while VJster is on.
+- **Old-preset warning:** a preset TourBox Console is still writing, or a file it holds, no longer causes a false warning; the note appears once, only while Console is running and not in Stream Deck-only mode, and also says to delete any old copy Console still lists.
+
 ## 0.12.9 - 2026-11-17
 0.12.8 was a draft for the hardware test and was never published. This release ships Fadester Companion 0.1.12; the VJster extension stays 0.1.6.
 - **Fadester Companion warns about an old TourBox preset** (Windows and Mac). It compares the presets TourBox Console has stored with the one it ships, by their shortcuts, so it works in every language and never mistakes Console's own presets for ours. With an older copy in Console, the TourBox light turns amber, reads "TourBox: old preset" and offers **Import new preset**; Activity says once what to do. Found in the hand test: an old copy put the whole mix level on the Knob, so the Knob changed the audio instead of the video speed.

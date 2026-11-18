@@ -322,16 +322,24 @@ internal static class MacDevelopmentHost
         {
             ObsConnection obs;
             try { obs = await Connect(config, stop); }
-            catch (Exception error) when (error is not OperationCanceledException)
+            // Any failure to reach OBS, timeouts included; only the host stopping ends the loop.
+            catch (Exception error) when (!stop.IsCancellationRequested)
             {
                 if (error.Message != told) { told = error.Message; Log("OFFLINE: OBS is not connected (" + error.Message + "). Video controls work; OBS controls wait for OBS."); }
                 if (!await RunOfflineSession(config, inputApp, mapPath, ingress, stop, wait, vjster)) return;
                 wait = TimeSpan.FromTicks(Math.Min(wait.Ticks * 2, OfflineLongestWait.Ticks));
                 continue;
             }
-            told = null; wait = OfflineFirstWait;
-            try { await RunSession(config, obs, nativeApp, inputApp, mapPath, ingress, stop, readOnly: false, noMixProvider, vjster); }
-            catch (IOException error) when (obs.Disconnected.IsCompleted) { Log("OFFLINE: " + error.Message); }
+            told = null;
+            try { await RunSession(config, obs, nativeApp, inputApp, mapPath, ingress, stop, readOnly: false, noMixProvider, vjster); wait = OfflineFirstWait; }
+            // OBS lost, or a session that could not start (its T-bar not parked, the native helper failing): keep Chrome's
+            // videos going and try OBS again after a growing pause. Only a stopped shortcut helper ends the host, as before.
+            catch (Exception error) when (!stop.IsCancellationRequested && error is not ShortcutInputStopped)
+            {
+                Log("OFFLINE: " + error.Message + " Video controls keep working; OBS controls are tried again shortly.");
+                if (!await RunOfflineSession(config, inputApp, mapPath, ingress, stop, wait, vjster)) return;
+                wait = TimeSpan.FromTicks(Math.Min(wait.Ticks * 2, OfflineLongestWait.Ticks));
+            }
         }
     }
     static readonly TimeSpan OfflineFirstWait = TimeSpan.FromSeconds(5), OfflineLongestWait = TimeSpan.FromSeconds(60);
@@ -365,18 +373,21 @@ internal static class MacDevelopmentHost
             WriteControl(Control.VideoReady, generation);
             Log("Host armed without OBS: video controls work" + (shortcuts is null ? "." : ", exclusive Mac shortcuts enabled.") + " OBS controls start when OBS answers.");
             Task<bool>? available = null;
+            // Both waits outlive a loop turn, so steady input (a Knob turned nonstop) cannot starve the look for OBS.
+            Task? tick = null;
             while (!stop.IsCancellationRequested)
             {
                 available ??= ingress.Commands.Reader.WaitToReadAsync(stop).AsTask();
-                var tick = Task.Delay(1000, stop);
+                tick ??= Task.Delay(1000, stop);
                 Task completed = shortcuts is null ? await Task.WhenAny(available, tick) : await Task.WhenAny(available, tick, shortcuts.Done);
                 if (shortcuts is not null && shortcuts.Done.IsCompleted)
                 {
                     await shortcuts.Done;
-                    throw new IOException("Shortcut input stopped; host disarmed without fallback.");
+                    throw new ShortcutInputStopped();
                 }
                 if (completed == tick)
                 {
+                    tick = null;
                     if (since.Elapsed >= minWait && await ObsListening(config.Port, stop)) return true;
                     continue;
                 }
@@ -385,7 +396,7 @@ internal static class MacDevelopmentHost
                 if (!ingress.Current(command) || !ingress.Fresh(command)) { Log("DROPPED: expired input or old connection generation."); continue; }
                 if (command.Action == "bridge.reconnect") return true;
                 try { Log("RESULT " + command.Action + ": " + await session.Dispatch(command)); }
-                catch (Exception error) when (error is not OperationCanceledException) { Log("REFUSED " + command.Action + ": " + error.Message); }
+                catch (Exception error) when (!stop.IsCancellationRequested) { Log("REFUSED " + command.Action + ": " + error.Message); }
             }
             return false;
         }
@@ -464,7 +475,7 @@ internal static class MacDevelopmentHost
                 if (shortcuts is not null && shortcuts.Done.IsCompleted)
                 {
                     await shortcuts.Done;
-                    throw new IOException("Shortcut input stopped; host disarmed without fallback.");
+                    throw new ShortcutInputStopped();
                 }
                 if (completed != available) break;
                 if (!await available || !ingress.Commands.Reader.TryRead(out var command)) continue;
@@ -474,7 +485,7 @@ internal static class MacDevelopmentHost
                 if (KeyGuards.IsHeldDialTurn(command.Action)) lastHeldTurn = nowStamp;
                 if (!readOnly && command.Action == "bridge.reconnect") { reconnect = true; break; }
                 try { Log("RESULT " + command.Action + ": " + await session.Dispatch(command)); }
-                catch (Exception error) when (error is not OperationCanceledException) { Log("REFUSED " + command.Action + ": " + error.Message); }
+                catch (Exception error) when (!stop.IsCancellationRequested) { Log("REFUSED " + command.Action + ": " + error.Message); }
             }
         }
         finally
@@ -498,4 +509,10 @@ internal static class MacDevelopmentHost
             : "OFFLINE: OBS disconnected. Video controls keep working; OBS controls come back when OBS does. Queued OBS actions are not replayed.");
         return reconnect;
     }
+}
+
+/// <summary>The exclusive shortcut helper ended (Accessibility withdrawn, the helper gone): the host stops, with or without OBS.</summary>
+internal sealed class ShortcutInputStopped : IOException
+{
+    internal ShortcutInputStopped() : base("Shortcut input stopped; host disarmed without fallback.") { }
 }

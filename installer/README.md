@@ -35,8 +35,8 @@ You need Windows, Inno Setup 6, and a finished `tourbox\build.ps1` run (its fold
 
 - **Pinned inputs.** Everything else comes from the releases pinned in [components.json](components.json), and each file is checked against its SHA-256. A mismatch stops the build.
 - **Local builds.** `-LocalArtifacts <folder>` uses files from a folder instead of downloading them, but they must still match the pinned hashes.
-- **Shipping a new plugin version.** Publish the plugin's release first, then run `node installer/update-pins.mjs --midi 0.7.2 --vs 0.7.2 --playlister 0.5.2 --sd 0.12.9` (name only what changed). It downloads each published file and rewrites its `version`, `file`, `url` and `sha256` in `components.json`.
-- **Releases.** Pushing a tag such as `v0.12.9` runs `.github/workflows/release.yml`, which builds the `.streamDeckPlugin`, the VJster extension zip, the Companion ZIP and its Store MSIX (version from `components.json`) into a **draft** release. Nothing is published until someone tests the draft and publishes it.
+- **Shipping a new plugin version.** Publish the plugin's release first, then run `node installer/update-pins.mjs --midi 0.7.2 --vs 0.7.2 --playlister 0.5.2 --sd 0.12.10` (name only what changed). It downloads each published file and rewrites its `version`, `file`, `url` and `sha256` in `components.json`.
+- **Releases.** Pushing a tag such as `v0.12.10` runs `.github/workflows/release.yml`, which builds the `.streamDeckPlugin`, the VJster extension zip, the Companion ZIP and its Store MSIX (version from `components.json`) into a **draft** release. Nothing is published until someone tests the draft and publishes it.
 - **Signing (optional).** Set `FADESTER_SIGN_CMD` to a signing command that uses `$f` for the file. With it, the Companion's executables, both uninstallers and both setups are signed. Without it, the build is unsigned. Unsigned setups trigger SmartScreen, so do not publish one widely until a certificate is chosen.
 
 ## Test
@@ -61,4 +61,4 @@ The tests refuse to run outside CI, because they install into `C:\ProgramData` a
 
 - **No real-PC run yet.** The CI runners have no OBS, Stream Deck or OpenDeck. So nobody has yet seen Stream Deck's own import, the OpenDeck task with OpenDeck itself, or the plugins loading in OBS after a suite install.
 - **Code signing and Smart App Control** behaviour are untested until a certificate exists.
-- **Pins wait for publication.** Until Midi Fadester 0.7.2, Visual Sidechain 0.7.2, Playlister 0.5.2 and Fadester for OBS 0.12.9 are published, `components.json` still pins the earlier releases.
+- **Pins wait for publication.** Until Midi Fadester 0.7.2, Visual Sidechain 0.7.2, Playlister 0.5.2 and Fadester for OBS 0.12.10 are published, `components.json` still pins the earlier releases.

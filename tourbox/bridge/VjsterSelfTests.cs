@@ -238,6 +238,16 @@ internal static class VjsterSelfTests
         Check(Math.Abs(intent["rate"]!.GetValue<double>() - 4.0) < 1e-9, "steps stop at 4x");
         await SendText(ext, StateJson(intent["id"]!.GetValue<string>(), 4));
         await by;
+        // Tap Tempo (or any other speed change) in between: the next step starts from the video's speed, not the last step.
+        var reset = desk.Dispatch("vjster.speed.reset");
+        intent = JsonNode.Parse(await Receive(ext))!.AsObject();
+        await SendText(ext, StateJson(intent["id"]!.GetValue<string>(), 1));
+        await reset;
+        by = desk.SpeedBy(1);
+        intent = JsonNode.Parse(await Receive(ext))!.AsObject();
+        Check(Math.Abs(intent["rate"]!.GetValue<double>() - 1.05) < 1e-9, "a step after a reset starts from 1x");
+        await SendText(ext, StateJson(intent["id"]!.GetValue<string>(), 1.05));
+        await by;
         var remoteLines = new List<string>();
         var remote = new VjsterRemote(desk, l => { lock (remoteLines) remoteLines.Add(l); });
         remote.OnVendorEvent("other-vendor", VjsterRemote.EventType, new JsonObject { ["action"] = "vjster.speed.reset" });

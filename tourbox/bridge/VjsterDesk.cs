@@ -37,23 +37,32 @@ internal static class KeyGuards
 internal sealed class VjsterRemote(VjsterDesk desk, Action<string> log)
 {
     public const string Vendor = "midi-fadester", EventType = "vjster_action";
+    const int MaxQueued = 16;
     readonly object gate = new();
     bool busy;
-    int pendingSteps;
-    string? pendingAction;
+    /** What the APC40 asked for, in order: an action id, or (null, n) for n speed steps. Steps in a row add up. */
+    readonly List<(string? Action, int Steps)> queued = new();
 
     public void OnVendorEvent(string vendorName, string eventType, JsonObject data)
     {
         if (vendorName != Vendor || eventType != EventType) return;
         string? action = data["action"] is JsonValue a && a.TryGetValue<string>(out var text) ? text : null;
-        int steps = data["steps"] is JsonValue n && n.TryGetValue<int>(out var count) ? count : 0;
+        long steps = data["steps"] is JsonValue n && n.TryGetValue<long>(out var count) ? Math.Clamp(count, -80, 80) : 0;
         lock (gate)
         {
-            if (action == "vjster.speed.step") pendingSteps = Math.Clamp(pendingSteps + steps, -80, 80);
+            if (action == "vjster.speed.step")
+            {
+                if (steps == 0) return;
+                if (queued.Count > 0 && queued[^1].Action is null)
+                    queued[^1] = (null, (int)Math.Clamp(queued[^1].Steps + steps, -80, 80));
+                else if (queued.Count < MaxQueued) queued.Add((null, (int)steps));
+                else return;
+            }
             else if (action is not null && VjsterDesk.Actions.Contains(action))
             {
-                pendingAction = action;
-                if (action == "vjster.speed.reset") pendingSteps = 0;
+                if (action == "vjster.speed.reset") queued.RemoveAll(q => q.Action is null); // steps before 1x are overtaken
+                if (queued.Count >= MaxQueued) return;
+                queued.Add((action, 0));
             }
             else return;
             if (busy) return;
@@ -66,17 +75,16 @@ internal sealed class VjsterRemote(VjsterDesk desk, Action<string> log)
     {
         while (true)
         {
-            string? action;
-            int steps;
+            (string? Action, int Steps) next;
             lock (gate)
             {
-                action = pendingAction; steps = pendingSteps; pendingAction = null; pendingSteps = 0;
-                if (action is null && steps == 0) { busy = false; return; }
+                if (queued.Count == 0) { busy = false; return; }
+                next = queued[0];
+                queued.RemoveAt(0);
             }
             try
             {
-                if (action is not null) log("APC40: " + await desk.Dispatch(action));
-                if (steps != 0) log("APC40: " + await desk.SpeedBy(steps));
+                log("APC40: " + (next.Action is not null ? await desk.Dispatch(next.Action) : await desk.SpeedBy(next.Steps)));
             }
             catch (Exception e) { log("APC40: " + e.Message); }
         }
@@ -99,6 +107,18 @@ internal sealed class VjsterDesk(VjsterLink link, double fastSpeed = 2.0, double
     public async Task<string> Dispatch(string id)
     {
         if (!Actions.Contains(id)) throw new ArgumentException("Unknown VJster action: " + id);
+        // Any other speed change (Tap Tempo, Nudge, the TourBox) makes the speed steps last asked for out of date:
+        // the next step starts from the video's reported speed.
+        bool speed = id.StartsWith("vjster.speed.", StringComparison.Ordinal);
+        if (speed) ForgetAsked();
+        try { return await DispatchCore(id); }
+        finally { if (speed) ForgetAsked(); }
+    }
+
+    void ForgetAsked() { lock (lastAsked) lastAsked.Clear(); }
+
+    async Task<string> DispatchCore(string id)
+    {
         if (!link.Running)
         {
             var holder = await VjsterLink.ProbePortHolderAsync(link.Port);
@@ -176,10 +196,14 @@ internal sealed class VjsterDesk(VjsterLink link, double fastSpeed = 2.0, double
         var replies = new List<string>();
         foreach (var target in open)
         {
-            double baseRate = lastAsked.TryGetValue(target, out var asked) && Stopwatch.GetElapsedTime(asked.At) < TimeSpan.FromSeconds(1.5)
-                ? asked.Rate : link.GetLastState(target)?.Rate ?? 1.0;
-            double rate = Math.Clamp(Math.Round((baseRate + steps * StepRate) * 100) / 100, MinRemoteRate, MaxRemoteRate);
-            lastAsked[target] = (rate, Stopwatch.GetTimestamp());
+            double rate;
+            lock (lastAsked)
+            {
+                double baseRate = lastAsked.TryGetValue(target, out var asked) && Stopwatch.GetElapsedTime(asked.At) < TimeSpan.FromSeconds(1.5)
+                    ? asked.Rate : link.GetLastState(target)?.Rate ?? 1.0;
+                rate = Math.Clamp(Math.Round((baseRate + steps * StepRate) * 100) / 100, MinRemoteRate, MaxRemoteRate);
+                lastAsked[target] = (rate, Stopwatch.GetTimestamp());
+            }
             replies.Add(FormatReply("vjster.speed.step", target, await link.Request("speed.set", Rate(rate), ReplyTimeout, target)));
         }
         return open.Length == 1 ? replies[0] : $"Chrome: {replies[0]} | OBS: {replies[1]}";

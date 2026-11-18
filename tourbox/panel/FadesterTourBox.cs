@@ -198,6 +198,12 @@ namespace Fadester.TourBox {
         var wheel=new HandledMouseEventArgs(MouseButtons.None,0,10,10,-120); PassWheelToPage(pick,wheel);
         var wheel2=new HandledMouseEventArgs(MouseButtons.None,0,10,10,-120); PassWheelToPage(num,wheel2);
         if (!wheel.Handled || !wheel2.Handled || pick.SelectedIndex!=0 || num.Value!=5 || -page.AutoScrollPosition.Y<=0) throw new Exception();
+        // Through the real event, after the box was taken away and added back twice: one notch scrolls once.
+        tall.Controls.Remove(pick); tall.Controls.Add(pick); tall.Controls.Remove(pick); tall.Controls.Add(pick);
+        page.AutoScrollPosition=new Point(0,0);
+        typeof(Control).GetMethod("OnMouseWheel",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic)
+          .Invoke(pick,new object[] {new HandledMouseEventArgs(MouseButtons.None,0,10,10,-120)});
+        if (-page.AutoScrollPosition.Y!=120 || pick.SelectedIndex!=0) throw new Exception();
       }
       var d=Decode("{\"scenes\":[\"🎬 Studio\",\"Act II\"],\"anchors\":[\"a\",\"\",\"b\",\"\"],\"port\":4455}");
       if (List(d,"scenes")[0]!="🎬 Studio" || Val(d,"port")!="4455" || List(d,"anchors").Length!=4) throw new Exception();
@@ -396,10 +402,12 @@ namespace Fadester.TourBox {
     /** The mouse wheel scrolls the page, not the drop-down or number box under the pointer: scrolling past the Assignments
     once turned every anchor into the same scene. A drop-down that is open still takes the wheel. Rows added later get it too. */
     static void KeepWheelForScrolling(Control root) {
-      if(root is ComboBox||root is NumericUpDown) root.MouseWheel+=PassWheelToPage;
+      // Taken off first: a control added again (the grid's editing box, each edit) is hooked once, not once per add.
+      if(root is ComboBox||root is NumericUpDown){ root.MouseWheel-=PassWheelToPage; root.MouseWheel+=PassWheelToPage; }
+      root.ControlAdded-=HookAdded; root.ControlAdded+=HookAdded;
       foreach(Control c in root.Controls) KeepWheelForScrolling(c);
-      root.ControlAdded+=delegate(object s,ControlEventArgs e){ if(e.Control!=null) KeepWheelForScrolling(e.Control); };
     }
+    static void HookAdded(object sender,ControlEventArgs e) { if(e.Control!=null) KeepWheelForScrolling(e.Control); }
     static void PassWheelToPage(object sender,MouseEventArgs e) {
       var combo=sender as ComboBox; var h=e as HandledMouseEventArgs;
       if((combo!=null&&combo.DroppedDown)||h==null) return;

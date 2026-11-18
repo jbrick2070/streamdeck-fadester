@@ -582,12 +582,16 @@ enum PresetAge {
     }
 
     /// Console's stored presets: ~/Library/Application Support/TourBox Console/presets/<number> (.bak files are its backups).
-    static func stored() -> [Set<String>] {
+    /// complete is false when a preset file could not be read or is not finished (no closing </Preset> yet).
+    static func stored() -> (presets: [Set<String>], complete: Bool) {
         let dir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/TourBox Console/presets")
-        guard let names = try? FileManager.default.contentsOfDirectory(atPath: dir.path) else { return [] }
-        return names.filter { !$0.isEmpty && $0.allSatisfy(\.isNumber) }.compactMap { name in
-            (try? String(contentsOf: dir.appendingPathComponent(name), encoding: .utf8)).map(shortcuts)
+        guard let names = try? FileManager.default.contentsOfDirectory(atPath: dir.path) else { return ([], true) }
+        var presets: [Set<String>] = [], complete = true
+        for name in names where !name.isEmpty && name.allSatisfy(\.isNumber) {
+            guard let xml = try? String(contentsOf: dir.appendingPathComponent(name), encoding: .utf8), xml.contains("</Preset>") else { complete = false; continue }
+            presets.append(shortcuts(xml))
         }
+        return (presets, complete)
     }
 
     static func check(_ check: (Bool, String) throws -> Void) throws {

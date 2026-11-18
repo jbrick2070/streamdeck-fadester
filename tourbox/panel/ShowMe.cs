@@ -83,17 +83,17 @@ namespace Fadester.TourBox {
      * Only after setup was saved once (a first run still shows Save & start) and never after the user pressed Stop: that
      * choice holds until they start the controls again. "remembered" is "on", "off" or null.
      */
-    internal static bool AutoStart(bool settingsSaved, bool settingsValid, string remembered, bool obsConnected, bool controlsOn, bool mixOnly) {
-      return settingsSaved && settingsValid && remembered != "off" && !controlsOn && (obsConnected || !mixOnly);
+    internal static bool AutoStart(bool settingsSaved, bool settingsValid, string remembered, bool obsConnected, bool controlsOn, bool mixOnly, bool vjsterOn = true) {
+      return settingsSaved && settingsValid && remembered != "off" && !controlsOn && (obsConnected || (vjsterOn && !mixOnly));
     }
     /**
      * The one reminder worth a strip while the controls run, or null. The T-bar needs OBS's main window; a TourBox preset
      * needs OBS in front, except that Chrome in front is VJster's turn (FIX-8), and with OBS closed there is nothing to bring forward.
      */
-    internal static string Reminder(bool controlsOn, bool mixOnly, bool obsHidden, bool tourboxConsole, string front, bool obsRunning) {
+    internal static string Reminder(bool controlsOn, bool mixOnly, bool obsHidden, bool tourboxConsole, string front, bool obsRunning, bool vjsterOn = true) {
       if (!controlsOn || mixOnly || !obsRunning) return null;
       if (obsHidden) return "remindObsOpen";
-      if (tourboxConsole && !IsObs(front) && !IsChrome(front)) return "remindObsFront";
+      if (tourboxConsole && !IsObs(front) && !(vjsterOn && IsChrome(front))) return "remindObsFront";
       return null;
     }
     internal static bool IsObs(string process) {
@@ -119,7 +119,9 @@ namespace Fadester.TourBox {
       if (!AutoStart(true, true, null, true, false, false) || !AutoStart(true, true, "on", true, false, false) || AutoStart(true, true, "off", true, false, false) ||
           AutoStart(false, true, null, true, false, false) || AutoStart(true, false, "on", true, false, false) || !AutoStart(true, true, "on", false, false, false) ||
           AutoStart(true, true, "on", false, false, true) || !AutoStart(true, true, "on", true, false, true) ||
-          AutoStart(true, true, "on", true, true, false)) throw new InvalidOperationException("Auto-start decision");
+          AutoStart(true, true, "on", true, true, false) || AutoStart(true, true, "on", false, false, false, false) ||
+          !AutoStart(true, true, "on", true, false, false, false)) throw new InvalidOperationException("Auto-start decision");
+      if (Reminder(true, false, false, true, "chrome", true, false) != "remindObsFront") throw new InvalidOperationException("Reminder with VJster off");
       if (Reminder(true, false, false, true, "obs64", true) != null || Reminder(true, false, false, true, "chrome", true) != null ||
           Reminder(true, false, false, true, "explorer", true) != "remindObsFront" || Reminder(true, false, false, true, "explorer", false) != null ||
           Reminder(true, false, true, true, "chrome", true) != "remindObsOpen" || Reminder(false, false, false, true, "explorer", true) != null)

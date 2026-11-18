@@ -47,29 +47,36 @@ namespace Fadester.TourBox {
       return any ? PresetState.Current : PresetState.None;
     }
 
-    /** The preset this Companion ships (a gzip of Console's XML), or an empty set when it cannot be read. */
+    /** The preset this Companion ships (a gzip of Console's XML), or null when it cannot be read (the caller tries again later). */
     internal static HashSet<string> Shipped(string tbPath) {
       try {
         using (var file = File.OpenRead(tbPath))
         using (var gzip = new GZipStream(file, CompressionMode.Decompress))
         using (var reader = new StreamReader(gzip, Encoding.UTF8)) return Shortcuts(reader.ReadToEnd());
-      } catch (IOException) { return new HashSet<string>(); }
-      catch (UnauthorizedAccessException) { return new HashSet<string>(); }
-      catch (InvalidDataException) { return new HashSet<string>(); }
+      } catch (IOException) { return null; }
+      catch (UnauthorizedAccessException) { return null; }
+      catch (InvalidDataException) { return null; }
     }
 
-    /** Console's stored presets: %APPDATA%\TourBox Console\presets\<number> (the .bak files are its own backups). */
-    internal static IEnumerable<HashSet<string>> Stored() {
+    /**
+     * Console's stored presets: %APPDATA%\TourBox Console\presets\<number> (the .bak files are its own backups).
+     * complete is false when a file could not be read or is not finished (no closing </Preset> yet): Console may be writing it.
+     */
+    internal static List<HashSet<string>> Stored(out bool complete) {
+      complete = true;
+      var found = new List<HashSet<string>>();
       string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TourBox Console", "presets");
-      if (!Directory.Exists(dir)) yield break;
+      if (!Directory.Exists(dir)) return found;
       string[] files;
-      try { files = Directory.GetFiles(dir); } catch (IOException) { yield break; } catch (UnauthorizedAccessException) { yield break; }
+      try { files = Directory.GetFiles(dir); } catch (IOException) { complete = false; return found; } catch (UnauthorizedAccessException) { complete = false; return found; }
       foreach (string file in files) {
         if (!Path.GetFileName(file).All(char.IsDigit)) continue;
         string xml;
-        try { xml = File.ReadAllText(file, Encoding.UTF8); } catch (IOException) { continue; } catch (UnauthorizedAccessException) { continue; }
-        yield return Shortcuts(xml);
+        try { xml = File.ReadAllText(file, Encoding.UTF8); } catch (IOException) { complete = false; continue; } catch (UnauthorizedAccessException) { complete = false; continue; }
+        if (!xml.Contains("</Preset>")) { complete = false; continue; }
+        found.Add(Shortcuts(xml));
       }
+      return found;
     }
 
     internal static void Test() {

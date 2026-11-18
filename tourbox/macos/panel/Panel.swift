@@ -889,7 +889,7 @@ private final class PillActionButton: NSControl {
         )
 
         if let banner = Readiness.banner(controlsOn: controlsOn, obsHidden: obsHidden, consoleRunning: tourboxConsoleRunning, frontIsObs: frontIsObs, axTrusted: axReady, mixOnly: onlyMix,
-                                           frontIsChrome: frontIsChrome, obsRunning: obsRunning) {
+                                           frontIsChrome: frontIsChrome && vjster.state == .on, obsRunning: obsRunning) {
             reminderLabel.stringValue = banner.text
             reminderAction.titleText = banner.button
             bannerActionId = banner.action
@@ -902,14 +902,19 @@ private final class PillActionButton: NSControl {
     /// Compare Console's stored presets with the one this Companion ships, every 5 s (Console writes them when they change), FIX-9.
     private func checkPresetAge() {
         presetCheckAt = Date().addingTimeInterval(5)
-        if shippedShortcuts == nil { shippedShortcuts = PresetAge.shipped(paths.localizedPreset) }
-        presetState = PresetAge.judge(shipped: shippedShortcuts ?? [], stored: PresetAge.stored())
-        if presetState == .old && !toldOldPreset { toldOldPreset = true; note(L("tbOldNote")) }
+        // An unreadable shipped preset is read again next time rather than turning the check off for good.
+        if shippedShortcuts?.isEmpty ?? true { shippedShortcuts = PresetAge.shipped(paths.localizedPreset) }
+        // A preset Console is still writing (or a file it holds) keeps the last answer instead of a false one.
+        let (stored, complete) = PresetAge.stored()
+        guard complete else { return }
+        presetState = PresetAge.judge(shipped: shippedShortcuts ?? [], stored: stored)
+        // Said once, and only where the TourBox light shows it: Console running and not in Stream Deck-only mode.
+        if presetState == .old && !toldOldPreset && tourboxConsoleRunning && !mixOnlyChosen { toldOldPreset = true; note(L("tbOldNote")) }
         if presetState != .old { toldOldPreset = false }
     }
 
     private func watchDesktop() {
-        if !previewMode && Date() >= presetCheckAt { checkPresetAge() }
+        defer { if !previewMode && Date() >= presetCheckAt { checkPresetAge() } }
         guard !previewMode else { return }
         axTrusted = AXIsProcessTrusted()
         let apps = NSWorkspace.shared.runningApplications

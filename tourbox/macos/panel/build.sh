@@ -28,9 +28,11 @@ for folder in "$localized_presets"/*/; do
   mkdir -p "$resources/presets/$locale"
   cp "$folder/map.json" "$resources/presets/$locale/map.json"
   cp "$localized_mac/$locale/OBS Fadester for TourBox.tb" "$resources/presets/$locale/OBS Fadester for TourBox.tb"
+  cp "$localized_mac/$locale/Chrome Video Fadester for TourBox.tb" "$resources/presets/$locale/Chrome Video Fadester for TourBox.tb"
 done
 rm -rf "$localized_presets" "$localized_mac"
 cp "$repo/tourbox/presets/macos/OBS Fadester for TourBox.tb" "$resources/presets/"
+cp "$repo/tourbox/presets/macos/Chrome Video Fadester for TourBox.tb" "$resources/presets/"
 cp "$repo/tourbox/artwork/icons/"*.png "$resources/artwork/icons/"
 icon_src="$repo/tourbox/store/assets/Square44x44Logo.targetsize-256.png"
 if [[ -f "$icon_src" ]]; then

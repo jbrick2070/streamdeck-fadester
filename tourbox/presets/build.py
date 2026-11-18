@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""Build and check the single OBS Fadester for TourBox Console 1.9 preset. Standard library only."""
+"""Build and check the OBS Fadester for TourBox Console 1.9 preset and its Chrome copy. Standard library only."""
 
 import argparse
 import base64
@@ -110,6 +110,9 @@ MASTER_MENU = ("preview.status fader.status soundcheck preview.sync music.duck m
                "transition.shorter transition.longer overlay.show overlay.hide mic.mute "
                "vjster.status vjster.speed.reset vjster.quality.reset layer1.blend.reset layer2.blend.reset").split()
 MASTER_NAME = "OBS Fadester for TourBox"
+# TourBox Console links a preset to one application, so the Chrome copy is the same full map under its own name:
+# the Companion's shortcuts work whichever app is in front, and the name says which app to link it to.
+CHROME_NAME = "Chrome Video Fadester for TourBox"
 
 
 def require(ok, message):
@@ -372,6 +375,25 @@ def check(preset, data):
             "Expected hidden General HUD with unique assigned controls")
 
 
+def renamed(data, name):
+    """The same native preset under another presetName; nothing else changes."""
+    root = ET.fromstring(gzip.decompress(data))
+    require(root.find("presetName") is not None, "Preset has no name")
+    root.find("presetName").text = name
+    buffer = io.BytesIO()
+    with gzip.GzipFile(filename="", fileobj=buffer, mode="wb", compresslevel=6, mtime=0) as packed:
+        packed.write(ET.tostring(root, encoding="utf-8"))
+    return buffer.getvalue()
+
+
+def check_copy(master, copy, name=CHROME_NAME):
+    """The Chrome copy must equal the master in everything but its name."""
+    a, b = ET.fromstring(gzip.decompress(master)), ET.fromstring(gzip.decompress(copy))
+    require(b.findtext("presetName") == name, f"Expected the copy to be named {name}")
+    b.find("presetName").text = a.findtext("presetName")
+    require(ET.tostring(a) == ET.tostring(b), f"{name} differs from the master beyond its name")
+
+
 def localized_presets(presets, translations):
     master = presets["master"]
     actions = ALL_ACTIONS | {"native.tourMenu"}
@@ -416,8 +438,8 @@ def main():
                 labels == {(10, 0x1000012): "Kit Welcome", (10, 0x1000013): "Kit Visuals"}, "Reference mismatch")
     presets = json.loads((HERE / "map.json").read_text(encoding="utf-8"))["presets"]
     check_master(presets)
-    require(not ({path.name for path in HERE.glob("*.tb")} - {MASTER_NAME + ".tb"}),
-            "Remove superseded or backup native presets; ship only the master")
+    require(not ({path.name for path in HERE.glob("*.tb")} - {MASTER_NAME + ".tb", CHROME_NAME + ".tb"}),
+            "Remove superseded or backup native presets; ship only the master and its Chrome copy")
     assigned = {}
     for preset in presets.values():
         for binding in preset["bindings"] + preset.get("menuBindings", []):
@@ -426,12 +448,15 @@ def main():
         out = HERE / preset["file"]
         data = build(preset)
         check(preset, data)
+        chrome = out.with_name(CHROME_NAME + ".tb")
         if args.check:
             saved = out.read_bytes()
             check(preset, saved)
             require(gzip.decompress(saved) == gzip.decompress(data), f"Rebuild {out.name}")
+            check_copy(data, chrome.read_bytes())
         else:
             out.write_bytes(data)
+            chrome.write_bytes(renamed(data, CHROME_NAME))
         print(f"{out.name}: {len(preset['bindings'])} shortcuts, {len(preset['nativeBindings'])} native controls, "
               f"{len(menu_keys(preset))} menu items, {len(hud_slots(preset))} HUD rows")
     translations = json.loads((HERE / "locales.json").read_text(encoding="utf-8"))
@@ -440,6 +465,7 @@ def main():
             folder = args.localized_out / locale
             folder.mkdir(parents=True, exist_ok=True)
             (folder / localized["master"]["file"]).write_bytes(data)
+            (folder / (CHROME_NAME + ".tb")).write_bytes(renamed(data, CHROME_NAME))
             (folder / "map.json").write_text(
                 json.dumps({"version": 1, "presets": localized}, ensure_ascii=False, indent=2) + "\n",
                 encoding="utf-8")

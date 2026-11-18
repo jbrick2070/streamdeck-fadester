@@ -552,6 +552,9 @@ private final class PillActionButton: NSControl {
         openConsoleStepButton = button(L("macOpenConsoleStep"), #selector(openOrDownloadConsole))
         let showGuideBtn = button(L("btnShowWhere"), #selector(showImportGuide))
         stack.addArrangedSubview(horizontal([savePresetStepButton, openConsoleStepButton, showGuideBtn]))
+        // The Chrome video copy: the same full map, to link to Google Chrome (Console links one preset to one app).
+        stack.addArrangedSubview(horizontal([button(L("btnImportChrome"), #selector(saveChromePreset))]))
+        paragraph(L("importChromeHint"), in: stack)
         let downloadConsoleBtn = button(L("macDownloadConsole"), #selector(downloadTourBoxConsole))
         let presetSquareBtn = button(L("macPresetSquare"), #selector(openPresetSquare))
         stack.addArrangedSubview(horizontal([label(L("macTourBoxInfo"), small: true), downloadConsoleBtn, presetSquareBtn]))
@@ -1274,6 +1277,23 @@ private final class PillActionButton: NSControl {
         } else {
             downloadTourBoxConsole()
         }
+    }
+
+    /// Save the Chrome video preset (the same map as the OBS one, its own name) and open Console to import and link it.
+    @objc private func saveChromePreset() {
+        guard !previewMode else { return }
+        let save = NSSavePanel()
+        save.nameFieldStringValue = paths.localizedChromePreset.lastPathComponent
+        save.title = L("macSaveDialogTitle")
+        save.message = L("macSaveDialogMessage")
+        guard save.runModal() == .OK, let url = save.url else { return }
+        do {
+            try Data(contentsOf: paths.localizedChromePreset).write(to: url, options: .atomic)
+            importNote.stringValue = L("macPresetSavedChrome", url.path)
+            importNote.isHidden = false
+            note(L("macPresetSavedChrome", url.path))
+        } catch { failure(error); return }
+        if tourboxConsoleInstalled || tourboxConsoleRunning { openTourBoxConsole() } else { downloadTourBoxConsole() }
     }
 
     private func savePresetDialog() -> URL? {

@@ -7,6 +7,7 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 ## 0.12.9 - 2026-11-17
 0.12.8 was a draft for the hardware test and was never published. This release ships Fadester Companion 0.1.12; the VJster extension stays 0.1.6.
 - **Fadester Companion warns about an old TourBox preset** (Windows and Mac). It compares the presets TourBox Console has stored with the one it ships, by their shortcuts, so it works in every language and never mistakes Console's own presets for ours. With an older copy in Console, the TourBox light turns amber, reads "TourBox: old preset" and offers **Import new preset**; Activity says once what to do. Found in the hand test: an old copy put the whole mix level on the Knob, so the Knob changed the audio instead of the video speed.
+- **A TourBox preset for Chrome videos.** TourBox Console links one preset to one application, so the Companion now also ships **Chrome Video Fadester for TourBox**: the same full map under its own name, to link to Google Chrome (Windows and Mac, all ten languages). The panel has an **Import Chrome video preset** button. This replaces importing the OBS preset twice and linking the "… 02" copy to Chrome. Both presets hold every control, so OBS and the video both work whichever of the two is in front.
 
 ## 0.12.8 - 2026-11-17
 0.12.7 was a draft for the hardware test and was never published. This release ships Fadester Companion 0.1.11 and the VJster extension 0.1.6.

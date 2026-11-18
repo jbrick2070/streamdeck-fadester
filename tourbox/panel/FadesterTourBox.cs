@@ -277,9 +277,11 @@ namespace Fadester.TourBox {
       SubTitle(body,"TourBox");
       Hint(body,text.Get("importHint"));
       var importRow=new FlowLayoutPanel {AutoSize=true,WrapContents=true,Margin=new Padding(0)};
-      AddButton(importRow,text.Get("openPreset"),delegate { ImportPreset(); ShowImportGuide(); });
+      AddButton(importRow,text.Get("btnImportObs"),delegate { ImportPreset(); ShowImportGuide(); });
+      AddButton(importRow,text.Get("btnImportChrome"),delegate { ImportPreset(true); });
       AddButton(importRow,text.Get("btnShowWhere"),delegate { ShowImportGuide(); });
       body.Controls.Add(importRow); importNote=Hint(body,"");
+      Hint(body,text.Get("importChromeHint"));
       Title(body,text.Get("cueTitle"));
       Hint(body,text.Get("cueHint"));
       Title(body,text.Get("inputsTitle")); Hint(body,text.Get("inputsHint"));
@@ -606,9 +608,9 @@ namespace Fadester.TourBox {
     }
     void SaveRequested() { if(PortsClash())return; try {WriteConfig(); Note(text.Get(worker==null?"saved":"savedRestart"));}catch(Exception e){Note(e.Message);} }
     /** Console has no way in from outside: no file type, no command line. Hand over the path, open Console, say what to do there. */
-    void ImportPreset() {
-      string path=text.PresetPath(folder);
-      try { Clipboard.SetText(path); importNote.Text=text.Get("importCopied"); }
+    void ImportPreset(bool chrome=false) {
+      string path=chrome ? text.ChromePresetPath(folder) : text.PresetPath(folder);
+      try { Clipboard.SetText(path); importNote.Text=text.Get(chrome ? "importCopiedChrome" : "importCopied"); }
       catch(ExternalException) { importNote.Text=text.Get("importManual",path); }
       try { if(!Desktop.Running("TourBox Console")) { string exe=Desktop.ConsoleExe(); if(exe!=null) OpenPath(exe); } }
       catch(InvalidOperationException e) { Note(e.Message); }

@@ -220,6 +220,34 @@ internal static class VjsterSelfTests
         Check(intent["type"]!.GetValue<string>() == "speed.set" && intent["rate"]!.GetValue<double>() == 0.5, "the slow preset sets 0.5x");
         await SendText(ext, StateJson(intent["id"]!.GetValue<string>(), 0.5));
         Check((await slow).StartsWith("Clip · Video 0.5x"), "slow preset reply");
+
+        // Midi Fadester's APC40 Tempo knob: steps of 0.05x as one speed.set from the speed last asked for, kept within
+        // 0.25x..4x, so steps that come faster than the replies still add up.
+        var by = desk.SpeedBy(3);
+        intent = JsonNode.Parse(await Receive(ext))!.AsObject();
+        Check(intent["type"]!.GetValue<string>() == "speed.set" && Math.Abs(intent["rate"]!.GetValue<double>() - 0.65) < 1e-9, "3 steps from 0.5x ask for 0.65x");
+        await SendText(ext, StateJson(intent["id"]!.GetValue<string>(), 0.65));
+        Check((await by).StartsWith("Clip · Video 0.65x"), "step reply");
+        by = desk.SpeedBy(-20);
+        intent = JsonNode.Parse(await Receive(ext))!.AsObject();
+        Check(Math.Abs(intent["rate"]!.GetValue<double>() - 0.25) < 1e-9, "steps stop at 0.25x");
+        await SendText(ext, StateJson(intent["id"]!.GetValue<string>(), 0.25));
+        await by;
+        by = desk.SpeedBy(80);
+        intent = JsonNode.Parse(await Receive(ext))!.AsObject();
+        Check(Math.Abs(intent["rate"]!.GetValue<double>() - 4.0) < 1e-9, "steps stop at 4x");
+        await SendText(ext, StateJson(intent["id"]!.GetValue<string>(), 4));
+        await by;
+        var remoteLines = new List<string>();
+        var remote = new VjsterRemote(desk, l => { lock (remoteLines) remoteLines.Add(l); });
+        remote.OnVendorEvent("other-vendor", VjsterRemote.EventType, new JsonObject { ["action"] = "vjster.speed.reset" });
+        remote.OnVendorEvent(VjsterRemote.Vendor, VjsterRemote.EventType, new JsonObject { ["action"] = "not.an.action" });
+        remote.OnVendorEvent(VjsterRemote.Vendor, VjsterRemote.EventType, new JsonObject { ["action"] = "vjster.speed.reset" });
+        intent = JsonNode.Parse(await Receive(ext))!.AsObject();
+        Check(intent["type"]!.GetValue<string>() == "speed.reset", "the APC40's Tap Tempo resets the speed (other vendors and unknown actions ignored)");
+        await SendText(ext, StateJson(intent["id"]!.GetValue<string>(), 1));
+        for (int i = 0; i < 50; i++) { lock (remoteLines) if (remoteLines.Count > 0) break; await Task.Delay(20); }
+        lock (remoteLines) Check(remoteLines.Count == 1 && remoteLines[0].StartsWith("APC40: Clip · Video 1x"), "the APC40 line says where it came from");
         var status = desk.Dispatch("vjster.status");
         intent = JsonNode.Parse(await Receive(ext))!.AsObject();
         Check(intent["type"]!.GetValue<string>() == "state.get", "status asks for state");

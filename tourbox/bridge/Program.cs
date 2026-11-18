@@ -100,6 +100,7 @@ internal static class Program
         var vjInput = Channel.CreateBounded<KeyInput>(new BoundedChannelOptions(64) { SingleReader = true, FullMode = BoundedChannelFullMode.DropOldest });
         int current = 0, generation = 0;
         VjsterHost? vjster = cfg.VjsterEnabled && bindings.Count > 0 ? new VjsterHost(cfg, Console.WriteLine) : null;
+        VjsterRemote? vjRemote = vjster is null ? null : new VjsterRemote(vjster.Desk, Console.WriteLine);
         void Enqueue(string action)
         {
             if (action.StartsWith("vjster."))
@@ -239,6 +240,8 @@ internal static class Program
                     if (trace != null) { obs.TransitionEvent += trace.OnEvent; rpc = trace.Call; }
                     using var vsMonitor = new VisualSidechainMonitor(obs.Call, panelOwned ? Console.WriteLine : null);
                     vsMonitor.Attach(obs);
+                    // Midi Fadester's APC40 transport (Tempo, Nudge, Tap Tempo, Play) drives VJster through this OBS.
+                    if (vjRemote is not null) obs.VendorEvent += vjRemote.OnVendorEvent;
                     var desk = new DeskActions(cfg, rpc, nativeMove: native.MoveAsync, resume: memory, vsMonitor: vsMonitor, onStatus: Console.WriteLine); int mine = ++generation;
                     obs.InputVolumeChanged += desk.OnVolumeChanged;
                     obs.InputLevelChangedById += desk.OnMixInputLevelChanged;

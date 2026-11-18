@@ -4,6 +4,10 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 
 ## Unreleased
 
+## 0.12.9 - 2026-11-17
+0.12.8 was a draft for the hardware test and was never published. This release ships Fadester Companion 0.1.12; the VJster extension stays 0.1.6.
+- **Fadester Companion warns about an old TourBox preset** (Windows and Mac). It compares the presets TourBox Console has stored with the one it ships, by their shortcuts, so it works in every language and never mistakes Console's own presets for ours. With an older copy in Console, the TourBox light turns amber, reads "TourBox: old preset" and offers **Import new preset**; Activity says once what to do. Found in the hand test: an old copy put the whole mix level on the Knob, so the Knob changed the audio instead of the video speed.
+
 ## 0.12.8 - 2026-11-17
 0.12.7 was a draft for the hardware test and was never published. This release ships Fadester Companion 0.1.11 and the VJster extension 0.1.6.
 - **Chrome videos without OBS** (Fadester Companion, Windows and Mac). The controls start by themselves at launch whether or not OBS is open (once setup was saved, unless you pressed Stop), so VJster's link and video controls work with OBS closed; the OBS controls start as soon as OBS answers. The Controls light reads "Controls: on, waiting for OBS" meanwhile, in all ten languages. On the Mac the host no longer ends when OBS is closed or goes away: it keeps the shortcuts and VJster running and looks for OBS every few seconds. Mix-only mode, and the Mac with VJster off, still wait for OBS.

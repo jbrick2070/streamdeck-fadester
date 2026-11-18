@@ -154,6 +154,8 @@ namespace Fadester.TourBox {
     // What the lights also need from the desktop, read once a second without touching OBS (ShowMe.cs).
     Light obsLight, tbLight, vjLight, padLight, ctlLight; System.Windows.Forms.Timer watch; ShowMeWindow showMe;
     string obsProblem, front=""; bool obsRunning, obsHidden, padSeen, studioOff, tourboxConsole, consoleInstalled; DateTime autoConnectAt=DateTime.MaxValue; int autoTries;
+    // Whether Console holds an older OBS Fadester preset than ours (PresetAge.cs, FIX-9): read every few seconds, said once in Activity.
+    PresetState presetState=PresetState.None; HashSet<string> shippedShortcuts; DateTime presetCheckAt=DateTime.MinValue; bool toldOldPreset;
     // VJster, from the running controls' own lines: which of the Chrome extension and the OBS page are connected, and whether its port is taken.
     HashSet<string> vjPeers=new HashSet<string>(); bool vjPortBusy;
     TableLayoutPanel reminderBar; Button bringObs;
@@ -617,6 +619,14 @@ namespace Fadester.TourBox {
       showMe=new ShowMeWindow(text,"tourbox",null,delegate { ImportPreset(); });
       showMe.Show(this);
     }
+    /** Compare Console's stored presets with the one this Companion ships, every 5 s (Console writes them when they change). */
+    void CheckPresetAge() {
+      presetCheckAt=DateTime.Now.AddSeconds(5);
+      if(shippedShortcuts==null) shippedShortcuts=PresetAge.Shipped(text.PresetPath(folder));
+      presetState=PresetAge.Judge(shippedShortcuts,PresetAge.Stored());
+      if(presetState==PresetState.Old && !toldOldPreset){ toldOldPreset=true; Note(text.Get("tbOldNote")); }
+      if(presetState!=PresetState.Old) toldOldPreset=false;
+    }
     /** The TourBox light's buttons: open Console, or its download page when it is not installed. */
     void OpenConsole() {
       string exe=Desktop.ConsoleExe();
@@ -776,7 +786,7 @@ namespace Fadester.TourBox {
       obsLight.Display(Readiness.Obs(obsConnected,obsRunning,obsProblem,studioOff,on),text);
       // A stopped bridge has no VJster link: what its lines said no longer holds.
       if(!on){ vjPeers.Clear(); vjPortBusy=false; }
-      tbLight.Display(Readiness.TourBox(tourboxConsole,consoleInstalled,mixOnly.Checked,enableGamepad.Checked),text);
+      tbLight.Display(Readiness.TourBox(tourboxConsole,consoleInstalled,mixOnly.Checked,enableGamepad.Checked,presetState==PresetState.Old),text);
       vjLight.Display(Readiness.Vjster(enableVjster.Checked,mixOnly.Checked,on,vjPeers.Count,vjPortBusy),text);
       padLight.Display(Readiness.Pad(enableGamepad.Checked,mixOnly.Checked,on,padState,padSeen),text);
       ctlLight.Display(Readiness.Controls(on,obsConnected),text);
@@ -800,6 +810,7 @@ namespace Fadester.TourBox {
         consoleInstalled=tourboxConsole || Desktop.ConsoleExe()!=null;
         front=on ? Desktop.Front() : "";
         if(obsConnected || on) autoTries=0;
+        if(DateTime.Now>=presetCheckAt) CheckPresetAge();
         if(autoTries>0 && !refreshing && DateTime.Now>=autoConnectAt && (obsProblem==null || obsProblem=="obs-no-answer")){
           autoTries--; autoConnectAt=DateTime.Now.AddSeconds(5); var pending=Connect();
         }
@@ -825,6 +836,7 @@ namespace Fadester.TourBox {
           return;
         }
         if(action=="openConsole"){ OpenConsole(); return; }
+        if(action=="importPreset"){ ShowImportGuide(); return; }
         if(action=="downloadConsole"){ DownloadConsole(); return; }
         if(showMe!=null && !showMe.IsDisposed) showMe.Close();
         if(action=="vjsterWait" || action=="vjsterPort") showMe=new ShowMeWindow(text,action,null,delegate { CopyObsUrl(); },(int)vjsterPort.Value);

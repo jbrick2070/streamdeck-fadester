@@ -34,7 +34,11 @@ With a full-size TourBox, the Scroll wheel selects the next scene in Preview, th
 
 VJster's controls (the Knob's speed, play and pause) work on a video in Chrome whether or not OBS is open. From the second launch on, Fadester Companion starts its controls by itself, OBS or not, unless you pressed **Stop controls** last time. While OBS is closed the Controls light reads **Controls: on, waiting for OBS**; the OBS controls start as soon as OBS answers.
 
-A TourBox Console preset links to one application, so for the TourBox to work while Chrome is in front, import the preset a second time (Console names the copy **OBS Fadester for TourBox 02**) and link that copy to **Google Chrome**, the first to OBS. The yellow “bring OBS to the front” strip stays hidden while Chrome is in front or OBS is closed.
+A TourBox Console preset links to one application, so for the TourBox to work while Chrome is in front, import the preset a second time (Console names the copy **OBS Fadester for TourBox 02**) and link that copy to **Google Chrome**, the first to OBS. You can rename the copy in Console, for example to **OBS Fadester for TourBox – Chrome**. The yellow “bring OBS to the front” strip stays hidden while Chrome is in front or OBS is closed.
+
+### Updating the preset
+
+A new Fadester Companion can ship a new preset (for example, older presets put the whole mix level on the Knob; now it rides the video speed). The panel compares the presets TourBox Console has stored with its own: if one is older, the TourBox light turns amber and reads **TourBox: old preset**. Click **Import new preset** and import it into each OBS Fadester preset with that preset's own menu **Import**, which keeps its link to OBS or Chrome. The light turns green again once Console holds no older copy.
 
 ## Rehearse the first throw
 

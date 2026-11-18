@@ -218,8 +218,10 @@ enum Readiness {
     }
 
     /// The Windows panel's Readiness.TourBox has the same states (and greys a closed Console while a game controller is in use).
-    static func tourBox(consoleRunning: Bool, consoleInstalled: Bool = true, mixOnly: Bool = false) -> LightState {
+    static func tourBox(consoleRunning: Bool, consoleInstalled: Bool = true, mixOnly: Bool = false, oldPreset: Bool = false) -> LightState {
         if mixOnly { return LightState(.grey, L("liTbOff")) }
+        // An older Fadester preset in Console: some controls do other things than the panel's map says (FIX-9).
+        if consoleRunning && oldPreset { return LightState(.amber, L("liTbOld"), button: L("btnImportNew"), action: "importPreset") }
         if consoleRunning { return LightState(.green, L("liTbReady")) }
         if !consoleInstalled { return LightState(.amber, L("liTbMissing"), button: L("btnDownload"), action: "downloadConsole") }
         return LightState(.amber, L("liTbClosed"), button: L("btnOpenConsole"), action: "openConsole")
@@ -491,6 +493,10 @@ enum ModelTests {
                   !Readiness.autoStart(settingsSaved: true, settingsValid: true, remembered: "on", obsConnected: false, controlsOn: false, axReady: false, vjsterOn: true) &&
                   !Readiness.autoStart(settingsSaved: true, settingsValid: true, remembered: "on", obsConnected: true, controlsOn: true, axReady: true) &&
                   !Readiness.autoStart(settingsSaved: true, settingsValid: true, remembered: "on", obsConnected: true, controlsOn: false, axReady: false), "Auto-start decision")
+        try check(Readiness.tourBox(consoleRunning: true, oldPreset: true).action == "importPreset" &&
+                  Readiness.tourBox(consoleRunning: true, mixOnly: true, oldPreset: true).action == nil &&
+                  Readiness.tourBox(consoleRunning: false, oldPreset: true).action == "openConsole", "TourBox light with an old preset")
+        try PresetAge.check(check)
         try check(Readiness.controls(running: true, armed: true, obsConnected: false) == LightState(.amber, L("liCtlWaiting"), button: L("macBtnStop"), action: "stop"), "Controls light while armed for videos only")
         try check(Readiness.reminder(controlsOn: true, obsHidden: false, consoleRunning: true, frontIsObs: false) != nil &&
                   Readiness.reminder(controlsOn: true, obsHidden: false, consoleRunning: true, frontIsObs: false, frontIsChrome: true) == nil &&
@@ -521,5 +527,79 @@ enum ModelTests {
         let mapRows = try ControlMapRow.load(data: sampleMap)
         try check(mapRows == [ControlMapRow(category: "media", control: "Side + Knob", gesture: "Clockwise", action: "Video speed up")], "Control map formatting")
         print("PASS: panel settings, readiness lights, control map formatting, Unicode/layer/VJster assignments, strict ranges, secret-free serialization and log redaction. No files, OBS, shortcuts or GUI used.")
+    }
+}
+
+/// Whether TourBox Console holds an older OBS Fadester preset than the one this Companion ships (FIX-9, hand test
+/// 2026-11-17: an old copy turned the Knob into the mix level instead of the video speed), as on Windows (PresetAge.cs).
+/// Console keeps one ShortDesc per shortcut (modifiers and key code) in the .tb it imports and in the copy it stores; the
+/// labels are translated, the shortcuts are not, so this works in every language.
+enum PresetState { case none, current, old }
+
+enum PresetAge {
+    /// A stored preset counts as a Fadester preset when at least this many of its shortcuts make up at least this share of
+    /// it; Console's factory presets share at most a tenth with ours.
+    static let minShared = 10, minShare = 0.6
+
+    static func shortcuts(_ xml: String) -> Set<String> {
+        guard let block = try? NSRegularExpression(pattern: "<ShortDesc>(.*?)</ShortDesc>", options: [.dotMatchesLineSeparators]),
+              let mods = try? NSRegularExpression(pattern: "<m>([0-9]+)</m>"), let key = try? NSRegularExpression(pattern: "<s>([0-9]+)</s>") else { return [] }
+        let text = xml as NSString
+        var found = Set<String>()
+        for match in block.matches(in: xml, range: NSRange(location: 0, length: text.length)) {
+            let inner = text.substring(with: match.range(at: 1)) as NSString
+            let range = NSRange(location: 0, length: inner.length)
+            guard let m = mods.firstMatch(in: inner as String, range: range), let s = key.firstMatch(in: inner as String, range: range) else { continue }
+            found.insert(inner.substring(with: m.range(at: 1)) + ":" + inner.substring(with: s.range(at: 1)))
+        }
+        return found
+    }
+
+    /// none: no Fadester preset in Console. old: one of them lacks a shortcut of the shipped preset (Auto Switch may pick it).
+    static func judge(shipped: Set<String>, stored: [Set<String>]) -> PresetState {
+        guard !shipped.isEmpty else { return .none }
+        var any = false
+        for preset in stored {
+            let shared = preset.intersection(shipped).count
+            if shared < minShared || Double(shared) < minShare * Double(preset.count) { continue }
+            any = true
+            if !shipped.isSubset(of: preset) { return .old }
+        }
+        return any ? .current : .none
+    }
+
+    /// The preset this Companion ships (a gzip of Console's XML), or an empty set when it cannot be read.
+    static func shipped(_ url: URL) -> Set<String> {
+        let gzip = Process(), out = Pipe()
+        gzip.executableURL = URL(fileURLWithPath: "/usr/bin/gzip")
+        gzip.arguments = ["-dc", url.path]
+        gzip.standardOutput = out; gzip.standardError = FileHandle.nullDevice
+        do { try gzip.run() } catch { return [] }
+        let data = out.fileHandleForReading.readDataToEndOfFile()
+        gzip.waitUntilExit()
+        guard gzip.terminationStatus == 0, let xml = String(data: data, encoding: .utf8) else { return [] }
+        return shortcuts(xml)
+    }
+
+    /// Console's stored presets: ~/Library/Application Support/TourBox Console/presets/<number> (.bak files are its backups).
+    static func stored() -> [Set<String>] {
+        let dir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/TourBox Console/presets")
+        guard let names = try? FileManager.default.contentsOfDirectory(atPath: dir.path) else { return [] }
+        return names.filter { !$0.isEmpty && $0.allSatisfy(\.isNumber) }.compactMap { name in
+            (try? String(contentsOf: dir.appendingPathComponent(name), encoding: .utf8)).map(shortcuts)
+        }
+    }
+
+    static func check(_ check: (Bool, String) throws -> Void) throws {
+        func desc(_ pairs: [String]) -> String {
+            pairs.map { p -> String in let part = p.split(separator: ":"); return "<ShortDesc><m>\(part[0])</m><s>\(part[1])</s><d>x</d></ShortDesc>" }.joined()
+        }
+        let shipped = shortcuts("<Preset>" + desc((1...20).map { "14:\($0)" }) + "</Preset>")
+        let old = shortcuts(desc((1...15).map { "14:\($0)" }))
+        let factory = shortcuts(desc((1...3).map { "14:\($0)" } + (100..<160).map { "2:\($0)" }))
+        try check(shipped.count == 20 && shipped.contains("14:7"), "Preset shortcuts parse")
+        try check(judge(shipped: shipped, stored: [factory]) == .none && judge(shipped: shipped, stored: [factory, shipped]) == .current &&
+                  judge(shipped: shipped, stored: [old]) == .old && judge(shipped: shipped, stored: [shipped, old]) == .old &&
+                  judge(shipped: [], stored: [old]) == .none, "Preset age decision")
     }
 }

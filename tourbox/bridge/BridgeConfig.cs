@@ -60,7 +60,7 @@ internal sealed class BridgeConfig
     /**
      * Takes the settings a running bridge reads at each action from a freshly loaded config (the panel's Save sends
      * "reload", hand test 2026-11-17: a saved layer did nothing until Stop and Start). Restarting instead would let go of a
-     * T-bar fade part-way. Ports, VJster, the game controller, the mixer mode and the fader step are set up at start and
+     * T-bar fade part-way. Ports, VJster, the game controller (and its speed presets), the mixer mode and the fader step are set up at start and
      * keep their values until the controls restart.
      */
     public void ApplyLive(BridgeConfig next)
@@ -70,7 +70,7 @@ internal sealed class BridgeConfig
         VolumeStepDb = next.VolumeStepDb; DuckDb = next.DuckDb; TransitionStepMs = next.TransitionStepMs;
         MixStepDb = next.MixStepDb; MixFadeMs = next.MixFadeMs;
         Layer1Scene = next.Layer1Scene; Layer1Source = next.Layer1Source; Layer2Scene = next.Layer2Scene; Layer2Source = next.Layer2Source;
-        OpacityStep = next.OpacityStep; GamepadFastSpeed = next.GamepadFastSpeed; GamepadSlowSpeed = next.GamepadSlowSpeed;
+        OpacityStep = next.OpacityStep; // the game controller's speed presets are copied at start, so they wait for a restart
         TakeBeats = next.TakeBeats; TakeQuantize = next.TakeQuantize; TakeFallbackMs = next.TakeFallbackMs;
     }
 

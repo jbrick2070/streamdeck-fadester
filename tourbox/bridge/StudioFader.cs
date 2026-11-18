@@ -54,6 +54,8 @@ public sealed class StudioFader
         await MoveAsync(delta, snapToRail: true);
         if (takeAt != before && sweep == null && Position == 0) sweepEndAt = takeAt;
     }
+    private static string SettlingNote(string action) =>
+        $"{ActionNames.Of(action)} ignored: the last throw just finished. Pause a moment, then turn clockwise for the next one.";
     private bool Settling => sweep == null && Position == 0 && sweepEndAt != 0 && Stopwatch.GetElapsedTime(sweepEndAt).TotalMilliseconds < SettleMs;
     private readonly bool allowAutoCloseout;
     private Sweep? disconnectedSweep;
@@ -377,9 +379,9 @@ public sealed class StudioFader
             {
                 // With clockwise always towards Preview, a spin that overshoots the end of a throw would start the next one;
                 // clicks right after a take are that spin, so the next throw starts after a short pause.
-                case "fader.forward": if (!Settling) await DialForwardAsync(direction * step); break;
+                case "fader.forward": if (Settling) return SettlingNote(action); await DialForwardAsync(direction * step); break;
                 case "fader.back": await MoveAsync(-direction * step, snapToRail: true); break;
-                case "fader.fineForward": if (!Settling) await DialForwardAsync(direction * step / 4); break;
+                case "fader.fineForward": if (Settling) return SettlingNote(action); await DialForwardAsync(direction * step / 4); break;
                 case "fader.fineBack": await MoveAsync(-direction * step / 4, snapToRail: true); break;
                 case "take": case "take.cut":
                     // A second take within 450 ms of the last is a double press, and so is one pressed before the last

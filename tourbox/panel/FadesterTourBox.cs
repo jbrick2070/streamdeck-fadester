@@ -172,6 +172,7 @@ namespace Fadester.TourBox {
     Dictionary<string,int> padHolds = new Dictionary<string,int>();
     double[] padSpeeds = new double[0];
     readonly Dictionary<string,string> actionLabels = new Dictionary<string,string>();
+    readonly Dictionary<string,string> englishLabels = new Dictionary<string,string>();
     List<Choice> padChoices = new List<Choice>(), releaseChoices = new List<Choice>();
     sealed class Choice { public string Id { get; set; } public string Label { get; set; } }
     NumericUpDown mixStep, mixDuration, vjsterPort, opacityStep; TextBox extensionId, vjsterVideo; ComboBox vjsterTarget;
@@ -489,6 +490,13 @@ namespace Fadester.TourBox {
           }
         }
       } catch { Note(text.Get("mapUnreadable")); }
+      // The English labels too: the bridge prints those (TbarHint).
+      try {
+        var root=Decode(File.ReadAllText(Path.Combine(folder,"presets","map.json"),Encoding.UTF8));
+        foreach(var bank in (Dictionary<string,object>)root["presets"])
+          foreach(var listKey in new[]{"bindings","menuBindings"}) { object rows; if(!((Dictionary<string,object>)bank.Value).TryGetValue(listKey,out rows)) continue;
+            foreach(var o in (IEnumerable)rows){ var b=(Dictionary<string,object>)o; string id=Val(b,"action"); if(id.Length>0 && !englishLabels.ContainsKey(id)) englishLabels[id]=Val(b,"label"); } }
+      } catch(Exception e) { Entry.Log("english map: "+e.Message); }
     }
     void ReadPad() {
       try {
@@ -639,7 +647,7 @@ namespace Fadester.TourBox {
     }
     /** The saved settings a running bridge only reads at start (BridgeConfig.ApplyLive leaves them alone), as one string to compare. */
     string RestartSettings() {
-      var keys=new[]{"host","port","vjsterEnabled","vjsterPort","vjsterExtensionId","vjsterTarget","vjsterObsToken","gamepadEnabled","gamepadEasy","gamepadMap","mixEnabled","mixOnly","faderStep"};
+      var keys=new[]{"host","port","vjsterEnabled","vjsterPort","vjsterExtensionId","vjsterTarget","vjsterObsToken","gamepadEnabled","gamepadEasy","gamepadMap","gamepadFastSpeed","gamepadSlowSpeed","mixEnabled","mixOnly","faderStep"};
       var parts=new List<string>(); foreach(var k in keys){ object v; parts.Add(k+"="+(config.TryGetValue(k,out v) ? Json.Serialize(v) : "")); }
       return string.Join("\n",parts);
     }
@@ -673,6 +681,8 @@ namespace Fadester.TourBox {
     }
     /** The TourBox light's buttons: open Console, or its download page when it is not installed. */
     void OpenConsole() {
+      // A running Console comes to the front wherever it is installed; only a missing one sends to the download page.
+      if(Desktop.BringToFront("TourBox Console")) return;
       string exe=Desktop.ConsoleExe();
       if(exe!=null) OpenPath(exe); else DownloadConsole();
     }
@@ -833,21 +843,24 @@ namespace Fadester.TourBox {
       foreach(System.Text.RegularExpressions.Match m in Readiness.PickedLayers(line)){
         string n=m.Groups[1].Value, scene=m.Groups[2].Value, source=m.Groups[3].Value;
         config["layer"+n+"Scene"]=scene; config["layer"+n+"Source"]=source;
-        boxes["layer"+n+"Scene"].Text=scene; PopulateLayer(int.Parse(n)); boxes["layer"+n+"Source"].Text=source;
+        // Fill adds the name when OBS's list is not read yet: a drop-down list cannot show a name it does not hold.
+        object items; var d=catalog.TryGetValue("sceneItems",out items)?items as Dictionary<string,object>:null;
+        Fill("layer"+n+"Scene",List(catalog,"scenes"),scene); Fill("layer"+n+"Source",List(d,scene),source);
         SaveKeys(new Dictionary<string,object>{{"layer"+n+"Scene",scene},{"layer"+n+"Source",source}});
       }
     }
     /**
-     * A Dial click that left the T-bar at rest, in words, as on the Mac (Model.swift hostFeedback): forward right after a
-     * throw is the end of that spin (StudioFader.SettleMs), back at rest has nothing to undo.
+     * A counter-clockwise Dial click that left the T-bar at rest, in words, as on the Mac (Model.swift hostFeedback): there
+     * is nothing to undo, so turn clockwise. A clockwise click right after a throw says so itself (StudioFader.SettlingNote).
      */
     string TbarHint(string line) {
       // P0 formats by the bridge's culture: "0%", or "0 %" with a (narrow) no-break space in French or German.
       var m=line==null ? null : System.Text.RegularExpressions.Regex.Match(line,@"^(.*) · T-bar 0[\s  ]?%$");
       if(m==null || !m.Success) return null;
       string label=m.Groups[1].Value; string a;
-      foreach(var id in new[]{"fader.forward","fader.fineForward"}) if(actionLabels.TryGetValue(id,out a) && a==label) return text.Get("tbarPause");
-      foreach(var id in new[]{"fader.back","fader.fineBack"}) if(actionLabels.TryGetValue(id,out a) && a==label) return text.Get("tbarCw");
+      // The bridge names actions from the English map (it starts without --map), the panel from its language's map: either matches.
+      foreach(var id in new[]{"fader.back","fader.fineBack"})
+        if((actionLabels.TryGetValue(id,out a) && a==label) || (englishLabels.TryGetValue(id,out a) && a==label)) return text.Get("tbarCw");
       return null;
     }
     /** Whether OBS is connected after this bridge line (Program.cs prints these). */

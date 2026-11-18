@@ -97,18 +97,24 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
         {
             case "layer2.opacity.down":
             case "layer2.opacity.up":
-                layersPicked = "";
-                try { string done = await Opacity(id); return done + layersPicked; }
-                catch (InvalidOperationException e) when (layersPicked.Length > 0 && !e.Message.Contains("picked automatically")) { throw new InvalidOperationException(e.Message + layersPicked, e); }
+                {
+                    // Kept per action, so two layer actions at once never swap their notes.
+                    string picked = await FillLayers(id);
+                    try { return await Opacity(id) + picked; }
+                    catch (InvalidOperationException e) when (picked.Length > 0) { throw new InvalidOperationException(e.Message + picked, e); }
+                }
             case "layer1.blend.previous":
             case "layer1.blend.next":
             case "layer1.blend.reset":
             case "layer2.blend.previous":
             case "layer2.blend.next":
             case "layer2.blend.reset":
-                layersPicked = "";
-                try { string done = await Blend(id); return done + layersPicked; }
-                catch (InvalidOperationException e) when (layersPicked.Length > 0 && !e.Message.Contains("picked automatically")) { throw new InvalidOperationException(e.Message + layersPicked, e); }
+                {
+                    // Kept per action, so two layer actions at once never swap their notes.
+                    string picked = await FillLayers(id);
+                    try { return await Blend(id) + picked; }
+                    catch (InvalidOperationException e) when (picked.Length > 0) { throw new InvalidOperationException(e.Message + picked, e); }
+                }
             case "mix.up": return await StepMixAsync(1);
             case "mix.down": return await StepMixAsync(-1);
             case "mix.fadeOut": return await SetMixAsync(-100, cfg.MixFadeMs);
@@ -370,12 +376,12 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
         if (!one) picks.Remove(cfg.Layer1Source);
         if (!two) picks.Remove(cfg.Layer2Source);
         string said = "";
-        if (one && picks.Count > 0)
+        if (one && string.IsNullOrWhiteSpace(cfg.Layer1Source) && picks.Count > 0)
         {
             cfg.Layer1Scene = scene; cfg.Layer1Source = picks[0]; picks.RemoveAt(0);
             said += $"\nLayer 1 = {scene} › {cfg.Layer1Source} (picked automatically; change it on the Assignments tab)";
         }
-        if (two && picks.Count > 0)
+        if (two && string.IsNullOrWhiteSpace(cfg.Layer2Source) && picks.Count > 0)
         {
             cfg.Layer2Scene = scene; cfg.Layer2Source = picks[0];
             said += $"\nLayer 2 = {scene} › {cfg.Layer2Source} (picked automatically; change it on the Assignments tab)";
@@ -386,12 +392,9 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
             throw new InvalidOperationException($"Layer {(forTwo ? 2 : 1)}: {scene} has no {(forTwo && !string.IsNullOrWhiteSpace(cfg.Layer1Source) ? "second " : "")}picture to use. Choose a scene and source on the Assignments tab.{said}");
         return said;
     }
-    /** The line FillLayers added to the last layer action, for that action's result. */
-    private string layersPicked = "";
     /** The one scene item a layer names. None or several is an error, so a layer never acts on the wrong copy or on a source that left the scene. */
     private async Task<(string Scene, string Source, string Label, int Item)> LayerItem(string id)
     {
-        layersPicked = await FillLayers(id);
         var (scene, source, label) = Layer(id);
         var rows = (await rpc("GetSceneItemList", new() { ["sceneName"] = scene }))["sceneItems"]!.AsArray()
             .Where(n => n?["sourceName"]?.GetValue<string>() == source).ToArray();

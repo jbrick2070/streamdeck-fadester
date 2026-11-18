@@ -257,6 +257,19 @@ namespace Fadester.TourBox {
       SetForegroundWindow(main);
       return true;
     }
+    /** Restores and fronts a running program's main window; false when it does not run or has no window. */
+    internal static bool BringToFront(string name) {
+      var found = Process.GetProcessesByName(name);
+      try {
+        foreach (var p in found) {
+          IntPtr h;
+          try { h = p.MainWindowHandle; } catch (InvalidOperationException) { continue; } catch (System.ComponentModel.Win32Exception) { continue; }
+          if (h == IntPtr.Zero) continue;
+          ShowWindow(h, IsIconic(h) ? 9 : 5); SetForegroundWindow(h); return true;
+        }
+      } finally { foreach (var p in found) p.Dispose(); }
+      return false;
+    }
     internal static string Front() {
       try {
         uint id; GetWindowThreadProcessId(GetForegroundWindow(), out id);

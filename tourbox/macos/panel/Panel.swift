@@ -192,6 +192,7 @@ private final class PillActionButton: NSControl {
     private var presetState = PresetState.none, shippedShortcuts: Set<String>?, presetCheckAt = Date.distantPast, toldOldPreset = false
     /// TourBox Console's Auto Switch and whether its selected preset is ours (Model.swift PresetAge): they decide the reminder strip.
     private var startedWith: Settings?
+    private var catalogAt = Date.distantPast
     private var consoleAutoSwitch: Bool?, activeFadester: Bool?, shippedLayout: String?
     /// Whether the user last started ("on") or stopped ("off") the controls; kept apart from panel-config.json, which start() rewrites.
     private var rememberedControls: String? { UserDefaults.standard.string(forKey: "fadester.controlsLastAction") }
@@ -507,6 +508,8 @@ private final class PillActionButton: NSControl {
     @objc private func selectTab(_ sender: NSButton) {
         tabs.selectTabViewItem(at: sender.tag)
         for item in navigation { item.state = item.tag == sender.tag ? .on : .off }
+        // An old list is read again on the way to a page, as on Windows when Assignments opens (hand test 2026-11-17).
+        if host.running && obsConnected && Date().timeIntervalSince(catalogAt) > 10 { performScan(silentIfOffline: true, listsOnly: true) }
     }
     private func scrolling(_ stack: NSStackView) -> NSScrollView {
         let scroll = NSScrollView(); scroll.hasVerticalScroller = true; scroll.drawsBackground = true; scroll.backgroundColor = .white
@@ -1101,7 +1104,7 @@ private final class PillActionButton: NSControl {
         // Editing and Save stay open while the controls run: Save hands the new settings to the running host.
         let editable = !scanning
         edits.forEach { $0.isEnabled = editable }
-        scanButton?.isEnabled = editable && !host.running && !invalidSettings && !previewMode
+        scanButton?.isEnabled = editable && !invalidSettings && !previewMode
         saveButton?.isEnabled = editable && !invalidSettings && !previewMode
         if host.running {
             primaryButton?.title = L("stop")
@@ -1219,14 +1222,15 @@ private final class PillActionButton: NSControl {
         } catch { failure(error) }
     }
 
-    @objc private func scan() { performScan(silentIfOffline: false) }
+    @objc private func scan() { performScan(silentIfOffline: false, listsOnly: host.running) }
 
     /// listsOnly: a refresh of the Assignments lists by itself while the controls run (OBS just answered the host, hand test
     /// 2026-11-17: the lists stayed empty until Read scenes was clicked). It changes no light and starts nothing.
     private func performScan(silentIfOffline: Bool, listsOnly: Bool = false) {
         guard (listsOnly || !host.running) && !scanning && !previewMode && !invalidSettings else { return }
         let targetPort: Int
-        if let parsed = Int(port.stringValue.trimmingCharacters(in: .whitespaces)), (1...65535).contains(parsed) {
+        // A refresh while the controls run asks the OBS the host uses (the saved port), not an unsaved edit.
+        if listsOnly { targetPort = settings.port } else if let parsed = Int(port.stringValue.trimmingCharacters(in: .whitespaces)), (1...65535).contains(parsed) {
             targetPort = parsed
         } else {
             if !silentIfOffline { failure(PanelFailure.message(L("macErrPort"))) }
@@ -1236,6 +1240,7 @@ private final class PillActionButton: NSControl {
         do {
             secret = try LocalFiles.password(port: targetPort, override: password.stringValue)
         } catch {
+            if listsOnly { return } // a refresh changes no light
             obsConnected = false
             obsProblem = Readiness.obsProblem(from: (error as? PanelFailure)?.description ?? "")
             refreshIndicators()
@@ -1255,6 +1260,7 @@ private final class PillActionButton: NSControl {
             do {
                 self.catalog = try await client.scan(password: secret)
                 self.fillChoices(preserveEdits: true)
+                self.catalogAt = Date()
                 if listsOnly { self.scanning = false; self.scanTask = nil; self.updateEnabled(); return }
                 self.obsConnected = true
                 self.obsRunning = true

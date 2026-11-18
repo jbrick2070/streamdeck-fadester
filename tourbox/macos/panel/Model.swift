@@ -362,9 +362,6 @@ enum Readiness {
             guard !summary.isEmpty else { return nil }
             // P0 formats by the host's culture: "0%", or "0 %" with a (narrow) no-break space.
             if summary.range(of: #"· T-bar 0[\s\x{00A0}\x{202F}]?%$"#, options: .regularExpression) != nil {
-                if action == "fader.forward" || action == "fader.fineForward" {
-                    return L("macTbarPause") // clockwise always throws; this click was the end of the last spin
-                }
                 if action == "fader.back" || action == "fader.fineBack" {
                     return L("macTbarCw")
                 }
@@ -544,7 +541,8 @@ enum ModelTests {
         try check(Readiness.hostFeedback(from: "RESULT vjster.speed.up: Video 1.25x · 1080p · playing") == "Video 1.25x · 1080p · playing", "Host RESULT feedback")
         try check(Readiness.hostFeedback(from: "Clip · Video 1x · Auto (720p) · playing") == "Clip · Video 1x · Auto (720p) · playing" &&
                   Readiness.hostFeedback(from: "News · www.example.com · Video 1x · paused") == "News · www.example.com · Video 1x · paused", "VJster lines that name the video are feedback")
-        try check(Readiness.hostFeedback(from: "RESULT fader.forward: T-bar right · T-bar 0%") == L("macTbarPause"), "T-bar pause hint after a throw")
+        try check(Readiness.hostFeedback(from: "RESULT fader.forward: T-bar right · T-bar 0%") == "T-bar right · T-bar 0%" &&
+                  Readiness.hostFeedback(from: "RESULT fader.back: T-bar left · T-bar 0 %") == L("macTbarCw"), "T-bar hints: a finished throw reads as is, back at rest says turn clockwise")
         let picks = Readiness.pickedLayers("RESULT layer1.blend.next: Layer 1 blend: Additive Layer 1 = Kit Visuals › Kit Motion (picked automatically; change it on the Assignments tab) Layer 2 = Kit Visuals › Kit Title (picked automatically; x)")
         try check(picks.count == 2 && picks[0].layer == 1 && picks[0].source == "Kit Motion" && picks[1].scene == "Kit Visuals" && Readiness.pickedLayers("Music up").isEmpty, "Picked layers")
         try check(Readiness.hostFeedback(from: "REFUSED fader.forward: Choose a different Preview scene first.")?.contains("Scroll") == true, "Same-scene Preview hint")
@@ -605,13 +603,15 @@ enum PresetAge {
         return String(xml[start.upperBound..<end.lowerBound].filter { !$0.isWhitespace })
     }
     /// An import copy's layout, read again only when the file changes: the check runs every 5 s on the main thread.
+    /// read is false only for a copy that exists but cannot be unzipped yet; no copy, or one without a layout, gives nil.
     private static var layoutCache: [String: (Date, String?)] = [:]
-    static func cachedLayout(_ url: URL) -> String? {
-        guard let changed = (try? FileManager.default.attributesOfItem(atPath: url.path))?[.modificationDate] as? Date else { return nil }
-        if let hit = layoutCache[url.path], hit.0 == changed { return hit.1 }
-        let found = layout(unzip(url))
+    static func cachedLayout(_ url: URL) -> (read: Bool, layout: String?) {
+        guard let changed = (try? FileManager.default.attributesOfItem(atPath: url.path))?[.modificationDate] as? Date else { return (true, nil) }
+        if let hit = layoutCache[url.path], hit.0 == changed { return (true, hit.1) }
+        guard let text = unzip(url) else { return (false, nil) }
+        let found = layout(text)
         layoutCache[url.path] = (changed, found)
-        return found
+        return (true, found)
     }
     /// The gzip of Console's XML (a shipped .tb, or Console's import copy), as text; nil when it cannot be read.
     static func unzip(_ url: URL) -> String? {
@@ -649,7 +649,10 @@ enum PresetAge {
         for name in names where !name.isEmpty && name.allSatisfy(\.isNumber) {
             guard let xml = try? String(contentsOf: dir.appendingPathComponent(name), encoding: .utf8), xml.contains("</Preset>") else { complete = false; continue }
             presets.append(shortcuts(xml))
-            layouts.append(cachedLayout(dir.deletingLastPathComponent().appendingPathComponent("import/\(name)")))
+            let copy = dir.deletingLastPathComponent().appendingPathComponent("import/\(name)")
+            let (read, found) = cachedLayout(copy)
+            if !read { complete = false } // being written: keep the last answer
+            layouts.append(found)
         }
         return (presets, complete, layouts)
     }

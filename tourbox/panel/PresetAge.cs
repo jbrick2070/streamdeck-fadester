@@ -101,7 +101,13 @@ namespace Fadester.TourBox {
         if (!xml.Contains("</Preset>")) { complete = false; continue; }
         found.Add(Shortcuts(xml));
         string copy = Path.Combine(Path.GetDirectoryName(dir), "import", Path.GetFileName(file));
-        layouts.Add(File.Exists(copy) ? Layout(Unzip(copy)) : null);
+        string layout = null;
+        if (File.Exists(copy)) {
+          string unzipped = Unzip(copy);
+          if (unzipped == null) complete = false; // being written: keep the last answer
+          else layout = Layout(unzipped);         // null for a copy without a layout: compared by shortcuts only
+        }
+        layouts.Add(layout);
       }
       return found;
     }

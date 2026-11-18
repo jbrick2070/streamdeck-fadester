@@ -77,7 +77,7 @@ language, or `--language CODE`). Its strings come from `tourbox/panel/PanelText.
 `PanelExtraText.cs` and the Mac-only `mac-strings.json`, generated into
 `PanelStrings.swift` by `node tourbox/macos/panel/make-strings.cjs` (build.sh and
 `tests/companion-mac-strings.test.ts` refuse a stale file). TourBox Console's own
-labels (Preset List, Not Linked, Running applications) stay as Console shows them.
+labels (Preset List, Import, Auto Switch) stay as Console shows them.
 The panel saves the TourBox preset and opens the quick start in its own language:
 build.sh writes each language's Mac preset with `tourbox/presets/build_macos.py
 --localized-out` (the same shortcuts, translated labels, as `build.py` makes the Windows

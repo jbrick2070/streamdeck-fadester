@@ -57,6 +57,23 @@ internal sealed class BridgeConfig
     public static readonly JsonSerializerOptions Options = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true };
     public static string DefaultPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FadesterTourBox", "config.json");
 
+    /**
+     * Takes the settings a running bridge reads at each action from a freshly loaded config (the panel's Save sends
+     * "reload", hand test 2026-11-17: a saved layer did nothing until Stop and Start). Restarting instead would let go of a
+     * T-bar fade part-way. Ports, VJster, the game controller, the mixer mode and the fader step are set up at start and
+     * keep their values until the controls restart.
+     */
+    public void ApplyLive(BridgeConfig next)
+    {
+        MusicInput = next.MusicInput; ContentInput = next.ContentInput; MicInput = next.MicInput; MediaInput = next.MediaInput;
+        OverlayScene = next.OverlayScene; OverlaySource = next.OverlaySource; Anchors = next.Anchors;
+        VolumeStepDb = next.VolumeStepDb; DuckDb = next.DuckDb; TransitionStepMs = next.TransitionStepMs;
+        MixStepDb = next.MixStepDb; MixFadeMs = next.MixFadeMs;
+        Layer1Scene = next.Layer1Scene; Layer1Source = next.Layer1Source; Layer2Scene = next.Layer2Scene; Layer2Source = next.Layer2Source;
+        OpacityStep = next.OpacityStep; GamepadFastSpeed = next.GamepadFastSpeed; GamepadSlowSpeed = next.GamepadSlowSpeed;
+        TakeBeats = next.TakeBeats; TakeQuantize = next.TakeQuantize; TakeFallbackMs = next.TakeFallbackMs;
+    }
+
     public static BridgeConfig Load(string path)
     {
         var config = File.Exists(path) ? JsonSerializer.Deserialize<BridgeConfig>(File.ReadAllText(path), Options)

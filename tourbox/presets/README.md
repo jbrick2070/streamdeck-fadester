@@ -1,10 +1,10 @@
 # OBS Fadester for TourBox preset for Windows
 
-Import **OBS Fadester for TourBox.tb** using the import button beside **Preset List** in TourBox Console. Link **OBS Fadester for TourBox** to the running OBS application and select it. For a later update, select this existing preset and use its own menu’s **Import** command to replace its contents.
+Import **OBS Fadester for TourBox.tb** using the import button beside **Preset List** in TourBox Console. Turn **Auto Switch** off and select **OBS Fadester for TourBox**: one preset then works whichever application is in front (OBS, Chrome or anything else). Only if you keep Auto Switch on, link the preset to OBS, and to Google Chrome too to control videos with Chrome in front. For a later update, select this existing preset and use its own menu’s **Import** command to replace its contents.
 
-The raised Knob is the speed of the YouTube video in Chrome, through VJster: press and turn for 0.05 steps (or Short + Dial), tap to play or pause, Side + press for 1x. Press and turn Scroll for the video's quality; Side + D-pad Up reads the video. The flat Dial controls the Studio Mode fader and Scroll selects Preview scenes; press and turn the Dial for finer movement. Hold Side and turn the Dial for Music, Tall and turn the Knob for Content. Hold Top: Knob and Scroll cycle Layer 1's and Layer 2's blend modes and the Dial rides Layer 2's opacity. The companion provides these actions through the shortcuts shown in Console; the video and layer actions use Ctrl+Shift and Alt+Shift chords, everything else Ctrl+Alt+Shift.
+The raised Knob is the speed of the YouTube video in Chrome, through VJster: press and turn for 0.05 steps (or Short + Dial), tap to play or pause, tap Side (or Side + press) for 1x. Press and turn Scroll for the video's quality; Side + D-pad Up reads the video. The flat Dial controls the Studio Mode fader and Scroll selects Preview scenes; press and turn the Dial for finer movement. Hold Side and turn the Dial for Music, Tall and turn the Knob for Content. Hold Top: Knob and Scroll cycle Layer 1's and Layer 2's blend modes and the Dial rides Layer 2's opacity. The companion provides these actions through the shortcuts shown in Console; the video and layer actions use Ctrl+Shift and Alt+Shift chords, everything else Ctrl+Alt+Shift.
 
-The generated guide includes the selected Side, Tall, Short and Top modifier combinations for whole-mix level and media, Content and transition type, fine adjustments, the VJ layers, and direct production shortcuts. The four prime buttons use native **UP** mode, so their bare actions execute on release. Confirm the new hold-and-release gestures on the actual hardware using REHEARSAL.md. [TourBox UP mode](https://www.tourboxtech.com/en/news/up-mode-and-rep-mode.html)
+The generated guide includes the selected Side, Tall, Short and Top modifier combinations for whole-mix level and media, Content and transition type, fine adjustments, the VJ layers, and direct production shortcuts. The four prime buttons use native **UP** mode, so their bare actions execute on release (Side: video speed back to 1x, Short: check recording status, Tall: take, Top: cut). Confirm the new hold-and-release gestures on the actual hardware using REHEARSAL.md. [TourBox UP mode](https://www.tourboxtech.com/en/news/up-mode-and-rep-mode.html)
 
 ## Tour menu and assignment HUD
 
@@ -18,31 +18,32 @@ The menu includes the following actions in display order.
 4. Sync preview to live scene
 5. Duck music
 6. Restore music level
-7. Read whole mix level
-8. Fade whole mix to silence
-9. Restore whole mix
-10. Check recording status
-11. Save OBS screenshot
-12. Add recording chapter
-13. Save replay buffer
-14. Play or pause media
-15. Reconnect to OBS
-16. Previous transition
-17. Next transition
-18. Shorter transition
-19. Longer transition
-20. Show overlay
-21. Hide overlay
-22. Mute microphone
-23. Read the video
-24. Video speed back to 1x
-25. Video quality to Auto
-26. Layer 1 blend mode Normal
-27. Layer 2 blend mode Normal
+7. Undo last audio change
+8. Read whole mix level
+9. Fade whole mix to silence
+10. Restore whole mix
+11. Check recording status
+12. Save OBS screenshot
+13. Add recording chapter
+14. Save replay buffer
+15. Play or pause media
+16. Reconnect to OBS
+17. Previous transition
+18. Next transition
+19. Shorter transition
+20. Longer transition
+21. Show overlay
+22. Hide overlay
+23. Mute microphone
+24. Read the video
+25. Video speed back to 1x
+26. Video quality to Auto
+27. Layer 1 blend mode Normal
+28. Layer 2 blend mode Normal
 
-With **All OBS mixer inputs** enabled in the companion, **Side + raised Knob turn** adjusts the group level; **Read whole mix level** in the menu reads it. **Side + Knob press** returns the video speed to 1x. The native Console registry assigns slot 8 to KNOB+SIDE and slot 126 to its separate press. The whole-mix fade and restore actions use deliberate menu selections. See the companion guide for source discovery, manual intervention and restore behavior.
+With **All OBS mixer inputs** enabled in the companion, **Side + raised Knob turn** adjusts the group level; **Read whole mix level** in the menu reads it. **Side + Knob press**, like a tap on Side, returns the video speed to 1x. The native Console registry assigns slot 8 to KNOB+SIDE and slot 126 to its separate press. The whole-mix fade and restore actions use deliberate menu selections. See the companion guide for source discovery, manual intervention and restore behavior.
 
-The **General HUD** starts hidden. Open it from the top right of TourBox Console for the regular and fine fader, Preview scroll, video speed and fine speed, video quality, Music (Side + Dial), whole mix (Side + Knob), Layer 2 opacity and the two layer blend turns, Take, Undo, recording status, Read the video, 1x, play/pause, Duck and Restore music, and Tour. Click **Select Items** on the HUD to customize that list. [TourBox HUD guide](https://www.tourboxtech.com/en/news/how-to-use-hud-in-tourbox.html)
+The **General HUD** starts hidden. Open it from the top right of TourBox Console for the regular and fine fader, Preview scroll, video speed and fine speed, video quality, Music (Side + Dial), whole mix (Side + Knob), Layer 2 opacity and the two layer blend turns, Take, recording status (Short), 1x (Side and Side + Knob press), Read the video, play/pause, Duck and Restore music, and Tour. Click **Select Items** on the HUD to customize that list. [TourBox HUD guide](https://www.tourboxtech.com/en/news/how-to-use-hud-in-tourbox.html)
 
 ## Reproduce the preset
 

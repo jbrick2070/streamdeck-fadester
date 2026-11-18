@@ -281,8 +281,9 @@ import AppKit
         fill(autoBox, card.withAlphaComponent(0.75), radius: 5)
         text("Auto Switch", at: NSPoint(x: 40, y: 91), size: 11, bold: true, color: ink)
         let toggleRect = NSRect(x: 202, y: 90, width: 32, height: 17)
-        fill(toggleRect, blue, radius: 8.5)
-        fill(NSRect(x: toggleRect.maxX - 15, y: 92, width: 13, height: 13), .white, radius: 6.5)
+        // Off: one preset serves every app in front (hand test 2026-11-17).
+        fill(toggleRect, NSColor(white: 0.42, alpha: 1), radius: 8.5)
+        fill(NSRect(x: toggleRect.minX + 2, y: 92, width: 13, height: 13), .white, radius: 6.5)
 
         // Preset row: OBS Fadester for TourBox + [Not Linked] -> [OBS]
         let imported = t >= 6.8

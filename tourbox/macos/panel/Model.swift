@@ -22,6 +22,12 @@ struct Settings {
     var vjsterExtensionId = "", vjsterObsToken = Settings.newObsToken(), vjsterTarget = "both"
     var layer1Scene = "", layer1Source = "", layer2Scene = "", layer2Source = ""
     var opacityStep = 0.05
+    /// Whether two settings agree on everything the host sets up at start, so a Save while it runs applies by reload alone.
+    static func sameAtStart(_ a: Settings, _ b: Settings) -> Bool {
+        a.port == b.port && a.faderStep == b.faderStep && a.mixEnabled == b.mixEnabled && a.mixOnly == b.mixOnly &&
+        a.vjsterEnabled == b.vjsterEnabled && a.vjsterPort == b.vjsterPort && a.vjsterExtensionId == b.vjsterExtensionId &&
+        a.vjsterObsToken == b.vjsterObsToken && a.vjsterTarget == b.vjsterTarget
+    }
 
     static func newObsToken() -> String {
         (0..<16).map { _ in String(format: "%02x", UInt8.random(in: 0...255)) }.joined()
@@ -264,20 +270,26 @@ enum Readiness {
     /// Like the Windows panel's Readiness.Reminder: nothing in Stream Deck-only mode, which needs neither the T-bar nor the
     /// TourBox preset; nothing while Chrome is in front (VJster's turn) or OBS is closed (nothing to bring forward), FIX-8.
     static func reminder(controlsOn: Bool, obsHidden: Bool, consoleRunning: Bool, frontIsObs: Bool, mixOnly: Bool = false,
-                         frontIsChrome: Bool = false, obsRunning: Bool = true) -> String? {
-        guard controlsOn && !mixOnly && obsRunning else { return nil }
+                         frontIsChrome: Bool = false, obsRunning: Bool = true, autoSwitch: Bool? = nil, activeFadester: Bool? = nil) -> String? {
+        guard controlsOn && !mixOnly else { return nil }
+        // Auto Switch off (TourBox Console's customConfig): the selected preset serves every app in front, so OBS need not be
+        // in front; but another selected preset makes every TourBox control do something else (hand test 2026-11-17).
+        if consoleRunning && autoSwitch == false && activeFadester == false { return L("remindSelectPreset") }
+        guard obsRunning else { return nil }
         if obsHidden { return L("macRemindObsHidden") }
-        if consoleRunning && !frontIsObs && !frontIsChrome { return L("remindObsFront") }
+        // Auto Switch unknown (Console's settings unreadable or in a new format): no strip rather than a wrong one.
+        if consoleRunning && autoSwitch == true && !frontIsObs && !frontIsChrome { return L("remindObsFront") }
         return nil
     }
 
     static func banner(controlsOn: Bool, obsHidden: Bool, consoleRunning: Bool, frontIsObs: Bool, axTrusted: Bool = true, mixOnly: Bool = false,
-                       frontIsChrome: Bool = false, obsRunning: Bool = true) -> (text: String, button: String, action: String)? {
+                       frontIsChrome: Bool = false, obsRunning: Bool = true, autoSwitch: Bool? = nil, activeFadester: Bool? = nil) -> (text: String, button: String, action: String)? {
         if !controlsOn && !axTrusted {
             return (L("macAxBanner"), L("macBtnGrantAx"), "grantAx")
         }
         if let obsText = reminder(controlsOn: controlsOn, obsHidden: obsHidden, consoleRunning: consoleRunning, frontIsObs: frontIsObs, mixOnly: mixOnly,
-                                  frontIsChrome: frontIsChrome, obsRunning: obsRunning) {
+                                  frontIsChrome: frontIsChrome, obsRunning: obsRunning, autoSwitch: autoSwitch, activeFadester: activeFadester) {
+            if obsText == L("remindSelectPreset") { return (obsText, L("btnOpenConsole"), "openConsole") }
             return (obsText, L("btnBringObs"), "openObs")
         }
         return nil
@@ -333,6 +345,15 @@ enum Readiness {
         return next
     }
 
+    /// The layers the host picked by itself in this line (DeskActions.FillLayers); the host joins its lines with spaces.
+    static func pickedLayers(_ line: String) -> [(layer: Int, scene: String, source: String)] {
+        guard let regex = try? NSRegularExpression(pattern: #"Layer ([12]) = (.+?) › (.+?) \(picked automatically"#) else { return [] }
+        let text = line as NSString
+        return regex.matches(in: line, range: NSRange(location: 0, length: text.length)).map {
+            (Int(text.substring(with: $0.range(at: 1))) ?? 1, text.substring(with: $0.range(at: 2)), text.substring(with: $0.range(at: 3)))
+        }
+    }
+
     static func hostFeedback(from line: String) -> String? {
         if line.hasPrefix("RESULT ") {
             guard let sep = line.range(of: ": ") else { return nil }
@@ -341,7 +362,7 @@ enum Readiness {
             guard !summary.isEmpty else { return nil }
             if summary.hasSuffix("· T-bar 0%") {
                 if action == "fader.forward" || action == "fader.fineForward" {
-                    return L("macTbarCcw")
+                    return L("macTbarPause") // clockwise always throws; this click was the end of the last spin
                 }
                 if action == "fader.back" || action == "fader.fineBack" {
                     return L("macTbarCw")
@@ -497,14 +518,19 @@ enum ModelTests {
                   Readiness.tourBox(consoleRunning: true, mixOnly: true, oldPreset: true).action == nil &&
                   Readiness.tourBox(consoleRunning: false, oldPreset: true).action == "openConsole", "TourBox light with an old preset")
         try PresetAge.check(check)
+        try check(Readiness.reminder(controlsOn: true, obsHidden: false, consoleRunning: true, frontIsObs: false, autoSwitch: false, activeFadester: true) == nil &&
+                  Readiness.reminder(controlsOn: true, obsHidden: false, consoleRunning: true, frontIsObs: false, autoSwitch: true, activeFadester: true) == L("remindObsFront") &&
+                  Readiness.reminder(controlsOn: true, obsHidden: false, consoleRunning: true, frontIsObs: false, obsRunning: false, autoSwitch: false, activeFadester: false) == L("remindSelectPreset") &&
+                  Readiness.banner(controlsOn: true, obsHidden: false, consoleRunning: true, frontIsObs: true, autoSwitch: false, activeFadester: false)?.action == "openConsole" &&
+                  Readiness.reminder(controlsOn: true, obsHidden: false, consoleRunning: false, frontIsObs: false, autoSwitch: false, activeFadester: false) == nil, "Reminder with Auto Switch")
         try check(Readiness.controls(running: true, armed: true, obsConnected: false) == LightState(.amber, L("liCtlWaiting"), button: L("macBtnStop"), action: "stop"), "Controls light while armed for videos only")
-        try check(Readiness.reminder(controlsOn: true, obsHidden: false, consoleRunning: true, frontIsObs: false) != nil &&
+        try check(Readiness.reminder(controlsOn: true, obsHidden: false, consoleRunning: true, frontIsObs: false, autoSwitch: true) != nil &&
                   Readiness.reminder(controlsOn: true, obsHidden: false, consoleRunning: true, frontIsObs: false, frontIsChrome: true) == nil &&
                   Readiness.reminder(controlsOn: true, obsHidden: false, consoleRunning: true, frontIsObs: false, obsRunning: false) == nil, "No bring-OBS reminder with Chrome in front or OBS closed")
         try check(Readiness.controls(running: false, armed: false).action == "start" && Readiness.controls(running: false, armed: false, axTrusted: false).action == "grantAx" && Readiness.controls(running: true, armed: true) == LightState(.green, "Controls: on", button: "Stop", action: "stop"), "Controls readiness light")
         try check(Readiness.banner(controlsOn: false, obsHidden: false, consoleRunning: true, frontIsObs: false, axTrusted: false)?.action == "grantAx", "Accessibility banner before start")
         try check(HostController.explainHostError("ERROR: initialization: guardFailed(\"Accessibility denied; grant the responsible app\")").contains("Grant Accessibility"), "Host Accessibility error explanation")
-        try check(Readiness.reminder(controlsOn: true, obsHidden: false, consoleRunning: true, frontIsObs: false) != nil && Readiness.reminder(controlsOn: true, obsHidden: false, consoleRunning: true, frontIsObs: true) == nil, "Frontmost OBS reminder")
+        try check(Readiness.reminder(controlsOn: true, obsHidden: false, consoleRunning: true, frontIsObs: false, autoSwitch: true) != nil && Readiness.reminder(controlsOn: true, obsHidden: false, consoleRunning: true, frontIsObs: true) == nil, "Frontmost OBS reminder")
         try check(Readiness.reminder(controlsOn: true, obsHidden: true, consoleRunning: true, frontIsObs: false, mixOnly: true) == nil && Readiness.tourBox(consoleRunning: true, mixOnly: true) == LightState(.grey, "TourBox: off") && Readiness.vjster(enabled: true, controlsOn: true, connectedPeers: 1, mixOnly: true) == LightState(.grey, "VJster: off"), "Stream Deck-only lights and reminder")
         try check(Readiness.vsMeter("Music up") == nil && Readiness.vsMeter("VS-METER: not_loaded") == "Visual Sidechain: NOT LOADED" && Readiness.vsMeter("VS-METER: no_audio") == "Visual Sidechain: NO AUDIO" && Readiness.vsMeter("VS-METER: active 120 1 2 100 50 0 25") == "Visual Sidechain: 120 BPM [LOCK] · Beat 2/4 · █▅▁▃" && Readiness.vsMeter("VS-METER: active x") == "", "Visual Sidechain meter line")
         var mixOnlySettings = Settings(); mixOnlySettings.mixEnabled = true; mixOnlySettings.mixOnly = true
@@ -517,7 +543,9 @@ enum ModelTests {
         try check(Readiness.hostFeedback(from: "RESULT vjster.speed.up: Video 1.25x · 1080p · playing") == "Video 1.25x · 1080p · playing", "Host RESULT feedback")
         try check(Readiness.hostFeedback(from: "Clip · Video 1x · Auto (720p) · playing") == "Clip · Video 1x · Auto (720p) · playing" &&
                   Readiness.hostFeedback(from: "News · www.example.com · Video 1x · paused") == "News · www.example.com · Video 1x · paused", "VJster lines that name the video are feedback")
-        try check(Readiness.hostFeedback(from: "RESULT fader.forward: T-bar right · T-bar 0%")?.contains("counterclockwise") == true, "Alternating T-bar throw hint")
+        try check(Readiness.hostFeedback(from: "RESULT fader.forward: T-bar right · T-bar 0%") == L("macTbarPause"), "T-bar pause hint after a throw")
+        let picks = Readiness.pickedLayers("RESULT layer1.blend.next: Layer 1 blend: Additive Layer 1 = Kit Visuals › Kit Motion (picked automatically; change it on the Assignments tab) Layer 2 = Kit Visuals › Kit Title (picked automatically; x)")
+        try check(picks.count == 2 && picks[0].layer == 1 && picks[0].source == "Kit Motion" && picks[1].scene == "Kit Visuals" && Readiness.pickedLayers("Music up").isEmpty, "Picked layers")
         try check(Readiness.hostFeedback(from: "REFUSED fader.forward: Choose a different Preview scene first.")?.contains("Scroll") == true, "Same-scene Preview hint")
         let busy = Readiness.vjsterPortBusy(after: "VJster port 48150 is in use, probably by the VJster actions in your Stream Deck or OpenDeck software.", current: false)
         try check(busy && !Readiness.vjsterPortBusy(after: "VJster link listening on 127.0.0.1:48150", current: busy), "VJster port busy tracking")
@@ -556,16 +584,36 @@ enum PresetAge {
     }
 
     /// none: no Fadester preset in Console. old: one of them lacks a shortcut of the shipped preset (Auto Switch may pick it).
-    static func judge(shipped: Set<String>, stored: [Set<String>]) -> PresetState {
+    /// old also when Console's import copy shows the buttons laid out differently (0.12.11 swapped bare Side and Short without
+    /// changing the set of shortcuts, hand test 2026-11-17), as on Windows. layouts[i] is stored[i]'s layout, or nil.
+    static func judge(shipped: Set<String>, stored: [Set<String>], shippedLayout: String? = nil, layouts: [String?] = []) -> PresetState {
         guard !shipped.isEmpty else { return .none }
         var any = false
-        for preset in stored {
-            let shared = preset.intersection(shipped).count
-            if shared < minShared || Double(shared) < minShare * Double(preset.count) { continue }
+        for (i, preset) in stored.enumerated() {
+            if !isFadester(shipped: shipped, preset: preset) { continue }
             any = true
             if !shipped.isSubset(of: preset) { return .old }
+            if let want = shippedLayout, i < layouts.count, let have = layouts[i], have != want { return .old }
         }
         return any ? .current : .none
+    }
+
+    /// A preset's button layout: the configBytes of Console's XML (labels live apart, so it is the same in every language).
+    static func layout(_ xml: String?) -> String? {
+        guard let xml = xml, let start = xml.range(of: "<configBytes>"), let end = xml.range(of: "</configBytes>", range: start.upperBound..<xml.endIndex) else { return nil }
+        return String(xml[start.upperBound..<end.lowerBound].filter { !$0.isWhitespace })
+    }
+    /// The gzip of Console's XML (a shipped .tb, or Console's import copy), as text; nil when it cannot be read.
+    static func unzip(_ url: URL) -> String? {
+        let gzip = Process(), out = Pipe()
+        gzip.executableURL = URL(fileURLWithPath: "/usr/bin/gzip")
+        gzip.arguments = ["-dc", url.path]
+        gzip.standardOutput = out; gzip.standardError = FileHandle.nullDevice
+        do { try gzip.run() } catch { return nil }
+        let data = out.fileHandleForReading.readDataToEndOfFile()
+        gzip.waitUntilExit()
+        guard gzip.terminationStatus == 0 else { return nil }
+        return String(data: data, encoding: .utf8)
     }
 
     /// The preset this Companion ships (a gzip of Console's XML), or an empty set when it cannot be read.
@@ -583,15 +631,39 @@ enum PresetAge {
 
     /// Console's stored presets: ~/Library/Application Support/TourBox Console/presets/<number> (.bak files are its backups).
     /// complete is false when a preset file could not be read or is not finished (no closing </Preset> yet).
-    static func stored() -> (presets: [Set<String>], complete: Bool) {
+    /// layouts: each stored preset's button layout from Console's import copy (import/<number>), or nil without one.
+    static func stored() -> (presets: [Set<String>], complete: Bool, layouts: [String?]) {
         let dir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/TourBox Console/presets")
-        guard let names = try? FileManager.default.contentsOfDirectory(atPath: dir.path) else { return ([], true) }
-        var presets: [Set<String>] = [], complete = true
+        guard let names = try? FileManager.default.contentsOfDirectory(atPath: dir.path) else { return ([], true, []) }
+        var presets: [Set<String>] = [], complete = true, layouts: [String?] = []
         for name in names where !name.isEmpty && name.allSatisfy(\.isNumber) {
             guard let xml = try? String(contentsOf: dir.appendingPathComponent(name), encoding: .utf8), xml.contains("</Preset>") else { complete = false; continue }
             presets.append(shortcuts(xml))
+            let copy = dir.deletingLastPathComponent().appendingPathComponent("import/\(name)")
+            layouts.append(FileManager.default.fileExists(atPath: copy.path) ? layout(unzip(copy)) : nil)
         }
-        return (presets, complete)
+        return (presets, complete, layouts)
+    }
+
+    /// TourBox Console's Auto Switch (customConfig switchByProcess): true, false, or nil when its settings cannot be read.
+    static func autoSwitch() -> Bool? { parseAutoSwitch(consoleFile("customConfig")) }
+    static func parseAutoSwitch(_ xml: String?) -> Bool? {
+        guard let xml = xml, let r = xml.range(of: #"<string>switchByProcess</string>\s*<string>(true|false)</string>"#, options: .regularExpression) else { return nil }
+        return xml[r].contains("<string>true</string>")
+    }
+    /// Whether the preset Console has selected (its tableid file names presets/<number>) is a Fadester preset; nil when unknown.
+    static func activeIsFadester(shipped: Set<String>) -> Bool? {
+        guard !shipped.isEmpty, let id = consoleFile("tableid")?.trimmingCharacters(in: .whitespacesAndNewlines), !id.isEmpty, id.allSatisfy(\.isNumber),
+              let xml = consoleFile("presets/\(id)"), xml.contains("</Preset>") else { return nil }
+        return isFadester(shipped: shipped, preset: shortcuts(xml))
+    }
+    static func isFadester(shipped: Set<String>, preset: Set<String>) -> Bool {
+        let shared = preset.intersection(shipped).count
+        return shared >= minShared && Double(shared) >= minShare * Double(preset.count)
+    }
+    private static func consoleFile(_ name: String) -> String? {
+        let url = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/TourBox Console/\(name)")
+        return try? String(contentsOf: url, encoding: .utf8)
     }
 
     static func check(_ check: (Bool, String) throws -> Void) throws {
@@ -605,5 +677,12 @@ enum PresetAge {
         try check(judge(shipped: shipped, stored: [factory]) == .none && judge(shipped: shipped, stored: [factory, shipped]) == .current &&
                   judge(shipped: shipped, stored: [old]) == .old && judge(shipped: shipped, stored: [shipped, old]) == .old &&
                   judge(shipped: [], stored: [old]) == .none, "Preset age decision")
+        try check(judge(shipped: shipped, stored: [shipped], shippedLayout: "AAA", layouts: ["AAA"]) == .current &&
+                  judge(shipped: shipped, stored: [shipped], shippedLayout: "AAA", layouts: ["BBB"]) == .old &&
+                  judge(shipped: shipped, stored: [shipped], shippedLayout: "AAA", layouts: [nil]) == .current &&
+                  layout("<TableTransfer><configBytes>QUJD\n  REVG</configBytes>") == "QUJDREVG" && layout("<Preset/>") == nil, "Preset layout")
+        try check(parseAutoSwitch("<map><entry><string>switchByProcess</string>\n    <string>false</string></entry></map>") == false &&
+                  parseAutoSwitch("<entry><string>switchByProcess</string><string>true</string></entry>") == true && parseAutoSwitch("<map/>") == nil &&
+                  isFadester(shipped: shipped, preset: shipped) && !isFadester(shipped: shipped, preset: factory), "Console settings")
     }
 }

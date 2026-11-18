@@ -97,14 +97,14 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
         {
             case "layer2.opacity.down":
             case "layer2.opacity.up":
-                return await Opacity(id);
+                layersPicked = ""; { string done = await Opacity(id); return done + layersPicked; }
             case "layer1.blend.previous":
             case "layer1.blend.next":
             case "layer1.blend.reset":
             case "layer2.blend.previous":
             case "layer2.blend.next":
             case "layer2.blend.reset":
-                return await Blend(id);
+                layersPicked = ""; { string done = await Blend(id); return done + layersPicked; }
             case "mix.up": return await StepMixAsync(1);
             case "mix.down": return await StepMixAsync(-1);
             case "mix.fadeOut": return await SetMixAsync(-100, cfg.MixFadeMs);
@@ -334,9 +334,55 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
         var source = Bound(two ? cfg.Layer2Source : cfg.Layer1Source, two ? "Layer 2 source" : "Layer 1 source");
         return (scene, source, two ? "Layer 2" : "Layer 1");
     }
+    /**
+     * Layers nobody chose fill themselves in from the live scene the first time a layer control is used (hand test
+     * 2026-11-17: the controls did nothing until both layers were picked, and a sound file picked by hand showed nothing).
+     * Layer 1 is the topmost visible picture, Layer 2 the next one down: enabled, with video, a size above zero (a sound
+     * file has none) and the only item of that name in the scene. Only empty layers are filled, in memory; the line
+     * returned tells the panel, which shows the choice on the Assignments tab and saves it.
+     */
+    private async Task<string> FillLayers()
+    {
+        bool one = string.IsNullOrWhiteSpace(cfg.Layer1Scene) || string.IsNullOrWhiteSpace(cfg.Layer1Source);
+        bool two = string.IsNullOrWhiteSpace(cfg.Layer2Scene) || string.IsNullOrWhiteSpace(cfg.Layer2Source);
+        if (!one && !two) return "";
+        string scene = Str(await Get("GetCurrentProgramScene"), "currentProgramSceneName");
+        var video = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var row in (await Get("GetInputList"))["inputs"]?.AsArray() ?? [])
+            if (row?["inputKindCaps"]?.GetValue<int>() is int caps && (caps & 1) != 0 && (caps & 64) == 0) video.Add(row!["inputName"]!.GetValue<string>());
+        var items = (await rpc("GetSceneItemList", new() { ["sceneName"] = scene }))["sceneItems"]!.AsArray().Select(n => n!.AsObject()).ToList();
+        var picks = new List<string>();
+        foreach (var item in items.OrderByDescending(n => n["sceneItemIndex"]!.GetValue<int>()))
+        {
+            string name = Str(item, "sourceName");
+            bool isScene = Str(item, "sourceType") == "OBS_SOURCE_TYPE_SCENE";
+            if (item["sceneItemEnabled"]?.GetValue<bool>() != true || (!isScene && !video.Contains(name))) continue;
+            if (items.Count(n => Str(n, "sourceName") == name) != 1) continue;
+            var size = (await rpc("GetSceneItemTransform", new() { ["sceneName"] = scene, ["sceneItemId"] = item["sceneItemId"]!.GetValue<int>() }))["sceneItemTransform"];
+            if ((size?["sourceWidth"]?.GetValue<double>() ?? 0) <= 0 || (size?["sourceHeight"]?.GetValue<double>() ?? 0) <= 0) continue;
+            picks.Add(name);
+        }
+        string said = "";
+        if (one)
+        {
+            picks.Remove(cfg.Layer2Source);
+            if (picks.Count == 0) throw new InvalidOperationException($"Layer 1: {scene} shows no picture to use. Choose a scene and source on the Assignments tab.");
+            cfg.Layer1Scene = scene; cfg.Layer1Source = picks[0]; picks.RemoveAt(0);
+            said += $"\nLayer 1 = {scene} › {cfg.Layer1Source} (picked automatically; change it on the Assignments tab)";
+        }
+        if (two && picks.Count > 0 && picks[0] != cfg.Layer1Source)
+        {
+            cfg.Layer2Scene = scene; cfg.Layer2Source = picks[0];
+            said += $"\nLayer 2 = {scene} › {cfg.Layer2Source} (picked automatically; change it on the Assignments tab)";
+        }
+        return said;
+    }
+    /** The line FillLayers added to the last layer action, for that action's result. */
+    private string layersPicked = "";
     /** The one scene item a layer names. None or several is an error, so a layer never acts on the wrong copy or on a source that left the scene. */
     private async Task<(string Scene, string Source, string Label, int Item)> LayerItem(string id)
     {
+        layersPicked = await FillLayers();
         var (scene, source, label) = Layer(id);
         var rows = (await rpc("GetSceneItemList", new() { ["sceneName"] = scene }))["sceneItems"]!.AsArray()
             .Where(n => n?["sourceName"]?.GetValue<string>() == source).ToArray();
@@ -442,7 +488,11 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
     private async Task<string> Cue(string id)
     {
         if (!(await Get("GetStudioModeEnabled"))["studioModeEnabled"]!.GetValue<bool>()) throw new InvalidOperationException("Enable Studio Mode to select Preview; Program was not changed.");
-        string? anchor = id.StartsWith("anchor.") ? Bound(cfg.Anchors[id[^1] - '1'], "Preview anchor " + id[^1]) : null;
+        // An anchor nobody chose is the scene at that place in OBS's list, top first (hand test 2026-11-17: "Choose Preview
+        // anchor 1 on the Assignments tab first" told the operator nothing). Nothing is written: the Assignments tab still
+        // shows the anchor empty, and choosing a scene there takes over.
+        int anchorIndex = id.StartsWith("anchor.") ? id[^1] - '1' : -1;
+        string? anchor = anchorIndex >= 0 && !string.IsNullOrWhiteSpace(cfg.Anchors[anchorIndex]) ? cfg.Anchors[anchorIndex] : null;
         // OBS may report the destination as Program during a manual sweep. Cancel before reading either scene.
         await CancelOwnedAsync();
         var list = await Get("GetSceneList");
@@ -450,6 +500,12 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
         string preview = Str(list, "currentPreviewSceneName");
         string target;
         if (anchor != null) target = anchor;
+        else if (anchorIndex >= 0)
+        {
+            if (anchorIndex >= scenes.Count)
+                throw new InvalidOperationException($"Preview anchor {anchorIndex + 1} puts a chosen scene into Preview: OBS has only {scenes.Count} scene(s), so choose one on the Assignments tab.");
+            target = scenes[anchorIndex];
+        }
         else if (id == "preview.sync") target = Str(list, "currentProgramSceneName");
         else
         {

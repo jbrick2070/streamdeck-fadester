@@ -161,7 +161,13 @@ internal static class MacDevelopmentHost
             using var lease = AcquireLease(config.Port);
             // Console's synchronized TextReader may block before returning an async
             // task. Keep stdin on its own worker so startup can authenticate first.
-            _ = Task.Run(() => ReadInput(ingress, Stop, stop.Token));
+            _ = Task.Run(() => ReadInput(ingress, Stop, stop.Token, () =>
+            {
+                // The panel's Save while the controls run (hand test 2026-11-17): the settings read at each action change at once.
+                try { config.ApplyLive(BridgeConfig.Load(configPath)); Log("SETTINGS-RELOADED"); }
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException or System.Text.Json.JsonException)
+                { Log("Settings not reloaded: " + e.Message); }
+            }));
             await using var vjster = !readOnly && !mixOnly && config.VjsterEnabled ? new VjsterHost(config, Log) : null;
             Task vjsterBinder = vjster?.StartBinding(stop.Token) ?? Task.CompletedTask;
             try
@@ -209,7 +215,7 @@ internal static class MacDevelopmentHost
         Log("PIPE_STOPPED");
         return 0;
     }
-    static async Task ReadInput(CommandIngress ingress, Action stop, CancellationToken token)
+    static async Task ReadInput(CommandIngress ingress, Action stop, CancellationToken token, Action? reload = null)
     {
         try
         {
@@ -229,6 +235,7 @@ internal static class MacDevelopmentHost
                         string value = line.ToString().TrimEnd('\r');
                         line.Clear();
                         if (!overflow && value == "quit") { stop(); return; }
+                        if (!overflow && value == "reload" && reload is not null) { reload(); overflow = false; continue; }
                         if (overflow) Log("DROPPED: command exceeds 256 characters.");
                         else if (!ingress.SubmitLine(value, out string reason)) Log("DROPPED: " + reason);
                         overflow = false;

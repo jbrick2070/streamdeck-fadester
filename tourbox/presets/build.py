@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""Build and check the OBS Fadester for TourBox Console 1.9 preset and its Chrome copy. Standard library only."""
+"""Build and check the OBS Fadester for TourBox Console 1.9 preset. Standard library only."""
 
 import argparse
 import base64
@@ -109,17 +109,20 @@ REVIEW_PHYSICAL_KEYS = """
 55:press:Ctrl+Shift+F11 20:press:Ctrl+Shift+F3 12:ccw:P 12:cw:Q 45:press:Alt+Shift+F5 46:press:Alt+Shift+F6
 169:ccw:Ctrl+Shift+F4 169:cw:Ctrl+Shift+F5
 """.split()
+# The hand test of 2026-11-17 (owner's choice): a tap on bare Side, the big side button, puts the video back to 1x; a tap on
+# bare Short only reads the recording status. Short is the modifier for fine speed, music and transition length, and a
+# stray tap used to undo a music change live; undo is in the Tour menu now.
+HANDTEST_PHYSICAL_KEYS = """
+1:press:Ctrl+Shift+F6 3:press:V
+""".split()
 RELEASE_SLOTS = {0, 1, 2, 3}
 HUD_SLOTS = [15, 75, 9, 4, 59, 69, 171, 8, 170, 13, 7, 0, 3, 1, 55, 126, 20, 34, 35, 42]
-MASTER_MENU = ("preview.status fader.status soundcheck preview.sync music.duck music.restore "
+MASTER_MENU = ("preview.status fader.status soundcheck preview.sync music.duck music.restore undo "
                "mix.status mix.fadeOut mix.restore recording.status capture.screenshot recording.chapter "
                "replay.save media.play bridge.reconnect transition.previous transition.next "
                "transition.shorter transition.longer overlay.show overlay.hide mic.mute "
                "vjster.status vjster.speed.reset vjster.quality.reset layer1.blend.reset layer2.blend.reset").split()
 MASTER_NAME = "OBS Fadester for TourBox"
-# TourBox Console links a preset to one application, so the Chrome copy is the same full map under its own name:
-# the Companion's shortcuts work whichever app is in front, and the name says which app to link it to.
-CHROME_NAME = "OBS Fadester for TourBox (Chrome Video)"
 
 
 def require(ok, message):
@@ -139,9 +142,9 @@ def check_master(presets):
     require(all(actual[b["hotkey"]] == b["action"] for b in bindings), "Conflicting action/shortcut pair")
     physical = {(slot(b), b["gesture"]): b["hotkey"] for b in preset["bindings"]}
     fixed = {(int(i), gesture): key if "+" in key else "Ctrl+Alt+Shift+" + key
-             for i, gesture, key in (row.split(":") for row in ORIGINAL_PHYSICAL_KEYS + ADDED_PHYSICAL_KEYS + VJ_PHYSICAL_KEYS + REVIEW_PHYSICAL_KEYS)}
+             for i, gesture, key in (row.split(":") for row in ORIGINAL_PHYSICAL_KEYS + ADDED_PHYSICAL_KEYS + VJ_PHYSICAL_KEYS + REVIEW_PHYSICAL_KEYS + HANDTEST_PHYSICAL_KEYS)}
     require(len(preset["bindings"]) == 68 and physical == fixed,
-            "Preserve the original 35 shortcuts, the approved 33 additions, the VJ layout's 17 reassignments and the 2026-11-17 review's 8")
+            "Preserve the original 35 shortcuts, the approved 33 additions, the VJ layout's 17 reassignments, the 2026-11-17 review's 8 and the hand test's 2")
     require({slot(b) for b in preset["bindings"] if b.get("mode") == "release"} == RELEASE_SLOTS and
             all(b.get("mode", "standard") in ("standard", "release") for b in preset["bindings"]),
             "Bare Side, Top, Tall and Short must use calibrated UP/release mode")
@@ -382,25 +385,6 @@ def check(preset, data):
             "Expected hidden General HUD with unique assigned controls")
 
 
-def renamed(data, name):
-    """The same native preset under another presetName; nothing else changes."""
-    root = ET.fromstring(gzip.decompress(data))
-    require(root.find("presetName") is not None, "Preset has no name")
-    root.find("presetName").text = name
-    buffer = io.BytesIO()
-    with gzip.GzipFile(filename="", fileobj=buffer, mode="wb", compresslevel=6, mtime=0) as packed:
-        packed.write(ET.tostring(root, encoding="utf-8"))
-    return buffer.getvalue()
-
-
-def check_copy(master, copy, name=CHROME_NAME):
-    """The Chrome copy must equal the master in everything but its name."""
-    a, b = ET.fromstring(gzip.decompress(master)), ET.fromstring(gzip.decompress(copy))
-    require(b.findtext("presetName") == name, f"Expected the copy to be named {name}")
-    b.find("presetName").text = a.findtext("presetName")
-    require(ET.tostring(a) == ET.tostring(b), f"{name} differs from the master beyond its name")
-
-
 def localized_presets(presets, translations):
     master = presets["master"]
     actions = ALL_ACTIONS | {"native.tourMenu"}
@@ -445,8 +429,9 @@ def main():
                 labels == {(10, 0x1000012): "Kit Welcome", (10, 0x1000013): "Kit Visuals"}, "Reference mismatch")
     presets = json.loads((HERE / "map.json").read_text(encoding="utf-8"))["presets"]
     check_master(presets)
-    require(not ({path.name for path in HERE.glob("*.tb")} - {MASTER_NAME + ".tb", CHROME_NAME + ".tb"}),
-            "Remove superseded or backup native presets; ship only the master and its Chrome copy")
+    # One preset (hand test 2026-11-17): with Auto Switch off in TourBox Console it serves every application in front.
+    require(not ({path.name for path in HERE.glob("*.tb")} - {MASTER_NAME + ".tb"}),
+            "Remove superseded or backup native presets; ship only the master")
     assigned = {}
     for preset in presets.values():
         for binding in preset["bindings"] + preset.get("menuBindings", []):
@@ -455,15 +440,12 @@ def main():
         out = HERE / preset["file"]
         data = build(preset)
         check(preset, data)
-        chrome = out.with_name(CHROME_NAME + ".tb")
         if args.check:
             saved = out.read_bytes()
             check(preset, saved)
             require(gzip.decompress(saved) == gzip.decompress(data), f"Rebuild {out.name}")
-            check_copy(data, chrome.read_bytes())
         else:
             out.write_bytes(data)
-            chrome.write_bytes(renamed(data, CHROME_NAME))
         print(f"{out.name}: {len(preset['bindings'])} shortcuts, {len(preset['nativeBindings'])} native controls, "
               f"{len(menu_keys(preset))} menu items, {len(hud_slots(preset))} HUD rows")
     translations = json.loads((HERE / "locales.json").read_text(encoding="utf-8"))
@@ -472,7 +454,6 @@ def main():
             folder = args.localized_out / locale
             folder.mkdir(parents=True, exist_ok=True)
             (folder / localized["master"]["file"]).write_bytes(data)
-            (folder / (CHROME_NAME + ".tb")).write_bytes(renamed(data, CHROME_NAME))
             (folder / "map.json").write_text(
                 json.dumps({"version": 1, "presets": localized}, ensure_ascii=False, indent=2) + "\n",
                 encoding="utf-8")

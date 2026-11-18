@@ -69,7 +69,7 @@ internal static class Program
                 if (command == "--mix-only" && !config.MixEnabled) throw new ArgumentException("Enable All OBS mixer inputs in Setup first.");
                 if (command == "--listen") config.CheckPorts();
                 // Every line of the run goes through one queue: a console that stops taking lines never holds up the controls.
-                using (ConsoleQueue.Install()) await Listen(config, command == "--listen" ? Binding.Load(map) : [], stop, traceTransitions);
+                using (ConsoleQueue.Install()) await Listen(config, command == "--listen" ? Binding.Load(map) : [], stop, traceTransitions, configPath);
                 return 0;
             }
             if (command is not ("--catalog" or "--check" or "--dispatch")) throw new ArgumentException("Unknown option " + command + ". See --help.");
@@ -89,7 +89,7 @@ internal static class Program
         catch (Exception e) { Console.Error.WriteLine("ERROR: " + e.Message); return 1; }
     }
 
-    private static async Task Listen(BridgeConfig cfg, List<Binding> bindings, CancellationTokenSource stop, bool traceTransitions = false)
+    private static async Task Listen(BridgeConfig cfg, List<Binding> bindings, CancellationTokenSource stop, bool traceTransitions = false, string? configPath = null)
     {
         // One gain authority per local OBS endpoint, including other Windows login sessions.
         // Retain the handle without thread ownership: awaiting OBS can resume on another thread.
@@ -196,6 +196,13 @@ internal static class Program
         {
             line = line.Trim();
             if (line.Equals("quit", StringComparison.OrdinalIgnoreCase)) { stop.Cancel(); return; }
+            if (line.Equals("reload", StringComparison.OrdinalIgnoreCase))
+            {
+                try { if (configPath is null) return; cfg.ApplyLive(BridgeConfig.Load(configPath)); Console.WriteLine("SETTINGS-RELOADED"); }
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException or System.Text.Json.JsonException)
+                { Console.WriteLine("Settings not reloaded: " + e.Message); }
+                return;
+            }
             if (line.StartsWith("dispatch ", StringComparison.OrdinalIgnoreCase))
             {
                 var action = line["dispatch ".Length..].Trim();

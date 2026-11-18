@@ -22,19 +22,20 @@
     <ol>
       <li>OBS の <strong>ツール → WebSocket サーバー設定</strong>で、認証を有効にした状態でサーバーをオンにします。OBS Studio <strong>33</strong> で手動フェードを使うには、<strong>スタジオモード</strong>を有効にし、<strong>フェード（Fade）</strong>を選び、プレビューとプログラムの間にある白いスライダーを表示したままにします。OBS に保存されたパスワードは Fadester Companion が自動で読み込みます。</li>
       <li>Fadester Companion で <strong>1. TourBox プリセットを保存 (.tb)…</strong> をクリックし、使用する言語のプリセットを「ダウンロード」など見つけやすい場所に保存します。</li>
-      <li><strong>2. TourBox Console を開く</strong>（または <strong>クリックする場所を見る</strong>）をクリックします。TourBox Console でプリセットリスト横のインポートアイコンをクリックし、<code>OBS Fadester for TourBox.tb</code> を開き、<strong>Not Linked</strong> をクリックして <strong>OBS</strong> を選び、<strong>Save</strong> をクリックします。<strong>Auto Switch</strong> はオンのままにします。読み込む言語版は一つだけにし、Windows 用のファイルは読み込まないでください。</li>
+      <li><strong>2. TourBox Console を開く</strong>（または <strong>クリックする場所を見る</strong>）をクリックします。TourBox Console でプリセットリスト横のインポートアイコンをクリックし、<code>OBS Fadester for TourBox.tb</code> を開き、<strong>Auto Switch</strong> をオフにして <strong>OBS Fadester for TourBox</strong> を選びます。こうすると、前面にあるアプリに関係なく一つのプリセットで操作できます。Auto Switch をオンのままにする場合だけ、<strong>Not Linked</strong> をクリックして <strong>OBS</strong> を選び、<strong>Save</strong> をクリックします。Chrome を前面にして動画を操作するには Google Chrome にも関連付けます。読み込む言語版は一つだけにし、Windows 用のファイルは読み込まないでください。</li>
       <li><strong>Fadester Companion にアクセシビリティを許可…</strong> をクリックし、<strong>システム設定 → プライバシーとセキュリティ → アクセシビリティ</strong>で Fadester Companion をオンにします。<strong>Fadester Companion T-bar</strong> と <strong>Fadester Companion Shortcuts</strong> も表示されている場合は、それらもオンにします。TourBox Console には別の許可が必要です。</li>
-      <li><strong>割り当て</strong> でシーンと音楽の入力を選びます。<strong>保存 &amp; 開始</strong> をクリックし、<strong>コントロール: オン</strong> になったら OBS を前面に出します。Fadester Companion は開いたままにしてください。</li>
+      <li><strong>割り当て</strong> でシーンと音楽の入力を選びます。<strong>保存 &amp; 開始</strong> をクリックし、<strong>コントロール: オン</strong> になるまで待ちます。Fadester Companion は開いたままにしてください。</li>
     </ol>
     <p>Mac 用プリセットでは、OBS の操作に <strong>Control + Option + Shift</strong>、動画とレイヤーの操作に <strong>Control + Shift</strong> または <strong>Option + Shift</strong> を使います。Command は使いません。</p>
 
     <h2>異なる二つのシーンで試す</h2>
     <ul>
       <li><strong>Scroll</strong> ホイールを回すと、プログラムはそのままでプレビューのシーンだけが変わります。押すと両方のシーン名がパネルに表示されます。</li>
-      <li>平たい <strong>Dial</strong> をゆっくり回すと、OBS のスライダーが動いて二つのシーンが混ざります。途中で取り消すには、<strong>Side</strong> を押したまま <strong>Dial</strong> を押します。</li>
-      <li>Chrome で YouTube 動画を再生します（無料の VJster 拡張機能が必要です）。突き出た <strong>Knob</strong> を回すと速度が変わり、押しながら回すと微調整できます。押すと動画を再生・一時停止できます。</li>
+      <li>平たい <strong>Dial</strong> をゆっくり回すと、OBS のスライダーが動いて二つのシーンが混ざります。途中で取り消すには、<strong>Side</strong> を押したまま <strong>Dial</strong> を押します。時計回りに回すと、次のトランジションでも常に T バーがプレビュー側へ動きます。トランジションが終わったら、少し間を置いてから回してください。</li>
+      <li>Chrome で YouTube 動画を再生します（無料の VJster 拡張機能が必要です）。突き出た <strong>Knob</strong> を回すと速度が変わり、押しながら回すと微調整できます。押すと動画を再生・一時停止できます。<strong>Side</strong> を軽く押すと速度が 1 倍に戻ります。</li>
       <li>OBS 内の YouTube 動画を直接操作するには、セットアップで動画を入力し、<strong>OBS ブラウザソース URL をコピー</strong> をクリックして、そのアドレスを OBS のブラウザソースに貼り付けます。</li>
-      <li>Fadester で音楽に使う入力を割り当てます。<strong>Side</strong> を押したまま平たい <strong>Dial</strong> を回すと音量を調整できます。<strong>Top</strong> を押したままの Knob、Scroll、Dial は VJ レイヤー（ブレンドモードと不透明度）を操作します。</li>
+      <li>Fadester で音楽に使う入力を割り当てます。<strong>Side</strong> を押したまま平たい <strong>Dial</strong> を回すと音量を調整できます。<strong>Top</strong> を押したままの Knob、Scroll、Dial は VJ レイヤー（ブレンドモードと不透明度）を操作します。選んでいないレイヤーは、初めて操作したときに放送中のシーンから自動で決まり（レイヤー 1 = いちばん上の見えている映像、レイヤー 2 = その次）、<strong>割り当て</strong>に保存されます。</li>
+      <li><strong>Short</strong> を軽く押すと録画状態を確認できます（何も変更しません）。<strong>音量変更を元に戻す</strong> は <strong>Tour</strong> メニューにあります。</li>
     </ul>
 
     <h2>ミックス全体を調整する</h2>

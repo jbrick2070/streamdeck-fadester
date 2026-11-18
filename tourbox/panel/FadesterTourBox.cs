@@ -153,9 +153,11 @@ namespace Fadester.TourBox {
     bool obsConnected; string padState="stPadOff"; ListBox activity; Button connect, start, save, openSettings;
     // What the lights also need from the desktop, read once a second without touching OBS (ShowMe.cs).
     Light obsLight, tbLight, vjLight, padLight, ctlLight; System.Windows.Forms.Timer watch; ShowMeWindow showMe;
-    string obsProblem, front=""; bool obsRunning, obsHidden, padSeen, studioOff, tourboxConsole, consoleInstalled; DateTime autoConnectAt=DateTime.MaxValue; int autoTries;
+    string obsProblem, front=""; bool obsRunning, obsHidden, padSeen, padEver, studioOff, tourboxConsole, consoleInstalled; DateTime autoConnectAt=DateTime.MaxValue; int autoTries;
     // Whether Console holds an older OBS Fadester preset than ours (PresetAge.cs, FIX-9): read every few seconds, said once in Activity.
     PresetState presetState=PresetState.None; HashSet<string> shippedShortcuts; DateTime presetCheckAt=DateTime.MinValue; bool toldOldPreset;
+    // TourBox Console's Auto Switch and whether its selected preset is ours (PresetAge.cs): they decide the reminder strip.
+    bool? consoleAutoSwitch, activeFadester; string reminderKey; string shippedLayout;
     // VJster, from the running controls' own lines: which of the Chrome extension and the OBS page are connected, and whether its port is taken.
     HashSet<string> vjPeers=new HashSet<string>(); bool vjPortBusy;
     TableLayoutPanel reminderBar; Button bringObs;
@@ -252,7 +254,10 @@ namespace Fadester.TourBox {
       reminder=new Label {AutoSize=true,UseMnemonic=false,BackColor=amberBack,ForeColor=Color.FromArgb(107,74,0),Font=new Font("Segoe UI",10,FontStyle.Bold),Anchor=AnchorStyles.Left,Margin=new Padding(0,5,8,3),MaximumSize=new Size(560,0)};
       bringObs=new Button {Text=text.Get("btnBringObs"),AutoSize=true,Height=28,FlatStyle=FlatStyle.Flat,BackColor=accent,ForeColor=Color.White,Font=new Font("Segoe UI",9,FontStyle.Bold),UseMnemonic=false,Cursor=Cursors.Hand,Anchor=AnchorStyles.Right,Padding=new Padding(4,0,4,0),Margin=new Padding(0)};
       bringObs.FlatAppearance.BorderSize=0;
-      bringObs.Click+=delegate { if(!Desktop.BringObsToFront()) Note(text.Get("obsNotFound")); };
+      bringObs.Click+=delegate {
+        if(reminderKey=="remindSelectPreset"){ OpenConsole(); return; }
+        if(!Desktop.BringObsToFront()) Note(text.Get("obsNotFound"));
+      };
       reminderBar.Controls.Add(reminder,0,0); reminderBar.Controls.Add(bringObs,1,0);
       grid.Controls.Add(reminderBar,0,2);
       grid.ClientSizeChanged+=delegate { reminder.MaximumSize=new Size(Math.Max(150,grid.ClientSize.Width-28-bringObs.Width-40),0); };
@@ -277,11 +282,10 @@ namespace Fadester.TourBox {
       SubTitle(body,"TourBox");
       Hint(body,text.Get("importHint"));
       var importRow=new FlowLayoutPanel {AutoSize=true,WrapContents=true,Margin=new Padding(0)};
-      AddButton(importRow,text.Get("btnImportObs"),delegate { ImportPreset(); ShowImportGuide(); });
-      AddButton(importRow,text.Get("btnImportChrome"),delegate { ImportPreset(true); });
+      AddButton(importRow,text.Get("openPreset"),delegate { ImportPreset(); ShowImportGuide(); });
       AddButton(importRow,text.Get("btnShowWhere"),delegate { ShowImportGuide(); });
       body.Controls.Add(importRow); importNote=Hint(body,"");
-      Hint(body,text.Get("importChromeHint"));
+      Hint(body,text.Get("importAutoHint"));
       Title(body,text.Get("cueTitle"));
       Hint(body,text.Get("cueHint"));
       Title(body,text.Get("inputsTitle")); Hint(body,text.Get("inputsHint"));
@@ -314,6 +318,9 @@ namespace Fadester.TourBox {
       AddButton(pageRow,text.Get("copyObsUrl"),delegate { CopyObsUrl(); }); body.Controls.Add(pageRow);
       enableGamepad.CheckedChanged+=delegate { ShowStatus(); }; mixOnly.CheckedChanged+=delegate { ShowStatus(); }; enableVjster.CheckedChanged+=delegate { ShowStatus(); };
       var assign=Page(tabs,text.Get("assignments")); Title(assign,text.Get("assignTitle"));
+      // Opening Assignments reads OBS's scenes and sources again when the list is old (hand test 2026-11-17: the lists
+      // stayed empty until "Read scenes and inputs from OBS" was clicked).
+      tabs.SelectedIndexChanged += delegate { if(tabs.SelectedTab==assign.Parent && obsConnected && DateTime.Now-catalogAt>TimeSpan.FromSeconds(10)){ var pending=Connect(true); } };
       Hint(assign,text.Get("assignHint"));
       foreach (var field in new[] { "musicInput", "contentInput", "micInput", "mediaInput", "overlayScene", "overlaySource" })
         Field(assign,text.Get(field),field);
@@ -606,11 +613,30 @@ namespace Fadester.TourBox {
       try { File.WriteAllText(tmp,Json.Serialize(config),new UTF8Encoding(false)); if(File.Exists(settings)) File.Replace(tmp,settings,null); else File.Move(tmp,settings); }
       finally { if(File.Exists(tmp)) File.Delete(tmp); }
     }
-    void SaveRequested() { if(PortsClash())return; try {WriteConfig(); Note(text.Get(worker==null?"saved":"savedRestart"));}catch(Exception e){Note(e.Message);} }
+    /**
+     * Save. Running controls take the new assignments, inputs, anchors and steps at once ("reload", hand test 2026-11-17: a
+     * saved layer did nothing until Stop and Start); a restart would let go of a T-bar fade part-way. The settings the
+     * controls set up at start (ports, VJster, the game controller, the mixer mode, the fade step) still need Stop and Start.
+     */
+    void SaveRequested() {
+      if(PortsClash())return;
+      string before=RestartSettings();
+      try { WriteConfig(); } catch(Exception e){ Note(e.Message); return; }
+      var p=worker;
+      if(p==null){ Note(text.Get("saved")); return; }
+      try { p.StandardInput.WriteLine("reload"); p.StandardInput.Flush(); } catch(IOException) {} catch(InvalidOperationException) {}
+      Note(text.Get(RestartSettings()==before ? "savedApplied" : "savedRestart"));
+    }
+    /** The saved settings a running bridge only reads at start (BridgeConfig.ApplyLive leaves them alone), as one string to compare. */
+    string RestartSettings() {
+      var keys=new[]{"host","port","vjsterEnabled","vjsterPort","vjsterExtensionId","vjsterTarget","vjsterObsToken","gamepadEnabled","gamepadEasy","gamepadMap","mixEnabled","mixOnly","faderStep"};
+      var parts=new List<string>(); foreach(var k in keys){ object v; parts.Add(k+"="+(config.TryGetValue(k,out v) ? Json.Serialize(v) : "")); }
+      return string.Join("\n",parts);
+    }
     /** Console has no way in from outside: no file type, no command line. Hand over the path, open Console, say what to do there. */
-    void ImportPreset(bool chrome=false) {
-      string path=chrome ? text.ChromePresetPath(folder) : text.PresetPath(folder);
-      try { Clipboard.SetText(path); importNote.Text=text.Get(chrome ? "importCopiedChrome" : "importCopied"); }
+    void ImportPreset() {
+      string path=text.PresetPath(folder);
+      try { Clipboard.SetText(path); importNote.Text=text.Get("importCopied"); }
       catch(ExternalException) { importNote.Text=text.Get("importManual",path); }
       try { if(!Desktop.Running("TourBox Console")) { string exe=Desktop.ConsoleExe(); if(exe!=null) OpenPath(exe); } }
       catch(InvalidOperationException e) { Note(e.Message); }
@@ -626,9 +652,11 @@ namespace Fadester.TourBox {
       presetCheckAt=DateTime.Now.AddSeconds(5);
       if(shippedShortcuts==null) shippedShortcuts=PresetAge.Shipped(text.PresetPath(folder));
       // A preset Console is still writing (or a file it holds) keeps the last answer instead of a false one.
-      bool complete; var stored=PresetAge.Stored(out complete);
+      consoleAutoSwitch=PresetAge.AutoSwitch(); activeFadester=PresetAge.ActiveIsFadester(shippedShortcuts);
+      if(shippedLayout==null) shippedLayout=PresetAge.Layout(PresetAge.Unzip(text.PresetPath(folder)));
+      bool complete; List<string> layouts; var stored=PresetAge.Stored(out complete, out layouts);
       if(!complete) return;
-      presetState=PresetAge.Judge(shippedShortcuts,stored);
+      presetState=PresetAge.Judge(shippedShortcuts,stored,shippedLayout,layouts);
       // Said once, and only where the TourBox light shows it: Console running and not in Stream Deck-only mode.
       if(presetState==PresetState.Old && !toldOldPreset && tourboxConsole && !mixOnly.Checked){ toldOldPreset=true; Note(text.Get("tbOldNote")); }
       if(presetState!=PresetState.Old) toldOldPreset=false;
@@ -658,8 +686,16 @@ namespace Fadester.TourBox {
     void Note(string msg) {
       if(IsDisposed || Disposing || String.IsNullOrWhiteSpace(msg))return;
       if(InvokeRequired){try{BeginInvoke((Action)(()=>Note(msg)));}catch(InvalidOperationException){}return;}
-      msg=msg.Trim(); state.Text=msg; if(hud!=null && !hud.IsDisposed)hud.Set(msg); if(activity!=null){activity.Items.Add(DateTime.Now.ToString("T")+"  "+msg); if(activity.Items.Count>180)activity.Items.RemoveAt(0); activity.TopIndex=activity.Items.Count-1;}
+      msg=msg.Trim(); state.Text=msg; if(hud!=null && !hud.IsDisposed)hud.Set(msg);
+      if(activity!=null){
+        // A repeated line (the same error on every Knob click) becomes one line with a count.
+        bool repeat=msg==lastNote && activity.Items.Count>0; lastNoteCount=repeat?lastNoteCount+1:1; lastNote=msg;
+        string line=DateTime.Now.ToString("T")+"  "+ActivityText.Counted(msg,lastNoteCount);
+        if(repeat)activity.Items[activity.Items.Count-1]=line; else {activity.Items.Add(line); if(activity.Items.Count>180)activity.Items.RemoveAt(0);}
+        activity.TopIndex=activity.Items.Count-1;
+      }
     }
+    string lastNote; int lastNoteCount; DateTime catalogAt=DateTime.MinValue;
     ProcessStartInfo Command(string args) {
       var exe=Path.Combine(folder,"FadesterCompanionBridge.exe"); if(!File.Exists(exe))throw new FileNotFoundException(text.Get("bridgeMissing"));
       var pi=new ProcessStartInfo(exe,args) {UseShellExecute=false,CreateNoWindow=true,WorkingDirectory=folder,RedirectStandardOutput=true,RedirectStandardError=true,RedirectStandardInput=true,StandardOutputEncoding=Encoding.UTF8,StandardErrorEncoding=Encoding.UTF8};
@@ -667,9 +703,10 @@ namespace Fadester.TourBox {
       pi.EnvironmentVariables["FADESTER_PANEL"]="1";
       return pi;
     }
-    async Task Connect() {
-      if(refreshing||invalidConfig||PortsClash())return;
-      refreshing=true; connect.Enabled=false; start.Enabled=false; string tmp=null;
+    /** quiet: a refresh of the lists by itself (OBS connected, Assignments opened): Stop stays usable and success says nothing. */
+    async Task Connect(bool quiet=false) {
+      if(refreshing||invalidConfig||(!quiet && PortsClash()))return;
+      refreshing=true; connect.Enabled=false; if(!quiet) start.Enabled=false; string tmp=null;
       string failure=null; // the OBS problem this scan found; any other failure counts as OBS not answering
       try {
         // A read-only discovery must not overwrite the user's saved assignments.
@@ -681,16 +718,16 @@ namespace Fadester.TourBox {
           var s=await output; var err=await error;
           if(proc.ExitCode!=0){ failure=PanelText.ProblemCode(err); throw new Exception(String.IsNullOrWhiteSpace(err)?text.Get("obsUnavailable"):text.Explain(err.Trim())); }
           var next=Decode(s); if(next==null || !next.ContainsKey("scenes"))throw new Exception(text.Get("noScenes"));
-          catalog=next; LoadChoices(true);
+          catalog=next; catalogAt=DateTime.Now; LoadChoices(true);
           bool studioMode, knowsStudio=Boolean.TryParse(Val(next,"studioMode"),out studioMode);
           string studio=knowsStudio ? text.Get(studioMode?"on":"off") : "—";
           live.Text=text.Get("sceneSummary",Val(next,"program","—"),Val(next,"preview","—"),studio);
           SetVsStatus(FormatVsMeter(text,Val(next,"visualSidechain"))??"");
           obsConnected=true; obsProblem=null; studioOff=knowsStudio && !studioMode; ShowStatus();
-          Note(text.Get(worker==null?"obsReady":"obsConnected",List(next,"scenes").Length));
+          if(!quiet) Note(text.Get(worker==null?"obsReady":"obsConnected",List(next,"scenes").Length));
         }
-      }catch(Exception e){live.Text=""; if(worker==null){SetVsStatus(""); obsConnected=false; obsProblem=failure??"obs-no-answer"; ShowStatus();} Note(e.Message);}
-      finally{try{if(tmp!=null && File.Exists(tmp))File.Delete(tmp);}catch(IOException){} refreshing=false; if(!IsDisposed){connect.Enabled=true; start.Enabled=true;}}
+      }catch(Exception e){if(quiet){ Entry.Log("list refresh: "+e.Message); } else { live.Text=""; if(worker==null){SetVsStatus(""); obsConnected=false; obsProblem=failure??"obs-no-answer"; ShowStatus();} Note(e.Message);}}
+      finally{try{if(tmp!=null && File.Exists(tmp))File.Delete(tmp);}catch(IOException){} refreshing=false; if(!IsDisposed){connect.Enabled=true; if(!quiet) start.Enabled=true;}}
       // After the scan, OBS or not: VJster controls Chrome's videos without OBS, and the bridge connects to OBS when it appears (FIX-8).
       bool asked=startAfterScan; startAfterScan=false;
       if(IsDisposed || worker!=null) return;
@@ -766,11 +803,40 @@ namespace Fadester.TourBox {
         var peersNow=Readiness.VjsterPeers(line,vjPeers); bool busyNow=Readiness.VjsterPortBusy(line,vjPortBusy);
         if(busyNow!=vjPortBusy || !peersNow.SetEquals(vjPeers)){ vjPeers=peersNow; vjPortBusy=busyNow; ShowStatus(); }
         string padNow=PadState(line,padState), problem=PanelText.ProblemCode(line); bool obsNow=ObsState(line,obsConnected);
+        if(padNow=="stPadOn") padEver=true;
+        // OBS just answered the running controls: read its scenes and sources for the Assignments lists, with no click.
+        if(obsNow && !obsConnected){ var refresh=Connect(true); }
         if(!obsNow && obsConnected) SetVsStatus("");
         if(obsNow) problem=null; else if(problem==null) problem=obsProblem;
         if(padNow!=padState || obsNow!=obsConnected || problem!=obsProblem){padState=padNow; obsConnected=obsNow; obsProblem=problem; ShowStatus();}
       }
-      Note(text.Explain(line));
+      if(line=="SETTINGS-RELOADED") return; // the Save note already said so
+      if(worker==p) TakePickedLayer(line);
+      Note(TbarHint(line) ?? text.Explain(line));
+    }
+    /**
+     * A layer the bridge picked by itself (DeskActions.FillLayers, "Layer 1 = scene › source (picked automatically…"):
+     * shown on the Assignments tab and saved, so the next start keeps it. The bridge already uses it.
+     */
+    void TakePickedLayer(string line) {
+      foreach(System.Text.RegularExpressions.Match m in Readiness.PickedLayers(line)){
+        string n=m.Groups[1].Value, scene=m.Groups[2].Value, source=m.Groups[3].Value;
+        config["layer"+n+"Scene"]=scene; config["layer"+n+"Source"]=source;
+        boxes["layer"+n+"Scene"].Text=scene; PopulateLayer(int.Parse(n)); boxes["layer"+n+"Source"].Text=source;
+        try { WriteConfig(); } catch(Exception e){ Note(e.Message); }
+      }
+    }
+    /**
+     * A Dial click that left the T-bar at rest, in words, as on the Mac (Model.swift hostFeedback): forward right after a
+     * throw is the end of that spin (StudioFader.SettleMs), back at rest has nothing to undo.
+     */
+    string TbarHint(string line) {
+      const string rest=" · T-bar 0%";
+      if(line==null || !line.EndsWith(rest,StringComparison.Ordinal)) return null;
+      string label=line.Substring(0,line.Length-rest.Length); string a;
+      foreach(var id in new[]{"fader.forward","fader.fineForward"}) if(actionLabels.TryGetValue(id,out a) && a==label) return text.Get("tbarPause");
+      foreach(var id in new[]{"fader.back","fader.fineBack"}) if(actionLabels.TryGetValue(id,out a) && a==label) return text.Get("tbarCw");
+      return null;
     }
     /** Whether OBS is connected after this bridge line (Program.cs prints these). */
     internal static bool ObsState(string line,bool now) {
@@ -794,10 +860,11 @@ namespace Fadester.TourBox {
       if(!on){ vjPeers.Clear(); vjPortBusy=false; }
       tbLight.Display(Readiness.TourBox(tourboxConsole,consoleInstalled,mixOnly.Checked,enableGamepad.Checked,presetState==PresetState.Old),text);
       vjLight.Display(Readiness.Vjster(enableVjster.Checked,mixOnly.Checked,on,vjPeers.Count,vjPortBusy),text);
-      padLight.Display(Readiness.Pad(enableGamepad.Checked,mixOnly.Checked,on,padState,padSeen),text);
+      padLight.Display(Readiness.Pad(enableGamepad.Checked,mixOnly.Checked,on,padState,padSeen,padEver),text);
       ctlLight.Display(Readiness.Controls(on,obsConnected),text);
-      string key=Readiness.Reminder(on,mixOnly.Checked,obsHidden,tourboxConsole,front,obsRunning,enableVjster.Checked);
-      if(key!=null) reminder.Text=text.Get(key);
+      string key=Readiness.Reminder(on,mixOnly.Checked,obsHidden,tourboxConsole,front,obsRunning,enableVjster.Checked,consoleAutoSwitch,activeFadester);
+      reminderKey=key;
+      if(key!=null){ reminder.Text=text.Get(key); bringObs.Text=text.Get(key=="remindSelectPreset" ? "btnOpenConsole" : "btnBringObs"); }
       reminderBar.Visible=key!=null;
     }
     /** Once a second: whether OBS runs, has its main window open or is in front, and whether a controller is plugged in. */
@@ -810,7 +877,7 @@ namespace Fadester.TourBox {
         if(running && !obsRunning && !on && !obsConnected){ autoConnectAt=DateTime.Now.AddSeconds(5); autoTries=4; }
         if(!running && !on){ obsConnected=false; studioOff=false; autoTries=0; obsProblem=null; }
         obsRunning=running;
-        if(!on || !enableGamepad.Checked) padSeen=PadProbe.Any();
+        if(!on || !enableGamepad.Checked){ padSeen=PadProbe.Any(); padEver|=padSeen; }
         obsHidden=on && running && Desktop.ObsHidden();
         tourboxConsole=Desktop.Running("TourBox Console"); // the reminder asks for it only while the controls run
         consoleInstalled=tourboxConsole || Desktop.ConsoleExe()!=null;

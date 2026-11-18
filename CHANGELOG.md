@@ -4,6 +4,19 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 
 ## Unreleased
 
+## 0.12.11 - 2026-11-17
+This release ships Fadester Companion 0.1.14; the VJster extension stays 0.1.6. Fixes from the TourBox hand test (Windows and Mac alike, every language), with a plan reviewed by Antigravity:
+- **One TourBox preset again.** The Chrome Video copy is gone. Turn **Auto Switch off** in TourBox Console and select **OBS Fadester for TourBox**: one preset then works whichever app is in front. The yellow "bring OBS to the front" strip appears only while Auto Switch is on (the Companion reads Console's setting); with Auto Switch off and another preset selected, it says to select ours instead. The old-preset warning now also compares the button layout Console keeps from the import, so it flags a preset whose buttons moved.
+- **Bare buttons:** a tap on **Side** (the big side button) puts the video back to 1x; a tap on **Short** only reads the recording status. A stray tap on Short used to undo a music change live; **Undo** is in the Tour menu now. Re-import the preset.
+- **The flat Dial: clockwise always moves the T-bar towards Preview,** also for the next throw (it used to switch direction after each take, which read backwards on screen). Clicks right after a throw are taken as the end of that spin, so the next throw starts after a short pause.
+- **Layers fill themselves in:** the first time a layer control is used with no layer chosen, Layer 1 becomes the topmost visible picture in the live scene and Layer 2 the next one down (sound-only, hidden and duplicate sources are skipped). The choice appears on the Assignments tab and is saved.
+- **Preview anchors:** an anchor nobody chose is the scene at that place in OBS's list.
+- **Save applies at once:** while the controls run, saved assignments, inputs, anchors and steps take effect immediately, with no Stop and Start (the controls reload them; a restart would let go of a fade part-way). Port, VJster, game controller, mixer mode and fade step still need Stop and Start.
+- **Scenes and sources are read by themselves** when OBS connects to the running controls and when the Assignments tab opens.
+- **Activity:** the same line again becomes one line with a count. After a throw, a Dial click at rest says to pause and turn clockwise (Windows now too).
+- **Controller light:** grey "Controller: none plugged in" when no game controller is connected; amber only for one that was plugged in this session and is gone.
+- **Music duck and restore say what happened:** "already at or below the duck level; nothing to duck", "was not ducked; nothing to restore", "was changed by hand after the duck; restore skipped".
+
 ## 0.12.10 - 2026-11-17
 0.12.9 was a draft for the hardware test and was never published. This release ships Fadester Companion 0.1.13; the VJster extension stays 0.1.6. Fixes from a regression review of 0.12.8 and 0.12.9:
 - **Mac: Chrome's videos keep working through OBS trouble.** OBS timing out, or a session that cannot start (OBS's T-bar not parked at zero), no longer ends the Companion's host: it keeps the video controls and tries OBS again after a growing pause. Turning the Knob nonstop no longer delays noticing that OBS has opened. Only a stopped shortcut helper (Accessibility withdrawn) still ends it.

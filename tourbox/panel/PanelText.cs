@@ -9,7 +9,6 @@ namespace Fadester.TourBox {
   internal sealed class PanelText {
     static readonly string[] Locales = { "en", "es", "fr", "zh-CN" };
     const string PresetName = "OBS Fadester for TourBox.tb";
-    const string ChromePresetName = "OBS Fadester for TourBox (Chrome Video).tb";
     static readonly Regex Placeholder = new Regex(@"\{\d+\}");
     readonly Dictionary<string,string> extra;
 
@@ -141,6 +140,8 @@ namespace Fadester.TourBox {
       { "select", new[] { "Select", "Elegir", "Choisir", "选择" } },
       { "cw", new[] { "Clockwise", "Horario", "Horaire", "顺时针" } },
       { "ccw", new[] { "Counterclockwise", "Antihorario", "Antihoraire", "逆时针" } },
+      { "tbarCw", new[] { "T-bar at 0%: turn the Dial clockwise for this fade.", "T-bar al 0 %: gira el Dial en sentido horario para este fundido.", "T-bar à 0 % : tournez le Dial dans le sens horaire pour ce fondu.", "T-bar 位于 0%：此次淡变请顺时针转动 Dial。" } },
+      { "tbarPause", new[] { "T-bar at 0%: that fade just finished. Pause a moment, then turn the Dial clockwise for the next one.", "T-bar al 0 %: ese fundido acaba de terminar. Espera un momento y gira el Dial en sentido horario para el siguiente.", "T-bar à 0 % : ce fondu vient de se terminer. Attendez un instant, puis tournez le Dial dans le sens horaire pour le suivant.", "T-bar 为 0%：刚完成一次渐变。稍等片刻，再顺时针转动 Dial 进行下一次。" } },
       { "activity", new[] { "Activity", "Actividad", "Activité", "活动" } },
       { "saveStart", new[] { "Save && start controls", "Guardar e iniciar", "Enregistrer et démarrer", "保存并启动控制" } },
       { "save", new[] { "Save assignments", "Guardar asignaciones", "Enregistrer les affectations", "保存分配" } },
@@ -159,6 +160,7 @@ namespace Fadester.TourBox {
       { "mapUnreadable", new[] { "Cannot read the control map. Install Fadester Companion again, or extract the whole ZIP again.", "No se puede leer el mapa de controles. Vuelve a instalar Fadester Companion o vuelve a extraer todo el archivo ZIP.", "Impossible de lire le plan des commandes. Réinstallez Fadester Companion ou extrayez à nouveau tout le fichier ZIP.", "无法读取控制映射。请重新安装 Fadester Companion，或重新解压整个 ZIP 文件。" } },
       { "cannotWrite", new[] { "Existing config could not be read.", "No se pudo leer la configuración existente.", "Impossible de lire la configuration existante.", "无法读取现有配置。" } },
       { "saved", new[] { "Assignments saved.", "Asignaciones guardadas.", "Affectations enregistrées.", "分配已保存。" } },
+      { "savedApplied", new[] { "Saved. The running controls use the new settings now.", "Guardado. Los controles en marcha ya usan los nuevos ajustes.", "Enregistré. Les commandes en cours utilisent déjà les nouveaux réglages.", "已保存。正在运行的控制现已使用新设置。" } },
       { "savedRestart", new[] {
         "Assignments saved. Stop and restart controls to apply.",
         "Asignaciones guardadas. Detén y reinicia los controles para aplicarlas.",
@@ -219,6 +221,7 @@ namespace Fadester.TourBox {
       { "liPadOn", new[] { "Controller: connected", "Mando: conectado", "Manette : connectée", "手柄：已连接" } },
       { "liPadReady", new[] { "Controller: ready", "Mando: listo", "Manette : prête", "手柄：就绪" } },
       { "liPadMissing", new[] { "Controller: not found", "Mando: no encontrado", "Manette : introuvable", "手柄：未找到" } },
+      { "liPadNone", new[] { "Controller: none plugged in", "Mando: ninguno conectado", "Manette : aucune branchée", "手柄：未连接" } },
       { "liPadIdle", new[] { "Controller: plugged in, not in use", "Mando: conectado, sin usar", "Manette : branchée, non utilisée", "手柄：已插入，未启用" } },
       { "liPadOff", new[] { "Controller: off", "Mando: desactivado", "Manette : désactivée", "手柄：已关闭" } },
       { "liCtlOn", new[] { "Controls: on", "Controles: activos", "Commandes : actives", "控制：已开启" } },
@@ -231,7 +234,8 @@ namespace Fadester.TourBox {
       { "autoStarted", new[] { "Controls started by themselves. Press Stop controls to turn them off.", "Los controles se iniciaron solos. Pulsa Detener controles para apagarlos.", "Les commandes ont démarré d’elles-mêmes. Appuyez sur Arrêter les commandes pour les couper.", "控制已自动启动。按“停止控制”可关闭。" } },
       { "btnClose", new[] { "Close", "Cerrar", "Fermer", "关闭" } },
       { "remindObsOpen", new[] { "Keep the main OBS window open, not minimised: the T-bar needs it.", "Mantén abierta la ventana principal de OBS, sin minimizar: el T-bar la necesita.", "Gardez la fenêtre principale d’OBS ouverte, pas réduite : le T-bar en a besoin.", "请保持 OBS 主窗口打开，不要最小化：T-bar 需要它。" } },
-      { "remindObsFront", new[] { "TourBox: bring OBS to the front. Its preset only works while OBS is the active window.", "TourBox: pon OBS en primer plano. Su preajuste solo funciona mientras OBS es la ventana activa.", "TourBox : mettez OBS au premier plan. Son préréglage ne fonctionne que lorsque OBS est la fenêtre active.", "TourBox：请将 OBS 置于前台。其预设只在 OBS 为活动窗口时生效。" } },
+      { "remindObsFront", new[] { "TourBox: bring OBS to the front, or turn Auto Switch off in TourBox Console so the preset works with any app in front.", "TourBox: pon OBS en primer plano, o desactiva Auto Switch en TourBox Console para que el preajuste funcione con cualquier aplicación delante.", "TourBox : mettez OBS au premier plan, ou désactivez Auto Switch dans TourBox Console pour que le préréglage fonctionne quelle que soit l’application au premier plan.", "TourBox：请将 OBS 置于前台，或在 TourBox Console 中关闭 Auto Switch，让预设在任何应用位于前台时都能使用。" } },
+      { "remindSelectPreset", new[] { "TourBox: select OBS Fadester for TourBox in TourBox Console. Another preset is active, so the TourBox does other things.", "TourBox: selecciona OBS Fadester for TourBox en TourBox Console. Hay otro preajuste activo, así que el TourBox hace otras cosas.", "TourBox : sélectionnez OBS Fadester for TourBox dans TourBox Console. Un autre préréglage est actif, la TourBox fait donc autre chose.", "TourBox：请在 TourBox Console 中选择 OBS Fadester for TourBox。当前启用的是另一个预设，TourBox 会执行其他操作。" } },
       { "showServerTitle", new[] { "Turn on OBS's WebSocket server", "Activa el servidor WebSocket de OBS", "Activer le serveur WebSocket d’OBS", "开启 OBS 的 WebSocket 服务器" } },
       { "showPasswordTitle", new[] { "Find OBS's WebSocket password", "Busca la contraseña WebSocket de OBS", "Trouver le mot de passe WebSocket d’OBS", "查找 OBS 的 WebSocket 密码" } },
       { "showStudioTitle", new[] { "Turn on Studio Mode", "Activa el modo Estudio", "Activer le mode Studio", "开启工作室模式" } },
@@ -252,10 +256,7 @@ namespace Fadester.TourBox {
       { "vsMeterLocked", new[] { "Visual Sidechain: {0} BPM [LOCK] · Beat {1}/4 · {2}", "Visual Sidechain: {0} BPM [FIJO] · Pulso {1}/4 · {2}", "Visual Sidechain : {0} BPM [FIXE] · Temps {1}/4 · {2}", "Visual Sidechain：{0} BPM [锁定] · 第 {1}/4 拍 · {2}" } },
       { "liTbReady", new[] { "TourBox: ready", "TourBox: listo", "TourBox : prêt", "TourBox：就绪" } },
       { "liTbClosed", new[] { "TourBox Console: closed", "TourBox Console: cerrado", "TourBox Console : fermé", "TourBox Console：未打开" } },
-      { "btnImportObs", new[] { "Import OBS preset", "Importar preajuste de OBS", "Importer le préréglage OBS", "导入 OBS 预设" } },
-      { "btnImportChrome", new[] { "Import Chrome video preset", "Importar preajuste de vídeo de Chrome", "Importer le préréglage vidéo Chrome", "导入 Chrome 视频预设" } },
-      { "importCopiedChrome", new[] { "Path copied. In TourBox Console, click Import at the top of Preset List, press Ctrl+V, then Enter, and link OBS Fadester for TourBox (Chrome Video) to Google Chrome.", "Ruta copiada. En TourBox Console, haz clic en Importar arriba de la lista de preajustes, pulsa Ctrl+V y luego Intro, y vincula OBS Fadester for TourBox (Chrome Video) a Google Chrome.", "Chemin copié. Dans TourBox Console, cliquez sur Importer en haut de la liste des préréglages, appuyez sur Ctrl+V puis Entrée, et liez OBS Fadester for TourBox (Chrome Video) à Google Chrome.", "路径已复制。在 TourBox Console 中，点击预设列表顶部的“导入”，按 Ctrl+V，然后按 Enter，并将 OBS Fadester for TourBox (Chrome Video) 关联到 Google Chrome。" } },
-      { "importChromeHint", new[] { "Using the TourBox with Chrome in front too? Also import the Chrome video preset and link it to Google Chrome. It has every control, so OBS and the video both work. (A TourBox Console preset links to one app.)", "¿Usas también el TourBox con Chrome al frente? Importa también el preajuste de vídeo de Chrome y vincúlalo a Google Chrome. Tiene todos los controles, así que OBS y el vídeo funcionan. (Un preajuste de TourBox Console se vincula a una sola app.)", "Vous utilisez aussi le TourBox avec Chrome au premier plan ? Importez aussi le préréglage vidéo Chrome et liez-le à Google Chrome. Il a toutes les commandes, donc OBS et la vidéo fonctionnent. (Un préréglage TourBox Console se lie à une seule app.)", "Chrome 在前台时也要用 TourBox？请同时导入 Chrome 视频预设并关联到 Google Chrome。它包含所有控件，OBS 和视频都能控制。（TourBox Console 的一个预设只能关联一个应用。）" } },
+      { "importAutoHint", new[] { "Turn Auto Switch off in TourBox Console and select OBS Fadester for TourBox: the TourBox then works whichever app is in front (OBS, Chrome or any other).", "Desactiva Auto Switch en TourBox Console y selecciona OBS Fadester for TourBox: así el TourBox funciona con cualquier aplicación delante (OBS, Chrome u otra).", "Désactivez Auto Switch dans TourBox Console et sélectionnez OBS Fadester for TourBox : la TourBox fonctionne alors quelle que soit l’application au premier plan (OBS, Chrome ou autre).", "在 TourBox Console 中关闭 Auto Switch 并选择 OBS Fadester for TourBox：这样无论哪个应用在前台（OBS、Chrome 或其他），TourBox 都能使用。" } },
       { "liTbOld", new[] { "TourBox: old preset", "TourBox: preajuste antiguo", "TourBox : ancien préréglage", "TourBox：预设已过时" } },
       { "btnImportNew", new[] { "Import new preset", "Importar el nuevo", "Importer le nouveau", "导入新预设" } },
       { "tbOldNote", new[] { "TourBox Console has an older OBS Fadester preset: some controls do other things (the Knob may change the mix level instead of the video speed). Click Import new preset on the TourBox light and import it into each OBS Fadester preset in Console. Delete any old copy that Console still lists.", "TourBox Console tiene un preajuste OBS Fadester antiguo: algunos controles hacen otra cosa (el Knob puede cambiar el nivel de la mezcla en vez de la velocidad del vídeo). Haz clic en Importar el nuevo en la luz de TourBox e impórtalo en cada preajuste OBS Fadester de Console. Borra cualquier copia antigua que Console siga mostrando.", "TourBox Console contient un ancien préréglage OBS Fadester : certaines commandes font autre chose (le Knob peut changer le niveau du mixage au lieu de la vitesse de la vidéo). Cliquez sur Importer le nouveau sur le voyant TourBox et importez-le dans chaque préréglage OBS Fadester de Console. Supprimez toute ancienne copie que Console affiche encore.", "TourBox Console 中有旧版 OBS Fadester 预设：部分控件的作用不同（Knob 可能调整混音电平而不是视频速度）。点击 TourBox 指示灯上的“导入新预设”，并将其导入 Console 中的每个 OBS Fadester 预设。删除 Console 中仍列出的旧副本。" } },
@@ -369,7 +370,6 @@ namespace Fadester.TourBox {
 
     internal string PresetPath(string folder) { return Path.Combine(PresetFolder(folder), PresetName); }
     /** The Chrome copy: the same full map under its own name, to link to Google Chrome in Console (presets/build.py CHROME_NAME). */
-    internal string ChromePresetPath(string folder) { return Path.Combine(PresetFolder(folder), ChromePresetName); }
 
     internal string MapPath(string folder) {
       var localized = Path.Combine(PresetFolder(folder), "map.json");

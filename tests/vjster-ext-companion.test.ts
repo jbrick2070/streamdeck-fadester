@@ -39,8 +39,11 @@ describe("the extension says it needs the VJster plugin", () => {
         expect(text, `${language} ${key}`).not.toContain("Fadester for TourBox");
       }
       for (const name of ["Stream Deck", "OpenDeck"]) expect(messages.companionNote.message, `${language} companionNote`).toContain(name);
-      // The link line names the same programs the operator can start.
-      for (const name of ["Stream Deck", "OpenDeck", "Fadester Companion"]) expect(messages.statusLinkDown.message, `${language} statusLinkDown`).toContain(name);
+      // Not connected: one item per program that hosts the link, and none says OBS must be open (FIX-8).
+      expect(messages.linkDownCompanion.message, `${language} linkDownCompanion`).toContain("Fadester Companion");
+      for (const name of ["Stream Deck", "OpenDeck", "VJster"]) expect(messages.linkDownDeck.message, `${language} linkDownDeck`).toContain(name);
+      expect(messages.linkDownPort.message, `${language} linkDownPort`).toContain("VJster");
+      for (const key of ["statusLinkDown", "linkDownCompanion", "linkDownDeck", "linkDownPort"]) expect(messages[key].message, `${language} ${key}`).not.toContain("OBS");
     }
   });
 

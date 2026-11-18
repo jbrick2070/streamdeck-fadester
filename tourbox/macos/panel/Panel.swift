@@ -178,7 +178,7 @@ private final class PillActionButton: NSControl {
     private let previewMode: Bool
     private let paths: RuntimePaths
     private var settings = Settings(), catalog = Catalog(), invalidSettings = false, scanning = false, terminating = false
-    private var obsConnected = false, obsRunning = false, obsHidden = false, studioOff = false, tourboxConsoleRunning = false, tourboxConsoleInstalled = true, frontIsObs = false, vjsterPortBusy = false, axTrusted = true
+    private var obsConnected = false, obsRunning = false, obsHidden = false, studioOff = false, tourboxConsoleRunning = false, tourboxConsoleInstalled = true, frontIsObs = false, frontIsChrome = false, vjsterPortBusy = false, axTrusted = true
     private var bannerActionId = "openObs"
     private var obsProblem: String?
     private var vjsterPeers: Set<String> = []
@@ -271,6 +271,8 @@ private final class PillActionButton: NSControl {
             performScan(silentIfOffline: true)
         } else if !invalidSettings && !obsRunning {
             status.stringValue = L("macStartObs")
+            // No OBS: VJster can still control Chrome's videos, so the controls may start now (FIX-8).
+            autoStartIfWanted()
         }
     }
 
@@ -428,9 +430,10 @@ private final class PillActionButton: NSControl {
         }
         host.changed = { [weak self] text, _ in
             guard let self else { return }
+            // Armed with OBS (READY), or for Chrome's videos only while OBS is away (VIDEO-READY, FIX-8).
             if self.host.isArmed {
-                self.obsConnected = true
-                self.obsProblem = nil
+                self.obsConnected = self.host.isObsLive
+                if self.host.isObsLive { self.obsProblem = nil }
             }
             self.setStatus(text)
             self.updateEnabled()
@@ -442,7 +445,7 @@ private final class PillActionButton: NSControl {
             self.vjsterPortBusy = false
             self.updateEnabled()
             if self.terminating { NSApp.reply(toApplicationShouldTerminate: true); return }
-            // The host stops when OBS goes away: look for OBS again, and the next scan that reads it starts the controls,
+            // Without VJster the host stops when OBS goes away: look for OBS again, and the next scan that reads it starts the controls,
             // unless the user pressed Stop (FIX-5).
             self.obsConnected = false
             if self.obsRunning { self.autoTries = 4; self.nextAutoScan = Date().addingTimeInterval(3.5) }
@@ -880,7 +883,8 @@ private final class PillActionButton: NSControl {
             canStart: canAct
         )
 
-        if let banner = Readiness.banner(controlsOn: controlsOn, obsHidden: obsHidden, consoleRunning: tourboxConsoleRunning, frontIsObs: frontIsObs, axTrusted: axReady, mixOnly: onlyMix) {
+        if let banner = Readiness.banner(controlsOn: controlsOn, obsHidden: obsHidden, consoleRunning: tourboxConsoleRunning, frontIsObs: frontIsObs, axTrusted: axReady, mixOnly: onlyMix,
+                                           frontIsChrome: frontIsChrome, obsRunning: obsRunning) {
             reminderLabel.stringValue = banner.text
             reminderAction.titleText = banner.button
             bannerActionId = banner.action
@@ -908,8 +912,9 @@ private final class PillActionButton: NSControl {
             || (NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.tourbox.ui.launch") != nil)
         if let front = NSWorkspace.shared.frontmostApplication {
             frontIsObs = front.bundleIdentifier == "com.obsproject.obs-studio" || front.localizedName == "OBS" || front.localizedName == "OBS Studio"
+            frontIsChrome = front.bundleIdentifier == "com.google.Chrome"
         } else {
-            frontIsObs = false
+            frontIsObs = false; frontIsChrome = false
         }
         if obsRunning && !wasObsRunning && !host.running && !obsConnected {
             autoTries = 4
@@ -1104,7 +1109,11 @@ private final class PillActionButton: NSControl {
     @objc private func start() {
         guard !invalidSettings && !host.running && !scanning && !previewMode else { return }
         do {
-            let proposed = try current(), secret = try LocalFiles.password(port: proposed.port, override: password.stringValue)
+            let proposed = try current()
+            // OBS not set up (or not installed): with VJster on, start anyway for Chrome's videos; the host keeps looking for OBS (FIX-8).
+            let secret: String
+            do { secret = try LocalFiles.password(port: proposed.port, override: password.stringValue) }
+            catch where proposed.vjsterEnabled && !proposed.mixOnly { secret = "" }
             try paths.validate(); try LocalFiles.save(proposed); settings = proposed
             axTrusted = AXIsProcessTrusted()
             if !axTrusted && !proposed.mixOnly {
@@ -1197,17 +1206,24 @@ private final class PillActionButton: NSControl {
                 }
             }
             self.scanning = false; self.scanTask = nil; self.updateEnabled()
-            // OBS answered: start the controls now, not at launch, so nothing is armed while OBS is closed (FIX-5).
+            // After the scan, OBS or not: with VJster on, the host serves Chrome's videos without OBS (FIX-8).
             let asked = self.startAfterScan
             self.startAfterScan = false
-            guard self.obsConnected && !self.host.running else { return }
-            if asked { self.start(); return }
-            let axReady = AXIsProcessTrusted() || self.mixOnlyChosen
-            if Readiness.autoStart(settingsSaved: FileManager.default.fileExists(atPath: LocalFiles.settings.path), settingsValid: !self.invalidSettings,
-                                   remembered: self.rememberedControls, obsConnected: self.obsConnected, controlsOn: self.host.running, axReady: axReady) {
-                self.start()
-                if self.host.running { self.setStatus(L("autoStarted")); self.note(L("autoStarted")) }
-            }
+            guard !self.host.running else { return }
+            if asked { if self.obsConnected || (self.vjster.state == .on && !self.mixOnlyChosen) { self.start() }; return }
+            self.autoStartIfWanted()
+        }
+    }
+
+    /// Start the controls by themselves if Readiness.autoStart allows it (FIX-5, FIX-8).
+    private func autoStartIfWanted() {
+        guard !host.running && !scanning && !previewMode else { return }
+        let axReady = AXIsProcessTrusted() || mixOnlyChosen
+        if Readiness.autoStart(settingsSaved: FileManager.default.fileExists(atPath: LocalFiles.settings.path), settingsValid: !invalidSettings,
+                               remembered: rememberedControls, obsConnected: obsConnected, controlsOn: host.running, axReady: axReady,
+                               vjsterOn: vjster.state == .on, mixOnly: mixOnlyChosen) {
+            start()
+            if host.running { setStatus(L("autoStarted")); note(L("autoStarted")) }
         }
     }
 

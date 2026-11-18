@@ -45,7 +45,7 @@ struct RuntimePaths {
     private var process: Process?
     private var input: Pipe?
     private var secret = ""
-    private var armed = false
+    private var armed = false, obsLive = false
     // READY was seen once for the child this controller owns: a later DISARMED (a reconnect, OBS lost) is not a failed start.
     private var reachedReady = false
     private var stopping = false
@@ -55,6 +55,8 @@ struct RuntimePaths {
     var exited: (() -> Void)?
     var running: Bool { process != nil }
     var isArmed: Bool { armed }
+    /// Armed with OBS (READY), not just for videos (VIDEO-READY, FIX-8).
+    var isObsLive: Bool { armed && obsLive }
 
     nonisolated static func explainHostError(_ text: String) -> String {
         if text.localizedCaseInsensitiveContains("Accessibility denied") {
@@ -131,7 +133,8 @@ struct RuntimePaths {
                     if byte == 10 {
                         let raw = truncated ? "Host output exceeded its line limit." : String(decoding: pending, as: UTF8.self).trimmingCharacters(in: .newlines)
                         let text = redact(raw, secrets: redactionSecrets)
-                        let ready = raw.range(of: "^READY [1-9][0-9]*$", options: .regularExpression) != nil
+                        let ready = raw.range(of: "^(VIDEO-)?READY [1-9][0-9]*$", options: .regularExpression) != nil
+                        let withObs = !raw.hasPrefix("VIDEO-")
                         let disarmed = raw.hasPrefix("DISARMED ") || raw.hasPrefix("OFFLINE:")
                         pending.removeAll(keepingCapacity: true); truncated = false
                         DispatchQueue.main.async {
@@ -142,9 +145,10 @@ struct RuntimePaths {
                             self.line?(text)
                             if ready && child.isRunning {
                                 self.armed = true
+                                self.obsLive = withObs
                                 self.reachedReady = true
                                 self.lastError = nil
-                                self.changed?(L("macHostArmed"), true)
+                                self.changed?(L(withObs ? "macHostArmed" : "liCtlWaiting"), true)
                             } else if disarmed {
                                 self.armed = false
                                 if !self.stopping {

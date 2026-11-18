@@ -30,6 +30,12 @@ With a full-size TourBox, the Scroll wheel selects the next scene in Preview, th
 4. In Fadester Companion, click **Read scenes and inputs from OBS**. If your server uses a different port, set the **OBS port** (OBS usually uses 4455; while VJster is on, the OBS port cannot be the same as the VJster port). Leave **OBS password (filled in from OBS)** empty: the panel uses the password OBS saved on this PC. Type one only if the connection fails; it is not saved.
 5. Select **OBS Fadester for TourBox**, click **Save & start controls**, and bring OBS to the front. Keep Fadester Companion running.
 
+### Chrome videos without OBS
+
+VJster's controls (the Knob's speed, play and pause) work on a video in Chrome whether or not OBS is open. From the second launch on, Fadester Companion starts its controls by itself, OBS or not, unless you pressed **Stop controls** last time. While OBS is closed the Controls light reads **Controls: on, waiting for OBS**; the OBS controls start as soon as OBS answers.
+
+A TourBox Console preset links to one application, so for the TourBox to work while Chrome is in front, import the preset a second time (Console names the copy **OBS Fadester for TourBox 02**) and link that copy to **Google Chrome**, the first to OBS. The yellow “bring OBS to the front” strip stays hidden while Chrome is in front or OBS is closed.
+
 ## Rehearse the first throw
 
 Start with two scenes that look distinctly different. Turn **Scroll** until the second one appears in Preview. Program should keep showing the first shot. Tap Scroll to read both scene names in the panel.

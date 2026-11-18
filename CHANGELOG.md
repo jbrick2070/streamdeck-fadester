@@ -4,6 +4,12 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 
 ## Unreleased
 
+## 0.12.8 - 2026-11-17
+0.12.7 was a draft for the hardware test and was never published. This release ships Fadester Companion 0.1.11 and the VJster extension 0.1.6.
+- **Chrome videos without OBS** (Fadester Companion, Windows and Mac). The controls start by themselves at launch whether or not OBS is open (once setup was saved, unless you pressed Stop), so VJster's link and video controls work with OBS closed; the OBS controls start as soon as OBS answers. The Controls light reads "Controls: on, waiting for OBS" meanwhile, in all ten languages. On the Mac the host no longer ends when OBS is closed or goes away: it keeps the shortcuts and VJster running and looks for OBS every few seconds. Mix-only mode, and the Mac with VJster off, still wait for OBS.
+- **No "bring OBS to the front" strip while Chrome is in front or OBS is closed.** For the TourBox to work in Chrome, link a second copy of the preset to Google Chrome in TourBox Console (one preset links to one application); see `tourbox/README.md`.
+- **VJster 0.1.6: a clearer "Not connected".** The options page lists what to check for each program that can host the link: Fadester Companion open with its controls on; Stream Deck or OpenDeck showing a VJster key or dial, or "Keep the link on"; and the same port. It no longer suggests that OBS is needed.
+
 ## 0.12.7 - 2026-11-17
 0.12.6 was a draft for the hardware test and was never published. This release ships the VJster extension 0.1.5; Fadester Companion stays 0.1.10.
 - **VJster 0.1.5 finds videos inside web-component players** (archive.org's player, for one). These players keep their video inside a shadow root, where VJster did not look and where play, pause and speed changes never reached it, so the video stayed invisible with "Control videos on every site" on. VJster now looks inside every open shadow root on the page, and keeps watching for players added later.

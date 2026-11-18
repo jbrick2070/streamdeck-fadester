@@ -2,6 +2,8 @@
 
 **Do you have Fadester for OBS 0.9.0 or later?** Then you already have the seven VJster actions. Install only the Chrome extension (step 2). Do not install the VJster plugin too: both would want the same link port.
 
+VJster does not need OBS to control a video in Chrome. Fadester Companion opens VJster's link as soon as its controls start, OBS or not; Stream Deck and OpenDeck open it while a VJster key or dial is on the page showing, or always with **Keep the link on** ticked in the VJster settings.
+
 With a TourBox or a game controller you do not need Stream Deck: use Fadester Companion with the Chrome extension or with VJster's `/obs` Browser Source page, and follow `tourbox/README.md` (on Windows, set a 32-digit lowercase hex `vjsterObsToken` in `config.json` to enable `/obs`; the Mac Fadester Companion Setup window generates and copies the address directly).
 
 VJster has three parts. The keys and dials (in Fadester for OBS, or in the VJster plugin) also serve the OBS page. The Chrome extension controls the video in a Chrome tab. The OBS page is a browser source for OBS. They talk over one local socket on this computer (port 48150 by default); nothing goes to the internet except what YouTube's own player loads. What VJster is and what each control does: [README.md](README.md).

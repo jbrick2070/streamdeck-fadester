@@ -117,7 +117,7 @@ enum PanelStrings {
   "left": ["D-pad Left","Cruceta ←","Pavé ←","方向键 ←","Steuerkreuz Links","D-pad Sinistra","十字キー 左","십자키 왼쪽","Крестовина влево","十字鍵 左"],
   "liCtlOff": ["Controls: off","Controles: detenidos","Commandes : arrêtées","控制：已关闭","Steuerung: aus","Controlli: disattivati","コントロール: オフ","컨트롤: 꺼짐","Управление: выключено","控制：已關閉"],
   "liCtlOn": ["Controls: on","Controles: activos","Commandes : actives","控制：已开启","Steuerung: ein","Controlli: attivi","コントロール: オン","컨트롤: 켜짐","Управление: включено","控制：已開啟"],
-  "liCtlWaiting": ["Controls: waiting for OBS","Controles: esperando a OBS","Commandes : en attente d’OBS","控制：等待 OBS","Steuerung: wartet auf OBS","Controlli: in attesa di OBS","コントロール: OBS を待機中","컨트롤: OBS 대기 중","Управление: ждёт OBS","控制：等待 OBS"],
+  "liCtlWaiting": ["Controls: on, waiting for OBS","Controles: activos, esperando a OBS","Commandes : actives, en attente d’OBS","控制：已开启，等待 OBS","Steuerung: an, wartet auf OBS","Controlli: attivi, in attesa di OBS","コントロール: オン、OBS を待機中","컨트롤: 켜짐, OBS 대기 중","Управление: включено, ждёт OBS","控制：已開啟，等待 OBS"],
   "liObsClosed": ["OBS: not running","OBS: no está abierto","OBS : non lancé","OBS：未运行","OBS: nicht gestartet","OBS: non avviato","OBS: 起動していません","OBS: 실행 중 아님","OBS: не запущен","OBS：未執行"],
   "liObsLooking": ["OBS: connecting…","OBS: conectando…","OBS : connexion…","OBS：正在连接…","OBS: wird verbunden…","OBS: connessione…","OBS: 接続中…","OBS: 연결 중…","OBS: подключение…","OBS：正在連線…"],
   "liObsOn": ["OBS: connected","OBS: conectado","OBS : connecté","OBS：已连接","OBS: verbunden","OBS: connesso","OBS: 接続済み","OBS: 연결됨","OBS: подключён","OBS：已連線"],

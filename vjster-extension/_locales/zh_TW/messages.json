@@ -50,7 +50,16 @@
     }
   },
   "statusLinkDown": {
-    "message": "未連線。請在這台電腦上啟動 Stream Deck、OpenDeck 或 Fadester Companion。此處的連接埠必須與 VJster 設定中的連接埠相同。"
+    "message": "未連線。請檢查你使用的程式："
+  },
+  "linkDownCompanion": {
+    "message": "Fadester Companion：在這台電腦上開啟它，並確認控制已開啟。"
+  },
+  "linkDownDeck": {
+    "message": "Stream Deck 或 OpenDeck：顯示有 VJster 按鍵或旋鈕的頁面，或在 VJster 設定中勾選「保持連線開啟」。"
+  },
+  "linkDownPort": {
+    "message": "此處的連接埠必須與該程式 VJster 設定中的連接埠相同。"
   },
   "statusLinkChecking": {
     "message": "正在連線到 VJster…"

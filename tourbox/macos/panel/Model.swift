@@ -235,7 +235,8 @@ enum Readiness {
     }
 
     /// As on Windows (ShowMe.cs Readiness.Controls): with the controls off and OBS not connected the button is Try again,
-    /// which reads OBS and then starts them. The Mac host stops when OBS goes away, so "on but waiting" does not arise here.
+    /// which reads OBS and then starts them. With VJster on, the host stays armed without OBS for Chrome's videos (FIX-8):
+    /// amber "on, waiting for OBS", as on Windows.
     static func controls(running: Bool, armed: Bool, axTrusted: Bool = true, obsConnected: Bool = true) -> LightState {
         if !running {
             if !axTrusted { return LightState(.amber, L("macLiAxNeeded"), button: L("macBtnGrant"), action: "grantAx") }
@@ -244,29 +245,37 @@ enum Readiness {
                 : LightState(.grey, L("liCtlOff"), button: L("btnTryAgain"), action: "tryAgain")
         }
         if !armed { return LightState(.amber, L("macLiCtlStarting"), button: L("macBtnStop"), action: "stop") }
+        if !obsConnected { return LightState(.amber, L("liCtlWaiting"), button: L("macBtnStop"), action: "stop") }
         return LightState(.green, L("liCtlOn"), button: L("macBtnStop"), action: "stop")
     }
 
-    /// Whether the controls start by themselves once a scan has read OBS (FIX-5, hand test 2026-11-17), as on Windows
-    /// (ShowMe.cs Readiness.AutoStart), plus one Mac rule: never when Accessibility is still needed, so no system prompt
+    /// Whether the controls start by themselves at launch (FIX-5 and FIX-8, hand test 2026-11-17), as on Windows
+    /// (ShowMe.cs Readiness.AutoStart). OBS need not be open while VJster is on: the host serves Chrome's videos without
+    /// it and connects to OBS when it appears. Without VJster, or in mix-only mode, there is nothing to do before OBS
+    /// answers, so those still wait for it. One Mac rule: never when Accessibility is still needed, so no system prompt
     /// appears at launch. Only after setup was saved once, and never after the user pressed Stop ("off").
-    static func autoStart(settingsSaved: Bool, settingsValid: Bool, remembered: String?, obsConnected: Bool, controlsOn: Bool, axReady: Bool) -> Bool {
-        settingsSaved && settingsValid && remembered != "off" && obsConnected && !controlsOn && axReady
+    static func autoStart(settingsSaved: Bool, settingsValid: Bool, remembered: String?, obsConnected: Bool, controlsOn: Bool, axReady: Bool,
+                          vjsterOn: Bool = false, mixOnly: Bool = false) -> Bool {
+        settingsSaved && settingsValid && remembered != "off" && !controlsOn && axReady && (obsConnected || (vjsterOn && !mixOnly))
     }
 
-    /// Like the Windows panel's Readiness.Reminder: nothing in Stream Deck-only mode, which needs neither the T-bar nor the TourBox preset.
-    static func reminder(controlsOn: Bool, obsHidden: Bool, consoleRunning: Bool, frontIsObs: Bool, mixOnly: Bool = false) -> String? {
-        guard controlsOn && !mixOnly else { return nil }
+    /// Like the Windows panel's Readiness.Reminder: nothing in Stream Deck-only mode, which needs neither the T-bar nor the
+    /// TourBox preset; nothing while Chrome is in front (VJster's turn) or OBS is closed (nothing to bring forward), FIX-8.
+    static func reminder(controlsOn: Bool, obsHidden: Bool, consoleRunning: Bool, frontIsObs: Bool, mixOnly: Bool = false,
+                         frontIsChrome: Bool = false, obsRunning: Bool = true) -> String? {
+        guard controlsOn && !mixOnly && obsRunning else { return nil }
         if obsHidden { return L("macRemindObsHidden") }
-        if consoleRunning && !frontIsObs { return L("remindObsFront") }
+        if consoleRunning && !frontIsObs && !frontIsChrome { return L("remindObsFront") }
         return nil
     }
 
-    static func banner(controlsOn: Bool, obsHidden: Bool, consoleRunning: Bool, frontIsObs: Bool, axTrusted: Bool = true, mixOnly: Bool = false) -> (text: String, button: String, action: String)? {
+    static func banner(controlsOn: Bool, obsHidden: Bool, consoleRunning: Bool, frontIsObs: Bool, axTrusted: Bool = true, mixOnly: Bool = false,
+                       frontIsChrome: Bool = false, obsRunning: Bool = true) -> (text: String, button: String, action: String)? {
         if !controlsOn && !axTrusted {
             return (L("macAxBanner"), L("macBtnGrantAx"), "grantAx")
         }
-        if let obsText = reminder(controlsOn: controlsOn, obsHidden: obsHidden, consoleRunning: consoleRunning, frontIsObs: frontIsObs, mixOnly: mixOnly) {
+        if let obsText = reminder(controlsOn: controlsOn, obsHidden: obsHidden, consoleRunning: consoleRunning, frontIsObs: frontIsObs, mixOnly: mixOnly,
+                                  frontIsChrome: frontIsChrome, obsRunning: obsRunning) {
             return (obsText, L("btnBringObs"), "openObs")
         }
         return nil
@@ -477,8 +486,15 @@ enum ModelTests {
                   !Readiness.autoStart(settingsSaved: false, settingsValid: true, remembered: nil, obsConnected: true, controlsOn: false, axReady: true) &&
                   !Readiness.autoStart(settingsSaved: true, settingsValid: false, remembered: "on", obsConnected: true, controlsOn: false, axReady: true) &&
                   !Readiness.autoStart(settingsSaved: true, settingsValid: true, remembered: "on", obsConnected: false, controlsOn: false, axReady: true) &&
+                  Readiness.autoStart(settingsSaved: true, settingsValid: true, remembered: "on", obsConnected: false, controlsOn: false, axReady: true, vjsterOn: true) &&
+                  !Readiness.autoStart(settingsSaved: true, settingsValid: true, remembered: "on", obsConnected: false, controlsOn: false, axReady: true, vjsterOn: true, mixOnly: true) &&
+                  !Readiness.autoStart(settingsSaved: true, settingsValid: true, remembered: "on", obsConnected: false, controlsOn: false, axReady: false, vjsterOn: true) &&
                   !Readiness.autoStart(settingsSaved: true, settingsValid: true, remembered: "on", obsConnected: true, controlsOn: true, axReady: true) &&
                   !Readiness.autoStart(settingsSaved: true, settingsValid: true, remembered: "on", obsConnected: true, controlsOn: false, axReady: false), "Auto-start decision")
+        try check(Readiness.controls(running: true, armed: true, obsConnected: false) == LightState(.amber, L("liCtlWaiting"), button: L("macBtnStop"), action: "stop"), "Controls light while armed for videos only")
+        try check(Readiness.reminder(controlsOn: true, obsHidden: false, consoleRunning: true, frontIsObs: false) != nil &&
+                  Readiness.reminder(controlsOn: true, obsHidden: false, consoleRunning: true, frontIsObs: false, frontIsChrome: true) == nil &&
+                  Readiness.reminder(controlsOn: true, obsHidden: false, consoleRunning: true, frontIsObs: false, obsRunning: false) == nil, "No bring-OBS reminder with Chrome in front or OBS closed")
         try check(Readiness.controls(running: false, armed: false).action == "start" && Readiness.controls(running: false, armed: false, axTrusted: false).action == "grantAx" && Readiness.controls(running: true, armed: true) == LightState(.green, "Controls: on", button: "Stop", action: "stop"), "Controls readiness light")
         try check(Readiness.banner(controlsOn: false, obsHidden: false, consoleRunning: true, frontIsObs: false, axTrusted: false)?.action == "grantAx", "Accessibility banner before start")
         try check(HostController.explainHostError("ERROR: initialization: guardFailed(\"Accessibility denied; grant the responsible app\")").contains("Grant Accessibility"), "Host Accessibility error explanation")

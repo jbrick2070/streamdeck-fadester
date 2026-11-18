@@ -50,7 +50,16 @@
     }
   },
   "statusLinkDown": {
-    "message": "Нет подключения. Запустите Stream Deck, OpenDeck или Fadester Companion на этом компьютере. Порт здесь должен совпадать с портом в настройках VJster."
+    "message": "Нет подключения. Проверьте программу, которой вы пользуетесь:"
+  },
+  "linkDownCompanion": {
+    "message": "Fadester Companion: откройте её на этом компьютере и проверьте, что управление включено."
+  },
+  "linkDownDeck": {
+    "message": "Stream Deck или OpenDeck: откройте страницу с клавишей или регулятором VJster или отметьте «Не отключать связь» в настройках VJster."
+  },
+  "linkDownPort": {
+    "message": "Порт здесь должен совпадать с портом в настройках VJster этой программы."
   },
   "statusLinkChecking": {
     "message": "Подключение к VJster…"

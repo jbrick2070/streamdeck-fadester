@@ -19,6 +19,8 @@
       #status { margin-top: 1.25rem; min-height: 1.5em; font-weight: 600; }
       #link-status { margin: 0 0 1rem; font-weight: 600; }
       #link-status:empty { display: none; }
+      #link-help { margin: -0.5rem 0 1rem; padding-left: 1.25rem; }
+      #link-help li { margin: 0.25rem 0; }
       #link-status.up { color: #1a7f37; }
       #link-status.down { color: #c62828; }
       @media (prefers-color-scheme: dark) { #link-status.up { color: #3fb950; } #link-status.down { color: #ff7b72; } }
@@ -27,6 +29,11 @@
   <body>
     <h1>VJster <span id="version" class="version"></span></h1>
     <p id="link-status" role="status"></p>
+    <ul id="link-help" hidden>
+      <li data-i18n="linkDownCompanion">Fadester Companion: open it on this computer and check that its controls are on.</li>
+      <li data-i18n="linkDownDeck">Stream Deck or OpenDeck: show a page with a VJster key or dial, or tick “Keep the link on” in the VJster settings.</li>
+      <li data-i18n="linkDownPort">The port here must be the same as in that program’s VJster settings.</li>
+    </ul>
 
     <p class="callout">
       <span data-i18n="companionNote">VJster needs one free program on this computer: Fadester for OBS or the VJster plugin (for Stream Deck or OpenDeck), or Fadester Companion. Alone, this extension does nothing.</span><br />

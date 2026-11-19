@@ -190,14 +190,35 @@ internal sealed class VjsterDesk(VjsterLink link, double fastSpeed = 2.0, double
 
     static Action<JsonObject> Rate(double rate) => o => { o["rate"] = rate; o["direct"] = false; o["hold"] = false; };
 
-    /** The speed a run of steps last asked each target for, so steps that follow faster than the replies still add up. */
-    readonly Dictionary<string, (double Rate, long At)> lastAsked = new();
+    /**
+     * The speed a run of steps last asked each target for, so steps that follow faster than the replies still add up,
+     * and which video it was for (a step on another video starts from that video's own speed).
+     */
+    readonly Dictionary<string, (double Rate, long At, string? Video)> lastAsked = new();
     public const double StepRate = 0.05, MinRemoteRate = 0.25, MaxRemoteRate = 4.0;
+
+    static string? VideoOf(VjsterState? s) => s == null ? null : (s.Host ?? "") + "\n" + (s.Title ?? "");
+
+    /**
+     * The speeds a step may ask a target for: 0.25x to 4x, narrowed to the lowest and highest speed the video reports
+     * (the OBS page's video tops out at 2x), so a run of steps never asks past what the video can play and a step back
+     * down moves the video at once.
+     */
+    internal static (double Min, double Max) StepRange(VjsterState? s)
+    {
+        var usable = s?.AvailableRates.Where(r => double.IsFinite(r) && r > 0).ToArray() ?? [];
+        if (usable.Length == 0) return (MinRemoteRate, MaxRemoteRate);
+        double lo = Math.Max(MinRemoteRate, usable.Min()), hi = Math.Min(MaxRemoteRate, usable.Max());
+        return hi < lo ? (MinRemoteRate, MaxRemoteRate) : (lo, hi);
+    }
 
     /**
      * Moves the video speed by steps of 0.05x (negative: slower) with one speed.set per target: Midi Fadester's APC40
-     * Tempo knob and Nudge buttons (VjsterRemote). The base is the speed last asked for within 1.5 s, else the video's
-     * reported speed, else 1x.
+     * Tempo knob and Nudge buttons (VjsterRemote). The base is the speed last asked for within 1.5 s on the same video,
+     * else the video's reported speed, else 1x. The base stays the speed asked for, not the one the video answers:
+     * the OBS page's YouTube embed rounds to its own rates (1.05x plays as 1x), so steps must add up until they reach
+     * the next one. A step never moves the speed against its direction: from 3x on a video that tops out at 2x, a step
+     * up stays at 3x.
      */
     public async Task<string> SpeedBy(int steps)
     {
@@ -212,10 +233,17 @@ internal sealed class VjsterDesk(VjsterLink link, double fastSpeed = 2.0, double
             double rate;
             lock (lastAsked)
             {
-                double baseRate = lastAsked.TryGetValue(target, out var asked) && Stopwatch.GetElapsedTime(asked.At) < TimeSpan.FromSeconds(1.5)
-                    ? asked.Rate : link.GetLastState(target)?.Rate ?? 1.0;
-                rate = Math.Clamp(Math.Round((baseRate + steps * StepRate) * 100) / 100, MinRemoteRate, MaxRemoteRate);
-                lastAsked[target] = (rate, Stopwatch.GetTimestamp());
+                var known = link.GetLastState(target);
+                string? video = VideoOf(known);
+                double baseRate = lastAsked.TryGetValue(target, out var asked) && asked.Video == video &&
+                                  Stopwatch.GetElapsedTime(asked.At) < TimeSpan.FromSeconds(1.5)
+                    ? asked.Rate : known?.Rate ?? 1.0;
+                var (lo, hi) = StepRange(known);
+                double from = Math.Clamp(baseRate, MinRemoteRate, MaxRemoteRate);
+                if (steps > 0) hi = Math.Max(hi, from);
+                else lo = Math.Min(lo, from);
+                rate = Math.Clamp(Math.Round((baseRate + steps * StepRate) * 100) / 100, lo, hi);
+                lastAsked[target] = (rate, Stopwatch.GetTimestamp(), video);
             }
             replies.Add(FormatReply("vjster.speed.step", target, await link.Request("speed.set", Rate(rate), ReplyTimeout, target)));
         }

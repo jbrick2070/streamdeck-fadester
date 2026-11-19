@@ -417,7 +417,7 @@ describe("P1-5 Guided Setup Pass", () => {
       expect(byId(failingObsReport.items, "visual_sidechain")).toMatchObject({
         state: "warn",
         code: "too_old",
-        fix: "Update Visual Sidechain in OBS for live safety state, tempo lock, and Tape Deck controls."
+        fix: "Install Midi Fadester 0.9.0 or newer in OBS: it includes Visual Sidechain, with live safety state, tempo lock, and Tape Deck controls."
       });
       expect(byId(failingObsReport.items, "playlister")).toMatchObject({
         state: "info",
@@ -606,7 +606,7 @@ describe("P1-5 Guided Setup Pass", () => {
       });
     });
 
-    it("shows 'Update Visual Sidechain' on Visual Sidechain Meter and Tape Deck when vendor requests/fields are missing", async () => {
+    it("shows 'Update Midi Fadester' on Visual Sidechain Meter and Tape Deck when vendor requests/fields are missing", async () => {
       const server = new FakeObsServer({ missingPlugin: true, visualSidechainVendor: "legacy" });
       server.visualSidechainDecks = [
         {
@@ -640,7 +640,7 @@ describe("P1-5 Guided Setup Pass", () => {
 
       expect(signals.getSnapshot().supportsTempoGrid).toBe(false);
       await expect(signals.setBpm(128)).rejects.toThrow(
-        "Update Visual Sidechain in OBS to use 'set_bpm'."
+        "Update Midi Fadester in OBS (it includes Visual Sidechain) to use 'set_bpm'."
       );
       expect(signals.getSnapshot().needsTempoUpdate).toBe(true);
 
@@ -663,13 +663,13 @@ describe("P1-5 Guided Setup Pass", () => {
       cleanup.push(() => meter.disappear());
       meter.appear();
       await vi.waitFor(() => {
-        expect(meterFrames.at(-1) ?? "").toContain("Update Visual Sidechain");
+        expect(meterFrames.at(-1) ?? "").toContain("Update Midi Fadester");
       });
 
       // Legacy get_decks omits `version`, so TapeDecks detects deckCommandUnsupported immediately and throws a plain sentence on deck_command:
       expect(tapeDecks.getInspectorState().deckCommandUnsupported).toBe(true);
       await expect(tapeDecks.executeOperation("Deck 1", "play_pause")).rejects.toThrow(
-        "Update Visual Sidechain in OBS to use 'deck_command'."
+        "Update Midi Fadester in OBS (it includes Visual Sidechain) to use 'deck_command'."
       );
 
       const deckFrames: string[] = [];
@@ -691,7 +691,7 @@ describe("P1-5 Guided Setup Pass", () => {
       cleanup.push(() => deckCtrl.disappear());
       deckCtrl.appear();
       await vi.waitFor(() => {
-        expect(deckFrames.at(-1) ?? "").toContain("Update Visual Sidechain");
+        expect(deckFrames.at(-1) ?? "").toContain("Update Midi Fadester");
       });
     });
 

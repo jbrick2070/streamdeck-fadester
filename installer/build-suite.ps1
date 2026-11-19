@@ -47,7 +47,7 @@ function Get-Pinned([string]$key) {
 }
 
 $pinned = @{}
-foreach ($key in 'midiFadester', 'visualSidechain', 'playlister', 'fadesterForObs', 'vjsterExtension') { $pinned[$key] = Get-Pinned $key }
+foreach ($key in 'midiFadester', 'playlister', 'fadesterForObs', 'vjsterExtension') { $pinned[$key] = Get-Pinned $key }
 if ($DownloadOnly) { Write-Host 'All pinned inputs verified.'; return }
 
 # The unpacked VJster extension, ready for Chrome's "Load unpacked".
@@ -101,7 +101,6 @@ $name = "Fadester-Suite-Setup-$stamp-Windows-x64"
 $defs = @(
   "/DSuiteVersion=$stamp", "/DSuiteAppId=$($m.suiteAppId)", "/DStage=$stage",
   "/DMfFile=$($c.midiFadester.file)", "/DMfVersion=$($c.midiFadester.version)", "/DMfAppId=$($c.midiFadester.appId)",
-  "/DVsFile=$($c.visualSidechain.file)", "/DVsVersion=$($c.visualSidechain.version)", "/DVsAppId=$($c.visualSidechain.appId)",
   "/DPlFile=$($c.playlister.file)", "/DPlVersion=$($c.playlister.version)", "/DPlAppId=$($c.playlister.appId)",
   "/DSdFile=$($c.fadesterForObs.file)", "/DSdVersion=$($c.fadesterForObs.version)",
   "/DExtVersion=$($c.vjsterExtension.version)",

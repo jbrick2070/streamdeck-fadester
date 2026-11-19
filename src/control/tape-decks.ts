@@ -8,7 +8,7 @@
  * - Reports plain states `not_loaded` (Visual Sidechain absent, 600/604 on `get_decks`)
  *   and `no_deck` (none found or selected Browser Source missing), and flags older
  *   Visual Sidechain builds that answer `get_decks` without `deck_command` (604 on
- *   `deck_command` -> `"Update Visual Sidechain"`).
+ *   `deck_command` -> `"Update Midi Fadester"`).
  */
 import { EventEmitter } from "node:events";
 import { DirectObsClient, DirectObsError } from "../obs/direct-obs-client.js";

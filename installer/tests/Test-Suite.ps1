@@ -84,14 +84,25 @@ function Test-ObsRunning {
 }
 
 function Test-FullInstallWithStoreEdition {
-  Write-Host 'store-edition + full install: plugins install, standalone Companion is skipped when the Store edition exists'
+  Write-Host 'store-edition + full install: plugins install, standalone Companion is skipped when the Store edition exists,'
+  Write-Host '  and an old separate Visual Sidechain is reported and removed by Midi Fadester (0.9.0 and later)'
   $null = New-Item -Path $storeKey -Force
+  # A leftover standalone Visual Sidechain: its plugin folder and its uninstall entry (whose uninstaller is gone).
+  $oldVsDir = Join-Path $pluginDir 'visual-sidechain'
+  $oldVsKey = 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\{7C4A92E8-4B19-4F03-9A56-3D8E21B05C7F}_is1'
+  $null = New-Item -ItemType Directory -Force -Path (Join-Path $oldVsDir 'bin\64bit')
+  Set-Content -LiteralPath (Join-Path $oldVsDir 'bin\64bit\visual-sidechain.dll') -Value 'old'
+  $null = New-Item -Path $oldVsKey -Force
+  Set-ItemProperty -LiteralPath $oldVsKey -Name DisplayVersion -Value '0.8.0'
+  Set-ItemProperty -LiteralPath $oldVsKey -Name UninstallString -Value '"C:\Program Files\visual-sidechain-gone\unins000.exe"'
   try {
     $r = Run-Setup $Setup @() 'full-store'
     Check ($r.Code -eq 0) "setup succeeds (exit $($r.Code))"
     Check ($r.Log -cmatch 'STORE-EDITION:') 'log notes the Store edition'
+    Check ($r.Log -cmatch 'OLD-VS:') 'log notes the old separate Visual Sidechain'
+    Check (-not (Test-Path -LiteralPath $oldVsDir)) 'Midi Fadester removed the old Visual Sidechain plugin folder'
     Check (-not (Installed $c.companion.appId)) 'standalone Fadester Companion not installed'
-    foreach ($p in @(@($c.midiFadester, 'midi-fadester'), @($c.visualSidechain, 'visual-sidechain'), @($c.playlister, 'obs-playlister'))) {
+    foreach ($p in @(@($c.midiFadester, 'midi-fadester'), @($c.playlister, 'obs-playlister'))) {
       Check (Installed $p[0].appId) "$($p[0].name) has its own uninstall entry"
       Check ((Get-ItemProperty -LiteralPath (Uninstall-Key $p[0].appId)).DisplayVersion -eq $p[0].version) "$($p[0].name) shows its real version $($p[0].version)"
       Check (Test-Path -LiteralPath (Join-Path $pluginDir $p[1])) "$($p[0].name) files are in ProgramData\obs-studio\plugins\$($p[1])"
@@ -99,7 +110,11 @@ function Test-FullInstallWithStoreEdition {
     Check (Test-Path -LiteralPath (Join-Path $suiteDir "packages\$($c.fadesterForObs.file)")) 'Fadester for OBS package staged'
     Check (Test-Path -LiteralPath (Join-Path $suiteDir 'vjster-extension\manifest.json')) 'VJster extension unpacked'
     Check (Installed $m.suiteAppId) 'suite shared files have their own uninstall entry'
-  } finally { Remove-Item -Path $storeKey -Force -ErrorAction SilentlyContinue }
+  } finally {
+    Remove-Item -Path $storeKey -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $oldVsKey -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $oldVsDir -Recurse -Force -ErrorAction SilentlyContinue
+  }
 }
 
 function Test-Companion {
@@ -149,8 +164,8 @@ function Test-Uninstall {
   Uninstall $c.midiFadester.appId
   Check (-not (Installed $c.midiFadester.appId)) 'Midi Fadester uninstall entry removed'
   Check (-not (Test-Path -LiteralPath (Join-Path $pluginDir 'midi-fadester\bin'))) 'Midi Fadester files removed'
-  Check (Test-Path -LiteralPath (Join-Path $pluginDir 'visual-sidechain')) 'Visual Sidechain untouched by Midi Fadester uninstall'
-  Uninstall $c.visualSidechain.appId; Uninstall $c.playlister.appId; Uninstall $c.companion.appId; Uninstall $m.suiteAppId
+  Check (Test-Path -LiteralPath (Join-Path $pluginDir 'obs-playlister')) 'Playlister untouched by Midi Fadester uninstall'
+  Uninstall $c.playlister.appId; Uninstall $c.companion.appId; Uninstall $m.suiteAppId
   Check (-not (Installed $c.companion.appId)) 'Fadester Companion uninstall entry removed'
   Check (-not (Test-Path -LiteralPath (Join-Path $companionDir 'Fadester Companion.exe'))) 'Fadester Companion files removed'
   Check (-not (Test-Path -LiteralPath (Join-Path $suiteDir 'packages'))) 'suite shared files removed'

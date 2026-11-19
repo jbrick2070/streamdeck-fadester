@@ -5,7 +5,7 @@ One guided installer for any mix of the Fadester suite on Windows. It is built p
 
 | Component | How it is installed | Uninstall |
 | --- | --- | --- |
-| Midi Fadester, Visual Sidechain, Playlister | Each plugin's own released installer, run silently | Its own entry in **Installed apps**, as if installed alone |
+| Midi Fadester (includes Visual Sidechain since 0.9.0), Playlister | Each plugin's own released installer, run silently | Its own entry in **Installed apps**, as if installed alone |
 | Fadester Companion | Its own installer (`FadesterCompanion.iss`), built from this repository | Its own **Fadester Companion** entry |
 | Fadester for OBS (Stream Deck, OpenDeck; includes VJster) | The `.streamDeckPlugin` is staged and opened, so Stream Deck imports it itself. An optional task adds it to OpenDeck. | Removed inside Stream Deck or OpenDeck |
 | VJster Chrome extension | Unpacked to `ProgramData\Fadester Suite\vjster-extension` for **Load unpacked** | **Fadester Suite shared files** entry |
@@ -35,7 +35,7 @@ You need Windows, Inno Setup 6, and a finished `tourbox\build.ps1` run (its fold
 
 - **Pinned inputs.** Everything else comes from the releases pinned in [components.json](components.json), and each file is checked against its SHA-256. A mismatch stops the build.
 - **Local builds.** `-LocalArtifacts <folder>` uses files from a folder instead of downloading them, but they must still match the pinned hashes.
-- **Shipping a new plugin version.** Publish the plugin's release first, then run `node installer/update-pins.mjs --midi 0.7.4 --vs 0.7.4 --playlister 0.5.2 --sd 0.12.14` (name only what changed). It downloads each published file and rewrites its `version`, `file`, `url` and `sha256` in `components.json`.
+- **Shipping a new plugin version.** Publish the plugin's release first, then run `node installer/update-pins.mjs --midi 0.9.0 --playlister 0.5.2 --sd 0.12.15` (name only what changed). It downloads each published file and rewrites its `version`, `file`, `url` and `sha256` in `components.json`.
 - **Releases.** Pushing a tag such as `v0.12.14` runs `.github/workflows/release.yml`, which builds the `.streamDeckPlugin`, the VJster extension zip, the Companion ZIP and its Store MSIX (version from `components.json`) into a **draft** release. Nothing is published until someone tests the draft and publishes it.
 - **Signing (optional).** Set `FADESTER_SIGN_CMD` to a signing command that uses `$f` for the file. With it, the Companion's executables, both uninstallers and both setups are signed. Without it, the build is unsigned. Unsigned setups trigger SmartScreen, so do not publish one widely until a certificate is chosen.
 
@@ -61,4 +61,5 @@ The tests refuse to run outside CI, because they install into `C:\ProgramData` a
 
 - **No real-PC run yet.** The CI runners have no OBS, Stream Deck or OpenDeck. So nobody has yet seen Stream Deck's own import, the OpenDeck task with OpenDeck itself, or the plugins loading in OBS after a suite install.
 - **Code signing and Smart App Control** behaviour are untested until a certificate exists.
-- **Pins wait for publication.** Until Midi Fadester 0.7.4, Visual Sidechain 0.7.4, Playlister 0.5.2 and Fadester for OBS 0.12.14 are published, `components.json` still pins the earlier releases.
+- **Pins wait for publication.** `components.json` pins Midi Fadester 0.9.0. Playlister 0.5.2 (still a draft) and Fadester for OBS 0.12.15 are pinned once they are published; until then the earlier releases stay pinned.
+- **Visual Sidechain has no component any more.** It is part of Midi Fadester since 0.9.0. Midi Fadester's own installer removes an old separate Visual Sidechain; when Midi Fadester is not run (unticked, or a newer one is already installed), setup notes the old plugin (`OLD-VS`) on its first page and in its summary.

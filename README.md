@@ -2,7 +2,7 @@
 
 > **Setting up the Fadester Suite?** Start with **[docs/START-HERE.md](docs/START-HERE.md)** for what to install for your controller, which video player to pick, first-run OBS settings, and the compatibility matrix.
 
-**Fadester for OBS 0.12.14** puts OBS Studio on your Stream Deck: scenes, transitions, sources, filters and audio on keys and dials. It talks to OBS's built-in WebSocket server, so you need no MIDI desk and no extra OBS plugin for the main controls. Fourteen ready-made layouts open from any control's settings page. Nine languages.
+**Fadester for OBS 0.12.15** puts OBS Studio on your Stream Deck: scenes, transitions, sources, filters and audio on keys and dials. It talks to OBS's built-in WebSocket server, so you need no MIDI desk and no extra OBS plugin for the main controls. Fourteen ready-made layouts open from any control's settings page. Nine languages.
 
 ![Photo of a Stream Deck + running Fadester for OBS in Dutch: scene keys, two Playlister keys, the red PANIEK (Panic) key, a crossfader strip and a Desktop Audio dial on the touch strip. Several keys still ask for Studio Mode or a Playlister to be picked.](docs/images/streamdeck-fadester-hero.jpg)
 
@@ -60,9 +60,9 @@ For a whole-show fade, choose **All OBS mixer inputs** under **Control** on eith
 
 **Playlister Transport** (key). **Previous**, **Next**, **Play/pause**, **Stop**, **Restart** or **Status** for one [Playlister](https://github.com/jbrick2070/obs-playlister) source. The key shows what OBS reports (Playing, Paused, Stopped, with the time), not just that a press was sent. Needs Playlister 0.5 or later in OBS; choose the source in the key's settings page.
 
-**Tape Deck** (key or dial). Drives one [Visual Sidechain](https://github.com/jbrick2070/visual-sidechain) **Tape Deck** filter on an OBS Browser Source (`25% to 800% (0.25x to 8x)` live speed). On a dial, turning steps along the 11-rung speed ladder; pressing a key or dial runs **Play / pause**, **Cue to start**, **Normal speed (100% / 1x)**, **Speed up**, or **Speed down**. The face shows speed in both units (`"150% (1.5x)"`), playing or paused state, and the plain states **NOT LOADED** (Visual Sidechain absent) and **NO DECK** (no deck found), updating from `decks_changed` with no polling loop (capped at 10 redraws/s per cell). Tape Decks remain outside Visual Sidechain's Panic and Restore visuals. *(Direct Fadester Companion / TourBox Tape Deck preset bindings are a planned follow-up.)*
+**Tape Deck** (key or dial). Drives one [Visual Sidechain](https://github.com/jbrick2070/midi-fadester/blob/main/docs/VISUAL-SIDECHAIN.md) **Tape Deck** filter on an OBS Browser Source (`25% to 800% (0.25x to 8x)` live speed). On a dial, turning steps along the 11-rung speed ladder; pressing a key or dial runs **Play / pause**, **Cue to start**, **Normal speed (100% / 1x)**, **Speed up**, or **Speed down**. The face shows speed in both units (`"150% (1.5x)"`), playing or paused state, and the plain states **NOT LOADED** (Visual Sidechain absent) and **NO DECK** (no deck found), updating from `decks_changed` with no polling loop (capped at 10 redraws/s per cell). Tape Decks remain outside Visual Sidechain's Panic and Restore visuals. *(Direct Fadester Companion / TourBox Tape Deck preset bindings are a planned follow-up.)*
 
-**Visual Panic** (key). [Visual Sidechain](https://github.com/jbrick2070/visual-sidechain)'s own **Panic** (instant) and **Restore visuals** (hold 0.8 s), sent through OBS's hotkeys. After Panic the key reads **PANIC SENT** until Restore visuals is accepted or the OBS connection drops; meanwhile no Visual Sidechain filter is written from the deck. Needs Visual Sidechain in OBS, and the key looks the same without it. So try it once before the show: hold **Restore visuals**, which changes nothing when no Panic is on. If the key then says **Visual Sidechain missing**, OBS has no Visual Sidechain.
+**Visual Panic** (key). [Visual Sidechain](https://github.com/jbrick2070/midi-fadester/blob/main/docs/VISUAL-SIDECHAIN.md)'s own **Panic** (instant) and **Restore visuals** (hold 0.8 s), sent through OBS's hotkeys. After Panic the key reads **PANIC SENT** until Restore visuals is accepted or the OBS connection drops; meanwhile no Visual Sidechain filter is written from the deck. Needs Visual Sidechain in OBS, which comes with Midi Fadester 0.9.0 or newer, and the key looks the same without it. So try it once before the show: hold **Restore visuals**, which changes nothing when no Panic is on. If the key then says **Needs Midi Fadester**, OBS has no Visual Sidechain.
 
 **OBS Scene Info Bar** (Stream Deck Neo). Shows the connection, the Program scene and, in Studio Mode, the Preview scene. Display only.
 
@@ -83,7 +83,7 @@ None of these is needed for scenes, transitions, sources, audio or filters.
 | Plugin | What it adds on the deck |
 |---|---|
 | [Playlister](https://github.com/jbrick2070/obs-playlister) 0.5 or later | The Playlister Transport keys and layout. |
-| [Visual Sidechain](https://github.com/jbrick2070/visual-sidechain) | Visual Panic, Visual Sidechain Meter, Tape Deck, quantized beat/bar fades, and the Effect mix and Reactivity dials of the VJ Rig. |
+| [Visual Sidechain](https://github.com/jbrick2070/midi-fadester/blob/main/docs/VISUAL-SIDECHAIN.md), part of Midi Fadester 0.9.0 or later | Visual Panic, Visual Sidechain Meter, Tape Deck, quantized beat/bar fades, and the Effect mix and Reactivity dials of the VJ Rig. |
 | [Midi Fadester](https://github.com/jbrick2070/midi-fadester) | The two actions labelled *(optional)*, for an APC40 or another MIDI controller. |
 
 The [Suite Demo Kit](demo-kit/README.md) is one OBS scene collection with media and two Stream Deck + profiles that show the plugins working together.
@@ -117,7 +117,7 @@ A robot (a cue list or an AI agent) uses the same doors through the API, or thro
 | **Scene T-bar needs OBS Studio Mode**, **Preview selection needs OBS Studio Mode** | Turn on Studio Mode in OBS (**View > Studio Mode**), or open the layout again with **Enable Studio Mode & open current starter layout**. The Regular Mode layouts have no Preview or T-bar. |
 | **Choose a different Preview** | The scene mixer needs Preview and Program to be two different scenes. Pick another scene in Preview. |
 | **Choose a source**, **Choose a filter**, **Choose a Playlister** | That key or dial is not bound yet. Open its settings page and pick the source, filter or Playlister. VJ Rig and Playlister Transport keys ship unbound on purpose. |
-| **Visual Sidechain missing**, **Playlister missing** | Install that OBS plugin, or switch to the scene collection that has the source. |
+| **Needs Midi Fadester**, **Playlister missing** | Install that OBS plugin (Visual Sidechain comes with Midi Fadester 0.9.0 or newer), or switch to the scene collection that has the source. |
 | **Companion offline**, **Whole mix is off** | An **All OBS mixer inputs** key or dial needs Fadester Companion. Start it, connect it to the same OBS, and turn on **All OBS mixer inputs** there. |
 | **PANIC SENT** | Visual Sidechain's Panic is on. Hold **Restore visuals** for 0.8 s to bring the effects back. |
 | A key moved the live output in Studio Mode | A scene's content is shared: when Preview and Program show the same scene, layer edits change both. The dial labels that scene PROGRAM. |

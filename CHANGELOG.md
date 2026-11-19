@@ -4,6 +4,18 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 
 ## Unreleased
 
+## 0.12.15 - 2026-11-19
+Visual Sidechain is part of Midi Fadester since 0.9.0. Fadester Companion stays 0.1.17 and the VJster extension 0.1.6.
+
+### Changed
+- Words that told you to install or update Visual Sidechain now point to Midi Fadester 0.9.0 or newer, in all nine languages. Keys read **Needs Midi Fadester** and **Update Midi Fadester**.
+- Fadester Suite Setup has no separate Visual Sidechain any more: it installs Midi Fadester 0.9.0 (which includes it and removes the old plugin), and notes an old Visual Sidechain when Midi Fadester is not run.
+- Docs (README, START-HERE, DECK-LAYOUTS, API-CONTRACT) link Visual Sidechain's guide in Midi Fadester.
+
+### Fixed
+- The setup checklist reads Visual Sidechain together with Midi Fadester: an old separate Visual Sidechain still running next to Midi Fadester 0.9.0 says to remove it, and a Visual Sidechain switched off in Midi Fadester says so instead of asking you to install it.
+- The checklist tells a missing plugin from a missing feature the way obs-websocket answers (600 for both, told apart by its message), so an old Midi Fadester or Visual Sidechain reads "too old" instead of "not installed".
+
 ## 0.12.14 - 2026-11-19
 This release ships Fadester Companion 0.1.17; the VJster extension stays 0.1.6.
 - **Preset speeds from Midi Fadester's Fadester Desk dock** (with Midi Fadester 0.8.0): the dock's 0.5x, 0.75x, 1.25x, 1.5x and 2x buttons arrive as one `vjster.speed.set` request each, kept within the speeds the video plays. A preset overtakes speed steps still waiting (play / pause stays queued), and a dial turn right after it starts from the preset.

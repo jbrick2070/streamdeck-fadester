@@ -235,7 +235,7 @@ describe("Tape Deck action & controller (P1-6)", () => {
     expect(key.alerts()).toBe(0);
   });
 
-  it("surfaces vendor validation sentences and 604 Update Visual Sidechain gates cleanly without silent no-ops", async () => {
+  it("surfaces vendor validation sentences and 604 Update Midi Fadester gates cleanly without silent no-ops", async () => {
     let nowMs = 1_700_000_000_000;
     // 1. Empty tape cue_to_start -> verbatim plain-sentence error + showAlert
     const { client, tapeDecks } = await setup(
@@ -265,7 +265,7 @@ describe("Tape Deck action & controller (P1-6)", () => {
     expect(key.alerts()).toBe(1);
     await key.waitSvg((svg) => svg.includes("Cue to start needs a tap"));
 
-    // 2. Older Visual Sidechain (0.6.0: get_decks works, deck_command returns 604) -> "Update Visual Sidechain"
+    // 2. Older Visual Sidechain (0.6.0: get_decks works, deck_command returns 604) -> "Update Midi Fadester"
     const legacy = await setup(
       { missingPlugin: true, visualSidechainVendor: "legacy" },
       [makeDeck({ source: "Legacy Deck" })]
@@ -287,7 +287,7 @@ describe("Tape Deck action & controller (P1-6)", () => {
     nowMs += 200;
     await legCtrl.press(nowMs);
     expect(legDial.alerts()).toBe(1);
-    await legDial.waitSvg((svg) => svg.includes("Update Visual Sidechain"));
+    await legDial.waitSvg((svg) => svg.includes("Update Midi Fadester"));
   });
 
   it("caps cell redraws to at most 10 per second under rapid decks_changed bursts and translates labels", async () => {

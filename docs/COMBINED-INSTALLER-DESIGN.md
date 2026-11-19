@@ -1,5 +1,7 @@
 # Combined Windows Installer for the Three OBS Plugins — Design Note
 
+> **UPDATE (2026-11-19):** Visual Sidechain is part of Midi Fadester since 0.9.0, so the suite now has two OBS plugin components (Midi Fadester and Playlister). Where this note describes a separate Visual Sidechain component or pin, that part is history; see [`installer/README.md`](../installer/README.md).
+>
 > **STATUS (2026-11-15): Option B is built.**
 >
 > - **Where:** [`installer/`](../installer/README.md) holds the build, and `.github/workflows/suite-installer.yml` runs the tests (manual only).

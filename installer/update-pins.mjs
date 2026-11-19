@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Re-pins the Fadester Suite Setup inputs to newly PUBLISHED releases.
 //
-//   node installer/update-pins.mjs --midi 0.7.4 --vs 0.7.4 --playlister 0.5.2 --sd 0.12.14 [--ext 0.1.3 --ext-tag v0.11.0]
+//   node installer/update-pins.mjs --midi 0.9.0 --playlister 0.5.2 --sd 0.12.15 [--ext 0.1.3 --ext-tag v0.11.0]
+// (Visual Sidechain is part of Midi Fadester since 0.9.0 and has no pin of its own.)
 //
 // For each component named, it downloads the public release asset, computes its SHA-256 and rewrites that entry's
 // version, file, url and sha256 in installer/components.json. Components not named keep their pins. Draft releases
@@ -17,7 +18,6 @@ const gh = "https://github.com/jbrick2070";
 
 const rules = {
   midi: { key: "midiFadester", file: (v) => `midi-fadester-${v}-windows-x64-Installer.exe`, url: (v, f) => `${gh}/midi-fadester/releases/download/${v}/${f}` },
-  vs: { key: "visualSidechain", file: (v) => `visual-sidechain-${v}-windows-x64-Installer.exe`, url: (v, f) => `${gh}/visual-sidechain/releases/download/${v}/${f}` },
   playlister: { key: "playlister", file: (v) => `obs-playlister-${v}-windows-x64-Installer.exe`, url: (v, f) => `${gh}/obs-playlister/releases/download/${v}/${f}` },
   sd: { key: "fadesterForObs", file: () => "io.github.jbrick2070.fadester-for-obs.streamDeckPlugin", url: (v, f) => `${gh}/streamdeck-fadester/releases/download/v${v}/${f}` },
   ext: { key: "vjsterExtension", file: (v) => `vjster-chrome-extension-${v}.zip`, url: (v, f, a) => `${gh}/streamdeck-fadester/releases/download/${a["ext-tag"] ?? `v${a.sd}`}/${f}` }

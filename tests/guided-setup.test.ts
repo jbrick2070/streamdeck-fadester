@@ -417,7 +417,7 @@ describe("P1-5 Guided Setup Pass", () => {
       expect(byId(failingObsReport.items, "visual_sidechain")).toMatchObject({
         state: "warn",
         code: "too_old",
-        fix: "Update Visual Sidechain in OBS for live safety state, tempo lock, and Tape Deck controls."
+        fix: "Install Midi Fadester 0.9.0 or newer in OBS: it includes Visual Sidechain, with live safety state, tempo lock, and Tape Deck controls."
       });
       expect(byId(failingObsReport.items, "playlister")).toMatchObject({
         state: "info",

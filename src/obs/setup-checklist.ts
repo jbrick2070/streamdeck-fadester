@@ -12,8 +12,8 @@
 import koffi from "koffi";
 import { isLoopbackObsHost } from "../../packages/streamdeck-fadester-shared/src/obs/obs-websocket-config.js";
 import {
-  isObsVendorMissingError,
-  isObsVendorRequestMissingError
+  OBS_VENDOR_NOT_FOUND,
+  OBS_VENDOR_REQUEST_MISSING
 } from "../../packages/streamdeck-fadester-shared/src/obs/obs-vendor-client.js";
 import type { ConnectionStatusInfo } from "../../packages/streamdeck-fadester-shared/src/types.js";
 import { DEFAULT_LINK_PORT } from "../vjster/shared/protocol.js";
@@ -56,6 +56,8 @@ export type ChecklistReasonCode =
   | "present"
   | "missing"
   | "too_old"
+  | "vs_conflict"
+  | "vs_off"
   | "port_free"
   | "port_self"
   | "port_other"
@@ -425,6 +427,74 @@ export function defaultProbeMacAccessibility(
 // Checklist evaluation
 // ---------------------------------------------------------------------------
 
+/**
+ * What a failed vendor call says about the plugin. obs-websocket answers 600 (ResourceNotFound) both when no plugin
+ * registered the vendor ("No vendor was found by that name.") and when the vendor lacks the request ("No request was
+ * found by that name."); only the comment tells them apart. 604 is kept for test servers and older clients.
+ */
+export function vendorErrorKind(error: unknown): "vendor_missing" | "request_missing" | "other" {
+  const e = error as { code?: unknown; comment?: unknown; message?: unknown } | null;
+  const code = e?.code;
+  if (code === OBS_VENDOR_REQUEST_MISSING) return "request_missing";
+  if (code !== OBS_VENDOR_NOT_FOUND) return "other";
+  const comment = String(e?.comment ?? e?.message ?? "");
+  return /request/i.test(comment) ? "request_missing" : "vendor_missing";
+}
+
+/** Numeric "major.minor.patch" (any pre-release or build suffix dropped); null when it is not a version. */
+export function parseVersion(version: unknown): [number, number, number] | null {
+  if (typeof version !== "string") return null;
+  const m = /^(\d+)\.(\d+)(?:\.(\d+))?/.exec(version.trim());
+  if (!m) return null;
+  return [Number(m[1]), Number(m[2]), Number(m[3] ?? 0)];
+}
+
+export function versionAtLeast(version: unknown, min: [number, number, number]): boolean {
+  const v = parseVersion(version);
+  if (!v) return false;
+  for (let i = 0; i < 3; i++) {
+    if (v[i] !== min[i]) return v[i] > min[i];
+  }
+  return true;
+}
+
+/** Midi Fadester carries Visual Sidechain from this version on. */
+export const MF_WITH_VISUAL_SIDECHAIN: [number, number, number] = [0, 9, 0];
+
+/**
+ * The Visual Sidechain item read against Midi Fadester's. From Midi Fadester 0.9.0 Visual Sidechain is part of it and
+ * answers with Midi Fadester's version. With such a Midi Fadester, a Visual Sidechain answering with an older version is
+ * the old standalone plugin, loaded first (Midi Fadester then keeps its own copy off), and no answer at all means
+ * Visual Sidechain in Midi Fadester did not start.
+ */
+export function reconcileVisualSidechain(vs: SetupChecklistItem, mf: SetupChecklistItem): SetupChecklistItem {
+  const mfVersion = mf.meta.version;
+  const mfCarriesVs = (mf.code === "present" || mf.code === "too_old") && versionAtLeast(mfVersion, MF_WITH_VISUAL_SIDECHAIN);
+  const vsVersion = typeof vs.meta.version === "string" ? vs.meta.version : "";
+  if (mfCarriesVs && (vs.code === "present" || vs.code === "too_old") && !versionAtLeast(vsVersion, MF_WITH_VISUAL_SIDECHAIN)) {
+    const shown = parseVersion(vsVersion) ? vsVersion : "";
+    return {
+      id: "visual_sidechain",
+      state: "warn",
+      code: "vs_conflict",
+      detail: shown ? `Old Visual Sidechain ${shown} running` : "Old Visual Sidechain running",
+      fix: "Remove the old Visual Sidechain plugin and restart OBS: Visual Sidechain is part of Midi Fadester now. Midi Fadester's Fadester Desk dock names the file.",
+      meta: shown ? { version: shown } : {}
+    };
+  }
+  if (mfCarriesVs && vs.code === "missing") {
+    return {
+      id: "visual_sidechain",
+      state: "warn",
+      code: "vs_off",
+      detail: "Switched off in Midi Fadester",
+      fix: "Visual Sidechain in Midi Fadester did not start. Look at Midi Fadester's Fadester Desk dock or OBS's log, then restart OBS.",
+      meta: {}
+    };
+  }
+  return vs;
+}
+
 async function checkMidiFadester(
   client: SetupChecklistClientLike,
   connected: boolean
@@ -443,7 +513,8 @@ async function checkMidiFadester(
   try {
     stateReply = await client.callNamedVendor<Record<string, unknown>>("midi-fadester", "get_state");
   } catch (error) {
-    if (isObsVendorMissingError(error)) {
+    const kind = vendorErrorKind(error);
+    if (kind === "vendor_missing") {
       return {
         id: "midi_fadester",
         state: "info",
@@ -453,7 +524,7 @@ async function checkMidiFadester(
         meta: {}
       };
     }
-    if (isObsVendorRequestMissingError(error)) {
+    if (kind === "request_missing") {
       return {
         id: "midi_fadester",
         state: "warn",
@@ -511,7 +582,7 @@ async function checkMidiFadester(
       };
     }
   } catch (error) {
-    if (isObsVendorRequestMissingError(error) || (error as { code?: unknown } | null)?.code === 400) {
+    if (vendorErrorKind(error) === "request_missing" || (error as { code?: unknown } | null)?.code === 400) {
       return {
         id: "midi_fadester",
         state: "warn",
@@ -533,6 +604,11 @@ async function checkMidiFadester(
   };
 }
 
+const VS_FIX_MISSING =
+  "Optional: install Midi Fadester 0.9.0 or newer in OBS (it includes Visual Sidechain) if you use audio-reactive shaders, Visual Panic, or Tape Deck.";
+const VS_FIX_OLD =
+  "Install Midi Fadester 0.9.0 or newer in OBS: it includes Visual Sidechain, with live safety state, tempo lock, and Tape Deck controls.";
+
 async function checkVisualSidechain(
   client: SetupChecklistClientLike,
   connected: boolean
@@ -552,23 +628,24 @@ async function checkVisualSidechain(
   try {
     signals = await client.callNamedVendor<Record<string, unknown>>("visual-sidechain", "get_signals");
   } catch (error) {
-    if (isObsVendorMissingError(error)) {
+    const kind = vendorErrorKind(error);
+    if (kind === "vendor_missing") {
       return {
         id: "visual_sidechain",
         state: "info",
         code: "missing",
         detail: "Not installed (optional)",
-        fix: "Optional: install Visual Sidechain in OBS if you use audio-reactive shaders, Visual Panic, or Tape Deck.",
+        fix: VS_FIX_MISSING,
         meta: {}
       };
     }
-    if (isObsVendorRequestMissingError(error)) {
+    if (kind === "request_missing") {
       return {
         id: "visual_sidechain",
         state: "warn",
         code: "too_old",
         detail: "Visual Sidechain installed",
-        fix: "Update Visual Sidechain in OBS for live safety state, tempo lock, and Tape Deck controls.",
+        fix: VS_FIX_OLD,
         meta: {}
       };
     }
@@ -594,7 +671,7 @@ async function checkVisualSidechain(
       state: "warn",
       code: "too_old",
       detail: `Visual Sidechain ${version}`,
-      fix: "Update Visual Sidechain in OBS for live safety state, tempo lock, and Tape Deck controls.",
+      fix: VS_FIX_OLD,
       meta: { version }
     };
   }
@@ -610,18 +687,18 @@ async function checkVisualSidechain(
         state: "warn",
         code: "too_old",
         detail: `Visual Sidechain ${version}`,
-        fix: "Update Visual Sidechain in OBS for live safety state, tempo lock, and Tape Deck controls.",
+        fix: VS_FIX_OLD,
         meta: { version }
       };
     }
   } catch (error) {
-    if (isObsVendorMissingError(error) || isObsVendorRequestMissingError(error)) {
+    if (vendorErrorKind(error) !== "other") {
       return {
         id: "visual_sidechain",
         state: "warn",
         code: "too_old",
         detail: `Visual Sidechain ${version}`,
-        fix: "Update Visual Sidechain in OBS for live safety state, tempo lock, and Tape Deck controls.",
+        fix: VS_FIX_OLD,
         meta: { version }
       };
     }
@@ -926,12 +1003,13 @@ export async function evaluateSetupChecklist(
               meta: {}
             };
 
-  const [mfItem, vsItem, playlisterPlugin, vjsterProbe] = await Promise.all([
+  const [mfItem, vsRawItem, playlisterPlugin, vjsterProbe] = await Promise.all([
     checkMidiFadester(client, connected),
     checkVisualSidechain(client, connected),
     detectPlaylisterPlugin(client),
     probePort(vjsterPort)
   ]);
+  const vsItem = reconcileVisualSidechain(vsRawItem, mfItem);
 
   const playlisterItem: SetupChecklistItem =
     playlisterPlugin.status === "present"

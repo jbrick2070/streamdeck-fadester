@@ -9,7 +9,8 @@
  *   optional OBS plugins (`midi-fadester`, `visual-sidechain`, `obs-playlister`
  *   by input kind with `"version unknown"`), and who holds the VJster link port.
  */
-import koffi from "koffi";
+import { createRequire } from "node:module";
+import type KoffiModule from "koffi";
 import { isLoopbackObsHost } from "../../packages/streamdeck-fadester-shared/src/obs/obs-websocket-config.js";
 import {
   OBS_VENDOR_NOT_FOUND,
@@ -192,11 +193,34 @@ interface Win32ChecklistBindings {
 }
 
 let cachedWin32: Win32ChecklistBindings | null | undefined;
+
+type Koffi = typeof KoffiModule;
+let cachedKoffi: Koffi | null | undefined;
+
+/**
+ * koffi, loaded the first time a Windows or macOS probe needs it. It is never imported at start: koffi has no native
+ * addon for every platform this plugin may run on (OpenDeck on Linux), and a missing addon throws while loading.
+ */
+function loadKoffi(): Koffi | null {
+  if (cachedKoffi !== undefined) return cachedKoffi;
+  try {
+    const nativeRequire = createRequire(import.meta.url);
+    cachedKoffi = nativeRequire("koffi") as Koffi;
+  } catch {
+    cachedKoffi = null;
+  }
+  return cachedKoffi;
+}
 let cachedMacAxTrust: (() => number) | null | undefined;
 
 function getWin32Bindings(): Win32ChecklistBindings | null {
   if (cachedWin32 !== undefined) return cachedWin32;
   if (process.platform !== "win32") {
+    cachedWin32 = null;
+    return null;
+  }
+  const koffi = loadKoffi();
+  if (!koffi) {
     cachedWin32 = null;
     return null;
   }
@@ -334,7 +358,7 @@ export function defaultProbeLocalObsProcess(port: number, platform: string): Loc
 
   const proc = BigInt(win.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZE, 0, pid));
   if (proc === 0n) {
-    if (koffi.errno() === ERROR_ACCESS_DENIED) {
+    if (loadKoffi()?.errno() === ERROR_ACCESS_DENIED) {
       return { elevated: "fail", minimised: "unknown" };
     }
     return { elevated: "unknown", minimised: "unknown" };
@@ -406,7 +430,9 @@ export function defaultProbeMacAccessibility(
 ): "ok" | "fail" | "unknown" | "not_applicable" {
   if (platform !== "darwin") return "not_applicable";
   if (cachedMacAxTrust === undefined) {
+    const koffi = loadKoffi();
     try {
+      if (!koffi) throw new Error("koffi unavailable");
       const appServices = koffi.load(
         "/System/Library/Frameworks/ApplicationServices.framework/ApplicationServices"
       );

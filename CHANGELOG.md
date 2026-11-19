@@ -8,7 +8,7 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 Fadester Companion stays 0.1.17 and the VJster extension 0.1.6.
 
 ### Fixed
-- The plugin starts again on Windows. Since 0.12.0 the build copied koffi (the library that reads OBS's own window) into the plugin's main file, where it could not find its native part, so the Fadester actions stopped at start with "Cannot find the native Koffi module". koffi now stays a separate module, as it already was for the T-bar workers, and a test checks the build config and the built files.
+- The plugin starts again on Windows. Since 0.12.0 the build copied koffi (the library that reads OBS's own window) into the plugin's main file, where it could not find its native part, so the Fadester actions stopped at start with "Cannot find the native Koffi module". koffi now stays a separate module, as it already was for the T-bar workers, and is loaded only when a Windows or macOS check needs it, so the plugin also starts where koffi has no native part (OpenDeck on Linux, still untried). A test checks the build config and the built files.
 
 ## 0.12.15 - 2026-11-19
 Visual Sidechain is part of Midi Fadester since 0.9.0. Fadester Companion stays 0.1.17 and the VJster extension 0.1.6.

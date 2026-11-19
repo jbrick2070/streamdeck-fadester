@@ -8,8 +8,10 @@
 ; Safety rules: never closes OBS or Fadester Companion (asks you to), never replaces a newer installed component
 ; (unless /ALLOWDOWNGRADE), leaves the Microsoft Store edition of Fadester Companion alone, warns when the standalone
 ; VJster plugin would fight Fadester for OBS over port 48150, and never deletes settings, scene collections or profiles.
+; Visual Sidechain is part of Midi Fadester since 0.9.0: there is no separate component; Midi Fadester's own installer
+; removes the old standalone plugin, and setup says so when Midi Fadester is not run (unticked or already newer).
 ; Log markers (for tests and support): OBS-RUNNING, COMPANION-RUNNING, OPENDECK-RUNNING, SKIP-NEWER, STORE-EDITION,
-; VJSTER-CLASH, INSTALLED, FAILED.
+; VJSTER-CLASH, OLD-VS, INSTALLED, FAILED.
 
 #ifndef SuiteVersion
   #error Build with installer\build-suite.ps1, which passes the component defines.
@@ -49,8 +51,7 @@ Name: "custom"; Description: "Choose components"; Flags: iscustom
 
 [Components]
 Name: "obs"; Description: "OBS Studio 33 plugins (each keeps its own uninstall entry)"; Types: full
-Name: "obs\mf"; Description: "Midi Fadester {#MfVersion}"; Types: full
-Name: "obs\vs"; Description: "Visual Sidechain {#VsVersion}"; Types: full
+Name: "obs\mf"; Description: "Midi Fadester {#MfVersion} (includes Visual Sidechain)"; Types: full
 Name: "obs\pl"; Description: "Playlister {#PlVersion}"; Types: full
 Name: "companion"; Description: "Fadester Companion {#CoVersion} (game controller, TourBox, whole-mix audio)"; Types: full
 Name: "streamdeck"; Description: "Fadester for OBS {#SdVersion} for Stream Deck and OpenDeck (includes VJster)"; Types: full
@@ -62,7 +63,6 @@ Name: "opendeck"; Description: "Add Fadester for OBS to OpenDeck"; Components: s
 [Files]
 ; Standalone installers, extracted and run one by one during "Preparing to install".
 Source: "{#Stage}\{#MfFile}"; Flags: dontcopy
-Source: "{#Stage}\{#VsFile}"; Flags: dontcopy
 Source: "{#Stage}\{#PlFile}"; Flags: dontcopy
 Source: "{#Stage}\{#CoFile}"; Flags: dontcopy
 ; Fadester for OBS package: Stream Deck imports it with its own installer when it is opened.
@@ -185,6 +185,16 @@ begin
 #endif
 end;
 
+{ The standalone Visual Sidechain (0.8.0 and older), retired when Midi Fadester 0.9.0 took it in. }
+const
+  OldVsAppId = '7C4A92E8-4B19-4F03-9A56-3D8E21B05C7F';
+
+function OldVisualSidechainPresent(): Boolean;
+begin
+  Result := (InstalledVersion(OldVsAppId) <> '') or
+            DirExists(ExpandConstant('{commonappdata}\obs-studio\plugins\visual-sidechain'));
+end;
+
 function OpenDeckPresent(): Boolean;
 begin
   Result := DirExists(ExpandConstant('{userappdata}\opendeck'));
@@ -198,7 +208,7 @@ end;
 
 function AnyPluginSelected(): Boolean;
 begin
-  Result := WizardIsComponentSelected('obs\mf') or WizardIsComponentSelected('obs\vs') or WizardIsComponentSelected('obs\pl');
+  Result := WizardIsComponentSelected('obs\mf') or WizardIsComponentSelected('obs\pl');
 end;
 
 { ---------- wizard ---------- }
@@ -211,11 +221,8 @@ begin
     WizardSelectComponents('!obs\mf');
     Note('SKIP-NEWER', 'Midi Fadester ' + InstalledVersion('{#MfAppId}') + ' is already installed; setup carries {#MfVersion}, so it is left as it is.');
   end;
-  if NewerInstalled('Visual Sidechain', '{#VsAppId}', '{#VsVersion}') then
-  begin
-    WizardSelectComponents('!obs\vs');
-    Note('SKIP-NEWER', 'Visual Sidechain ' + InstalledVersion('{#VsAppId}') + ' is already installed; setup carries {#VsVersion}, so it is left as it is.');
-  end;
+  if OldVisualSidechainPresent() then
+    Note('OLD-VS', 'The old separate Visual Sidechain plugin is installed. Visual Sidechain is part of Midi Fadester now: keep Midi Fadester ticked and its installer removes the old plugin. If Midi Fadester is not installed by this setup, remove Visual Sidechain in Windows Installed apps.');
   if NewerInstalled('Playlister', '{#PlAppId}', '{#PlVersion}') then
   begin
     WizardSelectComponents('!obs\pl');
@@ -306,7 +313,6 @@ begin
     Exit;
   end;
   Result := ChainOne('obs\mf', 'Midi Fadester', '{#MfAppId}', '{#MfVersion}', '{#MfFile}'); if Result <> '' then Exit;
-  Result := ChainOne('obs\vs', 'Visual Sidechain', '{#VsAppId}', '{#VsVersion}', '{#VsFile}'); if Result <> '' then Exit;
   Result := ChainOne('obs\pl', 'Playlister', '{#PlAppId}', '{#PlVersion}', '{#PlFile}'); if Result <> '' then Exit;
   Result := ChainOne('companion', 'Fadester Companion', '{#CoAppId}', '{#CoVersion}', '{#CoFile}');
 end;
@@ -317,6 +323,11 @@ var
   Package, Deck: String;
 begin
   if CurStep <> ssPostInstall then Exit;
+  if OldVisualSidechainPresent() then
+  begin
+    Log('OLD-VS: the old separate Visual Sidechain plugin is still installed after setup.');
+    Summary := Summary + 'The old separate Visual Sidechain plugin is still installed. Visual Sidechain is part of Midi Fadester now: remove the old one in Windows Installed apps, or run the Midi Fadester installer again with OBS closed.' + #13#10;
+  end;
   if WizardIsComponentSelected('streamdeck') then
   begin
     Package := ExpandConstant('{app}\packages\{#SdFile}');

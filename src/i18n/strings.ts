@@ -66,7 +66,7 @@ const PLUGIN_EN = {
   vpRestore: "Restore visuals",
   vpHoldSeconds: "Hold {s} s",
   vpHolding: "Keep holding",
-  vpNotLoaded: "Visual Sidechain missing",
+  vpNotLoaded: "Needs Midi Fadester",
   // Visual Sidechain Meter (P1-3)
   vmTitle: "VS meter",
   vmOpTap: "Tap tempo",
@@ -93,7 +93,7 @@ const PLUGIN_EN = {
   tdOpSpeedDown: "Speed down",
   tdNoDeck: "NO DECK",
   tdChooseDeck: "Choose a deck",
-  tdNeedsUpdate: "Update Visual Sidechain",
+  tdNeedsUpdate: "Update Midi Fadester",
   tdErrorNoDeck: "No Tape Deck in OBS.",
   tdDialHint: "Push: {op} · Turn: speed",
   // OBS Filter keys and dials
@@ -276,7 +276,7 @@ const PLUGIN_EN = {
   holdFinish: "HOLD FINISH",
   mfNeedsUpdate: "Update Midi Fadester",
   mfNeedsUpdateSentence: "Update Midi Fadester in OBS to use '{request}'.",
-  vsNeedsUpdateSentence: "Update Visual Sidechain in OBS to use '{request}'.",
+  vsNeedsUpdateSentence: "Update Midi Fadester in OBS (it includes Visual Sidechain) to use '{request}'.",
   // Texts the plugin sends to the property inspectors
   setupErrorStudio: "Press Enable Studio Mode & open current starter layout.",
   setupErrorFallback: "Could not prepare this OBS layout.",

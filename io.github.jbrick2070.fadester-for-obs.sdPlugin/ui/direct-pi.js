@@ -361,6 +361,12 @@
       if (code === "not_applicable") return T("chkDetailNotApplicable");
       return T("chkDetailUnknown");
     }
+    if (id === "visual_sidechain" && code === "vs_conflict") {
+      return item.meta && item.meta.version
+        ? T("chkDetailVsConflict", { version: item.meta.version })
+        : T("chkDetailVsConflict", { version: "" }).replace(/\s+/g, " ").trim();
+    }
+    if (id === "visual_sidechain" && code === "vs_off") return T("chkDetailVsOff");
     if (id === "midi_fadester" || id === "visual_sidechain") {
       if (code === "missing") return T("chkDetailOptionalMissing");
       if (code === "unknown") return T("chkDetailWaitingObs");
@@ -398,6 +404,8 @@
     if (item.id === "midi_fadester" && code === "too_old") return T("chkFixMfOld");
     if (item.id === "visual_sidechain" && code === "missing") return T("chkFixVsMissing");
     if (item.id === "visual_sidechain" && code === "too_old") return T("chkFixVsOld");
+    if (item.id === "visual_sidechain" && code === "vs_conflict") return T("chkFixVsConflict");
+    if (item.id === "visual_sidechain" && code === "vs_off") return T("chkFixVsOff");
     if (item.id === "playlister" && code === "missing") return T("chkFixPlMissing");
     if (code === "port_other") return T("chkFixPortOther", metaParams);
     if (code === "port_unknown_holder") return T("chkFixPortUnknown", metaParams);

@@ -130,8 +130,8 @@ describe("Visual Panic", () => {
     expect(safety.isLatched()).toBe(false);
     expect(filters.isPanicLatched()).toBe(false);
     expect(panic.alerts()).toBe(1);
-    await panic.waitImage((svg) => svg.includes(">Visual Sidechain missing<") && svg.includes('data-icon="panic"'));
-    await expect(safety.restore()).rejects.toThrow(/Visual Sidechain missing/);
+    await panic.waitImage((svg) => svg.includes(">Needs Midi Fadester<") && svg.includes('data-icon="panic"'));
+    await expect(safety.restore()).rejects.toThrow(/Needs Midi Fadester/);
   });
 
   it("clears the latch on a reconnect and on a disconnect, and sends nothing while offline", async () => {

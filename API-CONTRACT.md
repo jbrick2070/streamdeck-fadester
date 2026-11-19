@@ -103,6 +103,8 @@ Because `obs-websocket-api.h`'s `obs_websocket_request_callback_function` (`void
 ## Visual Sidechain vendor API (`visual-sidechain`)
 
 Vendor name: `visual-sidechain`. Transport: obs-websocket 5 `CallVendorRequest` and vendor events.
+
+Since **Midi Fadester 0.9.0** this vendor is registered by Midi Fadester, which includes Visual Sidechain; the separate Visual Sidechain plugin (0.8.0 and older) is retired. The vendor name, requests, events and payloads are unchanged, and `version` is Midi Fadester's version. A `visual-sidechain` answer with a version below 0.9.0 while `midi-fadester` reports 0.9.0 or newer is the old plugin loaded first (Midi Fadester then keeps its own copy off); clients should say so rather than ask the user to install anything. obs-websocket answers `600` both for a missing vendor and for a missing vendor request (told apart by the comment); test servers may answer `604` for the latter.
 Visual Sidechain owns audio signals, Tape Deck descriptions, and visual safety (Panic / Restore). All requests and events carry `"version": "<semver>"` and `"api_version": 1`; new fields and requests are additive so older surfaces keep working.
 
 ### Requests (`visual-sidechain`)

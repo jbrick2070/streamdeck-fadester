@@ -104,7 +104,8 @@ describe("VJster plugin end to end", () => {
     sim.key("key-3-0");
     await until(() => sim.player.s.rate === 2);
     await until(() => sim.svg("key-3-0").includes('stroke-width="6"'));
-    expect(sim.svg("key-2-0")).not.toContain('stroke-width="6"');
+    // Each key redraws on its own; wait for the previous preset to let go instead of reading it at once.
+    await until(() => !sim.svg("key-2-0").includes('stroke-width="6"'));
     sim.key("key-2-0");
     await until(() => sim.player.s.rate === 1);
   });

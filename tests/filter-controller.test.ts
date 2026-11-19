@@ -96,9 +96,14 @@ describe("filter controller", () => {
     }, { timeout: 4000 });
     const all = server.filterWriteLog.map((entry) => entry.at);
     expect(all.length).toBe(4 + 4 + 4);
-    for (let i = 1; i < all.length; i++) expect(all[i]! - all[i - 1]!, `write ${i}`).toBeGreaterThanOrEqual(45);
+    // The fake server stamps each write when it arrives, so one late arrival shortens the next gap although the
+    // plugin sent them 50 ms apart (a busy CI runner showed 43 ms). Every gap must still be far from "no throttle", and
+    // the average over the whole run must keep the rate.
+    for (let i = 1; i < all.length; i++) expect(all[i]! - all[i - 1]!, `write ${i}`).toBeGreaterThanOrEqual(35);
+    expect((all.at(-1)! - all[0]!) / (all.length - 1), "average gap").toBeGreaterThanOrEqual(45);
     const modulator = server.filterWriteLog.filter((entry) => entry.filterName === "Pulse").map((entry) => entry.at);
-    for (let i = 1; i < modulator.length; i++) expect(modulator[i]! - modulator[i - 1]!, `modulator write ${i}`).toBeGreaterThanOrEqual(190);
+    for (let i = 1; i < modulator.length; i++) expect(modulator[i]! - modulator[i - 1]!, `modulator write ${i}`).toBeGreaterThanOrEqual(170);
+    expect((modulator.at(-1)! - modulator[0]!) / (modulator.length - 1), "average modulator gap").toBeGreaterThanOrEqual(190);
   });
 
   it("moves a whole-number setting at least one per write and arrives", async () => {

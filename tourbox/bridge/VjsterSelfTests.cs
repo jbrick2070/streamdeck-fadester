@@ -168,8 +168,8 @@ internal static class VjsterSelfTests
         return ws;
     }
 
-    static string StateJson(string inReplyTo, double rate, string title = "Clip", bool playing = true, string quality = "hd1080", string target = "browser") =>
-        $$"""{"v":1,"id":"e{{Random.Shared.Next()}}","target":"{{target}}","type":"state","inReplyTo":{{(inReplyTo == "" ? "null" : "\"" + inReplyTo + "\"")}},"rate":{{rate.ToString(System.Globalization.CultureInfo.InvariantCulture)}},"rateDirect":false,"availableRates":[0.25,0.5,1,1.25,1.5,2],"quality":"{{quality}}","availableQualities":["hd1080","hd720"],"qualityAuto":false,"title":"{{title}}","host":"www.youtube.com","playing":{{(playing ? "true" : "false")}},"adPlaying":false,"capabilities":["speed","quality","transport"],"pinned":false}""";
+    static string StateJson(string inReplyTo, double rate, string title = "Clip", bool playing = true, string quality = "hd1080", string target = "browser", string rates = "0.25,0.5,1,1.25,1.5,2") =>
+        $$"""{"v":1,"id":"e{{Random.Shared.Next()}}","target":"{{target}}","type":"state","inReplyTo":{{(inReplyTo == "" ? "null" : "\"" + inReplyTo + "\"")}},"rate":{{rate.ToString(System.Globalization.CultureInfo.InvariantCulture)}},"rateDirect":false,"availableRates":[{{rates}}],"quality":"{{quality}}","availableQualities":["hd1080","hd720"],"qualityAuto":false,"title":"{{title}}","host":"www.youtube.com","playing":{{(playing ? "true" : "false")}},"adPlaying":false,"capabilities":["speed","quality","transport"],"pinned":false}""";
 
     static async Task Loopback()
     {
@@ -222,7 +222,7 @@ internal static class VjsterSelfTests
         Check((await slow).StartsWith("Clip · Video 0.5x"), "slow preset reply");
 
         // Midi Fadester's APC40 Tempo knob: steps of 0.05x as one speed.set from the speed last asked for, kept within
-        // 0.25x..4x, so steps that come faster than the replies still add up.
+        // 0.25x..4x and the video's own speeds, so steps that come faster than the replies still add up.
         var by = desk.SpeedBy(3);
         intent = JsonNode.Parse(await Receive(ext))!.AsObject();
         Check(intent["type"]!.GetValue<string>() == "speed.set" && Math.Abs(intent["rate"]!.GetValue<double>() - 0.65) < 1e-9, "3 steps from 0.5x ask for 0.65x");
@@ -235,8 +235,31 @@ internal static class VjsterSelfTests
         await by;
         by = desk.SpeedBy(80);
         intent = JsonNode.Parse(await Receive(ext))!.AsObject();
-        Check(Math.Abs(intent["rate"]!.GetValue<double>() - 4.0) < 1e-9, "steps stop at 4x");
-        await SendText(ext, StateJson(intent["id"]!.GetValue<string>(), 4));
+        Check(Math.Abs(intent["rate"]!.GetValue<double>() - 2.0) < 1e-9, "steps stop at the video's top speed (2x here)");
+        await SendText(ext, StateJson(intent["id"]!.GetValue<string>(), 2));
+        await by;
+        by = desk.SpeedBy(-1);
+        intent = JsonNode.Parse(await Receive(ext))!.AsObject();
+        Check(Math.Abs(intent["rate"]!.GetValue<double>() - 1.95) < 1e-9, "one step back down from the top moves the video at once");
+        await SendText(ext, StateJson(intent["id"]!.GetValue<string>(), 1.95, rates: "0.25,1,2,4"));
+        await by;
+        by = desk.SpeedBy(80);
+        intent = JsonNode.Parse(await Receive(ext))!.AsObject();
+        Check(Math.Abs(intent["rate"]!.GetValue<double>() - 4.0) < 1e-9, "a video that plays 4x lets steps reach 4x");
+        await SendText(ext, StateJson(intent["id"]!.GetValue<string>(), 3, rates: "0.25,1,2,4"));
+        await by;
+        by = desk.SpeedBy(-1);
+        intent = JsonNode.Parse(await Receive(ext))!.AsObject();
+        Check(Math.Abs(intent["rate"]!.GetValue<double>() - 2.95) < 1e-9, "the next step starts from the speed the video took (3x), not the one asked for");
+        await SendText(ext, StateJson(intent["id"]!.GetValue<string>(), 2.95, rates: "0.25,1,2,4"));
+        await by;
+        // Another video comes up (its own state, not a reply): the next step starts from that video's speed.
+        await SendText(ext, StateJson("", 1.5, title: "Other"));
+        for (int i = 0; i < 100 && link.GetLastState("browser")?.Title != "Other"; i++) await Task.Delay(10);
+        by = desk.SpeedBy(1);
+        intent = JsonNode.Parse(await Receive(ext))!.AsObject();
+        Check(Math.Abs(intent["rate"]!.GetValue<double>() - 1.55) < 1e-9, "a step on another video starts from its speed: " + intent["rate"]);
+        await SendText(ext, StateJson(intent["id"]!.GetValue<string>(), 1.55));
         await by;
         // Tap Tempo (or any other speed change) in between: the next step starts from the video's speed, not the last step.
         var reset = desk.Dispatch("vjster.speed.reset");

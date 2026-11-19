@@ -21,10 +21,10 @@
     },
     "fadesterForObs": {
       "name": "Fadester for OBS (Stream Deck and OpenDeck, includes VJster)",
-      "version": "0.11.0",
+      "version": "0.12.16",
       "file": "io.github.jbrick2070.fadester-for-obs.streamDeckPlugin",
-      "url": "https://github.com/jbrick2070/streamdeck-fadester/releases/download/v0.11.0/io.github.jbrick2070.fadester-for-obs.streamDeckPlugin",
-      "sha256": "5da881bf247f1abf458e6e40e75d2d11024040d873b466fb3a23232ece8e44ff"
+      "url": "https://github.com/jbrick2070/streamdeck-fadester/releases/download/v0.12.16/io.github.jbrick2070.fadester-for-obs.streamDeckPlugin",
+      "sha256": "227ef149b3823e375eeda2ad2e982ae784cadbc45b1368c88c3c95976e595e70"
     },
     "vjsterExtension": {
       "name": "VJster Chrome extension",

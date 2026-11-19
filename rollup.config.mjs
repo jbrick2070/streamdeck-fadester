@@ -32,7 +32,9 @@ export default [
       format: "esm",
       sourcemap: true
     },
-    external: sharedExternal,
+    // koffi stays outside the bundle (as in the workers): bundled, its loader looks for its native addon relative to
+    // bin/ instead of bin/node_modules/koffi and the plugin stops at start ("Cannot find the native Koffi module").
+    external: [...sharedExternal, "koffi"],
     plugins: sharedPlugins()
   },
   {

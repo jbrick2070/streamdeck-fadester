@@ -100,7 +100,7 @@ The keys ship unbound: open each key's settings page once and choose the Playlis
 
 [VJ Rig +](io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-vj-rig-v1.streamDeckProfile) or [VJ Rig 15 Keys](io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-vj-rig-v1.streamDeckProfile). Four pages, each with its own colour: **Perform** (brass), **Layers** (teal), **Visuals** (magenta), **Scenes** (violet). **Next page** sits bottom left and the red **PANIC** key bottom right on every page; no Cut or Transition key is ever next to Panic.
 
-Panic sends [Visual Sidechain](https://github.com/jbrick2070/visual-sidechain)'s own Panic through OBS's hotkeys at once; **Restore** needs a 0.8 s hold. Panic keys then read **PANIC SENT** until a Restore is accepted. Every filter and Playlister control ships unbound: choose the source and its filter (or the Playlister) once in its settings page.
+Panic sends [Visual Sidechain](https://github.com/jbrick2070/midi-fadester/blob/main/docs/VISUAL-SIDECHAIN.md)'s own Panic (part of Midi Fadester 0.9.0 or later) through OBS's hotkeys at once; **Restore** needs a 0.8 s hold. Panic keys then read **PANIC SENT** until a Restore is accepted. Every filter and Playlister control ships unbound: choose the source and its filter (or the Playlister) once in its settings page.
 
 Stream Deck +, one row per page (keys top row / bottom row; dials):
 

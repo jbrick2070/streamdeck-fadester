@@ -61,4 +61,4 @@ The tests refuse to run outside CI, because they install into `C:\ProgramData` a
 
 - **No real-PC run yet.** The CI runners have no OBS, Stream Deck or OpenDeck. So nobody has yet seen Stream Deck's own import, the OpenDeck task with OpenDeck itself, or the plugins loading in OBS after a suite install.
 - **Code signing and Smart App Control** behaviour are untested until a certificate exists.
-- **Pins wait for publication.** Until Midi Fadester 0.7.4, Visual Sidechain 0.7.4, Playlister 0.5.2 and Fadester for OBS 0.12.12 are published, `components.json` still pins the earlier releases.
+- **Pins wait for publication.** Until Midi Fadester 0.7.4, Visual Sidechain 0.7.4, Playlister 0.5.2 and Fadester for OBS 0.12.13 are published, `components.json` still pins the earlier releases.

@@ -215,7 +215,10 @@ internal sealed class VjsterDesk(VjsterLink link, double fastSpeed = 2.0, double
     /**
      * Moves the video speed by steps of 0.05x (negative: slower) with one speed.set per target: Midi Fadester's APC40
      * Tempo knob and Nudge buttons (VjsterRemote). The base is the speed last asked for within 1.5 s on the same video,
-     * else the video's reported speed, else 1x; the reply's speed then replaces the one asked for.
+     * else the video's reported speed, else 1x. The base stays the speed asked for, not the one the video answers:
+     * the OBS page's YouTube embed rounds to its own rates (1.05x plays as 1x), so steps must add up until they reach
+     * the next one. A step never moves the speed against its direction: from 3x on a video that tops out at 2x, a step
+     * up stays at 3x.
      */
     public async Task<string> SpeedBy(int steps)
     {
@@ -228,7 +231,6 @@ internal sealed class VjsterDesk(VjsterLink link, double fastSpeed = 2.0, double
         foreach (var target in open)
         {
             double rate;
-            long at;
             lock (lastAsked)
             {
                 var known = link.GetLastState(target);
@@ -237,22 +239,13 @@ internal sealed class VjsterDesk(VjsterLink link, double fastSpeed = 2.0, double
                                   Stopwatch.GetElapsedTime(asked.At) < TimeSpan.FromSeconds(1.5)
                     ? asked.Rate : known?.Rate ?? 1.0;
                 var (lo, hi) = StepRange(known);
+                double from = Math.Clamp(baseRate, MinRemoteRate, MaxRemoteRate);
+                if (steps > 0) hi = Math.Max(hi, from);
+                else lo = Math.Min(lo, from);
                 rate = Math.Clamp(Math.Round((baseRate + steps * StepRate) * 100) / 100, lo, hi);
-                at = Stopwatch.GetTimestamp();
-                lastAsked[target] = (rate, at, video);
+                lastAsked[target] = (rate, Stopwatch.GetTimestamp(), video);
             }
-            var reply = await link.Request("speed.set", Rate(rate), ReplyTimeout, target);
-            if (reply?.State is { Rate: double played } state)
-            {
-                lock (lastAsked)
-                {
-                    // Only when no later step has asked since: the speed the video took (it may round or cap the
-                    // request) is the base for the next step, on the video that answered.
-                    if (lastAsked.TryGetValue(target, out var mine) && mine.At == at)
-                        lastAsked[target] = (played, at, VideoOf(state));
-                }
-            }
-            replies.Add(FormatReply("vjster.speed.step", target, reply));
+            replies.Add(FormatReply("vjster.speed.step", target, await link.Request("speed.set", Rate(rate), ReplyTimeout, target)));
         }
         return open.Length == 1 ? replies[0] : $"Chrome: {replies[0]} | OBS: {replies[1]}";
     }

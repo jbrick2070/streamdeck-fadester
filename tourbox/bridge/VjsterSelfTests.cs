@@ -248,10 +248,19 @@ internal static class VjsterSelfTests
         Check(Math.Abs(intent["rate"]!.GetValue<double>() - 4.0) < 1e-9, "a video that plays 4x lets steps reach 4x");
         await SendText(ext, StateJson(intent["id"]!.GetValue<string>(), 3, rates: "0.25,1,2,4"));
         await by;
+        // A player that rounds (the OBS page's embed plays 3.05x as 3x): steps still add up from what was asked.
         by = desk.SpeedBy(-1);
         intent = JsonNode.Parse(await Receive(ext))!.AsObject();
-        Check(Math.Abs(intent["rate"]!.GetValue<double>() - 2.95) < 1e-9, "the next step starts from the speed the video took (3x), not the one asked for");
-        await SendText(ext, StateJson(intent["id"]!.GetValue<string>(), 2.95, rates: "0.25,1,2,4"));
+        Check(Math.Abs(intent["rate"]!.GetValue<double>() - 3.95) < 1e-9, "steps add up from the speed asked for, not the one the video rounded to");
+        await SendText(ext, StateJson(intent["id"]!.GetValue<string>(), 3, rates: "0.25,1,2,4"));
+        await by;
+        // Left at 3x by a video that played 4x, now one that tops out at 2x: a step up never lowers the speed.
+        await SendText(ext, StateJson("", 3, title: "Capped"));
+        for (int i = 0; i < 100 && link.GetLastState("browser")?.Title != "Capped"; i++) await Task.Delay(10);
+        by = desk.SpeedBy(1);
+        intent = JsonNode.Parse(await Receive(ext))!.AsObject();
+        Check(Math.Abs(intent["rate"]!.GetValue<double>() - 3.0) < 1e-9, "a step up from above the video's top stays put: " + intent["rate"]);
+        await SendText(ext, StateJson(intent["id"]!.GetValue<string>(), 3, title: "Capped"));
         await by;
         // Another video comes up (its own state, not a reply): the next step starts from that video's speed.
         await SendText(ext, StateJson("", 1.5, title: "Other"));

@@ -15,7 +15,7 @@
  * - When `CallVendorRequest` answers 600 or 604 (an older Visual Sidechain build
  *   without safety requests, or Visual Sidechain not loaded), `VisualSafety`
  *   falls back transparently to `TriggerHotkeyByName` and the local latch
- *   (600 on the hotkey answers "Visual Sidechain missing").
+ *   (600 on the hotkey answers "Needs Midi Fadester").
  * - Locally initiated Panic sets the latch before OBS answers so no Visual
  *   Sidechain filter write slips in behind it.
  */

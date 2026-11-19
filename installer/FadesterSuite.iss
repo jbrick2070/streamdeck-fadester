@@ -195,6 +195,12 @@ begin
             DirExists(ExpandConstant('{commonappdata}\obs-studio\plugins\visual-sidechain'));
 end;
 
+{ After setup, only the plugin folder counts: an old uninstall entry whose uninstaller is gone can outlive the plugin. }
+function OldVisualSidechainFolderPresent(): Boolean;
+begin
+  Result := DirExists(ExpandConstant('{commonappdata}\obs-studio\plugins\visual-sidechain'));
+end;
+
 function OpenDeckPresent(): Boolean;
 begin
   Result := DirExists(ExpandConstant('{userappdata}\opendeck'));
@@ -323,7 +329,7 @@ var
   Package, Deck: String;
 begin
   if CurStep <> ssPostInstall then Exit;
-  if OldVisualSidechainPresent() then
+  if OldVisualSidechainFolderPresent() then
   begin
     Log('OLD-VS: the old separate Visual Sidechain plugin is still installed after setup.');
     Summary := Summary + 'The old separate Visual Sidechain plugin is still installed. Visual Sidechain is part of Midi Fadester now: remove the old one in Windows Installed apps, or run the Midi Fadester installer again with OBS closed.' + #13#10;

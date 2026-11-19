@@ -269,7 +269,7 @@ export interface VisualPanicKeyRenderInput {
   holdSeconds?: number;
   /** Restore's accent; Panic is always red. */
   accent?: AccentName;
-  /** The last failed send ("Visual Sidechain not loaded" or OBS's own text). */
+  /** The last failed send ("Needs Midi Fadester" or OBS's own text). */
   problem?: string;
   /** A custom caption; empty draws the operation word. */
   title?: string;

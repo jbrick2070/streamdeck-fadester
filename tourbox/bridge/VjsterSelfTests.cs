@@ -321,6 +321,25 @@ internal static class VjsterSelfTests
         Check((await Answer(1))["type"]!.GetValue<string>() == "speed.reset", "the reset follows");
         for (int i = 0; i < 15; i++) await Answer(1);
         for (int i = 0; i < 50 && remote.QueuedCount > 0; i++) await Task.Delay(20);
+        // Midi Fadester's dock presets (vjster.speed.set): one speed.set at the rate; a dial step right after starts from
+        // it; a preset overtakes the steps still waiting; a rate outside 0.25x..4x is refused.
+        JsonObject Set(double r) => new() { ["action"] = VjsterRemote.SetAction, ["rate"] = r };
+        Send(Set(1.5));
+        var set = await Answer(1.5);
+        Check(set["type"]!.GetValue<string>() == "speed.set" && Math.Abs(set["rate"]!.GetValue<double>() - 1.5) < 1e-9, "a preset sets 1.5x");
+        Send(Step(1));
+        Check(Math.Abs((await Answer(1.55))["rate"]!.GetValue<double>() - 1.55) < 1e-9, "a dial step after the preset starts from it");
+        Send(Act("vjster.playPause"));
+        held = JsonNode.Parse(await Receive(ext))!.AsObject();
+        Send(Step(3)); Send(Set(0.75)); Send(Step(1));
+        Check(remote.QueuedCount == 2, "the preset overtook the steps before it: " + remote.QueuedCount);
+        await SendText(ext, StateJson(held["id"]!.GetValue<string>(), 1.55));
+        Check(Math.Abs((await Answer(0.75))["rate"]!.GetValue<double>() - 0.75) < 1e-9, "then the preset 0.75x");
+        Check(Math.Abs((await Answer(0.8))["rate"]!.GetValue<double>() - 0.8) < 1e-9, "and the step after it");
+        Send(Set(9));
+        for (int i = 0; i < 10; i++) await Task.Delay(10);
+        Check(remote.QueuedCount == 0, "a preset outside 0.25x..4x is refused");
+        for (int i = 0; i < 50 && remote.QueuedCount > 0; i++) await Task.Delay(20);
         var status = desk.Dispatch("vjster.status");
         intent = JsonNode.Parse(await Receive(ext))!.AsObject();
         Check(intent["type"]!.GetValue<string>() == "state.get", "status asks for state");

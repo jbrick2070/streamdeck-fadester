@@ -4,6 +4,10 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 
 ## Unreleased
 
+## 0.12.14 - 2026-11-19
+This release ships Fadester Companion 0.1.17; the VJster extension stays 0.1.6.
+- **Preset speeds from Midi Fadester's Fadester Desk dock** (with Midi Fadester 0.8.0): the dock's 0.5x, 0.75x, 1.25x, 1.5x and 2x buttons arrive as one `vjster.speed.set` request each, kept within the speeds the video plays. A preset overtakes speed steps still waiting (play / pause stays queued), and a dial turn right after it starts from the preset.
+
 ## 0.12.13 - 2026-11-18
 This release ships Fadester Companion 0.1.16; the VJster extension stays 0.1.6.
 - **The APC40's Tempo knob stays inside the video's own speeds.** On the OBS video page (top speed 2x), turning past the top and straight back down did nothing: the Companion remembered asking for up to 4x and stepped down from there. Steps now stop at the lowest and highest speed the video reports, never move the speed against the turn, and a step on another video starts from that video's speed. Steps still add up from the speed asked for, since the OBS page's player rounds to its own rates.

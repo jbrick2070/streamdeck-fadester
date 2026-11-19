@@ -1,6 +1,6 @@
 name: Release (draft)
 
-# Pushing a version tag such as v0.12.13 builds the release packages from that commit and creates a DRAFT GitHub
+# Pushing a version tag such as v0.12.14 builds the release packages from that commit and creates a DRAFT GitHub
 # release with them. Nothing is published: a person tests the draft on real hardware, then publishes it.
 # The tag must match package.json and the Fadester for OBS manifest. The Companion version comes from
 # installer/components.json (companion.version), so the suite setup, the Windows ZIP, the Store package and the

@@ -40,8 +40,12 @@ internal sealed class VjsterRemote(VjsterDesk desk, Action<string> log)
     const int MaxQueued = 16;
     readonly object gate = new();
     bool busy;
-    /** What the APC40 asked for, in order: an action id, or (null, n) for n speed steps. Steps in a row add up. */
-    readonly List<(string? Action, int Steps)> queued = new();
+    /**
+     * What Midi Fadester asked for, in order: an action id, (null, n) for n speed steps (steps in a row add up), or
+     * ("vjster.speed.set", 0, rate) for a preset speed from its Fadester Desk dock.
+     */
+    readonly List<(string? Action, int Steps, double Rate)> queued = new();
+    public const string SetAction = "vjster.speed.set";
     string lastLine = "";
     long lastLineAt;
 
@@ -58,15 +62,24 @@ internal sealed class VjsterRemote(VjsterDesk desk, Action<string> log)
             {
                 if (steps == 0) return;
                 if (queued.Count > 0 && queued[^1].Action is null)
-                    queued[^1] = (null, (int)Math.Clamp(queued[^1].Steps + steps, -80, 80));
-                else if (queued.Count < MaxQueued) queued.Add((null, (int)steps));
+                    queued[^1] = (null, (int)Math.Clamp(queued[^1].Steps + steps, -80, 80), 0);
+                else if (queued.Count < MaxQueued) queued.Add((null, (int)steps, 0));
                 else return;
+            }
+            else if (action == SetAction)
+            {
+                double rate = data["rate"] is JsonValue r && r.TryGetValue<double>(out var x) && double.IsFinite(x) ? x : 0;
+                if (rate < VjsterDesk.MinRemoteRate || rate > VjsterDesk.MaxRemoteRate) return;
+                // A preset says where the video should be: speed requests still waiting are overtaken; play / pause stays.
+                queued.RemoveAll(q => q.Action is null || q.Action == SetAction || q.Action == "vjster.speed.reset");
+                if (queued.Count >= MaxQueued) return;
+                queued.Add((SetAction, 0, rate));
             }
             else if (action is not null && VjsterDesk.Actions.Contains(action))
             {
-                if (action == "vjster.speed.reset") queued.RemoveAll(q => q.Action is null); // steps before 1x are overtaken
+                if (action == "vjster.speed.reset") queued.RemoveAll(q => q.Action is null || q.Action == SetAction); // overtaken by 1x
                 if (queued.Count >= MaxQueued) return;
-                queued.Add((action, 0));
+                queued.Add((action, 0, 0));
             }
             else return;
             if (busy) return;
@@ -89,7 +102,7 @@ internal sealed class VjsterRemote(VjsterDesk desk, Action<string> log)
     {
         while (true)
         {
-            (string? Action, int Steps) next;
+            (string? Action, int Steps, double Rate) next;
             lock (gate)
             {
                 if (queued.Count == 0) { busy = false; return; }
@@ -97,7 +110,12 @@ internal sealed class VjsterRemote(VjsterDesk desk, Action<string> log)
                 queued.RemoveAt(0);
             }
             string line;
-            try { line = next.Action is not null ? await desk.Dispatch(next.Action) : await desk.SpeedBy(next.Steps); }
+            try
+            {
+                line = next.Action == SetAction ? await desk.SetSpeed(next.Rate)
+                     : next.Action is not null ? await desk.Dispatch(next.Action)
+                     : await desk.SpeedBy(next.Steps);
+            }
             catch (Exception e) { line = e.Message; }
             Say(line);
         }
@@ -210,6 +228,34 @@ internal sealed class VjsterDesk(VjsterLink link, double fastSpeed = 2.0, double
         if (usable.Length == 0) return (MinRemoteRate, MaxRemoteRate);
         double lo = Math.Max(MinRemoteRate, usable.Min()), hi = Math.Min(MaxRemoteRate, usable.Max());
         return hi < lo ? (MinRemoteRate, MaxRemoteRate) : (lo, hi);
+    }
+
+    /**
+     * A preset speed (Midi Fadester's Fadester Desk dock, vjster_action "vjster.speed.set"): one speed.set per target,
+     * kept within the speeds that video plays. Steps that follow within 1.5 s start from it.
+     */
+    public async Task<string> SetSpeed(double rate)
+    {
+        if (!double.IsFinite(rate)) return "";
+        if (!link.Running) return await Dispatch("vjster.status");
+        string[] candidates = this.targetChoice switch { "obs" => ["obs"], "both" => ["browser", "obs"], _ => ["browser"] };
+        string[] open = candidates.Where(link.IsConnected).ToArray();
+        if (open.Length == 0) return await Dispatch("vjster.status");
+        var replies = new List<string>();
+        foreach (var target in open)
+        {
+            double asked;
+            lock (lastAsked)
+            {
+                var known = link.GetLastState(target);
+                var (lo, hi) = StepRange(known); // within what this video plays (the OBS page tops out at 2x)
+                asked = Math.Clamp(Math.Round(rate * 100) / 100, lo, hi);
+                // the base for a dial turn right after, on this video
+                lastAsked[target] = (asked, Stopwatch.GetTimestamp(), VideoOf(known));
+            }
+            replies.Add(FormatReply("vjster.speed.set", target, await link.Request("speed.set", Rate(asked), ReplyTimeout, target)));
+        }
+        return open.Length == 1 ? replies[0] : $"Chrome: {replies[0]} | OBS: {replies[1]}";
     }
 
     /**

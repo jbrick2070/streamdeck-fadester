@@ -231,12 +231,8 @@ internal sealed class VjsterDesk(VjsterLink link, double fastSpeed = 2.0, double
     }
 
     /**
-     * Moves the video speed by steps of 0.05x (negative: slower) with one speed.set per target: Midi Fadester's APC40
-     * Tempo knob and Nudge buttons (VjsterRemote). The base is the speed last asked for within 1.5 s on the same video,
-     * else the video's reported speed, else 1x. The base stays the speed asked for, not the one the video answers:
-     * the OBS page's YouTube embed rounds to its own rates (1.05x plays as 1x), so steps must add up until they reach
-     * the next one. A step never moves the speed against its direction: from 3x on a video that tops out at 2x, a step
-     * up stays at 3x.
+     * A preset speed (Midi Fadester's Fadester Desk dock, vjster_action "vjster.speed.set"): one speed.set per target,
+     * kept within the speeds that video plays. Steps that follow within 1.5 s start from it.
      */
     public async Task<string> SetSpeed(double rate)
     {
@@ -263,8 +259,12 @@ internal sealed class VjsterDesk(VjsterLink link, double fastSpeed = 2.0, double
     }
 
     /**
-     * A preset speed (Midi Fadester's Fadester Desk dock, vjster_action "vjster.speed.set"): one speed.set per target,
-     * kept within the speeds that video plays. Steps that follow within 1.5 s start from it.
+     * Moves the video speed by steps of 0.05x (negative: slower) with one speed.set per target: Midi Fadester's APC40
+     * Tempo knob and Nudge buttons (VjsterRemote). The base is the speed last asked for within 1.5 s on the same video,
+     * else the video's reported speed, else 1x. The base stays the speed asked for, not the one the video answers:
+     * the OBS page's YouTube embed rounds to its own rates (1.05x plays as 1x), so steps must add up until they reach
+     * the next one. A step never moves the speed against its direction: from 3x on a video that tops out at 2x, a step
+     * up stays at 3x.
      */
     public async Task<string> SpeedBy(int steps)
     {

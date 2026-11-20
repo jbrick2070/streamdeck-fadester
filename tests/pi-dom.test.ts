@@ -301,4 +301,72 @@ describe("Property Inspector DOM behavior", () => {
     expect(calls.filter((x) => !x.source)).toHaveLength(2);
     expect(calls.filter((x) => x.source === "A")).toHaveLength(2);
   });
+
+  // C-01: every state message redraws an open, unedited editor, and the plugin answers a failed getCatalog with two
+  // more state messages. Without a memory of the failure the requests doubled each round.
+  it("asks once for a source's filters when the request fails, however many state messages follow", async () => {
+    const h = harness(); await flush();
+    const gone = structuredClone(h.state);
+    gone.slots[0].source_a = "Gone";
+    const calls: RecordValue[] = [];
+    h.api.requestWith(async (msg: RecordValue) => {
+      calls.push(msg);
+      return msg.source === "Gone" ? { error: "Source not found." } : { data: msg.source ? detail(msg.source) : overview };
+    });
+    h.api.configure(gone, "fx_1", overview);
+    h.api.resetEditorContext();
+    h.api.refreshEditor(gone); await flush();
+    expect(h.el("af-source-a").value).toBe("Gone");
+    expect(h.el("af-catalog-error").textContent).toBe("Source not found.");
+    // The two state messages the failure causes, then two more for each of those, as the plugin would send them.
+    for (let round = 0; round < 6; round += 1) { h.api.applyState(structuredClone(gone)); await flush(); }
+    expect(calls.filter((x) => x.source === "Gone")).toHaveLength(1);
+    expect(h.el("af-catalog-error").textContent).toBe("Source not found.");
+    // Refresh is the operator asking again: once.
+    h.el("assign-refresh").fire("click"); await flush(); await flush();
+    expect(calls.filter((x) => x.source === "Gone")).toHaveLength(2);
+    for (let round = 0; round < 3; round += 1) { h.api.applyState(structuredClone(gone)); await flush(); }
+    expect(calls.filter((x) => x.source === "Gone")).toHaveLength(2);
+    // A change of connection starts again too, and a source that answers is asked once and then kept.
+    const next = structuredClone(gone); next.connection.port = 4456;
+    h.api.applyState(next); await flush(); await flush();
+    expect(calls.filter((x) => x.source === "Gone")).toHaveLength(3);
+  });
+
+  it("does not send a second request for a source while the first is unanswered", async () => {
+    const h = harness(); await flush();
+    const other = structuredClone(h.state);
+    other.slots[0].source_a = "B"; other.slots[0].filter_name = "B Filter";
+    const reply = deferred<RecordValue>();
+    const calls: RecordValue[] = [];
+    h.api.requestWith((msg: RecordValue) => { calls.push(msg); return msg.source ? reply.promise : Promise.resolve({ data: overview }); });
+    h.api.configure(other, "fx_1", overview);
+    h.api.resetEditorContext();
+    h.api.refreshEditor(other);
+    for (let round = 0; round < 5; round += 1) { h.api.applyState(structuredClone(other)); await flush(); }
+    expect(calls.filter((x) => x.source === "B")).toHaveLength(1);
+    reply.resolve({ data: detail("B") }); await flush(); await flush();
+    expect(h.el("af-filter").options.map((x) => x.value)).toEqual(["", "B Filter"]);
+    h.api.applyState(structuredClone(other)); await flush();
+    expect(calls.filter((x) => x.source === "B")).toHaveLength(1);
+  });
+
+  it("asks once for the overview when it fails or is still on its way", async () => {
+    const h = harness(); await flush();
+    const reply = deferred<RecordValue>();
+    const calls: RecordValue[] = [];
+    h.api.configure(h.state, "fx_1", null);
+    h.api.requestWith((msg: RecordValue) => { calls.push(msg); return reply.promise; });
+    h.api.refreshEditor(h.state);
+    for (let round = 0; round < 4; round += 1) { h.api.applyState(structuredClone(h.state)); await flush(); }
+    expect(calls).toHaveLength(1);
+    reply.resolve({ error: "OBS did not return a catalog." }); await flush(); await flush();
+    for (let round = 0; round < 4; round += 1) { h.api.applyState(structuredClone(h.state)); await flush(); }
+    expect(calls).toHaveLength(1);
+    expect(h.el("assign-result").textContent).toBe("OBS did not return a catalog.");
+    h.api.requestWith(async (msg: RecordValue) => { calls.push(msg); return { data: msg.source ? detail(msg.source) : overview }; });
+    h.el("assign-refresh").fire("click"); await flush(); await flush();
+    expect(calls.filter((x) => !x.source)).toHaveLength(2);
+    expect(h.el("af-filter").options.map((x) => x.value)).toEqual(["", "A Filter"]);
+  });
 });

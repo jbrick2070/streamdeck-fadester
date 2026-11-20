@@ -53,6 +53,14 @@
   const pendingReplies = new Map();
   let overviewCatalog = null;
   let sourceCatalogCache = {};
+  // Every state message redraws an open editor, and a failed getCatalog makes the plugin send two more state
+  // messages. So a list is asked for once: a request still unanswered is shared, and one that failed is remembered
+  // (with its reason) until Refresh or a change of connection, never asked again by a redraw.
+  let sourceCatalogPending = new Map();
+  let sourceCatalogFailed = new Map();
+  let overviewPending = null;
+  let overviewFailed = false;
+  let overviewSlot = "";
   let editorDirty = false;
   let editorBaseline = null;
   let editorConflict = false;
@@ -765,7 +773,11 @@
           render();
           return;
         }
-        request({ event: "getCatalog", source: source }).then(function (reply) {
+        if (sourceCatalogFailed.has(source)) {
+          setBanner(catalogError, sourceCatalogFailed.get(source), "err");
+          return;
+        }
+        requestSourceCatalog(source).then(function (reply) {
           if (generation !== editorGeneration || catalogVersion !== catalogGeneration || requestVersion !== sourceRequest || hostSel.value !== source) return;
           if (reply && reply.data) sourceCatalogCache[source] = reply.data;
           else {
@@ -865,25 +877,56 @@
     return "";
   }
 
+  // One getCatalog per source: a second caller waits for the first one's answer, and a failure is remembered.
+  function requestSourceCatalog(source) {
+    const pending = sourceCatalogPending, failed = sourceCatalogFailed;
+    if (pending.has(source)) return pending.get(source);
+    const asked = request({ event: "getCatalog", source: source }).then(function (reply) {
+      pending.delete(source);
+      // After Refresh or a change of connection these are no longer the live maps, and the answer counts for nothing.
+      if (!(reply && reply.data)) failed.set(source, (reply && reply.error) || T("noFilterList"));
+      return reply;
+    });
+    pending.set(source, asked);
+    return asked;
+  }
+
+  function forgetCatalogRequests() {
+    sourceCatalogPending = new Map();
+    sourceCatalogFailed = new Map();
+    overviewPending = null;
+    overviewFailed = false;
+  }
+
   function refreshCatalog(force) {
     if (!lastState || !lastState.capabilities || !lastState.capabilities.catalog) return Promise.resolve();
     if (!lastState.status || lastState.status.kind !== "connected") return Promise.resolve();
     if (overviewCatalog && !force) return Promise.resolve();
-    if (force) sourceCatalogCache = {};
+    // The answer is drawn for the slot that asked last, also when that caller only joined a request on its way.
+    overviewSlot = currentSettings.slot || "crossfader";
+    if (!force && overviewPending) return overviewPending;
+    if (!force && overviewFailed) return Promise.resolve();
+    if (force) {
+      sourceCatalogCache = {};
+      forgetCatalogRequests();
+    }
     const requestVersion = ++catalogGeneration;
-    const slotId = currentSettings.slot || "crossfader";
-    return request({ event: "getCatalog" }).then(function (reply) {
+    const asked = request({ event: "getCatalog" }).then(function (reply) {
+      if (overviewPending === asked) overviewPending = null;
       if (requestVersion !== catalogGeneration) return;
       if (reply && reply.data) {
         overviewCatalog = reply.data;
-      } else if (reply && reply.error) {
-        setBanner($("assign-result"), reply.error, "err");
+      } else {
+        overviewFailed = true;
+        if (reply && reply.error) setBanner($("assign-result"), reply.error, "err");
       }
       const modeSel = $("assign-mode");
-      if (modeSel && slotId === (currentSettings.slot || "crossfader") && $("assign-editor").open) {
+      if (modeSel && overviewSlot === (currentSettings.slot || "crossfader") && $("assign-editor").open) {
         renderModeFields(modeSel.value, captureEditorDraft());
       }
     });
+    overviewPending = asked;
+    return asked;
   }
 
   function refreshEditor(state) {
@@ -1045,6 +1088,7 @@
     if (connectionChanged) {
       overviewCatalog = null;
       sourceCatalogCache = {};
+      forgetCatalogRequests();
       catalogGeneration += 1;
       editorGeneration += 1;
       applySequence += 1;

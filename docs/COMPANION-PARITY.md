@@ -53,7 +53,7 @@ Sources: `tourbox/panel/FadesterTourBox.cs` and `ShowMe.cs` (Windows), `tourbox/
 | Optional: VJster | Enable, port, extension ID, Target, OBS video URL / ID, Copy OBS Browser Source URL | Same fields | Same |
 | Optional: Whole mix | Enable, **Use only Stream Deck, OpenDeck or MIDI**, step (dB), fade (ms) | Same | Same. The Mac runs `FadesterMacHost --run --mix-only`: no shortcut helper, native T-bar, Accessibility or VJster. |
 | Number fields | Spin boxes | Plain fields, with "Enter a valid number" | **Gap** |
-| An empty choice | A blank first item | **Unassigned**, and **Unavailable: name** for a saved source OBS no longer has | **Gap** on Windows |
+| An empty choice | **Unassigned**, and **Unavailable: name** for a saved source OBS no longer has | Same | Same |
 
 ## While the controls run
 
@@ -109,7 +109,7 @@ No action is called "take" anywhere: the TourBox label is **Preview to Program**
 1. **Check the Mac app on a real Mac.** CI builds and self-tests it on both architectures; what is left needs a screen and hardware: open the released ZIP past Gatekeeper, check the lights, the menu-bar icon, Command-V in the password field, the meter line, Stream Deck-only mode and a non-English language (`--language de`, `--language ja`, `--language tr`) on screen, grant Accessibility, and rehearse with a TourBox.
 2. **Look at the dark appearance on screen.** Windows: the pictures from `--render FILE.png --theme dark` were checked for every tab; the window itself (title bar, scroll bars, an open drop-down list, the game controller table with its rows) was not. Mac: not built or seen. Still light in dark mode: the Show-me guide windows on both, the Mac setup diagram, and on Windows the spin-box arrows and check-box squares.
 3. **Shorter Setup page.** See the proposal below. It needs an on-screen review, so it was not changed blind.
-4. **Setup diagram on Windows**, and **Unassigned / Unavailable** in its lists.
+4. **Setup diagram on Windows** (or none on either: the lights say the same in less space; the owner's choice).
 5. **The Mac's Activity lines in words**, as on Windows.
 6. **Game controller on the Mac.** This would be a new feature (Apple's GameController framework), not a parity fix.
 

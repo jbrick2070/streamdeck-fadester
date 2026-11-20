@@ -204,6 +204,8 @@ namespace Fadester.TourBox {
       { "liVjOn", new[] { "VJster: connected", "VJster: conectado", "VJster : connecté", "VJster：已连接" } },
       { "liVjWait", new[] { "VJster: waiting for video", "VJster: esperando un vídeo", "VJster : en attente d’une vidéo", "VJster：正在等待视频" } },
       { "liVjPort", new[] { "VJster: port in use", "VJster: puerto en uso", "VJster : port occupé", "VJster：端口被占用" } },
+      { "unassigned", new[] { "Unassigned", "Sin asignar", "Non affecté", "未分配" } },
+      { "unavailable", new[] { "Unavailable: {0}", "No disponible: {0}", "Indisponible : {0}", "不可用：{0}" } },
       { "liVjDeck", new[] { "VJster: on your Stream Deck", "VJster: en tu Stream Deck", "VJster : sur votre Stream Deck", "VJster：由 Stream Deck 控制" } },
       { "btnOpenConsole", new[] { "Open Console", "Abrir Console", "Ouvrir Console", "打开 Console" } },
       { "btnDownload", new[] { "Download", "Descargar", "Télécharger", "下载" } },

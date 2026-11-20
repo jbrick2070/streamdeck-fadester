@@ -261,6 +261,15 @@ namespace Fadester.TourBox {
           if (w.start.Text.Length == 0 || w.tray != null || w.obsLight == null) throw new Exception("window " + locale);
         }
       }
+      // The assignment lists show words for "none" and for a name OBS no longer has; what is saved stays the name.
+      if (ChoiceText(enText,"",null)!="Unassigned" || ChoiceText(enText,"Camera",null)!="Camera" ||
+          ChoiceText(enText,"Camera",new HashSet<string>{"Camera"})!="Camera" || ChoiceText(deText,"Camera",new HashSet<string>())!="Nicht verfügbar: Camera") throw new Exception("choice text");
+      using (var w = new PanelWindow(new PanelText("en"), true)) {
+        w.catalog=Decode("{\"scenes\":[\"A\",\"B\"]}"); w.config["anchors"]=new object[]{"B","Gone","",""};
+        w.LoadChoices(false);
+        if (w.Picked("anchor0")!="B" || w.Picked("anchor1")!="Gone" || w.Picked("anchor2")!="" || w.boxes["anchor1"].Text!="Unavailable: Gone" ||
+            w.boxes["anchor2"].Text!="Unassigned" || w.boxes["anchor0"].Text!="B") throw new Exception("assignment lists");
+      }
       // The dark window builds too, with its own tab strip, and its page is dark.
       bool wasDark=Theme.Dark;
       try {
@@ -579,8 +588,20 @@ namespace Fadester.TourBox {
     void Field(FlowLayoutPanel p,string name,string id) {
       var r=new FlowLayoutPanel {AutoSize=true,WrapContents=false,Margin=new Padding(0)};
       r.Controls.Add(FieldLabel(name));
-      var c=new ComboBox {Width=270,DropDownStyle=ComboBoxStyle.DropDownList}; r.Controls.Add(c); c.Items.Add(""); c.SelectedIndex=0; boxes[id]=c; p.Controls.Add(r);
+      var c=new ComboBox {Width=270,DropDownStyle=ComboBoxStyle.DropDownList,FormattingEnabled=true}; r.Controls.Add(c);
+      // What the list shows, as on the Mac: "Unassigned" for the empty choice and "Unavailable: name" for a saved name OBS
+      // no longer has. The items themselves stay the plain names ("" for none), which is what is saved (Picked).
+      c.Format+=(s,e)=>{ e.Value=ChoiceText(text,Convert.ToString(e.ListItem),offered.ContainsKey(id)?offered[id]:null); };
+      c.Items.Add(""); c.SelectedIndex=0; boxes[id]=c; p.Controls.Add(r);
     }
+    /** The names OBS offered for each list at its last fill; none until OBS has been read, so nothing is called unavailable before. */
+    readonly Dictionary<string,HashSet<string>> offered=new Dictionary<string,HashSet<string>>();
+    internal static string ChoiceText(PanelText text,string name,HashSet<string> offeredNames) {
+      if(String.IsNullOrEmpty(name)) return text.Get("unassigned");
+      return offeredNames!=null && !offeredNames.Contains(name) ? text.Get("unavailable",name) : name;
+    }
+    /** The name chosen in an assignment list ("" for Unassigned): never the words the list shows. */
+    string Picked(string k) { return Convert.ToString(boxes[k].SelectedItem ?? ""); }
     ComboBox Choose(FlowLayoutPanel p,string label) {
       var r=new FlowLayoutPanel {AutoSize=true,WrapContents=false,Margin=new Padding(0)};
       r.Controls.Add(FieldLabel(label));
@@ -597,23 +618,24 @@ namespace Fadester.TourBox {
     }
     void Fill(string k,string[] options,string initial) {
       var c=boxes[k]; c.BeginUpdate(); c.Items.Clear(); c.Items.Add("");
+      if(catalog.ContainsKey("scenes")) offered[k]=new HashSet<string>(options); else offered.Remove(k);
       foreach(var x in options.Concat(new[]{initial}).Where(v=>!String.IsNullOrEmpty(v)).Distinct()) c.Items.Add(x);
       c.SelectedItem=initial??""; c.EndUpdate();
     }
     void PopulateOverlay() {
       object items; var d=catalog.TryGetValue("sceneItems",out items)?items as Dictionary<string,object>:null;
-      string scene=boxes["overlayScene"].Text, keep=scene==Val(config,"overlayScene")?Val(config,"overlaySource"):"";
+      string scene=Picked("overlayScene"), keep=scene==Val(config,"overlayScene")?Val(config,"overlaySource"):"";
       Fill("overlaySource",List(d,scene),keep);
     }
     void PopulateLayer(int n) {
       object items; var d=catalog.TryGetValue("sceneItems",out items)?items as Dictionary<string,object>:null;
       string sceneKey="layer"+n+"Scene", sourceKey="layer"+n+"Source";
-      string scene=boxes[sceneKey].Text, keep=scene==Val(config,sceneKey)?Val(config,sourceKey):"";
+      string scene=Picked(sceneKey), keep=scene==Val(config,sceneKey)?Val(config,sourceKey):"";
       Fill(sourceKey,List(d,scene),keep);
     }
     void LoadChoices(bool preserveEdits) {
       string[] audio=List(catalog,"audioInputs"), scenes=List(catalog,"scenes"), anchors=List(config,"anchors");
-      Func<string,string,string> keep=(k,old)=>preserveEdits?boxes[k].Text:old;
+      Func<string,string,string> keep=(k,old)=>preserveEdits?Picked(k):old;
       foreach(string k in new[]{"musicInput","contentInput","micInput"}) Fill(k,audio,keep(k,Val(config,k)));
       Fill("mediaInput",List(catalog,"mediaInputs"),keep("mediaInput",Val(config,"mediaInput")));
       string oldOverlay=keep("overlaySource",Val(config,"overlaySource"));
@@ -773,7 +795,7 @@ namespace Fadester.TourBox {
     protected override void Dispose(bool disposing){if(disposing){foreach(var img in glyphs.Values)if(img!=null)img.Dispose();glyphs.Clear();}base.Dispose(disposing);}
     void WriteConfig() {
       if(invalidConfig)throw new InvalidOperationException(text.Get("cannotWrite"));
-      foreach(string k in new[]{"musicInput","contentInput","micInput","mediaInput","overlayScene","overlaySource","layer1Scene","layer1Source","layer2Scene","layer2Source"}) config[k]=boxes[k].Text;
+      foreach(string k in new[]{"musicInput","contentInput","micInput","mediaInput","overlayScene","overlaySource","layer1Scene","layer1Source","layer2Scene","layer2Source"}) config[k]=Picked(k);
       config["vjsterEnabled"]=enableVjster.Checked; config["vjsterPort"]=(int)vjsterPort.Value; config["vjsterExtensionId"]=extensionId.Text.Trim();
       config["vjsterTarget"]=VjsterObsPage.Targets[Math.Max(0,vjsterTarget.SelectedIndex)];
       // The OBS page needs its private link token; make one the first time the page is chosen.
@@ -784,7 +806,7 @@ namespace Fadester.TourBox {
         var changes=PadChanges(); if(changes.Count==0) config.Remove("gamepadMap"); else config["gamepadMap"]=changes;
         config["gamepadFastSpeed"]=padSpeeds[fastSpeed.SelectedIndex]; config["gamepadSlowSpeed"]=padSpeeds[slowSpeed.SelectedIndex];
       }
-      config["anchors"]=Enumerable.Range(0,4).Select(i=>boxes["anchor"+i].Text).ToArray();
+      config["anchors"]=Enumerable.Range(0,4).Select(i=>Picked("anchor"+i)).ToArray();
       config["mixEnabled"]=enableMix.Checked; config["mixOnly"]=mixOnly.Checked; config["mixStepDb"]=mixStep.Value; config["mixFadeMs"]=(int)mixDuration.Value;
       config["volumeStepDb"]=volumeStep.Value;config["duckDb"]=duckLevel.Value;config["faderStep"]=1m/fadeTicks.Value;config["transitionStepMs"]=(int)transitionStep.Value;
       config["host"]="127.0.0.1"; config["port"]=(int)port.Value; config["portAuto"]=portAuto; Directory.CreateDirectory(Path.GetDirectoryName(settings));

@@ -63,9 +63,9 @@ struct RuntimePaths {
     /// every other control working and says so on an OFFLINE or T-BAR line (F-02).
     nonisolated static func tbarReason(_ text: String) -> String? {
         guard text.hasPrefix("OFFLINE:") || text.hasPrefix("T-BAR:") else { return nil }
-        for known in ["Accessibility denied", "not parked at zero", "expected exactly one native OBS T-bar"] where text.localizedCaseInsensitiveContains(known) {
-            return explainHostError(text)
-        }
+        if text.localizedCaseInsensitiveContains("Accessibility denied") { return L("macTbarAx") }
+        if text.localizedCaseInsensitiveContains("not parked at zero") { return L("macTbarZero") }
+        if text.localizedCaseInsensitiveContains("expected exactly one native OBS T-bar") { return L("macTbarStudio") }
         return nil
     }
 

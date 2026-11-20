@@ -178,7 +178,9 @@ namespace Fadester.TourBox {
     // A video has been connected to VJster on this PC at some time (config.json vjsterSeen): until then its light does not nag.
     bool vjUsed;
     // Studio Mode off is read again every 10 s while it shows, so turning it on in OBS by hand clears the light too.
-    DateTime studioCheckAt=DateTime.MinValue;
+    // Twelve looks (two minutes) after the light turned amber, not for ever: someone who works without Studio Mode must
+    // not have OBS asked every 10 s for the whole show. The Turn on button and every later read of OBS update it too.
+    DateTime studioCheckAt=DateTime.MinValue; int studioChecksLeft;
     // The OBS port follows OBS's own settings file (as the password does) until someone types another one.
     bool portAuto=true, settingPort;
     // The icon in the notification area: with the controls on, closing the window hides it there and the show goes on.
@@ -947,7 +949,10 @@ namespace Fadester.TourBox {
           string studio=knowsStudio ? text.Get(studioMode?"on":"off") : "—";
           live.Text=text.Get("sceneSummary",Val(next,"program","—"),Val(next,"preview","—"),studio);
           SetVsStatus(FormatVsMeter(text,Val(next,"visualSidechain"))??"");
-          obsConnected=true; obsProblem=null; studioOff=knowsStudio && !studioMode; studioCheckAt=DateTime.Now.AddSeconds(10); ShowStatus();
+          bool wasStudioOff=studioOff;
+          obsConnected=true; obsProblem=null; studioOff=knowsStudio && !studioMode; studioCheckAt=DateTime.Now.AddSeconds(10);
+          if(studioOff && !wasStudioOff) studioChecksLeft=12;
+          ShowStatus();
           if(!quiet) Note(text.Get(worker==null?"obsReady":"obsConnected",List(next,"scenes").Length));
         }
       }catch(Exception e){if(quiet){ Entry.Log("list refresh: "+e.Message); } else { live.Text=""; if(worker==null){SetVsStatus(""); obsConnected=false; obsProblem=failure??"obs-no-answer"; ShowStatus();} Note(e.Message);}}
@@ -1030,7 +1035,7 @@ namespace Fadester.TourBox {
         if(peersNow.Count>0 && !vjUsed){ vjUsed=true; config["vjsterSeen"]=true; SaveKeys(new Dictionary<string,object>{{"vjsterSeen",true}}); ShowStatus(); }
         if(busyNow!=vjPortBusy || !peersNow.SetEquals(vjPeers)){ vjPeers=peersNow; vjPortBusy=busyNow; ShowStatus(); }
         // Preview or the T-bar was used with Studio Mode off: the OBS light says so, with its Turn on button.
-        if(Readiness.SaysStudioOff(line) && !studioOff){ studioOff=true; studioCheckAt=DateTime.Now.AddSeconds(10); ShowStatus(); }
+        if(Readiness.SaysStudioOff(line) && !studioOff){ studioOff=true; studioChecksLeft=12; studioCheckAt=DateTime.Now.AddSeconds(10); ShowStatus(); }
         string padNow=PadState(line,padState), problem=PanelText.ProblemCode(line); bool obsNow=ObsState(line,obsConnected);
         if(padNow=="stPadOn") padEver=true;
         // OBS just answered the running controls: read its scenes and sources for the Assignments lists, with no click.
@@ -1091,7 +1096,8 @@ namespace Fadester.TourBox {
     void ShowStatus() {
       if(obsLight==null || enableGamepad==null || mixOnly==null || enableVjster==null || reminderBar==null) return;
       bool on=worker!=null;
-      obsLight.Display(Readiness.Obs(obsConnected,obsRunning,obsProblem,studioOff,on),text);
+      // Stream Deck-only mode serves OBS's mixer and needs no Studio Mode: its light does not ask for it.
+      obsLight.Display(Readiness.Obs(obsConnected,obsRunning,obsProblem,studioOff && !mixOnly.Checked,on),text);
       // A stopped bridge has no VJster link: what its lines said no longer holds.
       if(!on){ vjPeers.Clear(); vjPortBusy=false; }
       tbLight.Display(Readiness.TourBox(tourboxConsole,consoleInstalled,mixOnly.Checked,enableGamepad.Checked,presetState==PresetState.Old,presetState==PresetState.None),text);
@@ -1124,7 +1130,7 @@ namespace Fadester.TourBox {
           autoTries--; autoConnectAt=DateTime.Now.AddSeconds(5); var pending=Connect();
         }
         // Studio Mode off is on the OBS light: look again now and then, so turning it on in OBS itself clears the light.
-        if(running && obsConnected && studioOff && !refreshing && DateTime.Now>=studioCheckAt){ studioCheckAt=DateTime.Now.AddSeconds(10); var again=Connect(true); }
+        if(running && obsConnected && studioOff && studioChecksLeft>0 && !mixOnly.Checked && !refreshing && DateTime.Now>=studioCheckAt){ studioChecksLeft--; studioCheckAt=DateTime.Now.AddSeconds(10); var again=Connect(true); }
       } } catch(Exception e) { Entry.Log("watch: "+e.Message); }
       ShowStatus();
     }

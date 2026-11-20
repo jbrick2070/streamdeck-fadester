@@ -532,6 +532,10 @@ enum ModelTests {
         try check(Readiness.obs(connected: true, running: true, problem: nil, studioOff: false, controlsOn: false) == LightState(.green, "OBS: connected"), "OBS connected light")
         try check(Readiness.obs(connected: true, running: true, problem: nil, studioOff: true, controlsOn: false) == LightState(.amber, "OBS: turn on Studio Mode", button: "Turn on", action: "studioOn") &&
                   Readiness.obs(connected: true, running: true, problem: nil, studioOff: true, controlsOn: true).action == "studioOn", "OBS Studio Mode light")
+        try check(HostController.tbarReason("T-BAR: Accessibility denied; grant the responsible app The other controls work; the T-bar is looked at again when the Dial is turned.") == L("macTbarAx") &&
+                  HostController.tbarReason("OFFLINE: OBS's native T-bar is not parked at zero; move it back to its start in OBS.") == L("macTbarZero") &&
+                  HostController.tbarReason("T-BAR: OBS's T-bar can be read again; the Dial works.") == nil &&
+                  HostController.tbarReason("RESULT music.up: Music up") == nil, "A waiting T-bar says why in the panel's words")
         try check(Readiness.saysStudioOff("REFUSED preview.next: Enable Studio Mode in OBS before using Preview or the T-bar.") && !Readiness.saysStudioOff("RESULT music.up: Music up"), "Studio Mode line")
         try check(LocalFiles.obsPort(from: Data("{\"server_port\":4466,\"server_password\":\"x\"}".utf8)) == 4466 && LocalFiles.obsPort(from: Data("{\"server_port\":0}".utf8)) == nil &&
                   LocalFiles.obsPort(from: Data("{\"server_port\":true}".utf8)) == nil && LocalFiles.obsPort(from: Data("{ half".utf8)) == nil && LocalFiles.obsPort(from: nil) == nil, "OBS's own port")

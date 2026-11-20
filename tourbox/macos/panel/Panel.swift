@@ -198,7 +198,9 @@ private final class PillActionButton: NSControl {
         set { UserDefaults.standard.set(newValue, forKey: "fadester.vjsterSeen") }
     }
     /// Studio Mode off is read again every 10 s while the controls run, so turning it on in OBS by hand clears the light.
-    private var studioCheckAt = Date.distantPast
+    /// Twelve looks (two minutes) after the light turned amber, not for ever: someone who works without Studio Mode must
+    /// not have OBS asked every 10 s for the whole show.
+    private var studioCheckAt = Date.distantPast, studioChecksLeft = 0
     /// The port last filled in from OBS's own settings file; another value in the box was typed by hand.
     private var filledPort: Int?
     /// The menu-bar icon: with the controls on, closing the window hides it and the show goes on.
@@ -911,8 +913,9 @@ private final class PillActionButton: NSControl {
         let controlsOn = host.running
         let canAct = !scanning && !invalidSettings && !previewMode
         let consoleReady = tourboxConsoleInstalled || tourboxConsoleRunning
-        let obsState = Readiness.obs(connected: obsConnected, running: obsRunning, problem: obsProblem, studioOff: studioOff, controlsOn: controlsOn)
         let onlyMix = mixOnlyChosen
+        // Stream Deck-only mode serves OBS's mixer and needs no Studio Mode: its light does not ask for it.
+        let obsState = Readiness.obs(connected: obsConnected, running: obsRunning, problem: obsProblem, studioOff: studioOff && !onlyMix, controlsOn: controlsOn)
         // Stream Deck-only mode needs no Accessibility: it moves no T-bar.
         let axReady = axTrusted || onlyMix
         let tbState = Readiness.tourBox(consoleRunning: tourboxConsoleRunning, consoleInstalled: consoleReady, mixOnly: onlyMix, oldPreset: presetState == .old, noPreset: presetState == .none)
@@ -940,7 +943,7 @@ private final class PillActionButton: NSControl {
             obsLamp: obsState.lamp,
             obsRunning: obsRunning,
             obsConnected: obsConnected,
-            studioOff: studioOff,
+            studioOff: studioOff && !onlyMix,
             frontIsObs: frontIsObs,
             obsAction: obsState.action ?? "server",
             tourBoxLamp: tbState.lamp,
@@ -1041,7 +1044,8 @@ private final class PillActionButton: NSControl {
             performScan(silentIfOffline: true)
         }
         // Studio Mode off is on the OBS light: look again now and then, so turning it on in OBS itself clears the light.
-        if host.running && obsConnected && studioOff && !scanning && Date() >= studioCheckAt {
+        if host.running && obsConnected && studioOff && studioChecksLeft > 0 && !mixOnlyChosen && !scanning && Date() >= studioCheckAt {
+            studioChecksLeft -= 1
             studioCheckAt = Date().addingTimeInterval(10)
             performScan(silentIfOffline: true, listsOnly: true)
         }
@@ -1065,7 +1069,7 @@ private final class PillActionButton: NSControl {
         // The first video ever connected here: from now on a missing one is worth an amber light.
         if !vjsterPeers.isEmpty && !vjsterUsed { vjsterUsed = true }
         // Preview or the T-bar was used with Studio Mode off: the OBS light says so, with its Turn on button.
-        if Readiness.saysStudioOff(safeLine) && !studioOff { studioOff = true; studioCheckAt = Date().addingTimeInterval(10) }
+        if Readiness.saysStudioOff(safeLine) && !studioOff { studioOff = true; studioChecksLeft = 12; studioCheckAt = Date().addingTimeInterval(10) }
         // The T-bar is unavailable for a reason the panel can explain (the other controls keep working): say it in the
         // status line, in the panel's language, not only as an English line on the Activity tab (F-02).
         if let reason = HostController.tbarReason(safeLine) { setStatus(reason) }
@@ -1390,6 +1394,7 @@ private final class PillActionButton: NSControl {
                 self.fillChoices(preserveEdits: true)
                 self.catalogAt = Date()
                 if listsOnly {
+                    if !self.catalog.studio && !self.studioOff { self.studioChecksLeft = 12 }
                     self.studioOff = !self.catalog.studio // the OBS light's Studio Mode state follows every read
                     if loud { let msg = L("obsConnected", self.catalog.scenes.count); self.setStatus(msg); self.note(msg) } // controls already on
                     self.scanning = false; self.scanTask = nil; self.updateEnabled(); return
@@ -1397,6 +1402,7 @@ private final class PillActionButton: NSControl {
                 self.obsConnected = true
                 self.obsRunning = true
                 self.obsProblem = nil
+                if !self.catalog.studio && !self.studioOff { self.studioChecksLeft = 12 }
                 self.studioOff = !self.catalog.studio
                 self.snapshot.stringValue = L("sceneSummary", self.catalog.program, self.catalog.preview, L(self.catalog.studio ? "on" : "off"))
                 self.setMeter(Readiness.vsMeter(self.catalog.visualSidechain) ?? "")

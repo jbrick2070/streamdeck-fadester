@@ -5,7 +5,7 @@
 // sources, so only a look at the build config and the built files catches it. In CI the plugin is built before the
 // tests run, so the built files must be there; locally the checks of built files run only after a build.
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -108,7 +108,8 @@ describe("koffi's CommonJS side is staged too", () => {
       expect(run.stderr).toBe("");
       expect(run.status).toBe(0);
       const loaded = JSON.parse(run.stdout) as { from: string; load: string; errno: string };
-      expect(resolve(loaded.from)).toBe(resolve(koffiDir, "index.cjs"));
+      // realpath on both sides: macOS gives the temp folder as /var/... but Node resolves it to /private/var/...
+      expect(realpathSync(loaded.from)).toBe(realpathSync(resolve(koffiDir, "index.cjs")));
       expect(loaded).toMatchObject({ load: "function", errno: "function" });
     });
 });

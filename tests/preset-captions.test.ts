@@ -88,6 +88,17 @@ describe("bundled profile captions (R-I18N-2)", () => {
     expect(starter.actions.map((entry) => `${entry.column},${entry.row}`)).toEqual(["0,0", "1,0", "2,0", "3,0", "0,1", "1,1"]);
   });
 
+  // B-01: a Scene key's context is the scene's name, and a plain object answers "constructor" with a function.
+  it("a scene named like a built-in member of every object is an ordinary scene, in the plugin and on the page", () => {
+    for (const sceneTarget of ["constructor", "toString", "valueOf", "hasOwnProperty", "__proto__", "isPrototypeOf"]) {
+      const settings = { sceneTarget, labelOverride: "Main cam" };
+      expect(isGeneratedCaption("scene", settings)).toBe(false);
+      expect(customCaption("scene", settings)).toBe("Main cam");
+      expect(inspectorCaptions().isGenerated("scene", settings)).toBe(false);
+    }
+    expect(inspectorCaptions().isGenerated("constructor", { labelOverride: "x" })).toBe(false);
+  });
+
   it("matches in context only, so the same words elsewhere stay the operator's", () => {
     expect(isGeneratedCaption("scene", { sceneTarget: "__next_scene__" }, "Prev scene")).toBe(false);
     expect(isGeneratedCaption("scene", { sceneTarget: "Camera" }, "Next scene")).toBe(false);

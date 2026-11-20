@@ -146,8 +146,13 @@ export function isGeneratedCaption(action: CaptionAction, settings: Readonly<Rec
   if (typeof caption !== "string") return false;
   const normalized = caption.trim().replace(/\s+/g, " ").toLowerCase();
   if (!normalized) return false;
-  const entry = PRESET_CAPTIONS[action][captionContext(action, settings)];
-  return Boolean(entry) && [...entry.shipped, ...entry.legacy].some((known) => known.toLowerCase() === normalized);
+  // An own entry only: a Scene key's context is the scene's name as typed in OBS, and a scene may be called
+  // "constructor" or "toString", which a plain object answers with something that is not an entry.
+  const contexts = PRESET_CAPTIONS[action];
+  const context = captionContext(action, settings);
+  if (!Object.prototype.hasOwnProperty.call(contexts, context)) return false;
+  const entry = contexts[context];
+  return [...entry.shipped, ...entry.legacy].some((known) => known.toLowerCase() === normalized);
 }
 
 /** The caption to draw: empty for a generated default (the control draws its role), else as typed. */

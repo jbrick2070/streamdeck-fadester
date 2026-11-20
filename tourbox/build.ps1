@@ -68,7 +68,7 @@ Copy-Item -LiteralPath (Join-Path $vjObsSrc 'player.html') -Destination $vjObsDe
 Copy-Item -LiteralPath (Join-Path $vjObsSrc 'player.js') -Destination $vjObsDest
 & (Join-Path $bundle 'FadesterCompanionBridge.exe') --self-test --map (Join-Path $presets 'map.json')
 if($LASTEXITCODE){throw 'Packaged bridge self-test failed.'}
-& node (Join-Path $PSScriptRoot 'make-guide.cjs') (Join-Path $bundle 'START-HERE.html')
+& node (Join-Path $PSScriptRoot 'make-guide.cjs') (Join-Path $bundle 'START-HERE.html') $Version
 if($LASTEXITCODE){throw 'Quick-guide generation failed.'}
 Copy-Item -LiteralPath $guideDir -Destination (Join-Path $bundle 'guide') -Recurse
 Copy-Item -LiteralPath $guideDir -Destination (Join-Path $sources 'guide') -Recurse

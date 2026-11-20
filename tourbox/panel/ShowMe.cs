@@ -737,6 +737,7 @@ namespace Fadester.TourBox {
       Text = mode == "studio" ? text.Get("showStudioTitle") : mode == "password" ? text.Get("showPasswordTitle")
         : mode == "vjsterWait" ? text.Get("showVjWaitTitle") : mode == "vjsterPort" ? text.Get("showVjPortTitle", port)
         : mode == "tourbox" ? text.Get("showTbTitle") : text.Get("showServerTitle");
+      Text = PanelWindow.WithVersion(Text);
       FormBorderStyle = FormBorderStyle.FixedDialog; MaximizeBox = false; MinimizeBox = false; ShowInTaskbar = false;
       StartPosition = FormStartPosition.CenterParent; BackColor = Color.White; Font = new Font("Segoe UI", 10);
       AutoScaleMode = AutoScaleMode.None;

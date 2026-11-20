@@ -47,7 +47,7 @@ if [[ -f "$icon_src" ]]; then
 fi
 cp "$repo/LICENSE" "$resources/LICENSE"
 cp README.md "$resources/README.md"
-"$python" make-guide.py "$resources/START-HERE.html"
+"$python" make-guide.py "$resources/START-HERE.html" "$companion_version"
 # The Mac quick start in every preset language (the Quick guide button opens the panel's language).
 mkdir -p "$resources/guide"
 for locale in $("$python" -c 'import json, sys; print(" ".join(sorted(json.load(open(sys.argv[1], encoding="utf-8")))))' "$repo/tourbox/presets/locales.json"); do

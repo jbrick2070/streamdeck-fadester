@@ -444,7 +444,7 @@ public sealed class StudioFader
                     sweepEndAt = 0; // a take or cut by button leaves the Dial free at once
                     if (sweep != null) await FinishAndReturnAsync();
                     else if (!await TakeAsync(action == "take.cut", action == "take" ? durationOverrideMs : null))
-                        return $"{Named(action)} ignored: Preview is the same scene as Program. Cue another scene first.";
+                        return $"{Named(action)} ignored: Preview is the same scene as Program. Put another scene in Preview first.";
                     break;
                 default: throw new ArgumentException("Unknown Studio fader action: " + action, nameof(action));
             }

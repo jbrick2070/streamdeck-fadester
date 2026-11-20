@@ -65,5 +65,11 @@ enum PanelText {
     }
 }
 
+/// A secondary window's title with the app's version, so a picture of any window says which build it is.
+func titledWithVersion(_ title: String) -> String {
+    let version = (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)?.trimmingCharacters(in: .whitespaces) ?? ""
+    return version.isEmpty ? title : title + "  ·  Fadester Companion " + version
+}
+
 /// The panel text for key in the panel's language; {0}, {1}… take values.
 func L(_ key: String, _ values: Any...) -> String { PanelText.text(key, values) }

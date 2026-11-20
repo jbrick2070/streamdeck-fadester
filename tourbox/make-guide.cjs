@@ -2,6 +2,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const map = JSON.parse(fs.readFileSync(path.join(__dirname, 'presets', 'map.json'), 'utf8'));
+// node make-guide.cjs [OUTPUT.html] [VERSION]: build.ps1 passes the version, and the guide's last line shows it.
+const guideVersion = /^[0-9A-Za-z.-]+$/.test(process.argv[3] || '') ? ' ' + process.argv[3] : '';
 const locales = JSON.parse(fs.readFileSync(path.join(__dirname, 'presets', 'locales.json'), 'utf8'));
 const languageNames = {
   de: 'Deutsch', es: 'Español', fr: 'Français', it: 'Italiano', ja: '日本語', ko: '한국어',
@@ -164,7 +166,7 @@ const page = `<!doctype html>
 <ol class="step-list">
 <li>Open OBS. In <b>Tools → WebSocket Server Settings</b>, turn on <b>Enable WebSocket server</b> and keep authentication on. Then open <b>Fadester Companion</b> from the Start menu: it connects by itself, and its window says what to do if it cannot. The T-bar needs OBS 33, with the main OBS window open and its T-bar visible.</li>
 <li>On the <b>Setup</b> tab, tick <b>Use an Xbox or XInput game controller</b> and keep <b>Easy mode</b> ticked. The controls start by themselves the first time, without the controller: click <b>Stop</b> and then <b>Start</b>, at the bottom left of the window, so they start again with it (or click <b>Use it</b> beside the <b>Controller</b> light at the top). You can skip the preset import. Closing the window does not stop the controls: Fadester Companion stays in the notification area beside the clock, and <b>Quit Fadester Companion</b> in that icon's right-click menu stops them.</li>
-<li>Turn on <b>Studio Mode</b>: when it is off, the <b>OBS</b> light at the top of the Fadester Companion window says so and has a <b>Turn on</b> button. Keep a <b>Fade</b> among OBS's scene transitions. Press D-pad down to cue the next scene in OBS's list, D-pad up for the one above.</li>
+<li>Turn on <b>Studio Mode</b>: when it is off, the <b>OBS</b> light at the top of the Fadester Companion window says so and has a <b>Turn on</b> button. Keep a <b>Fade</b> among OBS's scene transitions. Press D-pad down to put the next scene in OBS's list in Preview, D-pad up for the one above.</li>
 <li>Pull the right trigger: OBS's T-bar follows, and pulling it all the way puts Preview on Program. Or hold <b>A</b>: after 0.15 s the T-bar moves while you hold it and Preview is on Program at the end. Let go to leave it part-way; hold A again to carry on.</li>
 <li><b>B</b> cuts, <b>View</b> goes back to Program, the left trigger ducks Music while you hold it, and D-pad left and right ride Music. Change any button on the <b>Game controller</b> tab.</li></ol>
 <p class="note">Every control, easy mode and the safety rules: <a href="https://github.com/jbrick2070/streamdeck-fadester/blob/main/docs/gamepad/README.md">the game controller guide</a>.</p></section>
@@ -212,7 +214,7 @@ ${master}
 <dt>A meter, overlay or clip does not respond</dt><dd>Read scenes and inputs again after renaming a source. Check the role under Assignments and click Save. <b>Undo last audio change</b> in the Tour menu undoes the last supported audio adjustment. Observe the actual mixer if a restore was interrupted.</dd>
 <dt>No actions arrive</dt><dd>Open Activity. Check the OBS server, port and password, start one listener, and clear any shortcut conflict it identifies. Focus OBS and press Scroll for a read-only scene check.</dd></dl>
 <p class="note">Full-size desktop TourBox with three pushable rotaries, Side, Tour, C1/C2 and D-pad. This control reference uses the same map as the shipped preset and control panel. <a href="presets/map.json">Open the bundled shortcut map</a>.</p></section>
-<footer><p>Fadester Companion · Community project by Jeffrey Brick · Offline quick guide</p></footer></main></body></html>`;
+<footer><p>Fadester Companion${guideVersion} · Community project by Jeffrey Brick · Offline quick guide</p></footer></main></body></html>`;
 
 const outputPath = process.argv[2] || path.join(__dirname, 'dist', 'START-HERE.html');
 fs.writeFileSync(outputPath, page, 'utf8');

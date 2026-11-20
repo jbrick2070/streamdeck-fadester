@@ -612,7 +612,7 @@ private final class SheetBackground: NSView {
             defer: false
         )
         panel.appearance = NSAppearance(named: .aqua)
-        panel.title = L("showTbTitle")
+        panel.title = titledWithVersion(L("showTbTitle"))
         panel.level = .floating
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
@@ -793,7 +793,7 @@ private final class SheetBackground: NSView {
             defer: false
         )
         panel.appearance = NSAppearance(named: .aqua)
-        panel.title = title
+        panel.title = titledWithVersion(title)
         panel.level = .floating
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false

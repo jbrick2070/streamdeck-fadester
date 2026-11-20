@@ -152,7 +152,7 @@ private final class PillActionButton: NSControl {
             backing: .buffered,
             defer: false
         )
-        panel.title = L("lastAction")
+        panel.title = titledWithVersion(L("lastAction"))
         panel.level = .floating
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false

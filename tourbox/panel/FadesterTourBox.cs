@@ -294,6 +294,9 @@ namespace Fadester.TourBox {
       } catch { return ""; }
     }
 
+    /// <summary>A secondary window's title with the app's version, so a picture of any window says which build it is.</summary>
+    internal static string WithVersion(string title) { var v=AppVersion(); return v.Length>0 ? title+"  ·  Fadester Companion "+v : title; }
+
     /** Built for the self-test or a picture (--render): no icon in the notification area, and opening it reads and starts nothing. */
     readonly bool inert;
     /** The window in this language, with nothing behind it, drawn into a PNG file. */
@@ -1194,7 +1197,7 @@ namespace Fadester.TourBox {
     protected override bool ShowWithoutActivation {get{return true;}}
     protected override CreateParams CreateParams {get{var cp=base.CreateParams; cp.ExStyle|=0x08000000; return cp;}}
     internal Feedback(string title) {
-      Text=title; TopMost=true; ShowInTaskbar=false; StartPosition=FormStartPosition.Manual;
+      Text=PanelWindow.WithVersion(title); TopMost=true; ShowInTaskbar=false; StartPosition=FormStartPosition.Manual;
       FormBorderStyle=FormBorderStyle.FixedToolWindow; ClientSize=new Size(420,82); BackColor=Color.FromArgb(26,34,51);
       var screen=Screen.FromPoint(Cursor.Position).WorkingArea; Location=new Point(screen.Right-Width-14,screen.Top+14);
       meter=new Label {Dock=DockStyle.Bottom,Height=26,Padding=new Padding(8,0,8,4),TextAlign=ContentAlignment.MiddleLeft,ForeColor=Color.FromArgb(196,210,232),Font=new Font("Segoe UI",9,FontStyle.Regular),AutoEllipsis=true,UseMnemonic=false};

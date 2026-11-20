@@ -14,6 +14,8 @@ import type { SettleTimers } from "./settle.js";
 export const API_URL = "https://www.youtube.com/iframe_api";
 /** Waits before trying YouTube's script again; the last one repeats. */
 export const SCRIPT_RETRY_MS = [2000, 4000, 8000, 16000, 30000] as const;
+/** How long the "standing by" note stays on the page (it is in the OBS output). */
+export const STANDBY_NOTE_MS = 15000;
 
 export interface PlayerOptions {
   width: string;
@@ -61,7 +63,21 @@ export function bootPage(env: BootEnv): ObsPage | null {
 
   let counter = 0;
   const prefix = Math.floor(env.random() * 36 ** 6).toString(36);
-  const page = new ObsPage({ params, openSocket: env.openSocket, timers: env.timers, newId: () => `o${prefix}-${++counter}`, random: env.random });
+  // Standing by (another page with this address holds the link): said on the page for a short while, since the page
+  // is the picture that goes on air. Back on the link, the note goes at once.
+  let standbyNote: unknown = null;
+  const onStandby = (standby: boolean): void => {
+    if (standbyNote !== null) env.timers.clearTimeout(standbyNote);
+    standbyNote = null;
+    env.show(standby ? note(lang, "standby") : "");
+    if (standby) {
+      standbyNote = env.timers.setTimeout(() => {
+        standbyNote = null;
+        env.show("");
+      }, STANDBY_NOTE_MS);
+    }
+  };
+  const page = new ObsPage({ params, openSocket: env.openSocket, timers: env.timers, newId: () => `o${prefix}-${++counter}`, random: env.random, onStandby });
 
   env.onApiReady(() => {
     env.show("");

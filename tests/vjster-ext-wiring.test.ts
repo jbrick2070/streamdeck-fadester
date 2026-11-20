@@ -67,6 +67,83 @@ describe("bridge (isolated world)", () => {
     expect(r.sent).toEqual([{ kind: "page-state", state: expect.objectContaining({ rate: 1.5 }), host: "www.youtube.com", inReplyTo: "i1", played: true }]);
   });
 
+  it("vouches for a report from the page's own media elements: no video, not playing, never played (D-01)", () => {
+    const video = (over: Partial<{ paused: boolean; ended: boolean; readyState: number; played: { length: number } }>) =>
+      ({ paused: true, ended: false, readyState: 4, played: { length: 0 }, ...over });
+    const page = (videos: unknown[], shadowVideos: unknown[] = []) => ({
+      querySelectorAll: (selector: string) => selector === "video" ? videos
+        : shadowVideos.length ? [{ shadowRoot: { querySelectorAll: (s: string) => (s === "video" ? shadowVideos : []) } }] : []
+    });
+    const report = (document: unknown, played = true) => {
+      const w = fakeWindow("evil.example", "https://evil.example");
+      (w.win as unknown as { document: unknown }).document = document;
+      const r = fakeRuntime();
+      installBridge(w.win as unknown as BridgeWindow, r.runtime as unknown as BridgeRuntime);
+      // The page posts this itself; the adapter is not involved.
+      w.fire("message", { source: w.win, data: { source: FROM_PAGE, kind: "state", state: playingState, inReplyTo: null, played } });
+      return r.sent[0] as { state: { rate: number | null; playing: boolean }; played: boolean };
+    };
+    // A page with no video at all cannot be a target, whatever it posts.
+    expect(report(page([]))).toMatchObject({ state: NO_VIDEO, played: false });
+    // A paused video that never played: not playing, and not "has played".
+    expect(report(page([video({})]))).toMatchObject({ state: { rate: 1.5, playing: false }, played: false });
+    // Paused now, played before: it may rejoin as a paused tab, but is not playing.
+    expect(report(page([video({ played: { length: 1 } })]))).toMatchObject({ state: { playing: false }, played: true });
+    // Really playing: passed on as reported.
+    expect(report(page([video({ paused: false })]))).toMatchObject({ state: { rate: 1.5, playing: true }, played: true });
+    // An ended or not-yet-loaded element is not playing.
+    expect(report(page([video({ paused: false, ended: true })]))).toMatchObject({ state: { playing: false } });
+    expect(report(page([video({ paused: false, readyState: 1 })]))).toMatchObject({ state: { playing: false } });
+    // A web-component player: its video is in an open shadow root.
+    expect(report(page([], [video({ paused: false })]))).toMatchObject({ state: { playing: true }, played: true });
+    // An answer to an intent is checked the same way.
+    const w = fakeWindow();
+    (w.win as unknown as { document: unknown }).document = page([]);
+    const r = fakeRuntime();
+    installBridge(w.win as unknown as BridgeWindow, r.runtime as unknown as BridgeRuntime);
+    w.fire("message", { source: w.win, data: { source: FROM_PAGE, kind: "state", state: playingState, inReplyTo: "i9", played: true } });
+    expect(r.sent).toEqual([{ kind: "page-state", state: NO_VIDEO, host: "www.youtube.com", inReplyTo: "i9", played: false }]);
+  });
+
+  it("spaces the reports it passes on, however fast the page posts, and always sends the newest (D-03)", () => {
+    let time = 1000;
+    const timers: Array<{ at: number; fn: () => void }> = [];
+    const clock = {
+      now: () => time,
+      setTimeout: (fn: () => void, ms: number) => { const timer = { at: time + ms, fn }; timers.push(timer); return timer; },
+      clearTimeout: (handle: unknown) => { const i = timers.indexOf(handle as { at: number; fn: () => void }); if (i >= 0) timers.splice(i, 1); }
+    };
+    const advance = (ms: number): void => {
+      time += ms;
+      for (const timer of timers.splice(0)) if (timer.at <= time) timer.fn(); else timers.push(timer);
+    };
+    const w = fakeWindow();
+    const r = fakeRuntime();
+    installBridge(w.win as unknown as BridgeWindow, r.runtime as unknown as BridgeRuntime, { clock, reportMs: 50, repliesPerSecond: 5 });
+    const post = (rate: number, inReplyTo: string | null = null) =>
+      w.fire("message", { source: w.win, data: { source: FROM_PAGE, kind: "state", state: { ...playingState, rate }, inReplyTo, played: true } });
+    for (let i = 0; i < 1000; i++) post(1 + (i % 4) * 0.25);
+    post(2);
+    expect(r.sent).toHaveLength(1); // the first at once
+    advance(50);
+    expect(r.sent).toHaveLength(2); // then the newest, once
+    expect((r.sent[1] as { state: { rate: number } }).state.rate).toBe(2);
+    advance(500);
+    expect(r.sent).toHaveLength(2);
+    // Answers go at once, up to a number per second no real page reaches.
+    for (let i = 0; i < 50; i++) post(1, `i${i}`);
+    expect(r.sent).toHaveLength(2 + 5);
+    advance(1000);
+    post(1, "later");
+    expect(r.sent).toHaveLength(2 + 5 + 1);
+    // Leaving the page drops a report still waiting and says the video is gone.
+    post(3);
+    post(3.5);
+    w.fire("pagehide", {});
+    advance(100);
+    expect(r.sent.at(-1)).toEqual({ kind: "page-state", state: NO_VIDEO, host: null, inReplyTo: null, played: false });
+  });
+
   it("relays page errors and drops anything else", () => {
     const w = fakeWindow();
     const r = fakeRuntime();
@@ -303,6 +380,58 @@ describe("service worker wiring (R-LNK-3, R-TGT-1..4)", () => {
     expect(opened.map((o) => o.url)).toEqual(["ws://127.0.0.1:48151/", "ws://127.0.0.1:48160/"]);
   });
 
+  it("gives its scripts to tabs that were open before the install, where it may run, and says to reload where it cannot (D-05)", async () => {
+    const injected: Array<{ tabId: number; file: string; world?: string }> = [];
+    const withInject = fakeChrome({ allSites: false });
+    const tabs = [
+      { id: 5, windowId: 1, url: "https://www.youtube.com/watch?v=abc" },
+      { id: 6, windowId: 1, url: "https://example.org/clip" }, // not YouTube, and every-site is off
+      { id: 7, windowId: 1 }, // no address: no access to that site
+      { id: 8, windowId: 2, url: "chrome://extensions/" },
+      { id: 9, windowId: 2, url: "https://m.youtube.com/watch?v=def" }
+    ];
+    withInject.c.tabs.query = (async (info: { active?: boolean }) => (info.active ? [tabs[0]] : tabs)) as typeof withInject.c.tabs.query;
+    (withInject.c.scripting as unknown as { executeScript: unknown }).executeScript = async (injection: { target: { tabId: number }; files: string[]; world?: string }) => {
+      if (injection.target.tabId === 9) throw new Error("Cannot access contents of the page.");
+      injected.push({ tabId: injection.target.tabId, file: injection.files[0], world: injection.world });
+    };
+    const sockets = fakeSocketFactory();
+    const worker = installWorker({ chrome: withInject.c as unknown as WorkerChrome, openSocket: sockets.openSocket, now: () => 0, random: () => 0.5 });
+    await worker.booted;
+    expect(await worker.adoptOpenTabs()).toBe(1);
+    // The bridge first, then the adapter in the page's own world; only the YouTube tab Chrome let it into.
+    expect(injected).toEqual([{ tabId: 5, file: "content-bridge.js", world: undefined }, { tabId: 5, file: "content-main.js", world: "MAIN" }]);
+
+    // The Chrome Web Store build has no scripting permission: nothing is injected, and the options page is told.
+    const store = fakeChrome({ scripting: false });
+    const storeSockets = fakeSocketFactory();
+    const storeWorker = installWorker({ chrome: store.c as unknown as WorkerChrome, openSocket: storeSockets.openSocket, now: () => 0, random: () => 0.5 });
+    await storeWorker.booted;
+    expect(await storeWorker.adoptOpenTabs()).toBe(0);
+    expect(store.sessionSets).toContainEqual({ "vjster.reloadTabs": true });
+    const answers: unknown[] = [];
+    store.c.runtime.onMessage.fire({ kind: "link-status" },
+      { id: store.c.runtime.id, url: `chrome-extension://${store.c.runtime.id}/options.html` }, (answer) => answers.push(answer));
+    await flush();
+    expect(answers.at(-1)).toMatchObject({ reloadTabs: true });
+  });
+
+  it("marks the toolbar button while the link is down, once it has been up, and clears the mark when it is back", async () => {
+    const fake = fakeChrome();
+    const badges: string[] = [];
+    (fake.c as unknown as { action: unknown }).action = { setBadgeText: (details: { text: string }) => void badges.push(details.text) };
+    const sockets = fakeSocketFactory();
+    const worker = installWorker({ chrome: fake.c as unknown as WorkerChrome, openSocket: sockets.openSocket, now: () => 0, random: () => 0.5 });
+    await worker.booted;
+    // Never linked yet: nothing is wrong, no mark.
+    expect(badges.at(-1)).toBe("");
+    sockets.opened[0].socket.open();
+    expect(badges.at(-1)).toBe("");
+    sockets.opened[0].socket.drop();
+    expect(badges.at(-1)).toBe("!");
+    worker.link.stop();
+  });
+
   it("tells this extension's own options page how the link is, and nobody else", async () => {
     const { c, opened } = await bootWorker();
     const answers: unknown[] = [];
@@ -311,15 +440,16 @@ describe("service worker wiring (R-LNK-3, R-TGT-1..4)", () => {
     const options = { id: c.runtime.id, url: `chrome-extension://${c.runtime.id}/options.html`, tab: { id: 9, windowId: 1 }, frameId: 0 };
     ask(options);
     await flush();
-    expect(answers).toEqual([{ state: "connecting", port: 48151 }]);
+    // Never linked since the install: the page's first line is a neutral "waiting", not a red "not connected".
+    expect(answers).toEqual([{ state: "connecting", port: 48151, everLinked: false }]);
     opened[0].socket.open();
     ask(options);
     await flush();
-    expect(answers.at(-1)).toEqual({ state: "up", port: 48151 });
+    expect(answers.at(-1)).toEqual({ state: "up", port: 48151, everLinked: true });
     opened[0].socket.drop();
     ask(options);
     await flush();
-    expect(answers.at(-1)).toEqual({ state: "down", port: 48151 });
+    expect(answers.at(-1)).toEqual({ state: "down", port: 48151, everLinked: true });
     // A YouTube tab's bridge, another extension, or another extension's page: no answer.
     ask({ id: c.runtime.id, url: "https://www.youtube.com/watch?v=x", tab: { id: 5, windowId: 1 }, frameId: 0 });
     ask({ id: "ponmlkjihgfedcbaponmlkjihgfedcba", url: "chrome-extension://ponmlkjihgfedcbaponmlkjihgfedcba/options.html" });

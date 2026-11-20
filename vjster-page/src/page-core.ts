@@ -18,6 +18,8 @@ export interface ObsPageDeps {
   newId(): string;
   /** Jitter for the link's backoff; tests pass a constant. */
   random?: () => number;
+  /** Another page holds the link for this target and this one stands by (true), or it is back on the link (false). */
+  onStandby?: (standby: boolean) => void;
 }
 
 /** YouTube's "unstarted" state: a new video of a playlist is loading. */
@@ -61,6 +63,7 @@ export class ObsPage {
       open: deps.openSocket,
       onIntent: (intent) => this.handle(intent),
       onOpen: () => this.adapter.refresh(),
+      onStandby: (standby) => deps.onStandby?.(standby),
       newId: deps.newId,
       random: deps.random,
       target: "obs"

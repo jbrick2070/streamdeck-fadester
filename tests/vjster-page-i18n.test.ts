@@ -54,7 +54,8 @@ describe("the OBS page's notes (PLAN.md 8.6)", () => {
 
   it("finds the table for a language tag, a region, a script or an alias, else English", () => {
     expect(["de", "de-AT", "de_CH", "DE", " de "].map(pageLanguage)).toEqual(["de", "de", "de", "de", "de"]);
-    expect(["en-US", "it-IT", "xx", "", null, undefined, "-", "1"].map(pageLanguage)).toEqual(Array(8).fill("en"));
+    expect(["en-US", "sv-SE", "xx", "", null, undefined, "-", "1"].map(pageLanguage)).toEqual(Array(8).fill("en"));
+    expect(["it-IT", "it", "nl-BE", "nl"].map(pageLanguage)).toEqual(["it", "it", "nl", "nl"]);
     // Chinese and Portuguese go to the table they belong to once it exists; English until then.
     const zhCN = "zh_CN" in NOTES ? "zh_CN" : "en";
     const zhTW = "zh_TW" in NOTES ? "zh_TW" : "en";

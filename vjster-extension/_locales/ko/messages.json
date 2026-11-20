@@ -52,6 +52,12 @@
   "statusLinkDown": {
     "message": "연결되지 않았습니다. 사용하는 프로그램을 확인하세요:"
   },
+  "statusFirstWait": {
+    "message": "VJster를 기다리는 중입니다. 다음 중 하나를 하세요:"
+  },
+  "statusStandby": {
+    "message": "대기 중입니다. 이 확장 프로그램의 다른 사본(다른 Chrome 프로필 또는 브라우저)이 링크를 사용하고 있습니다. 그쪽이 닫히면 이쪽이 이어받습니다."
+  },
   "linkDownCompanion": {
     "message": "Fadester Companion: 이 컴퓨터에서 열고 컨트롤이 켜져 있는지 확인하세요."
   },
@@ -63,6 +69,9 @@
   },
   "statusLinkChecking": {
     "message": "VJster에 연결하는 중…"
+  },
+  "reloadTabsNote": {
+    "message": "VJster를 설치하거나 업데이트하기 전에 열려 있던 동영상 탭은 한 번 새로 고치세요."
   },
   "statusBadPort": {
     "message": "1024에서 65535 사이의 정수를 사용하세요. 기본값은 $DEFAULT$입니다.",

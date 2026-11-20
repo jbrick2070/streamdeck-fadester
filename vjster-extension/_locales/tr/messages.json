@@ -52,6 +52,12 @@
   "statusLinkDown": {
     "message": "Bağlı değil. Kullandığınız programı kontrol edin:"
   },
+  "statusFirstWait": {
+    "message": "VJster bekleniyor. Şunlardan birini yapın:"
+  },
+  "statusStandby": {
+    "message": "Beklemede. Bağlantı bu uzantının başka bir kopyasında (başka bir Chrome profili veya tarayıcı); o kapanınca bu devralır."
+  },
   "linkDownCompanion": {
     "message": "Fadester Companion: bu bilgisayarda açın ve kontrollerinin açık olduğunu kontrol edin."
   },
@@ -63,6 +69,9 @@
   },
   "statusLinkChecking": {
     "message": "VJster'e bağlanılıyor…"
+  },
+  "reloadTabsNote": {
+    "message": "VJster kurulmadan veya güncellenmeden önce açık olan video sekmelerini bir kez yeniden yükleyin."
   },
   "statusBadPort": {
     "message": "1024 ile 65535 arasında bir tam sayı kullanın; varsayılan değer $DEFAULT$.",

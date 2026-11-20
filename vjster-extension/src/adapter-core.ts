@@ -345,7 +345,11 @@ export class Adapter {
     if (this.dedupe && inReplyTo === null && !force) {
       const text = JSON.stringify([state, this.played]);
       if (text === this.lastSent) return;
+      // A page with no video has nothing to say when it loads: "no video" is what is assumed of a tab that never
+      // reported. (On every site, each such first report would wake the extension's worker for nothing.)
+      const nothingYet = this.lastSent === null && state.rate === null;
       this.lastSent = text;
+      if (nothingYet) return;
     } else {
       this.lastSent = JSON.stringify([state, this.played]);
     }

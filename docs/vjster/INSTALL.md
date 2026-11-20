@@ -23,7 +23,7 @@ The Chrome extension is on the [Chrome Web Store](https://chromewebstore.google.
 
 **2. The Chrome extension.** Needs Chrome 116 or later. Add [VJster from the Chrome Web Store](https://chromewebstore.google.com/detail/daohboebokfmamkblejcpbblfnaijgnb). It asks for access to YouTube and to a socket on this computer (`ws://127.0.0.1`), and for the storage and alarms permissions. Its options page opens once. The page shows the extension's id (`daohboebokfmamkblejcpbblfnaijgnb` for the store version): to let only this extension connect, paste it into the **Only this extension** field on VJster's settings page.
 
-**3. First check.** Put a VJster action on the deck (or switch to a VJster profile) and play a YouTube video in Chrome. Within a few seconds the SPEED strip (Stream Deck +) or the 1x key (other decks) shows the video playing. Turn the dial: the video follows.
+**3. First check.** Put a VJster action on the deck (or switch to a VJster profile) and play a YouTube video in Chrome. A video that was already open when you added the extension works too in the GitHub build; with the Chrome Web Store build, reload that tab once (the extension's options page says so). Within a few seconds the SPEED strip (Stream Deck +) or the 1x key (other decks) shows the video playing. Turn the dial: the video follows.
 
 **4. The OBS page (optional).** This plays a YouTube video inside OBS at the speed the deck sets.
 

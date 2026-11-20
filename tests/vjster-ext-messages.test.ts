@@ -222,4 +222,21 @@ describe("the options page and the link status", () => {
     // A line that already says up or down keeps it through a reconnect attempt; the next check tells.
     expect(linkLine(connecting, false)).toBeNull();
   });
+
+  it("says 'waiting' before a first link and 'standing by' while another copy holds it, neither as an error", () => {
+    // Never linked since the install: nothing is wrong yet.
+    expect(linkLine({ state: "down", port: 48150, everLinked: false }, true)).toEqual({ name: "statusFirstWait", state: "waiting" });
+    // Linked before, or an older worker that does not say: the plain "not connected".
+    expect(linkLine({ state: "down", port: 48150, everLinked: true }, true)).toEqual({ name: "statusLinkDown", state: "down" });
+    expect(linkLine({ state: "down", port: 48150 }, true)).toEqual({ name: "statusLinkDown", state: "down" });
+    // Another copy of the extension holds the link.
+    for (const state of ["down", "connecting"] as const) {
+      expect(linkLine({ state, port: 48150, standby: true, everLinked: true }, false)).toEqual({ name: "statusStandby", state: "standby" });
+    }
+    expect(linkLine({ state: "up", port: 48150, standby: true }, false)).toEqual({ name: "statusLinkUp", state: "up" });
+    // The answer's extra fields are read strictly.
+    expect(readLinkStatus({ state: "down", port: 48150, standby: true, everLinked: false, reloadTabs: true }))
+      .toEqual({ state: "down", port: 48150, standby: true, everLinked: false, reloadTabs: true });
+    expect(readLinkStatus({ state: "down", port: 48150, standby: "yes", everLinked: 1, reloadTabs: "true" })).toEqual({ state: "down", port: 48150 });
+  });
 });

@@ -52,6 +52,12 @@
   "statusLinkDown": {
     "message": "未连接。请检查你使用的程序："
   },
+  "statusFirstWait": {
+    "message": "正在等待 VJster。请执行以下任一操作："
+  },
+  "statusStandby": {
+    "message": "待命中。此扩展程序的另一个副本（另一个 Chrome 个人资料或浏览器）正在使用连接；它关闭后由本副本接管。"
+  },
   "linkDownCompanion": {
     "message": "Fadester Companion：在这台电脑上打开它，并确认控制已开启。"
   },
@@ -63,6 +69,9 @@
   },
   "statusLinkChecking": {
     "message": "正在连接 VJster…"
+  },
+  "reloadTabsNote": {
+    "message": "在安装或更新 VJster 之前已打开的视频标签页：请重新加载一次。"
   },
   "statusBadPort": {
     "message": "请使用 1024 到 65535 之间的整数；默认值为 $DEFAULT$。",

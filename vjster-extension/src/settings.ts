@@ -8,6 +8,10 @@ export const ALL_SITES_KEY = "vjster.allSites";
 export const PIN_KEY = "vjster.pinnedTab";
 /** Session storage: another copy of the extension took the link and this one stands by (it outlives a worker restart). */
 export const STANDBY_KEY = "vjster.linkStandby";
+/** Local storage: the link has been up at least once since the install (the options page's first line depends on it). */
+export const EVER_LINKED_KEY = "vjster.everLinked";
+/** Session storage: tabs open before the install or update could not be given VJster's scripts; they need a reload. */
+export const RELOAD_TABS_KEY = "vjster.reloadTabs";
 
 /** A port the user may choose: 1024 to 65535. */
 export function readPort(value: unknown): number {

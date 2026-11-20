@@ -13,6 +13,8 @@ import { findYouTubePlayer, isYouTubeHost, youTubeControl, type YouTubePlayerEle
 
 /** The shortest gap between two searches of the page for shadow roots. */
 const SHADOW_RESCAN_MS = 300;
+/** More added nodes than this between two searches: the page is searched whole, once, instead of node by node. */
+const MAX_PENDING_NODES = 200;
 
 function start(): void {
   // Run once per page, even if the script is injected twice.
@@ -111,28 +113,54 @@ function start(): void {
     for (const type of MEDIA_EVENTS) document.addEventListener(type, onAnyMedia, true);
     // Media events do not leave a shadow root, so each open one gets the same listeners, and is watched for
     // players added later. Busy pages change all the time, so a rescan runs at most once per SHADOW_RESCAN_MS.
+    // Only what was added is searched (a busy page changes all the time, and a search of the whole document on each
+    // change costs every tab, video or not): the nodes a change brought in wait at most SHADOW_RESCAN_MS, then each is
+    // searched once. Past MAX_PENDING_NODES the page is searched whole, once, instead.
     let rescanTimer: ReturnType<typeof setTimeout> | null = null;
-    const grown = new MutationObserver(() => {
+    let pending: Element[] = [];
+    let searchAll = false;
+    const grown = new MutationObserver((records) => {
+      for (const record of records) {
+        for (const node of record.addedNodes) {
+          if (!(node instanceof Element)) continue;
+          if (pending.length >= MAX_PENDING_NODES) searchAll = true;
+          else pending.push(node);
+        }
+      }
+      if (pending.length === 0 && !searchAll) return;
       rescanTimer ??= setTimeout(() => {
         rescanTimer = null;
-        rescan();
+        const roots: Array<Document | Element> = searchAll ? [document] : pending.filter((node) => node.isConnected);
+        pending = [];
+        searchAll = false;
+        rescan(roots);
       }, SHADOW_RESCAN_MS);
     });
-    const rescan = (): void => {
+    const adopt = (shadow: ShadowRoot): boolean => {
+      if (shadows.has(shadow)) return false;
+      shadows.add(shadow);
+      for (const type of MEDIA_EVENTS) shadow.addEventListener(type, onAnyMedia, true);
+      grown.observe(shadow, { childList: true, subtree: true });
+      return true;
+    };
+    const rescan = (roots: ReadonlyArray<Document | Element>): void => {
       for (const shadow of shadows) if (!shadow.host.isConnected) shadows.delete(shadow);
       let added = false;
-      forEachShadowRoot(document, (found) => {
-        const shadow = found as unknown as ShadowRoot;
-        if (shadows.has(shadow)) return;
-        shadows.add(shadow);
-        added = true;
-        for (const type of MEDIA_EVENTS) shadow.addEventListener(type, onAnyMedia, true);
-        grown.observe(shadow, { childList: true, subtree: true });
-      });
+      for (const root of roots) {
+        // An added element may itself be the web component that holds the player.
+        const own = root instanceof Element ? root.shadowRoot : null;
+        if (own && adopt(own)) {
+          added = true;
+          forEachShadowRoot(own, (found) => { adopt(found as unknown as ShadowRoot); });
+        }
+        forEachShadowRoot(root, (found) => {
+          if (adopt(found as unknown as ShadowRoot)) added = true;
+        });
+      }
       if (added) adapter.changed();
     };
     grown.observe(document.documentElement, { childList: true, subtree: true });
-    rescan();
+    rescan([document]);
   }
   adapter.changed();
 }

@@ -11,10 +11,16 @@ chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === "install") void chrome.runtime.openOptionsPage();
 });
 
-installWorker({
+const worker = installWorker({
   chrome: chrome as unknown as WorkerChrome,
   openSocket: (url) => new WebSocket(url) as unknown as SocketLike,
   now: () => Date.now(),
   random: Math.random,
   log: (line) => console.info(line)
+});
+
+// Tabs that were open before the install, or whose scripts an update orphaned, get VJster's scripts now, so a video
+// that is already playing can be controlled without reloading its tab (which would stop it).
+chrome.runtime.onInstalled.addListener((details) => {
+  if (details.reason === "install" || details.reason === "update") void worker.adoptOpenTabs();
 });

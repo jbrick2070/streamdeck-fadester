@@ -30,6 +30,8 @@ declare namespace chrome {
       id?: number;
       windowId: number;
       active: boolean;
+      /** Present only for tabs on a site the extension has access to. */
+      url?: string;
     }
     function query(info: { active?: boolean; windowId?: number }): Promise<Tab[]>;
     function sendMessage(tabId: number, message: unknown, options?: { frameId?: number }): Promise<unknown>;

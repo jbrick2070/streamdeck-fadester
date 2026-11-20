@@ -52,6 +52,12 @@
   "statusLinkDown": {
     "message": "Niet verbonden. Controleer het programma dat u gebruikt:"
   },
+  "statusFirstWait": {
+    "message": "Wacht op VJster. Doe een van deze dingen:"
+  },
+  "statusStandby": {
+    "message": "Stand-by. Een andere kopie van deze extensie (een ander Chrome-profiel of een andere browser) heeft de verbinding; deze neemt het over zodra die sluit."
+  },
   "linkDownCompanion": {
     "message": "Fadester Companion: open het op deze computer en controleer dat de bediening aan staat."
   },
@@ -63,6 +69,9 @@
   },
   "statusLinkChecking": {
     "message": "Verbinden met VJster…"
+  },
+  "reloadTabsNote": {
+    "message": "Videotabbladen die al open waren voordat VJster werd geïnstalleerd of bijgewerkt: laad ze één keer opnieuw."
   },
   "statusBadPort": {
     "message": "Gebruik een geheel getal van 1024 tot 65535; $DEFAULT$ is de standaardwaarde.",

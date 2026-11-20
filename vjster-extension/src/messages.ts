@@ -121,8 +121,18 @@ export function readWorkerToBridge(data: unknown): WorkerToBridge | null {
 /** The options page asks the service worker how the link to VJster is, by chrome.runtime.sendMessage. */
 export const LINK_STATUS_REQUEST = { kind: "link-status" } as const;
 
-/** The worker's answer: the link's state and the port it uses. */
-export type LinkStatus = { readonly state: "up" | "connecting" | "down"; readonly port: number };
+/**
+ * The worker's answer: the link's state and the port it uses. `standby`: another copy of the extension holds the
+ * link and this one waits. `everLinked`: this extension has been linked at least once since it was installed.
+ * `reloadTabs`: tabs open before the install or update have no VJster scripts until they are reloaded.
+ */
+export type LinkStatus = {
+  readonly state: "up" | "connecting" | "down";
+  readonly port: number;
+  readonly standby?: boolean;
+  readonly everLinked?: boolean;
+  readonly reloadTabs?: boolean;
+};
 
 export function isLinkStatusRequest(data: unknown): boolean {
   return isRecord(data) && data.kind === LINK_STATUS_REQUEST.kind;
@@ -133,11 +143,24 @@ export function readLinkStatus(data: unknown): LinkStatus | null {
   if (!isRecord(data) || (data.state !== "up" && data.state !== "connecting" && data.state !== "down")) return null;
   const port = data.port;
   if (typeof port !== "number" || !Number.isInteger(port) || port < 1 || port > 65535) return null;
-  return { state: data.state, port };
+  return {
+    state: data.state,
+    port,
+    ...(data.standby === true ? { standby: true } : {}),
+    // An older worker says nothing about it: then the line is the plain "not connected" as before.
+    ...(typeof data.everLinked === "boolean" ? { everLinked: data.everLinked } : {}),
+    ...(data.reloadTabs === true ? { reloadTabs: true } : {})
+  };
 }
 
-/** What the options page's link line shows: a message name and the line's class (its colour). */
-export type LinkLine = { readonly name: "statusLinkUp" | "statusLinkDown" | "statusLinkChecking"; readonly state: LinkStatus["state"] };
+/**
+ * What the options page's link line shows: a message name and the line's class (its colour). "waiting" (never linked
+ * yet: nothing is wrong, the deck has simply not asked) and "standby" are drawn in the page's own colour, not in red.
+ */
+export type LinkLine = {
+  readonly name: "statusLinkUp" | "statusLinkDown" | "statusLinkChecking" | "statusFirstWait" | "statusStandby";
+  readonly state: LinkStatus["state"] | "waiting" | "standby";
+};
 
 /**
  * The link line for one answer, or null to keep the line as it is. Up and down always show. While the link is
@@ -146,8 +169,10 @@ export type LinkLine = { readonly name: "statusLinkUp" | "statusLinkDown" | "sta
  */
 export function linkLine(answer: LinkStatus | null, lineEmpty: boolean): LinkLine | null {
   if (!answer) return null;
+  if (answer.state === "up") return { name: "statusLinkUp", state: "up" };
+  if (answer.standby) return { name: "statusStandby", state: "standby" };
   if (answer.state === "connecting") return lineEmpty ? { name: "statusLinkChecking", state: "connecting" } : null;
-  return answer.state === "up" ? { name: "statusLinkUp", state: "up" } : { name: "statusLinkDown", state: "down" };
+  return answer.everLinked === false ? { name: "statusFirstWait", state: "waiting" } : { name: "statusLinkDown", state: "down" };
 }
 
 /** Plain-object copy of an intent for postMessage (structured clone drops nothing, but keeps it explicit). */

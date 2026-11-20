@@ -8,11 +8,15 @@
 // (Stream Deck's language), else from the browser (OBS's language), else
 // English. A text missing in a language is shown in English.
 //
+// "standby" is the one note shown while a video plays: another page with the
+// same address holds the link (two OBS sources with one address), so this
+// page is not controlled. It goes away by itself after a short while.
+//
 // The English texts were written with Claude Opus 5.5, an AI model; the other
 // languages were drafted by Claude Opus 5.5 and reviewed by a second AI model,
 // Gemini 4 Argon (PLAN.md 8.7). Corrections: docs/vjster/INSTALL.md.
 
-export const NOTE_KEYS = ["noToken", "noVideo", "playerMissing", "retry"] as const;
+export const NOTE_KEYS = ["noToken", "noVideo", "playerMissing", "retry", "standby"] as const;
 export type NoteKey = (typeof NOTE_KEYS)[number];
 export type Notes = Readonly<Record<NoteKey, string>>;
 
@@ -22,67 +26,92 @@ export const NOTES: Readonly<Record<string, Partial<Notes>>> = {
     noToken: "VJster: this address has no token. Copy the OBS page address from the VJster settings in Stream Deck.",
     noVideo: "VJster: add ?v= and a YouTube video id to this address.",
     playerMissing: "VJster: YouTube's player did not load.",
-    retry: "VJster: YouTube's player could not be loaded; trying again in {s} s."
+    retry: "VJster: YouTube's player could not be loaded; trying again in {s} s.",
+    standby: "VJster: another VJster page holds the link. This one is standing by; use one address per OBS source."
   },
   de: {
     noToken: "VJster: Diese Adresse hat keinen Schlüssel. Die Adresse der OBS-Seite aus den VJster-Einstellungen in Stream Deck kopieren.",
     noVideo: "VJster: ?v= und eine YouTube-Video-ID an diese Adresse anhängen.",
     playerMissing: "VJster: Der YouTube-Player wurde nicht geladen.",
-    retry: "VJster: Der YouTube-Player konnte nicht geladen werden; neuer Versuch in {s} s."
+    retry: "VJster: Der YouTube-Player konnte nicht geladen werden; neuer Versuch in {s} s.",
+    standby: "VJster: Eine andere VJster-Seite hält die Verbindung. Diese wartet; pro OBS-Quelle eine eigene Adresse verwenden."
   },
   es: {
     noToken: "VJster: esta dirección no tiene clave. Copia la dirección de la página de OBS desde los ajustes de VJster en Stream Deck.",
     noVideo: "VJster: añade ?v= y un ID de vídeo de YouTube a esta dirección.",
     playerMissing: "VJster: el reproductor de YouTube no se ha cargado.",
-    retry: "VJster: no se ha podido cargar el reproductor de YouTube; nuevo intento en {s} s."
+    retry: "VJster: no se ha podido cargar el reproductor de YouTube; nuevo intento en {s} s.",
+    standby: "VJster: otra página de VJster tiene el enlace. Esta queda en espera; usa una dirección por fuente de OBS."
   },
   fr: {
     noToken: "VJster : cette adresse n'a pas de clé. Copiez l'adresse de la page OBS depuis les paramètres VJster dans Stream Deck.",
     noVideo: "VJster : ajoutez ?v= et un ID de vidéo YouTube à cette adresse.",
     playerMissing: "VJster : le lecteur YouTube ne s'est pas chargé.",
-    retry: "VJster : le lecteur YouTube n'a pas pu être chargé ; nouvel essai dans {s} s."
+    retry: "VJster : le lecteur YouTube n'a pas pu être chargé ; nouvel essai dans {s} s.",
+    standby: "VJster : une autre page VJster tient le lien. Celle-ci attend ; utilisez une adresse par source OBS."
   },
   ja: {
     noToken: "VJster: このアドレスにはキーがありません。Stream Deck の VJster 設定から OBS ページのアドレスをコピーしてください。",
     noVideo: "VJster: このアドレスに ?v= と YouTube の動画 ID を追加してください。",
     playerMissing: "VJster: YouTube のプレーヤーを読み込めませんでした。",
-    retry: "VJster: YouTube のプレーヤーを読み込めませんでした。{s} 秒後に再試行します。"
+    retry: "VJster: YouTube のプレーヤーを読み込めませんでした。{s} 秒後に再試行します。",
+    standby: "VJster: 別の VJster ページがリンクを使用しています。このページは待機中です。OBS ソースごとに別のアドレスを使ってください。"
   },
   ko: {
     noToken: "VJster: 이 주소에 키가 없습니다. Stream Deck의 VJster 설정에서 OBS 페이지 주소를 복사하세요.",
     noVideo: "VJster: 이 주소에 ?v=와 YouTube 동영상 ID를 추가하세요.",
     playerMissing: "VJster: YouTube 플레이어가 로드되지 않았습니다.",
-    retry: "VJster: YouTube 플레이어를 로드하지 못했습니다. {s}초 후에 다시 시도합니다."
+    retry: "VJster: YouTube 플레이어를 로드하지 못했습니다. {s}초 후에 다시 시도합니다.",
+    standby: "VJster: 다른 VJster 페이지가 링크를 사용하고 있습니다. 이 페이지는 대기 중입니다. OBS 소스마다 다른 주소를 사용하세요."
+  },
+  it: {
+    noToken: "VJster: questo indirizzo non ha il token. Copia l'indirizzo della pagina OBS dalle impostazioni di VJster in Stream Deck.",
+    noVideo: "VJster: aggiungi ?v= e l'ID di un video di YouTube a questo indirizzo.",
+    playerMissing: "VJster: il player di YouTube non si è caricato.",
+    retry: "VJster: impossibile caricare il player di YouTube; nuovo tentativo tra {s} s.",
+    standby: "VJster: un'altra pagina VJster tiene il collegamento. Questa resta in attesa; usa un indirizzo per ogni fonte di OBS."
+  },
+  nl: {
+    noToken: "VJster: dit adres heeft geen token. Kopieer het adres van de OBS-pagina uit de VJster-instellingen in Stream Deck.",
+    noVideo: "VJster: voeg ?v= en een YouTube-video-ID toe aan dit adres.",
+    playerMissing: "VJster: de speler van YouTube is niet geladen.",
+    retry: "VJster: de speler van YouTube kon niet worden geladen; nieuwe poging over {s} s.",
+    standby: "VJster: een andere VJster-pagina heeft de verbinding. Deze wacht; gebruik één adres per OBS-bron."
   },
   pt_BR: {
     noToken: "VJster: este endereço não tem token. Copie o endereço da página do OBS nas configurações do VJster no Stream Deck.",
     noVideo: "VJster: adicione ?v= e o ID de um vídeo do YouTube a este endereço.",
     playerMissing: "VJster: o player do YouTube não carregou.",
-    retry: "VJster: não foi possível carregar o player do YouTube; nova tentativa em {s} s."
+    retry: "VJster: não foi possível carregar o player do YouTube; nova tentativa em {s} s.",
+    standby: "VJster: outra página do VJster está com a conexão. Esta fica em espera; use um endereço por fonte do OBS."
   },
   ru: {
     noToken: "VJster: в этом адресе нет токена. Скопируйте адрес страницы OBS из настроек VJster в Stream Deck.",
     noVideo: "VJster: добавьте к этому адресу ?v= и идентификатор видео YouTube.",
     playerMissing: "VJster: проигрыватель YouTube не загрузился.",
-    retry: "VJster: не удалось загрузить проигрыватель YouTube; повторная попытка через {s} сек."
+    retry: "VJster: не удалось загрузить проигрыватель YouTube; повторная попытка через {s} сек.",
+    standby: "VJster: связь держит другая страница VJster. Эта ждёт; используйте отдельный адрес для каждого источника OBS."
   },
   tr: {
     noToken: "VJster: bu adreste belirteç yok. OBS sayfasının adresini Stream Deck'teki VJster ayarlarından kopyalayın.",
     noVideo: "VJster: bu adrese ?v= ve bir YouTube video kimliği ekleyin.",
     playerMissing: "VJster: YouTube oynatıcısı yüklenmedi.",
-    retry: "VJster: YouTube oynatıcısı yüklenemedi; {s} saniye sonra yeniden denenecek."
+    retry: "VJster: YouTube oynatıcısı yüklenemedi; {s} saniye sonra yeniden denenecek.",
+    standby: "VJster: bağlantı başka bir VJster sayfasında. Bu sayfa bekliyor; her OBS kaynağı için ayrı bir adres kullanın."
   },
   zh_CN: {
     noToken: "VJster: 此地址没有密钥。请从 Stream Deck 中的 VJster 设置复制 OBS 页面地址。",
     noVideo: "VJster: 请在此地址后添加 ?v= 和一个 YouTube 视频 ID。",
     playerMissing: "VJster: YouTube 播放器未加载。",
-    retry: "VJster: 无法加载 YouTube 播放器；将在 {s} 秒后重试。"
+    retry: "VJster: 无法加载 YouTube 播放器；将在 {s} 秒后重试。",
+    standby: "VJster: 另一个 VJster 页面正在使用连接。本页面待命；请为每个 OBS 来源使用各自的地址。"
   },
   zh_TW: {
     noToken: "VJster: 此位址沒有金鑰。請從 Stream Deck 中的 VJster 設定複製 OBS 頁面位址。",
     noVideo: "VJster: 請在此位址加上 ?v= 與 YouTube 影片 ID。",
     playerMissing: "VJster: YouTube 播放器未載入。",
-    retry: "VJster: 無法載入 YouTube 播放器；將在 {s} 秒後重試。"
+    retry: "VJster: 無法載入 YouTube 播放器；將在 {s} 秒後重試。",
+    standby: "VJster: 另一個 VJster 頁面正在使用連線。本頁面待命；請為每個 OBS 來源使用各自的位址。"
   }
 };
 

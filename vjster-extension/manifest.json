@@ -46,5 +46,9 @@
     "ws://127.0.0.1/*",
     "<all_urls>"
   ],
-  "options_page": "options.html"
+  "options_page": "options.html",
+  "action": {
+    "default_title": "VJster",
+    "default_popup": "options.html"
+  }
 }

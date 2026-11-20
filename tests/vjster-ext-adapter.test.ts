@@ -580,6 +580,23 @@ describe("Adapter: fixes after the step 4 review", () => {
     expect(reports).toHaveLength(4);
   });
 
+  it("with dedupe, a page with no video says nothing when it loads, and reports once a video is there (D-04)", () => {
+    const quiet = setup("video", false, { dedupe: true });
+    quiet.adapter.changed();
+    quiet.clock.advance(1000);
+    expect(quiet.reports).toEqual([]);
+    // Asked (a new link, a restarted worker), it still answers.
+    quiet.adapter.refresh();
+    quiet.clock.advance(1000);
+    expect(quiet.reports).toHaveLength(1);
+    expect(quiet.reports[0]).toMatchObject({ kind: "state", state: { rate: null } });
+    // A page with a video reports at once, as before.
+    const loud = setup("video", true, { dedupe: true });
+    loud.adapter.changed();
+    loud.clock.advance(1000);
+    expect(loud.reports).toHaveLength(1);
+  });
+
   it("without dedupe, sends every unsolicited report", () => {
     const { adapter, reports, clock } = setup();
     adapter.changed();

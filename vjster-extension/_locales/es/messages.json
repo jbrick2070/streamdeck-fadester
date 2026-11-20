@@ -52,6 +52,12 @@
   "statusLinkDown": {
     "message": "Sin conexión. Revisa el programa que usas:"
   },
+  "statusFirstWait": {
+    "message": "Esperando a VJster. Haz una de estas cosas:"
+  },
+  "statusStandby": {
+    "message": "En espera. Otra copia de esta extensión (otro perfil de Chrome u otro navegador) tiene el enlace; esta lo toma cuando aquella se cierre."
+  },
   "linkDownCompanion": {
     "message": "Fadester Companion: ábrelo en este ordenador y comprueba que sus controles estén activos."
   },
@@ -63,6 +69,9 @@
   },
   "statusLinkChecking": {
     "message": "Conectando con VJster…"
+  },
+  "reloadTabsNote": {
+    "message": "Pestañas de vídeo que ya estaban abiertas antes de instalar o actualizar VJster: recárgalas una vez."
   },
   "statusBadPort": {
     "message": "Usa un número entero de 1024 a 65535; $DEFAULT$ es el valor predeterminado.",

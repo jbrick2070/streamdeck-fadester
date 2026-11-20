@@ -18,7 +18,7 @@ import { embedControl, embedRates, type EmbedPlayer } from "../vjster-page/src/e
 import { ObsPage, playerVars } from "../vjster-page/src/page-core.js";
 import { linkUrl, readParams, readPort, setupProblem, withoutToken } from "../vjster-page/src/page-params.js";
 import { AnswerSettler, SettledAnswers, settleKind } from "../vjster-page/src/settle.js";
-import { API_URL, SCRIPT_RETRY_MS, bootPage, type BootEnv } from "../vjster-page/src/page-boot.js";
+import { API_URL, SCRIPT_RETRY_MS, STANDBY_NOTE_MS, bootPage, type BootEnv } from "../vjster-page/src/page-boot.js";
 
 const TOKEN = "0123456789abcdef0123456789abcdef";
 const VIDEO = "aqz-KE-bpKQ";
@@ -701,6 +701,30 @@ describe("the page's start-up (R-OBS-2)", () => {
     const page = bootPage(x.e);
     expect(x.log.slice(0, 2)).toEqual([`address /obs?v=${VIDEO}&mute=1`, `script ${API_URL}`]);
     expect(x.log.every((l) => !l.includes(TOKEN))).toBe(true);
+    page?.stop();
+  });
+
+  it("says for a short while that it is standing by when another page with its address holds the link (D-02)", () => {
+    const x = env(`?v=${VIDEO}`, `#token=${TOKEN}`);
+    const sockets: Array<{ readyState: number; onopen: (() => void) | null; onclose: ((ev: { code: number }) => void) | null }> = [];
+    (x.e as { openSocket: unknown }).openSocket = () => {
+      const socket = { readyState: 0, send: () => undefined, close: () => undefined, onopen: null, onclose: null, onerror: null, onmessage: null };
+      sockets.push(socket as never);
+      return socket;
+    };
+    const page = bootPage(x.e);
+    sockets[0].readyState = 1;
+    sockets[0].onopen?.();
+    expect(x.shown.filter((text) => text !== "")).toEqual([]);
+    // A newer page takes the link: the server closes this one with "replaced".
+    sockets[0].readyState = 3;
+    sockets[0].onclose?.({ code: 4000 });
+    expect(x.shown.at(-1)).toMatch(/another VJster page holds the link/);
+    // The note leaves the picture by itself.
+    const hide = x.timers.find((timer) => timer.ms === STANDBY_NOTE_MS);
+    expect(hide).toBeDefined();
+    hide!.fn();
+    expect(x.shown.at(-1)).toBe("");
     page?.stop();
   });
 

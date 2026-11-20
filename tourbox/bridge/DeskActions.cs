@@ -8,7 +8,7 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
     Func<CancellationToken, IAsyncEnumerable<double>>? rampSteps = null, Func<double, double, Task>? nativeMove = null,
     DeskActions.Memory? resume = null, bool allowAutoCloseout = true,
     VisualSidechainMonitor? vsMonitor = null, Action<string>? onStatus = null, Func<long>? clockMs = null,
-    Func<int, CancellationToken, Task>? delayAsync = null, Action<int, string, string>? onPick = null)
+    Func<int, CancellationToken, Task>? delayAsync = null, Action<int, string, string>? onPick = null, bool deferCutReturn = false)
 {
     public const double MinQuantizeConfidence = 0.35;
     public const int MaxQuantizeWaitMs = 4000;
@@ -41,7 +41,7 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
     /** OBS scene-item blend modes in the order the Layer rotaries cycle them (obs-websocket SetSceneItemBlendMode). */
     public static readonly string[] BlendModes = ["OBS_BLEND_NORMAL", "OBS_BLEND_ADDITIVE", "OBS_BLEND_SUBTRACT", "OBS_BLEND_SCREEN", "OBS_BLEND_MULTIPLY", "OBS_BLEND_LIGHTEN", "OBS_BLEND_DARKEN"];
     public const string OpacityFilterName = "Fadester opacity";
-    private readonly StudioFader fader = new(rpc, cfg.FaderStep, nativeMove, resume?.Fader, allowAutoCloseout);
+    private readonly StudioFader fader = new(rpc, cfg.FaderStep, nativeMove, resume?.Fader, allowAutoCloseout) { DeferCutReturn = deferCutReturn };
     private readonly AudioDesk audio = new(rpc, rampSteps, resume?.Duck);
     private readonly MixDesk mix = new(cfg, rpc);
     public bool MixEnabled => cfg.MixEnabled;

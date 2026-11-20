@@ -15,6 +15,30 @@ internal static class Program
     /** OBS counts a cut as running for about a second after it (StudioFader); look again once it has stopped. */
     private const int CutRecheckMs = 1500;
 
+    /** The wait before OBS is tried again; after a sign-in OBS refused it grows (NextRetryMs). */
+    internal const int RetryMs = 1200, RetryRefusedMs = 5000, RetryLongestMs = 60_000;
+    /// <summary>
+    /// OBS closed or not answering is asked again every 1.2 s, so the controls are back the moment it is. A sign-in OBS
+    /// itself refused (wrong or missing password, authentication off) stays refused until a person changes something:
+    /// 5 s, then twice as long each time up to a minute, the Mac host's intervals.
+    /// </summary>
+    internal static int NextRetryMs(Exception error, int previous) =>
+        error is ObsSetupException { Code: not "obs-no-answer" }
+            ? Math.Min(previous < RetryRefusedMs ? RetryRefusedMs : previous * 2, RetryLongestMs)
+            : RetryMs;
+
+    private static void CheckRetryWaits()
+    {
+        static void Check(bool ok, string message) { if (!ok) throw new Exception("Retry self-test: " + message); }
+        Check(NextRetryMs(ObsSetupException.NotAnswering(4455), RetryMs) == RetryMs && NextRetryMs(new IOException("OBS disconnected."), 40_000) == RetryMs,
+            "OBS closed or lost is asked again every 1.2 s");
+        int wait = RetryMs; var waits = new List<int>();
+        for (int i = 0; i < 6; i++) waits.Add(wait = NextRetryMs(ObsSetupException.PasswordRejected(), wait));
+        Check(waits.SequenceEqual(new[] { 5000, 10_000, 20_000, 40_000, 60_000, 60_000 }), "a refused password waits longer each time, up to a minute");
+        Check(NextRetryMs(ObsSetupException.NoPassword(), RetryMs) == RetryRefusedMs && NextRetryMs(ObsSetupException.AuthenticationOff(), RetryMs) == RetryRefusedMs,
+            "a missing password and authentication off wait the same way");
+    }
+
     static string DefaultMap()
     {
         var packaged = Path.Combine(AppContext.BaseDirectory, "presets", "map.json");
@@ -54,7 +78,7 @@ internal static class Program
             if (command == "--self-test")
             {
                 var bindings = Binding.Load(map); await BridgeSelfTests.RunAsync(); await StudioFaderSelfTests.RunAsync(); GamepadSelfTests.Run();
-                await TransitionTraceSelfTests.RunAsync(); ConsoleQueue.SelfTest();
+                await TransitionTraceSelfTests.RunAsync(); ConsoleQueue.SelfTest(); CheckRetryWaits();
                 // The packaged panel reads the controller map from here; a source checkout without it skips the check.
                 var padFile = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(map))!, "gamepad.json");
                 if (File.Exists(padFile)) GamepadSelfTests.CheckPresetFile(padFile);
@@ -192,6 +216,7 @@ internal static class Program
         // After a cut OBS can switch back to Cut as the cut ends: look again once it has stopped counting it as running.
         void RecheckAfterCut(int g) => _ = Task.Delay(CutRecheckMs, stop.Token).ContinueWith(
             t => { if (t.IsCompletedSuccessfully) input.Writer.TryWrite(new(CutRecheck, g, Stopwatch.GetTimestamp())); }, TaskScheduler.Default);
+        var retryNow = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         // The panel and the tests can type "dispatch <action>" on stdin; it runs exactly as the hotkey would.
         void Command(string line)
         {
@@ -199,6 +224,7 @@ internal static class Program
             if (line.Equals("quit", StringComparison.OrdinalIgnoreCase)) { stop.Cancel(); return; }
             if (line.Equals("reload", StringComparison.OrdinalIgnoreCase))
             {
+                retryNow.TrySetResult(); // a wait for OBS's sign-in ends now: the password may be the thing just fixed
                 try { if (configPath is null) return; cfg.ApplyLive(BridgeConfig.Load(configPath)); Console.WriteLine("SETTINGS-RELOADED"); }
                 catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException or System.Text.Json.JsonException)
                 { Console.WriteLine("Settings not reloaded: " + e.Message); }
@@ -223,6 +249,9 @@ internal static class Program
             if (Console.IsInputRedirected) _ = Task.Run(async () => { try { while (!stop.IsCancellationRequested && await Console.In.ReadLineAsync() is { } line) Command(line); if (panelOwned && !stop.IsCancellationRequested) { Console.WriteLine("The control panel closed: stopping."); stop.Cancel(); } } catch (IOException) { } });
             else _ = Task.Run(() => { try { while (!stop.IsCancellationRequested && Console.ReadLine() is { } line) Command(line); } catch (IOException) { } });
             string? lastError = null;
+            // A sign-in OBS refuses is not retried every 1.2 s for the whole show (OBS logs and announces each one):
+            // the wait grows to a minute, as on the Mac. Save in the panel ("reload") tries again at once.
+            int retryMs = RetryMs;
             string providerId = BridgeConfig.ResolveProviderId(cfg.MixStateDirectory);
             // A duck, a cut's owed transition and a part-thrown T-bar outlive a dropped connection.
             DeskActions.Memory? memory = null;
@@ -232,7 +261,7 @@ internal static class Program
             {
                 try
                 {
-                    using var obs = await ObsConnection.Connect(cfg, stop.Token, traceTransitions, vendorEvents: true); lastError = null;
+                    using var obs = await ObsConnection.Connect(cfg, stop.Token, traceTransitions, vendorEvents: true); lastError = null; retryMs = RetryMs;
                     using var native = new NativeTBar(cfg.Port);
                     // --trace-transitions: the desk's requests pass through the trace, which only reads and prints.
                     TransitionTrace? trace = traceLog != null ? new TransitionTrace(obs.Call, traceLog) : null;
@@ -243,7 +272,8 @@ internal static class Program
                     // Midi Fadester's APC40 transport (Tempo, Nudge, Tap Tempo, Play) drives VJster through this OBS.
                     if (vjRemote is not null) obs.VendorEvent += vjRemote.OnVendorEvent;
                     var desk = new DeskActions(cfg, rpc, nativeMove: native.MoveAsync, resume: memory, vsMonitor: vsMonitor, onStatus: Console.WriteLine,
-                        onPick: (layer, scene, source) => ConsoleQueue.Marker(PanelLine.PickedLayer(layer, scene, source))); int mine = ++generation;
+                        onPick: (layer, scene, source) => ConsoleQueue.Marker(PanelLine.PickedLayer(layer, scene, source)),
+                        deferCutReturn: true /* RecheckAfterCut below puts the transition back; the loop is free meanwhile */); int mine = ++generation;
                     obs.InputVolumeChanged += desk.OnVolumeChanged;
                     obs.InputLevelChangedById += desk.OnMixInputLevelChanged;
                     desk.StartMixMonitor();
@@ -362,8 +392,20 @@ internal static class Program
                 }
                 catch (OperationCanceledException) when (stop.IsCancellationRequested) { break; }
                 // The panel reads "Offline:" for its status line, and shows its own text for an ObsSetupException's code.
-                catch (Exception e) { if (e.Message != lastError) { Console.WriteLine("Offline: " + e.Message); lastError = e.Message; } }
-                if (!stop.IsCancellationRequested) { try { await Task.Delay(1200, stop.Token); } catch (OperationCanceledException) { break; } }
+                catch (Exception e)
+                {
+                    if (e.Message != lastError) { Console.WriteLine("Offline: " + e.Message); lastError = e.Message; }
+                    int next = NextRetryMs(e, retryMs);
+                    if (next > retryMs && retryMs == RetryMs) Console.WriteLine("Still trying: OBS is asked again after a longer pause each time, up to once a minute. Save in Setup tries at once.");
+                    retryMs = next;
+                }
+                if (!stop.IsCancellationRequested)
+                {
+                    var again = retryNow.Task;
+                    try { await Task.WhenAny(Task.Delay(retryMs, stop.Token), again); stop.Token.ThrowIfCancellationRequested(); }
+                    catch (OperationCanceledException) { break; }
+                    if (again.IsCompleted) { retryNow = new(TaskCreationOptions.RunContinuationsAsynchronously); retryMs = RetryMs; }
+                }
             }
         }
         finally

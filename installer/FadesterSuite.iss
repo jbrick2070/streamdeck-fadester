@@ -10,8 +10,12 @@
 ; VJster plugin would fight Fadester for OBS over port 48150, and never deletes settings, scene collections or profiles.
 ; Visual Sidechain is part of Midi Fadester since 0.9.0: there is no separate component; Midi Fadester's own installer
 ; removes the old standalone plugin, and setup says so when Midi Fadester is not run (unticked or already newer).
+; Setup runs as administrator. On a PC where the signed-in person is a standard user, that is another account: the
+; per-user checks (the Store edition, the standalone VJster plugin, OpenDeck) and the OpenDeck copy use the signed-in
+; person's own settings and folders, not the administrator's (FindSignedInUser).
+; Fadester for OBS in OpenDeck and the unpacked VJster extension are never replaced by an older copy either.
 ; Log markers (for tests and support): OBS-RUNNING, COMPANION-RUNNING, OPENDECK-RUNNING, SKIP-NEWER, STORE-EDITION,
-; VJSTER-CLASH, OLD-VS, INSTALLED, FAILED.
+; VJSTER-CLASH, OLD-VS, ORIGINAL-USER, INSTALLED, FAILED.
 
 #ifndef SuiteVersion
   #error Build with installer\build-suite.ps1, which passes the component defines.
@@ -36,7 +40,7 @@ SolidCompression=yes
 WizardStyle=modern
 CloseApplications=no
 SetupLogging=yes
-; The OpenDeck task writes to the signed-in user's own OpenDeck folder on purpose.
+; The OpenDeck task writes to the signed-in user's own OpenDeck folder on purpose ({code:OpenDeckPlugins}).
 UsedUserAreasWarning=no
 #ifdef SIGN
 SignTool=fadester
@@ -51,11 +55,11 @@ Name: "custom"; Description: "Choose components"; Flags: iscustom
 
 [Components]
 Name: "obs"; Description: "OBS Studio 33 plugins (each keeps its own uninstall entry)"; Types: full
-Name: "obs\mf"; Description: "Midi Fadester {#MfVersion} (includes Visual Sidechain)"; Types: full
-Name: "obs\pl"; Description: "Playlister {#PlVersion}"; Types: full
-Name: "companion"; Description: "Fadester Companion {#CoVersion} (game controller, TourBox, whole-mix audio)"; Types: full
-Name: "streamdeck"; Description: "Fadester for OBS {#SdVersion} for Stream Deck and OpenDeck (includes VJster)"; Types: full
-Name: "vjsterext"; Description: "VJster Chrome extension {#ExtVersion} (unpacked, for Load unpacked)"; Types: full
+Name: "obs\mf"; Description: "Midi Fadester {#MfVersion}: for an APC40 or another MIDI controller (includes Visual Sidechain)"; Types: full
+Name: "obs\pl"; Description: "Playlister {#PlVersion}: playlists of video and audio files as an OBS source"; Types: full
+Name: "companion"; Description: "Fadester Companion {#CoVersion}: for a TourBox or a game controller (also whole-mix audio)"; Types: full
+Name: "streamdeck"; Description: "Fadester for OBS {#SdVersion}: for a Stream Deck or OpenDeck (includes VJster)"; Types: full
+Name: "vjsterext"; Description: "VJster Chrome extension {#ExtVersion}: YouTube speed and quality from your controller (unpacked, for Load unpacked)"; Types: full
 
 [Tasks]
 Name: "opendeck"; Description: "Add Fadester for OBS to OpenDeck"; Components: streamdeck; Check: OpenDeckPresent
@@ -67,8 +71,8 @@ Source: "{#Stage}\{#PlFile}"; Flags: dontcopy
 Source: "{#Stage}\{#CoFile}"; Flags: dontcopy
 ; Fadester for OBS package: Stream Deck imports it with its own installer when it is opened.
 Source: "{#Stage}\{#SdFile}"; DestDir: "{app}\packages"; Components: streamdeck; Flags: ignoreversion
-Source: "{#Stage}\sdplugin\*"; DestDir: "{userappdata}\opendeck\plugins"; Tasks: opendeck; Flags: ignoreversion recursesubdirs createallsubdirs uninsneveruninstall
-Source: "{#Stage}\vjster-extension\*"; DestDir: "{app}\vjster-extension"; Components: vjsterext; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#Stage}\sdplugin\*"; DestDir: "{code:OpenDeckPlugins}"; Tasks: opendeck; Check: OpenDeckCopyWanted; Flags: ignoreversion recursesubdirs createallsubdirs uninsneveruninstall
+Source: "{#Stage}\vjster-extension\*"; DestDir: "{app}\vjster-extension"; Components: vjsterext; Check: ExtensionCopyWanted; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Code]
 const
@@ -78,6 +82,16 @@ const
 var
   Notes: String;
   Summary: String;
+  { The person signed in at this PC, when setup was elevated with another account's credentials (FindSignedInUser). }
+  SignedInChecked: Boolean;
+  SignedInSid, SignedInAppData: String;
+  { Decided once per setup run: 0 not yet, 1 copy, 2 keep the newer copy that is installed. }
+  OpenDeckCopy, ExtensionCopy: Integer;
+
+function ProcessIdToSessionId(ProcessId: DWORD; var SessionId: DWORD): BOOL;
+  external 'ProcessIdToSessionId@kernel32.dll stdcall';
+function GetCurrentProcessId(): DWORD;
+  external 'GetCurrentProcessId@kernel32.dll stdcall';
 
 procedure Note(const Marker, Text: String);
 begin
@@ -116,16 +130,137 @@ begin
   end;
 end;
 
+{ ---------- the signed-in person ---------- }
+
+{ Setup always runs as administrator. A standard user gets there by typing an administrator's name and password, and
+  setup then runs as that administrator: HKCU and the user folders are the administrator's, not the person's who will
+  use the suite. The person signed in is the one whose settings hive has this Windows session in it; their profile
+  folder comes from the system's own list (HKLM ProfileList), which only an administrator can change. When that
+  person and the elevated account are the same (the usual case), nothing differs. }
+procedure FindSignedInUser();
+var
+  Names: TArrayOfString;
+  I, Changed: Integer;
+  Session: DWORD;
+  Profile: String;
+begin
+  if SignedInChecked then Exit;
+  SignedInChecked := True;
+  SignedInSid := '';
+  SignedInAppData := ExpandConstant('{userappdata}');
+  Session := 0;
+  Changed := 0;
+  if not ProcessIdToSessionId(GetCurrentProcessId(), Session) then Exit;
+  if not RegGetSubkeyNames(HKEY_USERS, '', Names) then Exit;
+  for I := 0 to GetArrayLength(Names) - 1 do
+    if ((Pos('S-1-5-21-', Names[I]) = 1) or (Pos('S-1-12-1-', Names[I]) = 1)) and (Pos('_Classes', Names[I]) = 0) then
+      if (SignedInSid = '') and RegKeyExists(HKEY_USERS, Names[I] + '\Volatile Environment\' + IntToStr(Session)) then
+        SignedInSid := Names[I];
+  if SignedInSid = '' then Exit;
+  Profile := '';
+  if RegQueryStringValue(HKLM, 'SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + SignedInSid, 'ProfileImagePath', Profile) then
+  begin
+    Changed := StringChangeEx(Profile, '%SystemDrive%', ExpandConstant('{sd}'), True);
+    if (Changed >= 0) and (Profile <> '') and DirExists(Profile + '\AppData\Roaming') then
+      SignedInAppData := Profile + '\AppData\Roaming';
+  end;
+  if CompareText(SignedInAppData, ExpandConstant('{userappdata}')) <> 0 then
+    Log('ORIGINAL-USER: setup was elevated with another account; per-user checks and the OpenDeck copy use ' + SignedInAppData + '.');
+end;
+
+{ The signed-in person's Roaming AppData folder. }
+function UserAppData(): String;
+begin
+  FindSignedInUser();
+  Result := SignedInAppData;
+end;
+
+function OpenDeckPlugins(Param: String): String;
+begin
+  Result := UserAppData() + '\opendeck\plugins';
+end;
+
 function InstalledVersion(const AppId: String): String;
 var
   Key: String;
 begin
   Result := '';
   Key := UninstallRoot + '{' + AppId + '}_is1';
+  FindSignedInUser();
   if not RegQueryStringValue(HKLM32, Key, 'DisplayVersion', Result) then
     if not RegQueryStringValue(HKLM64, Key, 'DisplayVersion', Result) then
       if not RegQueryStringValue(HKCU, Key, 'DisplayVersion', Result) then
-        Result := '';
+        if (SignedInSid = '') or not RegQueryStringValue(HKEY_USERS, SignedInSid + '\' + Key, 'DisplayVersion', Result) then
+          Result := '';
+end;
+
+{ The version a manifest names: "Version": "0.12.16.0" in a Stream Deck plugin, "version": "0.1.6" in a Chrome
+  extension. The first value under that name that looks like a version (it has a dot) counts, so the Node.js
+  "Version": "24" further down a plugin's manifest is passed over. '' when the file or the field is missing. }
+function ManifestVersion(const FileName, Field: String): String;
+var
+  Raw: AnsiString;
+  Text, Value: String;
+  P, Q, Guard: Integer;
+begin
+  Result := '';
+  if not LoadStringFromFile(FileName, Raw) then Exit;
+  Text := String(Raw);
+  Guard := 0;
+  while (Result = '') and (Guard < 50) do
+  begin
+    Guard := Guard + 1;
+    P := Pos('"' + Field + '"', Text);
+    if P = 0 then Exit;
+    Delete(Text, 1, P + Length(Field) + 1);
+    P := Pos('"', Text);
+    if P = 0 then Exit;
+    Value := Copy(Text, P + 1, Length(Text));
+    Q := Pos('"', Value);
+    if Q = 0 then Exit;
+    Value := Copy(Value, 1, Q - 1);
+    if (Pos('.', Value) > 0) and (Length(Value) < 40) then Result := Value;
+  end;
+end;
+
+{ True when the copy on disk is newer than the one this setup carries: it is kept, as for the plugins. }
+function NewerOnDisk(const Name, ManifestFile, Field, Bundled: String): Boolean;
+var
+  Have: String;
+begin
+  Have := ManifestVersion(ManifestFile, Field);
+  Result := (Have <> '') and (CompareVersions(Have, Bundled) > 0);
+  if Result and (Pos('/ALLOWDOWNGRADE', Uppercase(GetCmdTail)) > 0) then
+  begin
+    Log('Downgrade of ' + Name + ' allowed by /ALLOWDOWNGRADE.');
+    Result := False;
+  end;
+  if Result then
+    Note('SKIP-NEWER', Name + ' ' + Have + ' is already there; setup carries ' + Bundled + ', so it is left as it is.');
+end;
+
+{ [Files] asks once per file: the answer is worked out once, so the note and the log line appear once. }
+function OpenDeckCopyWanted(): Boolean;
+begin
+  if OpenDeckCopy = 0 then
+  begin
+    OpenDeckCopy := 1;
+    if NewerOnDisk('Fadester for OBS in OpenDeck', UserAppData() + '\opendeck\plugins\io.github.jbrick2070.fadester-for-obs.sdPlugin\manifest.json', 'Version', '{#SdVersion}') then
+      OpenDeckCopy := 2;
+  end;
+  Result := OpenDeckCopy = 1;
+end;
+
+function ExtensionCopyWanted(): Boolean;
+begin
+  if ExtensionCopy = 0 then
+  begin
+    ExtensionCopy := 1;
+    { Not {app}: this can be asked before the folder is settled. It is fixed (DisableDirPage). }
+    if NewerOnDisk('The VJster Chrome extension', ExpandConstant('{commonappdata}\Fadester Suite\vjster-extension\manifest.json'), 'version', '{#ExtVersion}') then
+      ExtensionCopy := 2;
+  end;
+  Result := ExtensionCopy = 1;
 end;
 
 { True when a newer copy than the bundled one is already installed (so it must not be replaced). }
@@ -168,7 +303,12 @@ var
   I: Integer;
 begin
   Result := False;
+  { The Store keeps its packages per user: the signed-in person's, not those of the administrator setup runs as. }
+  FindSignedInUser();
   if RegGetSubkeyNames(HKCU, PackagesKey, Names) then
+    for I := 0 to GetArrayLength(Names) - 1 do
+      if Pos('{#StorePrefix}', Names[I]) = 1 then Result := True;
+  if (SignedInSid <> '') and RegGetSubkeyNames(HKEY_USERS, SignedInSid + '\' + PackagesKey, Names) then
     for I := 0 to GetArrayLength(Names) - 1 do
       if Pos('{#StorePrefix}', Names[I]) = 1 then Result := True;
 #ifdef BREAK_STORE_GUARD
@@ -178,8 +318,8 @@ end;
 
 function StandaloneVjsterPresent(): Boolean;
 begin
-  Result := DirExists(ExpandConstant('{userappdata}\Elgato\StreamDeck\Plugins\com.jbrick2070.vjster.sdPlugin')) or
-            DirExists(ExpandConstant('{userappdata}\opendeck\plugins\com.jbrick2070.vjster.sdPlugin'));
+  Result := DirExists(UserAppData() + '\Elgato\StreamDeck\Plugins\com.jbrick2070.vjster.sdPlugin') or
+            DirExists(UserAppData() + '\opendeck\plugins\com.jbrick2070.vjster.sdPlugin');
 #ifdef BREAK_VJSTER_GUARD
   Result := False;
 #endif
@@ -203,7 +343,7 @@ end;
 
 function OpenDeckPresent(): Boolean;
 begin
-  Result := DirExists(ExpandConstant('{userappdata}\opendeck'));
+  Result := DirExists(UserAppData() + '\opendeck');
 end;
 
 function StreamDeckExe(): String;
@@ -253,6 +393,15 @@ end;
 
 { ---------- chaining ---------- }
 
+{ What to do next with a part that was just installed, for the last message of setup. }
+function NextStep(const Name: String): String;
+begin
+  Result := '';
+  if Name = 'Midi Fadester' then Result := ' Start OBS, then open Tools > Midi Fadester.'
+  else if Name = 'Playlister' then Result := ' Start OBS, then add a Playlister source with the + under Sources.'
+  else if Name = 'Fadester Companion' then Result := ' Open Fadester Companion from the Start menu: it finds OBS and starts its controls by itself.';
+end;
+
 function RunInstaller(const Name, FileName: String): String;
 var
   Code: Integer;
@@ -265,7 +414,7 @@ begin
   if Code = 0 then
   begin
     Log('INSTALLED: ' + Name);
-    Summary := Summary + Name + ' installed.' + #13#10;
+    Summary := Summary + Name + ' installed.' + NextStep(Name) + #13#10;
   end
   else
   begin
@@ -351,9 +500,16 @@ begin
     else
       Summary := Summary + 'Fadester for OBS is ready at ' + Package + '. Open it once Stream Deck is installed.' + #13#10;
     if WizardIsTaskSelected('opendeck') then
-      Summary := Summary + 'Fadester for OBS was added to OpenDeck. Start OpenDeck to use it.' + #13#10;
+    begin
+      if OpenDeckCopy = 2 then
+        Summary := Summary + 'OpenDeck already has a newer Fadester for OBS; it was kept.' + #13#10
+      else
+        Summary := Summary + 'Fadester for OBS was added to OpenDeck. Start OpenDeck to use it.' + #13#10;
+    end;
   end;
-  if WizardIsComponentSelected('vjsterext') then
+  if WizardIsComponentSelected('vjsterext') and (ExtensionCopy = 2) then
+    Summary := Summary + 'A newer VJster extension is already in ' + ExpandConstant('{app}\vjster-extension') + '; it was kept. Load that folder in Chrome (chrome://extensions, Developer mode, Load unpacked).' + #13#10
+  else if WizardIsComponentSelected('vjsterext') then
     Summary := Summary + 'VJster extension: in Chrome open chrome://extensions, turn on Developer mode, click Load unpacked and pick ' + ExpandConstant('{app}\vjster-extension') + '.' + #13#10;
   Log('Summary: ' + Summary);
   if (Summary <> '') and not WizardSilent() then

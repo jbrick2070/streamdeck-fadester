@@ -22,6 +22,10 @@ on:
       - vjster-page/**
       - src/vjster/shared/**
       - vjster-extension/src/**
+      - tests/tourbox-*.test.ts
+      - tests/companion-*.test.ts
+      - package.json
+      - package-lock.json
       - LICENSE
   pull_request:
     branches: [main]
@@ -44,6 +48,10 @@ on:
       - vjster-page/**
       - src/vjster/shared/**
       - vjster-extension/src/**
+      - tests/tourbox-*.test.ts
+      - tests/companion-*.test.ts
+      - package.json
+      - package-lock.json
       - LICENSE
   workflow_dispatch:
 
@@ -93,6 +101,18 @@ jobs:
           Copy-Item -Path (Join-Path $out 'Fadester-Companion-Windows-x64-*.zip*') -Destination artifacts
           Copy-Item -Path (Join-Path $out 'FadesterCompanion_*.msix') -Destination artifacts
           Set-Content -LiteralPath 'artifacts\SOURCE-COMMIT.txt' -Value $env:GITHUB_SHA -Encoding utf8NoBOM
+      - name: Companion tests (the built bridge hosts the VJster link for the real extension logic)
+        # tests/tourbox-vjster-link.test.ts starts the bridge from its Release folder and skips itself when the bridge is
+        # not there: here it is built first and FADESTER_REQUIRE_BRIDGE_TEST makes a skip a failure. Nothing else on the
+        # runner holds the bridge's global shortcuts or the port it picks.
+        shell: pwsh
+        env:
+          FADESTER_REQUIRE_BRIDGE_TEST: '1'
+        run: |
+          dotnet build tourbox\bridge\FadesterCompanionBridge.csproj -c Release --nologo
+          if ($LASTEXITCODE) { throw 'Bridge build failed.' }
+          npx vitest run tests/tourbox-vjster-link.test.ts tests/companion-mac-guides.test.ts tests/companion-mac-strings.test.ts tests/companion-one-name.test.ts
+          if ($LASTEXITCODE) { throw 'Companion tests failed.' }
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: Fadester-Companion-Windows-x64

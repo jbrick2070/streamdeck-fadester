@@ -1,12 +1,32 @@
 name: Fadester Suite Setup (Windows)
 
-# Builds the combined Windows installer and tests it end to end on throwaway runners. Runs manually, and on pull
-# requests that change the installer. It never runs on pushes to main and never publishes a release.
+# Builds the combined Windows installer and tests it end to end on throwaway runners: manually, on pull requests that
+# change what goes into it, and for every version tag. Fadester for OBS, the VJster extension and Fadester Companion
+# in it are built from the commit itself; Midi Fadester and Playlister are the pinned published installers.
+# For a version tag (or a manual run that names one), the tested setup is then attached to that tag's release, which
+# release.yml creates as a DRAFT, with a table that says which file is for which hardware. Nothing is published here:
+# a person tests the draft and publishes it.
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Attach the tested setup to this existing release (a tag such as v0.12.16). Empty: build and test only.'
+        required: false
+        default: ''
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
   pull_request:
     paths:
       - installer/**
+      - scripts/suite/**
+      - tourbox/build.ps1
+      - tourbox/bridge/**
+      - tourbox/panel/**
+      - tourbox/native/**
+      - tourbox/presets/**
+      - package.json
+      - package-lock.json
       - .github/workflows/suite-installer.yml
 
 permissions:
@@ -45,17 +65,27 @@ jobs:
         shell: pwsh
         run: |
           npm ci
+          if ($LASTEXITCODE) { throw 'npm ci failed.' }
           npm run build:vjster-page
+          if ($LASTEXITCODE) { throw 'VJster page build failed.' }
           $out = Join-Path $env:RUNNER_TEMP 'companion'
           & .\tourbox\build.ps1 -OutDir $out
           $build = (Get-ChildItem -LiteralPath $out -Directory -Filter 'build-*' | Select-Object -First 1).FullName
           "COMPANION_BUILD=$build\Fadester Companion" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
-      - name: Build the suite setup (pinned inputs verified by SHA-256)
+      - name: Build Fadester for OBS and the VJster extension from this commit
+        # The same script release.yml packs the release with: it writes the package, the extension ZIP and
+        # CANDIDATE.json (their hashes) into release/candidates/windows-macos.
         shell: pwsh
         run: |
-          & .\installer\build-suite.ps1 -CompanionBuild $env:COMPANION_BUILD -OutDir dist\suite
+          node --import tsx scripts/suite/package-candidate.ts
+          if ($LASTEXITCODE) { throw 'Packaging Fadester for OBS failed.' }
+      - name: Build the suite setup (pinned inputs and this commit's candidate verified by SHA-256)
+        shell: pwsh
+        run: |
+          $candidate = 'release\candidates\windows-macos'
+          & .\installer\build-suite.ps1 -CompanionBuild $env:COMPANION_BUILD -Candidate $candidate -OutDir dist\suite
           foreach ($g in 'OBS', 'STORE', 'DOWNGRADE', 'VJSTER') {
-            & .\installer\build-suite.ps1 -CompanionBuild $env:COMPANION_BUILD -OutDir "dist\broken-$g" -Define "BREAK_$($g)_GUARD"
+            & .\installer\build-suite.ps1 -CompanionBuild $env:COMPANION_BUILD -Candidate $candidate -OutDir "dist\broken-$g" -Define "BREAK_$($g)_GUARD"
           }
           Get-ChildItem dist -Recurse -Filter '*.exe' | Where-Object { $_.FullName -notmatch '\\stage\\' } | ForEach-Object { $_.FullName }
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -128,3 +158,66 @@ jobs:
         run: |
           $setup = (Get-ChildItem "variants\broken-${{ matrix.guard }}" -Filter 'Fadester-Suite-Setup-*.exe' | Select-Object -First 1).FullName
           & .\installer\tests\Test-Suite.ps1 -Setup $setup -Only '${{ matrix.test }}' -ExpectFail
+
+  attach:
+    name: Attach the tested setup to the draft release
+    # Only for a version tag, or a manual run that names a release. The setup is attached only after the install,
+    # guard, uninstall and mutation jobs have passed on it.
+    needs: [build, test, mutation]
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TAG: ${{ github.event_name == 'push' && github.ref_name || inputs.release_tag }}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: Fadester-Suite-Setup-Windows-x64
+          path: setup
+      - name: Wait for the release that release.yml drafts for this tag
+        run: |
+          case "$TAG" in v[0-9]*.[0-9]*.[0-9]*) ;; *) echo "Not a version tag: $TAG"; exit 1;; esac
+          for attempt in $(seq 1 80); do
+            if gh release view "$TAG" > /dev/null 2>&1; then exit 0; fi
+            sleep 30
+          done
+          echo "No release for $TAG after 40 minutes. Run this workflow again by hand with release_tag once the draft exists."
+          exit 1
+      - name: Attach the setup, and say which file is for which hardware
+        run: |
+          set -euo pipefail
+          gh release upload "$TAG" setup/Fadester-Suite-Setup-*.exe setup/Fadester-Suite-Setup-*.sha256 --clobber
+          gh release view "$TAG" --json assets --jq '.assets[].name' > names.txt
+          pick() { grep -E "$1" names.txt | head -n 1 || true; }
+          suite=$(pick '^Fadester-Suite-Setup-.*\.exe$')
+          plugin=$(pick '\.streamDeckPlugin$')
+          extension=$(pick '^vjster-chrome-extension-.*\.zip$')
+          win=$(pick '^Fadester-Companion-Windows-x64-.*\.zip$')
+          arm=$(pick '^Fadester-Companion-macOS-arm64-.*\.zip$')
+          intel=$(pick '^Fadester-Companion-macOS-x64-.*\.zip$')
+          {
+            echo '## Which file do I need?'
+            echo
+            echo '| I have | Windows | Mac |'
+            echo '| --- | --- | --- |'
+            echo "| Any of it, or all of it | **\`${suite}\`**: one setup, you tick what you own | No combined installer yet: take the files in the rows below |"
+            echo "| A Stream Deck (or OpenDeck) | \`${plugin}\` | The same file |"
+            echo "| A TourBox | \`${win}\` | \`${arm}\` (Apple silicon) or \`${intel}\` (Intel) |"
+            echo "| An Xbox or other game controller | \`${win}\` | Not on the Mac yet |"
+            echo '| An APC40 or another MIDI controller | Midi Fadester: in the suite setup, or on its own from [the Midi Fadester releases](https://github.com/jbrick2070/midi-fadester/releases) | Midi Fadester, from that same page |'
+            echo "| YouTube videos to control from the deck or the TourBox | VJster Chrome extension: in the suite setup, or \`${extension}\` | \`${extension}\` |"
+            echo
+            echo 'The suite setup installs each part with its own installer, so each keeps its own entry in Windows **Installed apps**. It is not code-signed yet: Windows SmartScreen asks once (click **More info**, then **Run anyway**). The `.msix` is the Microsoft Store package and is not needed for a download from this page.'
+            echo
+          } > table.md
+          gh release view "$TAG" --json body --jq '.body' > body.md
+          if grep -q '^## Which file do I need?' body.md; then
+            echo 'The release text already has the table; only the files were replaced.'
+          else
+            cat table.md body.md > notes.md
+            gh release edit "$TAG" --notes-file notes.md
+          fi

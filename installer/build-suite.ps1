@@ -1,12 +1,16 @@
 # Builds the Fadester Suite Setup for Windows x64.
 #
 #   .\installer\build-suite.ps1 -CompanionBuild "<...>\build-<id>\Fadester Companion" [-OutDir dist] [-Manifest components.json]
-#                               [-LocalArtifacts <folder>] [-DownloadOnly] [-Define NAME=VALUE ...]
+#                               [-LocalArtifacts <folder>] [-Candidate <folder>] [-DownloadOnly] [-Define NAME=VALUE ...]
 #
 # 1. Every pinned input in components.json is taken from -LocalArtifacts (when a file of that name is there) or
 #    downloaded, then checked against its SHA-256. Any mismatch stops the build before anything is compiled.
 # 2. The Fadester Companion must come from a finished tourbox\build.ps1 run (build-complete.txt beside its folder).
 #    It is wrapped in its own installer (FadesterCompanion.iss) with its own uninstall entry.
+#    With -Candidate (the folder scripts\suite\package-candidate.ts writes, release\candidates\windows-macos),
+#    Fadester for OBS and the VJster extension are this commit's own build as well, checked against the hashes
+#    in its CANDIDATE.json; without it they are the pinned published files. A release build uses -Candidate, so
+#    the setup attached to a release carries that release's plugin, not the one before it.
 # 3. FadesterSuite.iss chains the three plugins' own standalone installers, so each keeps its own AppId, version,
 #    upgrade and uninstall entry in Windows Installed apps.
 # Optional signing: set FADESTER_SIGN_CMD to a command that signs the file named by $f (for example
@@ -16,6 +20,7 @@ param(
   [string]$OutDir = (Join-Path $PSScriptRoot 'dist'),
   [string]$Manifest = (Join-Path $PSScriptRoot 'components.json'),
   [string]$LocalArtifacts,
+  [string]$Candidate,
   [switch]$DownloadOnly,
   [string[]]$Define = @(),
   [string]$Iscc
@@ -46,8 +51,43 @@ function Get-Pinned([string]$key) {
   return $dest
 }
 
+# This commit's own Fadester for OBS package and VJster extension, as package-candidate.ts built and hashed them.
+function Get-FromCandidate([string]$folder) {
+  $dir = [IO.Path]::GetFullPath($folder)
+  $record = Join-Path $dir 'CANDIDATE.json'
+  if (-not (Test-Path -LiteralPath $record -PathType Leaf)) { throw "$dir has no CANDIDATE.json. Run: node --import tsx scripts/suite/package-candidate.ts" }
+  $cand = Get-Content -Raw -Encoding UTF8 -LiteralPath $record | ConvertFrom-Json
+  $found = @{}
+  foreach ($a in $cand.artifacts) {
+    if ($a.name -match '[\\/]' -or $a.sha256 -notmatch '^[0-9a-f]{64}$') { throw "CANDIDATE.json names an unusable artifact: $($a.name)" }
+    $file = Join-Path $dir $a.name
+    $hash = (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($hash -ne $a.sha256) { throw "SHA-256 mismatch for $($a.name): CANDIDATE.json says $($a.sha256), the file is $hash. Nothing was built." }
+    Write-Host "verified $($a.name) $hash (this commit's candidate)"
+    if ($a.name -like '*.streamDeckPlugin') { $found.plugin = $file }
+    elseif ($a.name -match '^vjster-chrome-extension-(\d+\.\d+\.\d+)\.zip$') { $found.extension = $file; $found.extensionVersion = $Matches[1] }
+  }
+  if (-not $found.plugin -or -not $found.extension) { throw 'The candidate needs one .streamDeckPlugin and one vjster-chrome-extension-<version>.zip.' }
+  if ("$($cand.version)" -notmatch '^(\d+\.\d+\.\d+)(\.\d+)?$') { throw "CANDIDATE.json has no usable version: $($cand.version)" }
+  $found.pluginVersion = $Matches[1]
+  return $found
+}
+
 $pinned = @{}
-foreach ($key in 'midiFadester', 'playlister', 'fadesterForObs', 'vjsterExtension') { $pinned[$key] = Get-Pinned $key }
+$pinnedKeys = if ($Candidate) { 'midiFadester', 'playlister' } else { 'midiFadester', 'playlister', 'fadesterForObs', 'vjsterExtension' }
+foreach ($key in $pinnedKeys) { $pinned[$key] = Get-Pinned $key }
+$sdVersion = $m.components.fadesterForObs.version
+$extVersion = $m.components.vjsterExtension.version
+if ($Candidate) {
+  $own = Get-FromCandidate $Candidate
+  # Under the pinned file's name, which is the package's own (<plugin UUID>.streamDeckPlugin): the setup and its tests name it so.
+  $pinned.fadesterForObs = Join-Path $stage $m.components.fadesterForObs.file
+  Copy-Item -LiteralPath $own.plugin -Destination $pinned.fadesterForObs
+  $pinned.vjsterExtension = $own.extension
+  $sdVersion = $own.pluginVersion
+  $extVersion = $own.extensionVersion
+  Write-Host "Fadester for OBS $sdVersion and VJster extension $extVersion come from this commit's candidate."
+}
 if ($DownloadOnly) { Write-Host 'All pinned inputs verified.'; return }
 
 # The unpacked VJster extension, ready for Chrome's "Load unpacked".
@@ -102,8 +142,8 @@ $defs = @(
   "/DSuiteVersion=$stamp", "/DSuiteAppId=$($m.suiteAppId)", "/DStage=$stage",
   "/DMfFile=$($c.midiFadester.file)", "/DMfVersion=$($c.midiFadester.version)", "/DMfAppId=$($c.midiFadester.appId)",
   "/DPlFile=$($c.playlister.file)", "/DPlVersion=$($c.playlister.version)", "/DPlAppId=$($c.playlister.appId)",
-  "/DSdFile=$($c.fadesterForObs.file)", "/DSdVersion=$($c.fadesterForObs.version)",
-  "/DExtVersion=$($c.vjsterExtension.version)",
+  "/DSdFile=$($c.fadesterForObs.file)", "/DSdVersion=$sdVersion",
+  "/DExtVersion=$extVersion",
   "/DCoFile=$companionSetup", "/DCoVersion=$($c.companion.version)", "/DCoAppId=$($c.companion.appId)",
   "/DStorePrefix=$($c.companion.storePackageFamilyPrefix)"
 )

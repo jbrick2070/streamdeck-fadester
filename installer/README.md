@@ -8,14 +8,15 @@ One guided installer for any mix of the Fadester suite on Windows. It is built p
 | Midi Fadester (includes Visual Sidechain since 0.9.0), Playlister | Each plugin's own released installer, run silently | Its own entry in **Installed apps**, as if installed alone |
 | Fadester Companion | Its own installer (`FadesterCompanion.iss`), built from this repository | Its own **Fadester Companion** entry |
 | Fadester for OBS (Stream Deck, OpenDeck; includes VJster) | The `.streamDeckPlugin` is staged and opened, so Stream Deck imports it itself. An optional task adds it to OpenDeck. | Removed inside Stream Deck or OpenDeck |
-| VJster Chrome extension | Unpacked to `ProgramData\Fadester Suite\vjster-extension` for **Load unpacked** | **Fadester Suite shared files** entry |
+| VJster Chrome extension | Unpacked to `ProgramData\Fadester Suite\vjster-extension` for **Load unpacked** (the all-sites build; the Chrome Web Store copy is YouTube only and is not installed by setup) | **Fadester Suite shared files** entry |
 
 Each component keeps its real version. The setup file is named by build date, for example `Fadester-Suite-Setup-2026.11.15-Windows-x64.exe`.
 
 ## Safety rules
 
 - **OBS and the Companion are never closed for you.** If `obs64.exe` is running and a plugin is selected, setup stops before changing anything and asks you to close OBS. The same applies to Fadester Companion and OpenDeck.
-- **No silent downgrades.** A component whose installed version is newer than the bundled one starts unticked, and is skipped even if it is selected. Pass `/ALLOWDOWNGRADE` to override.
+- **No silent downgrades.** A component whose installed version is newer than the bundled one starts unticked, and is skipped even if it is selected. The same holds for the two parts setup copies itself: a newer Fadester for OBS already in OpenDeck's plugins folder, and a newer unpacked VJster extension, are kept (`SKIP-NEWER` in the log). Pass `/ALLOWDOWNGRADE` to override.
+- **The signed-in person's settings, not the administrator's.** Setup runs as administrator. When a standard user types an administrator's name and password, the Store-edition check, the standalone-VJster check and the OpenDeck copy use the folders and settings of the person who is signed in (`ORIGINAL-USER` in the log), not those of the administrator account.
 - **Microsoft Store edition.** If the Store's Fadester Companion (`Fluxxuuss.FadesterCompanion`) is installed, the standalone Companion starts unticked: two copies would fight over the OBS connection and VJster port 48150.
 - **Standalone VJster plugin.** If `com.jbrick2070.vjster.sdPlugin` is installed in Stream Deck or OpenDeck, setup warns. Fadester for OBS already includes VJster, and keeping both conflicts on port 48150.
 - **User data is never deleted.** Uninstalling any component leaves these alone:
@@ -35,13 +36,14 @@ You need Windows, Inno Setup 6, and a finished `tourbox\build.ps1` run (its fold
 
 - **Pinned inputs.** Everything else comes from the releases pinned in [components.json](components.json), and each file is checked against its SHA-256. A mismatch stops the build.
 - **Local builds.** `-LocalArtifacts <folder>` uses files from a folder instead of downloading them, but they must still match the pinned hashes.
-- **Shipping a new plugin version.** Publish the plugin's release first, then run `node installer/update-pins.mjs --midi 0.9.0 --playlister 0.5.2 --sd 0.12.15` (name only what changed). It downloads each published file and rewrites its `version`, `file`, `url` and `sha256` in `components.json`.
-- **Releases.** Pushing a tag such as `v0.12.14` runs `.github/workflows/release.yml`, which builds the `.streamDeckPlugin`, the VJster extension zip, the Companion ZIP and its Store MSIX (version from `components.json`) into a **draft** release. Nothing is published until someone tests the draft and publishes it.
+- **Shipping a new plugin version.** Publish the plugin's release first, then run `node installer/update-pins.mjs --midi 0.9.0 --playlister 0.5.2 --sd 0.12.16` (name only what changed). It downloads each published file and rewrites its `version`, `file`, `url` and `sha256` in `components.json`.
+- **Built from the commit.** With `-Candidate release\candidates\windows-macos` (the folder `node --import tsx scripts/suite/package-candidate.ts` writes), Fadester for OBS and the VJster extension in the setup are this commit's own build, checked against the hashes in its `CANDIDATE.json`, as Fadester Companion already is. Without it they are the pinned published files.
+- **Releases.** Pushing a tag such as `v0.12.14` runs `.github/workflows/release.yml`, which builds the `.streamDeckPlugin`, the VJster extension zip, the Companion ZIP and its Store MSIX (version from `components.json`) into a **draft** release. The same tag runs `.github/workflows/suite-installer.yml`: it builds the suite setup from that commit, runs every test below on it, and only then attaches `Fadester-Suite-Setup-<date>-Windows-x64.exe` and its `.sha256` to that draft and puts a **Which file do I need?** table (by hardware) at the top of the release text. A manual run with `release_tag` does the same for an existing release. Nothing is published until someone tests the draft and publishes it.
 - **Signing (optional).** Set `FADESTER_SIGN_CMD` to a signing command that uses `$f` for the file. With it, the Companion's executables, both uninstallers and both setups are signed. Without it, the build is unsigned. Unsigned setups trigger SmartScreen, so do not publish one widely until a certificate is chosen.
 
 ## Test
 
-The **Fadester Suite Setup (Windows)** workflow (`.github/workflows/suite-installer.yml`) runs manually, and on pull requests that change the installer.
+The **Fadester Suite Setup (Windows)** workflow (`.github/workflows/suite-installer.yml`) runs manually, for every version tag, and on pull requests that change the installer or what goes into it.
 
 1. **Build.** One job builds the setup, plus one copy per guard with that guard switched off.
 2. **End-to-end tests.** On a fresh runner, `tests/Test-Suite.ps1` really installs and uninstalls everything and checks:
@@ -52,6 +54,7 @@ The **Fadester Suite Setup (Windows)** workflow (`.github/workflows/suite-instal
    - the Companion's exact executable names
    - the downgrade guard
    - the VJster warning
+   - a newer Fadester for OBS in OpenDeck and a newer VJster extension kept, older ones replaced
    - clean per-component uninstall that keeps user settings
 3. **Mutation runs.** Four more fresh runners run each guard test against the setup with that guard broken. Each run must report the failure, which proves the tests can catch a regression.
 
@@ -59,6 +62,7 @@ The tests refuse to run outside CI, because they install into `C:\ProgramData` a
 
 ## Not verified yet
 
+- **A standard user elevating with an administrator's account** (`ORIGINAL-USER`): the CI runners sign in as one administrator, so this path has only been read, not run. To check it by hand: sign in as a standard user with OpenDeck or the Store edition of Fadester Companion, run setup, type an administrator's credentials, and read the first page and the log.
 - **No real-PC run yet.** The CI runners have no OBS, Stream Deck or OpenDeck. So nobody has yet seen Stream Deck's own import, the OpenDeck task with OpenDeck itself, or the plugins loading in OBS after a suite install.
 - **Code signing and Smart App Control** behaviour are untested until a certificate exists.
 - **Pins wait for publication.** `components.json` pins Midi Fadester 0.9.0 and Fadester for OBS 0.12.16 (never pin 0.12.0 to 0.12.15: those stop at start in Stream Deck). Playlister 0.5.2 is pinned once it is published (it is still a draft); until then Playlister 0.5.0 stays pinned.

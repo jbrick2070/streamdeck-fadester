@@ -153,6 +153,39 @@ function Test-VjsterClash {
   } finally { Remove-Item -LiteralPath $vjsterDir -Recurse -Force -ErrorAction SilentlyContinue }
 }
 
+function Test-KeepNewer {
+  Write-Host 'keep-newer: a newer Fadester for OBS in OpenDeck and a newer unpacked VJster extension are not replaced; older ones are'
+  $deckRoot = Join-Path $env:APPDATA 'opendeck'
+  $hadDeck = Test-Path -LiteralPath $deckRoot
+  $deckPlugin = Join-Path $deckRoot 'plugins\io.github.jbrick2070.fadester-for-obs.sdPlugin'
+  $extDir = Join-Path $suiteDir 'vjster-extension'
+  $deckManifest = Join-Path $deckPlugin 'manifest.json'
+  $extManifest = Join-Path $extDir 'manifest.json'
+  $null = New-Item -ItemType Directory -Force -Path $deckPlugin, $extDir
+  Set-Content -LiteralPath $deckManifest -Value '{ "Name": "Fadester for OBS", "Version": "99.0.0.0", "Nodejs": { "Version": "24" } }' -Encoding ascii
+  Set-Content -LiteralPath $extManifest -Value '{ "manifest_version": 3, "version": "99.0.0" }' -Encoding ascii
+  try {
+    $r = Run-Setup $Setup @('/COMPONENTS="streamdeck,vjsterext"', '/TASKS="opendeck"') 'keep-newer'
+    Check ($r.Code -eq 0) "setup succeeds (exit $($r.Code))"
+    Check ($r.Log -cmatch 'SKIP-NEWER: Fadester for OBS in OpenDeck 99\.0\.0\.0') 'log says the newer OpenDeck copy is kept'
+    Check ($r.Log -cmatch 'SKIP-NEWER: The VJster Chrome extension 99\.0\.0') 'log says the newer extension is kept'
+    Check ((Get-Content -Raw -LiteralPath $deckManifest) -match '99\.0\.0\.0') 'the newer OpenDeck plugin is untouched'
+    Check (-not (Test-Path -LiteralPath (Join-Path $deckPlugin 'bin'))) 'no file of the older plugin was put beside the newer one'
+    Check ((Get-Content -Raw -LiteralPath $extManifest) -match '"99\.0\.0"') 'the newer extension is untouched'
+    Set-Content -LiteralPath $deckManifest -Value '{ "Version": "0.0.1.0" }' -Encoding ascii
+    Set-Content -LiteralPath $extManifest -Value '{ "version": "0.0.1" }' -Encoding ascii
+    $r = Run-Setup $Setup @('/COMPONENTS="streamdeck,vjsterext"', '/TASKS="opendeck"') 'replace-older'
+    Check ($r.Code -eq 0) "setup succeeds over older copies (exit $($r.Code))"
+    Check ((Get-Content -Raw -LiteralPath $deckManifest) -notmatch '"0\.0\.1\.0"') 'an older OpenDeck plugin is replaced'
+    Check (Test-Path -LiteralPath (Join-Path $deckPlugin 'bin')) 'the plugin files are in OpenDeck''s folder'
+    Check ((Get-Content -Raw -LiteralPath $extManifest) -notmatch '"0\.0\.1"') 'an older extension is replaced'
+  } finally {
+    # The OpenDeck copy is never uninstalled by setup (it is the user's): the test removes its own.
+    if ($hadDeck) { Remove-Item -LiteralPath $deckPlugin -Recurse -Force -ErrorAction SilentlyContinue }
+    else { Remove-Item -LiteralPath $deckRoot -Recurse -Force -ErrorAction SilentlyContinue }
+  }
+}
+
 function Test-Uninstall {
   Write-Host 'uninstall: each component removes only itself, and never user settings'
   $keep = @(
@@ -174,7 +207,7 @@ function Test-Uninstall {
 
 $tests = [ordered]@{
   checksum = { Test-Checksum }; 'obs-running' = { Test-ObsRunning }; full = { Test-FullInstallWithStoreEdition }
-  companion = { Test-Companion }; downgrade = { Test-Downgrade }; 'vjster-clash' = { Test-VjsterClash }; uninstall = { Test-Uninstall }
+  companion = { Test-Companion }; downgrade = { Test-Downgrade }; 'vjster-clash' = { Test-VjsterClash }; 'keep-newer' = { Test-KeepNewer }; uninstall = { Test-Uninstall }
 }
 # Mutation checks need their prerequisites in place first.
 $prereq = @{ downgrade = @('full'); 'store-edition' = @() }

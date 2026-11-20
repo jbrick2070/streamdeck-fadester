@@ -535,7 +535,7 @@ window.VJSTER_PI_STRINGS = {
       "noObsPage": "Esta cópia do plugin não tem página do OBS",
       "noValidId": "Nenhuma entrada é um ID de extensão do Chrome: nenhuma extensão pode se conectar",
       "obsConnected": "Página do OBS conectada",
-      "obsNote": "No OBS, adicione uma fonte Navegador, desmarque Arquivo local e cole este endereço como URL. Depois defina o Controle de uma ação como Página do OBS ou Ambos. O endereço leva a chave da página do OBS deste computador: não o mostre em capturas de tela nem em chats.",
+      "obsNote": "No OBS, adicione uma fonte Navegador, desmarque Arquivo local e cole este endereço como URL. Depois defina o Controle de uma ação como Página do OBS ou Ambos. O endereço contém a chave da página do OBS deste computador: não o mostre em capturas de tela nem em chats.",
       "obsTitle": "Página do OBS",
       "obsWaiting": "Nenhuma página do OBS conectada",
       "onlyExtension": "Somente esta extensão",

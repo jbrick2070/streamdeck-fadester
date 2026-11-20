@@ -210,6 +210,35 @@ describe("German on the deck", () => {
     expect(mixer).not.toContain("Press: Preview to Program");
   });
 
+  it.each([
+    ["it", "PROGRAMMA", "ANTEPRIMA", "Premi: anteprima in Programma", "Programma · Taglio"],
+    ["pt_BR", "PROGRAMA", "PRÉVIA", "Aperte: prévia para o Programa", "Programa · Corte"],
+    ["ru", "ПЕРЕДАЧА", "ПРЕДПРОСМОТР", "Нажать: предпросмотр в передачу", "В передачу · Обрезка"],
+    ["tr", "PROGRAM", "ÖNİZLEME", "Bas: Önizleme Program'a", "Program'a · Kes"]
+  ])("%s draws OBS's own words for Program and Preview, and no word that means \"take\"", (language, program, preview, press, subtitle) => {
+    useLanguage(language);
+    const mixer = renderDirectDialSvg({
+      connected: true, reason: "", label: "", value: 0.5, configured: true, target: "tbar",
+      studioMode: true, programSceneName: "A", previewSceneName: "B"
+    });
+    expect(mixer).toContain(program);
+    expect(mixer).toContain(preview);
+    expect(mixer).toContain(press.split("'")[0]);
+    expect(t("sceneSubtitle", { role: t("sceneRoleTake"), operation: t("sceneOpCut") })).toBe(subtitle);
+    // The texts that say "Preview to Program" in English: none uses a verb for "take" (prendere, tomar, pegar, levar,
+    // взять, брать, almak), on the deck or on the settings pages.
+    const taking = /prend|pigli|\btom(ar|e|a)\b|\bpeg(ar|ue|a)\b|\blev(ar|e|a)\b|взять|возьм|бер[её]т|брать|\bal(ın|ır|mak)?(?![\p{L}])/iu;
+    const page = readLanguageFile(language).Localization.pi as Record<string, string>;
+    const texts = [
+      ...(["sceneTargetTakePreview", "sceneRoleTake", "mixerPressTake", "pressBlendTake", "errorTakeUnconfirmed", "mixerAutoQueue"] as const).map((key) => t(key)),
+      ...["pressFinish", "instrFinish", "pressCombined", "instrCombined", "pressSceneHintCombined", "targetCurrentPreview", "tbarHintPress", "faderBannerStudio", "tbarOn"].map((key) => page[key])
+    ];
+    for (const text of texts) {
+      expect(typeof text, language).toBe("string");
+      expect(text, language).not.toMatch(taking);
+    }
+  });
+
   it("words the Midi Fadester cells through the injected translator", () => {
     useLanguage("de");
     const offline = renderDialCellSvg({ status: { kind: "wrong_password" }, slotId: "crossfader", t: translate });

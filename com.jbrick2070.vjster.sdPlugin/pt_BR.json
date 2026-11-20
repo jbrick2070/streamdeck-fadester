@@ -74,7 +74,7 @@
       "copied": "Copiado",
       "keepOn": "Manter a conexão ligada",
       "keepOnNote": "O OBS carrega a página só ao iniciar ou quando a fonte é atualizada, por isso a conexão fica ligada enquanto o Stream Deck está aberto. Isto liga sozinho na primeira vez que uma página do OBS se conecta.",
-      "obsNote": "No OBS, adicione uma fonte Navegador, desmarque Arquivo local e cole este endereço como URL. Depois defina o Controle de uma ação como Página do OBS ou Ambos. O endereço leva a chave da página do OBS deste computador: não o mostre em capturas de tela nem em chats.",
+      "obsNote": "No OBS, adicione uma fonte Navegador, desmarque Arquivo local e cole este endereço como URL. Depois defina o Controle de uma ação como Página do OBS ou Ambos. O endereço contém a chave da página do OBS deste computador: não o mostre em capturas de tela nem em chats.",
       "languageHeading": "Idioma",
       "languageBadge": "todos os controles do VJster",
       "languageAuto": "Automático (idioma do Stream Deck)",

@@ -23,6 +23,7 @@ internal static class HostSelfTests
     internal static async Task Run()
     {
         MacDevelopmentHost.CheckControlFrames();
+        await MacDevelopmentHost.CheckGuardedOutput();
         long time = 1000, unix = 100000;
         var ingress = new CommandIngress(() => time, () => unix);
         Check(!ingress.SubmitLine("action take", out _), "offline input rejected");

@@ -661,4 +661,46 @@ internal static class PanelLine
         }
         return result.ToString();
     }
+
+    /// <summary>
+    /// A writer for everything a process prints as free text. Whatever way the text arrives (a string, single
+    /// characters, a character array, with or without its line end), it is collected into whole lines, and each line
+    /// goes through <see cref="Free"/> before it is handed on: no sequence of writes can start a line with the marker.
+    /// Text without a line end waits for it (or for Flush). Not thread-safe by itself: Console.SetOut wraps it.
+    /// </summary>
+    internal sealed class Guard(Action<string> emit, System.Text.Encoding? encoding = null) : TextWriter
+    {
+        private readonly System.Text.StringBuilder line = new();
+        public override System.Text.Encoding Encoding => encoding ?? System.Text.Encoding.UTF8;
+
+        public override void Write(char value)
+        {
+            line.Append(value);
+            if (value == '\n') Send();
+        }
+        public override void Write(char[] buffer, int index, int count) => Write(new string(buffer, index, count));
+        public override void Write(string? value)
+        {
+            if (string.IsNullOrEmpty(value)) return;
+            int last = value.LastIndexOf('\n');
+            if (last < 0) { line.Append(value); return; }
+            line.Append(value.AsSpan(0, last + 1));
+            Send();
+            if (last + 1 < value.Length) line.Append(value.AsSpan(last + 1));
+        }
+        // One hand-over per line, so a line is never split by another thread's.
+        public override void WriteLine(string? value)
+        {
+            line.Append(value).Append(CoreNewLine);
+            Send();
+        }
+        public override void Flush() { if (line.Length > 0) Send(); }
+
+        private void Send()
+        {
+            string text = line.ToString();
+            line.Clear();
+            emit(Free(text));
+        }
+    }
 }

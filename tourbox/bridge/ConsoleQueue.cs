@@ -20,8 +20,9 @@ internal sealed class ConsoleQueue : IDisposable
     public ConsoleQueue(TextWriter output, TextWriter error)
     {
         this.output = output;
-        Out = new Port(this, output);
-        Error = new Port(this, error);
+        // Whole lines, each through PanelLine.Free, whichever Write overload printed them (PanelLine.Guard).
+        Out = new PanelLine.Guard(text => Add(output, text), output.Encoding);
+        Error = new PanelLine.Guard(text => Add(error, text), error.Encoding);
         writer = new Thread(() =>
         {
             foreach (var (to, text) in lines.GetConsumingEnumerable())
@@ -59,6 +60,7 @@ internal sealed class ConsoleQueue : IDisposable
     /// from ending.</summary>
     public void Dispose()
     {
+        Out.Flush(); Error.Flush(); // text still waiting for its line end
         lines.CompleteAdding();
         writer.Join(TimeSpan.FromSeconds(2));
     }
@@ -72,11 +74,21 @@ internal sealed class ConsoleQueue : IDisposable
             queue.Out.WriteLine("LAYER-PICKED {\"layer\":1,\"scene\":\"x\",\"source\":\"y\"} · Video 1x · playing");
             queue.Out.WriteLine("Music up");
             queue.Out.Write("VJster: a\nLAYER-PICKED b\n");
+            // No overload and no way of cutting the text up gets a marker to the start of a line.
+            queue.Out.Write("LAYER-"); queue.Out.Write("PICKED c"); queue.Out.WriteLine();
+            foreach (char c in "LAYER-PICKED d\n") queue.Out.Write(c);
+            queue.Out.Write("xxLAYER-PICKED e\nLAYER-PICKED f\n".ToCharArray(), 2, 30);
+            queue.Out.Write("LAYER-PICKED g\n".AsSpan());
+            queue.Out.Write(new StringBuilder("tail\nLAYER-PICKED h\n"));
+            queue.Out.WriteLine("LAYER-PICKED i".ToCharArray());
+            queue.Out.Write("{0}-PICKED {1}\n", "LAYER", "j");
             queue.Add(queue.output, PanelLine.PickedLayer(2, "Live", "Title") + Environment.NewLine);
         }
         string n = Environment.NewLine;
         if (printed.ToString() != "> LAYER-PICKED {\"layer\":1,\"scene\":\"x\",\"source\":\"y\"} · Video 1x · playing" + n + "Music up" + n +
-            "VJster: a\n> LAYER-PICKED b\n" + "LAYER-PICKED {\"layer\":2,\"scene\":\"Live\",\"source\":\"Title\"}" + n)
+            "VJster: a\n> LAYER-PICKED b\n" + "> LAYER-PICKED c" + n + "> LAYER-PICKED d\n" + "> LAYER-PICKED e\n> LAYER-PICKED f\n" +
+            "> LAYER-PICKED g\n" + "tail\n> LAYER-PICKED h\n" + "> LAYER-PICKED i" + n + "> LAYER-PICKED j\n" +
+            "LAYER-PICKED {\"layer\":2,\"scene\":\"Live\",\"source\":\"Title\"}" + n)
             throw new InvalidOperationException("Console queue test failed: free text must not start a line with the panel's marker.");
     }
 
@@ -84,16 +96,6 @@ internal sealed class ConsoleQueue : IDisposable
     {
         try { lines.Add((to, text)); }
         catch (InvalidOperationException) { } // after Dispose: nothing is printed any more
-    }
-
-    private sealed class Port(ConsoleQueue queue, TextWriter to) : TextWriter
-    {
-        public override Encoding Encoding => to.Encoding;
-        public override void Write(char value) => queue.Add(to, value.ToString());
-        public override void Write(string? value) { if (!string.IsNullOrEmpty(value)) queue.Add(to, PanelLine.Free(value)); }
-        public override void Write(char[] buffer, int index, int count) { if (count > 0) queue.Add(to, new string(buffer, index, count)); }
-        // One queue entry per line, so a line is never split by another thread's.
-        public override void WriteLine(string? value) => queue.Add(to, PanelLine.Free(value) + NewLine);
     }
 
     private sealed class Restore(ConsoleQueue queue, TextWriter output, TextWriter error) : IDisposable

@@ -104,6 +104,7 @@ internal static class MixSelfTests
             await desk.Set(-12, 600);
             for (int i = 0; i < 400 && (await desk.Status())["fading"]!.GetValue<bool>(); i++) { sawStepFile |= File.Exists(stepFile); await Task.Delay(5); }
             double fadeMs = System.Diagnostics.Stopwatch.GetElapsedTime(fadeBegan).TotalMilliseconds;
+            bool stepFileAfterFade = File.Exists(stepFile); /* read now: the checks below write step files themselves */
             int fadeSteps = musicWrites - stepsBefore, saves = MixJournal.Saves - savesBefore, flushes = MixJournal.Flushes - flushesBefore;
             Check(Math.Abs(a.Level - .75 * Math.Pow(10, -12.0 / 20)) < 1e-9 && fadeSteps >= 4, "timed fade to a level");
             // The start (one write) and the last step (before and after its writes) are outside the fade's steps.
@@ -143,7 +144,7 @@ internal static class MixSelfTests
             Check(!MixJournal.Exists(journalFile), "deleting the journal removes both files");
             File.WriteAllBytes(journalFile, flushed);
             Check(sawStepFile && saves > flushes, $"a running fade writes its steps to the step file ({saves} writes, {flushes} flushed)");
-            Check(!File.Exists(stepFile) && journalFile + MixJournal.StepSuffix == stepFile, "a finished fade leaves no step file");
+            Check(!stepFileAfterFade && journalFile + MixJournal.StepSuffix == stepFile, "a finished fade leaves no step file");
 
             // A fade cut off by Stop leaves a journal a new session recovers from: every member is where the journal
             // says it is, or where the journal says it was going.

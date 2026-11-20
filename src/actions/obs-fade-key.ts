@@ -200,8 +200,7 @@ export class ObsFadeKeyInstanceController {
         badge,
         problem: all ? mixProblem(this.client.wholeMix.state) : !inputName && configured
           ? role ? t("roleUnavailable", { role }) : t("audioInputUnavailable") : undefined
-      }),
-      this.clock()
+      })
     );
   }
 

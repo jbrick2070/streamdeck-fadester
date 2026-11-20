@@ -546,7 +546,7 @@ describe("P1-5 Guided Setup Pass", () => {
   });
 
   describe("Feature-detection gates on keys and dials (never version numbers)", () => {
-    it("shows 'Update Midi Fadester' with a plain sentence when a Midi Fadester request returns 604", async () => {
+    it("shows 'Update Midi Fadester' with a plain sentence when a Midi Fadester request is missing (OBS's 600, or 604)", async () => {
       const server = new FakeObsServer({ fadesterVersion: "0.3.0", missingPlugin: false });
       const port = await server.start();
       cleanup.push(() => server.stop());
@@ -559,13 +559,23 @@ describe("P1-5 Guided Setup Pass", () => {
       await ready;
       await new Promise((r) => setTimeout(r, 30));
 
-      // Simulate an older Midi Fadester build returning real WebSocket 604 on auto_fade and nudge_fader:
+      // Simulate an older Midi Fadester build without auto_fade and nudge_fader. OBS answers 600 "No request was found
+      // by that name." (the fake server's default); 604 is what test servers answered and is still accepted.
       server.disabledMidiFadesterRequests.add("auto_fade");
       server.disabledMidiFadesterRequests.add("nudge_fader");
 
+      const stateReadsBefore = server.vendorCallLog.filter((call) => call.requestType === "get_state").length;
       await expect(
         client.autoFade({ slot: "fader_1", to: 1, ms: 500 })
       ).rejects.toThrow("Update Midi Fadester in OBS to use 'auto_fade'.");
+      server.missingRequestCode = 604;
+      await expect(
+        client.autoFade({ slot: "fader_1", to: 1, ms: 500 })
+      ).rejects.toThrow("Update Midi Fadester in OBS to use 'auto_fade'.");
+      server.missingRequestCode = 600;
+      // A missing request is not a reason to read the whole state again.
+      await new Promise((r) => setTimeout(r, 30));
+      expect(server.vendorCallLog.filter((call) => call.requestType === "get_state").length).toBe(stateReadsBefore);
 
       const keyImages: string[] = [];
       const keyCtrl = new AutoFadeKeyInstanceController(

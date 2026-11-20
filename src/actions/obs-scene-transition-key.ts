@@ -279,8 +279,7 @@ export class ObsSceneTransitionKeyInstanceController {
         configured,
         accent: this.settings.accent,
         badge
-      }),
-      this.clock()
+      })
     );
   }
 

@@ -5,10 +5,10 @@
  *   and subscribes to `decks_changed` vendor events (no polling loops).
  * - Sends `deck_command` (`play_pause`, `cue_to_start`, `normal_speed`, `speed_step`,
  *   `speed_set`) over the shared multi-vendor client.
- * - Reports plain states `not_loaded` (Visual Sidechain absent, 600/604 on `get_decks`)
- *   and `no_deck` (none found or selected Browser Source missing), and flags older
- *   Visual Sidechain builds that answer `get_decks` without `deck_command` (604 on
- *   `deck_command` -> `"Update Midi Fadester"`).
+ * - Reports plain states `not_loaded` (Visual Sidechain absent: OBS's 600 "No vendor was
+ *   found" on `get_decks`) and `no_deck` (none found or selected Browser Source missing),
+ *   and flags older Visual Sidechain builds that lack `get_decks` or `deck_command` (OBS's
+ *   600 "No request was found", or 604 from test servers -> `"Update Midi Fadester"`).
  */
 import { EventEmitter } from "node:events";
 import { DirectObsClient, DirectObsError } from "../obs/direct-obs-client.js";
@@ -300,7 +300,14 @@ export class TapeDecks extends EventEmitter {
       this.applyDecksPayload(reply as Record<string, unknown>, true);
     } catch (error) {
       if (gen !== this.connectionGen) return;
-      if (isObsVendorMissingError(error)) {
+      if (isObsVendorRequestMissingError(error)) {
+        // The vendor answered, without this request (OBS's 600 "No request was found", or 604): Visual Sidechain is
+        // loaded and older than the Tape Deck requests. "Update Midi Fadester", not "not loaded".
+        this.availability = "loaded";
+        this.decks = [];
+        this.deckCommandUnsupported = true;
+        this.emit("changed");
+      } else if (isObsVendorMissingError(error)) {
         this.availability = "not_loaded";
         this.version = "";
         this.decks = [];
@@ -430,14 +437,7 @@ export class TapeDecks extends EventEmitter {
       return reply;
     } catch (error) {
       const code = errorCodeOf(error);
-      if (code === OBS_VENDOR_NOT_FOUND) {
-        if (gen === this.connectionGen) {
-          this.availability = "not_loaded";
-          this.decks = [];
-          this.emit("changed");
-        }
-        throw new DirectObsError(ownText("vpNotLoaded"), OBS_VENDOR_NOT_FOUND);
-      }
+      // First: OBS answers 600 for a missing request too (by its comment), and that is not a missing plugin.
       if (isObsVendorRequestMissingError(error)) {
         if (gen === this.connectionGen) {
           this.deckCommandUnsupported = true;
@@ -447,6 +447,14 @@ export class TapeDecks extends EventEmitter {
           ownText("vsNeedsUpdateSentence", { request: "deck_command" }),
           OBS_VENDOR_REQUEST_MISSING
         );
+      }
+      if (code === OBS_VENDOR_NOT_FOUND) {
+        if (gen === this.connectionGen) {
+          this.availability = "not_loaded";
+          this.decks = [];
+          this.emit("changed");
+        }
+        throw new DirectObsError(ownText("vpNotLoaded"), OBS_VENDOR_NOT_FOUND);
       }
       throw error;
     }

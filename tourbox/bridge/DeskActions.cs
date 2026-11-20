@@ -8,7 +8,7 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
     Func<CancellationToken, IAsyncEnumerable<double>>? rampSteps = null, Func<double, double, Task>? nativeMove = null,
     DeskActions.Memory? resume = null, bool allowAutoCloseout = true,
     VisualSidechainMonitor? vsMonitor = null, Action<string>? onStatus = null, Func<long>? clockMs = null,
-    Func<int, CancellationToken, Task>? delayAsync = null)
+    Func<int, CancellationToken, Task>? delayAsync = null, Action<int, string, string>? onPick = null)
 {
     public const double MinQuantizeConfidence = 0.35;
     public const int MaxQuantizeWaitMs = 4000;
@@ -349,7 +349,8 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
      * 2026-11-17: the controls did nothing until both layers were picked, and a sound file picked by hand showed nothing).
      * Layer 1 is the topmost visible picture, Layer 2 the next one down: enabled, with video, a size above zero (a sound
      * file has none) and the only item of that name in the scene. Only empty layers are filled, in memory; the line
-     * returned tells the panel, which shows the choice on the Assignments tab and saves it.
+     * returned tells the operator, and onPick tells the panel (PanelLine.PickedLayer: a line of its own, which no video
+     * title or other free text can write), which shows the choice on the Assignments tab and saves it.
      */
     private async Task<string> FillLayers(string id)
     {
@@ -380,11 +381,13 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
         {
             cfg.Layer1Scene = scene; cfg.Layer1Source = picks[0]; picks.RemoveAt(0);
             said += $"\nLayer 1 = {scene} › {cfg.Layer1Source} (picked automatically; change it on the Assignments tab)";
+            onPick?.Invoke(1, scene, cfg.Layer1Source);
         }
         if (two && string.IsNullOrWhiteSpace(cfg.Layer2Source) && picks.Count > 0)
         {
             cfg.Layer2Scene = scene; cfg.Layer2Source = picks[0];
             said += $"\nLayer 2 = {scene} › {cfg.Layer2Source} (picked automatically; change it on the Assignments tab)";
+            onPick?.Invoke(2, scene, cfg.Layer2Source);
         }
         // Only the layer this control drives must exist; a pick for the other one is still said.
         bool forTwo = id.StartsWith("layer2");
@@ -621,3 +624,150 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
         };
     }
 }
+
+/// <summary>
+/// The lines the panel acts on, as opposed to the lines it only shows. Activity text also carries video titles and
+/// other text from outside (a peer's error message, an OBS name), so the panel must not find its orders in it: a
+/// picked layer is one line of its own that starts with <see cref="PickedMarker"/>, and every line of free text goes
+/// through <see cref="Free"/>, which never lets it start with that marker.
+/// </summary>
+internal static class PanelLine
+{
+    public const string PickedMarker = "LAYER-PICKED ";
+
+    /** The line for a layer the desk picked by itself (DeskActions.FillLayers): the marker and one JSON object, on one line. */
+    public static string PickedLayer(int layer, string scene, string source) =>
+        PickedMarker + new JsonObject { ["layer"] = layer, ["scene"] = scene, ["source"] = source }.ToJsonString();
+
+    /**
+     * Free text as it may be printed: a line of it that would start with the marker (after any white space or control
+     * characters, which a reader may trim) is set back behind "> ". CR and LF both start a new line for the panel.
+     */
+    public static string Free(string? text)
+    {
+        if (string.IsNullOrEmpty(text) || !text.Contains("LAYER-PICKED", StringComparison.Ordinal)) return text ?? "";
+        var result = new System.Text.StringBuilder(text.Length + 8);
+        int at = 0;
+        while (at <= text.Length)
+        {
+            int end = text.IndexOfAny(['\r', '\n'], at);
+            if (end < 0) end = text.Length;
+            int first = at;
+            while (first < end && Skipped(text[first])) first++;
+            if (string.CompareOrdinal(text, first, "LAYER-PICKED", 0, "LAYER-PICKED".Length) == 0) result.Append("> ");
+            result.Append(text, at, end - at);
+            if (end < text.Length) result.Append(text[end]);
+            at = end + 1;
+        }
+        return result.ToString();
+    }
+
+    /// <summary>
+    /// A writer for everything a process prints as free text. Whatever way the text arrives (a string, single
+    /// characters, a character array, with or without its line end), it is collected into whole lines, and each line
+    /// goes through <see cref="Free"/> before it is handed on: no sequence of writes can start a line with the marker.
+    /// Text without a line end waits for it, or for Flush. Flush hands an unfinished line on as it is, set back behind
+    /// "> " if it could still grow into the marker, and what is written next continues that line: it is never looked
+    /// at as a line start. Every call runs under the writer's own lock.
+    /// </summary>
+    internal sealed class Guard(Action<string> emit, System.Text.Encoding? encoding = null) : TextWriter
+    {
+        private readonly object sync = new();
+        private readonly System.Text.StringBuilder line = new();
+        /// <summary>Flush handed on the start of the line now being written: the next text sent continues it.</summary>
+        private bool cut;
+        public override System.Text.Encoding Encoding => encoding ?? System.Text.Encoding.UTF8;
+
+        public override void Write(char value)
+        {
+            lock (sync)
+            {
+                line.Append(value);
+                if (value == '\n') Send();
+            }
+        }
+        public override void Write(char[] buffer, int index, int count) => Write(new string(buffer, index, count));
+        public override void Write(string? value)
+        {
+            if (string.IsNullOrEmpty(value)) return;
+            lock (sync)
+            {
+                int last = value.LastIndexOf('\n');
+                if (last < 0) { line.Append(value); return; }
+                line.Append(value.AsSpan(0, last + 1));
+                Send();
+                if (last + 1 < value.Length) line.Append(value.AsSpan(last + 1));
+            }
+        }
+        // One hand-over per line, so a line is never split by another thread's.
+        public override void WriteLine(string? value)
+        {
+            lock (sync)
+            {
+                line.Append(value).Append(CoreNewLine);
+                Send();
+            }
+        }
+        public override void Flush()
+        {
+            lock (sync)
+            {
+                if (line.Length == 0) return;
+                string text = Take();
+                // The buffer holds no LF (a line is sent at its LF), but a CR starts a line for a reader too. Only
+                // the part after the last CR is unfinished.
+                int from = text.LastIndexOf('\r') + 1;
+                string head = text[..from], tail = text[from..];
+                string sent = cut ? Continued(head) : Free(head);
+                if (tail.Length > 0 && (from > 0 || !cut))
+                {
+                    // The tail starts a line. A whole marker is set back by Free; so is a start that could still
+                    // grow into one (past anything a reader trims): later text cannot undo it.
+                    int first = 0;
+                    while (first < tail.Length && Skipped(tail[first])) first++;
+                    string start = tail[first..];
+                    bool mayGrow = start.Length < "LAYER-PICKED".Length && "LAYER-PICKED".StartsWith(start, StringComparison.Ordinal);
+                    tail = mayGrow ? "> " + tail : Free(tail);
+                }
+                emit(sent + tail);
+                // What is written next continues the tail; after a CR (or nothing) it starts a line of its own.
+                cut = tail.Length > 0;
+            }
+        }
+
+        private string Take()
+        {
+            string text = line.ToString();
+            line.Clear();
+            return text;
+        }
+
+        /// <summary>Text whose first line continues one already handed on: guarded from its second line.</summary>
+        private static string Continued(string text) => text.Length == 0 ? "" : Free("x" + text)[1..];
+
+        private void Send()
+        {
+            string text = Take();
+            bool continues = cut;
+            cut = false;
+            emit(continues ? Continued(text) : Free(text));
+        }
+    }
+
+    private static bool Skipped(char c) =>
+        char.IsWhiteSpace(c) || char.IsControl(c) || char.GetUnicodeCategory(c) == System.Globalization.UnicodeCategory.Format;
+
+    /// <summary>
+    /// A helper process's own stderr, line by line, onto this process's stderr, which is guarded where a panel reads
+    /// it. Left to inherit the handle, the helper would write to the panel directly, past the guard.
+    /// </summary>
+    internal static void ForwardErrors(System.Diagnostics.Process helper)
+    {
+        helper.ErrorDataReceived += (_, e) =>
+        {
+            if (e.Data is { Length: > 0 } text) { try { Console.Error.WriteLine(text); } catch (Exception x) when (x is IOException or ObjectDisposedException) { } }
+        };
+        helper.BeginErrorReadLine();
+    }
+}
+

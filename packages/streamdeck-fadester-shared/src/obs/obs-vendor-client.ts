@@ -57,8 +57,8 @@ export function isObsNotReady(err: unknown): boolean {
 }
 
 /**
- * obs-websocket code 600 (vendor or hotkey not found) or 604 (request type not
- * registered on that vendor). Used for missing-plugin and missing-feature gates.
+ * obs-websocket code 600 (vendor, vendor request or hotkey not found) or 604 (request type not
+ * registered on that vendor, from test servers and our own errors). Used for missing-plugin and missing-feature gates.
  */
 export function isObsVendorMissingError(err: unknown): boolean {
   const code = (err as { code?: unknown } | null)?.code;
@@ -66,11 +66,26 @@ export function isObsVendorMissingError(err: unknown): boolean {
 }
 
 /**
- * obs-websocket code 604: the vendor is loaded in OBS, while the specific vendor
- * request is missing on this plugin build (feature-detection gate, P1-5).
+ * What a failed vendor call says about the plugin. obs-websocket answers 600 (ResourceNotFound) both when no plugin
+ * registered the vendor ("No vendor was found by that name.") and when the vendor lacks the request ("No request was
+ * found by that name."); only the comment tells them apart. 604 is kept for test servers, older clients and the errors
+ * this code makes itself.
+ */
+export function vendorErrorKind(error: unknown): "vendor_missing" | "request_missing" | "other" {
+  const e = error as { code?: unknown; comment?: unknown; message?: unknown } | null;
+  const code = e?.code;
+  if (code === OBS_VENDOR_REQUEST_MISSING) return "request_missing";
+  if (code !== OBS_VENDOR_NOT_FOUND) return "other";
+  const comment = String(e?.comment ?? e?.message ?? "");
+  return /request/i.test(comment) ? "request_missing" : "vendor_missing";
+}
+
+/**
+ * The vendor is loaded in OBS, while the specific vendor request is missing on this plugin build (feature-detection
+ * gate, P1-5): OBS's 600 with the "No request was found" comment, or 604 (see vendorErrorKind).
  */
 export function isObsVendorRequestMissingError(err: unknown): boolean {
-  return (err as { code?: unknown } | null)?.code === OBS_VENDOR_REQUEST_MISSING;
+  return vendorErrorKind(err) === "request_missing";
 }
 
 export interface ObsVendorClientOptions {
@@ -285,9 +300,12 @@ export class ObsVendorClient<
    * Throttled reconnect for user gestures (dial ticks, key presses) while
    * offline: at most one forced reconnect per `minIntervalMs`, and never while
    * halted on a wrong password (OBS would log a failed login per gesture).
+   * A socket that is opening, identifying or reading the catalog is left alone:
+   * it is about to be usable, and a reconnect would only start the handshake
+   * again (the link watch drops a socket that has gone silent).
    */
   public nudgeReconnect(minIntervalMs = 2000, now = Date.now()): boolean {
-    if (this.isConnected() || this.haltedReason === "wrong_password") {
+    if (this.isConnected() || this.haltedReason === "wrong_password" || this.hasLiveSocket()) {
       return false;
     }
     if (now - this.lastNudgeAt < minIntervalMs) {
@@ -500,18 +518,23 @@ export class ObsVendorClient<
   }
 
   private handleMessage(jsonText: string): void {
-    let msg: { op?: number; d?: Record<string, unknown> };
+    let msg: { op?: number; d?: Record<string, unknown> } | null;
     try {
       msg = JSON.parse(jsonText) as {
         op?: number;
         d?: Record<string, unknown>;
-      };
+      } | null;
     } catch {
+      return;
+    }
+    // Valid JSON that is not a message (`null`, a number, a list): dropped like text that is not JSON. `null` would
+    // otherwise throw out of the socket's listener, and a second uncaught exception ends the plugin.
+    if (msg === null || typeof msg !== "object" || Array.isArray(msg)) {
       return;
     }
 
     const op = msg.op;
-    const d = msg.d ?? {};
+    const d = msg.d !== null && typeof msg.d === "object" && !Array.isArray(msg.d) ? msg.d : {};
 
     if (op === 0) {
       // Hello

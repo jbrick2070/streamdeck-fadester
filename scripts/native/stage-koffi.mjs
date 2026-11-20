@@ -18,7 +18,12 @@ const KOFFI_JS_FILES = [
   "indirect.cjs",
   "src/koffi/index.js",
   "src/koffi/indirect.js",
-  "src/koffi/src/static.js"
+  "src/koffi/src/static.js",
+  // The CommonJS side: index.cjs is only `require("./src/koffi/index.cjs")`, and that is what
+  // createRequire(...)("koffi") loads (the setup checklist's probes).
+  "src/koffi/index.cjs",
+  "src/koffi/indirect.cjs",
+  "src/koffi/src/static.cjs"
 ];
 
 const NATIVE_TARGETS = [

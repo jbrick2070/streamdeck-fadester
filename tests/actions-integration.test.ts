@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { FadesterClient } from "../src/obs/fadester-client.js";
 import { FadesterStore } from "../src/state/fadester-store.js";
 import { FaderDialInstanceController } from "../src/actions/fader-dial.js";
@@ -229,10 +229,16 @@ describe("Step 1.4 — End-to-End Fader Dial & Auto-fade Key Integration", () =>
     allFxCtrl.appear();
     expect(allFxCtrl.renderSvgString()).toContain('data-key="clean-fx"');
 
+    // Any FX update redraws the key. Its picture does not show a slot's value, so the redraw is the same picture,
+    // and the same picture is not sent to the deck a second time (B-06).
     const imagesBeforeFxUpdate = allFxImages.length;
+    const redrawn = vi.spyOn(allFxCtrl, "renderSvgString");
     await client.setFaderValue({ slot: "fx_1", value: 0.6 });
     await new Promise((r) => setTimeout(r, 30));
-    expect(allFxImages.length).toBeGreaterThan(imagesBeforeFxUpdate);
+    expect(redrawn).toHaveBeenCalled();
+    redrawn.mockRestore();
+    expect(imagesBeforeFxUpdate).toBe(1);
+    expect(allFxImages.length).toBe(imagesBeforeFxUpdate);
 
     await allFxCtrl.handleKeyDown();
     const resetCall = server.vendorCallLog

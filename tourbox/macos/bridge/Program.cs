@@ -6,7 +6,12 @@ using System.Text.Json.Nodes;
 
 namespace Fadester.TourBox;
 
-/// <summary>Headless grouped-mix provider. It has no hardware/input/AX integration.</summary>
+/// <summary>
+/// Headless grouped-mix provider. It has no hardware/input/AX integration. A terminal tool: neither panel starts it
+/// or reads its output (Fadester Companion.app runs FadesterMacHost, with --mix-only for this job), so it prints with
+/// plain Console and not through PanelLine.Guard. If a panel is ever put on its stdout, install the guard first, as
+/// FadesterMacHost.GuardOutput does.
+/// </summary>
 internal static class MacMixHost
 {
     static string ApplicationSupport => OperatingSystem.IsMacOS()

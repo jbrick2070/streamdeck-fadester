@@ -970,6 +970,11 @@ private final class PillActionButton: NSControl {
             setMeter(meter)
             return
         }
+        // The host's own line for a layer it picked: never shown (the result that follows says the same in words).
+        if safeLine.hasPrefix(Readiness.pickedMarker) {
+            takePickedLayers(safeLine)
+            return
+        }
         vjsterPeers = Readiness.vjsterPeers(after: safeLine, current: vjsterPeers)
         vjsterPortBusy = Readiness.vjsterPortBusy(after: safeLine, current: vjsterPortBusy)
         if safeLine.hasPrefix("OFFLINE:") {
@@ -986,13 +991,13 @@ private final class PillActionButton: NSControl {
         if let feedback = Readiness.hostFeedback(from: safeLine) {
             setStatus(feedback)
         }
-        takePickedLayers(safeLine)
         refreshIndicators()
         note(safeLine)
     }
 
-    /// A layer the host picked by itself (DeskActions.FillLayers, "Layer 1 = scene › source (picked automatically…"), as on
-    /// Windows: shown on the Assignments page and saved, so the next start keeps it. The host already uses it.
+    /// A layer the host picked by itself (DeskActions.FillLayers), from the line the host writes for the panel alone
+    /// (Readiness.pickedLayers; never from Activity text, which also carries video titles), as on Windows: shown on the
+    /// Assignments page and saved, so the next start keeps it. The host already uses it.
     private func takePickedLayers(_ line: String) {
         let picks = Readiness.pickedLayers(line)
         guard !picks.isEmpty else { return }

@@ -91,6 +91,27 @@ describe("Tape Deck action & controller (P1-6)", () => {
     expect(formatTapeDeckSpeed(133)).toBe("133% (1.33x)");
   });
 
+  // QA-02: OBS answers 600 for a missing request as for a missing vendor; only the comment differs.
+  it.each([600, 604] as const)("reads a Visual Sidechain without get_decks (code %s) as loaded and in need of an update, not as absent", async (code) => {
+    const server = new FakeObsServer({ missingPlugin: true, visualSidechainVendor: "decks", disabledVisualSidechainRequests: ["get_decks"] });
+    server.missingRequestCode = code;
+    const port = await server.start();
+    const client = new DirectObsClient({ host: "127.0.0.1", port, password: "" });
+    const tapeDecks = new TapeDecks(client);
+    cleanup.push(() => client.stop(), () => server.stop());
+    const ready = once(client, "connectionReady", { signal: AbortSignal.timeout(3000) });
+    client.start();
+    await ready;
+    await vi.waitFor(() => expect(tapeDecks.sample().deckCommandUnsupported).toBe(true));
+    expect(tapeDecks.sample().availability).toBe("loaded");
+    expect(tapeDecks.sample().state).not.toBe("not_loaded");
+    const key = deckSink();
+    const control = new TapeDeckInstanceController(tapeDecks, client, key.sink, "key", {});
+    cleanup.push(() => control.disappear());
+    control.appear();
+    await key.waitSvg((svg) => svg.includes("Update Midi Fadester") && !svg.includes('data-state="not_loaded"'));
+  });
+
   it("shows NOT LOADED across key and dial when Visual Sidechain is absent", async () => {
     const { client, tapeDecks } = await setup({ missingPlugin: true, visualSidechainVendor: "none" });
     await vi.waitFor(() => expect(tapeDecks.sample().state).toBe("not_loaded"));

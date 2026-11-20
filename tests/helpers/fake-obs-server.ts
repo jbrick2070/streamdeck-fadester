@@ -41,6 +41,8 @@ export interface FakeObsServerOptions {
   deferStudioModeEvents?: boolean;
   /** Optional `visual-sidechain` vendor mode: `"none"` (default), `"legacy"` (0.6.0, no safety/tempo/deck_command requests), `"safety"` (P0-3), `"tempo"` (P1-2/P1-3), or `"decks"` (P1-6). */
   visualSidechainVendor?: "none" | "legacy" | "safety" | "tempo" | "decks";
+  /** Requests the loaded Visual Sidechain lacks (see `disabledVisualSidechainRequests`). */
+  disabledVisualSidechainRequests?: string[];
   /** Optional `GetInputKindList` reply override (defaults to standard OBS kinds + `obs_playlister_source`). */
   inputKinds?: string[];
   /** Whether `midi-fadester` `get_catalog` includes P1-8 `has_internal_opacity` / `opacity_slot` fields (default `true`). */
@@ -666,6 +668,13 @@ export class FakeObsServer {
   public inputKinds: string[];
   public includeLayerOpacityFields: boolean;
   public readonly disabledMidiFadesterRequests = new Set<string>();
+  /** Requests a loaded Visual Sidechain does not have (an older build): answered like any missing vendor request. */
+  public readonly disabledVisualSidechainRequests = new Set<string>();
+  /**
+   * How a missing vendor request is answered: 600 with obs-websocket's own comment, as OBS does (the same code as a
+   * missing vendor; only the comment differs). 604 is what this server answered before, and clients still accept it.
+   */
+  public missingRequestCode: 600 | 604 = 600;
   public visualSidechainPanic = false;
   public visualSidechainSinceMs = 0;
   public visualSidechainDecks: Array<Record<string, unknown>> = [];
@@ -731,6 +740,7 @@ export class FakeObsServer {
     this.dropStudioDisableResponse = opts?.dropStudioDisableResponse ?? false;
     this.deferStudioModeEvents = opts?.deferStudioModeEvents ?? false;
     this.visualSidechainVendor = opts?.visualSidechainVendor ?? "none";
+    for (const request of opts?.disabledVisualSidechainRequests ?? []) this.disabledVisualSidechainRequests.add(request);
     this.inputKinds = opts?.inputKinds ?? [
       "wasapi_output_capture",
       "wasapi_input_capture",
@@ -1323,6 +1333,13 @@ export class FakeObsServer {
     }
   }
 
+  /** Sends this text frame, as it is, to every connected client: for frames OBS itself would never send. */
+  public sendRawFrame(text: string): void {
+    for (const c of this.clients) {
+      if (c.readyState === WebSocket.OPEN) c.send(text);
+    }
+  }
+
   private handleClientMessage(ws: WebSocket, text: string): void {
     const msg = JSON.parse(text) as { op: number; d: Record<string, unknown> };
     if (msg.op === 1) {
@@ -1855,6 +1872,11 @@ export class FakeObsServer {
 
       if (vendorName === "visual-sidechain" && this.visualSidechainVendor !== "none") {
         if (this.hotkeyDelayMs > 0) await new Promise((r) => setTimeout(r, this.hotkeyDelayMs));
+        if (this.disabledVisualSidechainRequests.has(vReqType)) {
+          this.sendResponse(ws, requestId, requestType, false, this.missingRequestCode,
+            this.missingRequestCode === 600 ? "No request was found by that name." : `No request type '${vReqType}' was found on vendor '${vendorName}'.`);
+          return;
+        }
         if (this.visualSidechainFailNext) {
           const comment = this.visualSidechainFailNext;
           this.visualSidechainFailNext = "";
@@ -2094,8 +2116,8 @@ export class FakeObsServer {
           requestId,
           requestType,
           false,
-          604,
-          `No request type '${vReqType}' was found on vendor '${vendorName}'.`
+          this.missingRequestCode,
+          this.missingRequestCode === 600 ? "No request was found by that name." : `No request type '${vReqType}' was found on vendor '${vendorName}'.`
         );
         return;
       }
@@ -2107,7 +2129,7 @@ export class FakeObsServer {
           requestType,
           false,
           600,
-          `No vendor with name '${vendorName}' was found.`
+          "No vendor was found by that name."
         );
         return;
       }
@@ -2118,8 +2140,8 @@ export class FakeObsServer {
           requestId,
           requestType,
           false,
-          604,
-          `No request type '${vReqType}' was found on vendor '${vendorName}'.`
+          this.missingRequestCode,
+          this.missingRequestCode === 600 ? "No request was found by that name." : `No request type '${vReqType}' was found on vendor '${vendorName}'.`
         );
         return;
       }

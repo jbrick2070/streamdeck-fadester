@@ -9,6 +9,7 @@ import { ConnectionStatusInfo } from "../../packages/streamdeck-fadester-shared/
 import { automaticInputRole, resolveAutomaticInputName } from "./automatic-targets.js";
 import { WholeMixClient } from "./whole-mix.js";
 import { LocalText, ownText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
+import { monotonicNow } from "../../packages/streamdeck-fadester-shared/src/cell-rate-limiter.js";
 import { t } from "../i18n/strings.js";
 import {
   defaultNativeTbar,
@@ -393,6 +394,11 @@ export class DirectObsClient extends ObsVendorClient {
   };
   private readonly inputFadeTokens = new Map<string, number>();
   private readonly inputQueues = new Map<string, Promise<unknown>>();
+  /**
+   * Per input, the dial turn that is queued last and has not started: later ticks are added to it instead of
+   * queueing a read and a write each (at most one turn on its way to OBS and one waiting, as for the T-bar).
+   */
+  private readonly waitingNudges = new Map<string, { delta: number; generation: number; task: Promise<number> }>();
   private sceneQueue: Promise<unknown> = Promise.resolve();
   private tbarQueue: Promise<unknown> = Promise.resolve();
   private cutTransitionName = "";
@@ -719,11 +725,27 @@ export class DirectObsClient extends ObsVendorClient {
     this.requireControlGeneration(this.controlGeneration);
     const name = this.requireInputName(inputName);
     this.cancelInputFade(name);
-    return this.queueInput(name, async (generation) => {
+    // A turn still waiting behind the one on its way to OBS takes this tick too: with a slow OBS a fast spin would
+    // otherwise queue a read and a write per tick, and the volume would go on moving after the hand has stopped.
+    const waiting = this.waitingNudges.get(name);
+    if (waiting && waiting.generation === this.controlGeneration) {
+      waiting.delta += delta;
+      return waiting.task;
+    }
+    const turn = { delta, generation: this.controlGeneration, task: Promise.resolve(0) };
+    turn.task = this.queueInput(name, async (generation) => {
+      // Started: ticks from here on belong to the next turn.
+      if (this.waitingNudges.get(name) === turn) this.waitingNudges.delete(name);
       const current = await this.getInputVolume(name);
       // A source boosted above 0 dB in OBS keeps its boost: a turn up leaves it, a turn down starts from it.
-      return this.writeInputVolume(name, current + delta, generation, Math.max(1, current));
+      return this.writeInputVolume(name, current + turn.delta, generation, Math.max(1, current));
     });
+    this.waitingNudges.set(name, turn);
+    // A turn that never starts (the control generation changed while it waited) takes no more ticks either.
+    void turn.task.catch(() => {}).finally(() => {
+      if (this.waitingNudges.get(name) === turn) this.waitingNudges.delete(name);
+    });
+    return turn.task;
   }
 
   /** Runs a local, cancellable input-volume fade without changing OBS's
@@ -750,13 +772,14 @@ export class DirectObsClient extends ObsVendorClient {
       });
       return;
     }
-    const startedAt = Date.now();
+    // On the forward-only clock: after a wall-clock step back the progress was negative and the fade ran the wrong way.
+    const startedAt = monotonicNow();
     while (this.inputFadeTokens.get(name) === token) {
       await new Promise<void>((resolve) => setTimeout(resolve, Math.min(75, ms)));
       if (this.inputFadeTokens.get(name) !== token) {
         return;
       }
-      const progress = Math.min(1, (Date.now() - startedAt) / ms);
+      const progress = Math.max(0, Math.min(1, (monotonicNow() - startedAt) / ms));
       await this.queueInput(name, async () => {
         if (this.inputFadeTokens.get(name) === token) {
           await this.writeInputVolume(name, from + (target - from) * progress, undefined, Math.max(1, from));
@@ -2786,6 +2809,8 @@ export class DirectObsClient extends ObsVendorClient {
   }
 
   private queueInput<T>(inputName: string, operation: (generation: number) => Promise<T>): Promise<T> {
+    // Whatever is queued now comes after a waiting dial turn: later ticks must not be added in front of it.
+    this.waitingNudges.delete(inputName);
     const generation = this.controlGeneration;
     const task = (this.inputQueues.get(inputName) ?? Promise.resolve())
       .catch(() => {}).then(() => {

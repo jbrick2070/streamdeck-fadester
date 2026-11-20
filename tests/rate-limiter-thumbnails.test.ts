@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { CellRateLimiter } from "../src/gfx/cell-rate-limiter.js";
 import { ThumbnailFetcher } from "../src/gfx/thumbnail-fetcher.js";
 import { FadesterClient } from "../src/obs/fadester-client.js";
@@ -39,6 +39,79 @@ describe("Step 1.3 — Per-Cell 10 FPS Rate Limiter & 1–2 FPS Thumbnail Fetche
     await new Promise((r) => setTimeout(r, 140));
     expect(flushed).toEqual([0.1, 1.0]);
     limiter.dispose();
+  });
+
+  // B-06: the controls redraw on every OBS state event; most of those change nothing a key shows.
+  it("does not send again the picture it sent last, and sends it again after a change, a failed draw or dispose", async () => {
+    const sent: string[] = [];
+    let fail = false;
+    let t = 1000;
+    const limiter = new CellRateLimiter<string>(async (svg) => {
+      if (fail) throw new Error("draw failed");
+      sent.push(svg);
+    }, 20, () => t);
+    limiter.push("A");
+    for (let i = 0; i < 50; i++) { t += 5; limiter.push("A"); }
+    expect(sent).toEqual(["A"]);
+    // Identical pushes use up no interval: the next real change goes out at once.
+    limiter.push("B");
+    expect(sent).toEqual(["A", "B"]);
+    // Changed and changed back within one interval: the key already shows B, nothing is sent.
+    t += 1; limiter.push("C"); limiter.push("B");
+    await new Promise((r) => setTimeout(r, 60));
+    expect(sent).toEqual(["A", "B"]);
+    // The newest of a burst still lands, once.
+    t += 100; limiter.push("D"); limiter.push("E"); limiter.push("E"); limiter.push("F");
+    await new Promise((r) => setTimeout(r, 60));
+    expect(sent).toEqual(["A", "B", "D", "F"]);
+    // A draw that failed is not on the key: the same picture is sent again.
+    t += 100; fail = true; limiter.push("G");
+    await new Promise((r) => setTimeout(r, 5));
+    fail = false; t += 100; limiter.push("G");
+    expect(sent).toEqual(["A", "B", "D", "F", "G"]);
+    // After dispose (the control left the page) nothing is remembered.
+    limiter.dispose();
+    t += 100; limiter.push("G");
+    expect(sent).toEqual(["A", "B", "D", "F", "G", "G"]);
+    limiter.dispose();
+    // Feedback objects are compared by content.
+    const feedback: Array<Record<string, unknown>> = [];
+    const objects = new CellRateLimiter<Record<string, unknown>>((value) => { feedback.push(value); }, 20, () => t);
+    objects.push({ status: "live", preview: "Cam" });
+    t += 100; objects.push({ status: "live", preview: "Cam" });
+    t += 100; objects.push({ status: "live", preview: "Wide" });
+    expect(feedback).toEqual([{ status: "live", preview: "Cam" }, { status: "live", preview: "Wide" }]);
+    objects.dispose();
+  });
+
+  // B-02: an interval measured on the wall clock is negative after the clock is set back, and the next draw waited
+  // for the size of the step.
+  it("paces on a forward-only clock: setting the wall clock back does not hold draws back", async () => {
+    const realNow = Date.now.bind(Date);
+    let offset = 0;
+    const wall = vi.spyOn(Date, "now").mockImplementation(() => realNow() + offset);
+    try {
+      const flushed: number[] = [];
+      // As the controls build theirs: with their default clock, Date.now.
+      const limiter = new CellRateLimiter<number>((value) => { flushed.push(value); }, 20, Date.now);
+      const plain = new CellRateLimiter<number>((value) => { flushed.push(value * 10); }, 20);
+      limiter.push(1); plain.push(1);
+      offset = -3_600_000; // one hour back
+      limiter.push(2); plain.push(2);
+      await new Promise((r) => setTimeout(r, 80));
+      expect(flushed).toEqual([1, 10, 2, 20]);
+      limiter.push(3); plain.push(3);
+      expect(flushed).toEqual([1, 10, 2, 20, 3, 30]);
+      limiter.dispose(); plain.dispose();
+      // A caller that hands in its own readings is never held longer than one interval either.
+      const own = new CellRateLimiter<number>((value) => { flushed.push(value * 100); }, 20);
+      own.push(1, 5_000_000); own.push(2, 1_000);
+      await new Promise((r) => setTimeout(r, 80));
+      expect(flushed.slice(-2)).toEqual([100, 200]);
+      own.dispose();
+    } finally {
+      wall.mockRestore();
+    }
   });
 
   it("survives a draw that throws or rejects, at once and from the trailing timer", async () => {

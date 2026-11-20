@@ -88,6 +88,17 @@ describe("bundled profile captions (R-I18N-2)", () => {
     expect(starter.actions.map((entry) => `${entry.column},${entry.row}`)).toEqual(["0,0", "1,0", "2,0", "3,0", "0,1", "1,1"]);
   });
 
+  // B-01: a Scene key's context is the scene's name, and a plain object answers "constructor" with a function.
+  it("a scene named like a built-in member of every object is an ordinary scene, in the plugin and on the page", () => {
+    for (const sceneTarget of ["constructor", "toString", "valueOf", "hasOwnProperty", "__proto__", "isPrototypeOf"]) {
+      const settings = { sceneTarget, labelOverride: "Main cam" };
+      expect(isGeneratedCaption("scene", settings)).toBe(false);
+      expect(customCaption("scene", settings)).toBe("Main cam");
+      expect(inspectorCaptions().isGenerated("scene", settings)).toBe(false);
+    }
+    expect(inspectorCaptions().isGenerated("constructor", { labelOverride: "x" })).toBe(false);
+  });
+
   it("matches in context only, so the same words elsewhere stay the operator's", () => {
     expect(isGeneratedCaption("scene", { sceneTarget: "__next_scene__" }, "Prev scene")).toBe(false);
     expect(isGeneratedCaption("scene", { sceneTarget: "Camera" }, "Next scene")).toBe(false);
@@ -241,5 +252,56 @@ describe.each(CAPTION_LANGUAGES)("a $name deck shows no stored English caption",
     control.appear();
     control.disappear();
     expect(image).toContain(">Kamera an<");
+  });
+});
+
+describe("a control redraws on every OBS state event, and sends a picture only when it changed", () => {
+  const client = new DirectObsClient({ host: "127.0.0.1", port: 1, password: "" });
+  const alert = (): Promise<void> => Promise.resolve();
+  const pause = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+  // B-06: OBS sends an event per step of a volume fade; none of them changes what these controls show.
+  it.each(["scene", "fade", "fader"] as const)("a %s control sends its picture once for many events that change nothing", async (kind) => {
+    const images: string[] = [];
+    const sink = (value: string): Promise<void> => { images.push(decodeSvgUri(value)); return Promise.resolve(); };
+    const control = kind === "scene"
+      ? new ObsSceneTransitionKeyInstanceController(client, { setImage: sink, showAlert: alert }, { sceneTarget: "__next_scene__" }, 20)
+      : kind === "fade"
+        ? new ObsFadeKeyInstanceController(client, { setImage: sink, showAlert: alert }, { inputName: "__audio_mic__", to: 1, durationMs: 500 }, 20)
+        : new ObsFaderDialInstanceController(client, { setFeedback: (feedback) => sink(feedback.canvas), showAlert: alert },
+          { target: "input_volume", inputName: "__audio_main__" }, 20);
+    control.appear();
+    try {
+      for (let round = 0; round < 5; round += 1) {
+        for (let event = 0; event < 10; event += 1) client.emit("directStateChanged");
+        await pause(30);
+      }
+      expect(images).toHaveLength(1);
+    } finally {
+      control.disappear();
+    }
+    // Shown again (a new page of the profile): Stream Deck has no picture for the key, so the first one is sent.
+    const again: string[] = [];
+    const next = new ObsSceneTransitionKeyInstanceController(client,
+      { setImage: (value) => { again.push(decodeSvgUri(value)); return Promise.resolve(); }, showAlert: alert }, { sceneTarget: "__next_scene__" }, 20);
+    next.appear();
+    next.disappear();
+    expect(again).toHaveLength(1);
+  });
+
+  // B-01: the scene's name is the key into the caption table.
+  it("draws a Scene key with a typed label on a scene called constructor, on appear and on every later event", async () => {
+    const images: string[] = [];
+    const control = new ObsSceneTransitionKeyInstanceController(client,
+      { setImage: (value) => { images.push(decodeSvgUri(value)); return Promise.resolve(); }, showAlert: alert },
+      { sceneTarget: "constructor", labelOverride: "Main cam" }, 20);
+    expect(() => control.appear()).not.toThrow();
+    try {
+      expect(() => client.emit("directStateChanged")).not.toThrow();
+      await pause(30);
+      expect(images.at(-1)).toContain(">Main cam<");
+    } finally {
+      control.disappear();
+    }
   });
 });

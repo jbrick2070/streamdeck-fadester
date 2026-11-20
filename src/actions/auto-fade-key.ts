@@ -210,7 +210,7 @@ export class AutoFadeKeyInstanceController {
     if (!this.visible) {
       return;
     }
-    this.rateLimiter.push(this.renderSvgString(), this.clock());
+    this.rateLimiter.push(this.renderSvgString());
   }
 
   private mergeSettings(

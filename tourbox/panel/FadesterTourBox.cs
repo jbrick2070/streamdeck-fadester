@@ -869,16 +869,19 @@ namespace Fadester.TourBox {
         if(padNow!=padState || obsNow!=obsConnected || problem!=obsProblem){padState=padNow; obsConnected=obsNow; obsProblem=problem; ShowStatus();}
       }
       if(line=="SETTINGS-RELOADED") return; // the Save note already said so
-      if(worker==p) TakePickedLayer(line);
+      // The bridge's own line for a layer it picked: never shown (the sentence that follows it says the same in words).
+      if(line.StartsWith(Readiness.PickedMarker,StringComparison.Ordinal)){ if(worker==p) TakePickedLayer(line); return; }
       Note(TbarHint(line) ?? text.Explain(line));
     }
     /**
-     * A layer the bridge picked by itself (DeskActions.FillLayers, "Layer 1 = scene › source (picked automatically…"):
-     * shown on the Assignments tab and saved, so the next start keeps it. The bridge already uses it.
+     * A layer the bridge picked by itself (DeskActions.FillLayers), from the line the bridge writes for the panel alone
+     * (Readiness.PickedLayer; never from Activity text, which also carries video titles): shown on the Assignments tab
+     * and saved, so the next start keeps it. The bridge already uses it.
      */
     void TakePickedLayer(string line) {
-      foreach(System.Text.RegularExpressions.Match m in Readiness.PickedLayers(line)){
-        string n=m.Groups[1].Value, scene=m.Groups[2].Value, source=m.Groups[3].Value;
+      var pick=Readiness.PickedLayer(line);
+      if(pick!=null){
+        string n=pick.Item1.ToString(System.Globalization.CultureInfo.InvariantCulture), scene=pick.Item2, source=pick.Item3;
         config["layer"+n+"Scene"]=scene; config["layer"+n+"Source"]=source;
         // Fill adds the name when OBS's list is not read yet: a drop-down list cannot show a name it does not hold.
         object items; var d=catalog.TryGetValue("sceneItems",out items)?items as Dictionary<string,object>:null;

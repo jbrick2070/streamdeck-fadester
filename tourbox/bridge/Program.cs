@@ -54,7 +54,7 @@ internal static class Program
             if (command == "--self-test")
             {
                 var bindings = Binding.Load(map); await BridgeSelfTests.RunAsync(); await StudioFaderSelfTests.RunAsync(); GamepadSelfTests.Run();
-                await TransitionTraceSelfTests.RunAsync();
+                await TransitionTraceSelfTests.RunAsync(); ConsoleQueue.SelfTest();
                 // The packaged panel reads the controller map from here; a source checkout without it skips the check.
                 var padFile = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(map))!, "gamepad.json");
                 if (File.Exists(padFile)) GamepadSelfTests.CheckPresetFile(padFile);
@@ -242,7 +242,8 @@ internal static class Program
                     vsMonitor.Attach(obs);
                     // Midi Fadester's APC40 transport (Tempo, Nudge, Tap Tempo, Play) drives VJster through this OBS.
                     if (vjRemote is not null) obs.VendorEvent += vjRemote.OnVendorEvent;
-                    var desk = new DeskActions(cfg, rpc, nativeMove: native.MoveAsync, resume: memory, vsMonitor: vsMonitor, onStatus: Console.WriteLine); int mine = ++generation;
+                    var desk = new DeskActions(cfg, rpc, nativeMove: native.MoveAsync, resume: memory, vsMonitor: vsMonitor, onStatus: Console.WriteLine,
+                        onPick: (layer, scene, source) => ConsoleQueue.Marker(PanelLine.PickedLayer(layer, scene, source))); int mine = ++generation;
                     obs.InputVolumeChanged += desk.OnVolumeChanged;
                     obs.InputLevelChangedById += desk.OnMixInputLevelChanged;
                     desk.StartMixMonitor();

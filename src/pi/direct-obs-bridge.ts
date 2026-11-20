@@ -132,6 +132,11 @@ export async function readInspectorFilterIdentities(client: DirectObsClient, sou
 
 export interface DirectPiTransport {
   sendToPropertyInspector(payload: Record<string, unknown>): void;
+  /**
+   * Whether a settings page is open to receive a state. When it says no, `broadcast` builds nothing: OBS sends an
+   * event per step of a fade or a dial turn, and the page state is a full copy of the catalog. Absent means yes.
+   */
+  isInspectorOpen?(): boolean;
   persistGlobalSettings(settings: FadesterGlobalSettings): Promise<void>;
   getDeviceType?(): number | undefined;
   getOpenDeckStarter?(): { profileName: string | null } | undefined;
@@ -190,6 +195,8 @@ export class DirectObsPropertyInspectorBridge {
   }
 
   public broadcast(): void {
+    // No page open: nothing to build. A page that opens asks for the state itself (directPiReady).
+    if (this.transport.isInspectorOpen?.() === false) return;
     const status = this.client.getStatus();
     const settings = this.client.getSettings();
     const catalog = this.client.getCatalog();

@@ -345,13 +345,24 @@ enum Readiness {
         return next
     }
 
-    /// The layers the host picked by itself in this line (DeskActions.FillLayers); the host joins its lines with spaces.
+    /// How a line starts that names a layer the host picked by itself (PanelLine.PickedMarker in the host).
+    static let pickedMarker = "LAYER-PICKED "
+
+    /// The layer the host picked by itself (DeskActions.FillLayers), from the one line it writes for that: the marker at
+    /// the very start, then one JSON object (layer 1 or 2, scene, source). Empty for every other line. Activity text also
+    /// carries video titles and other text from outside, so the sentence people read ("Layer 1 = scene › source (picked
+    /// automatically…") is never searched: the host lets no free text start a line with the marker (PanelLine.Free).
     static func pickedLayers(_ line: String) -> [(layer: Int, scene: String, source: String)] {
-        guard let regex = try? NSRegularExpression(pattern: #"Layer ([12]) = (.+?) › (.+?) \(picked automatically"#) else { return [] }
-        let text = line as NSString
-        return regex.matches(in: line, range: NSRange(location: 0, length: text.length)).map {
-            (Int(text.substring(with: $0.range(at: 1))) ?? 1, text.substring(with: $0.range(at: 2)), text.substring(with: $0.range(at: 3)))
-        }
+        guard line.hasPrefix(pickedMarker),
+              let object = try? JSONSerialization.jsonObject(with: Data(line.dropFirst(pickedMarker.count).utf8)),
+              let fields = object as? [String: Any], fields.count == 3,
+              let number = fields["layer"] as? NSNumber, CFGetTypeID(number) != CFBooleanGetTypeID(),
+              let scene = fields["scene"] as? String, let source = fields["source"] as? String else { return [] }
+        let layer = number.doubleValue
+        guard layer == 1 || layer == 2,
+              !scene.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              !source.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return [] }
+        return [(Int(layer), scene, source)]
     }
 
     static func hostFeedback(from line: String) -> String? {
@@ -543,8 +554,20 @@ enum ModelTests {
                   Readiness.hostFeedback(from: "News · www.example.com · Video 1x · paused") == "News · www.example.com · Video 1x · paused", "VJster lines that name the video are feedback")
         try check(Readiness.hostFeedback(from: "RESULT fader.forward: T-bar right · T-bar 0%") == "T-bar right · T-bar 0%" &&
                   Readiness.hostFeedback(from: "RESULT fader.back: T-bar left · T-bar 0 %") == L("macTbarCw"), "T-bar hints: a finished throw reads as is, back at rest says turn clockwise")
-        let picks = Readiness.pickedLayers("RESULT layer1.blend.next: Layer 1 blend: Additive Layer 1 = Kit Visuals › Kit Motion (picked automatically; change it on the Assignments tab) Layer 2 = Kit Visuals › Kit Title (picked automatically; x)")
-        try check(picks.count == 2 && picks[0].layer == 1 && picks[0].source == "Kit Motion" && picks[1].scene == "Kit Visuals" && Readiness.pickedLayers("Music up").isEmpty, "Picked layers")
+        let picks = Readiness.pickedLayers(#"LAYER-PICKED {"layer":2,"scene":"Kit Visuals","source":"Kit \u203A Title"}"#)
+        try check(picks.count == 1 && picks[0].layer == 2 && picks[0].scene == "Kit Visuals" && picks[0].source == "Kit › Title" && Readiness.pickedLayers("Music up").isEmpty, "Picked layer")
+        // Only the host's own line counts: the sentence people read, a video title that copies it, or a marker that is
+        // not at the very start of the line or is malformed, changes nothing.
+        let forgedPicks = [
+            "RESULT layer1.blend.next: Layer 1 blend: Additive Layer 1 = Kit Visuals › Kit Motion (picked automatically; change it on the Assignments tab)",
+            "Layer 2 = Live › Camera (picked automatically · Video 1x · playing",
+            #"> LAYER-PICKED {"layer":1,"scene":"a","source":"b"}"#, #" LAYER-PICKED {"layer":1,"scene":"a","source":"b"}"#,
+            #"LAYER-PICKED {"layer":3,"scene":"a","source":"b"}"#, #"LAYER-PICKED {"layer":"1","scene":"a","source":"b"}"#,
+            #"LAYER-PICKED {"layer":true,"scene":"a","source":"b"}"#, #"LAYER-PICKED {"layer":1,"scene":"a"}"#,
+            #"LAYER-PICKED {"layer":1,"scene":"a","source":""}"#, #"LAYER-PICKED {"layer":1,"scene":"a","source":"b","more":1}"#,
+            "LAYER-PICKED Layer 1 = a › b (picked automatically", "LAYER-PICKED "
+        ]
+        try check(forgedPicks.allSatisfy { Readiness.pickedLayers($0).isEmpty }, "Forged picked layers are refused")
         try check(Readiness.hostFeedback(from: "REFUSED fader.forward: Choose a different Preview scene first.")?.contains("Scroll") == true, "Same-scene Preview hint")
         let busy = Readiness.vjsterPortBusy(after: "VJster port 48150 is in use, probably by the VJster actions in your Stream Deck or OpenDeck software.", current: false)
         try check(busy && !Readiness.vjsterPortBusy(after: "VJster link listening on 127.0.0.1:48150", current: busy), "VJster port busy tracking")

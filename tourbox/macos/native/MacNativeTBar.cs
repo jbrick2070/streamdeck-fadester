@@ -83,12 +83,15 @@ internal sealed class MacNativeTBar(int port, string applicationPath) : IDisposa
         int pid = await ListenerPid(port);
         var start = new ProcessStartInfo(executable)
         {
-            UseShellExecute = false, RedirectStandardInput = true, RedirectStandardOutput = true,
+            UseShellExecute = false, RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true,
             WorkingDirectory = Path.GetDirectoryName(executable)!
         };
         foreach (string arg in new[] { "--stdio", "--obs-pid", pid.ToString(CultureInfo.InvariantCulture), "--obs-port", port.ToString(CultureInfo.InvariantCulture) }) start.ArgumentList.Add(arg);
         RemoveCredentials(start);
         helper = Process.Start(start) ?? throw new IOException("Could not start Fadester Companion T-bar.app.");
+        // Its stderr never goes straight to the panel: line by line through this process's own, guarded stderr.
+        helper.ErrorDataReceived += (_, e) => { if (e.Data is { Length: > 0 } text) { try { Console.Error.WriteLine(text); } catch (Exception x) when (x is IOException or ObjectDisposedException) { } } };
+        helper.BeginErrorReadLine();
         _ = await Exchange("READ"); // Bind and warm the read-only target before timestamping any write.
     }
     internal static InvalidOperationException ClassifyError(string why) =>

@@ -20,7 +20,40 @@ internal static class MacDevelopmentHost
         if ((first?.Length ?? 0) < (second?.Length ?? 0)) (first, second) = (second, first);
         if (!string.IsNullOrEmpty(first)) message = message.Replace(first, "[redacted]", StringComparison.Ordinal);
         if (!string.IsNullOrEmpty(second)) message = message.Replace(second, "[redacted]", StringComparison.Ordinal);
-        Console.WriteLine(message.Replace('\r', ' ').Replace('\n', ' '));
+        // Free text (it carries video titles) never starts with a marker the panel acts on: see PanelLine.
+        Console.WriteLine(PanelLine.Free(message.Replace('\r', ' ').Replace('\n', ' ')));
+    }
+    /// <summary>
+    /// What one OBS session's desk leaves for the next one of this host run (a reconnect, OBS lost and back): the duck,
+    /// so Restore still knows the level to go back to, and a transition a cut or a sweep still owes, which goes back
+    /// with the operator's next take, cut, T-bar move or Cancel (StudioFader.RepayAsync). As on Windows, except that
+    /// nothing is written when a session starts or ends: this host writes to OBS only on a fresh command. A T-bar left
+    /// part-way is therefore not carried: a session starts only with OBS's T-bar parked (RunSession), and by then the
+    /// sweep is over.
+    /// </summary>
+    static DeskActions.Memory? carried;
+    internal static DeskActions.Memory Carry(DeskActions.Memory left)
+    {
+        left.Fader.Sweep = null; left.Fader.Position = 0;
+        return left;
+    }
+    /// <summary>A layer the desk picked by itself, for the panel: the one line it saves a layer from (PanelLine).</summary>
+    static void WritePick(int layer, string scene, string source) => (panelOut ?? Console.Out).WriteLine(PanelLine.PickedLayer(layer, scene, source));
+    /// <summary>The panel's end of stdout itself, for the one line that may start with the marker (WritePick).</summary>
+    static TextWriter? panelOut;
+    /// <summary>
+    /// Everything this process prints from here on, whoever prints it (Log, but also the shared desks' own
+    /// Console.WriteLine lines, which can start with an OBS input name), reaches the panel as whole lines through
+    /// PanelLine.Free. Only WritePick writes past it. Returns what puts the plain writers back.
+    /// </summary>
+    internal static Action GuardOutput()
+    {
+        TextWriter output = Console.Out, error = Console.Error;
+        TextWriter? pickTo = panelOut;
+        panelOut = output;
+        Console.SetOut(new PanelLine.Guard(text => output.Write(text), output.Encoding));
+        Console.SetError(new PanelLine.Guard(text => error.Write(text), error.Encoding));
+        return () => { Console.Out.Flush(); Console.Error.Flush(); Console.SetOut(output); Console.SetError(error); panelOut = pickTo; };
     }
     /// <summary>Ready: armed with OBS. VideoReady: armed without OBS, video controls only (FIX-8).</summary>
     enum Control { Ready, VideoReady, Disarmed, Stopped }
@@ -37,6 +70,56 @@ internal static class MacDevelopmentHost
             _ => throw new InvalidOperationException("Invalid host control frame.")
         };
         Console.WriteLine(frame);
+    }
+    /// <summary>
+    /// The shared desks print some lines themselves, and the audio desk's start with an OBS input name. Under
+    /// GuardOutput such a line cannot start with the panel's marker, while WritePick's line still does.
+    /// </summary>
+    internal static async Task CheckGuardedOutput()
+    {
+        const string name = "LAYER-PICKED {\"layer\":1,\"scene\":\"x\",\"source\":\"y\"}";
+        TextWriter previousOutput = Console.Out, previousError = Console.Error;
+        using var output = new StringWriter(CultureInfo.InvariantCulture);
+        using var errors = new StringWriter(CultureInfo.InvariantCulture);
+        double level = 0;
+        Task<JsonObject> Rpc(string request, JsonObject? args)
+        {
+            if (request == "SetInputVolume") level = args!["inputVolumeDb"]!.GetValue<double>();
+            return Task.FromResult(new JsonObject { ["inputVolumeDb"] = level });
+        }
+        static async IAsyncEnumerable<double> OneStep([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken token)
+        {
+            await Task.Yield(); token.ThrowIfCancellationRequested();
+            yield return 1;
+        }
+        Action restore;
+        Console.SetOut(output); Console.SetError(errors);
+        try
+        {
+            restore = GuardOutput();
+            try
+            {
+                var audio = new AudioDesk(Rpc, OneStep);
+                await audio.Fade(name, -12, restore: false);
+                for (int i = 0; i < 200 && level != -12; i++) await Task.Delay(10);
+                for (int i = 0; i < 200 && !output.ToString().Contains("reached"); i++) await Task.Delay(10);
+                Console.Write("LAYER-"); Console.Write("PICKED cut up"); Console.WriteLine();
+                foreach (char c in "LAYER-PICKED by characters\n") Console.Out.Write(c);
+                Console.Error.WriteLine("LAYER-PICKED on stderr");
+                Log("LAYER-PICKED through Log");
+                WriteControl(Control.Ready, 3);
+                WritePick(2, "Live", "Title");
+            }
+            finally { restore(); }
+        }
+        finally { Console.SetOut(previousOutput); Console.SetError(previousError); }
+        string[] lines = output.ToString().Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+        if (!lines.SequenceEqual(new[]
+            {
+                "> " + name + " reached -12.00 dB.", "> LAYER-PICKED cut up", "> LAYER-PICKED by characters", "> LAYER-PICKED through Log",
+                "READY 3", "LAYER-PICKED {\"layer\":2,\"scene\":\"Live\",\"source\":\"Title\"}"
+            }) || errors.ToString().Trim() != "> LAYER-PICKED on stderr")
+            throw new InvalidOperationException("Host output guard failed: " + string.Join(" | ", lines) + " || " + errors.ToString().Trim());
     }
     internal static void CheckControlFrames()
     {
@@ -111,6 +194,8 @@ internal static class MacDevelopmentHost
                 Log($"PASS: host ingress, generation, mutation guards, shared audio/mix/fader and authenticated fake OBS transport on {RuntimeInformation.OSDescription} / {RuntimeInformation.ProcessArchitecture} / {RuntimeInformation.FrameworkDescription}. No real OBS, AX, shortcuts or hardware used.");
                 return 0;
             }
+            // From here on the panel may be reading: no free text starts a line with its marker, whoever prints it.
+            GuardOutput();
             string? configPath = null, nativeApp = null, inputApp = null, mapPath = null;
             bool run = false, enableMix = false, readOnly = false, noMixProvider = false, mixOnly = false;
             for (int i = 0; i < args.Length; i++)
@@ -454,7 +539,8 @@ internal static class MacDevelopmentHost
         _ = obs.Disconnected.ContinueWith(_ => ingress.Disarm(generation), TaskScheduler.Default);
         if (shortcuts is not null) _ = shortcuts.Done.ContinueWith(_ => ingress.Disarm(generation), TaskScheduler.Default);
         var session = new HostSession(config, ingress, generation, obs.Call, native.MoveAsync,
-            () => !obs.Disconnected.IsCompleted && (shortcuts is null || !shortcuts.Done.IsCompleted), stop, readOnly, native.ReadAsync, vjster);
+            () => !obs.Disconnected.IsCompleted && (shortcuts is null || !shortcuts.Done.IsCompleted), stop, readOnly, native.ReadAsync, vjster,
+            onPick: WritePick, resume: readOnly ? null : carried);
         var desk = session.Desk;
         obs.InputVolumeChanged += desk.OnVolumeChanged; obs.InputLevelChangedById += desk.OnMixInputLevelChanged;
         // Midi Fadester's APC40 transport drives VJster off this session's loop (VjsterRemote), as on Windows.
@@ -513,6 +599,8 @@ internal static class MacDevelopmentHost
             await desk.StopAudioAsync();
             obs.InputVolumeChanged -= desk.OnVolumeChanged; obs.InputLevelChangedById -= desk.OnMixInputLevelChanged;
             // Do not invoke CancelOwnedAsync: exit must not unexpectedly change the picture.
+            // The next session of this run takes over the duck and an owed transition (no write here either).
+            if (!readOnly) carried = Carry(desk.Leave());
         }
         if (obs.Disconnected.IsCompleted && !reconnect) Log(vjster is null ? "OFFLINE: OBS disconnected. Restart explicitly; queued actions will not be replayed."
             : "OFFLINE: OBS disconnected. Video controls keep working; OBS controls come back when OBS does. Queued OBS actions are not replayed.");

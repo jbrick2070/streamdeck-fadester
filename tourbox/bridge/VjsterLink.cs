@@ -101,6 +101,8 @@ internal sealed class VjsterLink : IAsyncDisposable
         public long LastHeard = Stopwatch.GetTimestamp();
         public long LastReask = long.MinValue / 2;
         public bool WarnedMalformed;
+        /** A replaced client asked for this peer's target while it holds it; said once per peer. */
+        public bool NotedStandby;
         public Task? Loop;
         public readonly SemaphoreSlim SendLock = new(1);
     }
@@ -344,6 +346,9 @@ internal sealed class VjsterLink : IAsyncDisposable
         return (true, "", "browser");
     }
 
+    /** Whether an upgrade asks for the link only if it is free (the `standby=1` a replaced client adds). */
+    public static bool IsStandbyRequest(string query) => TryGetQuery(query, "standby", out var value) && value == "1";
+
     static bool TryGetQuery(string query, string name, out string value)
     {
         foreach (var part in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
@@ -483,6 +488,25 @@ internal sealed class VjsterLink : IAsyncDisposable
                 CloseHttp(client);
                 NoteRefusal(verdict.Reason);
                 return;
+            }
+            // A client that a newer one replaced asks again with standby=1: "only if nobody holds this target"
+            // (link-server.ts isStandbyRequest). The newer client keeps the link; the older gets it when the newer has
+            // gone. Without this two clients for one target took the link from each other every 24 to 30 s.
+            if (IsStandbyRequest(query))
+            {
+                bool held, say = false;
+                lock (gate)
+                {
+                    held = peers.TryGetValue(verdict.Target, out var holder);
+                    if (held && !holder!.NotedStandby) { holder.NotedStandby = true; say = true; }
+                }
+                if (held)
+                {
+                    await Reply(stream, "409 Conflict", "");
+                    CloseHttp(client);
+                    if (say) log($"VJster: another copy of {PeerLabel(verdict.Target)} is standing by; the newer one keeps the link");
+                    return;
+                }
             }
             var accept = Convert.ToBase64String(SHA1.HashData(Encoding.ASCII.GetBytes(headers["sec-websocket-key"][0].Trim() + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")));
             var response = Encoding.ASCII.GetBytes($"HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: {accept}\r\n\r\n");

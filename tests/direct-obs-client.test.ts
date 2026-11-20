@@ -125,6 +125,34 @@ describe("Direct OBS client", () => {
     expect(server!.inputVolumes.get("Desktop Audio")).toBeCloseTo(0.5);
   });
 
+  // B-05: "connected" comes only after the catalog read; a press in between restarted the whole handshake.
+  it("a nudge while the socket is still connecting leaves the attempt alone, and reconnects once there is no socket", async () => {
+    const fake = new FakeObsServer({ missingPlugin: true });
+    server = fake;
+    fake.sceneListDelayMs = 250;
+    const port = await fake.start();
+    const c = new DirectObsClient({ host: "127.0.0.1", port, password: "" }, { baseReconnectMs: 60_000 });
+    client = c;
+    c.start();
+    // Opening: not connected, but a socket is on its way.
+    expect(c.isConnected()).toBe(false);
+    expect(c.nudgeReconnect(0)).toBe(false);
+    await vi.waitFor(() => expect(c.isIdentified()).toBe(true), { timeout: 2000 });
+    // Identified and reading the catalog: still not "connected".
+    expect(c.isConnected()).toBe(false);
+    const attempts = c.getConnectAttemptCount();
+    expect(c.nudgeReconnect(0)).toBe(false);
+    expect(c.nudgeReconnect(0, Date.now() + 10_000)).toBe(false);
+    await vi.waitFor(() => expect(c.isConnected()).toBe(true), { timeout: 3000 });
+    expect(c.getConnectAttemptCount()).toBe(attempts);
+    // OBS gone: no socket, and the next attempt is a minute away. Now a press reconnects.
+    await fake.stop();
+    server = undefined;
+    await vi.waitFor(() => expect(c.hasLiveSocket()).toBe(false), { timeout: 3000 });
+    expect(c.nudgeReconnect(0)).toBe(true);
+    expect(c.getConnectAttemptCount()).toBe(attempts + 1);
+  });
+
   it("neither throws nor connects with a Host typed with its port: OBS unreachable", async () => {
     const fake = new FakeObsServer({ missingPlugin: true });
     server = fake;
@@ -524,6 +552,41 @@ describe("Direct OBS client", () => {
       direct.runSceneAction(DIRECT_SCENE_NEXT, "preview")
     ]);
     expect(server?.previewSceneName).toBe("Scene Live");
+  });
+
+  // B-07: each tick queued a GetInputVolume and a SetInputVolume; with a slow OBS a spin queued faster than it drained.
+  it("adds the ticks of a fast spin to the turn that is waiting: one read and one write for them, the same sum", async () => {
+    const direct = await connect();
+    const start = server!.inputVolumes.get("Mic/Aux")!;
+    const writes = (): number => server!.directCallLog.filter((call) =>
+      call.requestType === "SetInputVolume" && call.requestData?.inputName === "Mic/Aux").length;
+    const writesBefore = writes();
+    // Twenty ticks before the first has started: one turn.
+    const ticks = Array.from({ length: 20 }, () => direct.nudgeInputVolume("Mic/Aux", 0.01));
+    const results = await Promise.all(ticks);
+    expect(server!.inputVolumes.get("Mic/Aux")).toBeCloseTo(start + 0.2, 5);
+    expect(writes() - writesBefore).toBe(1);
+    for (const result of results) expect(result).toBeCloseTo(start + 0.2, 5);
+    // A turn on its way to OBS (its read is held here) is not changed any more: the ticks behind it are one more turn.
+    const held = holdNextVolume();
+    const first = direct.nudgeInputVolume("Mic/Aux", 0.01);
+    await held.started;
+    const behind = Array.from({ length: 10 }, () => direct.nudgeInputVolume("Mic/Aux", -0.01));
+    held.release();
+    expect(await first).toBeCloseTo(start + 0.21, 5);
+    for (const result of await Promise.all(behind)) expect(result).toBeCloseTo(start + 0.11, 5);
+    expect(writes() - writesBefore).toBe(3);
+    await direct.setInputVolume("Mic/Aux", start + 0.2);
+    // A set queued between two ticks keeps its place: the tick after it is not added in front of it.
+    const before = direct.nudgeInputVolume("Mic/Aux", 0.05);
+    const waiting = direct.nudgeInputVolume("Mic/Aux", 0.05);
+    const set = direct.setInputVolume("Mic/Aux", 0.3);
+    const after = direct.nudgeInputVolume("Mic/Aux", 0.05);
+    await Promise.all([before, waiting, set, after]);
+    expect(server!.inputVolumes.get("Mic/Aux")).toBeCloseTo(0.35, 5);
+    // Opposite ticks cancel; a later turn starts from what OBS has then.
+    await Promise.all([direct.nudgeInputVolume("Mic/Aux", 0.1), direct.nudgeInputVolume("Mic/Aux", 0.1), direct.nudgeInputVolume("Mic/Aux", -0.1)]);
+    expect(server!.inputVolumes.get("Mic/Aux")).toBeCloseTo(0.45, 5);
   });
 
   it("lets a new manual volume move cancel an in-flight fade without a late overwrite", async () => {

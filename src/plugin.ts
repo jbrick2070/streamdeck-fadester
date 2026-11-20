@@ -110,6 +110,7 @@ const directBridge = new DirectObsPropertyInspectorBridge(directClient, {
     }
     void streamDeck.ui.sendToPropertyInspector(payload as JsonObject);
   },
+  isInspectorOpen: () => Boolean(streamDeck.ui.action),
   persistGlobalSettings: persistSharedConnection,
   getLanguage: () => languageChoice.state(),
   getDeviceType: () => streamDeck.ui.action?.device.type,

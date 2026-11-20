@@ -3,7 +3,11 @@
 // standalone Visual Sidechain still loaded, Visual Sidechain switched off) and tells a missing vendor from a missing
 // vendor request the way obs-websocket answers (600 for both, told apart by the comment; 604 from test servers).
 import { describe, expect, it } from "vitest";
-import { ObsVendorError } from "../packages/streamdeck-fadester-shared/src/obs/obs-vendor-client.js";
+import {
+  ObsVendorError,
+  isObsVendorMissingError,
+  isObsVendorRequestMissingError
+} from "../packages/streamdeck-fadester-shared/src/obs/obs-vendor-client.js";
 import {
   evaluateSetupChecklist,
   parseVersion,
@@ -79,6 +83,17 @@ describe("setup checklist: Visual Sidechain in Midi Fadester", () => {
     expect(vendorErrorKind(OLD_604())).toBe("request_missing");
     expect(vendorErrorKind(new ObsVendorError("OBS is not ready", 207))).toBe("other");
     expect(vendorErrorKind(new Error("timeout"))).toBe("other");
+  });
+
+  // A-04: the keys' "Update Midi Fadester" gates and the hotkey fallbacks ask this; OBS answers 600, never 604.
+  it("a missing request is recognised by OBS's 600 comment as well as by 604, and a missing vendor is not one", () => {
+    expect(isObsVendorRequestMissingError(NO_REQUEST())).toBe(true);
+    expect(isObsVendorRequestMissingError(OLD_604())).toBe(true);
+    expect(isObsVendorRequestMissingError(NO_VENDOR())).toBe(false);
+    expect(isObsVendorRequestMissingError(new ObsVendorError("No hotkeys were found by that name.", 600))).toBe(false);
+    expect(isObsVendorRequestMissingError(new ObsVendorError("OBS is not ready", 207))).toBe(false);
+    expect(isObsVendorRequestMissingError(null)).toBe(false);
+    for (const err of [NO_VENDOR(), NO_REQUEST(), OLD_604()]) expect(isObsVendorMissingError(err)).toBe(true);
   });
 
   it("Midi Fadester 0.9.0 with its own Visual Sidechain: ok", async () => {

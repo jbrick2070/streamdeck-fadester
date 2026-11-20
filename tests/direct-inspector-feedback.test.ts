@@ -29,7 +29,61 @@ function inspector(file: string) {
     change: (id: string, value: string) => { const element = elements.get(id)!; element.value = value; element.onchange?.(); }, saved };
 }
 
+/** The Auto-fade page's own callback (a Midi Fadester page: pi-common.js is stubbed), with the saved settings. */
+function autoFadeInspector(settings: Record<string, unknown>) {
+  const html = readFileSync("io.github.jbrick2070.fadester-for-obs.sdPlugin/ui/auto-fade-key.html", "utf8");
+  const elements = new Map([...html.matchAll(/\bid="([^"]+)"/g)].map((match) => [match[1], {
+    value: "", textContent: "", style: {} as Record<string, string>, onchange: undefined as (() => void) | undefined
+  }]));
+  const saved: Array<Record<string, unknown>> = [];
+  const window: Record<string, unknown> = {
+    initFadesterPropertyInspector: (callback: (settings: Record<string, unknown>, save: (patch: Record<string, unknown>) => void) => void) => {
+      callback(settings, (patch) => saved.push(patch));
+    }
+  };
+  runInNewContext(inspectorPageScript(html), { document: { activeElement: null, getElementById: (id: string) => elements.get(id) }, window });
+  return { saved, value: (id: string) => elements.get(id)!.value,
+    change: (id: string, value: string) => { const element = elements.get(id)!; element.value = value; element.onchange?.(); } };
+}
+
 describe("direct inspector feedback", () => {
+  // C-05: Number("") is 0, and 0 ms is an instant fade (on the Scene key: OBS's own transition duration).
+  it("keeps the saved fade length when the Duration box is emptied (OBS Fade, Scene & Transition, Auto-fade)", () => {
+    const state = { status: { kind: "connected" }, catalog: { inputVolumes: { Mic: 1 }, scenes: [], transitions: [] } };
+    const fade = inspector("obs-fade-key.html");
+    fade.render({ inputName: "Mic", durationMs: 2500 }, state);
+    fade.change("obs-fade-duration", "");
+    expect(fade.saved).toEqual([]);
+    expect(fade.value("obs-fade-duration")).toBe("2500");
+    fade.change("obs-fade-duration", "750");
+    expect(fade.saved).toEqual([{ durationMs: 750 }]);
+    // 0 typed on purpose is still "instant".
+    fade.change("obs-fade-duration", "0");
+    expect(fade.saved.at(-1)).toEqual({ durationMs: 0 });
+    const fresh = inspector("obs-fade-key.html");
+    fresh.render({ inputName: "Mic" }, state);
+    fresh.change("obs-fade-duration", "");
+    expect(fresh.saved).toEqual([]);
+    expect(fresh.value("obs-fade-duration")).toBe("1000");
+
+    const scene = inspector("obs-scene-transition-key.html");
+    scene.render({ durationMs: 800 }, state);
+    scene.change("obs-scene-duration", "");
+    expect(scene.saved).toEqual([]);
+    expect(scene.value("obs-scene-duration")).toBe("800");
+    scene.change("obs-scene-duration", "1200");
+    expect(scene.saved).toEqual([{ durationMs: 1200 }]);
+
+    const auto = autoFadeInspector({ slot: "fader_1", durationMs: 4000 });
+    auto.change("duration-input", "");
+    expect(auto.saved).toEqual([]);
+    expect(auto.value("duration-input")).toBe("4000");
+    auto.change("duration-input", "600");
+    auto.change("duration-input", "");
+    expect(auto.saved).toEqual([{ durationMs: 600 }]);
+    expect(auto.value("duration-input")).toBe("600");
+  });
+
   it("saves a fixed source identity and displays a reused item ID as unavailable until explicitly reassigned", () => {
     const h = inspector("obs-layer-control.html");
     const item = { sceneItemId: 2, sourceName: "Camera", sourceUuid: "original-camera" };

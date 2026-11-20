@@ -143,7 +143,14 @@
         else if (val === "ms") save({ quantizeBeats: 0, durationMs: curMs });
         else save({ quantizeBeats: Number(val), durationMs: curMs });
       };
-      if (durationEl) durationEl.onchange = function () { save({ durationMs: Number(durationEl.value) }); };
+      if (durationEl) durationEl.onchange = function () {
+        // An emptied box is not 0 ms (which means OBS's own transition duration): the saved length stays.
+        if (durationEl.value.trim() === "" || !isFinite(Number(durationEl.value))) {
+          durationEl.value = String(selectedDuration > 0 ? selectedDuration : 500);
+          return;
+        }
+        save({ durationMs: Number(durationEl.value) });
+      };
       if (startEl) startEl.onchange = function () { save({ quantizeStart: startEl.value }); };
       if (label) label.onchange = function () { save({ labelOverride: label.value.trim() }); };
       const refresh = document.getElementById("obs-scene-refresh");

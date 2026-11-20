@@ -44,6 +44,7 @@ import {
   writableValue
 } from "../obs/filter-ranges.js";
 import { LocalText, errorLocalText, ownText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
+import { monotonicNow } from "../../packages/streamdeck-fadester-shared/src/cell-rate-limiter.js";
 
 /** One filter setting the deck controls; `setting` is empty for an enabled toggle. */
 export interface FilterTarget extends ExplicitRange {
@@ -316,10 +317,13 @@ export class FilterController extends EventEmitter {
     return this.runGlide(target, this.requireWritable(target), () => value, durationMs);
   }
 
-  /** Moves a setting by a fraction of its range from a fresh read (a step key). */
+  /**
+   * Moves a setting by a fraction of its range from a fresh read (a step key), or from the value still queued for it:
+   * a second press before the first step is fully written adds to that step, it does not replace the rest of it.
+   */
   public async step(target: FilterTarget, deltaFraction: number): Promise<GlideOutcome> {
     const range = this.requireWritable(target);
-    return this.runGlide(target, range, (from) => from + deltaFraction * (range.max - range.min), 0);
+    return this.runGlide(target, range, (from) => from + deltaFraction * (range.max - range.min), 0, undefined, true);
   }
 
   /**
@@ -413,7 +417,7 @@ export class FilterController extends EventEmitter {
   // ---- Internals ----
 
   private async runGlide(target: FilterTarget, range: FilterRange, toValue: (from: number) => number, durationMs: number,
-    onFrom?: (from: number) => void): Promise<GlideOutcome> {
+    onFrom?: (from: number) => void, fromQueued = false): Promise<GlideOutcome> {
     const key = settingKey(target);
     this.cancelGlide(key);
     this.gestures.delete(key);
@@ -438,10 +442,14 @@ export class FilterController extends EventEmitter {
     }
     const glide = this.glides.get(key);
     if (!glide || glide.token !== token) return "cancelled";
-    const from = record.values[target.setting] as number;
+    // A step counts from where the setting is going: a value still queued (the rest of an earlier step, written a
+    // slew step at a time) is the target that step asked for, and the value read is only how far it has got.
+    const queued = fromQueued ? record.pending.get(target.setting) : undefined;
+    const from = queued !== undefined ? queued : record.values[target.setting] as number;
     onFrom?.(from);
     const to = clampToRange(toValue(from), range);
-    const startedAt = Date.now();
+    // Progress and write spacing run on the forward-only clock: the wall clock can be set back.
+    const startedAt = monotonicNow();
     const step = (): void => {
       const current = this.glides.get(key);
       if (!current || current.token !== token) return;
@@ -450,7 +458,7 @@ export class FilterController extends EventEmitter {
         this.cancelGlide(key);
         return;
       }
-      const progress = durationMs > 0 ? Math.min(1, (Date.now() - startedAt) / durationMs) : 1;
+      const progress = durationMs > 0 ? Math.max(0, Math.min(1, (monotonicNow() - startedAt) / durationMs)) : 1;
       this.setPending(record, target.setting, from + (to - from) * progress, range);
       if (progress >= 1) {
         if (current.timer) clearInterval(current.timer);
@@ -587,7 +595,7 @@ export class FilterController extends EventEmitter {
 
   private scheduleDrain(record: FilterRecord): void {
     if (record.drainTimer || record.pending.size === 0) return;
-    const now = Date.now();
+    const now = monotonicNow();
     const wait = Math.max(0, record.lastWriteAt + this.intervalFor(record) - now, this.globalNextWriteAt - now);
     record.drainTimer = setTimeout(() => {
       record.drainTimer = null;
@@ -605,7 +613,7 @@ export class FilterController extends EventEmitter {
       record.pending.clear();
       return;
     }
-    const now = Date.now();
+    const now = monotonicNow();
     if (now < this.globalNextWriteAt || now < record.lastWriteAt + this.intervalFor(record)) {
       this.scheduleDrain(record);
       return;

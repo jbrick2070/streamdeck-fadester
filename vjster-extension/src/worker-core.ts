@@ -8,7 +8,7 @@ import { LinkClient, type SocketLike } from "./link-client.js";
 import { isLinkStatusRequest, readBridgeToWorker, plainIntent, type LinkStatus } from "./messages.js";
 import { NO_VIDEO } from "./page-state.js";
 import { Router } from "./router.js";
-import { ALL_SITES_IDS, ALL_SITES_KEY, ALL_SITES_SCRIPTS, PIN_KEY, PORT_KEY, allSitesWanted, linkUrl, readPort } from "./settings.js";
+import { ALL_SITES_IDS, ALL_SITES_KEY, ALL_SITES_SCRIPTS, PIN_KEY, PORT_KEY, STANDBY_KEY, allSitesWanted, linkUrl, readPort } from "./settings.js";
 import { isYouTubeHost } from "./youtube.js";
 
 export const ALARM = "vjster-link";
@@ -72,6 +72,9 @@ export interface WorkerEnv {
   /** The worker's own console (R-BEH-5); reasons only, never a URL or a title. */
   log?: (line: string) => void;
 }
+
+/** The one line the worker writes when another copy of the extension (a second Chrome profile, say) took the link. */
+export const STANDBY_NOTE = "VJster: another copy of the extension took the link; this one waits until the link is free.";
 
 /** The one line the worker writes when a YouTube tab cannot control quality (R-QLT-2). */
 export const NO_QUALITY_NOTE = "VJster: a YouTube tab has no quality methods; quality control is off there, speed still works.";
@@ -154,6 +157,11 @@ export function installWorker(env: WorkerEnv): Worker {
       void router.intent(intent);
     },
     onOpen: () => router.linkOpened(),
+    // Kept for the session: Chrome stops an idle worker, and the next one must not take the link back as a new client.
+    onStandby: (standby) => {
+      if (standby) log(STANDBY_NOTE);
+      void c.storage.session.set({ [STANDBY_KEY]: standby }).catch(() => undefined);
+    },
     newId,
     random: env.random
   });
@@ -227,7 +235,8 @@ export function installWorker(env: WorkerEnv): Worker {
     // A restarted worker starts with an empty registry: ask every tab what it plays.
     refreshAll();
     await c.alarms.create(ALARM, { periodInMinutes: 1 });
-    link.start();
+    const standby = await c.storage.session.get(STANDBY_KEY).then((stored) => stored[STANDBY_KEY] === true, () => false);
+    link.start({ standby });
   }
 
   /** Ask every tab's bridge to report now. No "tabs" permission: ids are enough; tabs without VJster fail quietly. */

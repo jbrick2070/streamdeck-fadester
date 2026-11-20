@@ -88,6 +88,10 @@ function harness() {
   add("profile-select", "select");
   add("profile-load", "button");
   add("profile-result");
+  add("conn-host", "input").value = "127.0.0.1";
+  add("conn-port", "input").value = "4455";
+  add("conn-password", "input");
+  add("conn-test-btn", "button");
   const document = {
     activeElement: null as Element | null,
     createElement: (tag: string) => new Element(tag),
@@ -101,6 +105,8 @@ function harness() {
       applyState, applySlotValue, resetEditorContext,
       configure(state, slot, catalog) { lastState = state; currentSettings = { slot }; overviewCatalog = catalog; },
       requestWith(fn) { request = fn; },
+      bindConnectionPanel, sendWith(fn) { send = fn; },
+      timersWith(fn) { setTimeout = fn; },
       isDirty() { return editorDirty; }
     };
   })();`);
@@ -300,5 +306,168 @@ describe("Property Inspector DOM behavior", () => {
     h.api.applyState(next); await flush(); await flush();
     expect(calls.filter((x) => !x.source)).toHaveLength(2);
     expect(calls.filter((x) => x.source === "A")).toHaveLength(2);
+  });
+
+  // C-02: typing in the password field and deleting it again fires no change event (the value is as at focus), and
+  // the pending "password was typed" then cleared the stored password on the next host or port save.
+  it("never sends an empty password with a host or port save, and still sends a typed one", async () => {
+    const h = harness(); await flush();
+    const sent: RecordValue[] = [];
+    h.api.sendWith((message: RecordValue) => { sent.push(message.payload ?? message); });
+    h.api.bindConnectionPanel();
+    const password = h.el("conn-password");
+    password.value = "x"; password.fire("input");
+    password.value = ""; password.fire("input");
+    h.el("conn-port").value = "4456"; h.el("conn-port").fire("change");
+    expect(sent.at(-1)).toEqual({ event: "updateGlobalSettings", host: "127.0.0.1", port: 4456 });
+    h.el("conn-test-btn").fire("click");
+    expect(sent.filter((x) => x.event === "updateGlobalSettings").every((x) => !("password" in x))).toBe(true);
+    password.value = "secret"; password.fire("input"); password.fire("change");
+    expect(sent.at(-1)).toEqual({ event: "updateGlobalSettings", host: "127.0.0.1", port: 4456, password: "secret" });
+    // Sent once: the next save does not repeat it.
+    h.el("conn-host").value = "10.0.0.5"; h.el("conn-host").fire("change");
+    expect(sent.at(-1)).toEqual({ event: "updateGlobalSettings", host: "10.0.0.5", port: 4456 });
+  });
+
+  // C-01: every state message redraws an open, unedited editor, and the plugin answers a failed getCatalog with two
+  // more state messages. Without a memory of the failure the requests doubled each round.
+  it("asks once for a source's filters when the request fails, however many state messages follow", async () => {
+    const h = harness(); await flush();
+    const gone = structuredClone(h.state);
+    gone.slots[0].source_a = "Gone";
+    const calls: RecordValue[] = [];
+    h.api.requestWith(async (msg: RecordValue) => {
+      calls.push(msg);
+      return msg.source === "Gone" ? { error: "Source not found." } : { data: msg.source ? detail(msg.source) : overview };
+    });
+    h.api.configure(gone, "fx_1", overview);
+    h.api.resetEditorContext();
+    h.api.refreshEditor(gone); await flush();
+    expect(h.el("af-source-a").value).toBe("Gone");
+    expect(h.el("af-catalog-error").textContent).toBe("Source not found.");
+    // The two state messages the failure causes, then two more for each of those, as the plugin would send them.
+    for (let round = 0; round < 6; round += 1) { h.api.applyState(structuredClone(gone)); await flush(); }
+    expect(calls.filter((x) => x.source === "Gone")).toHaveLength(1);
+    expect(h.el("af-catalog-error").textContent).toBe("Source not found.");
+    // Refresh is the operator asking again: once.
+    h.el("assign-refresh").fire("click"); await flush(); await flush();
+    expect(calls.filter((x) => x.source === "Gone")).toHaveLength(2);
+    for (let round = 0; round < 3; round += 1) { h.api.applyState(structuredClone(gone)); await flush(); }
+    expect(calls.filter((x) => x.source === "Gone")).toHaveLength(2);
+    // A change of connection starts again too, and a source that answers is asked once and then kept.
+    const next = structuredClone(gone); next.connection.port = 4456;
+    h.api.applyState(next); await flush(); await flush();
+    expect(calls.filter((x) => x.source === "Gone")).toHaveLength(3);
+  });
+
+  // QA-05: a request that timed out says nothing about the source; only an error answer is remembered.
+  it("asks again after a request that got no answer, for a source and for the overview, and not in a flood", async () => {
+    const h = harness(); await flush();
+    const timers: Array<() => void> = [];
+    h.api.timersWith((fn: () => void) => { timers.push(fn); return timers.length; });
+    const busy = structuredClone(h.state);
+    busy.slots[0].source_a = "B"; busy.slots[0].filter_name = "B Filter";
+    const calls: RecordValue[] = [];
+    let answering = false;
+    h.api.requestWith(async (msg: RecordValue) => {
+      calls.push(msg);
+      if (!answering) return { error: "No reply from the plugin after 6 s.", noReply: true };
+      return { data: msg.source ? detail(msg.source) : overview };
+    });
+    h.api.configure(busy, "fx_1", overview);
+    h.api.resetEditorContext();
+    h.api.refreshEditor(busy); await flush();
+    expect(calls.filter((x) => x.source === "B")).toHaveLength(1);
+    expect(h.el("af-catalog-error").textContent).toBe("No reply from the plugin after 6 s.");
+    // One retry is waiting, however many requests time out before it runs.
+    expect(timers).toHaveLength(1);
+    // OBS answers again: the retry (or the next state message) fills the list, and it is then kept.
+    answering = true;
+    timers.shift()!(); await flush(); await flush();
+    expect(calls.filter((x) => x.source === "B")).toHaveLength(2);
+    expect(h.el("af-filter").options.map((x) => x.value)).toEqual(["", "B Filter"]);
+    expect(h.el("af-catalog-error").textContent).toBe("");
+    for (let round = 0; round < 3; round += 1) { h.api.applyState(structuredClone(busy)); await flush(); }
+    expect(calls.filter((x) => x.source === "B")).toHaveLength(2);
+    expect(timers).toHaveLength(0);
+    // The overview the same way.
+    answering = false;
+    h.api.configure(busy, "fx_1", null);
+    h.api.refreshEditor(busy); await flush(); await flush();
+    expect(calls.filter((x) => !x.source)).toHaveLength(1);
+    expect(timers).toHaveLength(1);
+    answering = true;
+    h.api.applyState(structuredClone(busy)); await flush(); await flush();
+    expect(calls.filter((x) => !x.source)).toHaveLength(2);
+    expect(h.el("af-filter").options.map((x) => x.value)).toEqual(["", "B Filter"]);
+  });
+
+  it("stops asking by itself after three tries while nothing answers, and starts again with any answer", async () => {
+    const h = harness(); await flush();
+    const timers: Array<() => void> = [];
+    h.api.timersWith((fn: () => void) => { timers.push(fn); return timers.length; });
+    const busy = structuredClone(h.state);
+    busy.slots[0].source_a = "B"; busy.slots[0].filter_name = "B Filter";
+    const calls: RecordValue[] = [];
+    let answering = false;
+    h.api.requestWith(async (msg: RecordValue) => {
+      calls.push(msg);
+      return answering ? { data: msg.source ? detail(msg.source) : overview } : { error: "No reply from the plugin after 6 s.", noReply: true };
+    });
+    h.api.configure(busy, "fx_1", overview);
+    h.api.resetEditorContext();
+    h.api.refreshEditor(busy); await flush();
+    // The first ask and three retries, each armed by the one before; then silence.
+    for (let retry = 1; retry <= 3; retry += 1) {
+      expect(timers).toHaveLength(1);
+      timers.shift()!(); await flush(); await flush();
+      expect(calls.filter((x) => x.source === "B")).toHaveLength(1 + retry);
+    }
+    expect(timers).toHaveLength(0);
+    // A state message still asks (the operator's OBS may be back), and an answer gives the retries back.
+    answering = true;
+    h.api.applyState(structuredClone(busy)); await flush(); await flush();
+    expect(calls.filter((x) => x.source === "B")).toHaveLength(5);
+    expect(h.el("af-filter").options.map((x) => x.value)).toEqual(["", "B Filter"]);
+    answering = false;
+    h.el("assign-refresh").fire("click"); await flush(); await flush();
+    expect(timers).toHaveLength(1);
+  });
+
+  it("does not send a second request for a source while the first is unanswered", async () => {
+    const h = harness(); await flush();
+    const other = structuredClone(h.state);
+    other.slots[0].source_a = "B"; other.slots[0].filter_name = "B Filter";
+    const reply = deferred<RecordValue>();
+    const calls: RecordValue[] = [];
+    h.api.requestWith((msg: RecordValue) => { calls.push(msg); return msg.source ? reply.promise : Promise.resolve({ data: overview }); });
+    h.api.configure(other, "fx_1", overview);
+    h.api.resetEditorContext();
+    h.api.refreshEditor(other);
+    for (let round = 0; round < 5; round += 1) { h.api.applyState(structuredClone(other)); await flush(); }
+    expect(calls.filter((x) => x.source === "B")).toHaveLength(1);
+    reply.resolve({ data: detail("B") }); await flush(); await flush();
+    expect(h.el("af-filter").options.map((x) => x.value)).toEqual(["", "B Filter"]);
+    h.api.applyState(structuredClone(other)); await flush();
+    expect(calls.filter((x) => x.source === "B")).toHaveLength(1);
+  });
+
+  it("asks once for the overview when it fails or is still on its way", async () => {
+    const h = harness(); await flush();
+    const reply = deferred<RecordValue>();
+    const calls: RecordValue[] = [];
+    h.api.configure(h.state, "fx_1", null);
+    h.api.requestWith((msg: RecordValue) => { calls.push(msg); return reply.promise; });
+    h.api.refreshEditor(h.state);
+    for (let round = 0; round < 4; round += 1) { h.api.applyState(structuredClone(h.state)); await flush(); }
+    expect(calls).toHaveLength(1);
+    reply.resolve({ error: "OBS did not return a catalog." }); await flush(); await flush();
+    for (let round = 0; round < 4; round += 1) { h.api.applyState(structuredClone(h.state)); await flush(); }
+    expect(calls).toHaveLength(1);
+    expect(h.el("assign-result").textContent).toBe("OBS did not return a catalog.");
+    h.api.requestWith(async (msg: RecordValue) => { calls.push(msg); return { data: msg.source ? detail(msg.source) : overview }; });
+    h.el("assign-refresh").fire("click"); await flush(); await flush();
+    expect(calls.filter((x) => !x.source)).toHaveLength(2);
+    expect(h.el("af-filter").options.map((x) => x.value)).toEqual(["", "A Filter"]);
   });
 });

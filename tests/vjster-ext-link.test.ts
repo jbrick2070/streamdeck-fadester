@@ -336,6 +336,66 @@ describe("LinkClient on its own", () => {
     expect(t.runNext()).toBe(MIN_BACKOFF_MS);
   });
 
+  // D-02: two clients for one target took the link from each other every 24 to 30 s, for ever.
+  it("after being replaced it asks only for a free link, every 24 to 30 s, until it is on the link again", () => {
+    const { made, open } = fakeSockets();
+    const t = fakeTimers();
+    const urls: string[] = [];
+    const told: boolean[] = [];
+    const client = new LinkClient({
+      url: () => "ws://127.0.0.1:48150/",
+      open: (url) => { urls.push(url); return open(); },
+      onIntent: () => undefined, newId: () => "k", timers: t.timers, random: () => 0, onStandby: (standby) => told.push(standby)
+    });
+    client.start();
+    made[0].fireOpen();
+    expect(client.standby).toBe(false);
+    made[0].fireClose(CLOSE_REPLACED);
+    expect(client.standby).toBe(true);
+    expect(told).toEqual([true]);
+    // The server refuses a standby attempt while the newer client is there: closed without an open, again and again.
+    for (let attempt = 1; attempt <= 4; attempt++) {
+      expect(t.runNext()).toBe(MAX_BACKOFF_MS);
+      expect(urls[attempt]).toBe("ws://127.0.0.1:48150/?standby=1");
+      made[attempt].fireClose(1006);
+      expect(client.standby).toBe(true);
+    }
+    // The one-minute check is a standby attempt too.
+    t.pending.splice(0);
+    client.stop();
+    client.start();
+    expect(urls.at(-1)).toBe("ws://127.0.0.1:48150/?standby=1");
+    // The newer client has gone: the attempt opens, and this client is an ordinary one again.
+    made.at(-1)!.fireOpen();
+    expect(client.standby).toBe(false);
+    expect(told).toEqual([true, false]);
+    made.at(-1)!.fireClose(1006);
+    expect(t.runNext()).toBe(MIN_BACKOFF_MS);
+    expect(urls.at(-1)).toBe("ws://127.0.0.1:48150/");
+  });
+
+  it("stands by from the start when told so, adds the parameter to an address with a query, and restart takes the link", () => {
+    const { made, open } = fakeSockets();
+    const t = fakeTimers();
+    const urls: string[] = [];
+    const told: boolean[] = [];
+    const client = new LinkClient({
+      url: () => "ws://127.0.0.1:48150/?token=abc",
+      open: (url) => { urls.push(url); return open(); },
+      onIntent: () => undefined, newId: () => "k", timers: t.timers, random: () => 0, target: "obs", onStandby: (standby) => told.push(standby)
+    });
+    // A worker that Chrome stopped while it stood by starts again as a standby client.
+    client.start({ standby: true });
+    expect(urls).toEqual(["ws://127.0.0.1:48150/?token=abc&standby=1"]);
+    made[0].fireClose(1006);
+    expect(t.pending[0].ms).toBe(MAX_BACKOFF_MS);
+    // The operator asked for the connection (the port was saved again): an ordinary attempt, at once.
+    client.restart();
+    expect(client.standby).toBe(false);
+    expect(told).toEqual([false]);
+    expect(urls.at(-1)).toBe("ws://127.0.0.1:48150/?token=abc");
+  });
+
   it("calls onOpen and onClose for its own socket", () => {
     const { made, open } = fakeSockets();
     const t = fakeTimers();

@@ -21,13 +21,13 @@ internal sealed class HostSession
     internal HostSession(BridgeConfig config, CommandIngress ingress, int generation,
         Func<string, JsonObject?, Task<JsonObject>> rpc, Func<double, double, Task> native,
         Func<bool> connected, CancellationToken stop, bool readOnly = false, Func<Task<int>>? nativeRead = null,
-        VjsterDesk? vjster = null)
+        VjsterDesk? vjster = null, Action<int, string, string>? onPick = null)
     {
         this.ingress = ingress; this.generation = generation; this.rpc = rpc;
         this.native = native ?? throw new ArgumentNullException(nameof(native));
         this.connected = connected; this.stop = stop; this.readOnly = readOnly; this.nativeRead = nativeRead;
         this.vjster = vjster;
-        Desk = new DeskActions(config, Call, nativeMove: Move, allowAutoCloseout: false);
+        Desk = new DeskActions(config, Call, nativeMove: Move, allowAutoCloseout: false, onPick: onPick);
     }
     void Current()
     {

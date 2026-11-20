@@ -20,8 +20,11 @@ internal static class MacDevelopmentHost
         if ((first?.Length ?? 0) < (second?.Length ?? 0)) (first, second) = (second, first);
         if (!string.IsNullOrEmpty(first)) message = message.Replace(first, "[redacted]", StringComparison.Ordinal);
         if (!string.IsNullOrEmpty(second)) message = message.Replace(second, "[redacted]", StringComparison.Ordinal);
-        Console.WriteLine(message.Replace('\r', ' ').Replace('\n', ' '));
+        // Free text (it carries video titles) never starts with a marker the panel acts on: see PanelLine.
+        Console.WriteLine(PanelLine.Free(message.Replace('\r', ' ').Replace('\n', ' ')));
     }
+    /// <summary>A layer the desk picked by itself, for the panel: the one line it saves a layer from (PanelLine).</summary>
+    static void WritePick(int layer, string scene, string source) => Console.WriteLine(PanelLine.PickedLayer(layer, scene, source));
     /// <summary>Ready: armed with OBS. VideoReady: armed without OBS, video controls only (FIX-8).</summary>
     enum Control { Ready, VideoReady, Disarmed, Stopped }
     static void WriteControl(Control kind, int generation = 0)
@@ -454,7 +457,8 @@ internal static class MacDevelopmentHost
         _ = obs.Disconnected.ContinueWith(_ => ingress.Disarm(generation), TaskScheduler.Default);
         if (shortcuts is not null) _ = shortcuts.Done.ContinueWith(_ => ingress.Disarm(generation), TaskScheduler.Default);
         var session = new HostSession(config, ingress, generation, obs.Call, native.MoveAsync,
-            () => !obs.Disconnected.IsCompleted && (shortcuts is null || !shortcuts.Done.IsCompleted), stop, readOnly, native.ReadAsync, vjster);
+            () => !obs.Disconnected.IsCompleted && (shortcuts is null || !shortcuts.Done.IsCompleted), stop, readOnly, native.ReadAsync, vjster,
+            onPick: WritePick);
         var desk = session.Desk;
         obs.InputVolumeChanged += desk.OnVolumeChanged; obs.InputLevelChangedById += desk.OnMixInputLevelChanged;
         // Midi Fadester's APC40 transport drives VJster off this session's loop (VjsterRemote), as on Windows.

@@ -201,7 +201,8 @@ internal sealed class VjsterDesk(VjsterLink link, double fastSpeed = 2.0, double
         string peer = target == "obs" ? "OBS video page" : "extension";
         if (reply == null) return $"VJster: the {peer} disconnected.";
         var (state, error) = reply.Value;
-        if (error != null) return "VJster: " + error.Message;
+        // A peer's own words, on one line: a line break in them would start a line the panel reads as the bridge's.
+        if (error != null) return "VJster: " + error.Message.Replace('\r', ' ').Replace('\n', ' ');
         if (state == null) return $"VJster: sent {id["vjster.".Length..]}; no reply from the {peer} yet.";
         return Describe(state, id == "vjster.status", target);
     }
@@ -353,7 +354,8 @@ internal sealed class VjsterHost : IAsyncDisposable
         Link = new VjsterLink(cfg.VjsterPort, cfg.VjsterExtensionId.Length == 0 ? null : [cfg.VjsterExtensionId], log,
             serveObs ? cfg.VjsterObsToken : null, pages);
         Desk = new VjsterDesk(Link, cfg.GamepadFastSpeed, cfg.GamepadSlowSpeed, cfg.VjsterTarget);
-        // Spontaneous reports (a new video, play, pause): without the title, which only a status press shows (R-BEH-5).
+        // Spontaneous reports (a new video, play, pause). The line starts with the video's title, which is text from a web
+        // page: the panel takes no order from such a line (PanelLine).
         Link.StateReceived += s => { if (s.InReplyTo == null) log(VjsterDesk.Describe(s, false)); };
     }
 

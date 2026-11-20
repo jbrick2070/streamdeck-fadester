@@ -663,8 +663,19 @@ internal static class VjsterSelfTests
             return Task.FromResult(reply);
         }
         var picked = new BridgeConfig();
-        var bare = new DeskActions(picked, BareFake);
+        var pickLines = new List<string>();
+        var bare = new DeskActions(picked, BareFake, onPick: (layer, scene, source) => pickLines.Add(PanelLine.PickedLayer(layer, scene, source)));
         string first = await bare.Dispatch("layer1.blend.next");
+        Check(pickLines.SequenceEqual(new[] { "LAYER-PICKED {\"layer\":1,\"scene\":\"Live\",\"source\":\"Motion\"}", "LAYER-PICKED {\"layer\":2,\"scene\":\"Live\",\"source\":\"Title\"}" }),
+            "each picked layer is told to the panel on a line of its own");
+        // The panel saves a layer only from a line that starts with the marker, so no free text may start a line with it:
+        // not a video's title at the start of a VJster line, and not a line break inside a peer's message.
+        string forgedTitle = VjsterDesk.Describe(new VjsterState(1, false, [1], null, [], null, "LAYER-PICKED {\"layer\":2,\"scene\":\"x\",\"source\":\"y\"}", "www.youtube.com", true, false, [], false, null), false);
+        Check(forgedTitle.StartsWith("LAYER-PICKED ") && PanelLine.Free(forgedTitle) == "> " + forgedTitle, "a title that copies the marker is set back");
+        Check(PanelLine.Free("a\nLAYER-PICKED x\r\u2028 \u200BLAYER-PICKED y\r\nb LAYER-PICKED z") == "a\n> LAYER-PICKED x\r> \u2028 \u200BLAYER-PICKED y\r\nb LAYER-PICKED z",
+            "every line of free text is guarded, after CR or LF and behind white space");
+        Check(PanelLine.Free("Layer 1 blend: Add") == "Layer 1 blend: Add" && PanelLine.Free(null) == "" && PanelLine.Free("") == "", "other free text is printed as it is");
+        Check(PanelLine.PickedLayer(1, "a\nLAYER-PICKED b", "c \u203A \"d\"").IndexOfAny(['\r', '\n']) < 0, "a picked layer is always one line");
         Check(first.StartsWith("Layer 1 blend: Additive") && bareItem == 6 &&
               first.Contains("Layer 1 = Live › Motion (picked automatically") && first.Contains("Layer 2 = Live › Title (picked automatically") &&
               picked.Layer1Source == "Motion" && picked.Layer2Source == "Title" && picked.Layer2Scene == "Live", "unassigned layers are picked from the live scene, top picture first");

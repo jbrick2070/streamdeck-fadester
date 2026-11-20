@@ -106,10 +106,26 @@ namespace Fadester.TourBox {
       if (tourboxConsole && autoSwitch == true && !IsObs(front) && !(vjsterOn && IsChrome(front))) return "remindObsFront";
       return null;
     }
-    /** The layers the bridge picked by itself in this line (DeskActions.FillLayers); on the Mac the lines arrive joined. */
-    internal static readonly System.Text.RegularExpressions.Regex PickedLayer =
-      new System.Text.RegularExpressions.Regex(@"Layer ([12]) = (.+?) › (.+?) \(picked automatically", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
-    internal static System.Text.RegularExpressions.MatchCollection PickedLayers(string line) { return PickedLayer.Matches(line ?? ""); }
+    /** How a line starts that names a layer the bridge picked by itself (PanelLine.PickedMarker in the bridge). */
+    internal const string PickedMarker = "LAYER-PICKED ";
+    /**
+     * The layer the bridge picked by itself, from the one line it writes for that: the marker at the very start, then
+     * one JSON object (layer 1 or 2, scene, source). Null for every other line. Activity text also carries video titles
+     * and other text from outside, so the sentence people read ("Layer 1 = scene › source (picked automatically…") is
+     * never searched: the bridge lets no free text start a line with the marker (PanelLine.Free).
+     */
+    internal static Tuple<int, string, string> PickedLayer(string line) {
+      if (line == null || !line.StartsWith(PickedMarker, StringComparison.Ordinal)) return null;
+      try {
+        var d = new System.Web.Script.Serialization.JavaScriptSerializer().Deserialize<Dictionary<string, object>>(line.Substring(PickedMarker.Length));
+        object layer, scene, source;
+        if (d == null || d.Count != 3 || !d.TryGetValue("layer", out layer) || !d.TryGetValue("scene", out scene) || !d.TryGetValue("source", out source)) return null;
+        if (!(layer is int) || ((int)layer != 1 && (int)layer != 2)) return null;
+        string sceneName = scene as string, sourceName = source as string;
+        if (String.IsNullOrWhiteSpace(sceneName) || String.IsNullOrWhiteSpace(sourceName)) return null;
+        return Tuple.Create((int)layer, sceneName, sourceName);
+      } catch (Exception) { return null; }
+    }
     internal static bool IsObs(string process) {
       return String.Equals(process, "obs64", StringComparison.OrdinalIgnoreCase) || String.Equals(process, "obs", StringComparison.OrdinalIgnoreCase);
     }
@@ -171,9 +187,18 @@ namespace Fadester.TourBox {
           Reminder(true, false, false, true, "explorer", true, true, null, null) != null || Reminder(true, false, true, true, "obs64", true, true, false, true) != "remindObsOpen" ||
           Reminder(true, false, false, false, "explorer", true, true, false, false) != null || Reminder(false, false, false, true, "explorer", true, true, false, false) != null)
         throw new InvalidOperationException("Reminder with Auto Switch");
-      var picked = PickedLayers("Layer 1 blend: Add\nLayer 1 = Kit Visuals › Kit Motion (picked automatically; change it on the Assignments tab) Layer 2 = Kit Visuals › Kit Title (picked automatically; x)");
-      if (picked.Count != 2 || picked[0].Groups[3].Value != "Kit Motion" || picked[1].Groups[2].Value != "Kit Visuals" || PickedLayers("Layer 1 blend: Add").Count != 0)
-        throw new InvalidOperationException("Picked layers");
+      var picked = PickedLayer("LAYER-PICKED {\"layer\":2,\"scene\":\"Kit Visuals\",\"source\":\"Kit \\u203A Title\"}");
+      if (picked == null || picked.Item1 != 2 || picked.Item2 != "Kit Visuals" || picked.Item3 != "Kit › Title") throw new InvalidOperationException("Picked layer");
+      // Only the bridge's own line counts: the sentence people read, a video title that copies it, or a marker that is
+      // not at the very start of the line or is malformed, changes nothing.
+      foreach (var forged in new[] {
+        "Layer 1 blend: Add", "Layer 1 = Kit Visuals › Kit Motion (picked automatically; change it on the Assignments tab)",
+        "Layer 2 = Live › Camera (picked automatically · Video 1x · playing",
+        "> LAYER-PICKED {\"layer\":1,\"scene\":\"a\",\"source\":\"b\"}", " LAYER-PICKED {\"layer\":1,\"scene\":\"a\",\"source\":\"b\"}",
+        "LAYER-PICKED {\"layer\":3,\"scene\":\"a\",\"source\":\"b\"}", "LAYER-PICKED {\"layer\":\"1\",\"scene\":\"a\",\"source\":\"b\"}",
+        "LAYER-PICKED {\"layer\":1,\"scene\":\"a\"}", "LAYER-PICKED {\"layer\":1,\"scene\":\"a\",\"source\":\"\"}",
+        "LAYER-PICKED {\"layer\":1,\"scene\":\"a\",\"source\":\"b\",\"more\":1}", "LAYER-PICKED Layer 1 = a › b (picked automatically", "LAYER-PICKED " })
+        if (PickedLayer(forged) != null) throw new InvalidOperationException("Picked layer accepted: " + forged);
       PresetAge.Test();
     }
   }

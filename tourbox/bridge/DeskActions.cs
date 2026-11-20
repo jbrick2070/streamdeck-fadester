@@ -8,7 +8,7 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
     Func<CancellationToken, IAsyncEnumerable<double>>? rampSteps = null, Func<double, double, Task>? nativeMove = null,
     DeskActions.Memory? resume = null, bool allowAutoCloseout = true,
     VisualSidechainMonitor? vsMonitor = null, Action<string>? onStatus = null, Func<long>? clockMs = null,
-    Func<int, CancellationToken, Task>? delayAsync = null)
+    Func<int, CancellationToken, Task>? delayAsync = null, Action<int, string, string>? onPick = null)
 {
     public const double MinQuantizeConfidence = 0.35;
     public const int MaxQuantizeWaitMs = 4000;
@@ -349,7 +349,8 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
      * 2026-11-17: the controls did nothing until both layers were picked, and a sound file picked by hand showed nothing).
      * Layer 1 is the topmost visible picture, Layer 2 the next one down: enabled, with video, a size above zero (a sound
      * file has none) and the only item of that name in the scene. Only empty layers are filled, in memory; the line
-     * returned tells the panel, which shows the choice on the Assignments tab and saves it.
+     * returned tells the operator, and onPick tells the panel (PanelLine.PickedLayer: a line of its own, which no video
+     * title or other free text can write), which shows the choice on the Assignments tab and saves it.
      */
     private async Task<string> FillLayers(string id)
     {
@@ -380,11 +381,13 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
         {
             cfg.Layer1Scene = scene; cfg.Layer1Source = picks[0]; picks.RemoveAt(0);
             said += $"\nLayer 1 = {scene} › {cfg.Layer1Source} (picked automatically; change it on the Assignments tab)";
+            onPick?.Invoke(1, scene, cfg.Layer1Source);
         }
         if (two && string.IsNullOrWhiteSpace(cfg.Layer2Source) && picks.Count > 0)
         {
             cfg.Layer2Scene = scene; cfg.Layer2Source = picks[0];
             said += $"\nLayer 2 = {scene} › {cfg.Layer2Source} (picked automatically; change it on the Assignments tab)";
+            onPick?.Invoke(2, scene, cfg.Layer2Source);
         }
         // Only the layer this control drives must exist; a pick for the other one is still said.
         bool forTwo = id.StartsWith("layer2");
@@ -619,5 +622,43 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
             ["recordActive"] = (await Get("GetRecordStatus"))["outputActive"]?.DeepClone(),
             ["visualSidechain"] = vsLine
         };
+    }
+}
+
+/// <summary>
+/// The lines the panel acts on, as opposed to the lines it only shows. Activity text also carries video titles and
+/// other text from outside (a peer's error message, an OBS name), so the panel must not find its orders in it: a
+/// picked layer is one line of its own that starts with <see cref="PickedMarker"/>, and every line of free text goes
+/// through <see cref="Free"/>, which never lets it start with that marker.
+/// </summary>
+internal static class PanelLine
+{
+    public const string PickedMarker = "LAYER-PICKED ";
+
+    /** The line for a layer the desk picked by itself (DeskActions.FillLayers): the marker and one JSON object, on one line. */
+    public static string PickedLayer(int layer, string scene, string source) =>
+        PickedMarker + new JsonObject { ["layer"] = layer, ["scene"] = scene, ["source"] = source }.ToJsonString();
+
+    /**
+     * Free text as it may be printed: a line of it that would start with the marker (after any white space or control
+     * characters, which a reader may trim) is set back behind "> ". CR and LF both start a new line for the panel.
+     */
+    public static string Free(string? text)
+    {
+        if (string.IsNullOrEmpty(text) || !text.Contains("LAYER-PICKED", StringComparison.Ordinal)) return text ?? "";
+        var result = new System.Text.StringBuilder(text.Length + 8);
+        int at = 0;
+        while (at <= text.Length)
+        {
+            int end = text.IndexOfAny(['\r', '\n'], at);
+            if (end < 0) end = text.Length;
+            int first = at;
+            while (first < end && (char.IsWhiteSpace(text[first]) || char.IsControl(text[first]) || char.GetUnicodeCategory(text[first]) == System.Globalization.UnicodeCategory.Format)) first++;
+            if (string.CompareOrdinal(text, first, "LAYER-PICKED", 0, "LAYER-PICKED".Length) == 0) result.Append("> ");
+            result.Append(text, at, end - at);
+            if (end < text.Length) result.Append(text[end]);
+            at = end + 1;
+        }
+        return result.ToString();
     }
 }

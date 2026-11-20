@@ -184,6 +184,17 @@ interface Peer {
   lastHeardAt: number;
   lastReaskAt: number;
   warnedMalformed: boolean;
+  /** A replaced client asked for this peer's target while it holds it; said once per peer. */
+  notedStandby: boolean;
+}
+
+/**
+ * A client that a newer one replaced asks again with `standby=1`: "only if nobody holds this target" (link-client.ts
+ * STANDBY_QUERY). Without it two clients for one target took the link from each other every 24 to 30 s.
+ */
+export function isStandbyRequest(url: string): boolean {
+  const query = url.includes("?") ? url.slice(url.indexOf("?") + 1) : "";
+  return new URLSearchParams(query).get("standby") === "1";
 }
 
 export class LinkServer {
@@ -441,6 +452,17 @@ export class LinkServer {
       this.obsToken
     );
     if (!verdict.ok) return this.refuse(verdict.reason, socket);
+    // The newer client keeps the link; the one it replaced gets it when the newer has gone (R-LNK-4).
+    const holder = isStandbyRequest(req.url ?? "/") ? this.peers.get(verdict.target) : undefined;
+    if (holder) {
+      socket.write("HTTP/1.1 409 Conflict\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
+      socket.destroy();
+      if (!holder.notedStandby) {
+        holder.notedStandby = true;
+        this.log.info(`a second ${verdict.target} connection is standing by; the newer one keeps the link`);
+      }
+      return;
+    }
     wss.handleUpgrade(req, socket, head, (ws) => this.accept(ws, verdict.target));
   }
 
@@ -452,7 +474,7 @@ export class LinkServer {
       previous.socket.close(CLOSE_REPLACED, "replaced by a newer connection");
     }
     const now = this.clock.now();
-    const peer: Peer = { socket, target, lastHeardAt: now, lastReaskAt: Number.NEGATIVE_INFINITY, warnedMalformed: false };
+    const peer: Peer = { socket, target, lastHeardAt: now, lastReaskAt: Number.NEGATIVE_INFINITY, warnedMalformed: false, notedStandby: false };
     this.peers.set(target, peer);
     this.log.info(`${target} connected`);
 

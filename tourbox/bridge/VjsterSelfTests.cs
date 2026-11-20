@@ -376,11 +376,27 @@ internal static class VjsterSelfTests
         for (int i = 0; i < 50 && link.LastState == null; i++) await Task.Delay(20);
         Check(link.LastState?.Rate == 2, "the newcomer's state is kept");
 
+        // The client that was replaced asks again with standby=1 (every 24 to 30 s): refused while the newer one holds
+        // the link, which it keeps; said once. Without this the two took the link from each other for ever.
+        Check(VjsterLink.IsStandbyRequest("standby=1") && VjsterLink.IsStandbyRequest("token=abc&standby=1") &&
+              !VjsterLink.IsStandbyRequest("") && !VjsterLink.IsStandbyRequest("standby=0") && !VjsterLink.IsStandbyRequest("token=standby"), "the standby parameter");
+        for (int knock = 0; knock < 2; knock++)
+        {
+            try { using var waiting = await Connect(port, Ext, "?standby=1"); throw new Exception("VJster self-test: a standby connection took a held link"); }
+            catch (WebSocketException) { }
+        }
+        Check(link.Connected && second.State == WebSocketState.Open && link.LastState?.Rate == 2, "the holder keeps the link and its state when a standby client knocks");
+        lock (lines) logged = lines.ToArray();
+        Check(logged.Count(l => l.Contains("standing by")) == 1, "a standby client is said once per holder");
+
         // Pinned to one id: another extension is refused, the pinned one accepted.
         await using var pinned = new VjsterLink(0, ["abcdefghijklmnopabcdefghijklmnop"], _ => { });
         await pinned.StartAsync();
         try { await Connect(pinned.BoundPort, OtherExt); throw new Exception("VJster self-test: an unpinned extension was accepted"); }
         catch (WebSocketException) { }
+        // A standby connection for a target nobody holds is an ordinary one.
+        using (var free = await Connect(pinned.BoundPort, Ext, "?standby=1"))
+            Check((await Receive(free)).Contains("state.get"), "a standby client takes a free link");
         using var ok = await Connect(pinned.BoundPort, Ext);
         Check((await Receive(ok)).Contains("state.get"), "the pinned extension connects");
         await pinned.StopAsync();

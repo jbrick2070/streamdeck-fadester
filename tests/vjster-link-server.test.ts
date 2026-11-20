@@ -418,6 +418,39 @@ describe("LinkServer: connections and messages (R-LNK-3..5, PLAN.md 3.3)", () =>
     expect(events.filter((e) => e.type === "disconnected")).toHaveLength(0);
   });
 
+  // D-02: the client a newer one replaced asks again with standby=1, and gets the link only when it is free.
+  it("refuses a standby connection while the target is held, without touching the holder, and takes it when the target is free", async () => {
+    const { port, server, events, infos } = await startServer();
+    const older = await connect(port, { origin: EXT_ORIGIN });
+    await nextMessage(older);
+    const olderClosed = closed(older);
+    const newer = await connect(port, { origin: EXT_ORIGIN });
+    await nextMessage(newer);
+    expect(await olderClosed).toBe(4000);
+    // The older client knocks, as it does every 24 to 30 s: refused, and the newer one is not closed.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await expect(connect(port, { origin: EXT_ORIGIN, path: "/?standby=1" })).rejects.toThrow(/409/);
+    }
+    expect(server.isConnected("browser")).toBe(true);
+    server.send("browser", { type: "speed.reset" });
+    expect(await nextMessage(newer)).toMatchObject({ type: "speed.reset" });
+    expect(events.filter((e) => e.type === "disconnected")).toHaveLength(0);
+    expect(infos.filter((line) => line.includes("standing by"))).toHaveLength(1);
+    // The newer client leaves: the next standby attempt is taken.
+    const newerClosed = closed(newer);
+    newer.close();
+    await newerClosed;
+    await until(() => !server.isConnected("browser"));
+    const back = await connect(port, { origin: EXT_ORIGIN, path: "/?standby=1" });
+    expect(await nextMessage(back)).toMatchObject({ type: "state.get" });
+    expect(server.isConnected("browser")).toBe(true);
+    // And a client that is not standing by still takes the link from whoever holds it (R-LNK-4).
+    const backClosed = closed(back);
+    const third = await connect(port, { origin: EXT_ORIGIN });
+    await nextMessage(third);
+    expect(await backClosed).toBe(4000);
+  });
+
   it("reports a disconnect exactly once when the extension goes away", async () => {
     const { port, events, server } = await startServer();
     const ws = await connect(port, { origin: EXT_ORIGIN });

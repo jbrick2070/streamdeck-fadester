@@ -10,7 +10,7 @@ import { FROM_BRIDGE, FROM_PAGE } from "../vjster-extension/src/messages.js";
 import { NO_VIDEO } from "../vjster-extension/src/page-state.js";
 import { claimPage, listenToBridge, postReport, type PageWindow } from "../vjster-extension/src/page-wiring.js";
 import { ALL_SITES_IDS, ALL_SITES_SCRIPTS, allSitesChecked, linkUrl, readPort } from "../vjster-extension/src/settings.js";
-import { ALARM, NO_QUALITY_NOTE, installWorker, type WorkerChrome } from "../vjster-extension/src/worker-core.js";
+import { ALARM, NO_QUALITY_NOTE, STANDBY_NOTE, installWorker, type WorkerChrome } from "../vjster-extension/src/worker-core.js";
 import { videoControl } from "../vjster-extension/src/generic-video.js";
 import { CORE_METHODS, QUALITY_METHODS, findYouTubePlayer, hasQualityApi, isYouTubeHost, youTubeControl, type YouTubePlayerElement } from "../vjster-extension/src/youtube.js";
 
@@ -145,7 +145,7 @@ describe("page boundary (main world)", () => {
 });
 
 /** The worker's options: the all-sites choice as stored, Chrome's permission, the scripting API, and what Chrome has registered. */
-type WorkerOpts = { port?: unknown; pinned?: unknown; allSites?: unknown; granted?: boolean; scripting?: boolean; registered?: string[]; scriptingMs?: number };
+type WorkerOpts = { port?: unknown; pinned?: unknown; standby?: unknown; allSites?: unknown; granted?: boolean; scripting?: boolean; registered?: string[]; scriptingMs?: number };
 
 /** A chrome object with just what the worker uses, driven by the test. */
 function fakeChrome(opts: WorkerOpts = {}) {
@@ -200,7 +200,7 @@ function fakeChrome(opts: WorkerOpts = {}) {
     storage: {
       local: { get: async () => ({ "vjster.port": opts.port ?? 48151, "vjster.allSites": opts.allSites ?? true }) },
       session: {
-        get: async () => ({ "vjster.pinnedTab": opts.pinned ?? null }),
+        get: async () => ({ "vjster.pinnedTab": opts.pinned ?? null, ...(opts.standby === undefined ? {} : { "vjster.linkStandby": opts.standby }) }),
         set: async (items: Record<string, unknown>) => void sessionSets.push(items)
       },
       onChanged: event<[Record<string, { newValue?: unknown }>, string]>()
@@ -392,6 +392,29 @@ describe("service worker wiring (R-LNK-3, R-TGT-1..4)", () => {
     fire(5, "www.youtube.com", ["speed", "transport"]); // a new page in a reused tab id is noted again
     expect(logged).toEqual([NO_QUALITY_NOTE, NO_QUALITY_NOTE]);
     expect(NO_QUALITY_NOTE).not.toMatch(/http|youtube\.com/);
+  });
+
+  // D-02: Chrome stops an idle worker; the next one must not take the link back from the newer copy as a new client.
+  it("remembers for the session that another copy took the link, and starts again as a standby client", async () => {
+    const first = await bootWorker();
+    expect(first.opened.map((o) => o.url)).toEqual(["ws://127.0.0.1:48151/"]);
+    first.opened[0].socket.open();
+    // The server's close when a newer connection for the same target arrives (R-LNK-4).
+    (first.opened[0].socket as { readyState: number }).readyState = 3;
+    first.opened[0].socket.onclose?.({ code: 4000 });
+    await flush();
+    expect(first.sessionSets).toContainEqual({ "vjster.linkStandby": true });
+    expect(first.logged).toContain(STANDBY_NOTE);
+    expect(first.worker.link.standby).toBe(true);
+    first.worker.link.stop();
+    const next = await bootWorker({ standby: true });
+    expect(next.opened.map((o) => o.url)).toEqual(["ws://127.0.0.1:48151/?standby=1"]);
+    // On the link again (the other copy has gone): an ordinary client, and the session says so.
+    next.opened[0].socket.open();
+    await flush();
+    expect(next.sessionSets).toContainEqual({ "vjster.linkStandby": false });
+    expect(next.worker.link.standby).toBe(false);
+    next.worker.link.stop();
   });
 
   it("saves the pin in session storage", async () => {

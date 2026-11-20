@@ -29,12 +29,21 @@ export interface LinkClientOptions {
   random?: () => number;
   /** Which target this client is: the extension (default) or the OBS page (Phase 2). */
   target?: Target;
+  /** Told when this client gives the link up to a newer one (true) and when it holds the link again (false). */
+  onStandby?(standby: boolean): void;
 }
 
 export const MIN_BACKOFF_MS = 1000;
 export const MAX_BACKOFF_MS = 30_000;
 /** The server closed this socket because a newer one for the same target took over (R-LNK-4). */
 export const CLOSE_REPLACED = 4000;
+/**
+ * Added to the address by a client that was replaced: "take me only if nobody holds this target". The server refuses
+ * such a connection while the newer client is there, so two clients for one target (two OBS sources with the VJster
+ * page, the extension in two Chrome profiles) do not take the link from each other in turns. A server that does not
+ * know the parameter ignores it.
+ */
+export const STANDBY_QUERY = "standby=1";
 const CONNECTING = 0;
 const OPEN = 1;
 
@@ -43,6 +52,8 @@ export class LinkClient {
   private retryTimer: unknown = null;
   private backoff = MIN_BACKOFF_MS;
   private running = false;
+  /** Replaced by a newer client and not back on the link since: every attempt is a standby one. */
+  private standingBy = false;
   private readonly timers: NonNullable<LinkClientOptions["timers"]>;
   private readonly random: () => number;
 
@@ -65,9 +76,19 @@ export class LinkClient {
     return this.backoff;
   }
 
-  start(): void {
+  /** A newer client holds this target's link; this one asks only for a free link until it is on it again. */
+  get standby(): boolean {
+    return this.standingBy;
+  }
+
+  /**
+   * `standby`: this client was replaced before it was stopped (the extension's worker, which Chrome stops and starts
+   * again, remembers it), so it goes on asking for a free link only.
+   */
+  start(options: { standby?: boolean } = {}): void {
     if (this.running) return;
     this.running = true;
+    if (options.standby) this.standingBy = true;
     this.connect();
   }
 
@@ -90,6 +111,8 @@ export class LinkClient {
   restart(): void {
     this.stop();
     this.backoff = MIN_BACKOFF_MS;
+    // The operator asked for this connection: it takes the link like a new client.
+    this.setStandby(false);
     this.start();
   }
 
@@ -103,7 +126,8 @@ export class LinkClient {
     this.retryTimer = null;
     let socket: SocketLike;
     try {
-      socket = this.options.open(this.options.url());
+      const url = this.options.url();
+      socket = this.options.open(this.standingBy ? `${url}${url.includes("?") ? "&" : "?"}${STANDBY_QUERY}` : url);
     } catch {
       return this.scheduleRetry();
     }
@@ -111,6 +135,8 @@ export class LinkClient {
     socket.onopen = () => {
       if (this.socket !== socket) return;
       this.backoff = MIN_BACKOFF_MS;
+      // The link was free (or the server is an older one, which lets the latest connection win).
+      this.setStandby(false);
       this.options.onOpen?.();
     };
     socket.onmessage = (ev) => {
@@ -124,13 +150,24 @@ export class LinkClient {
       // Replaced by another copy of the extension (a second Chrome profile, say):
       // wait the longest delay before taking the link back, so the two do not trade it every second.
       if (closeCode(ev) === CLOSE_REPLACED) this.backoff = MAX_BACKOFF_MS;
+      // From here on it asks only for a free link (a refused attempt closes without this code and changes nothing):
+      // the newer client keeps the link until it leaves.
+      if (closeCode(ev) === CLOSE_REPLACED) this.setStandby(true);
       this.options.onClose?.();
       this.scheduleRetry();
     };
   }
 
+  private setStandby(standby: boolean): void {
+    if (this.standingBy === standby) return;
+    this.standingBy = standby;
+    this.options.onStandby?.(standby);
+  }
+
   private scheduleRetry(): void {
     if (!this.running || this.retryTimer !== null) return;
+    // A client standing by looks every 24 to 30 s whether the link is free, never faster.
+    if (this.standingBy) this.backoff = MAX_BACKOFF_MS;
     // Up to 20 % jitter, so many tabs reloading do not reconnect in lockstep.
     const delay = Math.round(this.backoff * (1 - 0.2 * this.random()));
     this.backoff = Math.min(MAX_BACKOFF_MS, this.backoff * 2);

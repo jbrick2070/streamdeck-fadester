@@ -6,6 +6,8 @@ import { DEFAULT_LINK_PORT, LINK_HOST } from "../../src/vjster/shared/protocol.j
 export const PORT_KEY = "vjster.port";
 export const ALL_SITES_KEY = "vjster.allSites";
 export const PIN_KEY = "vjster.pinnedTab";
+/** Session storage: another copy of the extension took the link and this one stands by (it outlives a worker restart). */
+export const STANDBY_KEY = "vjster.linkStandby";
 
 /** A port the user may choose: 1024 to 65535. */
 export function readPort(value: unknown): number {

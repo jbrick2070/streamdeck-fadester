@@ -64,7 +64,7 @@ function drawnTexts(): Array<{ key: StringKey; params?: TextParams; boxes: Box[]
   const texts: Array<{ key: StringKey; params?: TextParams; boxes: Box[] }> = [];
   const add = (key: StringKey, boxes: Box[], params?: TextParams): void => { texts.push({ ...sample(key, params), boxes }); };
 
-  for (const key of ["statusUnreachableShort", "statusWrongPasswordShort"] as const) add(key, reasons);
+  for (const key of ["statusUnreachableShort", "statusWebsocketOffShort", "statusObsNotRunningShort", "statusWrongPasswordShort"] as const) add(key, reasons);
   add("statusMissingPlugin", reasons, { plugin: "Midi Fadester" });
   add("statusVersionMismatchShort", reasons, { surface: "Fadester for OBS" });
   for (const key of ["errorDisconnected", "errorConnectionReset"] as const) add(key, [B.keySub, B.layerStatus]);
@@ -198,7 +198,8 @@ function drawnTexts(): Array<{ key: StringKey; params?: TextParams; boxes: Box[]
 
 /** Keys never drawn on the deck: inspector texts and full status sentences, kept out of the boxes on purpose. */
 const NOT_ON_DECK = new Set<StringKey>([
-  "statusUnreachable", "statusWrongPassword", "statusVersionMismatch", "statusConnectedDirect",
+  "statusUnreachable", "statusWebsocketOff", "statusObsNotRunning", "statusWrongPassword", "statusWrongPasswordRetrying",
+  "statusVersionMismatch", "statusConnectedDirect",
   "statusConnectedVendor", "statusConnectedVendorBuild", "errorEmptyScreenshot",
   "audioMainAutomatic", "audioMicAutomatic", "audioAuxAutomatic", "audioInputAutomatic",
   "setupErrorStudio", "setupErrorFallback", "piChooseSlot", "piEnabledNotApplied",

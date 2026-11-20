@@ -11,12 +11,14 @@ export function migrateAutomaticInputSettings<T extends {
   presetBindingsVersion?: number;
 }>(raw: T): T {
   if (raw.presetBindingsVersion === 1) return raw;
-  const label = raw.labelOverride?.trim().toLowerCase() ?? "";
+  // Stored settings are not always text (a hand-edited or imported profile): anything else is "no label", "no input".
+  const text = (value: unknown): string => (typeof value === "string" ? value : "");
+  const label = text(raw.labelOverride).trim().toLowerCase();
   const inputName = /^(music|desktop|audio)( down| up)?$/.test(label) ? "__audio_main__"
     : /^mic( down| up)?$/.test(label) ? "__audio_mic__"
     : /^aux( down| up)?$/.test(label) ? "__audio_input_2__" : undefined;
   if (!inputName) return raw;
-  return { ...raw, inputName: raw.inputName?.trim() ? raw.inputName : inputName, presetBindingsVersion: 1 };
+  return { ...raw, inputName: text(raw.inputName).trim() ? raw.inputName : inputName, presetBindingsVersion: 1 };
 }
 
 function indexedAudioTarget(target: string): number | undefined {

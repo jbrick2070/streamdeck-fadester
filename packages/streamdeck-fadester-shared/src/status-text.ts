@@ -6,9 +6,13 @@ import { LocalText, Translate, englishShared, ownText, wordText } from "./i18n.j
 export function statusSentenceText(status: ConnectionStatusInfo): LocalText {
   switch (status.kind) {
     case "obs_unreachable":
+      if (status.unreachableReason === "websocket_off") return ownText("statusWebsocketOff");
+      if (status.unreachableReason === "obs_not_running") return ownText("statusObsNotRunning");
       return ownText("statusUnreachable");
     case "wrong_password":
-      return ownText("statusWrongPassword");
+      return status.retrySeconds
+        ? ownText("statusWrongPasswordRetrying", { seconds: status.retrySeconds })
+        : ownText("statusWrongPassword");
     case "missing_plugin":
       return ownText("statusMissingPlugin", { plugin: status.pluginName ?? "" });
     case "version_mismatch":
@@ -36,6 +40,8 @@ export function statusSentenceText(status: ConnectionStatusInfo): LocalText {
 export function statusCellReasonText(status: ConnectionStatusInfo): LocalText | null {
   switch (status.kind) {
     case "obs_unreachable":
+      if (status.unreachableReason === "websocket_off") return ownText("statusWebsocketOffShort");
+      if (status.unreachableReason === "obs_not_running") return ownText("statusObsNotRunningShort");
       return ownText("statusUnreachableShort");
     case "wrong_password":
       return ownText("statusWrongPasswordShort");

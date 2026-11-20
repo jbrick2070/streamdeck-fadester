@@ -479,6 +479,119 @@ describe("Direct OBS client", () => {
     expect(direct.getCatalog().currentPreviewScene).toBe("Scene Live");
   });
 
+  it("puts a scene's own transition back after the next connection when the link dropped during the switch", async () => {
+    const fake = new FakeObsServer({ missingPlugin: true });
+    server = fake;
+    fake.sceneTransitionOverrides.set("Scene 3", { transitionName: "Fade to Black", transitionDuration: 1750 });
+    type Handler = (ws: WebSocket, id: string, type: string, data: Record<string, unknown>) => Promise<void>;
+    const native = fake as unknown as { handleObsRequest: Handler };
+    const original = native.handleObsRequest.bind(fake);
+    let dropped = false;
+    native.handleObsRequest = async (ws, id, type, data) => {
+      if (!dropped && type === "SetCurrentProgramScene") {
+        dropped = true; // the link dies between the temporary override and the switch
+        ws.terminate();
+        return;
+      }
+      await original(ws, id, type, data);
+    };
+    const port = await fake.start();
+    const c = new DirectObsClient({ host: "127.0.0.1", port, password: "" }, { baseReconnectMs: 30, maxReconnectMs: 60 });
+    client = c;
+    c.start();
+    await vi.waitFor(() => expect(c.getStatus().kind).toBe("connected"), { timeout: 3000 });
+    await expect(c.runSceneAction("Scene 3", "cut")).rejects.toThrow();
+    // OBS is left holding the temporary Cut on that scene...
+    expect(fake.sceneTransitionOverrides.get("Scene 3")?.transitionName).toBe("Cut");
+    // ...until the client is back.
+    await vi.waitFor(() => expect(fake.sceneTransitionOverrides.get("Scene 3")).toEqual({
+      transitionName: "Fade to Black", transitionDuration: 1750
+    }), { timeout: 3000 });
+  });
+
+  it("does not put back an override the user changed in OBS while the link was down", async () => {
+    const fake = new FakeObsServer({ missingPlugin: true });
+    server = fake;
+    type Handler = (ws: WebSocket, id: string, type: string, data: Record<string, unknown>) => Promise<void>;
+    const native = fake as unknown as { handleObsRequest: Handler };
+    const original = native.handleObsRequest.bind(fake);
+    let dropped = false;
+    native.handleObsRequest = async (ws, id, type, data) => {
+      if (!dropped && type === "SetCurrentProgramScene") {
+        dropped = true;
+        // The user picks another transition for the scene in OBS, then the link dies.
+        fake.sceneTransitionOverrides.set("Scene 3", { transitionName: "Fade", transitionDuration: 900 });
+        ws.terminate();
+        return;
+      }
+      await original(ws, id, type, data);
+    };
+    const port = await fake.start();
+    const c = new DirectObsClient({ host: "127.0.0.1", port, password: "" }, { baseReconnectMs: 30, maxReconnectMs: 60 });
+    client = c;
+    c.start();
+    await vi.waitFor(() => expect(c.getStatus().kind).toBe("connected"), { timeout: 3000 });
+    await expect(c.runSceneAction("Scene 3", "cut")).rejects.toThrow();
+    await vi.waitFor(() => expect(c.getConnectAttemptCount()).toBe(2), { timeout: 3000 });
+    await vi.waitFor(() => expect(c.getStatus().kind).toBe("connected"), { timeout: 3000 });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(fake.sceneTransitionOverrides.get("Scene 3")).toEqual({ transitionName: "Fade", transitionDuration: 900 });
+  });
+
+  it("is not 'connected' on a socket that closed during the first catalog read (A-03)", async () => {
+    const fake = new FakeObsServer({ missingPlugin: true });
+    server = fake;
+    type Handler = (ws: WebSocket, id: string, type: string, data: Record<string, unknown>) => Promise<void>;
+    const native = fake as unknown as { handleObsRequest: Handler };
+    const original = native.handleObsRequest.bind(fake);
+    let closedOnce = false;
+    native.handleObsRequest = async (ws, id, type, data) => {
+      if (!closedOnce && type === "GetSceneList") {
+        closedOnce = true; // OBS quits right after it was started
+        ws.terminate();
+        return;
+      }
+      await original(ws, id, type, data);
+    };
+    const port = await fake.start();
+    const c = new DirectObsClient({ host: "127.0.0.1", port, password: "" }, { baseReconnectMs: 60, maxReconnectMs: 120 });
+    client = c;
+    const readyOn: Array<{ identified: boolean; attempt: number; scenes: number }> = [];
+    c.on("connectionReady", () => readyOn.push({ identified: c.isIdentified(), attempt: c.getConnectAttemptCount(), scenes: c.getCatalog().scenes.length }));
+    const connectedOn: number[] = [];
+    c.on("statusChanged", (status: { kind: string }) => { if (status.kind === "connected") connectedOn.push(c.getConnectAttemptCount()); });
+    c.start();
+    await vi.waitFor(() => expect(c.getStatus().kind).toBe("connected"), { timeout: 3000 });
+    // Only the second attempt, on a live socket with a scene list, was declared connected.
+    expect(connectedOn).toEqual([2]);
+    expect(readyOn).toEqual([{ identified: true, attempt: 2, scenes: 3 }]);
+  });
+
+  it("does not declare 'connected' without a scene list: it drops the socket and tries again (A-03)", async () => {
+    const fake = new FakeObsServer({ missingPlugin: true });
+    server = fake;
+    type Handler = (ws: WebSocket, id: string, type: string, data: Record<string, unknown>) => Promise<void>;
+    const native = fake as unknown as { handleObsRequest: Handler };
+    const original = native.handleObsRequest.bind(fake);
+    let stalled = false;
+    native.handleObsRequest = async (ws, id, type, data) => {
+      if (!stalled && type === "GetSceneList") {
+        stalled = true; // no answer to the scene list, the socket stays open
+        return;
+      }
+      await original(ws, id, type, data);
+    };
+    const port = await fake.start();
+    const c = new DirectObsClient({ host: "127.0.0.1", port, password: "" }, { requestTimeoutMs: 150, baseReconnectMs: 30 });
+    client = c;
+    const connectedOn: number[] = [];
+    c.on("statusChanged", (status: { kind: string }) => { if (status.kind === "connected") connectedOn.push(c.getConnectAttemptCount()); });
+    c.start();
+    await vi.waitFor(() => expect(c.getStatus().kind).toBe("connected"), { timeout: 4000 });
+    expect(connectedOn).toEqual([2]);
+    expect(c.getCatalog().scenes.length).toBe(3);
+  });
+
   it("restores the destination scene override when a scene switch fails", async () => {
     const direct = await connect();
     server!.sceneTransitionOverrides.set("Scene 3", {

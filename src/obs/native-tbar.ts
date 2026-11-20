@@ -3,7 +3,6 @@
 // Automation (uia-worker.ts) or macOS Accessibility AXUIElement (ax-worker.ts). OBS ignores obs-websocket's
 // SetTBarPosition for its visible slider (obsproject/obs-studio#11372), and its release reads that slider: so a throw
 // that moves the real slider is the one that follows on screen and finishes or cancels cleanly with a single release.
-import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -20,6 +19,8 @@ export const UIA_READ_TIMEOUT_MS = 500;
 export const UIA_BOOT_TIMEOUT_MS = 1500;
 /** Maximum wait for a busy-tainted worker's late reply before reconciliation gives up on native slider recovery. */
 export const UIA_TAINT_DRAIN_MS = 1200;
+/** A worker closed while a call was still running gets this long to finish it and release its handles by itself. */
+export const UIA_STUCK_TERMINATE_MS = 10000;
 
 /** Ensures macOS Accessibility consent is requested at most once per plugin process lifetime across OBS reconnects. */
 let darwinAxPromptBudget = true;
@@ -132,16 +133,6 @@ export function builtAxWorkerPath(): string | undefined {
   }
 }
 
-/** Legacy helper lookup kept only for compatibility; FadesterNativeSlider.exe is no longer bundled or used by default. */
-export function bundledNativeTbarPath(): string | undefined {
-  try {
-    const path = join(dirname(fileURLToPath(import.meta.url)), "native", "FadesterNativeSlider.exe");
-    return existsSync(path) ? path : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 /** Minimal worker surface used by NativeTbarUia so fake workers can exercise timeouts and taint on any OS. */
 export interface UiaWorkerLike {
   postMessage(message: UiaWorkerRequest): void;
@@ -158,9 +149,10 @@ export interface NativeTbarUiaOptions {
   readTimeoutMs?: number;
   bootTimeoutMs?: number;
   taintDrainMs?: number;
+  /** How long a worker that was closed while still inside a call may take to end by itself before it is terminated. */
+  stuckTerminateMs?: number;
 }
 
-const REPLY_TIMEOUT_MS = 3000;
 const PARK_POLLS = 24;
 const PARK_POLL_MS = 25;
 
@@ -178,13 +170,15 @@ interface InFlightCall {
 /**
  * In-plugin Windows UI Automation backend (Route B). Keeps one COM MTA worker thread per OBS connection, enforces an
  * ~80 ms per-call deadline, and quarantines a timed-out call as busy-tainted until its late reply arrives and a fresh
- * read() confirms the slider's position. Never terminates the worker mid-COM-call.
+ * read() confirms the slider's position. A call is never cut off while the connection lives; close() asks the worker
+ * to release its handles and end by itself, and only a worker still stuck in a call long after that is terminated.
  */
 export class NativeTbarUia implements NativeTbar {
   private readonly callTimeoutMs: number;
   private readonly readTimeoutMs: number;
   private readonly bootTimeoutMs: number;
   private readonly taintDrainMs: number;
+  private readonly stuckTerminateMs: number;
   private readonly createWorker: (port: number) => UiaWorkerLike;
   private worker: UiaWorkerLike | null = null;
   private bootPromise: Promise<void> | null = null;
@@ -205,6 +199,7 @@ export class NativeTbarUia implements NativeTbar {
     this.readTimeoutMs = options.readTimeoutMs ?? options.callTimeoutMs ?? UIA_READ_TIMEOUT_MS;
     this.bootTimeoutMs = options.bootTimeoutMs ?? UIA_BOOT_TIMEOUT_MS;
     this.taintDrainMs = options.taintDrainMs ?? UIA_TAINT_DRAIN_MS;
+    this.stuckTerminateMs = options.stuckTerminateMs ?? UIA_STUCK_TERMINATE_MS;
     if (options.workerFactory) {
       this.createWorker = options.workerFactory;
     } else {
@@ -275,7 +270,10 @@ export class NativeTbarUia implements NativeTbar {
     }
     const worker = this.worker;
     if (!worker) return;
-    const finishShutdown = (): void => {
+    // An idle worker runs its "close" handler at once (it releases the slider, the process handle and COM, then closes
+    // its port and ends by itself), so 60 ms is ample. A worker still inside a call cannot run that handler yet: it is
+    // left to finish the call and close by itself, and is terminated only when it is still stuck long afterwards.
+    const finishShutdown = (stuck: boolean): void => {
       if (this.worker !== worker) return;
       this.worker = null;
       this.bootPromise = null;
@@ -284,19 +282,23 @@ export class NativeTbarUia implements NativeTbar {
       } catch {
         // worker already closed
       }
+      let exited = false;
+      worker.on("exit", () => {
+        exited = true;
+      });
       setTimeout(() => {
-        void worker.terminate().catch(() => undefined);
-      }, 60).unref?.();
+        if (!exited) void worker.terminate().catch(() => undefined);
+      }, stuck ? this.stuckTerminateMs : 60).unref?.();
     };
     if (active) {
-      const fallback = setTimeout(finishShutdown, Math.min(this.taintDrainMs, 600));
+      const fallback = setTimeout(() => finishShutdown(true), Math.min(this.taintDrainMs, 600));
       fallback.unref?.();
       void active.idlePromise.then(() => {
         clearTimeout(fallback);
-        finishShutdown();
+        finishShutdown(false);
       });
     } else {
-      finishShutdown();
+      finishShutdown(false);
     }
   }
 
@@ -519,139 +521,4 @@ export function defaultNativeTbar(port: number): NativeTbar | undefined {
     return workerPath ? new NativeTbarUia(port, { workerPath }) : undefined;
   }
   return undefined;
-}
-
-/**
- * Legacy out-of-process helper driver kept for stand-in protocol tests; FadesterNativeSlider.exe is not bundled.
- */
-export class NativeTbarHelper implements NativeTbar {
-  private child: ChildProcessWithoutNullStreams | null = null;
-  private buffer = "";
-  private waiting: { resolve: (line: string) => void; reject: (error: Error) => void } | null = null;
-  private queue: Promise<unknown> = Promise.resolve();
-  private retired = false;
-
-  /** `prefix` goes before the helper's own arguments (tests run a stand-in script under Node). */
-  public constructor(
-    private readonly exe: string,
-    private readonly port: number,
-    private readonly prefix: string[] = [],
-    private readonly replyTimeoutMs = REPLY_TIMEOUT_MS
-  ) {}
-
-  public read(): Promise<number> {
-    return this.serial(() => this.request("READ")).then((tick) => tick / NATIVE_TBAR_MAX);
-  }
-
-  public async move(from: number, to: number): Promise<number> {
-    const expected = nativeTick(from);
-    const next = nativeTick(to);
-    if (expected === next) {
-      // OBS parks its slider asynchronously after a release: wait for it, never pull a hand's slider back.
-      for (let attempt = 0; attempt < PARK_POLLS; attempt++) {
-        if (nativeTick(await this.read()) === next) return to;
-        await new Promise((resolve) => setTimeout(resolve, PARK_POLL_MS));
-      }
-      throw new NativeTbarUncertain("OBS did not park its T-bar where expected.");
-    }
-    const actual = await this.serial(() => this.request(`${expected} ${next}`));
-    if (actual !== next) throw new NativeTbarUncertain("OBS did not confirm the new T-bar position.");
-    return actual / NATIVE_TBAR_MAX;
-  }
-
-  public close(): void {
-    this.retired = true; // a request still queued must not start a helper nobody will close
-    this.reset();
-  }
-
-  /** Lets the running helper go; the next request starts a fresh one. */
-  private reset(): void {
-    const child = this.child;
-    this.child = null;
-    this.buffer = "";
-    const waiting = this.waiting;
-    this.waiting = null;
-    waiting?.reject(new NativeTbarUncertain("The OBS slider helper closed."));
-    if (child) {
-      child.stdin.end();
-      if (child.exitCode === null) setTimeout(() => { if (child.exitCode === null) child.kill(); }, 200).unref();
-    }
-  }
-
-  private serial<T>(operation: () => Promise<T>): Promise<T> {
-    const run = this.queue.then(operation, operation);
-    this.queue = run.catch(() => undefined);
-    return run;
-  }
-
-  private start(): ChildProcessWithoutNullStreams {
-    if (this.child && this.child.exitCode === null) return this.child;
-    this.buffer = ""; // nothing a helper that exited left half-written belongs to the next one
-    const child = spawn(this.exe, [...this.prefix, "--port", String(this.port)], { windowsHide: true, stdio: ["pipe", "pipe", "pipe"] });
-    child.stdout.setEncoding("utf8");
-    child.stdout.on("data", (chunk: string) => {
-      // A helper closed after a timeout can still answer late: its line must never confirm the next helper's request.
-      if (this.child !== child) return;
-      this.buffer += chunk;
-      let newline: number;
-      while ((newline = this.buffer.indexOf("\n")) >= 0) {
-        const line = this.buffer.slice(0, newline).replace(/\r$/, "");
-        this.buffer = this.buffer.slice(newline + 1);
-        const waiting = this.waiting;
-        this.waiting = null;
-        waiting?.resolve(line);
-      }
-    });
-    child.stderr.resume();
-    const lost = (): void => {
-      if (this.child !== child) return;
-      this.child = null;
-      const waiting = this.waiting;
-      this.waiting = null;
-      waiting?.reject(new NativeTbarUncertain("Lost the OBS slider helper."));
-    };
-    child.on("exit", lost);
-    child.on("error", lost);
-    child.stdin.on("error", lost); // a write to a helper that already exited
-    this.child = child;
-    return child;
-  }
-
-  private async request(line: string): Promise<number> {
-    if (this.retired) throw new NativeTbarRefusal("The OBS slider helper was closed.");
-    let reply: string;
-    try {
-      const child = this.start();
-      reply = await new Promise<string>((resolveLine, rejectLine) => {
-        const timer = setTimeout(() => {
-          this.waiting = null;
-          rejectLine(new NativeTbarTimeout("The OBS slider helper did not answer."));
-        }, this.replyTimeoutMs);
-        this.waiting = {
-          resolve: (value) => { clearTimeout(timer); resolveLine(value); },
-          reject: (error) => { clearTimeout(timer); rejectLine(error); }
-        };
-        child.stdin.write(`${line}\n`);
-      });
-    } catch (error) {
-      this.reset(); // A write that timed out may still land: never send it again on this helper.
-      throw error instanceof Error ? error : new NativeTbarUncertain(String(error));
-    }
-    if (reply.startsWith("ERR ")) {
-      const why = reply.slice(4);
-      // The helper says when a write may have landed; any other refusal wrote nothing.
-      if (why.startsWith("write unconfirmed") || why.startsWith("prior write unconfirmed")) {
-        this.reset();
-        throw new NativeTbarUncertain(why);
-      }
-      throw new NativeTbarRefusal(why);
-    }
-    const match = /^OK (\d+)$/.exec(reply);
-    const value = match ? Number(match[1]) : NaN;
-    if (!(value >= 0 && value <= NATIVE_TBAR_MAX)) {
-      this.reset();
-      throw new NativeTbarUncertain("Unexpected reply from the OBS slider helper.");
-    }
-    return value;
-  }
 }

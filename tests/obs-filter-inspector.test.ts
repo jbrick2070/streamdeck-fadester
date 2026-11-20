@@ -104,7 +104,7 @@ describe("OBS Filter inspector", () => {
     expect(missing.filters).toEqual([]);
     expect(missing.error).toContain("No source was found");
 
-    // A reconnect (the status stays "connected") empties the lists, counts up the epoch the page watches, and a
+    // A reconnect empties the lists, counts up the epoch the page watches, and a
     // list read across it is dropped rather than stored as the new connection's.
     const epoch = payloads.at(-1)!.filterEpoch as number;
     server.filterReadDelayMs = 150;

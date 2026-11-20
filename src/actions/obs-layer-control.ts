@@ -138,7 +138,7 @@ export class ObsLayerInstanceController {
     const reason = wordText(this.lastError ?? state.error, translate) ||
       statusCellReason(this.layers.client.getStatus(), translate);
     const connected = this.layers.client.isConnected();
-    const loaded = Boolean(this.layers.getCatalog()[state.sceneName]);
+    const loaded = this.layers.hasScene(state.sceneName);
     const missingSource = t(!connected ? "layerConnectObs" : !state.sceneName ? "layerChooseScene" :
       !loaded ? "layerLoading" : fixedTarget && this.settings.sceneItemId >= 0 && !layer ? "layerFixedUnavailable" :
         state.layers.length ? "layerChooseSource" : "layerNoSources");

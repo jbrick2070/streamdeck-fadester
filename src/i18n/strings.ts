@@ -325,6 +325,10 @@ export type LanguageTable = Readonly<Record<string, unknown>>;
 
 let activeLanguage = "en";
 let activeTable: LanguageTable = {};
+/** The active table's texts as `lookupText` chose them, by key: each is checked once per language, not on every draw. */
+let activeTexts = new Map<string, string>();
+/** Number formatters by language and digits (building one costs far more than a format call). */
+const numberFormats = new Map<string, Intl.NumberFormat>();
 const languageListeners = new Set<(language: string) => void>();
 
 /**
@@ -353,7 +357,12 @@ export function lookupText(table: LanguageTable, key: StringKey): string {
 
 /** The active language's text for `key`, placeholders filled. */
 export function t(key: StringKey, params?: TextParams): string {
-  return fillTemplate(lookupText(activeTable, key), params);
+  let text = activeTexts.get(key);
+  if (text === undefined) {
+    text = lookupText(activeTable, key);
+    activeTexts.set(key, text);
+  }
+  return fillTemplate(text, params);
 }
 
 /** The same translator, typed for the shared package (any key string). */
@@ -379,6 +388,7 @@ export function setLanguage(language: string, table?: LanguageTable | null): voi
   const previous = activeLanguage;
   activeLanguage = language || "en";
   activeTable = table && typeof table === "object" ? table : {};
+  activeTexts = new Map();
   // Only a changed code redraws the deck (an equal one re-sends nothing, PLAN.md 11.1).
   if (activeLanguage === previous) return;
   for (const listener of [...languageListeners]) {
@@ -402,7 +412,13 @@ export function localeTag(language = activeLanguage): string {
 /** A display number in the active language ("1.5" in English, "1,5" in German). */
 export function formatNumber(value: number, maximumFractionDigits = 2): string {
   try {
-    return new Intl.NumberFormat(localeTag(), { maximumFractionDigits, useGrouping: false }).format(value);
+    const id = `${activeLanguage}|${maximumFractionDigits}`;
+    let format = numberFormats.get(id);
+    if (!format) {
+      format = new Intl.NumberFormat(localeTag(), { maximumFractionDigits, useGrouping: false });
+      numberFormats.set(id, format);
+    }
+    return format.format(value);
   } catch {
     return String(value);
   }

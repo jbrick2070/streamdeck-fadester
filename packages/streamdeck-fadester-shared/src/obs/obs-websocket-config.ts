@@ -12,6 +12,8 @@ export interface ObsWebsocketConfigPathOptions {
 export interface ReadObsWebsocketConfigOptions extends ObsWebsocketConfigPathOptions {
   /** Configured OBS host; reading local config is refused unless this is loopback. */
   host?: string;
+  /** The port wanted: with several config files (Linux), the one saved for this port is read. */
+  port?: number;
   /** Optional explicit config path override for fixture tests. */
   configPath?: string;
   /** Optional file reader override for fixture tests. */
@@ -56,6 +58,15 @@ export interface ObsWebsocketConfigPreview {
 }
 
 export const OBS_WEBSOCKET_REL_PATH = "obs-studio/plugin_config/obs-websocket/config.json";
+
+/** The file as a settings page may name it: from OBS's own folder on, with the Flatpak or Snap folder in front, never the user's home. */
+export function obsWebsocketConfigRelPath(configPath: string): string {
+  const unix = configPath.split("\\").join("/");
+  for (const marker of [".var/app/com.obsproject.Studio/config/", "snap/obs-studio/current/.config/"]) {
+    if (unix.includes(`/${marker}${OBS_WEBSOCKET_REL_PATH}`)) return marker + OBS_WEBSOCKET_REL_PATH;
+  }
+  return OBS_WEBSOCKET_REL_PATH;
+}
 
 /** True only when `host` names this machine's loopback interface. */
 export function isLoopbackObsHost(host: string | undefined): boolean {
@@ -116,20 +127,54 @@ export function resolveObsWebsocketConfigPath(
 }
 
 /**
- * Reads OBS's local `plugin_config/obs-websocket/config.json` on explicit user request.
+ * Every place OBS may keep that file on this computer, the usual one first. On Linux OBS from Flathub and the Snap keep
+ * their own configuration folders, so those follow the native one. A portable OBS on Windows keeps its settings beside
+ * its own program, which cannot be found from here: its password has to be typed.
+ */
+export function resolveObsWebsocketConfigPaths(
+  options?: ObsWebsocketConfigPathOptions
+): string[] {
+  const platform = options?.platform ?? process.platform;
+  const first = resolveObsWebsocketConfigPath(options);
+  if (platform === "win32" || platform === "darwin") return [first];
+  const home = options?.homedir ?? homedir();
+  const tail = ["obs-studio", "plugin_config", "obs-websocket", "config.json"];
+  return [
+    first,
+    posix.join(home, ".var", "app", "com.obsproject.Studio", "config", ...tail),
+    posix.join(home, "snap", "obs-studio", "current", ".config", ...tail)
+  ];
+}
+
+/**
+ * Reads OBS's local `plugin_config/obs-websocket/config.json`.
  * Refuses non-local hosts before touching disk, and never logs the password.
+ * With several places to look (Linux), the file whose port is `port` wins, then the first file that can be read.
  */
 export function readObsWebsocketConfig(
   options?: ReadObsWebsocketConfigOptions
 ): ObsWebsocketConfigReadResult {
   const host = options?.host ?? "127.0.0.1";
-  const configPath =
-    options?.configPath ?? resolveObsWebsocketConfigPath(options);
-
+  const paths = options?.configPath ? [options.configPath] : resolveObsWebsocketConfigPaths(options);
   if (!isLoopbackObsHost(host)) {
-    return { ok: false, reason: "non_local", configPath };
+    return { ok: false, reason: "non_local", configPath: paths[0] };
   }
+  let firstFound: ObsWebsocketConfigReadResult | null = null;
+  let first: ObsWebsocketConfigReadResult | null = null;
+  for (const configPath of paths) {
+    const read = readOneObsWebsocketConfig(configPath, options);
+    first ??= read;
+    if (!read.ok && read.reason === "missing_file") continue;
+    if (options?.port === undefined || read.serverPort === options.port) return read;
+    firstFound ??= read;
+  }
+  return firstFound ?? first!;
+}
 
+function readOneObsWebsocketConfig(
+  configPath: string,
+  options?: ReadObsWebsocketConfigOptions
+): ObsWebsocketConfigReadResult {
   const reader = options?.readFile ?? ((filePath: string) => readFileSync(filePath, "utf8"));
   let rawText: string;
   try {
@@ -203,7 +248,7 @@ export function toObsWebsocketConfigPreview(
   if (result.ok) {
     return {
       ok: true,
-      sourceRelPath: OBS_WEBSOCKET_REL_PATH,
+      sourceRelPath: obsWebsocketConfigRelPath(result.configPath),
       serverPort: result.serverPort,
       serverEnabled: result.serverEnabled,
       authRequired: result.authRequired,
@@ -213,7 +258,7 @@ export function toObsWebsocketConfigPreview(
   return {
     ok: false,
     reason: result.reason,
-    sourceRelPath: OBS_WEBSOCKET_REL_PATH,
+    sourceRelPath: obsWebsocketConfigRelPath(result.configPath),
     serverPort: result.serverPort ?? null,
     serverEnabled: result.serverEnabled ?? null,
     authRequired: result.authRequired ?? null,
@@ -230,7 +275,28 @@ export function savedObsPasswordFor(
   port: number,
   options?: Omit<ReadObsWebsocketConfigOptions, "host">
 ): string {
-  const read = readObsWebsocketConfig({ ...options, host });
+  const read = readObsWebsocketConfig({ ...options, host, port });
   if (!read.ok || read.serverPort !== port || read.authRequired === false) return "";
   return read.password;
+}
+
+/** What OBS's saved settings on this computer say about its WebSocket server. */
+export interface SavedObsServer {
+  /** OBS's saved port, or null when the file has none. */
+  port: number | null;
+  /** OBS's "Enable WebSocket server" tick as saved, or null when the file does not say. */
+  enabled: boolean | null;
+}
+
+/**
+ * OBS's own saved port and "Enable WebSocket server" tick for a loopback host, or null (another host, no file, a
+ * broken file). The password is not part of the answer.
+ */
+export function savedObsServerFor(
+  host: string,
+  options?: Omit<ReadObsWebsocketConfigOptions, "host">
+): SavedObsServer | null {
+  const read = readObsWebsocketConfig({ ...options, host });
+  if (!read.ok && (read.reason === "non_local" || read.reason === "missing_file" || read.reason === "invalid_json")) return null;
+  return { port: read.serverPort ?? null, enabled: read.serverEnabled ?? null };
 }

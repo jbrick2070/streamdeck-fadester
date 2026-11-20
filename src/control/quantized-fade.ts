@@ -14,7 +14,8 @@
  *   5. Nothing starts without a key press; audio never originates a Program change.
  */
 import { SampledVisualSignals, VisualSignals } from "./visual-signals.js";
-import { QuantizeBeats, QuantizeStart } from "../types/settings.js";
+import { QuantizeBeats, QuantizeStart, clampDurationMs } from "../types/settings.js";
+import { t } from "../i18n/strings.js";
 import { DIAL_HOLD_THRESHOLD_MS } from "../actions/dial-math.js";
 
 export const MIN_QUANTIZE_CONFIDENCE = 0.35;
@@ -40,8 +41,15 @@ export function isTempoUsableForQuantize(sampled: SampledVisualSignals | undefin
 }
 
 export function computeBeatsDurationMs(beats: Exclude<QuantizeBeats, 0>, bpm: number): number {
-  const raw = beats * (60000 / bpm);
-  return Math.max(50, Math.min(20000, Math.round(raw)));
+  return clampDurationMs(beats * (60000 / bpm));
+}
+
+/** The state word a quantized key shows while it waits or just after: ARMED, NO TEMPO, CANCELLED; none otherwise. */
+export function quantizeBadge(banner: QuantizeBannerState): { text: string; on: boolean } | undefined {
+  return banner === "armed" ? { text: t("quantizeArmed"), on: true }
+    : banner === "no_tempo" ? { text: t("quantizeNoTempo"), on: false }
+      : banner === "cancelled" ? { text: t("quantizeCancelled"), on: false }
+        : undefined;
 }
 
 export function planQuantizedFade(

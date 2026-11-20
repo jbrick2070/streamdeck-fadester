@@ -1,20 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// The bundled T-bar helper's driver (src/obs/native-tbar.ts) and the dial's throws on OBS's real slider
-// (direct-obs-client.ts), against a stand-in helper and the fake OBS's model of OBS 33's T-bar widget.
+// The in-plugin T-bar backend (src/obs/native-tbar.ts) and the dial's throws on OBS's real slider
+// (direct-obs-client.ts), against stand-in backends and the fake OBS's model of OBS 33's T-bar widget.
 import { EventEmitter } from "node:events";
 import { cpSync, mkdtempSync, rmSync } from "node:fs";
 import { createServer, type Server } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fileURLToPath } from "node:url";
 import { DirectObsClient, TBAR_SETTLE_MS } from "../src/obs/direct-obs-client.js";
 import { DirectObsPropertyInspectorBridge } from "../src/pi/direct-obs-bridge.js";
 import {
   builtAxWorkerPath,
   builtUiaWorkerPath,
   NativeTbar,
-  NativeTbarHelper,
   NativeTbarRefusal,
   NativeTbarTimeout,
   NativeTbarUia,
@@ -28,78 +26,7 @@ import {
 import type { UiaWorkerRequest } from "../src/obs/uia/uia-worker.js";
 import { FakeObsServer } from "./helpers/fake-obs-server.js";
 
-const FAKE_HELPER = fileURLToPath(new URL("./helpers/fake-native-slider.mjs", import.meta.url));
-
-function helper(env: Record<string, string> = {}): NativeTbarHelper {
-  Object.assign(process.env, env);
-  return new NativeTbarHelper(process.execPath, 4455, [FAKE_HELPER]);
-}
-
-describe("native T-bar helper driver", () => {
-  const made: NativeTbarHelper[] = [];
-  afterEach(() => {
-    for (const h of made.splice(0)) h.close();
-    delete process.env.FAKE_SLIDER_MODE;
-    delete process.env.FAKE_SLIDER_START;
-    delete process.env.FAKE_SLIDER_ON_CLOSE;
-  });
-
-  it("reads and moves in normalised positions over the helper's line protocol", async () => {
-    const h = helper();
-    made.push(h);
-    expect(await h.read()).toBe(0);
-    expect(nativeTick(await h.move(0, 0.5))).toBe(512);
-    expect(nativeTick(await h.read())).toBe(512);
-    expect(await h.move(0.5, 1)).toBe(1);
-  });
-
-  it("refuses without writing when the slider is not where the dial left it", async () => {
-    const h = helper({ FAKE_SLIDER_START: "300" });
-    made.push(h);
-    await expect(h.move(0, 0.4)).rejects.toBeInstanceOf(NativeTbarRefusal);
-    expect(nativeTick(await h.read())).toBe(300); // nothing moved, and the helper is still usable
-  });
-
-  it("treats an unconfirmed write as uncertain and never replays it on the same helper", async () => {
-    const h = helper({ FAKE_SLIDER_MODE: "unconfirmed" });
-    made.push(h);
-    await expect(h.move(0, 0.3)).rejects.toBeInstanceOf(NativeTbarUncertain);
-    delete process.env.FAKE_SLIDER_MODE;
-    expect(await h.read()).toBe(0); // a fresh helper process answers again
-  });
-
-  it("reports a helper that cannot reach OBS as a refusal", async () => {
-    const h = helper({ FAKE_SLIDER_MODE: "refuse" });
-    made.push(h);
-    await expect(h.read()).rejects.toThrow(/main OBS window/);
-  });
-
-  it("gives up on a helper that does not answer, as uncertain", async () => {
-    process.env.FAKE_SLIDER_MODE = "silent";
-    const h = new NativeTbarHelper(process.execPath, 4455, [FAKE_HELPER], 300);
-    made.push(h);
-    await expect(h.read()).rejects.toBeInstanceOf(NativeTbarUncertain);
-  });
-
-  it("never takes a late line from a helper it let go as the next helper's answer", async () => {
-    const h = helper({ FAKE_SLIDER_MODE: "unconfirmed", FAKE_SLIDER_ON_CLOSE: "OK 777" });
-    made.push(h);
-    // The uncertain write lets that helper go; it prints its parting line while the next one is still starting.
-    await expect(h.move(0, 0.3)).rejects.toBeInstanceOf(NativeTbarUncertain);
-    delete process.env.FAKE_SLIDER_MODE;
-    delete process.env.FAKE_SLIDER_ON_CLOSE;
-    expect(await h.read()).toBe(0);
-    expect(nativeTick(await h.move(0, 0.25))).toBe(256); // and the answers that follow stay in step
-  });
-
-  it("starts no helper again once it is closed", async () => {
-    const h = helper();
-    made.push(h);
-    expect(await h.read()).toBe(0);
-    h.close();
-    await expect(h.read()).rejects.toBeInstanceOf(NativeTbarRefusal);
-  });
-
+describe("where OBS's own slider can be reached", () => {
   it("is only used for a local OBS 33 on Windows and macOS", () => {
     expect(nativeTbarEligible("win32", "127.0.0.1", "33.0.1")).toBe(true);
     expect(nativeTbarEligible("win32", "localhost", "33.0.0")).toBe(true);
@@ -128,7 +55,7 @@ describe("native T-bar helper driver", () => {
   });
 });
 
-/** The helper's stand-in for the dial tests: moves the fake OBS's real slider, refuses a slider that moved. */
+/** The backend's stand-in for the dial tests: moves the fake OBS's real slider, refuses a slider that moved. */
 class FakeNative implements NativeTbar {
   public moves: Array<[number, number]> = [];
   public refuseReads = false;
@@ -150,6 +77,7 @@ class FakeNative implements NativeTbar {
     this.closed++;
   }
 }
+
 
 describe("dial throws on OBS's real slider", () => {
   let server: FakeObsServer;
@@ -1028,6 +956,46 @@ describe("NativeTbarUia worker adapter", () => {
     expect(await uia.move(512 / 1023, 1)).toBe(1);
     uia.close();
     await vi.waitFor(() => expect(worker.terminated).toBe(1), { timeout: 1000 });
+  });
+
+  it("close() during a call that never returns lets the worker end by itself, and terminates only one still stuck later (A-07)", async () => {
+    const workers: FakeUiaWorker[] = [];
+    const make = (stuckTerminateMs: number): NativeTbarUia => {
+      const uia = new NativeTbarUia(4455, {
+        callTimeoutMs: 30,
+        taintDrainMs: 40,
+        stuckTerminateMs,
+        workerFactory: () => {
+          workers.push(new FakeUiaWorker());
+          return workers.at(-1)!;
+        }
+      });
+      adapters.push(uia);
+      return uia;
+    };
+
+    // The worker finishes its call after close() and exits: it is never terminated.
+    const leaving = make(150);
+    expect(await leaving.read()).toBe(0);
+    workers[0].mode = "hang";
+    await expect(leaving.move(0, 0.5)).rejects.toBeInstanceOf(NativeTbarTimeout);
+    leaving.close();
+    await vi.waitFor(() => expect(workers[0].requests.at(-1)?.op).toBe("close"), { timeout: 1000 });
+    expect(workers[0].terminated).toBe(0);
+    workers[0].emit("exit", 0);
+    await new Promise((res) => setTimeout(res, 250));
+    expect(workers[0].terminated).toBe(0);
+
+    // The worker never comes back: it is terminated, but only after the long wait.
+    const stuck = make(200);
+    expect(await stuck.read()).toBe(0);
+    workers[1].mode = "hang";
+    await expect(stuck.move(0, 0.5)).rejects.toBeInstanceOf(NativeTbarTimeout);
+    stuck.close();
+    await vi.waitFor(() => expect(workers[1].requests.at(-1)?.op).toBe("close"), { timeout: 1000 });
+    await new Promise((res) => setTimeout(res, 80));
+    expect(workers[1].terminated).toBe(0);
+    await vi.waitFor(() => expect(workers[1].terminated).toBe(1), { timeout: 1000 });
   });
 
   it("treats mid-call invalidate() as uncertain+tainted for moves, refusal for reads, and flushes forget afterwards", async () => {

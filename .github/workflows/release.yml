@@ -47,8 +47,81 @@ jobs:
           if-no-files-found: error
           compression-level: 0
 
+  # The package above is built on Linux, where every test that loads the packaged native addon (koffi) is skipped.
+  # The same commit is built, packed and tested again where the plugin really runs, and the draft waits for both:
+  # a package that cannot load on Windows or macOS never reaches a draft release.
+  streamdeck-native:
+    name: Fadester for OBS package, loaded and tested (${{ matrix.platform }}-${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - runner: windows-2025
+            platform: win32
+            arch: x64
+          - runner: macos-15
+            platform: darwin
+            arch: arm64
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          architecture: ${{ matrix.arch }}
+          package-manager-cache: false
+      - name: Confirm native host and Node runtime
+        env:
+          EXPECTED_PLATFORM: ${{ matrix.platform }}
+          EXPECTED_ARCH: ${{ matrix.arch }}
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          assert.equal(process.platform, process.env.EXPECTED_PLATFORM);
+          assert.equal(process.arch, process.env.EXPECTED_ARCH);
+          NODE
+      - run: npm ci
+      - name: Build, validate and pack
+        run: node --import tsx scripts/suite/package-candidate.ts
+      - name: Full test suite against the built tree (starts the packed plugin and loads its native addon)
+        run: npm test
+
+  # Fadester Companion's version comes from installer/components.json, not from the tag. Two releases that change
+  # tourbox/ and keep the number would publish two different builds under one version: the release stops here instead.
+  companion-version:
+    name: Fadester Companion version moved with its code
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: A changed tourbox/ needs a new Companion version
+        run: |
+          previous=$(git describe --tags --abbrev=0 --match 'v[0-9]*.[0-9]*.[0-9]*' "$GITHUB_SHA^" 2>/dev/null || true)
+          if [ -z "$previous" ]; then echo "No earlier release tag: nothing to compare."; exit 0; fi
+          now=$(node -p "require('./installer/components.json').components.companion.version")
+          before=$(git show "$previous:installer/components.json" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s).components.companion.version))")
+          if git diff --quiet "$previous" "$GITHUB_SHA" -- tourbox; then
+            echo "tourbox/ is unchanged since $previous (Companion $now)."
+          elif [ "$now" = "$before" ]; then
+            echo "tourbox/ changed since $previous, and Fadester Companion is still $now."
+            echo "Raise components.companion.version in installer/components.json (and the files the tests keep equal to it), then tag again."
+            exit 1
+          else
+            echo "tourbox/ changed since $previous: Fadester Companion $before -> $now."
+          fi
+
   companion:
     name: Fadester Companion ZIP and Store package
+    needs: [companion-version]
     runs-on: windows-2025
     timeout-minutes: 20
     env:
@@ -92,6 +165,7 @@ jobs:
 
   companion-macos:
     name: Fadester Companion Mac app (${{ matrix.arch }})
+    needs: [companion-version]
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 25
     strategy:
@@ -143,7 +217,7 @@ jobs:
 
   draft:
     name: Create the draft release
-    needs: [streamdeck, companion, companion-macos]
+    needs: [streamdeck, streamdeck-native, companion, companion-macos]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -157,6 +231,16 @@ jobs:
           cd dist
           {
             echo "Draft built from \`$GITHUB_SHA\`. Test on real hardware before publishing."
+            echo
+            echo "### Which file do I need?"
+            echo
+            echo "| I have | Download |"
+            echo "|---|---|"
+            echo "| Windows, and I want everything set up for me | **Fadester Suite Setup** (\`Fadester-Suite-Setup-*.exe\`, added to this release by the Suite Setup workflow) |"
+            echo "| A Stream Deck | \`$(ls *.streamDeckPlugin | head -n 1)\`: double-click it, then in OBS tick Tools > WebSocket Server Settings > Enable WebSocket server |"
+            echo "| A TourBox, a game controller, or only a keyboard | Fadester Companion (below) |"
+            echo "| An APC40 or another MIDI controller | Midi Fadester, from its own releases page: https://github.com/jbrick2070/midi-fadester/releases |"
+            echo "| Chrome, to ride a video's speed from the deck | the VJster extension (\`$(ls *.zip | grep -i vjster | head -n 1)\`) |"
             echo
             echo "### Fadester Companion"
             echo

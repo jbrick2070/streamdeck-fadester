@@ -159,7 +159,8 @@ describe("Property Inspector bridge", () => {
     await new Promise((r) => setTimeout(r, 60));
     expect(h.server.connectionCount).toBe(connectionsBefore);
     expect(h.client.getSettings().password).toBe("pw-one");
-    expect(h.persisted[h.persisted.length - 1].password).toBe("pw-one");
+    // The save itself carries no password: the stored one is left as it is (C-03).
+    expect("password" in h.persisted[h.persisted.length - 1]).toBe(false);
     expect(h.client.isConnected()).toBe(true);
 
     // Operator typed a new (wrong) password: reconnect happens and halts on 4009.

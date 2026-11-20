@@ -85,9 +85,6 @@ function harness() {
   add("assign-discard", "button", editor);
   add("assign-sentence");
   add("ctrl-status");
-  add("profile-select", "select");
-  add("profile-load", "button");
-  add("profile-result");
   add("conn-host", "input").value = "127.0.0.1";
   add("conn-port", "input").value = "4455";
   add("conn-password", "input");
@@ -101,10 +98,12 @@ function harness() {
   const source = readFileSync("io.github.jbrick2070.fadester-for-obs.sdPlugin/ui/pi-common.js", "utf8");
   const instrumented = source.replace(/\}\)\(\);\s*$/, `
     window.testApi = { renderModeFields, collectSetSlotFields, validateFields, refreshCatalog,
-      refreshEditor, bindEditor, bindControllerPanel, updateControllerPanel, markEditorDirty,
+      refreshEditor, bindEditor, updateControllerPanel, markEditorDirty,
       applyState, applySlotValue, resetEditorContext,
       configure(state, slot, catalog) { lastState = state; currentSettings = { slot }; overviewCatalog = catalog; },
       requestWith(fn) { request = fn; },
+      realRequest: request,
+      answer(reply) { const take = pendingReplies.get(reply.requestId); if (take && take(reply) !== false) pendingReplies.delete(reply.requestId); },
       bindConnectionPanel, sendWith(fn) { send = fn; },
       timersWith(fn) { setTimeout = fn; },
       isDirty() { return editorDirty; }
@@ -130,7 +129,6 @@ ${instrumented}`, { window, document, setTimeout, clearTimeout });
   api.configure(state, "fx_1", overview);
   api.requestWith(async (msg: RecordValue) => ({ data: msg.source ? detail(msg.source) : overview }));
   api.bindEditor();
-  api.bindControllerPanel();
   api.refreshEditor(state);
   const el = (id: string): Element => {
     const found = document.getElementById(id);
@@ -201,16 +199,28 @@ describe("Property Inspector DOM behavior", () => {
     expect(h.api.isDirty()).toBe(true);
   });
 
-  it("preserves a pending profile selection on state broadcasts and during load", async () => {
+  it("takes only its own answer: an id no other page uses, and an answer of the kind it asked for (C-07)", async () => {
     const h = harness(); await flush();
-    h.api.updateControllerPanel(h.state);
-    h.change("profile-select", "midimix");
-    h.api.updateControllerPanel(h.state);
-    expect(h.el("profile-select").value).toBe("midimix");
-    const reply = deferred<RecordValue>(); h.api.requestWith(() => reply.promise);
-    h.el("profile-load").fire("click"); h.api.updateControllerPanel(h.state);
-    expect(h.el("profile-load").disabled).toBe(true);
-    reply.resolve({ ok: true, loaded: "midimix" }); await flush();
+    const other = harness(); await flush();
+    const sent: RecordValue[] = [];
+    h.api.sendWith((message: RecordValue) => { sent.push(message.payload ?? message); });
+    const otherSent: RecordValue[] = [];
+    other.api.sendWith((message: RecordValue) => { otherSent.push(message.payload ?? message); });
+    let got: RecordValue | undefined;
+    void h.api.realRequest({ event: "getCatalog", source: "A" }).then((reply: RecordValue) => { got = reply; });
+    void other.api.realRequest({ event: "getCatalog", source: "A" });
+    const id = sent.at(-1)!.requestId as string;
+    // Two pages both count from 1, and still never share an id.
+    expect(id).toMatch(/^pi_[a-z0-9]+_1$/);
+    expect(otherSent.at(-1)!.requestId).not.toBe(id);
+    // A late answer to the other page's request does nothing here.
+    h.api.answer({ event: "catalog", requestId: otherSent.at(-1)!.requestId, data: { sources: [] } }); await flush();
+    expect(got).toBeUndefined();
+    // An answer with our id but of another kind (a late setSlotResult) is not the catalog we asked for.
+    h.api.answer({ event: "setSlotResult", requestId: id, ok: true }); await flush();
+    expect(got).toBeUndefined();
+    h.api.answer({ event: "catalog", requestId: id, data: { sources: ["A"] } }); await flush();
+    expect(got).toMatchObject({ event: "catalog", data: { sources: ["A"] } });
   });
 
   it("refreshes the live sentence without replacing an unsaved field", async () => {

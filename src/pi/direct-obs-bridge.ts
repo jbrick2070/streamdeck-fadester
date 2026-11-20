@@ -6,6 +6,7 @@ import { LayerController, LayerSettings } from "../control/layer-controller.js";
 import type { TapeDecks } from "../control/tape-decks.js";
 import type { VisualSignals } from "../control/visual-signals.js";
 import {
+  isLoopbackObsHost,
   readObsWebsocketConfig,
   toObsWebsocketConfigPreview,
   type ObsWebsocketConfigPreview,
@@ -415,6 +416,14 @@ export class DirectObsPropertyInspectorBridge {
       return;
     }
     const current = this.client.getSettings();
+    // The preview was read for OBS on this computer. A host changed since (from any settings page) is another OBS:
+    // this computer's password is never stored for it.
+    if (!isLoopbackObsHost(current.host)) {
+      this.pendingObsSavedConfig = null;
+      this.obsSavedConfigPreview = null;
+      this.broadcast();
+      return;
+    }
     const next: FadesterGlobalSettings = {
       host: current.host || DEFAULT_GLOBAL_SETTINGS.host,
       port: canApplyPassword ? read.serverPort : (read.serverPort ?? current.port),
@@ -435,13 +444,15 @@ export class DirectObsPropertyInspectorBridge {
           ? msg.host.trim()
           : DEFAULT_GLOBAL_SETTINGS.host,
       port: Number(msg.port ?? DEFAULT_GLOBAL_SETTINGS.port),
-      // A password only reaches this bridge if the operator typed it locally.
-      password: typeof msg.password === "string" ? msg.password : current.password
+      // A password only reaches this bridge if the operator typed it locally. Without one the save leaves the stored
+      // password alone: this session may not know it (a start-up read that came late), and must never write "" over it.
+      ...(typeof msg.password === "string" ? { password: msg.password } : {})
     };
     this.pendingObsSavedConfig = null;
     this.obsSavedConfigPreview = null;
     await this.transport.persistGlobalSettings(next);
-    this.client.updateSettings(next);
+    // After the save: the saver has given the client the stored password by now.
+    this.client.updateSettings({ ...next, password: next.password ?? this.client.getSettings().password ?? current.password });
     this.broadcast();
   }
 

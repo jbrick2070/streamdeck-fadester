@@ -3,7 +3,7 @@ import { EventEmitter } from "node:events";
 import { DirectObsClient, DirectObsError } from "../obs/direct-obs-client.js";
 import { LocalText, errorLocalText, ownText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
 import { StringKey } from "../i18n/strings.js";
-import { AccentName, normalizeAccent } from "../types/settings.js";
+import { AccentName, MAX_LAYER_LABEL_CHARS, normalizeAccent } from "../types/settings.js";
 
 /** OBS's blend modes; `label` is the key of OBS's own term for each. */
 export const BLEND_MODES: readonly { readonly id: string; readonly label: StringKey }[] = [
@@ -58,6 +58,12 @@ export interface LayerSceneState {
   error: LocalText | null;
 }
 
+/**
+ * The least time between two writes that change the picture at once (blend mode, layer order, show or hide) on the
+ * scene that is on Program: at most three a second, however fast a dial spins or a key is pressed.
+ */
+export const ABRUPT_WRITE_SPACING_MS = 334;
+
 export function normalizeLayerSettings(raw: LayerSettings = {}): Required<LayerSettings> {
   const operations: LayerOperation[] = ["select_next", "select_previous", "move_up", "move_down",
     "show_hide", "blend_next", "blend_previous", "blend_normal"];
@@ -71,7 +77,7 @@ export function normalizeLayerSettings(raw: LayerSettings = {}): Required<LayerS
     operation: operations.includes(raw.operation!) ? raw.operation! : "select_next",
     dialMode: raw.dialMode === "blend" || raw.dialMode === "order" ? raw.dialMode : "select_layer",
     allowReorder: raw.allowReorder === true,
-    labelOverride: typeof raw.labelOverride === "string" ? raw.labelOverride.trim().slice(0, 20) : "",
+    labelOverride: typeof raw.labelOverride === "string" ? raw.labelOverride.trim().slice(0, MAX_LAYER_LABEL_CHARS) : "",
     accent: normalizeAccent(raw.accent)
   };
 }
@@ -94,6 +100,8 @@ export class LayerController extends EventEmitter {
     sceneItemId: number; manual: boolean; sourceUuid?: string; sourceName?: string;
   }>();
   private poll: ReturnType<typeof setInterval> | undefined;
+  /** When the last picture-changing write went to each scene (forward-only clock). */
+  private readonly lastAbruptWriteAt = new Map<string, number>();
   private generation = 0;
   private collectionChanging = false;
   private sceneSignature = "";
@@ -111,6 +119,7 @@ export class LayerController extends EventEmitter {
     });
     client.on("statusChanged", () => {
       this.generation++;
+      this.lastAbruptWriteAt.clear();
       this.scenes.clear();
       this.refreshing.clear();
       // A disconnected switch may never deliver its Changed event. The next
@@ -151,6 +160,20 @@ export class LayerController extends EventEmitter {
     const value = this.scenes.get(sceneName);
     return value ? { ...value, layers: value.layers.map((layer) => ({ ...layer })) } :
       { sceneName, layers: [], selectedId: -1, error: null };
+  }
+
+  /** Whether a scene's sources have been read (no copy of the catalog is made to learn it). */
+  public hasScene(sceneName: string): boolean {
+    return this.scenes.has(sceneName);
+  }
+
+  /** Waits until the scene on Program may take another picture-changing write. A scene not on Program is not paced. */
+  private async paceAbruptWrite(sceneName: string): Promise<void> {
+    if (this.client.getCatalog().currentProgramScene !== sceneName) return;
+    const last = this.lastAbruptWriteAt.get(sceneName);
+    if (last === undefined) return;
+    const wait = last + ABRUPT_WRITE_SPACING_MS - performance.now();
+    if (wait > 0) await new Promise<void>((resolve) => setTimeout(resolve, Math.min(wait, ABRUPT_WRITE_SPACING_MS)));
   }
 
   public getCatalog(): Record<string, LayerSceneState> {
@@ -214,9 +237,18 @@ export class LayerController extends EventEmitter {
     if ((operation === "move_up" || operation === "move_down") && !settings.allowReorder) {
       throw new DirectObsError(ownText("layerErrorEnableReorder"));
     }
+    const selecting = operation === "select_next" || operation === "select_previous";
     await this.enqueue(sceneName, async () => {
       if (generation !== this.generation || this.collectionChanging) throw new DirectObsError(ownText("layerErrorChanged"));
-      const scene = await this.refreshScene(sceneName);
+      // Before the read, so the write is worked out from the scene as it is when its turn comes.
+      if (!selecting) await this.paceAbruptWrite(sceneName);
+      if (generation !== this.generation || this.collectionChanging) throw new DirectObsError(ownText("layerErrorChanged"));
+      // Moving the selection changes nothing in OBS: it uses the list already read (kept fresh by OBS's events and the
+      // watch), and asks OBS only when there is none yet.
+      const cached = selecting ? this.scenes.get(sceneName) : undefined;
+      const scene = cached && !cached.error && cached.layers.length > 0
+        ? { ...cached, layers: cached.layers.map((layer) => ({ ...layer })) }
+        : await this.refreshScene(sceneName);
       if (generation !== this.generation || this.collectionChanging) throw new DirectObsError(ownText("layerErrorChanged"));
       if (scene.layers.length === 0) throw new DirectObsError(ownText("layerErrorNoSources"));
       if (operation === "select_next" || operation === "select_previous") {
@@ -250,6 +282,7 @@ export class LayerController extends EventEmitter {
           BLEND_MODES[((current + offset) % BLEND_MODES.length + BLEND_MODES.length) % BLEND_MODES.length];
         await this.client.sendObsRequest("SetSceneItemBlendMode", { ...locator, sceneItemBlendMode: mode.id });
       }
+      this.lastAbruptWriteAt.set(sceneName, performance.now());
       await this.refreshScene(sceneName);
     });
   }

@@ -193,9 +193,8 @@ export class VisualMeterInstanceController {
       await this.sink.showAlert();
       return;
     }
-    const targetBpm = Math.max(60, Math.min(200, Math.round(this.signals.getSnapshot().bpm + ticks)));
     try {
-      await this.signals.setBpm(targetBpm);
+      await this.signals.nudgeBpm(ticks);
     } catch (error) {
       this.lastError = isObsVendorRequestMissingError(error)
         ? ownText("tdNeedsUpdate")

@@ -328,11 +328,11 @@ export class PropertyInspectorBridge {
           ? msg.host.trim()
           : DEFAULT_GLOBAL_SETTINGS.host,
       port: Number(msg.port ?? DEFAULT_GLOBAL_SETTINGS.port),
-      password:
-        typeof msg.password === "string" ? msg.password : current.password
+      // No password typed: the stored one is left alone (it is never overwritten with what this session happens to know).
+      ...(typeof msg.password === "string" ? { password: msg.password } : {})
     };
     await this.transport.persistGlobalSettings(next);
-    this.client.updateSettings(next);
+    this.client.updateSettings({ ...next, password: next.password ?? this.client.getSettings().password ?? current.password });
     this.broadcast();
   }
 

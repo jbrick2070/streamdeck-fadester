@@ -179,6 +179,8 @@ export async function detectPlaylisterPlugin(
 interface Win32ChecklistBindings {
   GetExtendedTcpTable: (...args: unknown[]) => number;
   OpenProcess: (...args: unknown[]) => number | bigint;
+  /** Windows' last error (koffi.errno() is the C runtime's errno, which Win32 calls do not set). */
+  GetLastError: () => number;
   CloseHandle: (...args: unknown[]) => number;
   QueryFullProcessImageNameW: (...args: unknown[]) => number;
   OpenProcessToken: (...args: unknown[]) => number;
@@ -244,6 +246,7 @@ function getWin32Bindings(): Win32ChecklistBindings | null {
         "int32",
         "uint32"
       ]) as Win32ChecklistBindings["OpenProcess"],
+      GetLastError: kernel32.func("__stdcall", "GetLastError", "uint32", []) as Win32ChecklistBindings["GetLastError"],
       CloseHandle: kernel32.func("__stdcall", "CloseHandle", "int32", [
         "uint64"
       ]) as Win32ChecklistBindings["CloseHandle"],
@@ -355,7 +358,7 @@ export function defaultProbeLocalObsProcess(port: number, platform: string): Loc
 
   const proc = BigInt(win.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZE, 0, pid));
   if (proc === 0n) {
-    if (loadKoffi()?.errno() === ERROR_ACCESS_DENIED) {
+    if (win.GetLastError() === ERROR_ACCESS_DENIED) {
       return { elevated: "fail", minimised: "unknown" };
     }
     return { elevated: "unknown", minimised: "unknown" };

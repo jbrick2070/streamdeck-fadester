@@ -10,11 +10,12 @@ import {
 } from "@elgato/streamdeck";
 import { FadesterStore } from "../state/fadester-store.js";
 import { VisualSignals } from "../control/visual-signals.js";
-import { QuantizedKeyArm } from "../control/quantized-fade.js";
+import { QuantizedKeyArm, quantizeBadge } from "../control/quantized-fade.js";
 import {
   ALL_FX_SLOT_ID,
   AutoFadeKeySettings,
   DEFAULT_AUTO_FADE_KEY_SETTINGS,
+  normalizeDurationMs,
   normalizeLabelOverride,
   normalizeQuantizeBeats,
   normalizeQuantizeStart,
@@ -182,15 +183,8 @@ export class AutoFadeKeyInstanceController {
 
   public renderSvgString(): string {
     const slot = this.store.getSlot(this.settings.slot);
-    const bannerKind = this.arm.getBanner();
-    const statusBanner =
-      bannerKind === "armed"
-        ? { text: t("quantizeArmed"), active: true }
-        : bannerKind === "no_tempo"
-          ? { text: t("quantizeNoTempo"), active: false }
-          : bannerKind === "cancelled"
-            ? { text: t("quantizeCancelled"), active: false }
-            : undefined;
+    const badge = quantizeBadge(this.arm.getBanner());
+    const statusBanner = badge ? { text: badge.text, active: badge.on } : undefined;
     return renderAutoFadeKeySvg({
       status: this.store.getStatus(),
       slot,
@@ -219,13 +213,7 @@ export class AutoFadeKeyInstanceController {
     const slot =
       (raw?.slot && String(raw.slot).trim()) || DEFAULT_AUTO_FADE_KEY_SETTINGS.slot;
     const to: 0 | 1 = Number(raw?.to) === 0 ? 0 : 1;
-    const rawMs = Number(raw?.durationMs ?? DEFAULT_AUTO_FADE_KEY_SETTINGS.durationMs);
-    const rounded = Math.round(rawMs);
-    const durationMs = Number.isFinite(rounded)
-      ? rounded === 0
-        ? 0
-        : Math.max(50, Math.min(20000, rounded))
-      : DEFAULT_AUTO_FADE_KEY_SETTINGS.durationMs;
+    const durationMs = normalizeDurationMs(raw?.durationMs, DEFAULT_AUTO_FADE_KEY_SETTINGS.durationMs);
     return {
       slot,
       to,

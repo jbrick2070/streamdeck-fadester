@@ -1,13 +1,116 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { once } from "node:events";
+import { readFileSync } from "node:fs";
+import { WebSocket } from "ws";
 import { DirectObsClient } from "../src/obs/direct-obs-client.js";
-import { FAKE_MEDIA_STATES, FakeMediaState, FakeObsServer, PLAYLISTER_KIND } from "./helpers/fake-obs-server.js";
+import { OBS_WS_DEFAULT_SUBSCRIPTIONS } from "../packages/streamdeck-fadester-shared/src/obs/obs-vendor-client.js";
+import {
+  FAKE_EVENT_CATEGORY, FAKE_MEDIA_STATES, FakeMediaState, FakeObsServer, PLAYLISTER_KIND, fakeEventCategory
+} from "./helpers/fake-obs-server.js";
 
 /**
  * The fake obs-websocket's media model (PLAN.md 9.1): the wire shapes of
  * obs-websocket 5.6.3 and the state rules of playlister-source.c.
  */
+describe("fake OBS server: event subscriptions and unknown requests (G-05)", () => {
+  let server: FakeObsServer | undefined;
+  let sockets: WebSocket[] = [];
+  let client: DirectObsClient | undefined;
+
+  afterEach(async () => {
+    client?.stop();
+    client = undefined;
+    for (const socket of sockets) socket.close();
+    sockets = [];
+    await server?.stop();
+    server = undefined;
+  });
+
+  /** A bare obs-websocket client: identifies with `mask` (or without one), then collects events and answers. */
+  async function raw(port: number, mask: number | undefined, identify = true): Promise<{ socket: WebSocket; events: string[]; answers: Array<Record<string, unknown>>; closed: number[] }> {
+    const socket = new WebSocket(`ws://127.0.0.1:${port}`);
+    sockets.push(socket);
+    const events: string[] = [];
+    const answers: Array<Record<string, unknown>> = [];
+    const closed: number[] = [];
+    socket.on("close", (code) => closed.push(code));
+    const identified = new Promise<void>((resolve) => {
+      socket.on("message", (data) => {
+        const message = JSON.parse(String(data)) as { op: number; d: Record<string, unknown> };
+        if (message.op === 0) {
+          if (identify) socket.send(JSON.stringify({ op: 1, d: { rpcVersion: 1, ...(mask === undefined ? {} : { eventSubscriptions: mask }) } }));
+          else resolve();
+        }
+        if (message.op === 2) resolve();
+        if (message.op === 5) events.push(String(message.d.eventType));
+        if (message.op === 7) answers.push(message.d);
+      });
+    });
+    await identified;
+    return { socket, events, answers, closed };
+  }
+
+  it("sends an event only to clients that subscribed to its category, and to none that has not identified", async () => {
+    server = new FakeObsServer({ missingPlugin: true });
+    const port = await server.start();
+    const all = await raw(port, undefined);
+    const scenesOnly = await raw(port, FAKE_EVENT_CATEGORY.Scenes);
+    const none = await raw(port, 0);
+    const unidentified = await raw(port, undefined, false);
+    server.emitObsEvent("CurrentProgramSceneChanged", { sceneName: "Scene 3" });
+    server.emitObsEvent("StudioModeStateChanged", { studioModeEnabled: true });
+    server.emitObsEvent("SceneTransitionStarted", { transitionName: "Fade" });
+    server.emitObsEvent("InputVolumeMeters", { inputs: [] }); // high volume: not part of "All"
+    server.emitVendorEvent("fader_changed", { slot: "fader_1", value: 0.5 });
+    await vi.waitFor(() => expect(all.events).toHaveLength(4));
+    expect(all.events).toEqual(["CurrentProgramSceneChanged", "StudioModeStateChanged", "SceneTransitionStarted", "VendorEvent"]);
+    expect(scenesOnly.events).toEqual(["CurrentProgramSceneChanged"]);
+    expect(none.events).toEqual([]);
+    expect(unidentified.events).toEqual([]);
+    expect(server.eventsNotSubscribed.get("InputVolumeMeters")).toBe(3);
+  });
+
+  it("answers a request type it does not model with 204 at once, and closes a client that asks before Identify", async () => {
+    server = new FakeObsServer({ missingPlugin: true });
+    const port = await server.start();
+    const ok = await raw(port, undefined);
+    ok.socket.send(JSON.stringify({ op: 6, d: { requestType: "NoSuchRequestHere", requestId: "x1" } }));
+    await vi.waitFor(() => expect(ok.answers).toHaveLength(1));
+    expect(ok.answers[0]).toMatchObject({ requestId: "x1", requestStatus: { result: false, code: 204 } });
+    const early = await raw(port, undefined, false);
+    early.socket.send(JSON.stringify({ op: 6, d: { requestType: "GetVersion", requestId: "x2" } }));
+    await vi.waitFor(() => expect(early.closed).toEqual([4007]));
+    expect(early.answers).toEqual([]);
+  });
+
+  it("the plugin subscribes to every category of every event it handles, and to nothing high-volume", async () => {
+    // The mask, pinned: a category dropped from it would leave its events' handlers dead against real OBS.
+    const c = FAKE_EVENT_CATEGORY;
+    expect(OBS_WS_DEFAULT_SUBSCRIPTIONS).toBe(c.General | c.Config | c.Scenes | c.Inputs | c.Transitions | c.SceneItems | c.Vendors | c.Ui);
+    // Every OBS event type named in the plugin's sources belongs to a subscribed category.
+    const sources = ["src/obs/direct-obs-client.ts", "src/control/layer-controller.ts", "src/control/filter-controller.ts",
+      "src/control/tape-decks.ts", "src/control/visual-signals.ts", "src/control/visual-safety.ts",
+      "packages/streamdeck-fadester-shared/src/obs/obs-vendor-client.ts"].map((file) => readFileSync(file, "utf8")).join("\n");
+    const named = new Set([...sources.matchAll(/"((?:Current|Scene|Input|Studio|Vendor|Custom|SourceFilter|MediaInput)[A-Za-z]*(?:Changed|Changing|Created|Removed|Started|Ended|Reindexed|Event))"/g)].map((match) => match[1]));
+    expect(named.size).toBeGreaterThan(15);
+    for (const eventType of named) expect(OBS_WS_DEFAULT_SUBSCRIPTIONS & fakeEventCategory(eventType), eventType).not.toBe(0);
+    // And a connected plugin misses none of the events the tests send it.
+    server = new FakeObsServer({ missingPlugin: true });
+    const port = await server.start();
+    client = new DirectObsClient({ host: "127.0.0.1", port, password: "" });
+    const connected = once(client, "statusChanged", { signal: AbortSignal.timeout(2000) });
+    client.start();
+    await connected;
+    for (const eventType of ["CurrentProgramSceneChanged", "CurrentPreviewSceneChanged", "CurrentSceneCollectionChanging",
+      "CurrentSceneCollectionChanged", "CurrentSceneTransitionChanged", "SceneTransitionStarted", "SceneTransitionEnded",
+      "StudioModeStateChanged", "InputVolumeChanged", "SceneItemEnableStateChanged", "CustomEvent"]) {
+      server.emitObsEvent(eventType, {});
+    }
+    expect([...server.eventsNotSubscribed.keys()]).toEqual([]);
+  });
+});
+
 describe("fake OBS server: identity, capabilities and media", () => {
   let server: FakeObsServer | undefined;
   let client: DirectObsClient | undefined;

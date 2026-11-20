@@ -18,6 +18,13 @@ export interface SurfaceBuildInfo {
  * when it is shown (`statusSentence` and `statusCellReason`, status-text.ts). */
 export interface ConnectionStatusInfo {
   kind: ConnectionStateKind;
+  /**
+   * Why OBS on this computer cannot be reached, when OBS's own saved settings say so (obs_unreachable): its WebSocket
+   * server is switched off, or it is switched on and nothing answers (OBS is not running). Absent when not known.
+   */
+  unreachableReason?: "websocket_off" | "obs_not_running";
+  /** After a refused password the sign-in is tried again this often, in seconds (wrong_password); absent when it is not. */
+  retrySeconds?: number;
   obsVersion?: string;
   fadesterVersion?: string;
   buildCommit?: string;

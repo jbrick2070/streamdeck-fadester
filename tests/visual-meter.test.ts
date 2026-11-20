@@ -375,7 +375,7 @@ describe("Visual Sidechain Meter (P1-3)", () => {
     await resyncKey.press();
     await dial.press(); // display_only is a no-op
     await dial.rotate(8); // 120 + 8 = 128 BPM
-    await dial.rotate(500); // clamped to 200 BPM
+    await dial.rotate(500); // clamped to Visual Sidechain's own top, 300 BPM
 
     expect(
       server.visualSidechainCallLog
@@ -386,10 +386,19 @@ describe("Visual Sidechain Meter (P1-3)", () => {
       { type: "lock_bpm", data: { locked: true } },
       { type: "resync_downbeat", data: {} },
       { type: "set_bpm", data: { bpm: 128 } },
-      { type: "set_bpm", data: { bpm: 200 } }
+      { type: "set_bpm", data: { bpm: 300 } }
     ]);
     expect(signals.getSnapshot().bpmLocked).toBe(true);
-    expect(signals.getSnapshot().bpm).toBe(200);
+    expect(signals.getSnapshot().bpm).toBe(300);
+
+    // B-08: ticks that arrive before the first answer add up; none is lost on a fast turn.
+    await dial.rotate(-180); // 120
+    await Promise.all([dial.rotate(1), dial.rotate(1), dial.rotate(1)]);
+    expect(signals.getSnapshot().bpm).toBe(123);
+    // And one tick from a tempo outside 60..200 moves by one, with no jump into a narrower range.
+    await dial.rotate(100); // 223
+    await dial.rotate(-1);
+    expect(signals.getSnapshot().bpm).toBe(222);
     expect(server.hotkeyTriggerLog).toEqual([]);
 
     // Older Visual Sidechain build (0.7.0 pre-P1-2, returns 604 for tempo requests): falls back to frontend hotkeys!

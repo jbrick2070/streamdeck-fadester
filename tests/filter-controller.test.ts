@@ -480,6 +480,25 @@ describe("filter controller", () => {
     expect(server.filterRequestLog).toHaveLength(reads);
   });
 
+  it("spaces on/off writes to one filter, at most three a second (B-04)", async () => {
+    const { server, filters, sceneUuid, aura } = await setup();
+    const at: number[] = [];
+    const set = filters.client.setSourceFilterEnabled.bind(filters.client);
+    filters.client.setSourceFilterEnabled = async (...args) => {
+      at.push(performance.now());
+      return set(...args);
+    };
+    const before = aura.filterEnabled;
+    // A key mashed three times at once: each press still lands, in order, from a fresh read.
+    const results = await Promise.all([filters.toggleEnabled(mix(sceneUuid)), filters.toggleEnabled(mix(sceneUuid)), filters.toggleEnabled(mix(sceneUuid))]);
+    expect(results).toEqual([!before, before, !before]);
+    expect(aura.filterEnabled).toBe(!before);
+    expect(at.length).toBe(3);
+    expect(at[1] - at[0]).toBeGreaterThanOrEqual(300);
+    expect(at[2] - at[1]).toBeGreaterThanOrEqual(300);
+    expect(server.directCallLog.filter((call) => call.requestType === "SetSourceFilterEnabled")).toHaveLength(3);
+  });
+
   it("toggles the filter from a fresh read of its enabled state", async () => {
     const { server, filters, sceneUuid, aura } = await setup();
     const release = filters.watch(mix(sceneUuid, { setting: "" }));

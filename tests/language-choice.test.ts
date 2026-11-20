@@ -243,6 +243,61 @@ describe("the global settings store", () => {
     expect(writes).toEqual([merged, { ...merged, language: "ja" }]);
   });
 
+  it("a start-up read answering after the timeout is handed to whoever applied the empty start (C-03)", async () => {
+    vi.useFakeTimers();
+    let answer!: (settings: FadesterGlobalSettings) => void;
+    const store = new GlobalSettingsStore({
+      getGlobalSettings: () => new Promise((resolve) => { answer = resolve; }),
+      setGlobalSettings: async () => {}
+    }, 50);
+    const late: FadesterGlobalSettings[] = [];
+    store.onLateRead = (settings) => late.push(settings);
+    const started = store.start();
+    await vi.advanceTimersByTimeAsync(50);
+    expect(await started).toEqual({});
+    expect(late).toEqual([]);
+    answer({ ...CONNECTION, language: "de" });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(late).toEqual([{ ...CONNECTION, language: "de" }]);
+  });
+
+  it("a start-up read answering in time calls no late listener", async () => {
+    const store = new GlobalSettingsStore({ getGlobalSettings: async () => ({ ...CONNECTION }), setGlobalSettings: async () => {} }, 50);
+    let late = 0;
+    store.onLateRead = () => { late++; };
+    expect(await store.start()).toEqual({ ...CONNECTION });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(late).toBe(0);
+  });
+
+  it("a connection save without a password never writes over the stored one, and the client gets the stored one (C-03)", async () => {
+    vi.useFakeTimers();
+    const writes: FadesterGlobalSettings[] = [];
+    let answer!: (settings: FadesterGlobalSettings) => void;
+    const store = new GlobalSettingsStore({
+      getGlobalSettings: () => new Promise((resolve) => { answer = resolve; }),
+      setGlobalSettings: async (settings) => { writes.push({ ...settings }); }
+    }, 50);
+    const started = store.start();
+    await vi.advanceTimersByTimeAsync(50);
+    await started;
+    // The session runs on the defaults; the stored settings arrive late.
+    answer({ host: "10.0.0.7", port: 4460, password: "stored-secret" });
+    await vi.advanceTimersByTimeAsync(0);
+    vi.useRealTimers();
+    const enhanced = new FadesterClient({ host: "127.0.0.1", port: 4455, password: "" });
+    enhanced.ensureStarted = () => {};
+    const bridge = new PropertyInspectorBridge(new FadesterStore(enhanced), enhanced, {
+      sendToPropertyInspector: () => {},
+      persistGlobalSettings: connectionSaver(store, [enhanced])
+    });
+    // The operator corrects the port on a page that shows "no password saved".
+    await bridge.handleMessage({ event: "updateGlobalSettings", host: "10.0.0.7", port: 4461 });
+    expect(writes.at(-1)).toEqual({ host: "10.0.0.7", port: 4461, password: "stored-secret" });
+    expect(enhanced.getSettings()).toEqual({ host: "10.0.0.7", port: 4461, password: "stored-secret" });
+    enhanced.stop();
+  });
+
   it("settings Stream Deck sends while the read is out are newer than the held saves: a held key they carry gives way", async () => {
     vi.useFakeTimers();
     const writes: FadesterGlobalSettings[] = [];

@@ -4,7 +4,7 @@ import { FadesterClient } from "../src/obs/fadester-client.js";
 import { FadesterStore } from "../src/state/fadester-store.js";
 import { FakeObsServer } from "./helpers/fake-obs-server.js";
 import { MIDI_FADESTER_RELEASE_URL } from "../src/types/contract.js";
-import { statusSentence } from "../packages/streamdeck-fadester-shared/src/status-text.js";
+import { statusCellReason, statusSentence } from "../packages/streamdeck-fadester-shared/src/status-text.js";
 
 function waitForEvent<T>(
   emitter: { once(ev: string, fn: (arg: T) => void): unknown },
@@ -125,13 +125,129 @@ describe("Step 1.2 — FadesterClient & FadesterStore against FakeObsServer", ()
     await statusPromise;
 
     expect(client.getStatus().kind).toBe("wrong_password");
+    // The sentence says the sign-in is tried again, and how often (30 s unless set otherwise).
     expect(statusSentence(client.getStatus())).toBe(
-      "Wrong password. Check OBS Tools > WebSocket Server Settings > Show Connect Info."
+      "Wrong password. In OBS: Tools > WebSocket Server Settings > Show Connect Info. Trying again every 30 seconds."
     );
 
+    // Not with the normal backoff (30..60 ms here): OBS logs every refused sign-in.
     const attemptsAfterAuthFail = client.getConnectAttemptCount();
     await new Promise((r) => setTimeout(r, 150));
     expect(client.getConnectAttemptCount()).toBe(attemptsAfterAuthFail);
+    // A key press does not retry a refused password either.
+    expect(client.nudgeReconnect(0)).toBe(false);
+    expect(client.getConnectAttemptCount()).toBe(attemptsAfterAuthFail);
+  });
+
+  it("after a refused password it keeps trying slowly, and signs in once OBS's saved password is right", async () => {
+    server = new FakeObsServer({ password: "new-in-obs" });
+    const port = await server.start();
+    let saved = "old";
+    client = new FadesterClient(
+      { host: "127.0.0.1", port, password: "" },
+      { baseReconnectMs: 20, maxReconnectMs: 40, wrongPasswordRetryMs: 120, readSavedPassword: () => saved }
+    );
+    const kinds: string[] = [];
+    client.on("statusChanged", (status: { kind: string }) => kinds.push(status.kind));
+    client.start();
+    await waitUntil(() => client!.getStatus().kind === "wrong_password");
+    const first = client.getConnectAttemptCount();
+    // Two more refusals, one per slow interval; the status stays "wrong password" throughout (no flicker).
+    await waitUntil(() => client!.getConnectAttemptCount() >= first + 2, 3000);
+    expect(client.getStatus().kind).toBe("wrong_password");
+    expect(kinds.filter((kind) => kind !== "wrong_password")).toEqual([]);
+    // OBS's saved password is read again for each attempt.
+    saved = "new-in-obs";
+    await waitUntil(() => client!.getStatus().kind === "connected", 3000);
+  });
+
+  it("with no retry interval a refused password is never tried again by itself", async () => {
+    server = new FakeObsServer({ password: "secret-password" });
+    const port = await server.start();
+    client = new FadesterClient({ host: "127.0.0.1", port, password: "x" }, { baseReconnectMs: 20, maxReconnectMs: 40, wrongPasswordRetryMs: 0 });
+    client.start();
+    await waitUntil(() => client!.getStatus().kind === "wrong_password");
+    expect(statusSentence(client.getStatus())).toBe("Wrong password. In OBS: Tools > WebSocket Server Settings > Show Connect Info.");
+    const attempts = client.getConnectAttemptCount();
+    await new Promise((r) => setTimeout(r, 150));
+    expect(client.getConnectAttemptCount()).toBe(attempts);
+  });
+
+  it("names the missing step when OBS's own saved settings say which it is", async () => {
+    server = new FakeObsServer();
+    const port = await server.start();
+    await server.stop();
+    let enabled: boolean | null = false;
+    client = new FadesterClient(
+      { host: "127.0.0.1", port, password: "" },
+      { baseReconnectMs: 20, maxReconnectMs: 40, readSavedServer: () => ({ port, enabled }) }
+    );
+    client.start();
+    await waitUntil(() => client!.getStatus().unreachableReason === "websocket_off");
+    expect(statusSentence(client.getStatus())).toBe(
+      "OBS's WebSocket server is off. In OBS: Tools > WebSocket Server Settings > Enable WebSocket server."
+    );
+    expect(statusCellReason(client.getStatus())).toBe("Turn on OBS WebSocket");
+    // The tick was set in OBS, and still nothing answers: OBS is not running.
+    enabled = true;
+    await waitUntil(() => client!.getStatus().unreachableReason === "obs_not_running");
+    expect(statusSentence(client.getStatus())).toBe("OBS does not answer. Start OBS.");
+    expect(statusCellReason(client.getStatus())).toBe("Start OBS");
+    // Nothing known (no file): the sentence that names both.
+    enabled = null;
+    await waitUntil(() => client!.getStatus().unreachableReason === undefined);
+    expect(statusCellReason(client.getStatus())).toBe("OBS not connected");
+  });
+
+  it("follows OBS's own saved port when the configured one does not answer and no password is typed", async () => {
+    server = new FakeObsServer({ password: "obs-saved" });
+    const obsPort = await server.start();
+    const closed = new FakeObsServer();
+    const configured = await closed.start();
+    await closed.stop();
+    const asked: number[] = [];
+    client = new FadesterClient(
+      { host: "127.0.0.1", port: configured, password: "" },
+      {
+        baseReconnectMs: 20,
+        maxReconnectMs: 40,
+        readSavedServer: () => ({ port: obsPort, enabled: true }),
+        readSavedPassword: (_host, port) => { asked.push(port); return port === obsPort ? "obs-saved" : ""; }
+      }
+    );
+    client.start();
+    await waitUntil(() => client!.getStatus().kind === "connected", 3000);
+    expect(client.getActivePort()).toBe(obsPort);
+    expect(client.getSettings().port).toBe(configured); // what the user set is not rewritten
+    expect(asked).toEqual([obsPort]);
+    // A typed password means "this OBS, this port": nothing is followed.
+    client.stop();
+    client = new FadesterClient(
+      { host: "127.0.0.1", port: configured, password: "typed" },
+      { baseReconnectMs: 20, maxReconnectMs: 40, readSavedServer: () => ({ port: obsPort, enabled: true }) }
+    );
+    client.start();
+    await new Promise((r) => setTimeout(r, 200));
+    expect(client.getStatus().kind).toBe("obs_unreachable");
+    expect(client.getActivePort()).toBe(configured);
+  });
+
+  it("a reconnect to another address is not 'connected' until that address has answered (A-03)", async () => {
+    server = new FakeObsServer();
+    const port = await server.start();
+    client = new FadesterClient({ host: "127.0.0.1", port, password: "" }, { baseReconnectMs: 20, maxReconnectMs: 40 });
+    client.start();
+    await waitUntil(() => client!.getStatus().kind === "connected");
+    const closed = new FakeObsServer();
+    const dead = await closed.start();
+    await closed.stop();
+    const kinds: string[] = [];
+    client.on("statusChanged", (status: { kind: string }) => kinds.push(status.kind));
+    client.updateSettings({ host: "127.0.0.1", port: dead, password: "" });
+    expect(client.getStatus().kind).toBe("obs_unreachable");
+    expect(kinds).toEqual(["obs_unreachable"]);
+    client.updateSettings({ host: "127.0.0.1", port, password: "" });
+    await waitUntil(() => client!.getStatus().kind === "connected");
   });
 
   it("detects missing Midi Fadester plugin (code 600) and includes the release link", async () => {
@@ -214,7 +330,7 @@ describe("Step 1.2 — FadesterClient & FadesterStore against FakeObsServer", ()
     await new Promise((r) => setTimeout(r, 50));
     expect(client.getStatus().kind).toBe("obs_unreachable");
     expect(statusSentence(client.getStatus())).toBe(
-      "OBS is not running or the websocket is off (Tools > WebSocket Server Settings)"
+      "OBS is not running, or its WebSocket server is off. In OBS: Tools > WebSocket Server Settings > Enable WebSocket server."
     );
 
     const connectedPromise = waitForEvent(client, "statusChanged");

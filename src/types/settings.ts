@@ -406,13 +406,28 @@ export function normalizeObsFilterSettings(raw?: ObsFilterSettings): NormalizedO
   };
 }
 
+/** The shortest and the longest fade or transition the deck asks OBS for, in ms. One place: every control uses these. */
+export const MIN_DURATION_MS = 50;
+export const MAX_DURATION_MS = 20000;
+
+/** A duration within the limits (a whole number of ms). */
+export function clampDurationMs(ms: number): number {
+  return Math.max(MIN_DURATION_MS, Math.min(MAX_DURATION_MS, Math.round(ms)));
+}
+
 export function normalizeDurationMs(raw: unknown, fallback = 1000): number {
   const rounded = Math.round(Number(raw ?? fallback));
   if (!Number.isFinite(rounded)) {
     return fallback;
   }
-  return rounded === 0 ? 0 : Math.max(50, Math.min(20000, rounded));
+  return rounded === 0 ? 0 : clampDurationMs(rounded);
 }
+
+/**
+ * A Source & Layer caption may be longer than the other controls' (MAX_LABEL_OVERRIDE_CHARS): its key draws the label
+ * on its own line. Kept at 20 so labels already saved are not cut.
+ */
+export const MAX_LAYER_LABEL_CHARS = 20;
 
 /** Tape Deck key / dial press operations (P1-6). */
 export type TapeDeckOperation =

@@ -47,6 +47,13 @@ export class GlobalSettingsStore {
   private pending: FadesterGlobalSettings | undefined;
   private current: FadesterGlobalSettings = {};
   private queue: Promise<void> = Promise.resolve();
+  /** `start()` has returned (with the stored settings, or without them after its time limit). */
+  private startReturned = false;
+  /**
+   * Called when the start-up read answers only after `start()` gave up waiting: whoever applied the empty snapshot
+   * `start()` returned (the two OBS clients, the language) applies the real one now.
+   */
+  public onLateRead: ((settings: FadesterGlobalSettings) => void) | undefined;
 
   public constructor(
     private readonly port: GlobalSettingsPort,
@@ -69,7 +76,14 @@ export class GlobalSettingsStore {
     const read = this.port.getGlobalSettings().then(
       (stored) => {
         // A late answer replaces nothing newer (settings sent by Stream Deck); it is merged with the saves held meanwhile.
-        if (!this.known) this.learn(copyOf(stored));
+        if (this.known) return;
+        this.learn(copyOf(stored));
+        if (!this.startReturned) return;
+        try {
+          this.onLateRead?.(this.snapshot());
+        } catch {
+          // the listener's failure is not the store's
+        }
       },
       () => undefined
     );
@@ -82,6 +96,7 @@ export class GlobalSettingsStore {
     } finally {
       clearTimeout(timer);
       this.resolveReady();
+      this.startReturned = true;
     }
     return this.snapshot();
   }
@@ -160,8 +175,8 @@ export class GlobalSettingsStore {
 
 /**
  * The connection part of a save (host, port, password), the keys a connection save may change.
- * A key the save leaves undefined is skipped, so a connection save never removes a key: by design,
- * since the pages always send all three (a cleared password arrives as "").
+ * A key the save leaves undefined is skipped, so a connection save never removes a key. A page that typed no
+ * password leaves `password` out, and the stored one stays as it is, also when this session never learned it.
  */
 export function connectionChange(settings: FadesterGlobalSettings): FadesterGlobalSettings {
   const change: FadesterGlobalSettings = {};
@@ -183,16 +198,19 @@ export interface ConnectionSettingsListener {
  * write, and the address the page shows must be the one in use. The refusal still reaches the caller.
  */
 export function connectionSaver(
-  store: Pick<GlobalSettingsStore, "patch">,
+  store: Pick<GlobalSettingsStore, "patch"> & Partial<Pick<GlobalSettingsStore, "snapshot">>,
   listeners: readonly ConnectionSettingsListener[]
 ): (settings: FadesterGlobalSettings) => Promise<void> {
   return async (settings) => {
     try {
       await store.patch(connectionChange(settings));
     } finally {
+      // A save without a password keeps the stored one: the clients get that one, not an empty one.
+      const password = settings.password ?? store.snapshot?.().password;
+      const forClients = password === undefined ? settings : { ...settings, password };
       for (const listener of listeners) {
         try {
-          listener.updateSettings(settings);
+          listener.updateSettings(forClients);
         } catch {
           // one client's failure must not hide the save's own result, nor keep the address from the next client
         }

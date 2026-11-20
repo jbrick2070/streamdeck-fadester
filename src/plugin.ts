@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { isOpenDeckInstall, provisionOpenDeckStarter } from "./opendeck/starter.js";
 import { FadesterClient } from "./obs/fadester-client.js";
 import { DirectObsClient } from "./obs/direct-obs-client.js";
-import { savedObsPasswordFor } from "../packages/streamdeck-fadester-shared/src/obs/obs-websocket-config.js";
+import { savedObsPasswordFor, savedObsServerFor } from "../packages/streamdeck-fadester-shared/src/obs/obs-websocket-config.js";
 import { FadesterStore } from "./state/fadester-store.js";
 import { FaderDialAction } from "./actions/fader-dial.js";
 import { AutoFadeKeyAction } from "./actions/auto-fade-key.js";
@@ -60,10 +60,13 @@ const settingsStore = new GlobalSettingsStore({
 }, START_READ_TIMEOUT_MS, (message) => streamDeck.logger.warn(message));
 
 // With no password typed, both clients sign in with the one OBS saved on this computer, as Fadester Companion does.
+// OBS's own saved port and "Enable WebSocket server" tick are read the same way: the status then names the step that is
+// missing, and a port changed in OBS is followed without typing it here.
 const readSavedPassword = (host: string, port: number): string => savedObsPasswordFor(host, port);
-const enhancedClient = new FadesterClient(DEFAULT_GLOBAL_SETTINGS, { readSavedPassword });
+const readSavedServer = (host: string): ReturnType<typeof savedObsServerFor> => savedObsServerFor(host);
+const enhancedClient = new FadesterClient(DEFAULT_GLOBAL_SETTINGS, { readSavedPassword, readSavedServer });
 const store = new FadesterStore(enhancedClient);
-const directClient = new DirectObsClient(DEFAULT_GLOBAL_SETTINGS, { readSavedPassword });
+const directClient = new DirectObsClient(DEFAULT_GLOBAL_SETTINGS, { readSavedPassword, readSavedServer });
 directClient.on("tbarTurnIgnored", (reason: string) => streamDeck.logger.info(`T-bar dial: ${reason}`));
 const layers = new LayerController(directClient);
 // The VJ rig (PLAN.md 10): one filter controller and one panic latch for every control.
@@ -124,6 +127,16 @@ const directBridge = new DirectObsPropertyInspectorBridge(directClient, {
     if (device) await streamDeck.profiles.switchToProfile(device.id, profilePathForSlug(slug));
   }
 }, layers, tapeDecks, visualSignals);
+
+// The start-up read answered after its time limit: both clients started on the default address with no password.
+// They take the stored connection now, and the pages are told.
+settingsStore.onLateRead = (settings) => {
+  enhancedClient.updateSettings(settings);
+  directClient.updateSettings(settings);
+  languageChoice.settingsReceived();
+  bridge.broadcast();
+  directBridge.broadcast();
+};
 
 streamDeck.settings.onDidReceiveGlobalSettings<FadesterGlobalSettings>((ev) => {
   settingsStore.replace(ev.settings);

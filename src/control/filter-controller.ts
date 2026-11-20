@@ -153,8 +153,13 @@ function settingKey(target: Pick<FilterTarget, "sourceUuid" | "filterName" | "fi
   return `${recordKey(target)}\u0000${target.setting}`;
 }
 
+/** The least time between two on/off writes to one filter: at most three a second (see ABRUPT_WRITE_SPACING_MS). */
+export const FILTER_TOGGLE_SPACING_MS = 334;
+
 export class FilterController extends EventEmitter {
   private readonly records = new Map<string, FilterRecord>();
+  private readonly toggleTurns = new WeakMap<FilterRecord, Promise<void>>();
+  private readonly lastToggleAt = new WeakMap<FilterRecord, number>();
   /** The targets visible controls show, re-read on every reconnect and collection change. */
   private readonly watched = new Map<number, FilterTarget>();
   private watchId = 0;
@@ -403,15 +408,26 @@ export class FilterController extends EventEmitter {
     if (this.panicLatched && isVisualSidechainKind(target.filterKind)) throw new DirectObsError(ownText("filterLatched"), 409);
     const generation = this.generation;
     const record = this.recordFor(target);
-    await this.readFilter(record, generation);
-    this.requireReady(record, { ...target, setting: "" }, generation);
-    if (this.panicLatched && isVisualSidechainKind(target.filterKind)) throw new DirectObsError(ownText("filterLatched"), 409);
-    const next = record.enabled !== true;
-    await this.client.setSourceFilterEnabled(target.sourceUuid, target.filterName, next);
-    if (generation !== this.generation) throw new DirectObsError(ownText("errorControlChanged"), 400);
-    record.enabled = next;
-    this.emit("changed", record.eventKey);
-    return next;
+    // A filter going on and off changes the picture at once: at most three times a second per filter, however fast
+    // the key is pressed. The presses wait in line, each from a fresh read.
+    const turn = (this.toggleTurns.get(record) ?? Promise.resolve()).then(async () => {
+      const wait = (this.lastToggleAt.get(record) ?? -Infinity) + FILTER_TOGGLE_SPACING_MS - performance.now();
+      if (wait > 0) await new Promise<void>((resolve) => setTimeout(resolve, Math.min(wait, FILTER_TOGGLE_SPACING_MS)));
+      if (generation !== this.generation) throw new DirectObsError(ownText("errorControlChanged"), 400);
+      await this.readFilter(record, generation);
+      this.requireReady(record, { ...target, setting: "" }, generation);
+      if (this.panicLatched && isVisualSidechainKind(target.filterKind)) throw new DirectObsError(ownText("filterLatched"), 409);
+      const next = record.enabled !== true;
+      this.lastToggleAt.set(record, performance.now());
+      await this.client.setSourceFilterEnabled(target.sourceUuid, target.filterName, next);
+      if (generation !== this.generation) throw new DirectObsError(ownText("errorControlChanged"), 400);
+      record.enabled = next;
+      this.emit("changed", record.eventKey);
+      return next;
+    });
+    // The line goes on after a press that failed.
+    this.toggleTurns.set(record, turn.then(() => undefined, () => undefined));
+    return turn;
   }
 
   // ---- Internals ----

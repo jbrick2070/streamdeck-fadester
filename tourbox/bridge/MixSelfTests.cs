@@ -24,7 +24,7 @@ internal static class MixSelfTests
         var video = new Source("Visual", 1, 1);
         var composite = new Source("Nested", 2 | 64, 1);
         var all = new ConcurrentDictionary<Guid, Source>(new[] { a, b, zero, video, composite }.ToDictionary(x => x.Id));
-        int reads = 0, writes = 0; bool failAfterSet = false; string collection = "Disposable";
+        int reads = 0, writes = 0, musicWrites = 0; bool failAfterSet = false; string collection = "Disposable";
         var appeared = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var late = new Source("New capture", 2, 0.32);
         MixDesk? desk = null;
@@ -49,7 +49,7 @@ internal static class MixSelfTests
                         if (request == "GetInputVolume") { reads++; result["inputVolumeMul"] = src.Level; }
                         else
                         {
-                            src.Level = arg["inputVolumeMul"]!.GetValue<double>(); writes++; desk?.OnVolume(src.Id, src.Level);
+                            src.Level = arg["inputVolumeMul"]!.GetValue<double>(); writes++; if (src == a) musicWrites++; desk?.OnVolume(src.Id, src.Level);
                             if (src == late && src.Level == 0) appeared.TrySetResult();
                             if (failAfterSet) { failAfterSet = false; throw new IOException("simulated lost setter reply"); }
                         }
@@ -94,6 +94,32 @@ internal static class MixSelfTests
             collection = "Disposable"; await desk.Set(0, 100);
             for (int i = 0; i < 100 && (await desk.Status())["fading"]!.GetValue<bool>(); i++) await Task.Delay(15);
             Check(a.Level == .75 && late.Level == .32 && !(await desk.Status())["active"]!.GetValue<bool>(), "timed restore");
+
+            // A fade writes its journal once per step (before the step's OBS writes), and forces it to the disk only a few
+            // times a second and when the fade ends: it used to be twice per 35 ms step, each time through to the disk.
+            int savesBefore = MixJournal.Saves, flushesBefore = MixJournal.Flushes, stepsBefore = musicWrites;
+            long fadeBegan = System.Diagnostics.Stopwatch.GetTimestamp();
+            await desk.Set(-12, 600);
+            for (int i = 0; i < 400 && (await desk.Status())["fading"]!.GetValue<bool>(); i++) await Task.Delay(15);
+            double fadeMs = System.Diagnostics.Stopwatch.GetElapsedTime(fadeBegan).TotalMilliseconds;
+            int fadeSteps = musicWrites - stepsBefore, saves = MixJournal.Saves - savesBefore, flushes = MixJournal.Flushes - flushesBefore;
+            Check(Math.Abs(a.Level - .75 * Math.Pow(10, -12.0 / 20)) < 1e-9 && fadeSteps >= 4, "timed fade to a level");
+            // The start (one write) and the last step (before and after its writes) are outside the fade's steps.
+            Check(saves <= fadeSteps + 3, $"one journal write per fade step ({saves} writes for {fadeSteps} steps)");
+            Check(flushes <= 4 + (int)(fadeMs / 250), $"the journal reaches the disk a few times a second ({flushes} times in {fadeMs:F0} ms)");
+            string journalFile = Directory.EnumerateFiles(directory, "*.json").Single(f => !Path.GetFileName(f).StartsWith("provider", StringComparison.Ordinal));
+            var kept = MixJournal.Read(journalFile, cfg.Port, collection);
+            Check(kept is not null && Math.Abs(kept.Gain - Math.Pow(10, -12.0 / 20)) < 1e-9 && kept.Members.Values.All(m => m.Pending is null), "the finished fade is in the journal");
+            // A fade cut off by Stop leaves a journal a new session recovers from: every member is where the journal
+            // says it is, or where the journal says it was going.
+            await desk.Set(-30, 2000); await Task.Delay(200); await desk.Stop();
+            var cut = MixJournal.Read(journalFile, cfg.Port, collection)!;
+            Check(cut.Members.TryGetValue(a.Id, out var cutMusic) && (Math.Abs(cutMusic.Applied - a.Level) <= a.Level * 1e-6 ||
+                (cutMusic.Pending is double going && Math.Abs(going - a.Level) <= a.Level * 1e-6)), "a fade cut off mid-way is journalled where it stopped");
+            desk = new MixDesk(cfg, Rpc);
+            Check((await desk.Status())["recovering"]!.GetValue<bool>(), "a cut-off fade is recoverable after restart");
+            await desk.Set(0, 0);
+            Check(a.Level == .75 && late.Level == .32 && !Directory.EnumerateFiles(directory, "*.json").Any(f => f == journalFile), "recovered from a cut-off fade to the original levels");
 
             var deskActions = new DeskActions(cfg, Rpc);
             string persistedId1 = BridgeConfig.ResolveProviderId(cfg.MixStateDirectory);

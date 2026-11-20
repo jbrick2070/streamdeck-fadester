@@ -27,6 +27,11 @@ internal sealed class MixDesk(BridgeConfig cfg, Func<string, JsonObject?, Task<J
     private double gain = 1, target = 1;
     private bool changing, recovering, stopped;
     private string? error;
+    // A fade writes its journal once per 35 ms step, under the gate. Each of those writes is handed to the operating
+    // system; it is forced to the disk at most this often, and always outside a fade's steps and when the fade ends.
+    private static readonly TimeSpan FadeFlushEvery = TimeSpan.FromMilliseconds(250);
+    private long lastFlush;
+    private bool unflushed;
 
     internal double Db => ToDb(Volatile.Read(ref gain));
     private static double ToDb(double value) => value <= 0 ? -100 : 20 * Math.Log10(value);
@@ -69,7 +74,15 @@ internal sealed class MixDesk(BridgeConfig cfg, Func<string, JsonObject?, Task<J
     {
         lifetime.Cancel();
         await gate.WaitAsync();
-        try { stopped = true; generation++; changing = false; }
+        try
+        {
+            stopped = true; generation++; changing = false;
+            // A fade cut off here: its last step's journal goes to the disk now, with what that step did.
+            if (unflushed && state is { } s && journalPath.Length != 0)
+            {
+                try { SaveJournal(s, fadeStep: false); } catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
+            }
+        }
         finally { gate.Release(); }
         if (monitor != null) await monitor;
         // Do not unexpectedly raise a live mix on shutdown. Recovery uses the persisted UUID baselines.
@@ -210,7 +223,24 @@ internal sealed class MixDesk(BridgeConfig cfg, Func<string, JsonObject?, Task<J
         catch (ObsError e) when (e.Code is 600 or 604) { return (id, null); } // Item removed or no longer audio-capable.
     }
 
-    private async Task<int> Apply(double next, bool finish)
+    /// <summary>
+    /// Writes the journal. A step of a running fade (<paramref name="fadeStep"/>) reaches the disk only when the last
+    /// write that did is FadeFlushEvery old; every other write does at once.
+    /// </summary>
+    private void SaveJournal(MixJournal s, bool fadeStep)
+    {
+        bool flush = !fadeStep || lastFlush == 0 || Stopwatch.GetElapsedTime(lastFlush) >= FadeFlushEvery;
+        s.Save(journalPath, flush);
+        if (flush) lastFlush = Stopwatch.GetTimestamp();
+        unflushed = !flush;
+    }
+
+    /// <summary>
+    /// One step toward <paramref name="next"/>. <paramref name="fadeStep"/>: a step of a running fade that is not its
+    /// last. Such a step writes the journal once, before its OBS writes (what was applied and what is about to be: either
+    /// outcome can be reconciled after an interruption), and leaves the result to the next step's write 35 ms later.
+    /// </summary>
+    private async Task<int> Apply(double next, bool finish, bool fadeStep = false)
     {
         if (await CurrentCollection() != collection) throw new InvalidOperationException("Scene collection changed; the former mix is saved for recovery.");
         var s = state ?? throw new InvalidOperationException("Mixer state unavailable.");
@@ -233,9 +263,10 @@ internal sealed class MixDesk(BridgeConfig cfg, Func<string, JsonObject?, Task<J
             double wanted = m.Original * next;
             if (!Near(actual, wanted)) { m.Pending = wanted; writes.Add((id, m, wanted)); }
         }
+        bool saved = false;
         if (writes.Count > 0)
         {
-            s.Save(journalPath); // Both previous and proposed levels can be reconciled after interruption.
+            SaveJournal(s, fadeStep); saved = true; // Both previous and proposed levels can be reconciled after interruption.
             if (await CurrentCollection() != collection) throw new InvalidOperationException("Scene collection changed before the mixer write.");
             await Task.WhenAll(writes.Select(async w =>
             {
@@ -253,8 +284,8 @@ internal sealed class MixDesk(BridgeConfig cfg, Func<string, JsonObject?, Task<J
         }
         gain = s.Gain = next;
         int skipped = s.Members.Count(p => p.Value.LeftToOperator);
-        if (finish) { if (File.Exists(journalPath)) File.Delete(journalPath); state = null; recovering = false; lock (events) events.Clear(); }
-        else if (dirty || !File.Exists(journalPath)) s.Save(journalPath);
+        if (finish) { if (File.Exists(journalPath)) File.Delete(journalPath); state = null; recovering = false; unflushed = false; lock (events) events.Clear(); }
+        else if ((dirty || !File.Exists(journalPath)) && !(fadeStep && saved)) SaveJournal(s, fadeStep);
         return skipped;
     }
 
@@ -272,7 +303,7 @@ internal sealed class MixDesk(BridgeConfig cfg, Func<string, JsonObject?, Task<J
                     if (mine != generation || stopped) return;
                     double fraction = Math.Min(1, Stopwatch.GetElapsedTime(began).TotalMilliseconds / ms);
                     if (fraction == 1 || Stopwatch.GetElapsedTime(inventoryTime).TotalMilliseconds >= 700) await Discover();
-                    await Apply(fraction == 1 ? to : from + (to - from) * fraction, fraction == 1 && to == 1);
+                    await Apply(fraction == 1 ? to : from + (to - from) * fraction, fraction == 1 && to == 1, fadeStep: fraction < 1);
                     if (fraction == 1) { changing = false; Console.WriteLine($"All mixer inputs reached {Display(to)}."); return; }
                 }
                 catch (Exception e) { Pause(e); Console.WriteLine("Mixer fade stopped: " + e.Message); return; }

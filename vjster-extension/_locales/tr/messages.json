@@ -62,7 +62,7 @@
     "message": "Fadester Companion: bu bilgisayarda açın ve kontrollerinin açık olduğunu kontrol edin."
   },
   "linkDownDeck": {
-    "message": "Stream Deck ya da OpenDeck: VJster tuşu ya da düğmesi olan bir sayfa gösterin veya VJster ayarlarında “Bağlantıyı açık tut” seçeneğini işaretleyin."
+    "message": "Stream Deck ya da OpenDeck: VJster tuşu ya da kadranı olan bir sayfa gösterin veya VJster ayarlarında “Bağlantıyı açık tut” seçeneğini işaretleyin."
   },
   "linkDownPort": {
     "message": "Buradaki bağlantı noktası, o programın VJster ayarlarındakiyle aynı olmalıdır."

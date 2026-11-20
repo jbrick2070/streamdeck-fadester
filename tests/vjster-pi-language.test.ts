@@ -27,7 +27,7 @@ const globalWrites = (sent: Record<string, unknown>[]) =>
   sent.filter((m) => m.event === "setGlobalSettings").map((m) => (m as { payload: Record<string, unknown> }).payload);
 
 describe("the Language section (R-LANG-1, R-LANG-6)", () => {
-  it("offers Automatic and the nine languages in their own names, with the note", () => {
+  it("offers Automatic and the thirteen languages in their own names, with the note", () => {
     const page = loadPage("en", "speed");
     expect(page.byId("language")).toBeDefined();
     const html = page.all.filter((e) => e.getAttribute("data-i18n") === "languageNote");
@@ -68,7 +68,7 @@ describe("the Language section (R-LANG-1, R-LANG-6)", () => {
     page.toPage({ event: "language", choice: "en", resolved: "en" });
     expect(picker.value).toBe("en");
     expect(page.byId("save-global").textContent).toBe("Save link settings");
-    page.toPage({ event: "language", choice: "pt_BR", resolved: "de" });
+    page.toPage({ event: "language", choice: "sv_SE", resolved: "de" });
     expect(picker.value).toBe("auto");
     expect(page.byId("save-global").textContent).toBe("Verbindung speichern");
   });
@@ -81,7 +81,7 @@ describe("the Language section (R-LANG-1, R-LANG-6)", () => {
     expect(page.byId("save-global").textContent).toBe("Verbinding opslaan");
   });
 
-  it("ignores a resolved language that is not one of the nine", () => {
+  it("ignores a resolved language that is not one of the thirteen", () => {
     const page = loadPage("de", "pin");
     page.toPage({ event: "language", choice: "auto", resolved: "../en" });
     expect(page.root.getAttribute("lang")).toBe("de");

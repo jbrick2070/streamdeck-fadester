@@ -104,7 +104,7 @@ export interface GlobalSettings {
   readonly obsToken: string | null;
   /** Keep the link running while the plugin runs, so OBS can load its page at any time (obs-keepalive.ts); null until chosen. */
   readonly obsAlwaysOn: boolean | null;
-  /** The Language choice (R-LANG-1): "auto" when absent or not one of the nine. */
+  /** The Language choice (R-LANG-1): "auto" when absent or not one of the thirteen. */
   readonly language: LanguageChoice;
   /** The stored `language` value as it was, kept until the next pick (R-LANG-5); undefined when absent. */
   readonly languageRaw: unknown;

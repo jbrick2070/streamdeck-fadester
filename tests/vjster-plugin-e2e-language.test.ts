@@ -69,7 +69,7 @@ describe("VJster plugin end to end, in another language", () => {
   }, 30_000);
 
   it("draws English for a language that has no file", async () => {
-    const sim = await run("it", sims);
+    const sim = await run("sv", sims);
     expect(words(sim.svg("dial-0"))).toEqual(expect.arrayContaining(["SPEED", "EXTENSION OFF"]));
     expect(words(sim.svg("key-1-1"))).toContain("PIN TAB");
   }, 30_000);
@@ -119,7 +119,7 @@ describe("VJster plugin end to end, in another language", () => {
     expect(sim.globalWrites.at(-1)).toEqual({ port, extensionIds: IDS, language: "fr", obsToken: TOKEN });
     // A value the page does not offer saves nothing.
     const writes = sim.globalWrites.length;
-    sim.fromPage("key-1-1", { event: "setLanguage", choice: "pt_BR" });
+    sim.fromPage("key-1-1", { event: "setLanguage", choice: "sv_SE" });
     await until(() => sim.toPage.filter((m) => m.event === "language").length >= 3);
     expect(sim.globalWrites).toHaveLength(writes);
   }, 30_000);

@@ -11,7 +11,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { EN, PLUGIN_LANGUAGES, STREAM_DECK_LANGUAGES, currentLanguage, onLanguageChanged, setLanguage, t, translatorFor } from "../src/i18n/strings.js";
+import { EN, LANGUAGE_NAMES, PLUGIN_LANGUAGES, STREAM_DECK_LANGUAGES, currentLanguage, onLanguageChanged, setLanguage, t, translatorFor } from "../src/i18n/strings.js";
 import { CURVE_LABELS, TARGET_MODE_LABELS } from "../src/types/contract.js";
 import { useStreamDeckLanguage } from "../src/i18n/load.js";
 import { LanguageChoiceController, normalizeChoice, resolveLanguage } from "../src/i18n/language-choice.js";
@@ -88,8 +88,9 @@ afterEach(() => {
 });
 
 describe("the resolver", () => {
-  it("offers Stream Deck's languages and Dutch", () => {
-    expect([...PLUGIN_LANGUAGES]).toEqual([...STREAM_DECK_LANGUAGES, "nl"]);
+  it("offers Stream Deck's languages and Dutch, Italian, Brazilian Portuguese, Russian and Turkish: thirteen", () => {
+    expect([...PLUGIN_LANGUAGES]).toEqual([...STREAM_DECK_LANGUAGES, "nl", "it", "pt_BR", "ru", "tr"]);
+    expect(Object.keys(LANGUAGE_NAMES).sort()).toEqual([...PLUGIN_LANGUAGES].sort());
   });
 
   it.each(LANGUAGE_CHOICE_CASES)("stored $stored with Stream Deck in $app draws $resolved", ({ stored, app, resolved, choice, unknown }) => {
@@ -513,7 +514,7 @@ describe("the Language setting", () => {
     const { store, controller, broadcasts } = choiceController(port, "en");
     await store.start();
     await controller.start();
-    for (const choice of ["pt_BR", "NL", 7, undefined]) {
+    for (const choice of ["sv_SE", "NL", 7, undefined]) {
       await expect(controller.handleMessage({ event: "setLanguageChoice", choice })).resolves.toBe(true);
     }
     expect(port.writes).toEqual([]);
@@ -524,18 +525,18 @@ describe("the Language setting", () => {
   });
 
   it("an unknown stored value acts as Automatic, stays stored, and is logged once without the value", async () => {
-    const port = new FakeSettingsPort({ language: "pt_BR" });
+    const port = new FakeSettingsPort({ language: "sv_SE" });
     const { store, controller, logs } = choiceController(port, "de");
     useStreamDeckLanguage("de", fixtureDir);
     await store.start();
     await controller.start();
     expect(currentLanguage()).toBe("de");
     expect(controller.state()).toEqual({ choice: "auto", resolved: "de" });
-    store.replace({ language: "pt_BR" });
+    store.replace({ language: "sv_SE" });
     controller.settingsReceived();
     expect(logs).toEqual(["unknown language choice"]);
-    expect(logs.join(" ")).not.toContain("pt_BR");
-    expect(port.data).toEqual({ language: "pt_BR" });
+    expect(logs.join(" ")).not.toContain("sv_SE");
+    expect(port.data).toEqual({ language: "sv_SE" });
     expect(port.writes).toEqual([]);
   });
 
@@ -687,7 +688,7 @@ describe("the redraw on a language change", () => {
       await settle();
       const before = contexts.map(({ context }) => context.draws.length);
 
-      for (const stored of [{}, { language: "auto" }, { language: "de" }, { language: "pt_BR" }]) {
+      for (const stored of [{}, { language: "auto" }, { language: "de" }, { language: "sv_SE" }]) {
         const store = new GlobalSettingsStore({ getGlobalSettings: async () => stored, setGlobalSettings: async () => {} });
         const controller = new LanguageChoiceController({ store, appLanguage: "de", dir: fixtureDir, broadcast: () => {} });
         await store.start();

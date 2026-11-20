@@ -23,7 +23,7 @@ const IDS = ["abcdefghijklmnopabcdefghijklmnop", "ponmlkjihgfedcbaponmlkjihgfedc
 const TOKEN = "0123456789abcdef0123456789abcdef";
 
 describe("the Language choice resolves as Fadester's does (D-L2)", () => {
-  it("lists Stream Deck's eight languages and Dutch, as Fadester does", async () => {
+  it("lists the same thirteen languages as Fadester does", async () => {
     const { PLUGIN_LANGUAGES: fadester } = await import("../src/i18n/strings.js");
     expect([...PLUGIN_LANGUAGES]).toEqual([...fadester]);
   });
@@ -47,7 +47,9 @@ describe("VJster's own Automatic baseline (R-LANG-2)", () => {
     expect(appMapping("zh_CN", hasFile)).toBe("zh_CN");
     expect(appMapping("de_AT", hasFile)).toBe("de");
     expect(appMapping("de-AT", hasFile)).toBe("de");
-    expect(appMapping("it", hasFile)).toBe("en");
+    expect(appMapping("sv", hasFile)).toBe("en");
+    // A language Stream Deck may offer one day is drawn as soon as it has a file.
+    expect(appMapping("it", hasFile)).toBe("it");
     expect(appMapping("", hasFile)).toBe("en");
     expect(appMapping(undefined, hasFile)).toBe("en");
     // Dutch is a choice, never Automatic's guess: until nl.json exists, Stream Deck in nl stays English.
@@ -122,13 +124,13 @@ describe("the deck words follow the choice (R-LANG-4, R-LANG-5)", () => {
     const logged: string[] = [];
     const deck = deckOver(tables, "de", (m) => logged.push(m));
     expect(deck.resolved).toBe("de");
-    expect(deck.apply("pt_BR")).toBe(false);
+    expect(deck.apply("sv_SE")).toBe(false);
     deck.apply("NL");
     deck.apply(42);
     expect(deck.choice).toBe("auto");
     expect(deck.resolved).toBe("de");
     expect(logged).toHaveLength(1);
-    expect(logged[0]).not.toMatch(/pt_BR|NL|42/);
+    expect(logged[0]).not.toMatch(/sv_SE|NL|42/);
   });
 });
 
@@ -209,7 +211,7 @@ describe("a settings page's write keeps what it omits (R-LANG-8)", () => {
   });
 
   it("keeps an unknown stored language as stored until the next pick (R-LANG-5)", () => {
-    expect(keepOmitted({}, known({ language: "pt_BR" })).language).toBe("pt_BR");
+    expect(keepOmitted({}, known({ language: "sv_SE" })).language).toBe("sv_SE");
     expect(keepOmitted({}, known({ language: undefined }))).not.toHaveProperty("language");
   });
 

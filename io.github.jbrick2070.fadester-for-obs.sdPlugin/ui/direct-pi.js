@@ -709,7 +709,7 @@
       inActionInfo
     ) {
       // The language the plugin last resolved first, with no hold (D-L5); Stream Deck's language when none is
-      // remembered or the remembered one is not one of the nine. The plugin's first state message settles it.
+      // remembered or the remembered one is not one of the thirteen. The plugin's first state message settles it.
       if (!window.FadesterI18n.setResolved(recalledLanguage())) {
         window.FadesterI18n.setLanguage(window.FadesterI18n.languageFromInfo(inInfo));
       }

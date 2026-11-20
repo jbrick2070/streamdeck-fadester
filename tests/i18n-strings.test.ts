@@ -43,13 +43,18 @@ function useLanguage(language: string): void {
 afterEach(() => setLanguage("en", null));
 
 describe("language files (R-I18N-5)", () => {
-  it("ships every required language, and only the plugin's nine languages", () => {
+  it("ships every required language, and only the plugin's thirteen languages", () => {
     const present = presentLanguages();
     for (const language of REQUIRED_LANGUAGES) expect(present, language).toContain(language);
     for (const language of present) expect(PLUGIN_LANGUAGES).toContain(language);
     // Dutch is one of them, though Stream Deck cannot select it (PLAN.md 11.1).
-    expect(present).toContain("nl");
-    expect(STREAM_DECK_LANGUAGES).not.toContain("nl");
+    expect(present).toHaveLength(13);
+    // Five of them Stream Deck cannot select (PLAN.md 11.1): their files hold Localization only.
+    for (const language of ["nl", "it", "pt_BR", "ru", "tr"]) {
+      expect(present).toContain(language);
+      expect(STREAM_DECK_LANGUAGES).not.toContain(language);
+      expect(Object.keys(readLanguageFile(language)), language).toEqual(["Localization"]);
+    }
   });
 
   it.each(presentLanguages())("%s.json is UTF-8 JSON without a BOM and has every deck key with English's placeholders", (language) => {

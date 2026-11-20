@@ -13,7 +13,7 @@ const UI = join(PLUGIN_DIR, "ui");
 const DIRECT_PAGES = readdirSync(UI).filter((name) => name.endsWith(".html")
   && /<script src="direct-pi\.js"><\/script>/.test(readFileSync(join(UI, name), "utf8")));
 const MEMORY_KEY = "fadester:resolvedLanguage";
-const ENDONYMS = ["English", "Deutsch", "Español", "Français", "日本語", "한국어", "简体中文", "繁體中文", "Nederlands"];
+const ENDONYMS = ["English", "Deutsch", "Español", "Français", "日本語", "한국어", "简体中文", "繁體中文", "Nederlands", "Italiano", "Português (Brasil)", "Русский", "Türkçe"];
 const en = readLanguageFile("en").Localization.pi as Record<string, string>;
 const de = readLanguageFile("de").Localization.pi as Record<string, string>;
 const nl = readLanguageFile("nl").Localization.pi as Record<string, string>;
@@ -142,7 +142,7 @@ describe("the direct pages' Language section (R-LANG-1, R-LANG-6)", () => {
     expect(DIRECT_PAGES.length).toBe(10);
   });
 
-  it.each(DIRECT_PAGES)("%s has the section: Automatic, the nine by their own names, the note", (page) => {
+  it.each(DIRECT_PAGES)("%s has the section: Automatic, the thirteen by their own names, the note", (page) => {
     const h = openPage(page);
     const select = h.byId("direct-language");
     expect(select.tag).toBe("select");
@@ -253,7 +253,7 @@ describe("a Language change (R-LANG-4)", () => {
     expect(headings(h.document)).toContain(`${nl.languageHeading} ${nl.scopeAllControls}`);
     expect(h.byId("direct-language-note").textContent).toBe(nl.languageNote);
     expect(h.byId("direct-language").value).toBe("nl");
-    // The select's Automatic is worded, the nine endonyms are not.
+    // The select's Automatic is worded, the thirteen endonyms are not.
     expect(h.byId("direct-language").options.map((option) => option.textContent)).toEqual([nl.languageAuto, ...ENDONYMS]);
   });
 
@@ -289,7 +289,7 @@ describe("the select follows the stored choice", () => {
   it("an unknown stored value shows Automatic", () => {
     const h = openPage("obs-fader-dial.html");
     h.receive(state({ choice: "en", resolved: "en" }));
-    h.receive(state({ choice: "pt_BR", resolved: "en" }));
+    h.receive(state({ choice: "sv_SE", resolved: "en" }));
     expect(h.byId("direct-language").value).toBe("auto");
   });
 
@@ -331,7 +331,7 @@ describe("first paint from the remembered language (D-L5, no hold)", () => {
   it("does not remember a resolved language the page refused", () => {
     const h = openPage("obs-fade-key.html");
     h.receive(state({ choice: "de", resolved: "de" }));
-    h.receive(state({ choice: "auto", resolved: "pt_BR" }));
+    h.receive(state({ choice: "auto", resolved: "sv_SE" }));
     expect(h.i18n.language()).toBe("de");
     expect(h.memory.get(MEMORY_KEY)).toBe("de");
   });
@@ -347,7 +347,7 @@ describe("first paint from the remembered language (D-L5, no hold)", () => {
     expect(headings(h.document)).toContain(`${en.connHeading} ${en.scopeAllControls}`);
   });
 
-  it.each(["pt_BR", "NL", "nl-NL", "", "{\"lang\":\"de\"}"])("a remembered %j that is not one of the nine gives Stream Deck's language", (stale) => {
+  it.each(["sv_SE", "NL", "nl-NL", "", "{\"lang\":\"de\"}"])("a remembered %j that is not one of the thirteen gives Stream Deck's language", (stale) => {
     const h = openPage("obs-fade-key.html", { appLanguage: "de", memory: { [MEMORY_KEY]: stale } });
     expect(h.i18n.language()).toBe("de");
   });

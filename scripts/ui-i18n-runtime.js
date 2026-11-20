@@ -123,7 +123,7 @@ function setLanguage(raw) {
 }
 
 /**
- * Sets a language the plugin has already resolved: an exact member of the nine
+ * Sets a language the plugin has already resolved: an exact member of the thirteen
  * (`nl` included), as the plugin sends it. Anything else changes nothing and gives null.
  */
 function setResolved(code) {

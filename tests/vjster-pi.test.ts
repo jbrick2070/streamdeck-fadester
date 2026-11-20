@@ -89,7 +89,7 @@ describe("the settings page's texts (PLAN.md 8.4)", () => {
   });
 
   it("falls back to English for a language without a file, and to the base language for a regional one", () => {
-    const page = loadPage("it", "pin");
+    const page = loadPage("sv", "pin");
     expect(page.root.getAttribute("lang")).toBe("en");
     expect(page.byId("save-global").textContent).toBe("Save link settings");
     expect(fieldTexts(page.fields)).toEqual([tables.en.pi.pinNote]);

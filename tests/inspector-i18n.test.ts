@@ -109,9 +109,13 @@ describe("the inspectors' translator", () => {
     expect(i18n.setLanguage("nl-NL")).toBe("en");
   });
 
-  it("takes the plugin's resolved language only when it is one of the nine, exactly", () => {
+  it("takes the plugin's resolved language only when it is one of the thirteen, exactly", () => {
     const i18n = loadI18n();
     for (const language of PLUGIN_LANGUAGES) expect(i18n.setResolved(language), language).toBe(language);
+    expect(i18n.t("languageHeading")).toBe("Dil");
+    expect(i18n.setResolved("ru")).toBe("ru");
+    expect(i18n.t("languageHeading")).toBe("Язык");
+    expect(i18n.setResolved("nl")).toBe("nl");
     expect(i18n.language()).toBe("nl");
     // Dutch from nl.json's page table, with the Dutch number format.
     expect(i18n.t("refresh")).toBe("Vernieuwen");
@@ -119,7 +123,7 @@ describe("the inspectors' translator", () => {
     expect(i18n.plural("filterHost", 2, { source: "Camera" })).toBe("Camera — 2 filters");
     expect(i18n.number(1.5, 1)).toBe("1,5");
     i18n.setResolved("de");
-    for (const raw of ["nl-NL", "NL", "de_AT", "pt_BR", "", 42, null, undefined]) {
+    for (const raw of ["nl-NL", "NL", "de_AT", "pt-BR", "sv_SE", "", 42, null, undefined]) {
       expect(i18n.setResolved(raw), String(raw)).toBeNull();
       expect(i18n.language(), String(raw)).toBe("de");
     }

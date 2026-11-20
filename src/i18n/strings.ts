@@ -314,10 +314,11 @@ export const STREAM_DECK_LANGUAGES = ["en", "de", "es", "fr", "ja", "ko", "zh_CN
 
 /**
  * The languages the plugin's own Language setting offers: Stream Deck's and
- * Dutch, which the app cannot select (PLAN.md 11, R-LANG-1). A fixed choice
- * must be one of these exactly.
+ * Dutch, Italian, Brazilian Portuguese, Russian and Turkish, which the app
+ * cannot select (PLAN.md 11, R-LANG-1): thirteen, the suite's list. A fixed
+ * choice must be one of these exactly.
  */
-export const PLUGIN_LANGUAGES = [...STREAM_DECK_LANGUAGES, "nl"] as const;
+export const PLUGIN_LANGUAGES = [...STREAM_DECK_LANGUAGES, "nl", "it", "pt_BR", "ru", "tr"] as const;
 
 export type PluginLanguage = (typeof PLUGIN_LANGUAGES)[number];
 
@@ -334,7 +335,11 @@ export const LANGUAGE_NAMES: Readonly<Record<PluginLanguage, string>> = {
   ko: "한국어",
   zh_CN: "简体中文",
   zh_TW: "繁體中文",
-  nl: "Nederlands"
+  nl: "Nederlands",
+  it: "Italiano",
+  pt_BR: "Português (Brasil)",
+  ru: "Русский",
+  tr: "Türkçe"
 };
 
 export type LanguageTable = Readonly<Record<string, unknown>>;

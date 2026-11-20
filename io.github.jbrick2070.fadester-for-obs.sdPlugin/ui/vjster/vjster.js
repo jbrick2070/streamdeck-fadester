@@ -82,8 +82,8 @@
   var obsSectionFor = null;
 
   var STRINGS = window.VJSTER_PI_STRINGS || {};
-  /** The Language choice's languages: Stream Deck's eight and Dutch, as the plugin stores and resolves them. */
-  var PLUGIN_LANGUAGES = ["en", "de", "es", "fr", "ja", "ko", "zh_CN", "zh_TW", "nl"];
+  /** The Language choice's languages: Stream Deck's eight and Dutch, Italian, Brazilian Portuguese, Russian and Turkish, as the plugin stores and resolves them. */
+  var PLUGIN_LANGUAGES = ["en", "de", "es", "fr", "ja", "ko", "zh_CN", "zh_TW", "nl", "it", "pt_BR", "ru", "tr"];
   /** The language the texts are in: Stream Deck's, its base language, or English; then the one the plugin resolved. */
   var lang = "en";
 

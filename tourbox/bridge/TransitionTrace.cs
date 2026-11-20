@@ -90,7 +90,7 @@ internal sealed class TransitionTrace(Func<string, JsonObject?, Task<JsonObject>
                 }
             }
             else if (request == "TriggerStudioModeTransition")
-                Say(at, "the companion asks OBS to take" + (selected != null ? " (OBS last announced " + selected + ")." : "."));
+                Say(at, "the companion asks OBS to run the transition" + (selected != null ? " (OBS last announced " + selected + ")." : "."));
             else if (request == "SetTBarPosition" && !(args?["release"] is JsonValue r && r.TryGetValue<bool>(out var released) && released))
             {
                 // A pull sends a position many times a second. The first one and the release tell the story.

@@ -4,8 +4,8 @@
 and is driven by the Mac action host. It is not part of the mix-only host.
 It appears under this name in System Settings → Privacy & Security → Accessibility.
 It builds using the Mac's existing Swift/AppKit/ApplicationServices tools and has
-no third-party runtime dependencies. `MacNativeTBar.cs` is an optional .NET 8 caller
-source; it is not linked into any shipping project.
+no third-party runtime dependencies. `MacNativeTBar.cs` is its .NET 8 caller,
+compiled into the Mac action host (`tourbox/macos/host/FadesterMacHost.csproj`).
 
 The separate development write probe demonstrated AXValue 0 → 512 → 0 with OBS's
 visible handle and renderer following. On November 4, 2026, the action host then
@@ -80,14 +80,14 @@ refused, including a second freshness check immediately before the setter.
 Malformed commands never invoke the backend. A guard or write failure latches
 the session disarmed; callers must not replay an unconfirmed write.
 
-Every read and write verification scans only the pinned OBS process, requiring
-one OBS window and exactly one enabled, writable slider with full identifier
+Every read and write verification scans only the pinned OBS process (up to 16 of
+its windows), requiring exactly one enabled, writable slider with full identifier
 `OBSApp.OBSBasic.centralwidget.canvasEditor.QWidget.SliderIgnoreScroll` and exact
 range 0..1023. The window and slider objects stay pinned for the session. Missing
 permission, process replacement, UI recreation, extra windows, unreadable nodes,
 ambiguous matches, traversal limits, unexpected value or readback all fail closed.
 Scans have a 1.5 second traversal deadline, 3,000 queued nodes, 30 levels, 128
-children per node and 75 ms per-element AX messaging timeout. Individual in-flight
+children per node and a 0.20 s per-element AX messaging timeout. Individual in-flight
 AX calls can finish after a deadline. Slow scans expire writes rather than queue
 old motion; real rotary latency remains to be measured.
 

@@ -101,13 +101,14 @@ Only loopback hosts are accepted. No password command-line option exists; secret
 are not printed or saved to the development configuration. The native launcher
 removes the OBS credential environment variables before starting its helper.
 
-Startup authenticates OBS, performs a read-only native warmup, requires its bar
-parked at zero, and checks the same authenticated connection again. It never moves
-the bar into position. `READY <generation>` means this connection is accepting
-commands. A missing or denied native helper refuses startup; there is no invisible
-WebSocket-only fader fallback. Ordinary `take` remains the shared explicit OBS
-Take action. The controlled small move/cancel above is verified; full endpoints,
-return throws and broader failure cases still need real Mac rehearsal.
+Startup authenticates OBS, performs a read-only native warmup and checks the same
+authenticated connection again. It never moves the bar into position.
+`READY <generation>` means this connection is accepting commands. A T-bar that
+cannot be read at start (Studio Mode off, Accessibility not granted, the bar not
+parked at zero and not where this host's own last sweep left it) no longer refuses
+the session: every other control works, a `T-BAR:` line says why, and each Dial
+turn looks again (at most every two seconds). There is still no invisible
+WebSocket-only T-bar: until the native bar can be read, T-bar moves are refused.
 
 For a strictly read-only startup/status check, add `--read-only`. It permits only
 `preview.status`, `fader.status`, `recording.status` and `host.native.status`, disables the mix provider
@@ -178,12 +179,19 @@ this option is not a read-only mode.
 EOF, `quit`, Ctrl+C or SIGTERM disarms input, closes the optional shortcut helper
 to unregister its chords, and stops owned tasks. Shutdown sends
 no cleanup T-bar reset, Take or level restore. Inspect OBS and explicitly recover
-any interrupted manual mix. OBS disconnect ends the host; it never silently
-reconnects and resumes motion. No automatic user or system settings are changed.
+any interrupted manual mix. With VJster on, the host stays up when OBS goes away
+(the video controls keep working) and connects again when OBS is back; without
+VJster, or with `--mix-only`, an OBS disconnect ends the host and the panel looks
+for OBS again. It never resumes motion by itself. No automatic user or system
+settings are changed.
 
 Within one host run, a new OBS session (Reconnect, or OBS lost and back with
 VJster on) takes over what the last one left: the duck, so Restore still knows
 the level to return to, and a transition a cut or a sweep still owes, which goes
-back with the next take, cut, T-bar move or Cancel. Nothing is written when a
-session starts or ends, and a T-bar left part-way is not carried: a session
-starts only with OBS's T-bar parked.
+back with the next take, cut, T-bar move or Cancel. About 1.5 s after a cut the
+host looks once more and puts the operator's transition back if OBS returned to
+Cut as the cut ended (the one write that follows a command instead of being one).
+Nothing is written when a session starts or ends. A T-bar left part-way is carried
+too: if OBS's T-bar still sits there when the next session starts, the next Dial
+turn carries on from it, a Fade or Cut finishes it, and Cancel returns to Program;
+if OBS's T-bar is at rest by then, the sweep is forgotten.

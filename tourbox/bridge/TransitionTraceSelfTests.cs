@@ -105,7 +105,7 @@ internal static class TransitionTraceSelfTests
         Same(rig.Said(), "a cut, its restore and a later stray Cut read in order",
             "the companion asks OBS to select Cut.",
             "OBS selected Cut (the companion asked 30 ms earlier).",
-            "the companion asks OBS to take (OBS last announced Cut).",
+            "the companion asks OBS to run the transition (OBS last announced Cut).",
             "OBS started the transition Cut.",
             "OBS ended the transition Cut.",
             "the companion asks OBS to select Fade.",
@@ -145,7 +145,7 @@ internal static class TransitionTraceSelfTests
         Same(rig.Said(), "a dropped request is reported before the next request at the latest",
             "the companion asks OBS to select Cut.",
             "OBS did not announce Cut, which the companion asked for 3100 ms earlier; it last announced Fade.",
-            "the companion asks OBS to take (OBS last announced Fade).");
+            "the companion asks OBS to run the transition (OBS last announced Fade).");
 
         // Nothing to report: OBS repeats itself, or the companion asks for what is already selected.
         rig = await Rig.Start();
@@ -249,7 +249,7 @@ internal static class TransitionTraceSelfTests
         await rig.Take();
         rig.Trace.OnEvent("SceneTransitionStarted", "Cut");
         Same(rig.Said(), "with no selection known, the take and the start say only what happened",
-            "the companion asks OBS to take.",
+            "the companion asks OBS to run the transition.",
             "OBS started the transition Cut.");
 
         // The transitions OBS runs.

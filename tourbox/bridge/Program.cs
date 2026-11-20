@@ -67,7 +67,7 @@ internal static class Program
             bool traceTransitions = args.Remove("--trace-transitions");
             string command = args.FirstOrDefault() ?? "--listen";
             if ((command == "--dispatch" && args.Count != 2) || (command != "--dispatch" && args.Count > 1)) throw new ArgumentException("Invalid arguments. See --help.");
-            if (command == "--help") { Console.WriteLine("FadesterCompanionBridge [--config PATH] [--map PATH] [--trace-transitions] [--init | --catalog | --check | --self-test | --dispatch ACTION | --listen | --mix-only]\nMix-only serves other controllers without registering shortcuts. Type quit or press Ctrl+C to stop.\n--trace-transitions, with --listen or --mix-only, prints each change of OBS's selected transition with the time and whether the companion asked for it."); return 0; }
+            if (command == "--help") { Console.WriteLine("FadesterCompanionBridge [--config PATH] [--map PATH] [--trace-transitions] [--init | --catalog | --check | --studio-on | --self-test | --dispatch ACTION | --listen | --mix-only]\n--studio-on turns OBS's Studio Mode on and changes nothing else (the panel's Turn on button).\nMix-only serves other controllers without registering shortcuts. Type quit or press Ctrl+C to stop.\n--trace-transitions, with --listen or --mix-only, prints each change of OBS's selected transition with the time and whether the companion asked for it."); return 0; }
             if (traceTransitions && command is not ("--listen" or "--mix-only")) throw new ArgumentException("--trace-transitions works with --listen or --mix-only.");
             if (command == "--init")
             {
@@ -96,8 +96,15 @@ internal static class Program
                 using (ConsoleQueue.Install()) await Listen(config, command == "--listen" ? Binding.Load(map) : [], stop, traceTransitions, configPath);
                 return 0;
             }
-            if (command is not ("--catalog" or "--check" or "--dispatch")) throw new ArgumentException("Unknown option " + command + ". See --help.");
+            if (command is not ("--catalog" or "--check" or "--dispatch" or "--studio-on")) throw new ArgumentException("Unknown option " + command + ". See --help.");
             using var obs = await ObsConnection.Connect(config, stop.Token);
+            if (command == "--studio-on")
+            {
+                // Asked for by a person, on the panel's OBS light: Preview and the T-bar need Studio Mode. Nothing else is touched.
+                await obs.Call("SetStudioModeEnabled", new() { ["studioModeEnabled"] = true });
+                Console.WriteLine("Studio Mode is on.");
+                return 0;
+            }
             using var native = new NativeTBar(config.Port);
             var desk = new DeskActions(config, obs.Call, nativeMove: native.MoveAsync);
             if (command == "--catalog") Console.WriteLine((await desk.Catalog()).ToJsonString());
@@ -188,7 +195,7 @@ internal static class Program
         if (padMap != null)
         {
             Console.WriteLine(cfg.GamepadEasy
-                ? "Game controller: easy mode on. Hold a button 0.4 s for take, cut and other live actions (0.7 s for fade out and mic mute); a take that pushes the T-bar starts after 0.15 s, and the right trigger takes as usual."
+                ? "Game controller: easy mode on. Hold a button 0.4 s for Preview to Program, Cut and other live actions (0.7 s for fade out and mic mute); a fade that pushes the T-bar starts after 0.15 s, and the right trigger works as usual."
                 : "Game controller: easy mode off. Every button acts on press.");
             if (padMap.Keys.Any(k => k.StartsWith(PadControls.ShiftPrefix, StringComparison.OrdinalIgnoreCase)))
                 Console.WriteLine("Game controller: LB is the shift button and does nothing on its own.");
@@ -346,7 +353,7 @@ internal static class Program
                                     if (await desk.SlidePlan(ev.Timestamp) is { } slide)
                                     {
                                         tbarMail.Slide(slide.From, slide.Ms); slid = true;
-                                        Console.WriteLine($"Controller: pushing the T-bar while the take is held ({slide.Ms} ms end to end){(slide.NoTempo ? " · NO TEMPO" : "")}");
+                                        Console.WriteLine($"Controller: pushing the T-bar while the button is held ({slide.Ms} ms end to end){(slide.NoTempo ? " · NO TEMPO" : "")}");
                                     }
                                     else if (cfg.GamepadEasy && desk.TbarPosition == 0 && !desk.IsTakeArmed) { tbarMail.Ordinary(); slid = true; ordinaryPressedAt = ev.Timestamp; }
                                     else Console.WriteLine(await desk.Dispatch("take", ev.Timestamp));

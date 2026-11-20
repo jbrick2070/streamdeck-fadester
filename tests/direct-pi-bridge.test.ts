@@ -55,6 +55,34 @@ describe("Shared direct OBS connection settings", () => {
   });
 });
 
+// C-04: OBS sends a volume event per step of a fade or dial turn, and each one built the whole page state.
+describe("the page state is built only for an open page", () => {
+  it("builds and sends nothing while no settings page is open, and everything once one is", () => {
+    const client = new DirectObsClient({ host: "127.0.0.1", port: 1, password: "" }, { baseReconnectMs: 60_000 });
+    const payloads: Record<string, unknown>[] = [];
+    let open = false, built = 0;
+    const bridge = new DirectObsPropertyInspectorBridge(client, {
+      sendToPropertyInspector: (payload) => payloads.push(payload),
+      isInspectorOpen: () => open,
+      persistGlobalSettings: async () => {},
+      // Read once per state built.
+      getOpenDeckStarter: () => { built += 1; return undefined; }
+    });
+    for (const event of ["directStateChanged", "wholeMixChanged", "connectionReset"]) client.emit(event);
+    client.emit("statusChanged", client.getStatus());
+    bridge.broadcast();
+    expect(built).toBe(0);
+    expect(payloads).toEqual([]);
+    open = true;
+    client.emit("directStateChanged");
+    expect(built).toBe(1);
+    expect(payloads).toHaveLength(1);
+    expect(payloads[0]).toMatchObject({ event: "directObsState", connection: { host: "127.0.0.1", port: 1 } });
+    // A filter list read under an earlier connection was still dropped while no page was open.
+    expect(payloads[0].filterEpoch).toBeGreaterThan(0);
+  });
+});
+
 describe("Save & test tells the page when the test is over", () => {
   function bridgeFor(client: DirectObsClient, extra: Record<string, unknown> = {}) {
     const payloads: Record<string, unknown>[] = [];

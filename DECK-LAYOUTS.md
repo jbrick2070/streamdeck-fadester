@@ -1,20 +1,20 @@
 # Fadester for OBS: ready-made layouts
 
-Fourteen layouts for the Stream Deck +, the 15-key Stream Deck and the Stream Deck Mini. Every one is an editable profile; the name says which OBS mode it is for.
+Fourteen layouts for the Stream Deck +, the 15-key Stream Deck and the Stream Deck Mini. Every one is a profile you can edit. The picker in the settings page lists the layouts for your deck with the OBS mode in front, as in **[Studio Mode] Scene Desk +**; in Stream Deck's own profile list the same layout is called **Fadester — Scene Desk + (Studio Mode)**.
 
 ## Open one
 
-In any Fadester control's settings page, expand **Ready-made layouts**, choose a layout for the deck you have, and press **Open current starter layout**. A Studio Mode layout offers **Enable Studio Mode & open current starter layout** and prepares Preview for you. The second time, the same button returns to your edited copy.
+Click any Fadester for OBS key in Stream Deck to open its settings. Click the line at the foot of the page (it shows the version and the connection), open **Ready-made layouts**, choose a layout and press **Open this layout**. The first time, a line at the top of the page, **New deck? Fill it with a ready-made layout**, leads to the same place. A Studio Mode layout offers **Turn on Studio Mode and open** (or **Prepare Preview and open** when Studio Mode is already on) and prepares Preview for you. The second time, the same button returns to your edited copy.
 
 Or double-click a `.streamDeckProfile` file linked below; Stream Deck imports it as a new profile. The [profile library](profiles/README.md) lists every file.
 
-Set up the OBS connection once, on any key (README, *First five minutes*). Every layout uses it.
+The plugin connects to OBS by itself when OBS runs on the same computer with its WebSocket server on (README, *Three steps to the first working key*). Every layout uses that one connection.
 
 ## Which one
 
 | You want to | Layout | Mode |
 |---|---|---|
-| Browse scenes in Preview, then take one live with Cut, Transition or the T-bar dial | [Scene Desk](#scene-desk-studio-mode) | Studio |
+| Choose scenes in Preview, then send Preview to Program with Cut, the transition or the T-bar dial | [Scene Desk](#scene-desk-studio-mode) | Studio |
 | Switch scenes directly, no Preview | [Scene Desk, Regular](#scene-desk-regular-mode) | Regular |
 | One scene with many sources: show, hide and fade audio | [Source Desk](#source-desk-either-mode) | Either |
 | The same with half the deck free for other plugins | [Half Source Desk](#half-source-desk-either-mode) | Either |
@@ -22,19 +22,19 @@ Set up the OBS connection once, on any key (README, *First five minutes*). Every
 | Play, pause and skip a Playlister source | [Playlister Transport +](#playlister-transport--either-mode) | Either |
 | A VJ set: scenes, layers, looks and Panic on four pages | [VJ Rig](#vj-rig-studio-mode) | Studio |
 
-**Studio Mode** layouts use Preview and a separate take-live control. **Regular Mode** layouts send the chosen scene straight to Program with OBS's current transition. **Either Mode** layouts work in both.
+**Studio Mode** layouts use Preview and separate keys that send Preview to Program. **Regular Mode** layouts send the chosen scene straight to Program with OBS's current transition. **Either Mode** layouts work in both.
 
 What every layout already knows:
 
-- **Scenes.** Previous, Next and Random follow your OBS scene list from top to bottom, including scenes you add or reorder, and wrap at the ends. Random avoids the live scene (and, in Studio layouts, the Preview scene). Scene 1, 2, 3... are positions in that list; a number beyond the end does nothing until you add a scene. Pin any key to a named scene in its settings page.
+- **Scenes.** Previous, Next and Random follow your OBS scene list from top to bottom, including scenes you add or reorder, and wrap at the ends. Random avoids the Program scene (and, in Studio layouts, the Preview scene). Scene 1, 2, 3... are positions in that list; a number beyond the end does nothing until you add a scene. Pin any key to a named scene in its settings page.
 - **Audio.** Music keys and dials pick your main audio input, Mic picks a microphone, Aux picks another input. Choose a specific OBS mixer input in the key's settings page whenever you want; keep both keys of a fade pair on the same input.
-- **Sources.** Source controls follow Preview in Studio Mode and the live scene otherwise, and share the selected source. A scene's content is shared, so when Preview and Program show the same scene, layer edits change both.
+- **Sources.** Source controls follow Preview in Studio Mode and the Program scene otherwise, and share the selected source. A scene's content is shared, so when Preview and Program show the same scene, layer edits change both.
 
 ## Scene Desk (Studio Mode)
 
 [Scene Desk +](io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-scene-desk-v3.streamDeckProfile) for the Stream Deck +, [Scene Desk 15 Keys](io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-scene-desk-v2.streamDeckProfile) for the 15-key deck.
 
-Browse scenes in Preview with **Previous**, **Next** or **Random**, then press **Cut** or **Transition** to take Preview live. The Plus layout adds a **Scene 1** key and the scene mixer dial (the T-bar: turn from LIVE to NEXT, press to take Next live); the 15-key layout has **Scene 1-4**. Both have audio controls.
+Browse scenes in Preview with **Previous**, **Next** or **Random**, then press **Cut** or **Transition** to send Preview to Program. The Plus layout adds a **Scene 1** key and the T-bar dial (turn to fade from PROGRAM to PREVIEW, press to send Preview to Program at once); the 15-key layout has **Scene 1-4**. A scene key is framed red with the word PROGRAM while its scene is on Program, and green with PREVIEW while it is in Preview. Both have audio controls.
 
 The T-bar's optional **Scene loop** queues the next scene after each transition you finish, so one dial walks through all your scenes.
 

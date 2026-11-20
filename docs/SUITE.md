@@ -1,6 +1,6 @@
 # The suite: Fadester for OBS and VJster in one plugin
 
-**Fadester for OBS 0.9.0 and later is one plugin with nineteen actions**: Fadester's twelve (scenes, transitions, sources, filters, audio, Playlister, Visual Panic, Visual Sidechain Meter, Tape Deck, and two optional Midi Fadester actions) and VJster's seven (speed and quality dials, speed presets and steps, Play / Pause, Pin Tab). You install it once, in Stream Deck software or in [OpenDeck](OPENDECK.md), and every action is in one list. VJster's actions are named **VJster Speed**, **VJster Quality** and so on.
+**Fadester for OBS 0.9.0 and later is one plugin with nineteen actions**: Fadester's twelve (Scene, Volume & T-bar, Audio Fade, Source & Layer, Filter, Playlister, Tape Deck, Visual Panic, Visual Sidechain Meter, Scene Info Bar and the two optional Midi Fadester actions) and VJster's seven (speed and quality dials, speed presets and steps, Play / Pause, Pin Tab). You install it once, in Stream Deck software or in [OpenDeck](OPENDECK.md), and every action is in one list. VJster's actions are named **VJster Speed**, **VJster Quality** and so on.
 
 The standalone VJster plugin (`com.jbrick2070.vjster`) is still built and released for decks that have no OBS and for saved profiles that name it. If both are installed they can run together: the second to start finds the link port taken, says so on its keys, and takes over when the other stops ([docs/vjster/REQUIREMENTS.md](vjster/REQUIREMENTS.md) D-11).
 

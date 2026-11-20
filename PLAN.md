@@ -1557,6 +1557,16 @@ and OBS page (D-L7), better Chinese alias handling in VJster's Automatic.
 | D-L11 | Automatic label | **"Automatic (Stream Deck's language)"**, translated |
 | D-L12 | Midi Fadester pages in the reel slice | **No** (the rig uses the direct pages); L.6 |
 
+- *Pass 2 (2026-11-20): thirteen languages.* `PLUGIN_LANGUAGES` is now `[...STREAM_DECK_LANGUAGES, "nl", "it",
+  "pt_BR", "ru", "tr"]` in both `src/i18n/strings.ts` and `src/vjster/plugin/language.ts`, the suite's list. The four
+  new files (`it.json`, `pt_BR.json`, `ru.json`, `tr.json`, in both plugin folders) hold `Localization` only, as
+  `nl.json` does: Stream Deck's `supportedLanguages` (@elgato/streamdeck 3.0.3) is still the eight, so the app reads
+  no manifest texts for them and Automatic never picks them; they are chosen under Language. Drafted by Claude Fable
+  5.2 with OBS's own words from OBS 33's locale files; no second-model review and no native review yet. The step L.6
+  of 11.3 (the two Midi Fadester pages follow the choice) and L.7 (manifest texts for the languages Stream Deck does
+  not offer) are still not done. The VJster extension gained Italian, so the plugin, the extension and the OBS page
+  all carry the same thirteen.
+
 ## 12. Scene mixer take on OBS 33.0.1 (found by the demo kit check 1.1, 2026-11-01)
 
 *As built (2026-11-01, worktree `tbar-take`):* OBS 33.0.1: the T-bar release over websocket cancels; the press now

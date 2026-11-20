@@ -40,7 +40,7 @@ of any Fadester for OBS control, find the **Language** section ("all Fadester co
   (scenes, sources, filters), LIVE and Cut stay as they are;
 - Stream Deck's own action list, tooltips, dial hints and menus stay English, as the page's note says.
 
-1.3 **The Info Bar (only with a Stream Deck Neo at hand).** With the OBS Scene Info Bar action on the Neo and
+1.3 **The Info Bar (only with a Stream Deck Neo at hand).** With the Scene Info Bar action on the Neo and
 Nederlands chosen. Expected: "OBS verbonden", "LIVE <program scene>" and, in Studio Mode, "VOORBEELD <preview
 scene>"; with OBS closed, "OBS niet verbonden". The words fit the bar.
 

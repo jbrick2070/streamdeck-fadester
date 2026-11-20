@@ -36,7 +36,7 @@ Each action's **Control** setting picks what it drives: **Chrome tab**, **OBS pa
 
 ## Languages
 
-The plugin, its keys and its settings page come in nine languages: English, German, Spanish, French, Japanese, Korean, Simplified Chinese, Traditional Chinese and Dutch, chosen under **Language** on the settings page (Automatic follows Stream Deck's language). The Chrome extension follows Chrome's language and the OBS page uses the language in its address. Details and how to send corrections: [INSTALL.md](INSTALL.md).
+The plugin, its keys and its settings page, the Chrome extension and the OBS page all come in the same thirteen languages: English, German, Spanish, French, Italian, Japanese, Korean, Dutch, Brazilian Portuguese, Russian, Turkish, Simplified Chinese and Traditional Chinese. On the deck the language is chosen under **Language** on the settings page (Automatic follows Stream Deck's language). The Chrome extension follows Chrome's language and the OBS page uses the language in its address. Details and how to send corrections: [INSTALL.md](INSTALL.md).
 
 ## Licence
 

@@ -261,12 +261,14 @@ export class ObsSceneTransitionKeyInstanceController {
     }
     const title = customLabel || resolved || targetLabel(target) || t("sceneTitleFallback");
     // A chosen OBS transition keeps its OBS name; only our own words are translated.
+    // OBS's own transition, the one selected in OBS now, is named too ("Next · Fade", "Next · Stinger"): a Fade
+    // reads as Fade on every product. The general word only stands in while OBS has not said which it is.
     const operation = this.settings.operation === "preview"
       ? t("sceneOpPreview")
       : this.settings.operation === "cut" || this.settings.transitionName === OBS_TRANSITION_CUT
         ? t("sceneOpCut")
         : this.settings.transitionName === OBS_TRANSITION_CURRENT || !this.settings.transitionName
-          ? t("sceneOpTransition")
+          ? (this.client.isConnected() && catalog.currentTransition) || t("sceneOpTransition")
           : this.settings.transitionName;
     const role = isAutomatic ? t("sceneRoleIndex", { n: sceneTargetIndex(target)! + 1 })
       : target === DIRECT_SCENE_NEXT ? t("sceneRoleNext")
@@ -285,10 +287,15 @@ export class ObsSceneTransitionKeyInstanceController {
           : target === DIRECT_SCENE_NEXT ? "next"
             : target === DIRECT_SCENE_PREVIOUS ? "previous"
               : this.settings.operation === "cut" ? "cut"
-                : this.settings.operation === "transition" ? "take" : "scene",
+                : this.settings.operation === "transition" ? "transition" : "scene",
         configured,
         accent: this.settings.accent,
-        badge
+        badge,
+        // Which of the deck's scene keys is on air: its scene is on Program, or in Preview in Studio Mode. The key
+        // that puts Preview on Program is not marked (its scene is always the one in Preview).
+        onAir: !resolved || target === DIRECT_SCENE_CURRENT_PREVIEW ? undefined
+          : resolved === catalog.currentProgramScene ? "program"
+            : catalog.studioMode && resolved === catalog.currentPreviewScene ? "preview" : undefined
       })
     );
   }

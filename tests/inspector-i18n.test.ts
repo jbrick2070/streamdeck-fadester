@@ -155,7 +155,7 @@ describe("the inspectors' translator", () => {
     const i18n = loadI18n(document);
     i18n.setLanguage("de");
     expect(documentElement.lang).toBe("de");
-    expect(intro.textContent).toBe("Dies ist die erweiterte Anbindung mit gemeinsamen Slots. Für den normalen OBS-Audiomixer und die Szenen-T-Bar wählen Sie stattdessen OBS-Fader.");
+    expect(intro.textContent).toBe("Dies ist die erweiterte Anbindung mit gemeinsamen Slots. Für den normalen OBS-Audiomixer und die Szenen-T-Bar wählen Sie stattdessen Lautstärke & T-Bar.");
     expect(intro.children).toContain(strong);
     expect(input.attributes.placeholder).toBe("Aus OBS (leer lassen)");
   });
@@ -168,7 +168,7 @@ describe("the inspectors' translator", () => {
     let render!: (settings: object, save: () => void, state: object) => void;
     const window: Record<string, unknown> = {
       initDirectObsPropertyInspector: (callback: typeof render) => { render = callback; },
-      directObsFillSelect: () => {}, directObsAudioItems: () => []
+      directObsFillSelect: () => {}, directObsAudioItems: () => [], directObsFold: () => {}
     };
     runInNewContext(inspectorPageScript(html), { window, document: { activeElement: null, getElementById: (id: string) => elements.get(id) } });
     (window.FadesterI18n as I18n).setLanguage("de");

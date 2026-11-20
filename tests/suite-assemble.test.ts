@@ -110,6 +110,7 @@ describe("the assembly", () => {
     const manifest = read(join(SUITE, "manifest.json"));
     const own = manifest.Actions.filter((action) => !String(action.UUID).startsWith(suiteActionId("")));
     expect(own).toHaveLength(12);
-    expect(own[0].UUID).toBe("io.github.jbrick2070.fadester-for-obs.obs-neo-infobar");
+    // The action most people want first is first in the list (the scene switcher), the Neo-only Info Bar after the rest.
+    expect(own[0].UUID).toBe("io.github.jbrick2070.fadester-for-obs.scene-transition");
   });
 });

@@ -126,7 +126,8 @@ describe("Playlister transport key", () => {
 
     // OBS gone: the connection reason, as every direct key draws it.
     await server.stop();
-    await waitImage((svg) => svg.includes(">OBS not connected<"));
+    // (the reason is the large text now, on two lines, with the broken-link picture; the key keeps its name below)
+    await waitImage((svg) => svg.includes('data-offline="true"') && svg.includes("OBS not connected</title>"));
     expect(last()).not.toContain("Stopped");
   }, 15000);
 

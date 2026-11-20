@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The inspectors' translator. scripts/generate-ui-i18n.ts wraps this body,
 // with TABLES (each language file's Localization.pi), into ui/i18n.js.
-/* global TABLES, window, document */
-// The eight Stream Deck can select (Automatic maps onto these), and the nine a fixed choice can name (PLAN.md 11.1).
-var LANGUAGES = ["en", "de", "es", "fr", "ja", "ko", "zh_CN", "zh_TW"];
-var PLUGIN_LANGUAGES = LANGUAGES.concat(["nl"]);
+/* global TABLES, LANGUAGES, PLUGIN_LANGUAGES, LANGUAGE_NAMES, window, document */
+// LANGUAGES (those Stream Deck can select: Automatic maps onto these), PLUGIN_LANGUAGES (those a fixed choice can
+// name, PLAN.md 11.1) and LANGUAGE_NAMES come from src/i18n/strings.ts, written in by the generator above this body.
 var EN = TABLES.en || {};
 var active = EN;
 var language = "en";
@@ -149,5 +148,9 @@ window.FadesterI18n = {
   setLanguage: setLanguage,
   setResolved: setResolved,
   languageFromInfo: languageFromInfo,
-  language: function () { return language; }
+  language: function () { return language; },
+  /** The Language choice's entries, [code, the language's own name], in the plugin's order. */
+  languageChoices: function () {
+    return PLUGIN_LANGUAGES.map(function (code) { return [code, LANGUAGE_NAMES[code] || code]; });
+  }
 };

@@ -129,19 +129,60 @@
   ],
   "Actions": [
     {
-      "Name": "OBS Scene Info Bar",
-      "UUID": "io.github.jbrick2070.fadester-for-obs.obs-neo-infobar",
+      "Name": "Scene",
+      "UUID": "io.github.jbrick2070.fadester-for-obs.scene-transition",
       "Icon": "imgs/actions/scene-transition/icon",
-      "Tooltip": "Display OBS connection, Program scene, and Studio Mode Preview on the Stream Deck Neo Info Bar.",
-      "PropertyInspectorPath": "ui/obs-neo-infobar.html",
+      "Tooltip": "Go to the next, the previous, a numbered or a chosen scene: cut, transition, or put it in Preview.",
+      "PropertyInspectorPath": "ui/obs-scene-transition-key.html",
       "Controllers": [
-        "Neo"
+        "Keypad"
       ],
       "UserTitleEnabled": false,
-      "SupportedInMultiActions": false,
+      "SupportedInMultiActions": true,
       "States": [
         {
           "Image": "imgs/actions/scene-transition/key"
+        }
+      ]
+    },
+    {
+      "Name": "Volume & T-bar",
+      "UUID": "io.github.jbrick2070.fadester-for-obs.obs-fader",
+      "Icon": "imgs/actions/fader/icon",
+      "Tooltip": "Ride an audio source's volume, or fade Preview into Program with the T-bar.",
+      "PropertyInspectorPath": "ui/obs-fader-dial.html",
+      "Controllers": [
+        "Encoder"
+      ],
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": false,
+      "Encoder": {
+        "layout": "layouts/fader-cell.json",
+        "TriggerDescription": {
+          "Rotate": "Adjust audio volume, or fade Preview into Program",
+          "Push": "Run the press action chosen in settings"
+        }
+      },
+      "States": [
+        {
+          "Image": "imgs/actions/fader/key"
+        }
+      ]
+    },
+    {
+      "Name": "Audio Fade",
+      "UUID": "io.github.jbrick2070.fadester-for-obs.obs-fade",
+      "Icon": "imgs/actions/audio-fade/icon",
+      "Tooltip": "Fade an OBS mixer input up or down over a set time.",
+      "PropertyInspectorPath": "ui/obs-fade-key.html",
+      "Controllers": [
+        "Keypad"
+      ],
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": true,
+      "States": [
+        {
+          "Image": "imgs/actions/audio-fade/key"
         }
       ]
     },
@@ -172,85 +213,10 @@
       ]
     },
     {
-      "Name": "OBS Fader",
-      "UUID": "io.github.jbrick2070.fadester-for-obs.obs-fader",
-      "Icon": "imgs/actions/fader/icon",
-      "Tooltip": "Adjust an audio source, or blend the Program scene into Preview with the colorful scene mixer.",
-      "PropertyInspectorPath": "ui/obs-fader-dial.html",
-      "Controllers": [
-        "Encoder"
-      ],
-      "UserTitleEnabled": false,
-      "SupportedInMultiActions": false,
-      "Encoder": {
-        "layout": "layouts/fader-cell.json",
-        "TriggerDescription": {
-          "Rotate": "Adjust audio volume, or blend Program into Preview",
-          "Push": "Run the press action chosen in settings"
-        }
-      },
-      "States": [
-        {
-          "Image": "imgs/actions/fader/key"
-        }
-      ]
-    },
-    {
-      "Name": "Scene & Transition",
-      "UUID": "io.github.jbrick2070.fadester-for-obs.scene-transition",
-      "Icon": "imgs/actions/scene-transition/icon",
-      "Tooltip": "Select next or previous OBS scene, cut, preview, or run a chosen transition.",
-      "PropertyInspectorPath": "ui/obs-scene-transition-key.html",
-      "Controllers": [
-        "Keypad"
-      ],
-      "UserTitleEnabled": false,
-      "SupportedInMultiActions": true,
-      "States": [
-        {
-          "Image": "imgs/actions/scene-transition/key"
-        }
-      ]
-    },
-    {
-      "Name": "OBS Fade",
-      "UUID": "io.github.jbrick2070.fadester-for-obs.obs-fade",
-      "Icon": "imgs/actions/audio-fade/icon",
-      "Tooltip": "Directly fade an OBS mixer input up or down without changing scene-transition settings.",
-      "PropertyInspectorPath": "ui/obs-fade-key.html",
-      "Controllers": [
-        "Keypad"
-      ],
-      "UserTitleEnabled": false,
-      "SupportedInMultiActions": true,
-      "States": [
-        {
-          "Image": "imgs/actions/audio-fade/key"
-        }
-      ]
-    },
-    {
-      "Name": "Playlister Transport",
-      "UUID": "io.github.jbrick2070.fadester-for-obs.playlister-transport",
-      "Icon": "imgs/actions/playlister-transport/icon",
-      "Tooltip": "Previous, next, play/pause, stop, restart or status of one Playlister source through OBS's media controls.",
-      "PropertyInspectorPath": "ui/playlister-transport-key.html",
-      "Controllers": [
-        "Keypad"
-      ],
-      "UserTitleEnabled": false,
-      "SupportedInMultiActions": false,
-      "States": [
-        {
-          "Image": "imgs/actions/playlister-transport/key"
-        }
-      ]
-    },
-    {
-      "Name": "OBS Filter",
+      "Name": "Filter",
       "UUID": "io.github.jbrick2070.fadester-for-obs.obs-filter",
       "Icon": "imgs/actions/obs-filter/icon",
-      "Tooltip": "Ride a filter setting on a dial, or turn a filter on and off, set a value or step it from a key. Ranges, a gentle slew and ownership checks keep it safe.",
+      "Tooltip": "Turn a filter on or off, or ride one of its settings.",
       "PropertyInspectorPath": "ui/obs-filter.html",
       "Controllers": [
         "Keypad",
@@ -272,11 +238,11 @@
       ]
     },
     {
-      "Name": "Visual Panic",
-      "UUID": "io.github.jbrick2070.fadester-for-obs.visual-panic",
-      "Icon": "imgs/actions/visual-panic/icon",
-      "Tooltip": "Visual Sidechain's Panic (instant) and Restore visuals (hold 0.8 s), sent through OBS's own hotkeys. Panic keys show PANIC SENT until Restore visuals.",
-      "PropertyInspectorPath": "ui/visual-panic.html",
+      "Name": "Playlister",
+      "UUID": "io.github.jbrick2070.fadester-for-obs.playlister-transport",
+      "Icon": "imgs/actions/playlister-transport/icon",
+      "Tooltip": "Previous, next, play/pause, stop, restart or status of one Playlister source through OBS's media controls.",
+      "PropertyInspectorPath": "ui/playlister-transport-key.html",
       "Controllers": [
         "Keypad"
       ],
@@ -284,33 +250,7 @@
       "SupportedInMultiActions": false,
       "States": [
         {
-          "Image": "imgs/actions/visual-panic/key"
-        }
-      ]
-    },
-    {
-      "Name": "Visual Sidechain Meter",
-      "UUID": "io.github.jbrick2070.fadester-for-obs.visual-meter",
-      "Icon": "imgs/actions/visual-meter/icon",
-      "Tooltip": "Live BPM, beat counter, four smoothed band bars, 32-band strip spectrum, and tap, lock and resync tempo controls for Visual Sidechain.",
-      "PropertyInspectorPath": "ui/visual-meter.html",
-      "Controllers": [
-        "Keypad",
-        "Encoder",
-        "Neo"
-      ],
-      "UserTitleEnabled": false,
-      "SupportedInMultiActions": false,
-      "Encoder": {
-        "layout": "layouts/fader-cell.json",
-        "TriggerDescription": {
-          "Rotate": "Adjust BPM by 1 per click",
-          "Push": "Tap tempo, lock BPM, or resync beat 1"
-        }
-      },
-      "States": [
-        {
-          "Image": "imgs/actions/visual-meter/key"
+          "Image": "imgs/actions/playlister-transport/key"
         }
       ]
     },
@@ -336,6 +276,66 @@
       "States": [
         {
           "Image": "imgs/actions/tape-deck/key"
+        }
+      ]
+    },
+    {
+      "Name": "Visual Panic",
+      "UUID": "io.github.jbrick2070.fadester-for-obs.visual-panic",
+      "Icon": "imgs/actions/visual-panic/icon",
+      "Tooltip": "Visual Sidechain's Panic (instant) and Restore visuals (hold 0.8 s), sent through OBS's own hotkeys. Panic keys show PANIC SENT until Restore visuals.",
+      "PropertyInspectorPath": "ui/visual-panic.html",
+      "Controllers": [
+        "Keypad"
+      ],
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": false,
+      "States": [
+        {
+          "Image": "imgs/actions/visual-panic/key"
+        }
+      ]
+    },
+    {
+      "Name": "Visual Sidechain Meter",
+      "UUID": "io.github.jbrick2070.fadester-for-obs.visual-meter",
+      "Icon": "imgs/actions/visual-meter/icon",
+      "Tooltip": "Shows BPM and the beat. Press to tap, lock or resync the tempo.",
+      "PropertyInspectorPath": "ui/visual-meter.html",
+      "Controllers": [
+        "Keypad",
+        "Encoder",
+        "Neo"
+      ],
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": false,
+      "Encoder": {
+        "layout": "layouts/fader-cell.json",
+        "TriggerDescription": {
+          "Rotate": "Adjust BPM by 1 per click",
+          "Push": "Tap tempo, lock BPM, or resync beat 1"
+        }
+      },
+      "States": [
+        {
+          "Image": "imgs/actions/visual-meter/key"
+        }
+      ]
+    },
+    {
+      "Name": "Scene Info Bar",
+      "UUID": "io.github.jbrick2070.fadester-for-obs.obs-neo-infobar",
+      "Icon": "imgs/actions/scene-transition/icon",
+      "Tooltip": "Shows the OBS connection, the Program scene and, in Studio Mode, the Preview scene on the Stream Deck Neo Info Bar.",
+      "PropertyInspectorPath": "ui/obs-neo-infobar.html",
+      "Controllers": [
+        "Neo"
+      ],
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": false,
+      "States": [
+        {
+          "Image": "imgs/actions/scene-transition/key"
         }
       ]
     },

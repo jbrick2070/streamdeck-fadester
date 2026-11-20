@@ -19,7 +19,7 @@ function inspector(file: string) {
     window: {
       initDirectObsPropertyInspector: (callback: typeof render) => { render = callback; },
       directObsFillSelect: (element: { value: string }, _items: unknown, selected: string) => { element.value = selected; },
-      directObsAudioItems: () => [], directObsRefreshLayers: () => {}
+      directObsAudioItems: () => [], directObsRefreshLayers: () => {}, directObsFold: () => {}
     }
   });
   return { render: (settings: Record<string, unknown>, state: Record<string, unknown>) => render(settings, (patch) => saved.push(patch), state),
@@ -103,17 +103,21 @@ describe("direct inspector feedback", () => {
     expect(h.saved.at(-1)).toEqual({ sceneItemId: 2, sourceUuid: "different-camera", sourceName: "Camera" });
   });
 
-  it("describes the configured T-bar press rather than always promising a take", () => {
+  it("describes the configured T-bar press, never as a take", () => {
     const h = inspector("obs-fader-dial.html");
     const state = { status: { kind: "connected" }, catalog: { studioMode: true } };
     h.render({ target: "tbar", pressAction: "none" }, state);
     expect(h.text("obs-fader-tbar-hint")).toContain("Dial press is disabled");
-    expect(h.text("obs-fader-tbar-hint")).not.toContain("Press to take");
+    expect(h.text("obs-fader-tbar-hint")).not.toContain("Preview to Program");
     h.render({ target: "tbar", pressAction: "toggle_source" }, state);
     expect(h.text("obs-fader-tbar-hint")).toContain("show or hide");
-    expect(h.text("obs-fader-press-hint")).not.toContain("then takes Preview");
+    expect(h.text("obs-fader-press-hint")).not.toContain("puts Preview on Program");
     h.render({ target: "tbar", pressAction: "finish_transition" }, state);
-    expect(h.text("obs-fader-tbar-hint")).toContain("Press to take Preview");
+    expect(h.text("obs-fader-tbar-hint")).toBe("Turn to fade Preview into Program. Press: Preview to Program. Needs Studio Mode.");
+    for (const press of ["none", "toggle_source", "finish_transition", "next_blend_and_finish"]) {
+      h.render({ target: "tbar", pressAction: press }, state);
+      expect(h.text("obs-fader-tbar-hint") + h.text("obs-fader-press-hint")).not.toMatch(/\btakes?\b/i);
+    }
   });
 
   it("says under the T-bar settings whether OBS's own slider follows the dial, and why not", () => {
@@ -121,27 +125,20 @@ describe("direct inspector feedback", () => {
     const base = { status: { kind: "connected" }, catalog: { studioMode: true } };
     h.render({ target: "tbar" }, { ...base, nativeTbar: "following" });
     expect(h.text("obs-fader-slider-status")).toBe("OBS's on-screen T-bar moves with this dial.");
-    expect(h.display("obs-fader-midi-tip")).toBe("none");
     h.render({ target: "tbar" }, { ...base, nativeTbar: "unreachable" });
     expect(h.text("obs-fader-slider-status")).toContain("not minimised");
     expect(h.text("obs-fader-slider-status")).toContain("Fading still works.");
-    expect(h.display("obs-fader-midi-tip")).toBe("");
     h.render({ target: "tbar" }, { ...base, nativeTbar: "permission" });
     expect(h.text("obs-fader-slider-status")).toContain("Accessibility");
     expect(h.text("obs-fader-slider-status")).toContain("Fading still works.");
-    expect(h.display("obs-fader-midi-tip")).toBe("");
     h.render({ target: "tbar" }, { ...base, nativeTbar: "unsupportedOs" });
     expect(h.text("obs-fader-slider-status")).toContain("Windows and macOS");
-    expect(h.display("obs-fader-midi-tip")).toBe("");
     h.render({ target: "tbar" }, { ...base, nativeTbar: "transition" });
     expect(h.text("obs-fader-slider-status")).toContain("Fade transition");
-    expect(h.display("obs-fader-midi-tip")).toBe("");
     h.render({ target: "tbar" }, { ...base, nativeTbar: "off" });
     expect(h.text("obs-fader-slider-status")).toBe("");
-    expect(h.display("obs-fader-midi-tip")).toBe("");
     h.render({ target: "input_volume" }, { ...base, nativeTbar: "following" });
     expect(h.text("obs-fader-slider-status")).toBe("");
-    expect(h.display("obs-fader-midi-tip")).toBe("none");
   });
 
   it("distinguishes loaded empty scenes, removed selections, and fixed targets", () => {

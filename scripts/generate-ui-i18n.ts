@@ -12,7 +12,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { PRESET_CAPTIONS } from "../src/obs/preset-captions.js";
-import { PLUGIN_LANGUAGES } from "../src/i18n/strings.js";
+import { LANGUAGE_NAMES, PLUGIN_LANGUAGES, STREAM_DECK_LANGUAGES } from "../src/i18n/strings.js";
 
 export const PLUGIN_ROOT = resolve(process.cwd(), "io.github.jbrick2070.fadester-for-obs.sdPlugin");
 export const UI_DIR = resolve(PLUGIN_ROOT, "ui");
@@ -95,6 +95,10 @@ export function inspectorI18nScript(): string {
     "// The inspectors' texts (Localization.pi of every <lang>.json) and their translator, window.FadesterI18n.",
     "(function () {",
     "  \"use strict\";",
+    "  // The languages, from src/i18n/strings.ts: those Stream Deck can select, those a fixed choice can name, and each one's own name.",
+    `  var LANGUAGES = ${JSON.stringify([...STREAM_DECK_LANGUAGES])};`,
+    `  var PLUGIN_LANGUAGES = ${JSON.stringify([...PLUGIN_LANGUAGES])};`,
+    `  var LANGUAGE_NAMES = ${JSON.stringify(LANGUAGE_NAMES)};`,
     `  var TABLES = ${tables};`,
     ...runtime.split("\n").map((line) => (line ? `  ${line}` : "")),
     "})();",

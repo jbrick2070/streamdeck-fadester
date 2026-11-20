@@ -23,8 +23,6 @@ describe("P1-7 suite naming invariants", () => {
     const pluginRefKeys = [
       "scopeAllControls",
       "languageNote",
-      "connHintOnce",
-      "connAppliesAll",
       "connHintRejected",
       "connHintSaved",
       "connHintShared",
@@ -33,7 +31,6 @@ describe("P1-7 suite naming invariants", () => {
       "passwordPlaceholderSavedAll",
       "passwordSavedAll",
       "tdBannerNeedsUpdate",
-      "chkFixObsVersion",
     ];
     for (const key of pluginRefKeys) {
       expect(pi[key], `en.json Localization.pi.${key}`).toContain("Fadester for OBS");
@@ -127,10 +124,10 @@ describe("P1-7 suite naming invariants", () => {
     expect(en.Localization.mixerLiveScene).toBe("Program");
     expect(en.Localization.layerRoleLive).toBe("PROGRAM");
     expect(en.Localization.infobarLive).toBe("PROGRAM  {scene}");
-    expect(en.Localization.mixerPressTake).toBe("Press to take Preview");
-    expect(en.Localization.pi.controlTbar).toBe("Blend Program into Preview");
-    expect(infobar?.Tooltip).toContain("Program scene, and Studio Mode Preview");
-    expect(obsFader?.Tooltip).toContain("blend the Program scene into Preview");
+    expect(en.Localization.mixerPressTake).toBe("Press: Preview to Program");
+    expect(en.Localization.pi.controlTbar).toBe("Switch scenes (T-bar)");
+    expect(infobar?.Tooltip).toContain("the Program scene and, in Studio Mode, the Preview scene");
+    expect(obsFader?.Tooltip).toContain("fade Preview into Program");
 
     const enRaw = readFileSync(path.join(PLUGIN_DIR, "en.json"), "utf8");
     expect(enRaw).not.toMatch(/Program \(Live\)|take NEXT live|takes Next live/);

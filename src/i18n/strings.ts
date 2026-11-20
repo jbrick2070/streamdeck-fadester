@@ -24,11 +24,11 @@ const PLUGIN_EN = {
   mixDb: "{db} dB",
   // Direct OBS client errors
   errorNoVolume: "OBS did not return a volume for '{input}'.",
-  errorRoleUnavailable: "{role} is unavailable. Choose an OBS mixer input in the inspector.",
+  errorRoleUnavailable: "{role} is unavailable. Choose an OBS mixer input in the settings.",
   errorChooseInput: "Choose an existing OBS mixer input first.",
   errorConnectBeforeStudio: "Connect to OBS before preparing a Studio layout.",
   errorStudioNotEnabled: "OBS Studio Mode could not be enabled.",
-  errorTakeUnconfirmed: "OBS did not take Preview. Check Program in OBS.",
+  errorTakeUnconfirmed: "OBS did not switch to Preview. Check Program in OBS.",
   errorTbarNeedsStudio: "Scene T-bar needs OBS Studio Mode.",
   errorSceneIndexUnavailableOne: "Scene {n} is unavailable; OBS has {count} scene.",
   errorSceneIndexUnavailableMany: "Scene {n} is unavailable; OBS has {count} scenes.",
@@ -173,7 +173,7 @@ const PLUGIN_EN = {
   audioInput: "Audio input {n}",
   audioInputAutomatic: "Audio input {n} (automatic)",
   // Scene & Transition key
-  sceneTargetTakePreview: "Take Preview",
+  sceneTargetTakePreview: "Preview to Program",
   sceneTargetNext: "Next scene",
   sceneTargetPrevious: "Previous scene",
   sceneTargetRandom: "Random scene",
@@ -188,10 +188,10 @@ const PLUGIN_EN = {
   sceneRoleNext: "Next",
   sceneRolePrevious: "Previous",
   sceneRoleRandom: "Random",
-  sceneRoleTake: "Take",
+  sceneRoleTake: "To Program",
   sceneSubtitle: "{role} · {operation}",
   // OBS Fade key
-  fadeTitle: "OBS Fade",
+  fadeTitle: "Audio Fade",
   fadeUpNow: "Up now",
   fadeDownNow: "Down now",
   fadeUpSeconds: "Up {s}s",
@@ -209,11 +209,11 @@ const PLUGIN_EN = {
   pressPreviousBlend: "Press: previous blend",
   pressNormalBlend: "Press: Normal blend",
   pressShowHide: "Press: show / hide",
-  pressBlendTake: "Press: blend + take Preview",
+  pressBlendTake: "Press: blend, then to Program",
   pressDisabled: "Press disabled",
   // Direct renderer
   dialChooseControl: "Choose OBS control",
-  dialOpenInspector: "Open its inspector",
+  dialOpenInspector: "Open its settings",
   obsNotConnected: "OBS not connected",
   studioModeOff: "Studio Mode is off",
   mixerLiveScene: "Program",
@@ -221,12 +221,12 @@ const PLUGIN_EN = {
   mixerTurnOnStudio: "Turn on OBS Studio Mode",
   mixerChooseDifferent: "Choose a different Preview",
   mixerAutoQueue: "Turn to fade · auto-queues Preview",
-  mixerPressTake: "Press to take Preview",
+  mixerPressTake: "Press: Preview to Program",
   mixerLive: "PROGRAM",
   mixerNext: "PREVIEW",
   keyDefaultTitle: "OBS",
-  keyChooseAction: "Choose OBS action",
-  keyOpenInspector: "Open inspector",
+  keyChooseAction: "Not set up",
+  keyOpenInspector: "Open its settings",
   keyReady: "Ready",
   // Source & Layer key and dial
   layerOpNextSource: "Next source",
@@ -257,11 +257,11 @@ const PLUGIN_EN = {
   layerHeader: "{role}: {scene}",
   layerHeaderNone: "OBS SOURCES",
   layerFooterConnect: "Connect OBS to control",
-  layerFooterChooseScene: "Choose scene in inspector",
+  layerFooterChooseScene: "Choose scene in settings",
   layerFooterWaiting: "Waiting for OBS sources",
   layerFooterAddSources: "Add sources in OBS",
   layerFooterBrowse: "Turn to browse sources",
-  layerFooterChooseSource: "Choose source in inspector",
+  layerFooterChooseSource: "Choose source in settings",
   layerFooterSelectOnDeck: "Select a source on the deck",
   // OBS Scene Info Bar (Stream Deck Neo)
   infobarDisconnected: "OBS disconnected",
@@ -278,7 +278,7 @@ const PLUGIN_EN = {
   mfNeedsUpdateSentence: "Update Midi Fadester in OBS to use '{request}'.",
   vsNeedsUpdateSentence: "Update Midi Fadester in OBS (it includes Visual Sidechain) to use '{request}'.",
   // Texts the plugin sends to the property inspectors
-  setupErrorStudio: "Press Enable Studio Mode & open current starter layout.",
+  setupErrorStudio: "Press Turn on Studio Mode and open.",
   setupErrorFallback: "Could not prepare this OBS layout.",
   piChooseSlot: "Choose a slot first.",
   piEnabledNotApplied: "Midi Fadester did not apply the enabled state. Update Midi Fadester to a build that supports slot enable controls.",
@@ -320,6 +320,22 @@ export const STREAM_DECK_LANGUAGES = ["en", "de", "es", "fr", "ja", "ko", "zh_CN
 export const PLUGIN_LANGUAGES = [...STREAM_DECK_LANGUAGES, "nl"] as const;
 
 export type PluginLanguage = (typeof PLUGIN_LANGUAGES)[number];
+
+/**
+ * Each language in its own word, as the Language choice lists it (never translated, D-L3). This and the two lists
+ * above are the one place a language is added: the settings pages get them through the generated ui/i18n.js.
+ */
+export const LANGUAGE_NAMES: Readonly<Record<PluginLanguage, string>> = {
+  en: "English",
+  de: "Deutsch",
+  es: "Español",
+  fr: "Français",
+  ja: "日本語",
+  ko: "한국어",
+  zh_CN: "简体中文",
+  zh_TW: "繁體中文",
+  nl: "Nederlands"
+};
 
 export type LanguageTable = Readonly<Record<string, unknown>>;
 

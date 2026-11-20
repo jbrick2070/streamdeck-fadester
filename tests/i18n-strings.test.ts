@@ -186,20 +186,23 @@ describe("German on the deck", () => {
       currentPreviewScene: "", currentTransition: "", inputVolumes: {}, tbarPosition: 0
     };
     expect(buildNeoInfobarFeedback(true, catalog)).toEqual({
-      status: "OBS verbunden", live: "LIVE  Opening", preview: "VORSCHAU  Studio-Modus aus"
+      status: "OBS verbunden", live: "PROGRAMM  Opening", preview: "VORSCHAU  Studio-Modus aus"
     });
     const key = renderDirectKeySvg({ connected: true, reason: "", title: "", configured: false });
-    expect(key).toContain("OBS-Aktion wählen");
-    expect(key).toContain("Inspektor öffnen");
+    expect(key).toContain("Nicht eingerichtet");
+    expect(key).toContain("Einstellungen öffnen");
     const dial = renderDirectDialSvg({ connected: true, reason: "", label: "Mic", value: 0.4, configured: true });
     expect(dial).toContain("40 %");
     const mixer = renderDirectDialSvg({
       connected: true, reason: "", label: "", value: 0.5, configured: true, target: "tbar",
       studioMode: true, programSceneName: "A", previewSceneName: "B"
     });
-    expect(mixer).toContain("NÄCHSTE");
-    expect(mixer).toContain("Drücken: Nächste live schalten");
-    expect(mixer).not.toContain("Press to take Preview");
+    // OBS's own words for the two scenes, in every language (never LIVE and NEXT), and no "take".
+    expect(mixer).toContain("PROGRAMM");
+    expect(mixer).toContain("VORSCHAU");
+    expect(mixer).not.toContain("NÄCHSTE");
+    expect(mixer).toContain("Drücken: Vorschau ins Programm");
+    expect(mixer).not.toContain("Press: Preview to Program");
   });
 
   it("words the Midi Fadester cells through the injected translator", () => {

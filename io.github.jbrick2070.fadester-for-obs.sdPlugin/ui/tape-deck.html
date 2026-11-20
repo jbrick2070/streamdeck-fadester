@@ -7,13 +7,14 @@
   <link rel="stylesheet" href="pi.css" />
 </head>
 <body>
+  <div id="direct-top-status" class="status-banner status-info" style="display:none;"></div>
+  <button id="direct-top-layouts" class="btn secondary" type="button" style="display:none;"></button>
   <h3><span data-i18n="tdHeading">Tape Deck</span> <span class="scope" data-i18n="scopeThisControl">this control</span></h3>
   <p class="muted" data-i18n="tdIntro">Drives a Visual Sidechain Tape Deck filter on an OBS Browser Source (25% to 800% / 0.25x to 8x live speed).</p>
   <div id="td-status" class="status-banner status-info" style="display:none;"></div>
   <div class="row">
     <label for="td-deck" data-i18n="tdSourceLabel">Deck source</label>
     <select id="td-deck"></select>
-    <button id="td-refresh" class="btn secondary" type="button" data-i18n="refresh">Refresh</button>
   </div>
   <div class="row">
     <label for="td-operation" data-i18n="whenPressed">When pressed</label>
@@ -107,8 +108,6 @@
         save(update);
       };
       if (label) label.onchange = function () { save({ labelOverride: label.value.trim() }); };
-      const refresh = document.getElementById("td-refresh");
-      if (refresh) refresh.onclick = function () { window.directObsRefresh(); };
     });
   </script>
 </body>

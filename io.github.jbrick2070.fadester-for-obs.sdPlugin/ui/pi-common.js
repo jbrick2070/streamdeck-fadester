@@ -1056,8 +1056,10 @@
       };
       // The password is sent only when the operator typed in the field, so
       // re-saving host or port never wipes a stored password, and a stored
-      // password is never echoed back to this page.
-      if (passwordDirty && passEl) {
+      // password is never echoed back to this page. An empty field is "no
+      // change", never "no password": typing and deleting again fires no
+      // change event, and the next host or port save would clear it.
+      if (passwordDirty && passEl && passEl.value !== "") {
         payload.password = passEl.value;
       }
       sendToPlugin(payload);
@@ -1065,7 +1067,7 @@
     }
 
     if (passEl) {
-      passEl.addEventListener("input", function () { passwordDirty = true; });
+      passEl.addEventListener("input", function () { passwordDirty = passEl.value !== ""; });
       passEl.addEventListener("change", pushGlobalConn);
     }
     if (hostEl) hostEl.addEventListener("change", pushGlobalConn);

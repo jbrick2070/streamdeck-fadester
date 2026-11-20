@@ -122,7 +122,16 @@
       if (slotEl) slotEl.onchange = () => { save({ slot: slotEl.value }); syncAllFxVisibility(currentUiSettings()); };
       if (toEl) toEl.onchange = () => save({ to: Number(toEl.value) === 0 ? 0 : 1 });
       if (beatsEl) beatsEl.onchange = () => { save({ quantizeBeats: Number(beatsEl.value) }); syncAllFxVisibility(currentUiSettings()); };
-      if (durEl) durEl.onchange = () => save({ durationMs: Number(durEl.value) });
+      // An emptied box is not 0 ms (an instant fade): the last length stays, in the box and on the key.
+      let lastDurationMs = settings.durationMs !== undefined ? settings.durationMs : 1000;
+      if (durEl) durEl.onchange = () => {
+        if (durEl.value.trim() === "" || !isFinite(Number(durEl.value))) {
+          durEl.value = String(lastDurationMs);
+          return;
+        }
+        lastDurationMs = Number(durEl.value);
+        save({ durationMs: lastDurationMs });
+      };
       if (startEl) startEl.onchange = () => { save({ quantizeStart: startEl.value }); syncAllFxVisibility(currentUiSettings()); };
       if (labelEl) labelEl.onchange = () => save({ labelOverride: labelEl.value.trim() });
       if (readoutEl) readoutEl.onchange = () => save({ readoutStyle: readoutEl.value });

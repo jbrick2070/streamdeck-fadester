@@ -190,13 +190,14 @@
         host: host ? host.value : "127.0.0.1",
         port: port ? Number(port.value) : 4455
       };
-      // A saved password is deliberately never echoed into the inspector.
-      if (passwordDirty && password) payload.password = password.value;
+      // A saved password is deliberately never echoed into the inspector. An empty box is "no change", never "no
+      // password": typing and deleting again fires no change event, and the next host or port save would clear it.
+      if (passwordDirty && password && password.value !== "") payload.password = password.value;
       sendToPlugin(payload);
       passwordDirty = false;
     }
     if (password) {
-      password.oninput = function () { passwordDirty = true; };
+      password.oninput = function () { passwordDirty = password.value !== ""; };
       password.onchange = pushConnection;
     }
     if (host) {

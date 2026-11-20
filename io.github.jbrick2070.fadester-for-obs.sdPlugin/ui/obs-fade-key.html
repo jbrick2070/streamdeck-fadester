@@ -118,7 +118,14 @@
       };
       if (to) to.onchange = function () { save({ to: Number(to.value) === 0 ? 0 : 1 }); };
       if (beats) beats.onchange = function () { save({ quantizeBeats: Number(beats.value) }); };
-      if (duration) duration.onchange = function () { save({ durationMs: Number(duration.value) }); };
+      if (duration) duration.onchange = function () {
+        // An emptied box is not 0 ms (an instant fade): the saved length stays, in the box and on the key.
+        if (duration.value.trim() === "" || !isFinite(Number(duration.value))) {
+          duration.value = String(settings.durationMs !== undefined ? settings.durationMs : 1000);
+          return;
+        }
+        save({ durationMs: Number(duration.value) });
+      };
       if (start) start.onchange = function () { save({ quantizeStart: start.value }); };
       if (label) label.onchange = function () { save({ labelOverride: label.value.trim() }); };
       const refresh = document.getElementById("obs-fade-refresh");

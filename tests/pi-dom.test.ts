@@ -88,6 +88,10 @@ function harness() {
   add("profile-select", "select");
   add("profile-load", "button");
   add("profile-result");
+  add("conn-host", "input").value = "127.0.0.1";
+  add("conn-port", "input").value = "4455";
+  add("conn-password", "input");
+  add("conn-test-btn", "button");
   const document = {
     activeElement: null as Element | null,
     createElement: (tag: string) => new Element(tag),
@@ -101,6 +105,7 @@ function harness() {
       applyState, applySlotValue, resetEditorContext,
       configure(state, slot, catalog) { lastState = state; currentSettings = { slot }; overviewCatalog = catalog; },
       requestWith(fn) { request = fn; },
+      bindConnectionPanel, sendWith(fn) { send = fn; },
       isDirty() { return editorDirty; }
     };
   })();`);
@@ -300,6 +305,27 @@ describe("Property Inspector DOM behavior", () => {
     h.api.applyState(next); await flush(); await flush();
     expect(calls.filter((x) => !x.source)).toHaveLength(2);
     expect(calls.filter((x) => x.source === "A")).toHaveLength(2);
+  });
+
+  // C-02: typing in the password field and deleting it again fires no change event (the value is as at focus), and
+  // the pending "password was typed" then cleared the stored password on the next host or port save.
+  it("never sends an empty password with a host or port save, and still sends a typed one", async () => {
+    const h = harness(); await flush();
+    const sent: RecordValue[] = [];
+    h.api.sendWith((message: RecordValue) => { sent.push(message.payload ?? message); });
+    h.api.bindConnectionPanel();
+    const password = h.el("conn-password");
+    password.value = "x"; password.fire("input");
+    password.value = ""; password.fire("input");
+    h.el("conn-port").value = "4456"; h.el("conn-port").fire("change");
+    expect(sent.at(-1)).toEqual({ event: "updateGlobalSettings", host: "127.0.0.1", port: 4456 });
+    h.el("conn-test-btn").fire("click");
+    expect(sent.filter((x) => x.event === "updateGlobalSettings").every((x) => !("password" in x))).toBe(true);
+    password.value = "secret"; password.fire("input"); password.fire("change");
+    expect(sent.at(-1)).toEqual({ event: "updateGlobalSettings", host: "127.0.0.1", port: 4456, password: "secret" });
+    // Sent once: the next save does not repeat it.
+    h.el("conn-host").value = "10.0.0.5"; h.el("conn-host").fire("change");
+    expect(sent.at(-1)).toEqual({ event: "updateGlobalSettings", host: "10.0.0.5", port: 4456 });
   });
 
   // C-01: every state message redraws an open, unedited editor, and the plugin answers a failed getCatalog with two

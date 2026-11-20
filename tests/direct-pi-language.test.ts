@@ -439,3 +439,28 @@ describe("the shared sections say what happened", () => {
     expect(h.byId("direct-setup-status").textContent).toBe("Could not prepare this OBS layout.");
   });
 });
+
+// C-02: typing in the password box and deleting it again fires no change event (the value is as at focus), and the
+// pending "password was typed" then cleared the saved password on the next host or port save.
+describe("the OBS password box on the direct pages", () => {
+  it("never sends an empty password with a host or port save, and still sends a typed one", () => {
+    const h = openPage("obs-fade-key.html");
+    h.receive(state({ choice: "auto", resolved: "en" }));
+    const password = h.byId("direct-conn-password"), port = h.byId("direct-conn-port"), host = h.byId("direct-conn-host");
+    const updates = () => h.toPlugin().filter((payload) => payload.event === "directUpdateGlobalSettings");
+    h.document.activeElement = password;
+    password.value = "x"; password.oninput?.();
+    password.value = ""; password.oninput?.();
+    h.document.activeElement = null;
+    port.value = "4456"; port.onchange?.();
+    expect(updates().at(-1)).toEqual({ event: "directUpdateGlobalSettings", host: "127.0.0.1", port: 4456 });
+    host.value = "10.0.0.5"; host.onchange?.();
+    h.byId("direct-conn-test").onclick?.();
+    expect(updates().length).toBe(3);
+    expect(updates().every((payload) => !("password" in payload))).toBe(true);
+    password.value = "secret"; password.oninput?.(); password.onchange?.();
+    expect(updates().at(-1)).toEqual({ event: "directUpdateGlobalSettings", host: "10.0.0.5", port: 4456, password: "secret" });
+    port.value = "4455"; port.onchange?.();
+    expect(updates().at(-1)).toEqual({ event: "directUpdateGlobalSettings", host: "10.0.0.5", port: 4455 });
+  });
+});

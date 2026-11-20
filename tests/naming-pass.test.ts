@@ -170,8 +170,10 @@ describe("P1-7 suite naming invariants", () => {
 
   it("uses the canonical Program/Preview, Restore visuals/mix, and Fadester for OBS terms in README.md", () => {
     const readme = readRepoFile("README.md");
-    expect(readme).toContain("Blend Program into Preview");
-    expect(readme).toContain("PROGRAM and PREVIEW names");
+    // The T-bar's name in the Control list, as the settings page words it (pi.controlTbar).
+    expect(readme).toContain("**Switch scenes (T-bar)**");
+    expect(readme).toContain("PROGRAM and PREVIEW scenes");
+    expect(readme).not.toContain("Blend Program into Preview");
     expect(readme).toContain("Restore mix returns each managed input");
     expect(readme).toContain("Restore visuals");
     expect(readme).toContain("Choose a different Preview");
@@ -179,5 +181,23 @@ describe("P1-7 suite naming invariants", () => {
     expect(readme).not.toContain("Choose a different Next scene");
     expect(readme).not.toContain("Preview cueing");
     expect(readme).not.toContain("Hold **Restore** for 0.8 s");
+  });
+
+  it("never says \"take\" for the product's actions in the user's documents, and names thirteen languages", () => {
+    // Sending Preview to Program is "Preview to Program", a fade or a cut; "take" stays an ordinary English verb
+    // ("takes over the link port"). The action id `take` in the Companion's map is code, shown in backticks.
+    const product = /\btak(e|es|ing|en)\b[^.|\n]{0,24}\b(Preview|Program|live|Next|scene)\b|\b(a|the|each|next|fallback|quantized) takes?\b|\*\*Take\*\*|\| Take\b/i;
+    for (const file of ["README.md", "DECK-LAYOUTS.md", "docs/START-HERE.md", "docs/OPENDECK.md", "docs/SUITE.md",
+      "docs/gamepad/README.md", "docs/ADD-YOUR-OWN-CONTROLLER.md", "profiles/README.md"]) {
+      const text = readRepoFile(file);
+      const hit = product.exec(text);
+      expect(hit ? `${file}: ${hit[0]}` : "", file).toBe("");
+      expect(text, file).not.toContain("starter layout");
+      expect(text, file).not.toMatch(/\b(Scene & Transition|OBS Fader|OBS Filter)\b/);
+    }
+    const readme = readRepoFile("README.md");
+    expect(readme).toContain("Thirteen languages.");
+    expect(readme).toContain("speaks thirteen languages");
+    for (const file of ["docs/vjster/README.md", "docs/vjster/INSTALL.md"]) expect(readRepoFile(file), file).toContain("thirteen languages");
   });
 });

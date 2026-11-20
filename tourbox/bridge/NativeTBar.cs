@@ -67,10 +67,11 @@ internal sealed class NativeTBar(int port) : IDisposable
         var start = new ProcessStartInfo(exe)
         {
             UseShellExecute = false, CreateNoWindow = true, RedirectStandardInput = true,
-            RedirectStandardOutput = true, WorkingDirectory = AppContext.BaseDirectory
+            RedirectStandardOutput = true, RedirectStandardError = true, WorkingDirectory = AppContext.BaseDirectory
         };
         start.ArgumentList.Add(target.Id.ToString(CultureInfo.InvariantCulture));
         helper = Process.Start(start) ?? throw new IOException("Could not open the OBS slider helper.");
+        PanelLine.ForwardErrors(helper); // never straight to the panel: through this process's guarded stderr
     }
 
     private static int Tick(double normalized) => StudioFader.ToSliderTick(normalized);

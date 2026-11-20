@@ -653,7 +653,7 @@ internal static class PanelLine
             int end = text.IndexOfAny(['\r', '\n'], at);
             if (end < 0) end = text.Length;
             int first = at;
-            while (first < end && (char.IsWhiteSpace(text[first]) || char.IsControl(text[first]) || char.GetUnicodeCategory(text[first]) == System.Globalization.UnicodeCategory.Format)) first++;
+            while (first < end && Skipped(text[first])) first++;
             if (string.CompareOrdinal(text, first, "LAYER-PICKED", 0, "LAYER-PICKED".Length) == 0) result.Append("> ");
             result.Append(text, at, end - at);
             if (end < text.Length) result.Append(text[end]);
@@ -666,41 +666,108 @@ internal static class PanelLine
     /// A writer for everything a process prints as free text. Whatever way the text arrives (a string, single
     /// characters, a character array, with or without its line end), it is collected into whole lines, and each line
     /// goes through <see cref="Free"/> before it is handed on: no sequence of writes can start a line with the marker.
-    /// Text without a line end waits for it (or for Flush). Not thread-safe by itself: Console.SetOut wraps it.
+    /// Text without a line end waits for it, or for Flush. Flush hands an unfinished line on as it is, set back behind
+    /// "> " if it could still grow into the marker, and what is written next continues that line: it is never looked
+    /// at as a line start. Every call runs under the writer's own lock.
     /// </summary>
     internal sealed class Guard(Action<string> emit, System.Text.Encoding? encoding = null) : TextWriter
     {
+        private readonly object sync = new();
         private readonly System.Text.StringBuilder line = new();
+        /// <summary>Flush handed on the start of the line now being written: the next text sent continues it.</summary>
+        private bool cut;
         public override System.Text.Encoding Encoding => encoding ?? System.Text.Encoding.UTF8;
 
         public override void Write(char value)
         {
-            line.Append(value);
-            if (value == '\n') Send();
+            lock (sync)
+            {
+                line.Append(value);
+                if (value == '\n') Send();
+            }
         }
         public override void Write(char[] buffer, int index, int count) => Write(new string(buffer, index, count));
         public override void Write(string? value)
         {
             if (string.IsNullOrEmpty(value)) return;
-            int last = value.LastIndexOf('\n');
-            if (last < 0) { line.Append(value); return; }
-            line.Append(value.AsSpan(0, last + 1));
-            Send();
-            if (last + 1 < value.Length) line.Append(value.AsSpan(last + 1));
+            lock (sync)
+            {
+                int last = value.LastIndexOf('\n');
+                if (last < 0) { line.Append(value); return; }
+                line.Append(value.AsSpan(0, last + 1));
+                Send();
+                if (last + 1 < value.Length) line.Append(value.AsSpan(last + 1));
+            }
         }
         // One hand-over per line, so a line is never split by another thread's.
         public override void WriteLine(string? value)
         {
-            line.Append(value).Append(CoreNewLine);
-            Send();
+            lock (sync)
+            {
+                line.Append(value).Append(CoreNewLine);
+                Send();
+            }
         }
-        public override void Flush() { if (line.Length > 0) Send(); }
+        public override void Flush()
+        {
+            lock (sync)
+            {
+                if (line.Length == 0) return;
+                string text = Take();
+                // The buffer holds no LF (a line is sent at its LF), but a CR starts a line for a reader too. Only
+                // the part after the last CR is unfinished.
+                int from = text.LastIndexOf('\r') + 1;
+                string head = text[..from], tail = text[from..];
+                string sent = cut ? Continued(head) : Free(head);
+                if (tail.Length > 0 && (from > 0 || !cut))
+                {
+                    // The tail starts a line. A whole marker is set back by Free; so is a start that could still
+                    // grow into one (past anything a reader trims): later text cannot undo it.
+                    int first = 0;
+                    while (first < tail.Length && Skipped(tail[first])) first++;
+                    string start = tail[first..];
+                    bool mayGrow = start.Length < "LAYER-PICKED".Length && "LAYER-PICKED".StartsWith(start, StringComparison.Ordinal);
+                    tail = mayGrow ? "> " + tail : Free(tail);
+                }
+                emit(sent + tail);
+                // What is written next continues the tail; after a CR (or nothing) it starts a line of its own.
+                cut = tail.Length > 0;
+            }
+        }
 
-        private void Send()
+        private string Take()
         {
             string text = line.ToString();
             line.Clear();
-            emit(Free(text));
+            return text;
+        }
+
+        /// <summary>Text whose first line continues one already handed on: guarded from its second line.</summary>
+        private static string Continued(string text) => text.Length == 0 ? "" : Free("x" + text)[1..];
+
+        private void Send()
+        {
+            string text = Take();
+            bool continues = cut;
+            cut = false;
+            emit(continues ? Continued(text) : Free(text));
         }
     }
+
+    private static bool Skipped(char c) =>
+        char.IsWhiteSpace(c) || char.IsControl(c) || char.GetUnicodeCategory(c) == System.Globalization.UnicodeCategory.Format;
+
+    /// <summary>
+    /// A helper process's own stderr, line by line, onto this process's stderr, which is guarded where a panel reads
+    /// it. Left to inherit the handle, the helper would write to the panel directly, past the guard.
+    /// </summary>
+    internal static void ForwardErrors(System.Diagnostics.Process helper)
+    {
+        helper.ErrorDataReceived += (_, e) =>
+        {
+            if (e.Data is { Length: > 0 } text) { try { Console.Error.WriteLine(text); } catch (Exception x) when (x is IOException or ObjectDisposedException) { } }
+        };
+        helper.BeginErrorReadLine();
+    }
 }
+

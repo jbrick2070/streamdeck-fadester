@@ -402,6 +402,38 @@ describe("Property Inspector DOM behavior", () => {
     expect(h.el("af-filter").options.map((x) => x.value)).toEqual(["", "B Filter"]);
   });
 
+  it("stops asking by itself after three tries while nothing answers, and starts again with any answer", async () => {
+    const h = harness(); await flush();
+    const timers: Array<() => void> = [];
+    h.api.timersWith((fn: () => void) => { timers.push(fn); return timers.length; });
+    const busy = structuredClone(h.state);
+    busy.slots[0].source_a = "B"; busy.slots[0].filter_name = "B Filter";
+    const calls: RecordValue[] = [];
+    let answering = false;
+    h.api.requestWith(async (msg: RecordValue) => {
+      calls.push(msg);
+      return answering ? { data: msg.source ? detail(msg.source) : overview } : { error: "No reply from the plugin after 6 s.", noReply: true };
+    });
+    h.api.configure(busy, "fx_1", overview);
+    h.api.resetEditorContext();
+    h.api.refreshEditor(busy); await flush();
+    // The first ask and three retries, each armed by the one before; then silence.
+    for (let retry = 1; retry <= 3; retry += 1) {
+      expect(timers).toHaveLength(1);
+      timers.shift()!(); await flush(); await flush();
+      expect(calls.filter((x) => x.source === "B")).toHaveLength(1 + retry);
+    }
+    expect(timers).toHaveLength(0);
+    // A state message still asks (the operator's OBS may be back), and an answer gives the retries back.
+    answering = true;
+    h.api.applyState(structuredClone(busy)); await flush(); await flush();
+    expect(calls.filter((x) => x.source === "B")).toHaveLength(5);
+    expect(h.el("af-filter").options.map((x) => x.value)).toEqual(["", "B Filter"]);
+    answering = false;
+    h.el("assign-refresh").fire("click"); await flush(); await flush();
+    expect(timers).toHaveLength(1);
+  });
+
   it("does not send a second request for a source while the first is unanswered", async () => {
     const h = harness(); await flush();
     const other = structuredClone(h.state);

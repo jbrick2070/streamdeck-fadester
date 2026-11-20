@@ -99,8 +99,10 @@ internal static class MixSelfTests
             // times a second and when the fade ends: it used to be twice per 35 ms step, each time through to the disk.
             int savesBefore = MixJournal.Saves, flushesBefore = MixJournal.Flushes, stepsBefore = musicWrites;
             long fadeBegan = System.Diagnostics.Stopwatch.GetTimestamp();
+            string stepFile = MixJournal.Location(directory, cfg.Port, collection) + MixJournal.StepSuffix;
+            bool sawStepFile = false;
             await desk.Set(-12, 600);
-            for (int i = 0; i < 400 && (await desk.Status())["fading"]!.GetValue<bool>(); i++) await Task.Delay(15);
+            for (int i = 0; i < 400 && (await desk.Status())["fading"]!.GetValue<bool>(); i++) { sawStepFile |= File.Exists(stepFile); await Task.Delay(5); }
             double fadeMs = System.Diagnostics.Stopwatch.GetElapsedTime(fadeBegan).TotalMilliseconds;
             int fadeSteps = musicWrites - stepsBefore, saves = MixJournal.Saves - savesBefore, flushes = MixJournal.Flushes - flushesBefore;
             Check(Math.Abs(a.Level - .75 * Math.Pow(10, -12.0 / 20)) < 1e-9 && fadeSteps >= 4, "timed fade to a level");
@@ -125,8 +127,23 @@ internal static class MixSelfTests
             stepped.Gain = 0.5; stepped.Save(journalFile, flush: false);
             var older = MixJournal.Read(journalFile, cfg.Port, collection)!; older.Gain = 0.75; older.Save(journalFile);
             Check(!File.Exists(journalFile + MixJournal.StepSuffix) && MixJournal.Read(journalFile, cfg.Port, collection)!.Gain == 0.75, "a flushed save replaces the journal and removes the step file");
+            // A power cut between the journal's rename and the removal of the step file leaves a step file that is
+            // older than the journal: the journal stands.
+            var behind = MixJournal.Read(journalFile, cfg.Port, collection)!;
+            long newest = behind.Revision;
+            behind.Gain = 0.1; behind.Revision = newest - 2; behind.Save(journalFile, flush: false);
+            Check(File.Exists(journalFile + MixJournal.StepSuffix) && MixJournal.Read(journalFile, cfg.Port, collection) is { Gain: 0.75 } stands && stands.Revision == newest,
+                "a step file older than the journal is passed over");
+            // A step file alone (no journal file) is the journal; alone and torn, there is none.
+            File.Delete(journalFile);
+            Check(MixJournal.Exists(journalFile) && MixJournal.Read(journalFile, cfg.Port, collection) is { Gain: 0.1 }, "a step file with no journal file is read");
+            File.WriteAllBytes(journalFile + MixJournal.StepSuffix, new byte[16]);
+            Check(MixJournal.Read(journalFile, cfg.Port, collection) is null, "a torn step file with no journal file is no journal");
+            MixJournal.Delete(journalFile);
+            Check(!MixJournal.Exists(journalFile), "deleting the journal removes both files");
             File.WriteAllBytes(journalFile, flushed);
-            Check(saves - flushes >= 1 || fadeSteps < 8, "the steps between flushes went to the step file");
+            Check(sawStepFile && saves > flushes, $"a running fade writes its steps to the step file ({saves} writes, {flushes} flushed)");
+            Check(!File.Exists(stepFile) && journalFile + MixJournal.StepSuffix == stepFile, "a finished fade leaves no step file");
 
             // A fade cut off by Stop leaves a journal a new session recovers from: every member is where the journal
             // says it is, or where the journal says it was going.

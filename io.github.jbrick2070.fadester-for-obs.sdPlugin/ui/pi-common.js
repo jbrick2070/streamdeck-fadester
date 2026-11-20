@@ -60,10 +60,13 @@
   let sourceCatalogFailed = new Map();
   let overviewPending = null;
   let overviewFailed = false;
-  // A request that got no answer at all is not remembered as failed: it is asked again, once, a few seconds later
-  // (and by the next state message). Each ask waits 6 s for its answer, so this never becomes a flood either.
+  // A request that got no answer at all is not remembered as failed: it is asked again a few seconds later, at most
+  // CATALOG_RETRIES times in a row while nothing answers (a state message or Refresh still asks after that). Each
+  // ask waits 6 s for its answer, so this never becomes a flood either. Any answer starts the count again.
   const CATALOG_RETRY_MS = 5000;
+  const CATALOG_RETRIES = 3;
   let catalogRetryTimer = null;
+  let catalogRetriesLeft = CATALOG_RETRIES;
   let overviewSlot = "";
   let editorDirty = false;
   let editorBaseline = null;
@@ -891,7 +894,10 @@
       // After Refresh or a change of connection these are no longer the live maps, and the answer counts for nothing.
       // Only an answer is remembered: a source OBS does not have stays missing, a busy OBS answers the next time.
       if (reply && reply.noReply) retryCatalogLater();
-      else if (!(reply && reply.data)) failed.set(source, (reply && reply.error) || T("noFilterList"));
+      else {
+        catalogRetriesLeft = CATALOG_RETRIES;
+        if (!(reply && reply.data)) failed.set(source, (reply && reply.error) || T("noFilterList"));
+      }
       return reply;
     });
     pending.set(source, asked);
@@ -899,7 +905,8 @@
   }
 
   function retryCatalogLater() {
-    if (catalogRetryTimer !== null) return;
+    if (catalogRetryTimer !== null || catalogRetriesLeft <= 0) return;
+    catalogRetriesLeft -= 1;
     catalogRetryTimer = setTimeout(function () {
       catalogRetryTimer = null;
       // Redraws the open, unedited editor, which asks again for what it still lacks.
@@ -912,6 +919,7 @@
     sourceCatalogFailed = new Map();
     overviewPending = null;
     overviewFailed = false;
+    catalogRetriesLeft = CATALOG_RETRIES;
   }
 
   function refreshCatalog(force) {
@@ -932,9 +940,13 @@
       if (requestVersion !== catalogGeneration) return;
       if (reply && reply.data) {
         overviewCatalog = reply.data;
+        catalogRetriesLeft = CATALOG_RETRIES;
       } else {
         if (reply && reply.noReply) retryCatalogLater();
-        else overviewFailed = true;
+        else {
+          overviewFailed = true;
+          catalogRetriesLeft = CATALOG_RETRIES;
+        }
         if (reply && reply.error) setBanner($("assign-result"), reply.error, "err");
       }
       const modeSel = $("assign-mode");

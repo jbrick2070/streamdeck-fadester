@@ -82,12 +82,19 @@ internal sealed class ConsoleQueue : IDisposable
             queue.Out.Write(new StringBuilder("tail\nLAYER-PICKED h\n"));
             queue.Out.WriteLine("LAYER-PICKED i".ToCharArray());
             queue.Out.Write("{0}-PICKED {1}\n", "LAYER", "j");
+            // Flush hands an unfinished line on; what follows continues it and cannot complete a marker.
+            queue.Out.Write("LAYER-"); queue.Out.Flush(); queue.Out.Write("PICKED k\n");
+            queue.Out.Write("\u2028 L"); queue.Out.Flush(); queue.Out.Flush(); queue.Out.Write("AYER-"); queue.Out.Flush(); queue.Out.Write("PICKED l\nLAYER-PICKED m\n");
+            queue.Out.Write("Music "); queue.Out.Flush(); queue.Out.Write("up\n");
+            queue.Out.Write("a\nLAYER-PICK"); queue.Out.Flush(); queue.Out.Write("ED n\n");
+            queue.Out.Write("LAYER-PICKED o"); queue.Out.Flush(); queue.Out.Write(" p\n");
             queue.Add(queue.output, PanelLine.PickedLayer(2, "Live", "Title") + Environment.NewLine);
         }
         string n = Environment.NewLine;
         if (printed.ToString() != "> LAYER-PICKED {\"layer\":1,\"scene\":\"x\",\"source\":\"y\"} · Video 1x · playing" + n + "Music up" + n +
             "VJster: a\n> LAYER-PICKED b\n" + "> LAYER-PICKED c" + n + "> LAYER-PICKED d\n" + "> LAYER-PICKED e\n> LAYER-PICKED f\n" +
             "> LAYER-PICKED g\n" + "tail\n> LAYER-PICKED h\n" + "> LAYER-PICKED i" + n + "> LAYER-PICKED j\n" +
+            "> LAYER-PICKED k\n" + "> \u2028 LAYER-PICKED l\n> LAYER-PICKED m\n" + "Music up\n" + "a\n> LAYER-PICKED n\n" + "> LAYER-PICKED o p\n" +
             "LAYER-PICKED {\"layer\":2,\"scene\":\"Live\",\"source\":\"Title\"}" + n)
             throw new InvalidOperationException("Console queue test failed: free text must not start a line with the panel's marker.");
     }

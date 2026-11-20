@@ -62,12 +62,15 @@ internal sealed class MacShortcutInput : IDisposable
         if (!File.Exists(executable)) throw new FileNotFoundException("Fadester Companion Shortcuts.app is missing.", executable);
         var info = new ProcessStartInfo(executable)
         {
-            UseShellExecute = false, RedirectStandardInput = true, RedirectStandardOutput = true,
+            UseShellExecute = false, RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true,
             WorkingDirectory = Path.GetDirectoryName(executable)!
         };
         info.ArgumentList.Add("--listen"); info.ArgumentList.Add(mapPath);
         info.Environment.Remove("FADESTER_OBS_PASSWORD"); info.Environment.Remove("FADESTER_MAC_OBS_PASSWORD");
         child = Process.Start(info) ?? throw new IOException("Cannot start Mac shortcut input.");
+        // Its stderr never goes straight to the panel: line by line through this process's own, guarded stderr.
+        child.ErrorDataReceived += (_, e) => { if (e.Data is { Length: > 0 } text) { try { Console.Error.WriteLine(text); } catch (Exception x) when (x is IOException or ObjectDisposedException) { } } };
+        child.BeginErrorReadLine();
         cancellation = stop.Register(Stop);
         _ = Pump();
     }

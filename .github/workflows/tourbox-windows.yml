@@ -6,6 +6,8 @@ on:
     paths:
       - .github/workflows/tourbox-windows.yml
       - installer/components.json
+      - installer/*.iss
+      - installer/lang/**
       - tourbox/build.ps1
       - tourbox/make-guide.cjs
       - tourbox/README.md
@@ -32,6 +34,8 @@ on:
     paths:
       - .github/workflows/tourbox-windows.yml
       - installer/components.json
+      - installer/*.iss
+      - installer/lang/**
       - tourbox/build.ps1
       - tourbox/make-guide.cjs
       - tourbox/README.md
@@ -111,7 +115,7 @@ jobs:
         run: |
           dotnet build tourbox\bridge\FadesterCompanionBridge.csproj -c Release --nologo
           if ($LASTEXITCODE) { throw 'Bridge build failed.' }
-          npx vitest run tests/tourbox-vjster-link.test.ts tests/companion-mac-guides.test.ts tests/companion-mac-strings.test.ts tests/companion-one-name.test.ts
+          npx vitest run tests/tourbox-vjster-link.test.ts tests/companion-mac-guides.test.ts tests/companion-mac-strings.test.ts tests/companion-one-name.test.ts tests/companion-installer-languages.test.ts
           if ($LASTEXITCODE) { throw 'Companion tests failed.' }
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

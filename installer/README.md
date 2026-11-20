@@ -12,6 +12,18 @@ One guided installer for any mix of the Fadester suite on Windows. It is built p
 
 Each component keeps its real version. The setup file is named by build date, for example `Fadester-Suite-Setup-2026.11.15-Windows-x64.exe`.
 
+## Languages
+
+The setup and the Fadester Companion installer open in the Windows display language when it is one of the suite's 13 (English, German, Spanish, French, Italian, Japanese, Korean, Dutch, Brazilian Portuguese, Russian, Turkish, Simplified Chinese, Traditional Chinese), otherwise in English. They do not ask. `/LANG=de` (or `es`, `fr`, `it`, `ja`, `ko`, `nl`, `ptbr`, `ru`, `tr`, `zhcn`, `zhtw`, `en`) chooses one.
+
+- English is in each script's `[CustomMessages]`. The other twelve are in `lang/<code>.isl`, one file per language for both scripts; `lang/languages.iss` lists them. `tests/companion-installer-languages.test.ts` fails when a language lacks a message or fills in different values.
+- Inno Setup's own pages (Next, Install, Finish) come from its language files. It ships none for Chinese, so `lang/zh-CN-pages.isl` and `lang/zh-TW-pages.isl` translate the pages these setups show; a rare error message stays English there.
+- The log (`/LOG=`) and its markers are English in every language.
+- Midi Fadester's and Playlister's own installers run silently, so their language does not show.
+- Written without a check against the programs themselves: the names of OBS's and Chrome's own menu items in each language (File > Exit, Tools, Sources, Developer mode, Load unpacked).
+
+The last page offers **Open Fadester Companion** when this run installed it.
+
 ## Safety rules
 
 - **OBS and the Companion are never closed for you.** If `obs64.exe` is running and a plugin is selected, setup stops before changing anything and asks you to close OBS. The same applies to Fadester Companion and OpenDeck.
@@ -62,6 +74,7 @@ The tests refuse to run outside CI, because they install into `C:\ProgramData` a
 
 ## Not verified yet
 
+- **The pages in each language.** Both scripts compile with all 13 languages (Inno Setup 6, placeholder inputs); nobody has yet read the wizard on a Windows set to each language.
 - **A standard user elevating with an administrator's account** (`ORIGINAL-USER`): the CI runners sign in as one administrator, so this path has only been read, not run. To check it by hand: sign in as a standard user with OpenDeck or the Store edition of Fadester Companion, run setup, type an administrator's credentials, and read the first page and the log.
 - **No real-PC run yet.** The CI runners have no OBS, Stream Deck or OpenDeck. So nobody has yet seen Stream Deck's own import, the OpenDeck task with OpenDeck itself, or the plugins loading in OBS after a suite install.
 - **Code signing and Smart App Control** behaviour are untested until a certificate exists.

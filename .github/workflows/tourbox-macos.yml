@@ -140,7 +140,7 @@ jobs:
           # The Mac host's node tests (settled-read and guard logic of the live fader check) and the Companion's
           # catalog and guide tests ran in no workflow before.
           npm run test:tourbox-node
-          npx vitest run tests/companion-mac-guides.test.ts tests/companion-mac-strings.test.ts tests/companion-one-name.test.ts
+          npx vitest run tests/companion-mac-guides.test.ts tests/companion-mac-strings.test.ts tests/companion-one-name.test.ts tests/companion-installer-languages.test.ts
           bash tourbox/macos/package.sh "$PWD/companion"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

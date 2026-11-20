@@ -191,7 +191,7 @@ private final class PillActionButton: NSControl {
     private let previewMode: Bool
     private let paths: RuntimePaths
     private var settings = Settings(), catalog = Catalog(), invalidSettings = false, scanning = false, terminating = false
-    private var obsConnected = false, obsRunning = false, obsHidden = false, studioOff = false, tourboxConsoleRunning = false, tourboxConsoleInstalled = true, frontIsObs = false, frontIsChrome = false, vjsterPortBusy = false, axTrusted = true
+    private var obsConnected = false, obsRunning = false, obsHidden = false, studioOff = false, tourboxConsoleRunning = false, tourboxConsoleInstalled = true, frontIsObs = false, frontIsChrome = false, vjsterPortBusy = false, vjsterOnDeck = false, axTrusted = true
     private var bannerActionId = "openObs"
     private var obsProblem: String?
     private var vjsterPeers: Set<String> = []
@@ -539,7 +539,7 @@ private final class PillActionButton: NSControl {
             guard let self else { return }
             self.setMeter("")
             self.vjsterPeers.removeAll()
-            self.vjsterPortBusy = false
+            self.vjsterPortBusy = false; self.vjsterOnDeck = false
             self.updateEnabled()
             if self.terminating { NSApp.reply(toApplicationShouldTerminate: true); return }
             // Without VJster the host stops when OBS goes away: look for OBS again, and the next scan that reads it starts the controls,
@@ -949,7 +949,7 @@ private final class PillActionButton: NSControl {
         let axReady = axTrusted || onlyMix
         let tbState = Readiness.tourBox(consoleRunning: tourboxConsoleRunning, consoleInstalled: consoleReady, mixOnly: onlyMix, oldPreset: presetState == .old, noPreset: presetState == .none)
         let vjEnabled = vjster.state == .on
-        let vjState = Readiness.vjster(enabled: vjEnabled, controlsOn: controlsOn, connectedPeers: vjsterPeers.count, portBusy: vjsterPortBusy, mixOnly: onlyMix, usedBefore: vjsterUsed)
+        let vjState = Readiness.vjster(enabled: vjEnabled, controlsOn: controlsOn, connectedPeers: vjsterPeers.count, portBusy: vjsterPortBusy, mixOnly: onlyMix, usedBefore: vjsterUsed, onDeck: vjsterOnDeck)
         let ctlState = Readiness.controls(running: controlsOn, armed: host.isArmed, axTrusted: axReady, obsConnected: obsConnected)
 
         let syncState: PresetSyncState = lastSavedPreset != nil
@@ -1095,6 +1095,7 @@ private final class PillActionButton: NSControl {
         }
         vjsterPeers = Readiness.vjsterPeers(after: safeLine, current: vjsterPeers)
         vjsterPortBusy = Readiness.vjsterPortBusy(after: safeLine, current: vjsterPortBusy)
+        vjsterOnDeck = Readiness.vjsterOnDeck(after: safeLine, current: vjsterOnDeck)
         // The first video ever connected here: from now on a missing one is worth an amber light.
         if !vjsterPeers.isEmpty && !vjsterUsed { vjsterUsed = true }
         // Preview or the T-bar was used with Studio Mode off: the OBS light says so, with its Turn on button.
@@ -1357,7 +1358,7 @@ private final class PillActionButton: NSControl {
                 return
             }
             vjsterPeers.removeAll()
-            vjsterPortBusy = false
+            vjsterPortBusy = false; vjsterOnDeck = false
             try host.start(paths: paths, config: LocalFiles.settings, password: secret, mixEnabled: proposed.mixEnabled, mixOnly: proposed.mixOnly, extraSecrets: [proposed.vjsterObsToken])
             startedWith = proposed
             updateEnabled()

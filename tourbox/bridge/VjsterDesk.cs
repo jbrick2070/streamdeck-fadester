@@ -397,12 +397,20 @@ internal sealed class VjsterHost : IAsyncDisposable
     {
         string? last = null;
         void Once(string message) { if (message != last) { last = message; log(message); } }
+        // Who holds the port is asked once (one /whoami), not at every retry.
+        bool asked = false; string? holder = null;
         while (!stop.IsCancellationRequested)
         {
             try { await Link.StartAsync(); return; }
             catch (VjsterPortInUseException e)
             {
-                Once($"VJster port {e.Port} is in use, probably by the VJster actions in your Stream Deck or OpenDeck software. Remove them from the deck, or choose another port here and on the extension's options page. Trying again every 30 s.");
+                if (!asked)
+                {
+                    asked = true;
+                    try { holder = (await VjsterLink.ProbePortHolderAsync(e.Port, stop))?.Product; }
+                    catch (Exception) { holder = null; }
+                }
+                Once(PortInUseLine(e.Port, holder));
             }
             catch (System.Net.Sockets.SocketException e)
             {
@@ -411,6 +419,16 @@ internal sealed class VjsterHost : IAsyncDisposable
             try { await Task.Delay(PortRetry, stop); } catch (OperationCanceledException) { return; }
         }
     }
+
+    /// <summary>
+    /// What Activity says while another program holds the VJster port. When that program answers as the suite's own
+    /// Stream Deck or OpenDeck plugin, the line says so ("is held by the VJster actions of"): the deck has the video, which
+    /// is no fault, and the panels show a grey light for it. Only those two known names are ever printed.
+    /// </summary>
+    internal static string PortInUseLine(int port, string? holderProduct) =>
+        holderProduct is "Fadester for OBS" or "VJster"
+            ? $"VJster port {port} is held by the VJster actions of {holderProduct} on your Stream Deck or OpenDeck: the deck controls the video. To use this controller for VJster instead, remove them from the deck, or choose another port here and on the extension's options page. Trying again every 30 s."
+            : $"VJster port {port} is in use, probably by the VJster actions in your Stream Deck or OpenDeck software. Remove them from the deck, or choose another port here and on the extension's options page. Trying again every 30 s.";
 
     public ValueTask DisposeAsync() => Link.DisposeAsync();
 }

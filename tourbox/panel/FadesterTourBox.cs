@@ -191,7 +191,7 @@ namespace Fadester.TourBox {
     // TourBox Console's Auto Switch and whether its selected preset is ours (PresetAge.cs): they decide the reminder strip.
     bool? consoleAutoSwitch, activeFadester; string reminderKey; string shippedLayout;
     // VJster, from the running controls' own lines: which of the Chrome extension and the OBS page are connected, and whether its port is taken.
-    HashSet<string> vjPeers=new HashSet<string>(); bool vjPortBusy;
+    HashSet<string> vjPeers=new HashSet<string>(); bool vjPortBusy, vjOnDeck;
     TableLayoutPanel reminderBar; Button bringObs;
     // A bridge that a Stop or Close already waited for in vain: the next Stop or Close ends it if it still does not exit.
     // Ending: the bridge the panel is ending, so whichever sees it exit first says so in the same words.
@@ -984,7 +984,7 @@ namespace Fadester.TourBox {
         WriteConfig(); startedWith=RestartSettings(); var p=new Process {StartInfo=Command(mixOnly.Checked?"--mix-only":"--listen"),EnableRaisingEvents=true};
         p.OutputDataReceived+=(s,e)=>BridgeLine(p,e.Data); p.ErrorDataReceived+=(s,e)=>BridgeLine(p,e.Data);
         p.Exited+=delegate { try{BeginInvoke((Action)(()=>{if(worker==p){worker=null; SetVsStatus(""); ShowStartButton(); padState="stPadOff"; ShowStatus(); string said=text.Get(ending==p?"bridgeEnded":p.ExitCode==0?"stopped":"bridgeFailed"); Note(said); if(ending==p || p.ExitCode!=0) TrayTell(said);} Entry.Log("controls ended: "+p.ExitCode); try{p.CancelOutputRead();p.CancelErrorRead();}catch(InvalidOperationException){} p.Dispose();}));}catch(InvalidOperationException){} };
-        vjPeers=new HashSet<string>(); vjPortBusy=false;
+        vjPeers=new HashSet<string>(); vjPortBusy=false; vjOnDeck=false;
         worker=p; if(!p.Start())throw new Exception(text.Get("bridgeNotStarted")); p.BeginOutputReadLine(); p.BeginErrorReadLine(); ShowStartButton();
         // Until the bridge says it found one, a controller that is switched on counts as not found.
         padState=enableGamepad.Checked && !mixOnly.Checked ? "stPadMissing" : "stPadOff"; ShowStatus(); Note(text.Get("starting"));
@@ -1044,10 +1044,10 @@ namespace Fadester.TourBox {
         return;
       }
       if(worker==p){
-        var peersNow=Readiness.VjsterPeers(line,vjPeers); bool busyNow=Readiness.VjsterPortBusy(line,vjPortBusy);
+        var peersNow=Readiness.VjsterPeers(line,vjPeers); bool busyNow=Readiness.VjsterPortBusy(line,vjPortBusy), deckNow=Readiness.VjsterOnDeck(line,vjOnDeck);
         // The first video ever connected here: from now on a missing one is worth an amber light.
         if(peersNow.Count>0 && !vjUsed){ vjUsed=true; config["vjsterSeen"]=true; SaveKeys(new Dictionary<string,object>{{"vjsterSeen",true}}); ShowStatus(); }
-        if(busyNow!=vjPortBusy || !peersNow.SetEquals(vjPeers)){ vjPeers=peersNow; vjPortBusy=busyNow; ShowStatus(); }
+        if(busyNow!=vjPortBusy || deckNow!=vjOnDeck || !peersNow.SetEquals(vjPeers)){ vjPeers=peersNow; vjPortBusy=busyNow; vjOnDeck=deckNow; ShowStatus(); }
         // Preview or the T-bar was used with Studio Mode off: the OBS light says so, with its Turn on button.
         if(Readiness.SaysStudioOff(line) && !studioOff){ studioOff=true; studioChecksLeft=12; studioCheckAt=DateTime.Now.AddSeconds(10); ShowStatus(); }
         string padNow=PadState(line,padState), problem=PanelText.ProblemCode(line); bool obsNow=ObsState(line,obsConnected);
@@ -1113,9 +1113,9 @@ namespace Fadester.TourBox {
       // Stream Deck-only mode serves OBS's mixer and needs no Studio Mode: its light does not ask for it.
       obsLight.Display(Readiness.Obs(obsConnected,obsRunning,obsProblem,studioOff && !mixOnly.Checked,on),text);
       // A stopped bridge has no VJster link: what its lines said no longer holds.
-      if(!on){ vjPeers.Clear(); vjPortBusy=false; }
+      if(!on){ vjPeers.Clear(); vjPortBusy=false; vjOnDeck=false; }
       tbLight.Display(Readiness.TourBox(tourboxConsole,consoleInstalled,mixOnly.Checked,enableGamepad.Checked,presetState==PresetState.Old,presetState==PresetState.None),text);
-      vjLight.Display(Readiness.Vjster(enableVjster.Checked,mixOnly.Checked,on,vjPeers.Count,vjPortBusy,vjUsed),text);
+      vjLight.Display(Readiness.Vjster(enableVjster.Checked,mixOnly.Checked,on,vjPeers.Count,vjPortBusy,vjUsed,vjOnDeck),text);
       padLight.Display(Readiness.Pad(enableGamepad.Checked,mixOnly.Checked,on,padState,padSeen,padEver),text);
       ctlLight.Display(Readiness.Controls(on,obsConnected),text);
       string key=Readiness.Reminder(on,mixOnly.Checked,obsHidden,tourboxConsole,front,obsRunning,enableVjster.Checked,consoleAutoSwitch,activeFadester);

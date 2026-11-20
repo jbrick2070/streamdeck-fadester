@@ -57,8 +57,10 @@ namespace Fadester.TourBox {
     /** The VJster light, as on the Mac (Model.swift Readiness.vjster). Peers are the Chrome extension and the OBS page. */
     /** usedBefore: a video has been connected on this PC at some time. VJster is on by default, so until then a missing
         video is not a fault (grey, with the same button), and a busy port is amber, not red. */
-    internal static LightState Vjster(bool enabled, bool mixOnly, bool controlsOn, int peers, bool portBusy, bool usedBefore = true) {
+    internal static LightState Vjster(bool enabled, bool mixOnly, bool controlsOn, int peers, bool portBusy, bool usedBefore = true, bool onDeck = false) {
       if (!enabled || mixOnly) return new LightState(Lamp.Grey, "liVjOff", null, null);
+      // The suite's own Stream Deck or OpenDeck plugin holds the port: the deck has the video. No fault, so no red.
+      if (portBusy && onDeck) return new LightState(Lamp.Grey, "liVjDeck", "btnShowMe", "vjsterPort");
       if (portBusy) return new LightState(usedBefore ? Lamp.Red : Lamp.Amber, "liVjPort", "btnShowMe", "vjsterPort");
       if (!controlsOn) return new LightState(usedBefore ? Lamp.Green : Lamp.Grey, "liVjReady", null, null);
       return peers > 0 ? new LightState(Lamp.Green, "liVjOn", null, null) : new LightState(usedBefore ? Lamp.Amber : Lamp.Grey, "liVjWait", "btnShowMe", "vjsterWait");
@@ -75,8 +77,14 @@ namespace Fadester.TourBox {
     }
     /** Whether VJster's port is taken after this bridge line (VjsterDesk.cs and VjsterLink.cs print these). */
     internal static bool VjsterPortBusy(string line, bool now) {
-      if ((line.StartsWith("VJster port ", StringComparison.Ordinal) && line.Contains(" is in use")) || line.StartsWith("The VJster port could not be opened", StringComparison.Ordinal)) return true;
+      if ((line.StartsWith("VJster port ", StringComparison.Ordinal) && (line.Contains(" is in use") || line.Contains(" is held by "))) || line.StartsWith("The VJster port could not be opened", StringComparison.Ordinal)) return true;
       if (line.StartsWith("VJster link listening on ", StringComparison.Ordinal) || line == "VJster link stopped") return false;
+      return now;
+    }
+    /** The VJster port is held by the suite's own Stream Deck or OpenDeck plugin (the bridge asked it, VjsterDesk.PortInUseLine). */
+    internal static bool VjsterOnDeck(string line, bool now) {
+      if (line.StartsWith("VJster port ", StringComparison.Ordinal)) return line.Contains(" is held by the VJster actions of ");
+      if (line.StartsWith("The VJster port could not be opened", StringComparison.Ordinal) || line.StartsWith("VJster link listening on ", StringComparison.Ordinal) || line == "VJster link stopped") return false;
       return now;
     }
     /**
@@ -198,6 +206,13 @@ namespace Fadester.TourBox {
       if (!busy || VjsterPortBusy("VJster link listening on 127.0.0.1:48150", busy) ||
           !VjsterPortBusy("The VJster port could not be opened (AccessDenied). Trying again every 30 s.", false) || VjsterPortBusy("Music up", false))
         throw new InvalidOperationException("VJster port");
+      // Held by the suite's own deck plugin: busy, but a grey light that says where the video is controlled.
+      string deckLine = "VJster port 48150 is held by the VJster actions of Fadester for OBS on your Stream Deck or OpenDeck: the deck controls the video.";
+      if (!VjsterPortBusy(deckLine, false) || !VjsterOnDeck(deckLine, false) || VjsterOnDeck("VJster port 48150 is in use, probably by the VJster actions in your Stream Deck or OpenDeck software.", true) ||
+          VjsterOnDeck("VJster link listening on 127.0.0.1:48150", true) || !VjsterOnDeck("Music up", true) || VjsterOnDeck("Music up", false) ||
+          Vjster(true, false, true, 0, true, true, true).Lamp != Lamp.Grey || Vjster(true, false, true, 0, true, true, true).Text != "liVjDeck" ||
+          Vjster(true, false, true, 0, true, true, false).Lamp != Lamp.Red || Vjster(true, false, true, 0, false, true, true).Text == "liVjDeck")
+        throw new InvalidOperationException("VJster on the deck");
       if (Reminder(false, false, true, true, "x", true) != null || Reminder(true, true, true, true, "x", true) != null ||
           Reminder(true, false, true, true, "obs64", true) != "remindObsOpen" || Reminder(true, false, false, true, "explorer", true, true, true) != "remindObsFront" ||
           Reminder(true, false, false, true, "obs64", true) != null || Reminder(true, false, false, false, "explorer", true) != null)

@@ -95,7 +95,7 @@ Install the free **VJster** extension in Chrome from the [Chrome Web Store](http
 
 In **Assignments**, set **Layer 1** and **Layer 2** to two items in your mix scene, each appearing once in it. Layers nobody chose fill themselves in from the live scene the first time a layer control is used (Layer 1 = the topmost visible picture, Layer 2 = the next one down; sound-only and hidden sources are skipped) and are saved to the Assignments tab. Opacity uses a filter on the source, so it also changes that source anywhere else it appears, Program included. Hold **Top** and turn the **Knob** to cycle Layer 1’s blend mode, **Scroll** for Layer 2’s, and the **Dial** to ride Layer 2’s opacity (through a Color Correction filter, added when the source has none). Tour has both blend modes back to Normal. The **Activity** tab reads back the video and each layer after every move.
 
-If the VJster actions of **Fadester for OBS** are on a Stream Deck or OpenDeck page, they hold the port and Activity says so; remove them from the deck or choose another port in both places. Fadester Companion tries the port again every 30 seconds.
+If the VJster actions of **Fadester for OBS** are on a Stream Deck or OpenDeck page, they hold the port and Activity says so. The **VJster** light at the top then reads *VJster: on your Stream Deck* in grey: the deck controls the video, and nothing is wrong. To control the video from this controller instead, remove them from the deck or choose another port in both places. Fadester Companion tries the port again every 30 seconds.
 
 ## Assign your show
 

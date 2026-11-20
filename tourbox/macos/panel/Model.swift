@@ -256,8 +256,10 @@ enum Readiness {
 
     /// usedBefore: a video has been connected on this Mac at some time. VJster is on by default, so until then a missing
     /// video is not a fault (grey, with the same button), and a busy port is amber, not red. As on Windows.
-    static func vjster(enabled: Bool, controlsOn: Bool, connectedPeers: Int, portBusy: Bool = false, mixOnly: Bool = false, usedBefore: Bool = true) -> LightState {
+    static func vjster(enabled: Bool, controlsOn: Bool, connectedPeers: Int, portBusy: Bool = false, mixOnly: Bool = false, usedBefore: Bool = true, onDeck: Bool = false) -> LightState {
         if !enabled || mixOnly { return LightState(.grey, L("liVjOff")) }
+        // The suite's own Stream Deck or OpenDeck plugin holds the port: the deck has the video. No fault, so no red.
+        if portBusy && onDeck { return LightState(.grey, L("liVjDeck"), button: L("btnShowMe"), action: "vjsterPort") }
         if portBusy { return LightState(usedBefore ? .red : .amber, L("liVjPort"), button: L("btnShowMe"), action: "vjsterPort") }
         if !controlsOn { return LightState(usedBefore ? .green : .grey, L("liVjReady")) }
         return connectedPeers > 0
@@ -425,8 +427,15 @@ enum Readiness {
         return nil
     }
 
+    /// The VJster port is held by the suite's own Stream Deck or OpenDeck plugin (the host asked it; VjsterDesk.PortInUseLine).
+    static func vjsterOnDeck(after line: String, current: Bool) -> Bool {
+        if line.hasPrefix("VJster port ") { return line.contains(" is held by the VJster actions of ") }
+        if line.hasPrefix("The VJster port could not be opened") || line.hasPrefix("VJster link listening on ") || line == "VJster link stopped" { return false }
+        return current
+    }
+
     static func vjsterPortBusy(after line: String, current: Bool) -> Bool {
-        if (line.hasPrefix("VJster port ") && line.contains(" is in use")) || line.hasPrefix("The VJster port could not be opened") {
+        if (line.hasPrefix("VJster port ") && (line.contains(" is in use") || line.contains(" is held by "))) || line.hasPrefix("The VJster port could not be opened") {
             return true
         }
         if line.hasPrefix("VJster link listening on ") || line == "VJster link stopped" {
@@ -619,6 +628,12 @@ enum ModelTests {
         try check(Readiness.hostFeedback(from: "REFUSED fader.forward: Choose a different Preview scene first.")?.contains("Scroll") == true, "Same-scene Preview hint")
         let busy = Readiness.vjsterPortBusy(after: "VJster port 48150 is in use, probably by the VJster actions in your Stream Deck or OpenDeck software.", current: false)
         try check(busy && !Readiness.vjsterPortBusy(after: "VJster link listening on 127.0.0.1:48150", current: busy), "VJster port busy tracking")
+        let deckLine = "VJster port 48150 is held by the VJster actions of Fadester for OBS on your Stream Deck or OpenDeck: the deck controls the video."
+        try check(Readiness.vjsterPortBusy(after: deckLine, current: false) && Readiness.vjsterOnDeck(after: deckLine, current: false) &&
+                  !Readiness.vjsterOnDeck(after: "VJster port 48150 is in use, probably by the VJster actions in your Stream Deck or OpenDeck software.", current: true) &&
+                  !Readiness.vjsterOnDeck(after: "VJster link listening on 127.0.0.1:48150", current: true) && Readiness.vjsterOnDeck(after: "RESULT music.up: Music up", current: true) &&
+                  Readiness.vjster(enabled: true, controlsOn: true, connectedPeers: 0, portBusy: true, onDeck: true) == LightState(.grey, L("liVjDeck"), button: L("btnShowMe"), action: "vjsterPort") &&
+                  Readiness.vjster(enabled: true, controlsOn: true, connectedPeers: 0, portBusy: true).lamp == .red, "VJster held by the deck is a grey light")
         let sampleHash = LocalFiles.sha256Hex(Data("preset-v1".utf8))
         try check(LocalFiles.presetSyncState(bundledHash: sampleHash, savedHash: nil) == .neverSaved && LocalFiles.presetSyncState(bundledHash: sampleHash, savedHash: sampleHash) == .current && LocalFiles.presetSyncState(bundledHash: sampleHash, savedHash: "older") == .updateAvailable, "Preset freshness tracking")
         let sampleMap = Data("{\"presets\":{\"master\":{\"bindings\":[{\"control\":\"side+knob\",\"gesture\":\"cw\",\"action\":\"vjster.speed.up\",\"label\":\"Video speed up\"}]}}}".utf8)

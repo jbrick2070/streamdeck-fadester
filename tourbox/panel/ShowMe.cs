@@ -22,9 +22,11 @@ namespace Fadester.TourBox {
   /** Which colour and words each light shows: pure decisions, so the self-test can check every case. */
   internal static class Readiness {
     internal static LightState Obs(bool connected, bool running, string problem, bool studioOff, bool controlsOn) {
+      // Studio Mode off: the light's own button turns it on (it asks OBS, nothing else changes). Shown with the controls
+      // on too: they start by themselves now, and Preview and the T-bar do nothing until Studio Mode is on.
       if (connected)
-        return studioOff && !controlsOn ? new LightState(Lamp.Amber, "liObsStudio", "btnShowMe", "studio") : new LightState(Lamp.Green, "liObsOn", null, null);
-      if (!running) return new LightState(Lamp.Red, "liObsClosed", null, null);
+        return studioOff ? new LightState(Lamp.Amber, "liObsStudio", "btnTurnOn", "studioOn") : new LightState(Lamp.Green, "liObsOn", null, null);
+      if (!running) return new LightState(Lamp.Red, "liObsClosed", "btnOpenObs", "openObs"); // as on the Mac
       if (problem == "obs-bad-password") return new LightState(Lamp.Amber, "liObsPassword", "btnShowMe", "password");
       if (problem == null) return new LightState(Lamp.Grey, "liObsLooking", null, null); // OBS is starting, or a scan is under way
       return new LightState(Lamp.Amber, "liObsSetting", "btnShowMe", "server");
@@ -40,21 +42,26 @@ namespace Fadester.TourBox {
       return padSeen ? new LightState(Lamp.Green, "liPadReady", null, null) : new LightState(Lamp.Grey, "liPadNone", null, null);
     }
     /** The TourBox light, as on the Mac (Model.swift Readiness.tourBox). Grey instead of amber while a game controller is in use, so a panel without a TourBox does not nag. */
-    internal static LightState TourBox(bool consoleRunning, bool consoleInstalled, bool mixOnly, bool otherController, bool oldPreset = false) {
+    internal static LightState TourBox(bool consoleRunning, bool consoleInstalled, bool mixOnly, bool otherController, bool oldPreset = false, bool noPreset = false) {
       if (mixOnly) return new LightState(Lamp.Grey, "liTbOff", null, null);
       // An older Fadester preset in Console: some controls do other things than the panel's map says (FIX-9).
       if (consoleRunning && oldPreset) return new LightState(Lamp.Amber, "liTbOld", "btnImportNew", "importPreset");
-      if (consoleRunning) return new LightState(Lamp.Green, "liTbReady", null, null);
       var lamp = otherController ? Lamp.Grey : Lamp.Amber;
+      // Console runs but holds no OBS Fadester preset (read from Console's own files, PresetAge): the TourBox does
+      // nothing for OBS yet, so the light is not green. Unknown (files unreadable, a new Console format) stays "ready".
+      if (consoleRunning && noPreset) return new LightState(lamp, "liTbNone", "btnImport", "importPreset");
+      if (consoleRunning) return new LightState(Lamp.Green, "liTbReady", null, null);
       if (!consoleInstalled) return new LightState(lamp, "liTbMissing", "btnDownload", "downloadConsole");
       return new LightState(lamp, "liTbClosed", "btnOpenConsole", "openConsole");
     }
     /** The VJster light, as on the Mac (Model.swift Readiness.vjster). Peers are the Chrome extension and the OBS page. */
-    internal static LightState Vjster(bool enabled, bool mixOnly, bool controlsOn, int peers, bool portBusy) {
+    /** usedBefore: a video has been connected on this PC at some time. VJster is on by default, so until then a missing
+        video is not a fault (grey, with the same button), and a busy port is amber, not red. */
+    internal static LightState Vjster(bool enabled, bool mixOnly, bool controlsOn, int peers, bool portBusy, bool usedBefore = true) {
       if (!enabled || mixOnly) return new LightState(Lamp.Grey, "liVjOff", null, null);
-      if (portBusy) return new LightState(Lamp.Red, "liVjPort", "btnShowMe", "vjsterPort");
-      if (!controlsOn) return new LightState(Lamp.Green, "liVjReady", null, null);
-      return peers > 0 ? new LightState(Lamp.Green, "liVjOn", null, null) : new LightState(Lamp.Amber, "liVjWait", "btnShowMe", "vjsterWait");
+      if (portBusy) return new LightState(usedBefore ? Lamp.Red : Lamp.Amber, "liVjPort", "btnShowMe", "vjsterPort");
+      if (!controlsOn) return new LightState(usedBefore ? Lamp.Green : Lamp.Grey, "liVjReady", null, null);
+      return peers > 0 ? new LightState(Lamp.Green, "liVjOn", null, null) : new LightState(usedBefore ? Lamp.Amber : Lamp.Grey, "liVjWait", "btnShowMe", "vjsterWait");
     }
     /** Which VJster peers are connected after this bridge line (VjsterLink.cs prints these). */
     internal static HashSet<string> VjsterPeers(string line, HashSet<string> now) {
@@ -77,19 +84,23 @@ namespace Fadester.TourBox {
      * with the controls off it reads OBS and then starts them; with them on it restarts them (a corrected password is read then).
      */
     internal static LightState Controls(bool on, bool obsConnected) {
-      if (on) return obsConnected ? new LightState(Lamp.Green, "liCtlOn", null, null) : new LightState(Lamp.Amber, "liCtlWaiting", "btnTryAgain", "tryAgain");
+      // On: the light carries Stop, as on the Mac, so the way to turn the controls off is beside the words that say they are on.
+      if (on) return obsConnected ? new LightState(Lamp.Green, "liCtlOn", "stop", "stop") : new LightState(Lamp.Amber, "liCtlWaiting", "btnTryAgain", "tryAgain");
       return obsConnected ? new LightState(Lamp.Grey, "liCtlOff", "btnStart", "start") : new LightState(Lamp.Grey, "liCtlOff", "btnTryAgain", "tryAgain");
     }
     /**
      * Whether the controls start by themselves at launch (FIX-5 and FIX-8, hand test 2026-11-17), as on the Mac
      * (Model.swift Readiness.autoStart). OBS need not be open: VJster controls Chrome's videos without it, and the bridge
      * connects to OBS whenever OBS appears. Mix-only serves OBS's mixer and nothing else, so it still waits for OBS.
-     * Only after setup was saved once (a first run still shows Save & start) and never after the user pressed Stop: that
-     * choice holds until they start the controls again. "remembered" is "on", "off" or null.
+     * On a first run too (the owner's decision, 2026-11-20: three steps to the first working control; the game controller
+     * stays opt-in), and never after the user pressed Stop: that choice holds until they start the controls again.
+     * "remembered" is "on", "off" or null. settingsSaved is no longer part of the rule; it is kept for the callers.
      */
     internal static bool AutoStart(bool settingsSaved, bool settingsValid, string remembered, bool obsConnected, bool controlsOn, bool mixOnly, bool vjsterOn = true) {
-      return settingsSaved && settingsValid && remembered != "off" && !controlsOn && (obsConnected || (vjsterOn && !mixOnly));
+      return settingsValid && remembered != "off" && !controlsOn && (obsConnected || (vjsterOn && !mixOnly));
     }
+    /** The bridge's own sentence when Preview or the T-bar is used with Studio Mode off (StudioFader.ReadScenesAsync). */
+    internal static bool SaysStudioOff(string line) { return line != null && line.Contains("Enable Studio Mode in OBS before using Preview or the T-bar."); }
     /**
      * The one reminder worth a strip while the controls run, or null. The T-bar needs OBS's main window; a TourBox preset
      * needs OBS in front, except that Chrome in front is VJster's turn (FIX-8), and with OBS closed there is nothing to bring forward.
@@ -134,8 +145,8 @@ namespace Fadester.TourBox {
     }
     internal static void Test() {
       Func<LightState, string> s = l => l.Lamp + " " + l.Text + " " + (l.Action ?? "-");
-      if (s(Obs(true, true, null, false, false)) != "Green liObsOn -" || s(Obs(true, true, null, true, false)) != "Amber liObsStudio studio" ||
-          s(Obs(true, true, null, true, true)) != "Green liObsOn -" || s(Obs(false, false, null, false, false)) != "Red liObsClosed -" ||
+      if (s(Obs(true, true, null, false, false)) != "Green liObsOn -" || s(Obs(true, true, null, true, false)) != "Amber liObsStudio studioOn" ||
+          s(Obs(true, true, null, true, true)) != "Amber liObsStudio studioOn" || s(Obs(false, false, null, false, false)) != "Red liObsClosed openObs" ||
           s(Obs(false, true, "obs-no-answer", false, false)) != "Amber liObsSetting server" ||
           s(Obs(false, true, "obs-bad-password", false, false)) != "Amber liObsPassword password" ||
           s(Obs(false, true, null, false, false)) != "Grey liObsLooking -")
@@ -148,10 +159,12 @@ namespace Fadester.TourBox {
         throw new InvalidOperationException("Controller light");
       if (ActivityText.Counted("Music up", 1) != "Music up" || ActivityText.Counted("Music up", 3) != "Music up (×3)")
         throw new InvalidOperationException("Activity repeats");
-      if (s(Controls(false, true)) != "Grey liCtlOff start" || s(Controls(true, true)) != "Green liCtlOn -" ||
+      if (s(Controls(false, true)) != "Grey liCtlOff start" || s(Controls(true, true)) != "Green liCtlOn stop" ||
           s(Controls(false, false)) != "Grey liCtlOff tryAgain" || s(Controls(true, false)) != "Amber liCtlWaiting tryAgain") throw new InvalidOperationException("Controls light");
       if (!AutoStart(true, true, null, true, false, false) || !AutoStart(true, true, "on", true, false, false) || AutoStart(true, true, "off", true, false, false) ||
-          AutoStart(false, true, null, true, false, false) || AutoStart(true, false, "on", true, false, false) || !AutoStart(true, true, "on", false, false, false) ||
+          !AutoStart(false, true, null, true, false, false) || AutoStart(false, true, "off", true, false, false) || AutoStart(false, false, null, true, false, false) ||
+          !AutoStart(false, true, null, false, false, false) || AutoStart(false, true, null, false, false, true) ||
+          AutoStart(true, false, "on", true, false, false) || !AutoStart(true, true, "on", false, false, false) ||
           AutoStart(true, true, "on", false, false, true) || !AutoStart(true, true, "on", true, false, true) ||
           AutoStart(true, true, "on", true, true, false) || AutoStart(true, true, "on", false, false, false, false) ||
           !AutoStart(true, true, "on", true, false, false, false)) throw new InvalidOperationException("Auto-start decision");
@@ -163,12 +176,19 @@ namespace Fadester.TourBox {
       if (s(TourBox(true, true, false, false)) != "Green liTbReady -" || s(TourBox(false, true, false, false)) != "Amber liTbClosed openConsole" ||
           s(TourBox(false, false, false, false)) != "Amber liTbMissing downloadConsole" || s(TourBox(false, false, false, true)) != "Grey liTbMissing downloadConsole" ||
           s(TourBox(true, true, true, false)) != "Grey liTbOff -" || s(TourBox(true, true, false, false, true)) != "Amber liTbOld importPreset" ||
-          s(TourBox(false, true, false, false, true)) != "Amber liTbClosed openConsole" || s(TourBox(true, true, true, false, true)) != "Grey liTbOff -")
+          s(TourBox(false, true, false, false, true)) != "Amber liTbClosed openConsole" || s(TourBox(true, true, true, false, true)) != "Grey liTbOff -" ||
+          s(TourBox(true, true, false, false, false, true)) != "Amber liTbNone importPreset" || s(TourBox(true, true, false, true, false, true)) != "Grey liTbNone importPreset" ||
+          s(TourBox(true, true, false, false, true, true)) != "Amber liTbOld importPreset" || s(TourBox(false, true, false, false, false, true)) != "Amber liTbClosed openConsole" ||
+          s(TourBox(true, true, true, false, false, true)) != "Grey liTbOff -")
         throw new InvalidOperationException("TourBox light");
       if (s(Vjster(false, false, true, 1, false)) != "Grey liVjOff -" || s(Vjster(true, true, true, 1, false)) != "Grey liVjOff -" ||
           s(Vjster(true, false, false, 0, false)) != "Green liVjReady -" || s(Vjster(true, false, true, 1, false)) != "Green liVjOn -" ||
-          s(Vjster(true, false, true, 0, false)) != "Amber liVjWait vjsterWait" || s(Vjster(true, false, true, 2, true)) != "Red liVjPort vjsterPort")
+          s(Vjster(true, false, true, 0, false)) != "Amber liVjWait vjsterWait" || s(Vjster(true, false, true, 2, true)) != "Red liVjPort vjsterPort" ||
+          s(Vjster(true, false, true, 0, false, false)) != "Grey liVjWait vjsterWait" || s(Vjster(true, false, false, 0, false, false)) != "Grey liVjReady -" ||
+          s(Vjster(true, false, true, 0, true, false)) != "Amber liVjPort vjsterPort" || s(Vjster(true, false, true, 1, false, false)) != "Green liVjOn -")
         throw new InvalidOperationException("VJster light");
+      if (!SaysStudioOff("Preview next: Enable Studio Mode in OBS before using Preview or the T-bar.") || SaysStudioOff("Music up") || SaysStudioOff(null))
+        throw new InvalidOperationException("Studio Mode line");
       var peers = VjsterPeers("VJster: the Chrome extension connected", new HashSet<string>());
       peers = VjsterPeers("VJster: the OBS video page connected", peers);
       if (peers.Count != 2 || VjsterPeers("VJster: the Chrome extension disconnected (closed)", peers).Count != 1 ||
@@ -220,6 +240,29 @@ namespace Fadester.TourBox {
       try { return found.Length > 0; } finally { foreach (var p in found) p.Dispose(); }
     }
     internal static bool ObsRunning() { return Running("obs64") || Running("obs"); }
+    /**
+     * One listing of the running programs for one tick of the panel's one-second timer, which used to ask Windows for the
+     * whole list three to five times per tick, on the thread that draws the window.
+     */
+    internal sealed class Snapshot : IDisposable {
+      readonly Process[] all = Process.GetProcesses();
+      static bool Named(Process p, string name) {
+        try { return String.Equals(p.ProcessName, name, StringComparison.OrdinalIgnoreCase); } catch (InvalidOperationException) { return false; }
+      }
+      internal bool Running(string name) { foreach (var p in all) if (Named(p, name)) return true; return false; }
+      internal bool ObsRunning() { return Running("obs64") || Running("obs"); }
+      /** As Desktop.ObsHidden: OBS runs but its main window is minimised or hidden to the tray. */
+      internal bool ObsHidden() {
+        foreach (var p in all) {
+          if (!Named(p, "obs64") && !Named(p, "obs")) continue;
+          IntPtr h;
+          try { h = p.MainWindowHandle; } catch (InvalidOperationException) { continue; } catch (System.ComponentModel.Win32Exception) { continue; }
+          if (h == IntPtr.Zero || IsIconic(h) || !IsWindowVisible(h)) return true;
+        }
+        return false;
+      }
+      public void Dispose() { foreach (var p in all) p.Dispose(); }
+    }
     /** OBS runs but its main window is minimised or hidden (minimise to tray), where the native T-bar cannot be reached. */
     internal static bool ObsHidden() {
       foreach (var name in new[] { "obs64", "obs" }) {
@@ -240,6 +283,28 @@ namespace Fadester.TourBox {
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetWindowText(IntPtr window, StringBuilder text, int length);
     delegate bool WindowProc(IntPtr window, IntPtr data);
     [DllImport("user32.dll")] static extern bool EnumWindows(WindowProc proc, IntPtr data);
+
+    /** OBS Studio's own program, where its installer puts it (or says it did, in the registry); null when it is not found. */
+    internal static string ObsExe() {
+      var roots = new List<string>();
+      foreach (var view in new[] { Microsoft.Win32.RegistryView.Registry64, Microsoft.Win32.RegistryView.Registry32 }) {
+        try {
+          using (var hive = Microsoft.Win32.RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.LocalMachine, view))
+          using (var key = hive.OpenSubKey(@"SOFTWARE\OBS Studio")) { var dir = key == null ? null : key.GetValue(null) as string; if (!String.IsNullOrEmpty(dir)) roots.Add(dir); }
+        } catch (Exception) { } // no such key, or no right to read it: the usual folder is tried next
+      }
+      string programs = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+      if (!String.IsNullOrEmpty(programs)) roots.Add(Path.Combine(programs, "obs-studio"));
+      foreach (var root in roots) {
+        try { var exe = Path.Combine(root, "bin", "64bit", "obs64.exe"); if (File.Exists(exe)) return exe; } catch (ArgumentException) { }
+      }
+      return null;
+    }
+    /** Starts OBS the way its own shortcut does: from its bin folder, or it cannot find its files. */
+    internal static void StartObs(string exe, Action<string> failed) {
+      try { using (Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true, WorkingDirectory = Path.GetDirectoryName(exe) })) { } }
+      catch (Exception e) { failed(e.Message); }
+    }
 
     /** TourBox Console's own program, where its installer puts it; null when it is not installed. */
     internal static string ConsoleExe() {

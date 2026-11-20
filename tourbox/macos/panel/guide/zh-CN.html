@@ -16,7 +16,7 @@
     </header>
 
     <h2>首次打开</h2>
-    <p>将 <strong>Fadester Companion.app</strong> 移到<strong>应用程序</strong>文件夹。此应用未经 Apple 公证，因此第一次请按住 Control 键点击（或右键点击）该应用，选择<strong>打开</strong>，然后再次点击<strong>打开</strong>。也可以先尝试打开一次，再在<strong>系统设置 → 隐私与安全性</strong>中点击<strong>仍要打开</strong>。</p>
+    <p>将 <strong>Fadester Companion.app</strong> 移到<strong>应用程序</strong>文件夹。此应用未经 Apple 公证，因此第一次 macOS 不会打开它。请先尝试打开一次，再在<strong>系统设置 → 隐私与安全性</strong>中点击<strong>仍要打开</strong>。（在 macOS 14 及更早版本中，也可以按住 Control 键点击该应用并选择<strong>打开</strong>。）</p>
 
     <h2>将 TourBox 连接到 OBS</h2>
     <ol>
@@ -24,7 +24,7 @@
       <li>在 Fadester Companion 中点击<strong>1. 保存 TourBox 预设 (.tb)…</strong>，将您所用语言的预设保存到容易找到的位置，例如“下载”文件夹。</li>
       <li>点击<strong>2. 打开 TourBox Console</strong>（或<strong>告诉我点哪里</strong>）。在 TourBox Console 中点击预设列表旁的导入图标，打开 <code>OBS Fadester for TourBox.tb</code>，关闭 <strong>Auto Switch</strong> 并选择 <strong>OBS Fadester for TourBox</strong>：这样无论前台是哪个应用，一个预设都能使用。只有在保持 Auto Switch 开启时，才点击 <strong>Not Linked</strong>，选择 <strong>OBS</strong>，再点击 <strong>Save</strong>；如需在 Chrome 位于前台时控制视频，也请关联到 Google Chrome。只导入一种语言版本，不要导入 Windows 版文件。</li>
       <li>点击<strong>为 Fadester Companion 授予辅助功能权限…</strong>，在<strong>系统设置 → 隐私与安全性 → 辅助功能</strong>中开启 Fadester Companion。如果其中还列出了 <strong>Fadester Companion T-bar</strong> 和 <strong>Fadester Companion Shortcuts</strong>，也请一并开启。TourBox Console 需要单独授权。</li>
-      <li>在<strong>分配</strong>中选择场景和音乐输入源。点击<strong>保存并启动控制</strong>，等到显示<strong>控制：已开启</strong>。请保持 Fadester Companion 打开。</li>
+      <li>在<strong>分配</strong>中选择场景和音乐输入源。授予辅助功能权限后，控制会自动启动：等到显示<strong>控制：已开启</strong>（如果指示灯显示已关闭，请点击它旁边的<strong>启动</strong>）。关闭窗口不会停止：应用会留在屏幕右上角的菜单栏中。</li>
     </ol>
     <p>Mac 版预设的 OBS 操作使用 <strong>Control + Option + Shift</strong>，视频和图层操作使用 <strong>Control + Shift</strong> 或 <strong>Option + Shift</strong>，从不使用 Command。</p>
 
@@ -39,7 +39,7 @@
     </ul>
 
     <h2>调节整个混音</h2>
-    <p>如果控制已经启动，请先点击<strong>停止控制</strong>。在<strong>设置</strong>中勾选<strong>启用 OBS 混音器全部输入控制</strong>，然后点击<strong>保存并启动控制</strong>。按住 <strong>Side</strong> 并转动 <strong>Knob</strong> 可整体调节音量。打开 <strong>Tour</strong> 菜单可将整个混音淡出至静音，也可以恢复之前的音量。已静音的输入源仍保持静音。</p>
+    <p>如果控制已经启动，请先点击<strong>停止</strong>。在<strong>设置</strong>中勾选<strong>启用 OBS 混音器全部输入控制</strong>，然后点击<strong>启动</strong>。按住 <strong>Side</strong> 并转动 <strong>Knob</strong> 可整体调节音量。打开 <strong>Tour</strong> 菜单可将整个混音淡出至静音，也可以恢复之前的音量。已静音的输入源仍保持静音。</p>
 
     <h2>帮助</h2>
     <p>Fadester 桥接程序的诊断信息使用英语。如果控件没有响应，请检查 TourBox Console 当前启用的预设，并查看 Fadester 的<strong>活动</strong>选项卡。</p>

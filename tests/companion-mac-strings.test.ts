@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// The Mac Fadester Companion speaks the Windows panel's 10 languages from one catalog:
+// The Mac Fadester Companion speaks the Windows panel's 13 languages from one catalog:
 // tourbox/panel/PanelText.cs + PanelExtraText.cs (shared strings) and tourbox/macos/panel/mac-strings.json
 // (Mac-only strings), generated into PanelStrings.swift by make-strings.cjs.
 import { createRequire } from "node:module";
@@ -22,10 +22,12 @@ const sources = readdirSync(panel)
 describe("Mac panel string catalog", () => {
   const table = generator.catalog();
 
-  it("has the Windows panel's 10 languages for every string", () => {
-    expect(generator.LOCALES).toEqual(["en", "es", "fr", "zh-CN", "de", "it", "ja", "ko", "ru", "zh-TW"]);
+  it("has the Windows panel's 13 languages for every string", () => {
+    expect(generator.LOCALES).toEqual(["en", "es", "fr", "zh-CN", "de", "it", "ja", "ko", "ru", "zh-TW", "nl", "pt-BR", "tr"]);
+    // The suite's one list: en, de, es, fr, it, ja, ko, nl, pt-BR, ru, tr, zh-CN, zh-TW.
+    expect([...generator.LOCALES].sort()).toEqual(["de", "en", "es", "fr", "it", "ja", "ko", "nl", "pt-BR", "ru", "tr", "zh-CN", "zh-TW"]);
     for (const [key, row] of table) {
-      expect(row, key).toHaveLength(10);
+      expect(row, key).toHaveLength(13);
       for (const text of row) expect(text.trim(), key).not.toBe("");
     }
   });

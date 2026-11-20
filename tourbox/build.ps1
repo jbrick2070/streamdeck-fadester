@@ -42,7 +42,7 @@ $panelSources=@(Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'panel') -Fi
 $panelVersion=Join-Path $stage 'PanelVersion.g.cs'
 [IO.File]::WriteAllText($panelVersion,"[assembly: System.Reflection.AssemblyVersion(`"$numericVersion`")]`r`n[assembly: System.Reflection.AssemblyFileVersion(`"$numericVersion`")]`r`n[assembly: System.Reflection.AssemblyInformationalVersion(`"$Version`")]`r`n",[Text.UTF8Encoding]::new($false))
 $panelSources+=$panelVersion
-& $csc /nologo /target:winexe /optimize+ /codepage:65001 "/win32icon:$(Join-Path $PSScriptRoot 'panel\fadester.ico')" "/out:$panel" /r:System.dll /r:System.Core.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.Web.Extensions.dll @panelSources
+& $csc /nologo /target:winexe /optimize+ /codepage:65001 "/win32icon:$(Join-Path $PSScriptRoot 'panel\fadester.ico')" "/win32manifest:$(Join-Path $PSScriptRoot 'panel\app.manifest')" "/out:$panel" /r:System.dll /r:System.Core.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.Web.Extensions.dll @panelSources
 if($LASTEXITCODE){throw 'Panel build failed.'}
 $paneltest=Start-Process -WindowStyle Hidden -FilePath $panel -ArgumentList '--self-test' -PassThru -Wait
 if($paneltest.ExitCode){throw 'Panel self-test failed.'}
@@ -91,7 +91,7 @@ foreach($file in Get-ChildItem -LiteralPath $PSScriptRoot -File) {if($file.Exten
 foreach($sub in 'presets','bridge','panel','tests','native'){
   $src=Join-Path $PSScriptRoot $sub; $dest=Join-Path $sources $sub
   $null=New-Item -ItemType Directory -Force $dest
-  foreach($file in Get-ChildItem -LiteralPath $src -File){if($file.Extension -in '.tb','.json','.py','.cjs','.mjs','.cs','.csproj','.cpp','.vcxproj','.md','.ps1','.txt','.js','.xml','.ico'){Copy-Item -LiteralPath $file.FullName -Destination $dest}}
+  foreach($file in Get-ChildItem -LiteralPath $src -File){if($file.Extension -in '.tb','.json','.py','.cjs','.mjs','.cs','.csproj','.cpp','.vcxproj','.md','.ps1','.txt','.js','.xml','.ico','.manifest'){Copy-Item -LiteralPath $file.FullName -Destination $dest}}
 }
 foreach($rel in 'vjster-page','vjster-page\src','src\vjster\shared','vjster-extension\src'){
   $src=Join-Path $repoRoot $rel; $dest=Join-Path (Join-Path $bundle 'source') $rel

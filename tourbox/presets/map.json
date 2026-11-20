@@ -42,7 +42,7 @@
         {"control":"dial","gesture":"cw","action":"fader.forward","label":"T-bar right","hotkey":"Ctrl+Alt+Shift+F4"},
         {"control":"scroll","gesture":"ccw","action":"preview.previous","label":"Previous preview scene","hotkey":"Ctrl+Alt+Shift+F5"},
         {"control":"scroll","gesture":"cw","action":"preview.next","label":"Next preview scene","hotkey":"Ctrl+Alt+Shift+F6"},
-        {"control":"tall","gesture":"press","action":"take","label":"Take preview live","hotkey":"Ctrl+Alt+Shift+F7","mode":"release"},
+        {"control":"tall","gesture":"press","action":"take","label":"Preview to Program","hotkey":"Ctrl+Alt+Shift+F7","mode":"release"},
         {"control":"short","gesture":"press","action":"recording.status","label":"Check recording status","hotkey":"Ctrl+Alt+Shift+V","mode":"release"},
         {"control":"up","gesture":"press","action":"anchor.1","label":"Preview anchor 1","hotkey":"Ctrl+Alt+Shift+F9"},
         {"control":"right","gesture":"press","action":"anchor.2","label":"Preview anchor 2","hotkey":"Ctrl+Alt+Shift+F10"},

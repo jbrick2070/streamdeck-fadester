@@ -1,0 +1,51 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-2.0-or-later -->
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Snelstart · Fadester Companion</title>
+  <link rel="stylesheet" href="quickstart.css">
+</head>
+<body>
+  <main>
+    <header>
+      <p>Snelstart · Mac · Apple silicon en Intel</p>
+      <h1>Fadester Companion</h1>
+      <p>Zet scènes klaar, fade met de hand en regel het geluid in OBS Studio met je TourBox.</p>
+    </header>
+
+    <h2>De eerste keer openen</h2>
+    <p>Zet <strong>Fadester Companion.app</strong> in de map <strong>Apps</strong>. De app is niet door Apple genotariseerd, dus macOS opent hem de eerste keer niet. Probeer hem één keer te openen en klik daarna in <strong>Systeeminstellingen → Privacy en beveiliging</strong> op <strong>Open toch</strong>. (Tot en met macOS 14 kun je ook met de Control-toets ingedrukt op de app klikken en <strong>Open</strong> kiezen.)</p>
+
+    <h2>TourBox met OBS verbinden</h2>
+    <ol>
+      <li>Open in OBS <strong>Hulpmiddelen → WebSocket-serverinstellingen</strong> en zet de server aan met authenticatie. Voor de handmatige fade in OBS Studio <strong>33</strong> zet je de <strong>Studiomodus</strong> aan, kies je <strong>Vervagen (Fade)</strong> en houd je de witte schuif tussen Voorbeeld en Programma in beeld. Fadester Companion leest de poort en het wachtwoord zelf uit OBS.</li>
+      <li>Klik in Fadester Companion op <strong>1. TourBox-preset (.tb) opslaan…</strong> en bewaar de preset in jouw taal op een plek die je terugvindt, bijvoorbeeld in Downloads.</li>
+      <li>Klik op <strong>2. TourBox Console openen</strong> (of op <strong>Laat zien waar ik moet klikken</strong>). Klik in TourBox Console op het importsymbool naast Preset List, open <code>OBS Fadester for TourBox.tb</code>, zet <strong>Auto Switch</strong> uit en selecteer <strong>OBS Fadester for TourBox</strong>: dan werkt één preset ongeacht welk programma op de voorgrond staat. Alleen als je Auto Switch aan laat, klik je op <strong>Not Linked</strong>, kies je <strong>OBS</strong> en klik je op <strong>Save</strong>; koppel de preset ook aan Google Chrome om video’s te bedienen met Chrome op de voorgrond. Importeer maar één taalversie, en niet het Windows-bestand.</li>
+      <li>Klik op <strong>Toegankelijkheid geven aan Fadester Companion…</strong> en zet Fadester Companion aan in <strong>Systeeminstellingen → Privacy en beveiliging → Toegankelijkheid</strong>. Staan daar ook <strong>Fadester Companion T-bar</strong> en <strong>Fadester Companion Shortcuts</strong>, zet die dan ook aan. TourBox Console heeft een eigen toestemming.</li>
+      <li>Kies onder <strong>Toewijzingen</strong> je scènes en de muziekinput. De bediening start vanzelf zodra Toegankelijkheid is gegeven: wacht op <strong>Bediening: aan</strong> (geeft het lampje „uit” aan, klik dan op <strong>Starten</strong> ernaast). Het venster sluiten stopt de bediening niet: de app blijft in de menubalk staan, rechtsboven.</li>
+    </ol>
+    <p>De Mac-preset gebruikt <strong>Control + Option + Shift</strong> voor de OBS-acties en <strong>Control + Shift</strong> of <strong>Option + Shift</strong> voor video en lagen, nooit Command.</p>
+
+    <h2>Oefen met twee verschillende scènes</h2>
+    <ul>
+      <li>Draai aan het <strong>Scroll</strong>-wiel om Voorbeeld te wisselen. Programma blijft staan. Een druk toont beide scènenamen in het paneel.</li>
+      <li>Draai langzaam aan de platte <strong>Dial</strong> om de schuif van OBS te bewegen en de scènes te mengen. Om een lopende fade te annuleren houd je <strong>Side</strong> vast en druk je op de <strong>Dial</strong>. Rechtsom draaien beweegt de T-bar altijd naar Voorbeeld, ook bij de volgende overgang. Wacht na een voltooide overgang even voordat je verder draait.</li>
+      <li>Speel een YouTube-video af in Chrome (met de gratis VJster-extensie). Draai aan de verhoogde <strong>Knob</strong> om de snelheid te veranderen; druk en draai voor fijne stappen. Druk erop om de video af te spelen of te pauzeren. Tik op <strong>Side</strong> om de snelheid terug te zetten naar 1x.</li>
+      <li>Om een YouTube-video rechtstreeks in OBS te bedienen, vul je hem in bij Instellen, klik je op <strong>URL voor OBS-browserbron kopiëren</strong> en plak je het adres in een browserbron in OBS.</li>
+      <li>Wijs in Fadester een muziekinput toe. Houd <strong>Side</strong> vast en draai aan de platte <strong>Dial</strong> om het volume ervan te regelen. Met <strong>Top</strong> ingedrukt bedienen Knob, Scroll en Dial de VJ-lagen (mengmodus en dekking). Lagen die je niet hebt gekozen, vult Fadester bij het eerste gebruik zelf in vanuit de live scène (Laag 1 = het bovenste zichtbare beeld, Laag 2 = het volgende eronder) en slaat ze op onder Toewijzingen.</li>
+      <li>Een tik op <strong>Short</strong> toont alleen de opnamestatus. <strong>Laatste audiowijziging herstellen</strong> vind je in het <strong>Tour</strong>-menu.</li>
+    </ul>
+
+    <h2>De hele mix regelen</h2>
+    <p>Zet bij Instellen de bediening van alle OBS-mixerinputs aan en klik op <strong>Stoppen</strong> en daarna op <strong>Starten</strong>. Houd <strong>Side</strong> vast en draai aan de <strong>Knob</strong> om het groepsniveau te veranderen. In het <strong>Tour</strong>-menu kun je de mix naar stilte faden en de vorige niveaus herstellen. Gedempte inputs blijven gedempt.</p>
+
+    <h2>Hulp</h2>
+    <p>Diagnosemeldingen van de bediening verschijnen in het Engels. Reageert een knop niet, controleer dan de actieve preset in TourBox Console en open het tabblad Activiteit in Fadester.</p>
+    <p>De volledige bediening van OBS met een TourBox is op de Mac nog niet in een generale repetitie getest. Oefen met testscènes voordat je live gaat.</p>
+    <p>Gebruikt macOS een andere taal, sluit Fadester Companion dan af en voer in Terminal uit: <code>open -a "Fadester Companion" --args --language nl</code>.</p>
+    <p><a href="../START-HERE.html" hreflang="en">Volledige handleiding en bedieningsoverzicht (Engels)</a> · <a href="../START-HERE.html#recovery" hreflang="en">Problemen oplossen (Engels)</a></p>
+  </main>
+</body>
+</html>

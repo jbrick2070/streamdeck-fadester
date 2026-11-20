@@ -189,7 +189,21 @@ private final class PillActionButton: NSControl {
     /// Try again was pressed with the controls off: the next scan that reads OBS starts them.
     private var startAfterScan = false
     // Whether Console holds an older OBS Fadester preset than ours (Model.swift PresetAge, FIX-9): read every few seconds, said once.
-    private var presetState = PresetState.none, shippedShortcuts: Set<String>?, presetCheckAt = Date.distantPast, toldOldPreset = false
+    private var presetState = PresetState.unknown, shippedShortcuts: Set<String>?, presetCheckAt = Date.distantPast, toldOldPreset = false
+    /// What Console's files looked like at the last complete read (PresetAge.stamp): unchanged, they are not read again.
+    private var presetStamp: String?
+    /// A video has been connected to VJster on this Mac at some time: until then its light does not nag.
+    private var vjsterUsed: Bool {
+        get { UserDefaults.standard.bool(forKey: "fadester.vjsterSeen") }
+        set { UserDefaults.standard.set(newValue, forKey: "fadester.vjsterSeen") }
+    }
+    /// Studio Mode off is read again every 10 s while the controls run, so turning it on in OBS by hand clears the light.
+    private var studioCheckAt = Date.distantPast
+    /// The port last filled in from OBS's own settings file; another value in the box was typed by hand.
+    private var filledPort: Int?
+    /// The menu-bar icon: with the controls on, closing the window hides it and the show goes on.
+    private var statusItem: NSStatusItem?
+    private var statusToggle: NSMenuItem?
     /// TourBox Console's Auto Switch and whether its selected preset is ours (Model.swift PresetAge): they decide the reminder strip.
     private var startedWith: Settings?
     private var catalogAt = Date.distantPast
@@ -198,6 +212,7 @@ private final class PillActionButton: NSControl {
     private var rememberedControls: String? { UserDefaults.standard.string(forKey: "fadester.controlsLastAction") }
     private func rememberControls(_ onOff: String) { UserDefaults.standard.set(onOff, forKey: "fadester.controlsLastAction") }
     private var nextAutoScan = Date.distantFuture
+    private var nextSlowScan = Date.distantPast
     private var watchTimer: Timer?
     private var scanTask: Task<Void, Never>?
     private let host = HostController()
@@ -269,6 +284,8 @@ private final class PillActionButton: NSControl {
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         guard !previewMode else { return }
+        makeStatusItem()
+        followObsPort()
         watchDesktop()
         watchTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.watchDesktop() }
@@ -280,6 +297,52 @@ private final class PillActionButton: NSControl {
             // No OBS: VJster can still control Chrome's videos, so the controls may start now (FIX-8).
             autoStartIfWanted()
         }
+    }
+
+    /// The icon in the menu bar (top right of the screen): Open, Start or Stop, and Quit. It is what brings the window
+    /// back after it was closed with the controls on.
+    private func makeStatusItem() {
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        if let icon = NSApplication.shared.applicationIconImage.copy() as? NSImage {
+            icon.size = NSSize(width: 18, height: 18)
+            item.button?.image = icon
+        } else {
+            item.button?.title = "F"
+        }
+        item.button?.toolTip = window.title
+        let menu = NSMenu()
+        let open = NSMenuItem(title: L("trayOpen"), action: #selector(showWindow), keyEquivalent: "")
+        open.target = self; menu.addItem(open)
+        let toggle = NSMenuItem(title: L("saveStart"), action: #selector(toggleControls), keyEquivalent: "")
+        toggle.target = self; menu.addItem(toggle)
+        menu.addItem(.separator())
+        menu.addItem(withTitle: L("macQuit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
+        item.menu = menu
+        statusItem = item; statusToggle = toggle
+    }
+
+    @objc private func showWindow() {
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    /// A click on the Dock icon with the window closed brings it back.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if !flag && !previewMode { showWindow() }
+        return true
+    }
+
+    /// The OBS port fills itself in from OBS's own settings file, as the password does, until a port is typed by hand
+    /// (that is how another OBS is chosen). Never while the controls run, and never onto VJster's port.
+    private func followObsPort() {
+        guard settings.portAuto, !host.running, !previewMode, !invalidSettings else { return }
+        // A value that is not the one filled in last was typed: it stays, and current() saves that choice.
+        if let filled = filledPort, port.stringValue.trimmingCharacters(in: .whitespaces) != String(filled) { return }
+        if filledPort == nil && port.stringValue.trimmingCharacters(in: .whitespaces) != String(settings.port) { return }
+        guard let found = LocalFiles.obsPort() else { filledPort = filledPort ?? settings.port; return }
+        let vjPort = Int(vjsterPort.stringValue.trimmingCharacters(in: .whitespaces)) ?? settings.vjsterPort
+        if vjster.state == .on && found == vjPort { filledPort = filledPort ?? settings.port; return }
+        port.stringValue = String(found); filledPort = found
     }
 
     /// The app's version (CFBundleShortVersionString in Info.plist); "" when the bundle does not say.
@@ -423,7 +486,7 @@ private final class PillActionButton: NSControl {
         let feedbackButton = button(L("feedback"), #selector(toggleFeedback))
         let guideButton = button(L("guide"), #selector(guide))
         root.addArrangedSubview(horizontal([primaryButton, saveButton, feedbackButton, guideButton]))
-        root.addArrangedSubview(label(L("keepOpen"), small: true))
+        root.addArrangedSubview(label(L("macKeepOpen"), small: true))
 
         vjster.target = self; vjster.action = #selector(vjsterToggled)
         mix.target = self; mix.action = #selector(mixToggled)
@@ -467,6 +530,7 @@ private final class PillActionButton: NSControl {
 
     private func setStatus(_ text: String) {
         status.stringValue = text
+        status.toolTip = text // the line is cut at the window's width; the whole message is here and in Activity
         hud?.set(text)
     }
 
@@ -819,6 +883,7 @@ private final class PillActionButton: NSControl {
     private func current() throws -> Settings {
         var result = settings
         guard let value = Int(port.stringValue.trimmingCharacters(in: .whitespaces)) else { throw PanelFailure.message(L("macErrPort")) }; result.port = value
+        if result.portAuto && value != (filledPort ?? settings.port) { result.portAuto = false }
         guard let vjPort = Int(vjsterPort.stringValue.trimmingCharacters(in: .whitespaces)) else { throw PanelFailure.message(L("macErrVjPort")) }; result.vjsterPort = vjPort
         result.vjsterEnabled = vjster.state == .on
         result.vjsterTarget = vjsterTarget.selectedItem?.representedObject as? String ?? "both"
@@ -850,9 +915,9 @@ private final class PillActionButton: NSControl {
         let onlyMix = mixOnlyChosen
         // Stream Deck-only mode needs no Accessibility: it moves no T-bar.
         let axReady = axTrusted || onlyMix
-        let tbState = Readiness.tourBox(consoleRunning: tourboxConsoleRunning, consoleInstalled: consoleReady, mixOnly: onlyMix, oldPreset: presetState == .old)
+        let tbState = Readiness.tourBox(consoleRunning: tourboxConsoleRunning, consoleInstalled: consoleReady, mixOnly: onlyMix, oldPreset: presetState == .old, noPreset: presetState == .none)
         let vjEnabled = vjster.state == .on
-        let vjState = Readiness.vjster(enabled: vjEnabled, controlsOn: controlsOn, connectedPeers: vjsterPeers.count, portBusy: vjsterPortBusy, mixOnly: onlyMix)
+        let vjState = Readiness.vjster(enabled: vjEnabled, controlsOn: controlsOn, connectedPeers: vjsterPeers.count, portBusy: vjsterPortBusy, mixOnly: onlyMix, usedBefore: vjsterUsed)
         let ctlState = Readiness.controls(running: controlsOn, armed: host.isArmed, axTrusted: axReady, obsConnected: obsConnected)
 
         let syncState: PresetSyncState = lastSavedPreset != nil
@@ -909,14 +974,19 @@ private final class PillActionButton: NSControl {
     /// Compare Console's stored presets with the one this Companion ships, every 5 s (Console writes them when they change), FIX-9.
     private func checkPresetAge() {
         presetCheckAt = Date().addingTimeInterval(5)
-        // An unreadable shipped preset is read again next time rather than turning the check off for good.
-        if shippedShortcuts?.isEmpty ?? true { shippedShortcuts = PresetAge.shipped(paths.localizedPreset) }
-        // A preset Console is still writing (or a file it holds) keeps the last answer instead of a false one.
-        consoleAutoSwitch = PresetAge.autoSwitch(); activeFadester = PresetAge.activeIsFadester(shipped: shippedShortcuts ?? [])
-        if shippedLayout == nil { shippedLayout = PresetAge.layout(PresetAge.unzip(paths.localizedPreset)) }
-        let (stored, complete, layouts) = PresetAge.stored()
-        guard complete else { return }
-        presetState = PresetAge.judge(shipped: shippedShortcuts ?? [], stored: stored, shippedLayout: shippedLayout, layouts: layouts)
+        // Nothing in Console's folder changed since the last complete read: nothing is opened or parsed again.
+        let stamp = PresetAge.stamp()
+        if stamp != presetStamp || (shippedShortcuts?.isEmpty ?? true) {
+            // An unreadable shipped preset is read again next time rather than turning the check off for good.
+            if shippedShortcuts?.isEmpty ?? true { shippedShortcuts = PresetAge.shipped(paths.localizedPreset) }
+            // A preset Console is still writing (or a file it holds) keeps the last answer instead of a false one.
+            consoleAutoSwitch = PresetAge.autoSwitch(); activeFadester = PresetAge.activeIsFadester(shipped: shippedShortcuts ?? [])
+            if shippedLayout == nil { shippedLayout = PresetAge.layout(PresetAge.unzip(paths.localizedPreset)) }
+            let (stored, complete, layouts) = PresetAge.stored()
+            guard complete else { return }
+            presetState = PresetAge.judge(shipped: shippedShortcuts ?? [], stored: stored, shippedLayout: shippedLayout, layouts: layouts)
+            presetStamp = stamp
+        }
         // Said once, and only where the TourBox light shows it: Console running and not in Stream Deck-only mode.
         if presetState == .old && !toldOldPreset && tourboxConsoleRunning && !mixOnlyChosen { toldOldPreset = true; note(L("tbOldNote")) }
         if presetState != .old { toldOldPreset = false }
@@ -925,7 +995,10 @@ private final class PillActionButton: NSControl {
     private func watchDesktop() {
         defer { if !previewMode && Date() >= presetCheckAt { checkPresetAge() } }
         guard !previewMode else { return }
+        let wasTrusted = axTrusted
         axTrusted = AXIsProcessTrusted()
+        // Accessibility was just granted: the controls start now, as they would have at launch (never after Stop).
+        if axTrusted && !wasTrusted { autoStartIfWanted() }
         let apps = NSWorkspace.shared.runningApplications
         let obsApp = apps.first {
             $0.bundleIdentifier == "com.obsproject.obs-studio" || $0.localizedName == "OBS" || $0.localizedName == "OBS Studio"
@@ -960,6 +1033,18 @@ private final class PillActionButton: NSControl {
             nextAutoScan = Date().addingTimeInterval(4.5)
             performScan(silentIfOffline: true)
         }
+        // Without VJster, or in Stream Deck-only mode, the host ends when OBS goes away and the four tries above are
+        // soon used up: while OBS runs and Stop was not pressed, keep looking every 15 s (F-04).
+        if obsRunning && !host.running && !obsConnected && autoTries == 0 && !scanning && !invalidSettings && rememberedControls != "off" &&
+            (obsProblem == nil || obsProblem == "obs-no-answer") && Date() >= nextSlowScan {
+            nextSlowScan = Date().addingTimeInterval(15)
+            performScan(silentIfOffline: true)
+        }
+        // Studio Mode off is on the OBS light: look again now and then, so turning it on in OBS itself clears the light.
+        if host.running && obsConnected && studioOff && !scanning && Date() >= studioCheckAt {
+            studioCheckAt = Date().addingTimeInterval(10)
+            performScan(silentIfOffline: true, listsOnly: true)
+        }
         refreshIndicators()
     }
 
@@ -977,7 +1062,16 @@ private final class PillActionButton: NSControl {
         }
         vjsterPeers = Readiness.vjsterPeers(after: safeLine, current: vjsterPeers)
         vjsterPortBusy = Readiness.vjsterPortBusy(after: safeLine, current: vjsterPortBusy)
-        if safeLine.hasPrefix("OFFLINE:") {
+        // The first video ever connected here: from now on a missing one is worth an amber light.
+        if !vjsterPeers.isEmpty && !vjsterUsed { vjsterUsed = true }
+        // Preview or the T-bar was used with Studio Mode off: the OBS light says so, with its Turn on button.
+        if Readiness.saysStudioOff(safeLine) && !studioOff { studioOff = true; studioCheckAt = Date().addingTimeInterval(10) }
+        // The T-bar is unavailable for a reason the panel can explain (the other controls keep working): say it in the
+        // status line, in the panel's language, not only as an English line on the Activity tab (F-02).
+        if let reason = HostController.tbarReason(safeLine) { setStatus(reason) }
+        if safeLine.hasPrefix("T-BAR:") {
+            // Not an OBS failure: OBS stays connected and only the T-bar waits.
+        } else if safeLine.hasPrefix("OFFLINE:") {
             obsConnected = false
             setMeter("")
             let problem = Readiness.obsProblem(from: safeLine)
@@ -1054,6 +1148,7 @@ private final class PillActionButton: NSControl {
         case "importPreset": saveAndGuidePreset()
         case "downloadConsole": downloadTourBoxConsole()
         case "grantAx": grantAccessibility()
+        case "studioOn": turnOnStudio()
         case "studio", "password", "server", "vjsterWait", "vjsterPort":
             openObsShowMe(mode: action)
         default: break
@@ -1105,6 +1200,31 @@ private final class PillActionButton: NSControl {
         win.show(relativeTo: window)
     }
 
+    /// The OBS light's Turn on button: asks OBS to switch Studio Mode on, then reads OBS again. Only on that click.
+    private func turnOnStudio() {
+        guard !scanning && !previewMode && !invalidSettings else { return }
+        let targetPort = host.running ? settings.port : (Int(port.stringValue.trimmingCharacters(in: .whitespaces)) ?? settings.port)
+        let secret: String, client: ObsDiscovery
+        do {
+            secret = try LocalFiles.password(port: targetPort, override: password.stringValue)
+            client = try ObsDiscovery(port: targetPort)
+        } catch { failure(error); return }
+        scanning = true; updateEnabled()
+        Task { [weak self] in
+            guard let self else { return }
+            var turnedOn = false
+            do { try await client.turnOnStudioMode(password: secret); turnedOn = true }
+            catch { self.failure(error) }
+            self.scanning = false
+            if turnedOn {
+                self.studioOff = false
+                let said = L("studioTurnedOn"); self.setStatus(said); self.note(said)
+            }
+            self.updateEnabled()
+            if turnedOn { self.performScan(silentIfOffline: true, listsOnly: self.host.running) }
+        }
+    }
+
     private func updateEnabled() {
         // Editing and Save stay open while the controls run: Save hands the new settings to the running host.
         let editable = !scanning
@@ -1120,6 +1240,7 @@ private final class PillActionButton: NSControl {
             primaryButton?.bezelColor = accentColor
             primaryButton?.isEnabled = editable && !invalidSettings && !previewMode
         }
+        statusToggle?.title = primaryButton?.title ?? L("saveStart")
         refreshIndicators()
     }
 
@@ -1234,6 +1355,7 @@ private final class PillActionButton: NSControl {
     /// 2026-11-17: the lists stayed empty until Read scenes was clicked). It changes no light and starts nothing.
     private func performScan(silentIfOffline: Bool, listsOnly: Bool = false, loud: Bool = false) {
         guard (listsOnly || !host.running) && !scanning && !previewMode && !invalidSettings else { return }
+        if !listsOnly { followObsPort() }
         let targetPort: Int
         // A refresh while the controls run asks the OBS the host uses (the saved port), not an unsaved edit.
         if listsOnly { targetPort = settings.port } else if let parsed = Int(port.stringValue.trimmingCharacters(in: .whitespaces)), (1...65535).contains(parsed) {
@@ -1268,6 +1390,7 @@ private final class PillActionButton: NSControl {
                 self.fillChoices(preserveEdits: true)
                 self.catalogAt = Date()
                 if listsOnly {
+                    self.studioOff = !self.catalog.studio // the OBS light's Studio Mode state follows every read
                     if loud { let msg = L("obsConnected", self.catalog.scenes.count); self.setStatus(msg); self.note(msg) } // controls already on
                     self.scanning = false; self.scanTask = nil; self.updateEnabled(); return
                 }
@@ -1430,7 +1553,12 @@ private final class PillActionButton: NSControl {
 
     @objc private func guide() { if !previewMode { NSWorkspace.shared.open(paths.guide) } }
 
-    func windowShouldClose(_ sender: NSWindow) -> Bool { NSApp.terminate(nil); return false }
+    /// With the controls on, closing the window only hides it: the show goes on, and the icon in the menu bar (or the Dock
+    /// icon) brings it back. Quit, in the menu bar icon's menu or the app menu, stops the controls and ends the app.
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        if host.running && statusItem != nil { window.orderOut(nil); return false }
+        NSApp.terminate(nil); return false
+    }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         watchTimer?.invalidate(); watchTimer = nil

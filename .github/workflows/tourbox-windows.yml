@@ -111,7 +111,7 @@ jobs:
             '',
             "Result: **$env:RESULT**. Commit: ``$env:GITHUB_SHA``.",
             '',
-            'Builds the native C++ UIA slider helper (`FadesterNativeSlider.exe`), self-contained bridge (`FadesterCompanionBridge.exe`), 10-locale WinForms panel (`Fadester Companion.exe`), VJster `/obs` page assets, ZIP archive, and unsigned MSIX candidate, running both `--self-test` suites.',
+            'Builds the native C++ UIA slider helper (`FadesterNativeSlider.exe`), self-contained bridge (`FadesterCompanionBridge.exe`), 13-language WinForms panel (`Fadester Companion.exe`), VJster `/obs` page assets, ZIP archive, and unsigned MSIX candidate, running both `--self-test` suites.',
             '',
             '**Developer candidates only.** Store submission remains held until Windows and macOS physical hardware verification are completely signed off.'
           ) | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Encoding utf8NoBOM

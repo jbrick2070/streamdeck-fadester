@@ -30,7 +30,7 @@ command-line launch is not proof of the GUI's Accessibility attribution.
 Start never moves OBS into position, substitutes invisible fading or retries an
 uncertain action. Connected appears only after the host's READY acknowledgement.
 Startup without READY is stopped after 30 seconds. Stop/quit closes only the owned
-host and releases its shortcuts; it sends no fade cancellation, take or level
+host and releases its shortcuts; it sends no fade cancellation, transition or level
 restore. Review OBS after an interrupted transition.
 
 ## Build and offline checks
@@ -72,7 +72,7 @@ show no window, read no user settings and make no connection.
 
 Accessibility attribution from the GUI, source assignments, menu/modifier behavior, fast
 rotary input and end-to-end OBS actions still need a supervised Mac rehearsal.
-The panel speaks the Windows panel's 10 languages (the Mac's first preferred
+The panel speaks the Windows panel's 13 languages (the Mac's first preferred
 language, or `--language CODE`). Its strings come from `tourbox/panel/PanelText.cs`,
 `PanelExtraText.cs` and the Mac-only `mac-strings.json`, generated into
 `PanelStrings.swift` by `node tourbox/macos/panel/make-strings.cjs` (build.sh and

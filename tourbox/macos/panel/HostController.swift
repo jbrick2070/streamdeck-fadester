@@ -58,12 +58,20 @@ struct RuntimePaths {
     /// Armed with OBS (READY), not just for videos (VIDEO-READY, FIX-8).
     var isObsLive: Bool { armed && obsLive }
 
+    /// Why the T-bar is not available, in the panel's words, when a host line names one of the reasons the panel can
+    /// explain (Accessibility, the T-bar not at its start, Studio Mode off); nil for any other line. The host keeps
+    /// every other control working and says so on an OFFLINE or T-BAR line (F-02).
+    nonisolated static func tbarReason(_ text: String) -> String? {
+        guard text.hasPrefix("OFFLINE:") || text.hasPrefix("T-BAR:") else { return nil }
+        for known in ["Accessibility denied", "not parked at zero", "expected exactly one native OBS T-bar"] where text.localizedCaseInsensitiveContains(known) {
+            return explainHostError(text)
+        }
+        return nil
+    }
+
     nonisolated static func explainHostError(_ text: String) -> String {
         if text.localizedCaseInsensitiveContains("Accessibility denied") {
             return L("macHostAx")
-        }
-        if text.localizedCaseInsensitiveContains("expected one OBS window") {
-            return L("macHostOneWindow")
         }
         if text.localizedCaseInsensitiveContains("not parked at zero") {
             return L("macHostTbarZero")
@@ -73,6 +81,7 @@ struct RuntimePaths {
         }
         var clean = text
         if clean.hasPrefix("ERROR: ") { clean = String(clean.dropFirst(7)) }
+        if clean.hasPrefix("OFFLINE: ") { clean = String(clean.dropFirst(9)) }
         if clean.hasPrefix("initialization: ") { clean = String(clean.dropFirst(16)) }
         if clean.hasPrefix("guardFailed(\"") && clean.hasSuffix("\")") {
             clean = String(clean.dropFirst(13).dropLast(2))

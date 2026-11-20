@@ -26,7 +26,7 @@ Version 0.1.7:
 - New TourBox and VJster lights in the status strip, each with the one button that fixes it, such as Open Console or Show me.
 - Show me where to click: an animated guide walks you through importing the preset into TourBox Console.
 - Bring OBS to Front: a button on the reminder, and in the tray menu, brings OBS's main window back.
-- The Mac app speaks the same 10 languages as the Windows app.
+- The Mac app speaks the same 13 languages as the Windows app.
 
 ## Product features
 

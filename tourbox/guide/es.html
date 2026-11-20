@@ -18,19 +18,19 @@
     <h2>¿Sin TourBox? Usa un mando de juego</h2>
     <ol>
       <li>Abre OBS. En <strong>Herramientas → Configuración del servidor WebSocket</strong>, activa el servidor y mantén activa la autenticación. Después abre <strong>Fadester Companion</strong>: se conecta solo y, si no puede, su ventana te dice qué hacer. El T-bar necesita OBS 33, con la ventana principal de OBS abierta y su T-bar visible.</li>
-      <li>En la pestaña <strong>Configuración</strong>, marca <strong>Usar un mando de Xbox o XInput</strong>, deja marcado el <strong>Modo fácil</strong> y haz clic en <strong>Guardar e iniciar</strong>. Puedes omitir la importación del preset.</li>
+      <li>En la pestaña <strong>Configuración</strong>, marca <strong>Usar un mando de Xbox o XInput</strong> y deja marcado el <strong>Modo fácil</strong>. Los controles se inician solos la primera vez, todavía sin el mando: haz clic en <strong>Detener</strong> y luego en <strong>Iniciar</strong>, abajo a la izquierda de la ventana, para que se inicien con él. Puedes omitir la importación del preset.</li>
       <li>En OBS, activa el <strong>Modo de estudio</strong> y selecciona <strong>Fundido (Fade)</strong>. Pulsa abajo en la cruceta para preparar la siguiente escena de la lista de OBS, o arriba para la anterior.</li>
       <li>Aprieta el gatillo derecho: el T-bar de OBS lo sigue y, al apretarlo a fondo, pasa a programa. O mantén pulsado <strong>A</strong>: tras 0,15 s el T-bar avanza mientras lo mantienes y pasa a programa al llegar al final. Suéltalo para dejarlo a medio camino; vuelve a mantener A para continuar.</li>
       <li><strong>B</strong> corta, <strong>View</strong> vuelve a Programa, el gatillo izquierdo baja la música mientras lo mantienes y la cruceta izquierda y derecha ajustan la música. Cambia cualquier botón en la pestaña <strong>Mando de juego</strong>.</li>
     </ol>
-    <p>Mantén esta ventana abierta mientras trabajas. Si la cierras, los controles se detienen.</p>
+    <p>Cerrar esta ventana no detiene los controles: Fadester Companion sigue en el área de notificación, junto al reloj. Para detenerlos, haz clic en Detener, o haz clic derecho en ese icono y elige Salir de Fadester Companion.</p>
 
     <h2>Conecta TourBox con OBS</h2>
     <ol>
       <li>Abre <strong>Fadester Companion</strong> desde el menú Inicio. Si usas el ZIP, extráelo entero y ejecuta <strong>Fadester Companion.exe</strong>.</li>
       <li>Abre OBS y, en TourBox Console, usa <strong>Import</strong> junto a <strong>Preset List</strong> para importar <code>presets/es/OBS Fadester for TourBox.tb</code>. Desactiva <strong>Auto Switch</strong> y elige <strong>OBS Fadester for TourBox</strong>: así un solo preajuste funciona sea cual sea la aplicación en primer plano (OBS, Chrome o cualquier otra). Solo si dejas Auto Switch activado, vincula el preajuste con OBS y también con Google Chrome para controlar vídeos con Chrome en primer plano. Importa una sola versión del preajuste. Usa el botón <strong>Importar en TourBox Console</strong> de Fadester; no hagas doble clic en el archivo <code>.tb</code>.</li>
       <li>En OBS, abre <strong>Herramientas → Configuración del servidor WebSocket</strong> y activa el servidor con autenticación. Para usar el fader manual en OBS Studio <strong>33</strong>, activa el <strong>Modo de estudio</strong>, selecciona la transición <strong>Fundido (Fade)</strong> y deja visible la barra blanca entre Vista previa y Programa.</li>
-      <li>En Fadester, pulsa <strong>Leer escenas y entradas de OBS</strong>. Introduce el puerto y la contraseña de OBS si se solicitan. Para probar el volumen, elige la entrada de música en <strong>Asignaciones</strong>. Pulsa <strong>Guardar e iniciar</strong> y elige <strong>OBS Fadester for TourBox</strong> en TourBox Console. Deja abierto Fadester.</li>
+      <li>En Fadester, pulsa <strong>Leer escenas y entradas de OBS</strong>. Introduce el puerto y la contraseña de OBS si se solicitan. Para probar el volumen, elige la entrada de música en <strong>Asignaciones</strong>. Pulsa <strong>Iniciar</strong> y elige <strong>OBS Fadester for TourBox</strong> en TourBox Console. Deja abierto Fadester.</li>
     </ol>
     <p>Si Windows está en otro idioma, cierra Fadester y, desde PowerShell en la carpeta extraída, ejecútalo con <code>&amp; '.\Fadester Companion.exe' --language es</code>.</p>
 
@@ -45,7 +45,7 @@
     </ul>
 
     <h2>Ajusta toda la mezcla</h2>
-    <p>Si los controles están activos, pulsa <strong>Detener controles</strong>. En <strong>Configuración</strong>, activa <strong>Controlar todas las entradas del mezclador de OBS</strong> y pulsa <strong>Guardar e iniciar</strong>. Mantén pulsado <strong>Side</strong> y gira <strong>Knob</strong> para ajustar el grupo. Desde el menú <strong>Tour</strong>, puedes fundir la mezcla a silencio y recuperar los niveles anteriores. Las entradas silenciadas siguen silenciadas.</p>
+    <p>Si los controles están activos, pulsa <strong>Detener</strong>. En <strong>Configuración</strong>, activa <strong>Controlar todas las entradas del mezclador de OBS</strong> y pulsa <strong>Iniciar</strong>. Mantén pulsado <strong>Side</strong> y gira <strong>Knob</strong> para ajustar el grupo. Desde el menú <strong>Tour</strong>, puedes fundir la mezcla a silencio y recuperar los niveles anteriores. Las entradas silenciadas siguen silenciadas.</p>
 
     <h2>Ayuda</h2>
     <p>Los diagnósticos del puente de Fadester están en inglés. Si un control no responde, comprueba el preajuste activo en TourBox Console y consulta la pestaña <strong>Actividad</strong> de Fadester.</p>

@@ -90,9 +90,30 @@ import AppKit
         guard args.isEmpty else { fputs("Use no arguments for Fadester Companion (optionally --language CODE), or --self-test for offline checks.\n", stderr); exit(2) }
         let app = NSApplication.shared, delegate = Panel()
         app.setActivationPolicy(.regular); app.delegate = delegate
+        // The usual Mac menus. Without an Edit menu Command-V, Command-C and Command-A do nothing in the password, video
+        // and extension fields; without About nothing in the menu bar says which version this is.
         let menu = NSMenu(), item = NSMenuItem(), application = NSMenu()
+        application.addItem(withTitle: L("macMenuAbout"), action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        application.addItem(.separator())
+        application.addItem(withTitle: L("macMenuHide"), action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        application.addItem(.separator())
         application.addItem(withTitle: L("macQuit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
-        item.submenu = application; menu.addItem(item); app.mainMenu = menu
+        item.submenu = application; menu.addItem(item)
+        let editItem = NSMenuItem(), edit = NSMenu(title: L("macMenuEdit"))
+        edit.addItem(withTitle: L("macMenuUndo"), action: Selector(("undo:")), keyEquivalent: "z")
+        let redo = edit.addItem(withTitle: L("macMenuRedo"), action: Selector(("redo:")), keyEquivalent: "z")
+        redo.keyEquivalentModifierMask = [.command, .shift]
+        edit.addItem(.separator())
+        edit.addItem(withTitle: L("macMenuCut"), action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        edit.addItem(withTitle: L("macUiCopy"), action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        edit.addItem(withTitle: L("macMenuPaste"), action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        edit.addItem(withTitle: L("macMenuSelectAll"), action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        editItem.submenu = edit; menu.addItem(editItem)
+        let windowItem = NSMenuItem(), windows = NSMenu(title: L("macMenuWindow"))
+        windows.addItem(withTitle: L("macMenuMinimize"), action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
+        windows.addItem(withTitle: L("macMenuZoom"), action: #selector(NSWindow.performZoom(_:)), keyEquivalent: "")
+        windowItem.submenu = windows; menu.addItem(windowItem)
+        app.mainMenu = menu; app.windowsMenu = windows
         withExtendedLifetime(delegate) { app.run() }
     }
 }

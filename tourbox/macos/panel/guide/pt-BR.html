@@ -1,0 +1,51 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-2.0-or-later -->
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Início rápido · Fadester Companion</title>
+  <link rel="stylesheet" href="quickstart.css">
+</head>
+<body>
+  <main>
+    <header>
+      <p>Início rápido · Mac · Apple silicon e Intel</p>
+      <h1>Fadester Companion</h1>
+      <p>Prepare cenas, faça fades manuais e ajuste o áudio no OBS Studio com o seu TourBox.</p>
+    </header>
+
+    <h2>Ao abrir pela primeira vez</h2>
+    <p>Mova <strong>Fadester Companion.app</strong> para a pasta <strong>Aplicativos</strong>. O app não foi autenticado (notarizado) pela Apple, por isso o macOS não o abre na primeira vez. Tente abri-lo uma vez e depois clique em <strong>Abrir Mesmo Assim</strong> em <strong>Ajustes do Sistema → Privacidade e Segurança</strong>. (Até o macOS 14, você também pode clicar no app com a tecla Control pressionada e escolher <strong>Abrir</strong>.)</p>
+
+    <h2>Conectar o TourBox ao OBS</h2>
+    <ol>
+      <li>No OBS, abra <strong>Ferramentas → Configurações do servidor WebSocket</strong> e ative o servidor com autenticação. Para o fade manual no OBS Studio <strong>33</strong>, ative o <strong>Modo Estúdio</strong>, escolha <strong>Esmaecer (Fade)</strong> e mantenha visível o controle deslizante branco entre a Prévia e o Programa. O Fadester Companion lê sozinho a porta e a senha salvas no OBS.</li>
+      <li>No Fadester Companion, clique em <strong>1. Salvar preset do TourBox (.tb)…</strong> e salve o preset no seu idioma em um lugar fácil de achar, por exemplo em Transferências.</li>
+      <li>Clique em <strong>2. Abrir o TourBox Console</strong> (ou em <strong>Mostre-me onde clicar</strong>). No TourBox Console, clique no ícone de importação ao lado de Preset List, abra <code>OBS Fadester for TourBox.tb</code>, desative o <strong>Auto Switch</strong> e selecione <strong>OBS Fadester for TourBox</strong>: assim um único preset funciona com qualquer programa na frente. Somente se você mantiver o Auto Switch ativado, clique em <strong>Not Linked</strong>, escolha <strong>OBS</strong> e clique em <strong>Save</strong>; vincule o preset também ao Google Chrome para controlar vídeos com o Chrome na frente. Importe apenas uma versão de idioma, e não o arquivo do Windows.</li>
+      <li>Clique em <strong>Dar Acessibilidade ao Fadester Companion…</strong> e ative o Fadester Companion em <strong>Ajustes do Sistema → Privacidade e Segurança → Acessibilidade</strong>. Se <strong>Fadester Companion T-bar</strong> e <strong>Fadester Companion Shortcuts</strong> também aparecerem ali, ative-os também. O TourBox Console tem a própria permissão.</li>
+      <li>Em <strong>Atribuições</strong>, escolha suas cenas e a entrada de música. Os controles iniciam sozinhos assim que a Acessibilidade é concedida: espere por <strong>Controles: ligados</strong> (se a luz disser que estão desligados, clique em <strong>Iniciar</strong> ao lado dela). Fechar a janela não para os controles: o app continua na barra de menus, no canto superior direito.</li>
+    </ol>
+    <p>O preset do Mac usa <strong>Control + Option + Shift</strong> para as ações do OBS e <strong>Control + Shift</strong> ou <strong>Option + Shift</strong> para o vídeo e as camadas, nunca Command.</p>
+
+    <h2>Pratique com duas cenas diferentes</h2>
+    <ul>
+      <li>Gire a roda <strong>Scroll</strong> para trocar a Prévia. O Programa continua igual. Um toque mostra os nomes das duas cenas no painel.</li>
+      <li>Gire devagar o <strong>Dial</strong> plano para mover o controle deslizante do OBS e misturar as cenas. Para cancelar um fade em andamento, segure <strong>Side</strong> e pressione o <strong>Dial</strong>. Girar no sentido horário sempre leva o T-bar em direção à Prévia, também na próxima transição. Depois de uma transição concluída, espere um instante antes de girar de novo.</li>
+      <li>Reproduza um vídeo do YouTube no Chrome (com a extensão gratuita VJster). Gire o <strong>Knob</strong> elevado para mudar a velocidade; pressione e gire para passos finos. Pressione-o para reproduzir ou pausar o vídeo. Toque em <strong>Side</strong> para voltar a velocidade a 1x.</li>
+      <li>Para controlar um vídeo do YouTube direto no OBS, informe-o em Configuração, clique em <strong>Copiar URL da Fonte de navegador do OBS</strong> e cole o endereço em uma fonte de navegador do OBS.</li>
+      <li>Atribua uma entrada de música no Fadester. Segure <strong>Side</strong> e gire o <strong>Dial</strong> plano para ajustar o volume dela. Com <strong>Top</strong> pressionado, Knob, Scroll e Dial controlam as camadas de VJ (modo de mesclagem e opacidade). As camadas que você não escolheu são preenchidas pelo Fadester no primeiro uso a partir da cena ao vivo (Camada 1 = a imagem visível mais acima, Camada 2 = a seguinte) e salvas em Atribuições.</li>
+      <li>Um toque em <strong>Short</strong> apenas mostra o status da gravação. <strong>Desfazer última mudança de áudio</strong> fica no menu <strong>Tour</strong>.</li>
+    </ul>
+
+    <h2>Ajustar a mixagem inteira</h2>
+    <p>Em Configuração, ative o controle de todas as entradas do mixer do OBS e clique em <strong>Parar</strong> e depois em <strong>Iniciar</strong>. Segure <strong>Side</strong> e gire o <strong>Knob</strong> para mudar o nível do grupo. No menu <strong>Tour</strong> você pode levar a mixagem ao silêncio com um fade e restaurar os níveis anteriores. As entradas silenciadas continuam silenciadas.</p>
+
+    <h2>Ajuda</h2>
+    <p>As mensagens de diagnóstico dos controles aparecem em inglês. Se um controle não responder, confira o preset ativo no TourBox Console e abra a aba Atividade no Fadester.</p>
+    <p>O controle completo do OBS com um TourBox ainda não foi ensaiado em um Mac. Pratique com cenas de teste antes de entrar ao vivo.</p>
+    <p>Se o macOS usa outro idioma, encerre o Fadester Companion e execute no Terminal: <code>open -a "Fadester Companion" --args --language pt-BR</code>.</p>
+    <p><a href="../START-HERE.html" hreflang="en">Guia completo e referência de controles (em inglês)</a> · <a href="../START-HERE.html#recovery" hreflang="en">Solução de problemas (em inglês)</a></p>
+  </main>
+</body>
+</html>

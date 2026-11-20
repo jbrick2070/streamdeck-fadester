@@ -22,6 +22,9 @@ struct Settings {
     var vjsterExtensionId = "", vjsterObsToken = Settings.newObsToken(), vjsterTarget = "both"
     var layer1Scene = "", layer1Source = "", layer2Scene = "", layer2Source = ""
     var opacityStep = 0.05
+    /// The OBS port fills itself in from OBS's own settings file (as the password does) until another one is typed.
+    /// True for a first run; a settings file saved before this existed keeps the port it has.
+    var portAuto = true
     /// Whether two settings agree on everything the host sets up at start, so a Save while it runs applies by reload alone.
     static func sameAtStart(_ a: Settings, _ b: Settings) -> Bool {
         a.port == b.port && a.faderStep == b.faderStep && a.mixEnabled == b.mixEnabled && a.mixOnly == b.mixOnly &&
@@ -89,6 +92,7 @@ struct Settings {
             return value.boolValue
         }
         port = try integer("port", port)
+        portAuto = try boolean("portAuto", false)
         musicInput = try text("musicInput"); contentInput = try text("contentInput"); micInput = try text("micInput"); mediaInput = try text("mediaInput")
         overlayScene = try text("overlayScene"); overlaySource = try text("overlaySource")
         if let raw = json["anchors"] {
@@ -136,7 +140,7 @@ struct Settings {
     }
     func encoded() throws -> Data {
         try validate()
-        return try JSONSerialization.data(withJSONObject: ["host":"127.0.0.1", "port":port,
+        return try JSONSerialization.data(withJSONObject: ["host":"127.0.0.1", "port":port, "portAuto":portAuto,
             "musicInput":musicInput, "contentInput":contentInput, "micInput":micInput, "mediaInput":mediaInput,
             "overlayScene":overlayScene, "overlaySource":overlaySource, "anchors":anchors,
             "volumeStepDb":volumeStepDb, "duckDb":duckDb, "faderStep":faderStep, "transitionStepMs":transitionStepMs,
@@ -183,6 +187,18 @@ enum LocalFiles {
         }
         return value
     }
+    /// OBS's own WebSocket port, from the settings file OBS keeps on this Mac (the one its password is read from); nil when unknown.
+    static func obsPort() -> Int? {
+        let file = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/obs-studio/plugin_config/obs-websocket/config.json")
+        return obsPort(from: try? Data(contentsOf: file))
+    }
+    static func obsPort(from data: Data?) -> Int? {
+        guard let data = data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let number = json["server_port"] as? NSNumber, CFGetTypeID(number) != CFBooleanGetTypeID() else { return nil }
+        let value = number.doubleValue
+        guard value.isFinite, value.rounded() == value, (1...65535).contains(value) else { return nil }
+        return Int(value)
+    }
     static func save(_ settings: Settings, to url: URL = LocalFiles.settings) throws {
         let directory = url.deletingLastPathComponent()
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions:0o700])
@@ -206,9 +222,11 @@ struct LightState: Equatable {
 /// Pure header readiness state machine (mirrors Windows Readiness in tourbox/panel/ShowMe.cs).
 enum Readiness {
     static func obs(connected: Bool, running: Bool, problem: String?, studioOff: Bool, controlsOn: Bool) -> LightState {
+        // Studio Mode off: the light's own button turns it on (it asks OBS, nothing else changes). Shown with the controls
+        // on too: they start by themselves now, and Preview and the T-bar do nothing until Studio Mode is on.
         if connected {
-            return studioOff && !controlsOn
-                ? LightState(.amber, L("liObsStudio"), button: L("btnShowMe"), action: "studio")
+            return studioOff
+                ? LightState(.amber, L("liObsStudio"), button: L("btnTurnOn"), action: "studioOn")
                 : LightState(.green, L("liObsOn"))
         }
         if !running {
@@ -224,23 +242,31 @@ enum Readiness {
     }
 
     /// The Windows panel's Readiness.TourBox has the same states (and greys a closed Console while a game controller is in use).
-    static func tourBox(consoleRunning: Bool, consoleInstalled: Bool = true, mixOnly: Bool = false, oldPreset: Bool = false) -> LightState {
+    static func tourBox(consoleRunning: Bool, consoleInstalled: Bool = true, mixOnly: Bool = false, oldPreset: Bool = false, noPreset: Bool = false) -> LightState {
         if mixOnly { return LightState(.grey, L("liTbOff")) }
         // An older Fadester preset in Console: some controls do other things than the panel's map says (FIX-9).
         if consoleRunning && oldPreset { return LightState(.amber, L("liTbOld"), button: L("btnImportNew"), action: "importPreset") }
+        // Console runs but holds no OBS Fadester preset (read from Console's own files, PresetAge): the TourBox does nothing
+        // for OBS yet, so the light is not green. Unknown (files unreadable, a new Console format) stays "ready".
+        if consoleRunning && noPreset { return LightState(.amber, L("liTbNone"), button: L("btnImport"), action: "importPreset") }
         if consoleRunning { return LightState(.green, L("liTbReady")) }
         if !consoleInstalled { return LightState(.amber, L("liTbMissing"), button: L("btnDownload"), action: "downloadConsole") }
         return LightState(.amber, L("liTbClosed"), button: L("btnOpenConsole"), action: "openConsole")
     }
 
-    static func vjster(enabled: Bool, controlsOn: Bool, connectedPeers: Int, portBusy: Bool = false, mixOnly: Bool = false) -> LightState {
+    /// usedBefore: a video has been connected on this Mac at some time. VJster is on by default, so until then a missing
+    /// video is not a fault (grey, with the same button), and a busy port is amber, not red. As on Windows.
+    static func vjster(enabled: Bool, controlsOn: Bool, connectedPeers: Int, portBusy: Bool = false, mixOnly: Bool = false, usedBefore: Bool = true) -> LightState {
         if !enabled || mixOnly { return LightState(.grey, L("liVjOff")) }
-        if portBusy { return LightState(.red, L("liVjPort"), button: L("btnShowMe"), action: "vjsterPort") }
-        if !controlsOn { return LightState(.green, L("liVjReady")) }
+        if portBusy { return LightState(usedBefore ? .red : .amber, L("liVjPort"), button: L("btnShowMe"), action: "vjsterPort") }
+        if !controlsOn { return LightState(usedBefore ? .green : .grey, L("liVjReady")) }
         return connectedPeers > 0
             ? LightState(.green, L("liVjOn"))
-            : LightState(.amber, L("liVjWait"), button: L("btnShowMe"), action: "vjsterWait")
+            : LightState(usedBefore ? .amber : .grey, L("liVjWait"), button: L("btnShowMe"), action: "vjsterWait")
     }
+
+    /// The host's own sentence when Preview or the T-bar is used with Studio Mode off (StudioFader.ReadScenesAsync).
+    static func saysStudioOff(_ line: String) -> Bool { line.contains("Enable Studio Mode in OBS before using Preview or the T-bar.") }
 
     /// As on Windows (ShowMe.cs Readiness.Controls): with the controls off and OBS not connected the button is Try again,
     /// which reads OBS and then starts them. With VJster on, the host stays armed without OBS for Chrome's videos (FIX-8):
@@ -261,10 +287,12 @@ enum Readiness {
     /// (ShowMe.cs Readiness.AutoStart). OBS need not be open while VJster is on: the host serves Chrome's videos without
     /// it and connects to OBS when it appears. Without VJster, or in mix-only mode, there is nothing to do before OBS
     /// answers, so those still wait for it. One Mac rule: never when Accessibility is still needed, so no system prompt
-    /// appears at launch. Only after setup was saved once, and never after the user pressed Stop ("off").
+    /// appears at launch: a first run starts as soon as Accessibility is granted. On a first run too (the owner's decision,
+    /// 2026-11-20), and never after the user pressed Stop ("off"). settingsSaved is no longer part of the rule; it is kept
+    /// for the callers.
     static func autoStart(settingsSaved: Bool, settingsValid: Bool, remembered: String?, obsConnected: Bool, controlsOn: Bool, axReady: Bool,
                           vjsterOn: Bool = false, mixOnly: Bool = false) -> Bool {
-        settingsSaved && settingsValid && remembered != "off" && !controlsOn && axReady && (obsConnected || (vjsterOn && !mixOnly))
+        settingsValid && remembered != "off" && !controlsOn && axReady && (obsConnected || (vjsterOn && !mixOnly))
     }
 
     /// Like the Windows panel's Readiness.Reminder: nothing in Stream Deck-only mode, which needs neither the T-bar nor the
@@ -502,7 +530,13 @@ enum ModelTests {
         try check(redact("ERROR test-secret\nagain", secret: "test-secret") == "ERROR [redacted] again", "secret redaction")
         try check(redact("pw 1 tok 0123456789abcdef0123456789abcdef", secrets: ["1", "0123456789abcdef0123456789abcdef"]) == "pw [redacted] tok [redacted]", "longest-first multi-secret redaction")
         try check(Readiness.obs(connected: true, running: true, problem: nil, studioOff: false, controlsOn: false) == LightState(.green, "OBS: connected"), "OBS connected light")
-        try check(Readiness.obs(connected: true, running: true, problem: nil, studioOff: true, controlsOn: false).action == "studio", "OBS Studio Mode light")
+        try check(Readiness.obs(connected: true, running: true, problem: nil, studioOff: true, controlsOn: false) == LightState(.amber, "OBS: turn on Studio Mode", button: "Turn on", action: "studioOn") &&
+                  Readiness.obs(connected: true, running: true, problem: nil, studioOff: true, controlsOn: true).action == "studioOn", "OBS Studio Mode light")
+        try check(Readiness.saysStudioOff("REFUSED preview.next: Enable Studio Mode in OBS before using Preview or the T-bar.") && !Readiness.saysStudioOff("RESULT music.up: Music up"), "Studio Mode line")
+        try check(LocalFiles.obsPort(from: Data("{\"server_port\":4466,\"server_password\":\"x\"}".utf8)) == 4466 && LocalFiles.obsPort(from: Data("{\"server_port\":0}".utf8)) == nil &&
+                  LocalFiles.obsPort(from: Data("{\"server_port\":true}".utf8)) == nil && LocalFiles.obsPort(from: Data("{ half".utf8)) == nil && LocalFiles.obsPort(from: nil) == nil, "OBS's own port")
+        let savedBefore = try Settings(data: Data("{\"port\":4455}".utf8)), firstRun = try Settings(data: Settings().encoded())
+        try check(Settings().portAuto && !savedBefore.portAuto && firstRun.portAuto, "The port follows OBS on a first run only")
         try check(Readiness.obs(connected: false, running: false, problem: nil, studioOff: false, controlsOn: false) == LightState(.red, "OBS: not running", button: "Open OBS", action: "openObs"), "OBS closed light")
         try check(Readiness.obs(connected: false, running: true, problem: "obs-bad-password", studioOff: false, controlsOn: false).action == "password", "OBS bad password light")
         try check(Readiness.obs(connected: false, running: true, problem: nil, studioOff: false, controlsOn: false) == LightState(.grey, "OBS: connecting…"), "OBS connecting light")
@@ -510,12 +544,18 @@ enum ModelTests {
         try check(Readiness.vjster(enabled: true, controlsOn: false, connectedPeers: 0) == LightState(.green, "VJster: ready"), "VJster ready before start")
         try check(Readiness.vjster(enabled: true, controlsOn: true, connectedPeers: 1) == LightState(.green, "VJster: connected") && Readiness.vjster(enabled: true, controlsOn: true, connectedPeers: 0).action == "vjsterWait", "VJster readiness light")
         try check(Readiness.vjster(enabled: true, controlsOn: true, connectedPeers: 0, portBusy: true).action == "vjsterPort", "VJster port busy light")
+        try check(Readiness.vjster(enabled: true, controlsOn: true, connectedPeers: 0, usedBefore: false) == LightState(.grey, "VJster: waiting for video", button: "Show me", action: "vjsterWait") &&
+                  Readiness.vjster(enabled: true, controlsOn: false, connectedPeers: 0, usedBefore: false) == LightState(.grey, "VJster: ready") &&
+                  Readiness.vjster(enabled: true, controlsOn: true, connectedPeers: 0, portBusy: true, usedBefore: false).lamp == .amber &&
+                  Readiness.vjster(enabled: true, controlsOn: true, connectedPeers: 1, usedBefore: false).lamp == .green, "VJster light before a video was ever connected")
         try check(Readiness.controls(running: false, armed: false, obsConnected: false).action == "tryAgain" &&
                   Readiness.controls(running: false, armed: false, axTrusted: false, obsConnected: false).action == "grantAx", "Controls light offers Try again while OBS is not connected")
         try check(Readiness.autoStart(settingsSaved: true, settingsValid: true, remembered: nil, obsConnected: true, controlsOn: false, axReady: true) &&
                   Readiness.autoStart(settingsSaved: true, settingsValid: true, remembered: "on", obsConnected: true, controlsOn: false, axReady: true) &&
                   !Readiness.autoStart(settingsSaved: true, settingsValid: true, remembered: "off", obsConnected: true, controlsOn: false, axReady: true) &&
-                  !Readiness.autoStart(settingsSaved: false, settingsValid: true, remembered: nil, obsConnected: true, controlsOn: false, axReady: true) &&
+                  Readiness.autoStart(settingsSaved: false, settingsValid: true, remembered: nil, obsConnected: true, controlsOn: false, axReady: true) &&
+                  !Readiness.autoStart(settingsSaved: false, settingsValid: true, remembered: nil, obsConnected: true, controlsOn: false, axReady: false) &&
+                  !Readiness.autoStart(settingsSaved: false, settingsValid: true, remembered: "off", obsConnected: true, controlsOn: false, axReady: true) &&
                   !Readiness.autoStart(settingsSaved: true, settingsValid: false, remembered: "on", obsConnected: true, controlsOn: false, axReady: true) &&
                   !Readiness.autoStart(settingsSaved: true, settingsValid: true, remembered: "on", obsConnected: false, controlsOn: false, axReady: true) &&
                   Readiness.autoStart(settingsSaved: true, settingsValid: true, remembered: "on", obsConnected: false, controlsOn: false, axReady: true, vjsterOn: true) &&
@@ -526,6 +566,10 @@ enum ModelTests {
         try check(Readiness.tourBox(consoleRunning: true, oldPreset: true).action == "importPreset" &&
                   Readiness.tourBox(consoleRunning: true, mixOnly: true, oldPreset: true).action == nil &&
                   Readiness.tourBox(consoleRunning: false, oldPreset: true).action == "openConsole", "TourBox light with an old preset")
+        try check(Readiness.tourBox(consoleRunning: true, noPreset: true) == LightState(.amber, "TourBox: preset not imported", button: "Import", action: "importPreset") &&
+                  Readiness.tourBox(consoleRunning: true, oldPreset: true, noPreset: true).text == "TourBox: old preset" &&
+                  Readiness.tourBox(consoleRunning: false, noPreset: true).action == "openConsole" &&
+                  Readiness.tourBox(consoleRunning: true, mixOnly: true, noPreset: true).action == nil, "TourBox light with no preset imported")
         try PresetAge.check(check)
         try check(Readiness.reminder(controlsOn: true, obsHidden: false, consoleRunning: true, frontIsObs: false, autoSwitch: false, activeFadester: true) == nil &&
                   Readiness.reminder(controlsOn: true, obsHidden: false, consoleRunning: true, frontIsObs: false, autoSwitch: true, activeFadester: true) == L("remindObsFront") &&
@@ -584,7 +628,9 @@ enum ModelTests {
 /// 2026-11-17: an old copy turned the Knob into the mix level instead of the video speed), as on Windows (PresetAge.cs).
 /// Console keeps one ShortDesc per shortcut (modifiers and key code) in the .tb it imports and in the copy it stores; the
 /// labels are translated, the shortcuts are not, so this works in every language.
-enum PresetState { case none, current, old }
+/// unknown: Console's presets could not be read (yet), or none were found to judge. none: Console holds presets, and none
+/// is an OBS Fadester preset.
+enum PresetState { case unknown, none, current, old }
 
 enum PresetAge {
     /// A stored preset counts as a Fadester preset when at least this many of its shortcuts make up at least this share of
@@ -605,11 +651,12 @@ enum PresetAge {
         return found
     }
 
-    /// none: no Fadester preset in Console. old: one of them lacks a shortcut of the shipped preset (Auto Switch may pick it).
+    /// unknown: nothing to judge (our own preset unreadable, or no stored preset found). none: Console holds presets and
+    /// none is a Fadester preset. old: one of them lacks a shortcut of the shipped preset (Auto Switch may pick it).
     /// old also when Console's import copy shows the buttons laid out differently (0.12.11 swapped bare Side and Short without
     /// changing the set of shortcuts, hand test 2026-11-17), as on Windows. layouts[i] is stored[i]'s layout, or nil.
     static func judge(shipped: Set<String>, stored: [Set<String>], shippedLayout: String? = nil, layouts: [String?] = []) -> PresetState {
-        guard !shipped.isEmpty else { return .none }
+        guard !shipped.isEmpty, !stored.isEmpty else { return .unknown }
         var any = false
         for (i, preset) in stored.enumerated() {
             if !isFadester(shipped: shipped, preset: preset) { continue }
@@ -680,6 +727,28 @@ enum PresetAge {
         return (presets, complete, layouts)
     }
 
+    /// What Console's files looked like when they were last read: every file in presets and import, customConfig and
+    /// tableid, by name, size and time of last change. While it is the same, nothing is read or parsed again (the panel
+    /// used to read every preset every 5 s on the main thread).
+    static func stamp() -> String {
+        let root = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/TourBox Console")
+        var parts: [String] = []
+        func describe(_ url: URL, _ label: String) -> String {
+            guard let attributes = try? FileManager.default.attributesOfItem(atPath: url.path) else { return label + ":none" }
+            let size = (attributes[.size] as? NSNumber)?.int64Value ?? -1
+            let changed = (attributes[.modificationDate] as? Date)?.timeIntervalSince1970 ?? 0
+            return "\(label):\(size):\(changed)"
+        }
+        for folder in ["presets", "import"] {
+            let dir = root.appendingPathComponent(folder)
+            guard let names = try? FileManager.default.contentsOfDirectory(atPath: dir.path) else { parts.append(folder + ":none"); continue }
+            for name in names.sorted() { parts.append(describe(dir.appendingPathComponent(name), folder + "/" + name)) }
+        }
+        parts.append(describe(root.appendingPathComponent("customConfig"), "customConfig"))
+        parts.append(describe(root.appendingPathComponent("tableid"), "tableid"))
+        return parts.joined(separator: "|")
+    }
+
     /// TourBox Console's Auto Switch (customConfig switchByProcess): true, false, or nil when its settings cannot be read.
     static func autoSwitch() -> Bool? { parseAutoSwitch(consoleFile("customConfig")) }
     static func parseAutoSwitch(_ xml: String?) -> Bool? {
@@ -711,7 +780,7 @@ enum PresetAge {
         try check(shipped.count == 20 && shipped.contains("14:7"), "Preset shortcuts parse")
         try check(judge(shipped: shipped, stored: [factory]) == .none && judge(shipped: shipped, stored: [factory, shipped]) == .current &&
                   judge(shipped: shipped, stored: [old]) == .old && judge(shipped: shipped, stored: [shipped, old]) == .old &&
-                  judge(shipped: [], stored: [old]) == .none, "Preset age decision")
+                  judge(shipped: [], stored: [old]) == .unknown && judge(shipped: shipped, stored: []) == .unknown, "Preset age decision")
         try check(judge(shipped: shipped, stored: [shipped], shippedLayout: "AAA", layouts: ["AAA"]) == .current &&
                   judge(shipped: shipped, stored: [shipped], shippedLayout: "AAA", layouts: ["BBB"]) == .old &&
                   judge(shipped: shipped, stored: [shipped], shippedLayout: "AAA", layouts: [nil]) == .current &&

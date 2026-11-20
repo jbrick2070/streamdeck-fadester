@@ -136,6 +136,26 @@ internal static class HostSelfTests
         Check(ingress.SubmitLine("action vjster.speed.up", out _), "read-only vjster.speed.up reaches guard");
         await Refused(() => readOnly.Dispatch(Pop(ingress)));
 
+        // What a session leaves for the next one of the same run (a reconnect): the duck and an owed transition, never a
+        // T-bar position, and the next session's desk starts from it.
+        int callsBefore = calls.Count, nativeBefore = nativeCalls;
+        var duck = new AudioDesk.Duck("Synthetic Music", -3, -18);
+        var owedCut = new StudioFader.Owed("Cut", "Fade", System.Diagnostics.Stopwatch.GetTimestamp());
+        var left = new DeskActions.Memory(new StudioFader.Memory
+        {
+            Owed = owedCut, Sweep = new StudioFader.Sweep(new StudioFader.Scenes("Fixture A", "Fixture B"), "fade-uuid"), Position = 0.4, Direction = -1, TakeAt = 7
+        }, duck);
+        var kept = MacDevelopmentHost.Carry(left);
+        Check(kept.Duck == duck && kept.Fader.Owed == owedCut && kept.Fader.Sweep is null && kept.Fader.Position == 0 &&
+              kept.Fader.Direction == -1 && kept.Fader.TakeAt == 7, "a session leaves its duck and owed transition, not a T-bar position");
+        var resumed = new HostSession(config, ingress, generation, Rpc, Native, () => true, CancellationToken.None, resume: kept);
+        var again = resumed.Desk.Leave();
+        Check(again.Duck == duck && again.Fader.Owed == owedCut && again.Fader.Sweep is null && resumed.Desk.TbarPosition == 0,
+            "the next session's desk starts with the duck and the owed transition");
+        Check(new HostSession(config, ingress, generation, Rpc, Native, () => true, CancellationToken.None).Desk.Leave() is { Duck: null, Fader.Owed: null },
+            "a first session starts with nothing carried");
+        Check(calls.Count == callsBefore && nativeCalls == nativeBefore, "carrying memory into a session sends nothing to OBS or the native T-bar");
+
         var noVjster = new HostSession(config, ingress, generation, Rpc, Native, () => true, CancellationToken.None);
         Check(ingress.SubmitLine("action vjster.speed.up", out _), "disabled vjster action admitted");
         await Refused(() => noVjster.Dispatch(Pop(ingress)));

@@ -23,6 +23,20 @@ internal static class MacDevelopmentHost
         // Free text (it carries video titles) never starts with a marker the panel acts on: see PanelLine.
         Console.WriteLine(PanelLine.Free(message.Replace('\r', ' ').Replace('\n', ' ')));
     }
+    /// <summary>
+    /// What one OBS session's desk leaves for the next one of this host run (a reconnect, OBS lost and back): the duck,
+    /// so Restore still knows the level to go back to, and a transition a cut or a sweep still owes, which goes back
+    /// with the operator's next take, cut, T-bar move or Cancel (StudioFader.RepayAsync). As on Windows, except that
+    /// nothing is written when a session starts or ends: this host writes to OBS only on a fresh command. A T-bar left
+    /// part-way is therefore not carried: a session starts only with OBS's T-bar parked (RunSession), and by then the
+    /// sweep is over.
+    /// </summary>
+    static DeskActions.Memory? carried;
+    internal static DeskActions.Memory Carry(DeskActions.Memory left)
+    {
+        left.Fader.Sweep = null; left.Fader.Position = 0;
+        return left;
+    }
     /// <summary>A layer the desk picked by itself, for the panel: the one line it saves a layer from (PanelLine).</summary>
     static void WritePick(int layer, string scene, string source) => Console.WriteLine(PanelLine.PickedLayer(layer, scene, source));
     /// <summary>Ready: armed with OBS. VideoReady: armed without OBS, video controls only (FIX-8).</summary>
@@ -458,7 +472,7 @@ internal static class MacDevelopmentHost
         if (shortcuts is not null) _ = shortcuts.Done.ContinueWith(_ => ingress.Disarm(generation), TaskScheduler.Default);
         var session = new HostSession(config, ingress, generation, obs.Call, native.MoveAsync,
             () => !obs.Disconnected.IsCompleted && (shortcuts is null || !shortcuts.Done.IsCompleted), stop, readOnly, native.ReadAsync, vjster,
-            onPick: WritePick);
+            onPick: WritePick, resume: readOnly ? null : carried);
         var desk = session.Desk;
         obs.InputVolumeChanged += desk.OnVolumeChanged; obs.InputLevelChangedById += desk.OnMixInputLevelChanged;
         // Midi Fadester's APC40 transport drives VJster off this session's loop (VjsterRemote), as on Windows.
@@ -517,6 +531,8 @@ internal static class MacDevelopmentHost
             await desk.StopAudioAsync();
             obs.InputVolumeChanged -= desk.OnVolumeChanged; obs.InputLevelChangedById -= desk.OnMixInputLevelChanged;
             // Do not invoke CancelOwnedAsync: exit must not unexpectedly change the picture.
+            // The next session of this run takes over the duck and an owed transition (no write here either).
+            if (!readOnly) carried = Carry(desk.Leave());
         }
         if (obs.Disconnected.IsCompleted && !reconnect) Log(vjster is null ? "OFFLINE: OBS disconnected. Restart explicitly; queued actions will not be replayed."
             : "OFFLINE: OBS disconnected. Video controls keep working; OBS controls come back when OBS does. Queued OBS actions are not replayed.");

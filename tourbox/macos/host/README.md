@@ -180,3 +180,10 @@ to unregister its chords, and stops owned tasks. Shutdown sends
 no cleanup T-bar reset, Take or level restore. Inspect OBS and explicitly recover
 any interrupted manual mix. OBS disconnect ends the host; it never silently
 reconnects and resumes motion. No automatic user or system settings are changed.
+
+Within one host run, a new OBS session (Reconnect, or OBS lost and back with
+VJster on) takes over what the last one left: the duck, so Restore still knows
+the level to return to, and a transition a cut or a sweep still owes, which goes
+back with the next take, cut, T-bar move or Cancel. Nothing is written when a
+session starts or ends, and a T-bar left part-way is not carried: a session
+starts only with OBS's T-bar parked.

@@ -2,17 +2,30 @@
 import AppKit
 import ApplicationServices
 
-private let navyColor = NSColor(srgbRed: 26 / 255, green: 34 / 255, blue: 51 / 255, alpha: 1)
-private let accentColor = NSColor(srgbRed: 38 / 255, green: 90 / 255, blue: 158 / 255, alpha: 1)
-private let stripColor = NSColor(srgbRed: 241 / 255, green: 244 / 255, blue: 249 / 255, alpha: 1)
-private let reminderBgColor = NSColor(srgbRed: 255 / 255, green: 241 / 255, blue: 214 / 255, alpha: 1)
-private let reminderFgColor = NSColor(srgbRed: 107 / 255, green: 74 / 255, blue: 0 / 255, alpha: 1)
+private func rgb(_ red: CGFloat, _ green: CGFloat, _ blue: CGFloat) -> NSColor { NSColor(srgbRed: red / 255, green: green / 255, blue: blue / 255, alpha: 1) }
+/// One colour for the light appearance and one for the dark one: the window follows the Mac's Appearance setting.
+/// The colour is chosen each time it is drawn, so switching the Mac between Light and Dark needs no restart.
+private func adaptive(light: NSColor, dark: NSColor) -> NSColor {
+    NSColor(name: nil) { appearance in appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? dark : light }
+}
+/// The header, the feedback window and the buttons: the same in both appearances (white text on them).
+private let navyColor = rgb(26, 34, 51)
+private let accentColor = rgb(38, 90, 158)
+/// Text that is navy on the light window: headings, the lights' words, the Program/Preview line.
+private let inkColor = adaptive(light: rgb(26, 34, 51), dark: rgb(226, 232, 244))
+/// Text that is the accent blue on the light window: sub-headings, the meter line, the preset note.
+private let accentTextColor = adaptive(light: rgb(38, 90, 158), dark: rgb(128, 176, 240))
+private let panelColor = adaptive(light: .white, dark: rgb(30, 33, 40))
+private let stripColor = adaptive(light: rgb(241, 244, 249), dark: rgb(44, 50, 63))
+private let reminderBgColor = adaptive(light: rgb(255, 241, 214), dark: rgb(84, 62, 14))
+private let reminderFgColor = adaptive(light: rgb(107, 74, 0), dark: rgb(255, 220, 150))
+private let grantedColor = adaptive(light: rgb(40, 140, 72), dark: rgb(110, 210, 140))
 
 private final class FlippedDocument: NSView { override var isFlipped: Bool { true } }
 
 private final class PanelBackground: NSView {
     override var isOpaque: Bool { true }
-    override func draw(_ dirtyRect: NSRect) { NSColor.white.setFill(); dirtyRect.fill() }
+    override func draw(_ dirtyRect: NSRect) { panelColor.setFill(); dirtyRect.fill() }
 }
 
 private final class RoundedCardView: NSView {
@@ -90,7 +103,7 @@ private final class PillActionButton: NSControl {
         super.init(frame: frameRect)
         translatesAutoresizingMaskIntoConstraints = false
         words.font = .boldSystemFont(ofSize: 12.5)
-        words.textColor = navyColor
+        words.textColor = inkColor
         actionButton.isHidden = true
         actionButton.onClick = { [weak self] in
             if let id = self?.actionId { self?.onAction?(id) }
@@ -229,7 +242,7 @@ private final class PillActionButton: NSControl {
     private var reminderCard = RoundedCardView(fill: reminderBgColor, radius: 5)
     private var reminderLabel = NSTextField(wrappingLabelWithString: "")
     private var reminderAction = PillActionButton()
-    private var status = NSTextField(labelWithString: L("macLookingForObs"))
+    private var status = NSTextField(wrappingLabelWithString: L("macLookingForObs"))
     private var snapshot = NSTextField(wrappingLabelWithString: L("macSnapshotHint"))
     // The Visual Sidechain meter (P1-3), from a scan or the running controls' VS-METER lines, as on Windows.
     private var vsLine = NSTextField(labelWithString: "")
@@ -282,6 +295,10 @@ private final class PillActionButton: NSControl {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         build()
+        // Never taller or wider than the screen it opens on (a 13-inch laptop has less room than the window asks for).
+        if let room = (window.screen ?? NSScreen.main)?.visibleFrame, window.frame.height > room.height || window.frame.width > room.width {
+            window.setFrame(NSRect(x: room.minX, y: room.minY, width: min(window.frame.width, room.width), height: min(window.frame.height, room.height)), display: false)
+        }
         window.center()
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
@@ -354,7 +371,9 @@ private final class PillActionButton: NSControl {
 
     func build() {
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 920, height: 856), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
-        window.appearance = NSAppearance(named: .aqua)
+        // Light or dark with the Mac (System Settings → Appearance). The setup diagram and the Show-me windows are
+        // drawn in fixed colours on their own light card, so they stay light.
+        diagramView.appearance = NSAppearance(named: .aqua)
         window.contentView = PanelBackground(frame: NSRect(x: 0, y: 0, width: 920, height: 856))
         let version = Panel.appVersion()
         window.title = version.isEmpty ? "Fadester Companion" : "Fadester Companion " + version
@@ -380,7 +399,12 @@ private final class PillActionButton: NSControl {
         titleLabel.textColor = .white
         status.font = .systemFont(ofSize: 13, weight: .regular)
         status.textColor = NSColor(srgbRed: 228 / 255, green: 234 / 255, blue: 245 / 255, alpha: 1)
-        status.lineBreakMode = .byTruncatingTail
+        // Two lines, then an ellipsis, as on Windows; the whole message is the tooltip and the newest line in Activity.
+        status.isSelectable = false
+        status.maximumNumberOfLines = 2
+        status.lineBreakMode = .byWordWrapping
+        status.cell?.truncatesLastVisibleLine = true
+        status.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         let headerText = NSStackView(views: [titleLabel, status])
         headerText.orientation = .vertical; headerText.alignment = .leading; headerText.spacing = 4
         headerText.translatesAutoresizingMaskIntoConstraints = false
@@ -412,7 +436,7 @@ private final class PillActionButton: NSControl {
             headerRow.bottomAnchor.constraint(equalTo: headerCard.bottomAnchor, constant: -12),
             versionLabel.topAnchor.constraint(equalTo: headerCard.topAnchor, constant: 12),
             versionLabel.trailingAnchor.constraint(equalTo: headerCard.trailingAnchor, constant: -16),
-            status.widthAnchor.constraint(lessThanOrEqualTo: headerCard.widthAnchor, constant: -90)
+            status.widthAnchor.constraint(lessThanOrEqualTo: headerCard.widthAnchor, constant: -100)
         ])
 
         // 2. Top live readiness indicator strip (OBS, TourBox, VJster, Controls + quick Start/Stop).
@@ -560,10 +584,10 @@ private final class PillActionButton: NSControl {
         let stack = NSStackView(); stack.orientation = .vertical; stack.alignment = .leading; stack.spacing = 10; return stack
     }
     private func heading(_ title: String, in stack: NSStackView) {
-        let text = label(title); text.font = .boldSystemFont(ofSize: 14.5); text.textColor = navyColor; stack.addArrangedSubview(text)
+        let text = label(title); text.font = .boldSystemFont(ofSize: 14.5); text.textColor = inkColor; stack.addArrangedSubview(text)
     }
     private func subheading(_ title: String, in stack: NSStackView) {
-        let text = label(title); text.font = .boldSystemFont(ofSize: 13); text.textColor = accentColor; stack.addArrangedSubview(text)
+        let text = label(title); text.font = .boldSystemFont(ofSize: 13); text.textColor = accentTextColor; stack.addArrangedSubview(text)
     }
     private func paragraph(_ text: String, in stack: NSStackView) {
         let field = label(text); stack.addArrangedSubview(field); field.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
@@ -578,7 +602,7 @@ private final class PillActionButton: NSControl {
         if host.running && obsConnected && Date().timeIntervalSince(catalogAt) > 10 { performScan(silentIfOffline: true, listsOnly: true) }
     }
     private func scrolling(_ stack: NSStackView) -> NSScrollView {
-        let scroll = NSScrollView(); scroll.hasVerticalScroller = true; scroll.drawsBackground = true; scroll.backgroundColor = .white
+        let scroll = NSScrollView(); scroll.hasVerticalScroller = true; scroll.drawsBackground = true; scroll.backgroundColor = panelColor
         let document = FlippedDocument(); document.translatesAutoresizingMaskIntoConstraints = false; scroll.documentView = document
         stack.translatesAutoresizingMaskIntoConstraints = false; document.addSubview(stack)
         NSLayoutConstraint.activate([
@@ -608,11 +632,11 @@ private final class PillActionButton: NSControl {
         scanButton = button(L("discover"), #selector(scan))
         stack.addArrangedSubview(scanButton)
         snapshot.font = .boldSystemFont(ofSize: 12.5)
-        snapshot.textColor = navyColor
+        snapshot.textColor = inkColor
         stack.addArrangedSubview(snapshot)
         snapshot.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         vsLine.font = .systemFont(ofSize: 12.5, weight: .medium)
-        vsLine.textColor = accentColor
+        vsLine.textColor = accentTextColor
         vsLine.stringValue = vsStatus
         vsLine.isHidden = vsStatus.isEmpty
         stack.addArrangedSubview(vsLine)
@@ -637,7 +661,7 @@ private final class PillActionButton: NSControl {
             importNote.isHidden = true
         }
         importNote.font = .systemFont(ofSize: 12, weight: .medium)
-        importNote.textColor = accentColor
+        importNote.textColor = accentTextColor
         stack.addArrangedSubview(importNote)
         importNote.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
 
@@ -650,6 +674,17 @@ private final class PillActionButton: NSControl {
 
         heading(L("cueTitle"), in: stack)
         paragraph(L("macCueHint"), in: stack)
+
+        // The optional sections, in the order of the Windows panel: Assign your inputs, Whole mix, VJster.
+        heading(L("inputsTitle"), in: stack)
+        paragraph(L("inputsHint"), in: stack)
+
+        heading(L("mixTitle"), in: stack)
+        stack.addArrangedSubview(mix); edits.append(mix)
+        paragraph(L("mixHint"), in: stack)
+        stack.addArrangedSubview(mixOnly); edits.append(mixOnly)
+        number(L("mixStep"), key: "mixStepDb", in: stack)
+        number(L("mixFade"), key: "mixFadeMs", in: stack)
 
         heading(L("vjsterTitle"), in: stack)
         vjsterPort.widthAnchor.constraint(equalToConstant: 86).isActive = true
@@ -669,13 +704,6 @@ private final class PillActionButton: NSControl {
         stack.addArrangedSubview(horizontal([label(L("vjsterVideo")), vjsterVideo, copyObsUrlButton]))
         edits += [vjster, vjsterPort, vjsterTarget, vjsterExtensionId]
         paragraph(L("macVjsterHint"), in: stack)
-
-        heading(L("mixTitle"), in: stack)
-        stack.addArrangedSubview(mix); edits.append(mix)
-        paragraph(L("mixHint"), in: stack)
-        stack.addArrangedSubview(mixOnly); edits.append(mixOnly)
-        number(L("mixStep"), key: "mixStepDb", in: stack)
-        number(L("mixFade"), key: "mixFadeMs", in: stack)
         return scrolling(stack)
     }
 
@@ -803,6 +831,7 @@ private final class PillActionButton: NSControl {
     private func activityPage() -> NSView {
         let scroll = NSScrollView(); scroll.hasVerticalScroller = true; scroll.hasHorizontalScroller = false
         activity.isEditable = false; activity.isSelectable = true; activity.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
+        activity.textColor = .labelColor; activity.backgroundColor = .textBackgroundColor
         activity.textContainerInset = NSSize(width: 14, height: 14); activity.isVerticallyResizable = true; activity.isHorizontallyResizable = false
         activity.autoresizingMask = [.width]; activity.textContainer?.widthTracksTextView = true
         scroll.documentView = activity; return scroll
@@ -935,7 +964,7 @@ private final class PillActionButton: NSControl {
         openConsoleStepButton?.title = consoleReady ? L("macOpenConsoleStep") : L("macDownloadConsoleStep")
         grantAxButton?.bezelColor = axTrusted ? nil : accentColor
         axStatusLabel.stringValue = axTrusted ? L("macAxGranted") : L("macAxNeeded")
-        axStatusLabel.textColor = axTrusted ? NSColor(srgbRed: 40 / 255, green: 140 / 255, blue: 72 / 255, alpha: 1) : reminderFgColor
+        axStatusLabel.textColor = axTrusted ? grantedColor : reminderFgColor
         importGuideWindow?.update(savedPreset: lastSavedPreset, consoleInstalled: consoleReady)
 
         let parsedVjPort = Int(vjsterPort.stringValue.trimmingCharacters(in: .whitespaces)) ?? settings.vjsterPort
@@ -1250,6 +1279,11 @@ private final class PillActionButton: NSControl {
 
     /// The last Activity line, so the same message again becomes one line with a count, as on Windows (ActivityText).
     private var lastNote = "", lastNoteCount = 0, lastNoteRange: NSRange?
+    /// Activity lines carry their font and a colour that follows the light or dark appearance (text added without
+    /// attributes is black, whatever the window's colour).
+    private static let activityAttributes: [NSAttributedString.Key: Any] = [
+        .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .regular), .foregroundColor: NSColor.labelColor
+    ]
 
     private func note(_ text: String) {
         let safe = redact(text, secrets: [password.stringValue, settings.vjsterObsToken])
@@ -1259,11 +1293,11 @@ private final class PillActionButton: NSControl {
         let line = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .medium) + "  " + shown + "\n"
         guard let storage = activity.textStorage else { return }
         if repeated, let range = lastNoteRange, NSMaxRange(range) <= storage.length {
-            storage.replaceCharacters(in: range, with: line)
+            storage.replaceCharacters(in: range, with: NSAttributedString(string: line, attributes: Self.activityAttributes))
             lastNoteRange = NSRange(location: range.location, length: (line as NSString).length)
         } else {
             lastNoteRange = NSRange(location: storage.length, length: (line as NSString).length)
-            storage.append(NSAttributedString(string: line))
+            storage.append(NSAttributedString(string: line, attributes: Self.activityAttributes))
         }
         if activity.string.count > 60_000 { activity.string = String(activity.string.suffix(45_000)); lastNoteRange = nil }
         activity.scrollToEndOfDocument(nil)

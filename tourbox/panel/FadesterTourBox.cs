@@ -21,10 +21,12 @@ using System.Windows.Forms;
 namespace Fadester.TourBox {
   internal static class Entry {
     [STAThread] static int Main(string[] args) {
+      // Dark colours when Windows is in dark app mode, or with --theme dark (Theme.cs).
+      Theme.Choose(args);
       if (args.Contains("--self-test")) {
         try { PanelWindow.Test(); return 0; } catch (Exception e) { Log("self-test: " + e); return 1; }
       }
-      // --render FILE.png [--tab N] [--language CODE]: a picture of the window as it opens, for checks and screenshots.
+      // --render FILE.png [--tab N] [--language CODE] [--theme dark|light]: a picture of the window as it opens, for checks and screenshots.
       // Nothing is read, saved, started or connected, and no window appears on screen.
       int render = Array.IndexOf(args, "--render");
       if (render >= 0 && render + 1 < args.Length) {
@@ -219,6 +221,7 @@ namespace Fadester.TourBox {
     internal static void Test() {
       PanelText.Test();
       Readiness.Test();
+      Theme.Test();
       VjsterObsPage.Test();
       // The wheel over a closed drop-down or number box scrolls the page and leaves the value alone.
       using (var page=new Panel {AutoScroll=true,Size=new Size(200,100)}) {
@@ -258,6 +261,16 @@ namespace Fadester.TourBox {
           if (w.start.Text.Length == 0 || w.tray != null || w.obsLight == null) throw new Exception("window " + locale);
         }
       }
+      // The dark window builds too, with its own tab strip, and its page is dark.
+      bool wasDark=Theme.Dark;
+      try {
+        Theme.Dark=true;
+        using (var w = new PanelWindow(new PanelText("en"), true)) {
+          w.ShowStatus(); w.ShowStartButton(); Color blue=Color.FromArgb(38,90,158);
+          if (w.BackColor.ToArgb()!=Theme.Back.ToArgb() || w.body.BackColor.ToArgb()!=Theme.Back.ToArgb() || !(w.body.Parent.Parent is DarkTabs) ||
+              w.start.BackColor!=blue) throw new Exception("dark window");
+        }
+      } finally { Theme.Dark=wasDark; }
       // Closing the window hides it only for the user's own close with the controls on; Quit, a shutdown or no icon end as before.
       if (!HidesOnClose(true,true,false,true) || HidesOnClose(true,false,false,true) || HidesOnClose(true,true,true,true) ||
           HidesOnClose(false,true,false,true) || HidesOnClose(true,true,false,false)) throw new Exception();
@@ -338,7 +351,7 @@ namespace Fadester.TourBox {
       reminderBar.Controls.Add(reminder,0,0); reminderBar.Controls.Add(bringObs,1,0);
       grid.Controls.Add(reminderBar,0,2);
       grid.ClientSizeChanged+=delegate { reminder.MaximumSize=new Size(Math.Max(150,grid.ClientSize.Width-28-bringObs.Width-40),0); };
-      var tabs=new TabControl {Dock=DockStyle.Fill}; grid.Controls.Add(tabs,0,3);
+      TabControl tabs=Theme.Dark ? (TabControl)new DarkTabs {Dock=DockStyle.Fill} : new TabControl {Dock=DockStyle.Fill}; grid.Controls.Add(tabs,0,3);
       // Setup reads in the order a newcomer acts: OBS, then the controller in hand, then a first cue with it.
       body=Page(tabs,text.Get("setup"));
       Title(body,text.Get("connectTitle")); Hint(body,text.Get("connectHint"));
@@ -448,6 +461,7 @@ namespace Fadester.TourBox {
       footer.ClientSizeChanged+=delegate { keepOpen.MaximumSize=new Size(Math.Max(200,footer.ClientSize.Width-12),0); };
       footer.Controls.Add(bar,0,0); footer.Controls.Add(keepOpen,0,1);
       grid.Controls.Add(footer,0,4);
+      Theme.Apply(this,navy,accent,stopRed);
       ShowStatus();
       watch=new System.Windows.Forms.Timer {Interval=1000}; watch.Tick+=delegate { Watch(); };
       FormClosed+=delegate { watch.Stop(); watch.Dispose(); showStopped=true; if(showSignal!=null) showSignal.Set(); if(tray!=null){ tray.Visible=false; tray.Dispose(); tray=null; } };
@@ -708,7 +722,7 @@ namespace Fadester.TourBox {
         int i=padGrid.Rows.Add(); var row=padGrid.Rows[i]; row.Tag=c; row.Cells[0].Value=PadName(c);
         var actionCell=(DataGridViewComboBoxCell)row.Cells[1]; actionCell.DataSource=WithId(choices,a); actionCell.Value=a;
         var shiftCell=(DataGridViewComboBoxCell)row.Cells[2]; shiftCell.DataSource=WithId(choices,s); shiftCell.Value=s;
-        if(c=="LB"){shiftCell.ReadOnly=true; shiftCell.Style.BackColor=Color.Gainsboro;}
+        if(c=="LB"){shiftCell.ReadOnly=true; shiftCell.Style.BackColor=Theme.LockedCell;}
       }
       ShowShift();
     }
@@ -717,7 +731,7 @@ namespace Fadester.TourBox {
     void ShowShift(){
       var lb=PadRow("LB"); if(lb==null) return;
       bool shift=padGrid.Rows.Cast<DataGridViewRow>().Any(r=>(string)r.Tag!="LB" && (Convert.ToString(r.Cells[2].Value)??"").Length>0);
-      lb.Cells[1].ReadOnly=shift; lb.Cells[1].Style.BackColor=shift?Color.Gainsboro:Color.Empty;
+      lb.Cells[1].ReadOnly=shift; lb.Cells[1].Style.BackColor=shift?Theme.LockedCell:Color.Empty;
     }
     /** A left trigger that ducks Music must bring it back on the same layer, or the bridge refuses the map: pair it. */
     void PairDuck(){

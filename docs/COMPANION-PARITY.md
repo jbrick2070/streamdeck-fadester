@@ -18,7 +18,7 @@ Sources: `tourbox/panel/FadesterTourBox.cs` and `ShowMe.cs` (Windows), `tourbox/
 
 | Part | Windows | Mac | Status |
 | --- | --- | --- | --- |
-| Header | Title, version and live status line (two lines, the whole text as a tooltip) | Title, app icon, version and live status line (one line, the whole text as a tooltip) | Same words. **Gap**: one line on the Mac |
+| Header | Title, version and live status line (two lines, the whole text as a tooltip) | Title, app icon, version and live status line (two lines, the whole text as a tooltip) | Same |
 | Readiness lights | OBS, TourBox, VJster, Controller, Controls | OBS, TourBox, VJster, Controls | Same states, words and buttons. **Intentional**: the Mac has no game controller, so it has no Controller light. On Windows a closed or missing TourBox Console shows grey instead of amber while the game controller is in use. |
 | OBS light | Red **Open OBS**; amber Studio Mode with **Turn on**; amber server or password with **Show me** | Same | Same |
 | TourBox light | Green only when Console holds the preset; amber **preset not imported** with **Import**; amber **old preset** | Same | Same |
@@ -34,9 +34,9 @@ Sources: `tourbox/panel/FadesterTourBox.cs` and `ShowMe.cs` (Windows), `tourbox/
 | Panel languages | 13 (the Windows display language, or `--language`) | The same 13, from the same catalog (the Mac's first preferred language, or `--language`) | Same. See [Panel languages](#panel-languages). |
 | Feedback window | Last action and the Visual Sidechain meter line | Last action and the Visual Sidechain meter line | Same |
 | Quick guide | Opens the guide in the panel's language (`guide/<locale>.html`) | Opens the Mac quick start in the panel's language (`guide/<locale>.html`); English opens `START-HERE.html` | Same. The Mac quick starts (`tourbox/macos/panel/guide/`) leave out the Windows-only parts (game controller, Windows x64). |
-| Light and dark | Light only | Light only (`aqua`) | Same. **Gap** on both: no dark appearance |
+| Light and dark | Dark when Windows is in dark app mode, read when the panel opens (`--theme dark` or `--theme light` chooses by hand). The header, the blue and red buttons and the feedback window are the same in both; the Show-me guide windows stay light. Spin-box arrows and check-box squares keep Windows' light drawing. | Follows the Mac's Appearance setting, also while open. The setup diagram and the Show-me guide windows stay light | Same rule. Written for the Mac without a build: check it on a real Mac |
 | Scaled screens | Sharp text (GDI scaling); the layout is the 100 % one | Retina native | **Intentional** |
-| Window size | 780 × 700, never larger than the screen | 920 × 856 | **Gap**: the Mac window is taller than a 13-inch laptop's default space |
+| Window size | 780 × 700, never larger than the screen | 920 × 856, never larger than the screen | Same rule. The Mac window is larger because of its setup diagram |
 
 ## Setup tab
 
@@ -47,8 +47,8 @@ Sources: `tourbox/panel/FadesterTourBox.cs` and `ShowMe.cs` (Windows), `tourbox/
 | 2 Controller | "Choose your controller": game controller (Easy mode) and TourBox: **Import into TourBox Console** copies the preset path, opens Console and opens the **Show me where to click** guide (also its own button) | "Set up the TourBox and the native T-bar": save the `.tb`, open Console, **Show me where to click**, **Download TourBox Console…**, **TourBox Preset Square…** | Same guide. **Intentional**: the game controller is Windows only, and the Mac saves the `.tb` with a save dialog. **Gap**: the two download links are Mac only |
 | macOS Accessibility | Not applicable | Grant Accessibility, native helper window, status | **Intentional** (macOS permission) |
 | 3 Try Preview | Present | Present | Same |
-| Optional: Assign your inputs | A paragraph that points to the Assignments tab | Not there | **Gap** on the Mac |
-| Optional sections, order | Assign, Whole mix, VJster | VJster, Whole mix | **Gap**: the order differs |
+| Optional: Assign your inputs | A paragraph that points to the Assignments tab | Same | Same |
+| Optional sections, order | Assign, Whole mix, VJster | Same | Same |
 | Optional: VJster | Enable, port, extension ID, Target, OBS video URL / ID, Copy OBS Browser Source URL | Same fields | Same |
 | Optional: Whole mix | Enable, **Use only Stream Deck, OpenDeck or MIDI**, step (dB), fade (ms) | Same | Same. The Mac runs `FadesterMacHost --run --mix-only`: no shortcut helper, native T-bar, Accessibility or VJster. |
 | Number fields | Spin boxes | Plain fields, with "Enter a valid number" | **Gap** |
@@ -103,7 +103,7 @@ No action is called "take" anywhere: the TourBox label is **Preview to Program**
 ## Suggested follow-ups, in priority order
 
 1. **Check the Mac app on a real Mac.** CI builds and self-tests it on both architectures; what is left needs a screen and hardware: open the released ZIP past Gatekeeper, check the lights, the menu-bar icon, Command-V in the password field, the meter line, Stream Deck-only mode and a non-English language (`--language de`, `--language ja`, `--language tr`) on screen, grant Accessibility, and rehearse with a TourBox.
-2. **Dark appearance.** Neither panel has one. On Windows the tab strip, check boxes, spin boxes and scrollbars have no supported dark drawing in Windows Forms, and on the Mac the setup diagram and the guide animations use fixed colours, so it is a design pass with an on-screen review, not a setting.
+2. **Look at the dark appearance on screen.** Windows: the pictures from `--render FILE.png --theme dark` were checked for every tab; the window itself (title bar, scroll bars, an open drop-down list, the game controller table with its rows) was not. Mac: not built or seen. Still light in dark mode: the Show-me guide windows on both, the Mac setup diagram, and on Windows the spin-box arrows and check-box squares.
 3. **Shorter Setup page.** See the proposal below. It needs an on-screen review, so it was not changed blind.
 4. **Setup diagram on Windows**, and **Unassigned / Unavailable** in its lists.
 5. **The Mac's Activity lines in words**, as on Windows.

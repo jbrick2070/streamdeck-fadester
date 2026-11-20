@@ -403,6 +403,57 @@ describe("filter controller", () => {
     expect(filters.getState(mix(sceneUuid))).toMatchObject({ availability: "ok", value: 100 });
   });
 
+  // B-10: a step above the slew cap is written 10 % at a time; a second press stepped from the value written so far
+  // and dropped the rest of the first step.
+  it("a second step before the first is fully written adds to it: both steps land in full", async () => {
+    const { server, filters, sceneUuid, aura } = await setup({ filterWriteDelayMs: 40 });
+    await expect(filters.step(mix(sceneUuid), 0.25)).resolves.toBe("done");
+    await vi.waitFor(() => expect(server.filterWriteLog.length).toBeGreaterThan(0));
+    expect(aura.filterSettings.vs_effect_mix_pct as number).toBeLessThan(65);
+    await expect(filters.step(mix(sceneUuid), 0.25)).resolves.toBe("done");
+    await vi.waitFor(() => expect(aura.filterSettings.vs_effect_mix_pct).toBe(90), { timeout: 3000 });
+    await sleep(200);
+    expect(aura.filterSettings.vs_effect_mix_pct).toBe(90);
+    // Still within the slew cap per write.
+    let previous = 40;
+    for (const value of writesTo(server, "vs_effect_mix_pct")) {
+      expect(Math.abs(value - previous)).toBeLessThanOrEqual(10 + 1e-9);
+      previous = value;
+    }
+    // A step down while the rest is queued counts from the queued target too; with nothing queued, from the value read.
+    await expect(filters.step(mix(sceneUuid), -0.3)).resolves.toBe("done");
+    await expect(filters.step(mix(sceneUuid), 0.05)).resolves.toBe("done");
+    await vi.waitFor(() => expect(aura.filterSettings.vs_effect_mix_pct).toBe(65), { timeout: 3000 });
+    await sleep(200);
+    expect(aura.filterSettings.vs_effect_mix_pct).toBe(65);
+  });
+
+  // B-02: write spacing and glide progress were measured on the wall clock, which can be set back.
+  it("keeps writing and gliding the right way when the wall clock is set back", async () => {
+    const { server, filters, sceneUuid, aura } = await setup();
+    await expect(filters.step(mix(sceneUuid), 0.05)).resolves.toBe("done");
+    await vi.waitFor(() => expect(aura.filterSettings.vs_effect_mix_pct).toBe(45), { timeout: 2000 });
+    const realNow = Date.now.bind(Date);
+    let offset = -3_600_000;
+    const wall = vi.spyOn(Date, "now").mockImplementation(() => realNow() + offset);
+    try {
+      // Spacing: the next write is not held back for the hour the clock lost.
+      await expect(filters.step(mix(sceneUuid), 0.05)).resolves.toBe("done");
+      await vi.waitFor(() => expect(aura.filterSettings.vs_effect_mix_pct).toBe(50), { timeout: 2000 });
+      // Progress: a glide that the clock steps back under still goes up, never toward the other end of the range.
+      offset = 0;
+      const writesBefore = writesTo(server, "vs_effect_mix_pct").length;
+      const glide = filters.glideTo(mix(sceneUuid), 80, 300);
+      await sleep(60);
+      offset = -3_600_000;
+      await expect(glide).resolves.toBe("done");
+      await vi.waitFor(() => expect(aura.filterSettings.vs_effect_mix_pct).toBe(80), { timeout: 3000 });
+      for (const value of writesTo(server, "vs_effect_mix_pct").slice(writesBefore)) expect(value).toBeGreaterThan(50);
+    } finally {
+      wall.mockRestore();
+    }
+  });
+
   it("drops a setting's queued values on cancel: after a retarget only a write in flight lands", async () => {
     const { server, filters, sceneUuid, aura } = await setup({ filterWriteDelayMs: 40 });
     // A step of half the range lands in the queue at once; the drain carries it at 10 % per write.

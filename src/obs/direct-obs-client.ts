@@ -9,6 +9,7 @@ import { ConnectionStatusInfo } from "../../packages/streamdeck-fadester-shared/
 import { automaticInputRole, resolveAutomaticInputName } from "./automatic-targets.js";
 import { WholeMixClient } from "./whole-mix.js";
 import { LocalText, ownText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
+import { monotonicNow } from "../../packages/streamdeck-fadester-shared/src/cell-rate-limiter.js";
 import { t } from "../i18n/strings.js";
 import {
   defaultNativeTbar,
@@ -750,13 +751,14 @@ export class DirectObsClient extends ObsVendorClient {
       });
       return;
     }
-    const startedAt = Date.now();
+    // On the forward-only clock: after a wall-clock step back the progress was negative and the fade ran the wrong way.
+    const startedAt = monotonicNow();
     while (this.inputFadeTokens.get(name) === token) {
       await new Promise<void>((resolve) => setTimeout(resolve, Math.min(75, ms)));
       if (this.inputFadeTokens.get(name) !== token) {
         return;
       }
-      const progress = Math.min(1, (Date.now() - startedAt) / ms);
+      const progress = Math.max(0, Math.min(1, (monotonicNow() - startedAt) / ms));
       await this.queueInput(name, async () => {
         if (this.inputFadeTokens.get(name) === token) {
           await this.writeInputVolume(name, from + (target - from) * progress, undefined, Math.max(1, from));

@@ -213,7 +213,9 @@ export class VisualMeterInstanceController {
     const svg = this.buildSvg(sampled);
     if (svg === this.lastSvg) return;
     this.lastSvg = svg;
-    this.rateLimiter.push(svg, now);
+    // Draws are paced on the limiter's own forward-only clock; `now` paces them only when a test gave this control
+    // its clock (the wall clock can be set back).
+    this.rateLimiter.push(svg, this.clock === Date.now ? undefined : now);
   }
 
   private buildSvg(sampled: SampledVisualSignals): string {

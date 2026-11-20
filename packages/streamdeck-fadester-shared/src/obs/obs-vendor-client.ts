@@ -300,9 +300,12 @@ export class ObsVendorClient<
    * Throttled reconnect for user gestures (dial ticks, key presses) while
    * offline: at most one forced reconnect per `minIntervalMs`, and never while
    * halted on a wrong password (OBS would log a failed login per gesture).
+   * A socket that is opening, identifying or reading the catalog is left alone:
+   * it is about to be usable, and a reconnect would only start the handshake
+   * again (the link watch drops a socket that has gone silent).
    */
   public nudgeReconnect(minIntervalMs = 2000, now = Date.now()): boolean {
-    if (this.isConnected() || this.haltedReason === "wrong_password") {
+    if (this.isConnected() || this.haltedReason === "wrong_password" || this.hasLiveSocket()) {
       return false;
     }
     if (now - this.lastNudgeAt < minIntervalMs) {

@@ -125,6 +125,34 @@ describe("Direct OBS client", () => {
     expect(server!.inputVolumes.get("Desktop Audio")).toBeCloseTo(0.5);
   });
 
+  // B-05: "connected" comes only after the catalog read; a press in between restarted the whole handshake.
+  it("a nudge while the socket is still connecting leaves the attempt alone, and reconnects once there is no socket", async () => {
+    const fake = new FakeObsServer({ missingPlugin: true });
+    server = fake;
+    fake.sceneListDelayMs = 250;
+    const port = await fake.start();
+    const c = new DirectObsClient({ host: "127.0.0.1", port, password: "" }, { baseReconnectMs: 60_000 });
+    client = c;
+    c.start();
+    // Opening: not connected, but a socket is on its way.
+    expect(c.isConnected()).toBe(false);
+    expect(c.nudgeReconnect(0)).toBe(false);
+    await vi.waitFor(() => expect(c.isIdentified()).toBe(true), { timeout: 2000 });
+    // Identified and reading the catalog: still not "connected".
+    expect(c.isConnected()).toBe(false);
+    const attempts = c.getConnectAttemptCount();
+    expect(c.nudgeReconnect(0)).toBe(false);
+    expect(c.nudgeReconnect(0, Date.now() + 10_000)).toBe(false);
+    await vi.waitFor(() => expect(c.isConnected()).toBe(true), { timeout: 3000 });
+    expect(c.getConnectAttemptCount()).toBe(attempts);
+    // OBS gone: no socket, and the next attempt is a minute away. Now a press reconnects.
+    await fake.stop();
+    server = null;
+    await vi.waitFor(() => expect(c.hasLiveSocket()).toBe(false), { timeout: 3000 });
+    expect(c.nudgeReconnect(0)).toBe(true);
+    expect(c.getConnectAttemptCount()).toBe(attempts + 1);
+  });
+
   it("neither throws nor connects with a Host typed with its port: OBS unreachable", async () => {
     const fake = new FakeObsServer({ missingPlugin: true });
     server = fake;

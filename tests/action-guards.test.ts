@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { decodeSvgUri } from "./helpers/svg-text.js";
 import { FadesterClient } from "../src/obs/fadester-client.js";
 import { FadesterStore } from "../src/state/fadester-store.js";
@@ -38,9 +38,13 @@ describe("Action guards: offline nudges, unavailable slots, label and readout op
     );
     dial.appear();
     const t0 = 1_000_000;
+    await vi.waitFor(() => expect(client!.hasLiveSocket()).toBe(false), { timeout: 5000 });
     await dial.handleRotate(1, t0);
     await dial.handleRotate(1, t0 + 100);
     await dial.handleRotate(1, t0 + 1900);
+    // The attempt the first tick started has failed by now (nothing listens on port 1). A tick while an attempt is
+    // still on its way would leave it alone (B-05); the times here are the test's own, the sockets are real.
+    await vi.waitFor(() => expect(client!.hasLiveSocket()).toBe(false), { timeout: 5000 });
     await dial.handleRotate(1, t0 + 2100);
     expect(alerts).toBe(4);
     // Exactly two forced reconnects: at t0 and t0 + 2100.

@@ -30,6 +30,9 @@ export class ObsLayerInstanceController {
   private readonly limiter: CellRateLimiter<string>;
   private lastError: LocalText | null = null;
   private visible = false;
+  /** Dial ticks not yet sent, and the turn that is sending (see rotate). */
+  private pendingTicks = 0;
+  private turning: Promise<void> | null = null;
   /** Unsubscribes this control from language changes (PLAN.md 11.1). */
   private offLanguage: () => void = () => {};
   private readonly onChanged = (): void => {
@@ -67,9 +70,12 @@ export class ObsLayerInstanceController {
     this.layers.client.off("statusChanged", this.onChanged);
     this.layers.client.off("directStateChanged", this.onChanged);
     this.limiter.dispose();
+    this.pendingTicks = 0;
   }
 
   public updateSettings(settings: LayerSettings): void {
+    // Ticks counted under the old settings are not turned into another kind of turn.
+    this.pendingTicks = 0;
     this.unwatch?.();
     this.settings = normalizeLayerSettings(settings);
     this.lastError = null;
@@ -82,13 +88,30 @@ export class ObsLayerInstanceController {
     await this.perform(operation);
   }
 
-  public async rotate(ticks: number): Promise<void> {
-    if (!Number.isFinite(ticks) || ticks === 0) return;
-    const forward = ticks > 0;
-    const operation = this.settings.dialMode === "blend" ? (forward ? "blend_next" : "blend_previous") :
-      this.settings.dialMode === "order" ? (forward ? "move_up" : "move_down") :
-        forward ? "select_next" : "select_previous";
-    await this.perform(operation, Math.abs(ticks));
+  /**
+   * A dial turn. Each turn is a list read, a write and a list read in OBS; ticks that arrive while one is on its way
+   * are added up and sent as one turn when it has finished (clockwise and counter-clockwise ticks cancel), so a fast
+   * spin against a slow OBS does not go on moving after the hand has stopped.
+   */
+  public rotate(ticks: number): Promise<void> {
+    if (!Number.isFinite(ticks) || ticks === 0) return Promise.resolve();
+    this.pendingTicks += ticks;
+    this.turning ??= (async () => {
+      try {
+        while (this.pendingTicks !== 0) {
+          const net = this.pendingTicks;
+          this.pendingTicks = 0;
+          const forward = net > 0;
+          const operation = this.settings.dialMode === "blend" ? (forward ? "blend_next" : "blend_previous") :
+            this.settings.dialMode === "order" ? (forward ? "move_up" : "move_down") :
+              forward ? "select_next" : "select_previous";
+          await this.perform(operation, Math.abs(net));
+        }
+      } finally {
+        this.turning = null;
+      }
+    })();
+    return this.turning;
   }
 
   private async perform(operation: LayerOperation, steps = 1): Promise<void> {

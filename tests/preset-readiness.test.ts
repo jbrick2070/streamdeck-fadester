@@ -306,6 +306,42 @@ describe("ready-made presets operate an existing OBS collection", () => {
     } finally { control.disappear(); }
   });
 
+  // B-07: every tick was a list read, a write and a list read in OBS, one after the other.
+  it("adds up the ticks of a Source & Layer dial that arrive while a turn is on its way", async () => {
+    const { layers } = await connect(false);
+    const turns: Array<[string, number]> = [];
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    vi.spyOn(layers, "perform").mockImplementation(async (_settings, operation, steps = 1) => {
+      turns.push([operation, steps]);
+      if (turns.length === 1) await held;
+    });
+    const control = new ObsLayerInstanceController(layers, { render: async () => {}, showAlert: async () => {} }, true, { dialMode: "blend" });
+    const first = control.rotate(1);
+    const behind = [control.rotate(1), control.rotate(2), control.rotate(-1), control.rotate(1)];
+    expect(turns).toEqual([["blend_next", 1]]);
+    release();
+    await Promise.all([first, ...behind]);
+    expect(turns).toEqual([["blend_next", 1], ["blend_next", 3]]);
+    // One at a time, each turn is sent as before.
+    await control.rotate(-2);
+    expect(turns.at(-1)).toEqual(["blend_previous", 2]);
+    expect(turns).toHaveLength(3);
+    // Waiting ticks that cancel each other send nothing, and ticks still waiting when the dial leaves the page are dropped.
+    for (const leave of [false, true]) {
+      let free!: () => void;
+      const busy = new Promise<void>((resolve) => { free = resolve; });
+      vi.mocked(layers.perform).mockImplementationOnce(async (_settings, operation, steps = 1) => { turns.push([operation, steps]); await busy; });
+      const sent = turns.length;
+      const turn = control.rotate(1);
+      void control.rotate(3);
+      if (leave) control.disappear(); else void control.rotate(-3);
+      free();
+      await turn;
+      expect(turns).toHaveLength(sent + 1);
+    }
+  });
+
   it("clears an offline press error after the OBS connection recovers", async () => {
     const { layers, direct } = await connect(false);
     await layers.refresh({ scope: "auto" });

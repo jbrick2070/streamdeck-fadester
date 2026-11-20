@@ -110,6 +110,24 @@ internal static class MixSelfTests
             string journalFile = Directory.EnumerateFiles(directory, "*.json").Single(f => !Path.GetFileName(f).StartsWith("provider", StringComparison.Ordinal));
             var kept = MixJournal.Read(journalFile, cfg.Port, collection);
             Check(kept is not null && Math.Abs(kept.Gain - Math.Pow(10, -12.0 / 20)) < 1e-9 && kept.Members.Values.All(m => m.Pending is null), "the finished fade is in the journal");
+            // The journal file is only ever replaced by a flushed write: a step's write goes to the step file beside it,
+            // is read when it is whole and newer, and is passed over when a power cut left it empty or cut short.
+            byte[] flushed = File.ReadAllBytes(journalFile);
+            var stepped = MixJournal.Read(journalFile, cfg.Port, collection)!;
+            stepped.Gain = 0.25; stepped.Save(journalFile, flush: false);
+            Check(File.ReadAllBytes(journalFile).AsSpan().SequenceEqual(flushed) && File.Exists(journalFile + MixJournal.StepSuffix), "a fade step leaves the flushed journal as it is");
+            Check(MixJournal.Read(journalFile, cfg.Port, collection)!.Gain == 0.25, "a whole, newer step file is the journal");
+            foreach (var torn in new[] { Array.Empty<byte>(), new byte[64], "{\"version\":1,\"collec"u8.ToArray() })
+            {
+                File.WriteAllBytes(journalFile + MixJournal.StepSuffix, torn);
+                Check(Math.Abs(MixJournal.Read(journalFile, cfg.Port, collection)!.Gain - Math.Pow(10, -12.0 / 20)) < 1e-9, "a torn step file is passed over; the flushed journal stands");
+            }
+            stepped.Gain = 0.5; stepped.Save(journalFile, flush: false);
+            var older = MixJournal.Read(journalFile, cfg.Port, collection)!; older.Gain = 0.75; older.Save(journalFile);
+            Check(!File.Exists(journalFile + MixJournal.StepSuffix) && MixJournal.Read(journalFile, cfg.Port, collection)!.Gain == 0.75, "a flushed save replaces the journal and removes the step file");
+            File.WriteAllBytes(journalFile, flushed);
+            Check(saves - flushes >= 1 || fadeSteps < 8, "the steps between flushes went to the step file");
+
             // A fade cut off by Stop leaves a journal a new session recovers from: every member is where the journal
             // says it is, or where the journal says it was going.
             await desk.Set(-30, 2000); await Task.Delay(200); await desk.Stop();

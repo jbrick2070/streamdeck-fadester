@@ -20,6 +20,9 @@ internal sealed class MixJournal
     public int Port { get; set; }
     public double Gain { get; set; } = 1;
     public Dictionary<Guid, MixMember> Members { get; set; } = [];
+    /// <summary>Counts this journal's saves, so the newer of the journal file and the step file can be told (Read).</summary>
+    public long Revision { get; set; }
+    internal const string StepSuffix = ".step";
     /// <summary>How often a journal was written, and written through to the disk, in this process (the self-tests read them).</summary>
     internal static int Saves, Flushes;
 
@@ -29,7 +32,30 @@ internal sealed class MixJournal
         return Path.Combine(directory, $"{port}-{key}.json");
     }
 
+    /// <summary>
+    /// The journal as it is on disk, or null when there is none. Two files can hold it: the journal itself, which is
+    /// only ever replaced by a file whose bytes are on the disk, and a step file beside it, which a running fade writes
+    /// every 35 ms without forcing it to the disk. The step file counts when it is whole and newer; a step file a power
+    /// cut left empty or cut short is passed over, and the journal under it is still the last one that was flushed.
+    /// </summary>
     internal static MixJournal? Read(string path, int port, string collection)
+    {
+        var journal = Load(path, port, collection);
+        MixJournal? step = null;
+        try { step = Load(path + StepSuffix, port, collection); }
+        catch (Exception e) when (e is JsonException or InvalidDataException or IOException or UnauthorizedAccessException) { }
+        return step is not null && (journal is null || step.Revision > journal.Revision) ? step : journal;
+    }
+
+    internal static bool Exists(string path) => File.Exists(path) || File.Exists(path + StepSuffix);
+
+    internal static void Delete(string path)
+    {
+        File.Delete(path + StepSuffix);
+        File.Delete(path);
+    }
+
+    private static MixJournal? Load(string path, int port, string collection)
     {
         if (!File.Exists(path)) return null;
         var state = JsonSerializer.Deserialize<MixJournal>(File.ReadAllBytes(path), BridgeConfig.Options);
@@ -43,14 +69,17 @@ internal sealed class MixJournal
     }
 
     /// <summary>
-    /// Replaces the journal file. With <paramref name="flush"/> the bytes are on the disk before the old file is
-    /// replaced; without it they are with the operating system, which survives this process ending but not a power cut.
-    /// A fade's steps are saved without it (MixDesk.SaveJournal), 35 ms apart.
+    /// Saves the journal. With <paramref name="flush"/> it replaces the journal file: written to a temporary file,
+    /// forced to the disk, then renamed over it, so the journal on disk is whole at every moment, also across a power
+    /// cut; the step file is then older and is removed. Without it (a step of a running fade, MixDesk.SaveJournal) the
+    /// journal file is left alone and the step file beside it is replaced, with no wait for the disk.
     /// </summary>
     internal void Save(string path, bool flush = true)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        string temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        Revision++;
+        string target = flush ? path : path + StepSuffix;
+        string temp = target + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
             using (var file = new FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None))
@@ -59,7 +88,8 @@ internal sealed class MixJournal
                 file.Flush(flushToDisk: flush);
                 Flushes += flush ? 1 : 0; Saves++;
             }
-            File.Move(temp, path, overwrite: true);
+            File.Move(temp, target, overwrite: true);
+            if (flush) File.Delete(path + StepSuffix);
         }
         finally { File.Delete(temp); }
     }

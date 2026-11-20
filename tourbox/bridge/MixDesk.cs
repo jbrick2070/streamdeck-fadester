@@ -27,8 +27,9 @@ internal sealed class MixDesk(BridgeConfig cfg, Func<string, JsonObject?, Task<J
     private double gain = 1, target = 1;
     private bool changing, recovering, stopped;
     private string? error;
-    // A fade writes its journal once per 35 ms step, under the gate. Each of those writes is handed to the operating
-    // system; it is forced to the disk at most this often, and always outside a fade's steps and when the fade ends.
+    // A fade writes its journal once per 35 ms step, under the gate. The journal file itself is replaced at most this
+    // often during a fade, and always outside a fade's steps and when the fade ends, each time forced to the disk first;
+    // the steps in between go to a step file beside it, without waiting for the disk (MixJournal.Save).
     private static readonly TimeSpan FadeFlushEvery = TimeSpan.FromMilliseconds(250);
     private long lastFlush;
     private bool unflushed;
@@ -189,7 +190,7 @@ internal sealed class MixDesk(BridgeConfig cfg, Func<string, JsonObject?, Task<J
     {
         generation++; changing = false; recovering = state != null; error = e.Message;
         // Always reconcile against the durable intent on the next explicit command.
-        if (journalPath.Length != 0 && File.Exists(journalPath))
+        if (journalPath.Length != 0 && MixJournal.Exists(journalPath))
         {
             state = MixJournal.Read(journalPath, cfg.Port, collection);
             gain = state?.Gain ?? 1;
@@ -284,7 +285,7 @@ internal sealed class MixDesk(BridgeConfig cfg, Func<string, JsonObject?, Task<J
         }
         gain = s.Gain = next;
         int skipped = s.Members.Count(p => p.Value.LeftToOperator);
-        if (finish) { if (File.Exists(journalPath)) File.Delete(journalPath); state = null; recovering = false; unflushed = false; lock (events) events.Clear(); }
+        if (finish) { MixJournal.Delete(journalPath); state = null; recovering = false; unflushed = false; lock (events) events.Clear(); }
         else if ((dirty || !File.Exists(journalPath)) && !(fadeStep && saved)) SaveJournal(s, fadeStep);
         return skipped;
     }

@@ -60,6 +60,10 @@
   let sourceCatalogFailed = new Map();
   let overviewPending = null;
   let overviewFailed = false;
+  // A request that got no answer at all is not remembered as failed: it is asked again, once, a few seconds later
+  // (and by the next state message). Each ask waits 6 s for its answer, so this never becomes a flood either.
+  const CATALOG_RETRY_MS = 5000;
+  let catalogRetryTimer = null;
   let overviewSlot = "";
   let editorDirty = false;
   let editorBaseline = null;
@@ -122,7 +126,8 @@
     return new Promise(function (resolve) {
       const timer = setTimeout(function () {
         pendingReplies.delete(requestId);
-        resolve({ error: T("noReply") });
+        // `noReply` tells a missing answer (the plugin or OBS was busy) from an answer that is an error.
+        resolve({ error: T("noReply"), noReply: true });
       }, 6000);
       pendingReplies.set(requestId, function (reply) {
         clearTimeout(timer);
@@ -884,11 +889,22 @@
     const asked = request({ event: "getCatalog", source: source }).then(function (reply) {
       pending.delete(source);
       // After Refresh or a change of connection these are no longer the live maps, and the answer counts for nothing.
-      if (!(reply && reply.data)) failed.set(source, (reply && reply.error) || T("noFilterList"));
+      // Only an answer is remembered: a source OBS does not have stays missing, a busy OBS answers the next time.
+      if (reply && reply.noReply) retryCatalogLater();
+      else if (!(reply && reply.data)) failed.set(source, (reply && reply.error) || T("noFilterList"));
       return reply;
     });
     pending.set(source, asked);
     return asked;
+  }
+
+  function retryCatalogLater() {
+    if (catalogRetryTimer !== null) return;
+    catalogRetryTimer = setTimeout(function () {
+      catalogRetryTimer = null;
+      // Redraws the open, unedited editor, which asks again for what it still lacks.
+      if (lastState) refreshEditor(lastState);
+    }, CATALOG_RETRY_MS);
   }
 
   function forgetCatalogRequests() {
@@ -917,7 +933,8 @@
       if (reply && reply.data) {
         overviewCatalog = reply.data;
       } else {
-        overviewFailed = true;
+        if (reply && reply.noReply) retryCatalogLater();
+        else overviewFailed = true;
         if (reply && reply.error) setBanner($("assign-result"), reply.error, "err");
       }
       const modeSel = $("assign-mode");

@@ -11,7 +11,8 @@
  *   surface redraw cap).
  * - Sends `tap_tempo`, `lock_bpm`, `resync_downbeat`, and `set_bpm` with hotkey
  *   fallback (`visual_sidechain_tap_tempo`, `visual_sidechain_lock_bpm`,
- *   `visual_sidechain_resync_downbeat`) on obs-websocket code 604 for older builds.
+ *   `visual_sidechain_resync_downbeat`) when the request is missing on an older build (OBS's
+ *   600 "No request was found", or 604 from test servers).
  */
 import { EventEmitter } from "node:events";
 import { DirectObsClient, DirectObsError } from "../obs/direct-obs-client.js";
@@ -288,7 +289,15 @@ export class VisualSignals extends EventEmitter {
       this.applySignalsPayload(reply, true);
     } catch (error) {
       if (gen !== this.connectionGen) return;
-      if (isObsVendorMissingError(error) && this.snapshot.availability !== "loaded") {
+      if (isObsVendorRequestMissingError(error)) {
+        // The vendor answered, without this request (OBS's 600 "No request was found", or 604): Visual Sidechain is
+        // loaded and older than `get_signals`. "Update Midi Fadester", not "not loaded".
+        if (this.snapshot.availability !== "loaded" || !this.snapshot.needsTempoUpdate) {
+          this.snapshot = { ...this.snapshot, availability: "loaded", needsTempoUpdate: true, panic: this.effectivePanic() };
+          this.emit("stateChanged");
+          this.emit("updated");
+        }
+      } else if (isObsVendorMissingError(error) && this.snapshot.availability !== "loaded") {
         this.snapshot = { ...this.snapshot, availability: "not_loaded", panic: this.effectivePanic() };
         this.emit("stateChanged");
         this.emit("updated");

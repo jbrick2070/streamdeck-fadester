@@ -77,6 +77,14 @@ describe("Visual Sidechain Meter (P1-3)", () => {
     for (const step of cleanup.splice(0)) await step();
   });
 
+  // QA-02: OBS answers 600 for a missing request as for a missing vendor; only the comment differs.
+  it("reads a Visual Sidechain without get_signals as loaded and in need of an update, not as absent", async () => {
+    const { signals } = await setup({ missingPlugin: true, visualSidechainVendor: "tempo", disabledVisualSidechainRequests: ["get_signals"] });
+    await vi.waitFor(() => expect(signals.getSnapshot().needsTempoUpdate).toBe(true));
+    expect(signals.getSnapshot().availability).toBe("loaded");
+    expect(signals.sample().state).not.toBe("not_loaded");
+  });
+
   it("shows NOT LOADED across key, dial, and Neo forms when Visual Sidechain is absent", async () => {
     const { client, signals } = await setup({ missingPlugin: true, visualSidechainVendor: "none" });
     await vi.waitFor(() => expect(signals.sample().state).toBe("not_loaded"));

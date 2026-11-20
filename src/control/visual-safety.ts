@@ -119,6 +119,8 @@ export class VisualSafety extends EventEmitter {
       }
     } catch (error) {
       if (gen !== this.connectionGen) return;
+      // OBS answers 600 for a missing vendor and for a missing request alike (604 from test servers). Here both mean
+      // the same: the vendor requests are not there, and Panic and Restore go by the hotkeys.
       if (isObsVendorMissingError(error) && this.mode === "unknown") {
         this.mode = "legacy";
       }

@@ -106,6 +106,7 @@ function harness() {
       configure(state, slot, catalog) { lastState = state; currentSettings = { slot }; overviewCatalog = catalog; },
       requestWith(fn) { request = fn; },
       bindConnectionPanel, sendWith(fn) { send = fn; },
+      timersWith(fn) { setTimeout = fn; },
       isDirty() { return editorDirty; }
     };
   })();`);
@@ -357,6 +358,48 @@ describe("Property Inspector DOM behavior", () => {
     const next = structuredClone(gone); next.connection.port = 4456;
     h.api.applyState(next); await flush(); await flush();
     expect(calls.filter((x) => x.source === "Gone")).toHaveLength(3);
+  });
+
+  // QA-05: a request that timed out says nothing about the source; only an error answer is remembered.
+  it("asks again after a request that got no answer, for a source and for the overview, and not in a flood", async () => {
+    const h = harness(); await flush();
+    const timers: Array<() => void> = [];
+    h.api.timersWith((fn: () => void) => { timers.push(fn); return timers.length; });
+    const busy = structuredClone(h.state);
+    busy.slots[0].source_a = "B"; busy.slots[0].filter_name = "B Filter";
+    const calls: RecordValue[] = [];
+    let answering = false;
+    h.api.requestWith(async (msg: RecordValue) => {
+      calls.push(msg);
+      if (!answering) return { error: "No reply from the plugin after 6 s.", noReply: true };
+      return { data: msg.source ? detail(msg.source) : overview };
+    });
+    h.api.configure(busy, "fx_1", overview);
+    h.api.resetEditorContext();
+    h.api.refreshEditor(busy); await flush();
+    expect(calls.filter((x) => x.source === "B")).toHaveLength(1);
+    expect(h.el("af-catalog-error").textContent).toBe("No reply from the plugin after 6 s.");
+    // One retry is waiting, however many requests time out before it runs.
+    expect(timers).toHaveLength(1);
+    // OBS answers again: the retry (or the next state message) fills the list, and it is then kept.
+    answering = true;
+    timers.shift()!(); await flush(); await flush();
+    expect(calls.filter((x) => x.source === "B")).toHaveLength(2);
+    expect(h.el("af-filter").options.map((x) => x.value)).toEqual(["", "B Filter"]);
+    expect(h.el("af-catalog-error").textContent).toBe("");
+    for (let round = 0; round < 3; round += 1) { h.api.applyState(structuredClone(busy)); await flush(); }
+    expect(calls.filter((x) => x.source === "B")).toHaveLength(2);
+    expect(timers).toHaveLength(0);
+    // The overview the same way.
+    answering = false;
+    h.api.configure(busy, "fx_1", null);
+    h.api.refreshEditor(busy); await flush(); await flush();
+    expect(calls.filter((x) => !x.source)).toHaveLength(1);
+    expect(timers).toHaveLength(1);
+    answering = true;
+    h.api.applyState(structuredClone(busy)); await flush(); await flush();
+    expect(calls.filter((x) => !x.source)).toHaveLength(2);
+    expect(h.el("af-filter").options.map((x) => x.value)).toEqual(["", "B Filter"]);
   });
 
   it("does not send a second request for a source while the first is unanswered", async () => {

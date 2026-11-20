@@ -149,7 +149,7 @@ describe("P1-7 suite naming invariants", () => {
 
   it("documents the canonical product and control terms in START-HERE.md", () => {
     const startHere = readRepoFile("docs/START-HERE.md");
-    expect(startHere).toContain("## 5. Names");
+    expect(startHere).toContain("## 4. Names");
     for (const term of [
       "Fadester for OBS",
       "Fadester Companion",

@@ -18,6 +18,7 @@ Sources: `tourbox/panel/FadesterTourBox.cs` and `ShowMe.cs` (Windows), `tourbox/
 
 | Part | Windows | Mac | Status |
 | --- | --- | --- | --- |
+| Version | In the main window's title and header, in the title of every Show-me, import-guide and feedback window, and on the last line of the quick guide | Same, and in **Fadester Companion → About Fadester Companion** | Same |
 | Header | Title, version and live status line (two lines, the whole text as a tooltip) | Title, app icon, version and live status line (two lines, the whole text as a tooltip) | Same |
 | Readiness lights | OBS, TourBox, VJster, Controller, Controls | OBS, TourBox, VJster, Controls | Same states, words and buttons. **Intentional**: the Mac has no game controller, so it has no Controller light. On Windows a closed or missing TourBox Console shows grey instead of amber while the game controller is in use. |
 | OBS light | Red **Open OBS**; amber Studio Mode with **Turn on**; amber server or password with **Show me** | Same | Same |
@@ -44,7 +45,7 @@ Sources: `tourbox/panel/FadesterTourBox.cs` and `ShowMe.cs` (Windows), `tourbox/
 | --- | --- | --- | --- |
 | 1 Connect to OBS | Port and password filled in from OBS (a typed port is kept), Read scenes and inputs, Program/Preview summary, Visual Sidechain meter line | Same | Same |
 | Setup diagram | None | Clickable setup diagram | **Gap** on Windows |
-| 2 Controller | "Choose your controller": game controller (Easy mode) and TourBox: **Import into TourBox Console** copies the preset path, opens Console and opens the **Show me where to click** guide (also its own button) | "Set up the TourBox and the native T-bar": save the `.tb`, open Console, **Show me where to click**, **Download TourBox Console…**, **TourBox Preset Square…** | Same guide. **Intentional**: the game controller is Windows only, and the Mac saves the `.tb` with a save dialog. **Gap**: the two download links are Mac only |
+| 2 Controller | "Choose your controller": game controller (Easy mode) and TourBox: **Import into TourBox Console** copies the preset path, opens Console and opens the **Show me where to click** guide (also its own button) | "Set up your TourBox": save the `.tb`, open Console, **Show me where to click**, **Download TourBox Console…**, **TourBox Preset Square…** | Same guide. **Intentional**: the game controller is Windows only, and the Mac saves the `.tb` with a save dialog. **Gap**: the two download links are Mac only |
 | macOS Accessibility | Not applicable | Grant Accessibility, native helper window, status | **Intentional** (macOS permission) |
 | 3 Try Preview | Present | Present | Same |
 | Optional: Assign your inputs | A paragraph that points to the Assignments tab | Same | Same |
@@ -58,7 +59,8 @@ Sources: `tourbox/panel/FadesterTourBox.cs` and `ShowMe.cs` (Windows), `tourbox/
 
 | | Windows | Mac | Status |
 | --- | --- | --- | --- |
-| Status when on | "The controls are on. TourBox shortcuts: N." then "Connected to OBS at 127.0.0.1:4455." | "Connected to OBS. The controls are on." | Near enough. **Gap**: the Windows lines come from the bridge in English |
+| Status when on | "The controls are on. TourBox shortcuts: N." then "Connected to OBS at 127.0.0.1:4455." | "Connected to OBS. The controls are on." | Near enough. **Gap**: the Windows lines come from the controls in English |
+| Words | The controls are **on** or **off**; the app is **Fadester Companion** | Same: no "armed", "disarmed", "host" or "panel" in a message | Same |
 | Activity lines | The bridge's sentences | The host's own lines (`READY 1`, `RESULT fader.back: …`, `T-BAR: …`) | **Gap**: the Mac shows protocol lines; the status line above them is in words |
 | Cut | Returns as soon as Program shows the scene; the transition goes back about 1.5 s later | Puts the transition back inside the cut, and looks again 1.5 s later | **Gap** (speed only): the Mac holds other input for about a second after a cut |
 | T-bar cannot be read (Studio Mode off, OBS minimised or run as administrator, no Accessibility) | Only the T-bar waits; a held controller button sends OBS's own transition | Only the T-bar waits; the status line says why | Same rule |
@@ -95,6 +97,8 @@ Both panels use one catalog:
 - `tourbox/presets/locales.json` holds the TourBox preset's labels, and `tourbox/guide/` and `tourbox/macos/panel/guide/` the quick starts, in the twelve languages other than English.
 
 Written without a check against the programs themselves: the names of OBS's own menu items and buttons in Dutch, Brazilian Portuguese and Turkish (`obsUi…` and the sentences that quote them). Compare them with OBS in each language.
+
+Fadester Suite Setup and the Fadester Companion installer open in the same 13 languages (`installer/lang/`, see `installer/README.md`).
 
 Still English on both: the full guide `START-HERE.html` (the control map and recovery), the bridge's and the host's own Activity lines, and on the Mac the rare messages about a damaged settings file (`Settings` validation in `Model.swift`) and the T-bar helper's permission window.
 

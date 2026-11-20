@@ -46,6 +46,35 @@ describe("Step 1.2 — FadesterClient & FadesterStore against FakeObsServer", ()
     }
   });
 
+  // A-02 / D-06: `null` parses as JSON, and reading a field of it threw outside the try, out of the socket's listener.
+  it("ignores frames that are valid JSON but not a message, and goes on working", async () => {
+    server = new FakeObsServer({ obsVersion: "33.0.0", fadesterVersion: "0.1.0" });
+    const port = await server.start();
+    client = new FadesterClient({ host: "127.0.0.1", port, password: "" });
+    const statusPromise = waitForEvent(client, "statusChanged");
+    client.start();
+    await statusPromise;
+    await waitUntil(() => client!.isConnected());
+
+    const uncaught: unknown[] = [];
+    const onUncaught = (error: unknown): void => { uncaught.push(error); };
+    process.on("uncaughtException", onUncaught);
+    try {
+      for (const frame of ["null", "null", "7", "\"text\"", "true", "[]", "[{\"op\":5}]", "{\"op\":5,\"d\":null}",
+        "{\"op\":5,\"d\":7}", "{\"op\":7,\"d\":[1]}", "{\"op\":0,\"d\":\"x\"}", "not json"]) {
+        server.sendRawFrame(frame);
+      }
+      // The frames above are read before this request's answer, on the same socket.
+      const state = await client.getState();
+      expect(Array.isArray(state.slots)).toBe(true);
+      await new Promise((r) => setTimeout(r, 30));
+    } finally {
+      process.off("uncaughtException", onUncaught);
+    }
+    expect(uncaught).toEqual([]);
+    expect(client.isConnected()).toBe(true);
+  });
+
   it("connects without password and populates Connected status + initial slots", async () => {
     server = new FakeObsServer({ obsVersion: "33.0.0", fadesterVersion: "0.1.0" });
     const port = await server.start();

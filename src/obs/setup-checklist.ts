@@ -12,10 +12,7 @@
 import { createRequire } from "node:module";
 import type KoffiModule from "koffi";
 import { isLoopbackObsHost } from "../../packages/streamdeck-fadester-shared/src/obs/obs-websocket-config.js";
-import {
-  OBS_VENDOR_NOT_FOUND,
-  OBS_VENDOR_REQUEST_MISSING
-} from "../../packages/streamdeck-fadester-shared/src/obs/obs-vendor-client.js";
+import { vendorErrorKind } from "../../packages/streamdeck-fadester-shared/src/obs/obs-vendor-client.js";
 import type { ConnectionStatusInfo } from "../../packages/streamdeck-fadester-shared/src/types.js";
 import { DEFAULT_LINK_PORT } from "../vjster/shared/protocol.js";
 import { probeVjsterPortStatus, type VjsterPortProbeResult } from "../vjster/plugin/link-server.js";
@@ -453,19 +450,9 @@ export function defaultProbeMacAccessibility(
 // Checklist evaluation
 // ---------------------------------------------------------------------------
 
-/**
- * What a failed vendor call says about the plugin. obs-websocket answers 600 (ResourceNotFound) both when no plugin
- * registered the vendor ("No vendor was found by that name.") and when the vendor lacks the request ("No request was
- * found by that name."); only the comment tells them apart. 604 is kept for test servers and older clients.
- */
-export function vendorErrorKind(error: unknown): "vendor_missing" | "request_missing" | "other" {
-  const e = error as { code?: unknown; comment?: unknown; message?: unknown } | null;
-  const code = e?.code;
-  if (code === OBS_VENDOR_REQUEST_MISSING) return "request_missing";
-  if (code !== OBS_VENDOR_NOT_FOUND) return "other";
-  const comment = String(e?.comment ?? e?.message ?? "");
-  return /request/i.test(comment) ? "request_missing" : "vendor_missing";
-}
+// What a failed vendor call says about the plugin (600 by its comment, or 604): the shared client's, which the keys'
+// "Update Midi Fadester" gates use too.
+export { vendorErrorKind };
 
 /** Numeric "major.minor.patch" (any pre-release or build suffix dropped); null when it is not a version. */
 export function parseVersion(version: unknown): [number, number, number] | null {

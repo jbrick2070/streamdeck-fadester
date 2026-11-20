@@ -430,14 +430,7 @@ export class TapeDecks extends EventEmitter {
       return reply;
     } catch (error) {
       const code = errorCodeOf(error);
-      if (code === OBS_VENDOR_NOT_FOUND) {
-        if (gen === this.connectionGen) {
-          this.availability = "not_loaded";
-          this.decks = [];
-          this.emit("changed");
-        }
-        throw new DirectObsError(ownText("vpNotLoaded"), OBS_VENDOR_NOT_FOUND);
-      }
+      // First: OBS answers 600 for a missing request too (by its comment), and that is not a missing plugin.
       if (isObsVendorRequestMissingError(error)) {
         if (gen === this.connectionGen) {
           this.deckCommandUnsupported = true;
@@ -447,6 +440,14 @@ export class TapeDecks extends EventEmitter {
           ownText("vsNeedsUpdateSentence", { request: "deck_command" }),
           OBS_VENDOR_REQUEST_MISSING
         );
+      }
+      if (code === OBS_VENDOR_NOT_FOUND) {
+        if (gen === this.connectionGen) {
+          this.availability = "not_loaded";
+          this.decks = [];
+          this.emit("changed");
+        }
+        throw new DirectObsError(ownText("vpNotLoaded"), OBS_VENDOR_NOT_FOUND);
       }
       throw error;
     }

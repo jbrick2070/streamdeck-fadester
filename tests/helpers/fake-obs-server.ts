@@ -666,6 +666,11 @@ export class FakeObsServer {
   public inputKinds: string[];
   public includeLayerOpacityFields: boolean;
   public readonly disabledMidiFadesterRequests = new Set<string>();
+  /**
+   * How a missing vendor request is answered: 600 with obs-websocket's own comment, as OBS does (the same code as a
+   * missing vendor; only the comment differs). 604 is what this server answered before, and clients still accept it.
+   */
+  public missingRequestCode: 600 | 604 = 600;
   public visualSidechainPanic = false;
   public visualSidechainSinceMs = 0;
   public visualSidechainDecks: Array<Record<string, unknown>> = [];
@@ -1320,6 +1325,13 @@ export class FakeObsServer {
       if (c.readyState === WebSocket.OPEN) {
         c.send(payload);
       }
+    }
+  }
+
+  /** Sends this text frame, as it is, to every connected client: for frames OBS itself would never send. */
+  public sendRawFrame(text: string): void {
+    for (const c of this.clients) {
+      if (c.readyState === WebSocket.OPEN) c.send(text);
     }
   }
 
@@ -2094,8 +2106,8 @@ export class FakeObsServer {
           requestId,
           requestType,
           false,
-          604,
-          `No request type '${vReqType}' was found on vendor '${vendorName}'.`
+          this.missingRequestCode,
+          this.missingRequestCode === 600 ? "No request was found by that name." : `No request type '${vReqType}' was found on vendor '${vendorName}'.`
         );
         return;
       }
@@ -2107,7 +2119,7 @@ export class FakeObsServer {
           requestType,
           false,
           600,
-          `No vendor with name '${vendorName}' was found.`
+          "No vendor was found by that name."
         );
         return;
       }
@@ -2118,8 +2130,8 @@ export class FakeObsServer {
           requestId,
           requestType,
           false,
-          604,
-          `No request type '${vReqType}' was found on vendor '${vendorName}'.`
+          this.missingRequestCode,
+          this.missingRequestCode === 600 ? "No request was found by that name." : `No request type '${vReqType}' was found on vendor '${vendorName}'.`
         );
         return;
       }

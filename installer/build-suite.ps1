@@ -27,6 +27,10 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $m = Get-Content -Raw -Encoding UTF8 -LiteralPath $Manifest | ConvertFrom-Json
+# The setup's own version is the release's: package.json's "version", which a release tag must equal (release.yml
+# stops a tag that differs). Up to 0.12.16 the setup was named by its build date instead.
+$suiteVersion = "$((Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $PSScriptRoot '..\package.json') | ConvertFrom-Json).version)"
+if ($suiteVersion -notmatch '^\d+\.\d+\.\d+$') { throw "package.json has no usable version for the suite setup: '$suiteVersion'." }
 $out = [IO.Path]::GetFullPath($OutDir)
 $stage = Join-Path $out 'stage'
 if (Test-Path -LiteralPath $stage) { Remove-Item -LiteralPath $stage -Recurse -Force }
@@ -136,10 +140,9 @@ $companionSetup = "FadesterCompanion-$($c.companion.version)-Setup.exe"
   @signArgs @(foreach ($d in $Define) { "/D$d" }) (Join-Path $PSScriptRoot 'FadesterCompanion.iss')
 if ($LASTEXITCODE) { throw 'Fadester Companion installer build failed.' }
 
-$stamp = (Get-Date).ToUniversalTime().ToString('yyyy.MM.dd')
-$name = "Fadester-Suite-Setup-$stamp-Windows-x64"
+$name = "Fadester-Suite-Setup-$suiteVersion-Windows-x64"
 $defs = @(
-  "/DSuiteVersion=$stamp", "/DSuiteAppId=$($m.suiteAppId)", "/DStage=$stage",
+  "/DSuiteVersion=$suiteVersion", "/DSuiteAppId=$($m.suiteAppId)", "/DStage=$stage",
   "/DMfFile=$($c.midiFadester.file)", "/DMfVersion=$($c.midiFadester.version)", "/DMfAppId=$($c.midiFadester.appId)",
   "/DPlFile=$($c.playlister.file)", "/DPlVersion=$($c.playlister.version)", "/DPlAppId=$($c.playlister.appId)",
   "/DSdFile=$($c.fadesterForObs.file)", "/DSdVersion=$sdVersion",

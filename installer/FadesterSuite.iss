@@ -282,7 +282,7 @@ begin
           Result := '';
 end;
 
-{ The version a manifest names: "Version": "0.12.16.0" in a Stream Deck plugin, "version": "0.1.6" in a Chrome
+{ The version a manifest names: "Version": "1.5.0.0" in a Stream Deck plugin, "version": "1.5.0" in a Chrome
   extension. The first value under that name that looks like a version (it has a dot) counts, so the Node.js
   "Version": "24" further down a plugin's manifest is passed over. '' when the file or the field is missing. }
 function ManifestVersion(const FileName, Field: String): String;

@@ -63,6 +63,27 @@ const ALLOWED: Record<string, readonly string[]> = {
   tr: ["panel:macMenuUndo", "preset:undo"]
 };
 
+/** A guide page's readable text, sentence by sentence (tags, scripts and styles removed). */
+function guideSentences(path: string): string[] {
+  const text = read(path)
+    .replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/g, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ");
+  return text.split(/(?<=[.!?。！？])\s+/).map((sentence) => sentence.trim()).filter(Boolean);
+}
+
+/** The Store listing of one language: LISTING.md for English, its section of LISTING-translations.md otherwise. */
+function listingOf(locale: string): string {
+  if (locale === "en") return read("tourbox/store/LISTING.md");
+  const sections = read("tourbox/store/LISTING-translations.md").split(/^## /m);
+  return sections.find((section) => section.split(/\r?\n/)[0].includes(`(${locale})`)) ?? "";
+}
+
+// Phrases of ordinary speech in the guides: French "Prise en main" is "getting started", Turkish "geri al" "undo".
+const GUIDE_ALLOWED: Record<string, readonly string[]> = { fr: ["Prise en main"], tr: ["geri al"] };
+
 describe("Fadester Companion's and the installers' texts (QA-R306)", () => {
   const { locales } = panelCatalog();
 
@@ -81,5 +102,23 @@ describe("Fadester Companion's and the installers' texts (QA-R306)", () => {
     const hits = texts.filter(([, text]) => pattern.test(text)).map(([where]) => where);
     expect(hits.filter((where) => !allowed.includes(where)).map((where) => `${where}: ${texts.find(([w]) => w === where)![1]}`)).toEqual([]);
     expect(allowed.filter((where) => !hits.includes(where)), "allowed but no longer a hit").toEqual([]);
+  });
+
+  it.each(locales.filter((locale) => locale !== "en"))("%s: the Windows and Mac guides and the Store listing use no verb for \"take\"", (locale) => {
+    const pattern = TAKE_VERBS[verbKey(locale)];
+    const allowed = GUIDE_ALLOWED[locale] ?? [];
+    const pages = [`tourbox/guide/${locale}.html`, `tourbox/macos/panel/guide/${locale}.html`];
+    const sentences = pages.flatMap((page) => guideSentences(page).map((sentence) => `${page}: ${sentence}`));
+    expect(sentences.length).toBeGreaterThan(20);
+    const listing = listingOf(locale);
+    expect(listing.length, "listing section").toBeGreaterThan(200);
+    const lines = [...sentences, ...listing.split(/\r?\n/).map((line) => `listing: ${line}`)];
+    const hits = lines.filter((line) => pattern.test(line) && !allowed.some((phrase) => line.includes(phrase)));
+    expect(hits).toEqual([]);
+  });
+
+  it("en: the Store listing uses no verb for \"take\"", () => {
+    const hits = listingOf("en").split(/\r?\n/).filter((line) => TAKE_VERBS.en.test(line));
+    expect(hits).toEqual([]);
   });
 });

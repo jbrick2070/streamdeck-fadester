@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Re-pins the Fadester Suite Setup inputs to newly PUBLISHED releases.
 //
-//   node installer/update-pins.mjs --midi 0.9.0 --playlister 0.5.2 --sd 0.12.15 [--ext 0.1.3 --ext-tag v0.11.0]
+//   node installer/update-pins.mjs --midi 1.5.0 --playlister 1.5.0 --sd 1.5.0 --ext 1.5.0
+// (name only what changed; --ext reads the zip from the --sd release, or from --ext-tag <tag>, as in
+//  --ext 0.1.3 --ext-tag v0.11.0)
 // (Visual Sidechain is part of Midi Fadester since 0.9.0 and has no pin of its own.)
 //
 // For each component named, it downloads the public release asset, computes its SHA-256 and rewrites that entry's

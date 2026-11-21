@@ -94,7 +94,7 @@ This is the one layout whose layer keys may reorder your sources (**Allow reorde
 | Restart | Status | Free | Free |
 | **Dial:** Free | **Dial:** Free | **Dial:** Free | **Dial:** Free |
 
-The keys ship unbound: open each key's settings page once and choose the Playlister source by name. The key keeps following it if you rename it. Each key shows what OBS reports (Playing, Paused, Stopped, Ended, Empty, with the time), *Play sent* or *Pause sent* while a press waits for OBS, and *Busy* when presses are queued. Nothing is sent while the source is missing or OBS is unreachable. Status only watches. With Playlister 1.5.0 or newer (its `get_now_next` request), **Status** and **Play / pause** carry the playing item's name in place of their own word and **Next** names the item that follows; with an older Playlister the keys show their own words, as before.
+The keys ship unbound: open each key's settings page once and choose the Playlister source by name. The key keeps following it if you rename it. Each key shows what OBS reports (Playing, Paused, Stopped, Ended, Empty, with the time), *Play sent* or *Pause sent* while a press waits for OBS, and *Busy* when presses are queued. Nothing is sent while the source is missing or OBS is unreachable. Status only watches. With Playlister 1.5.0 or newer (its `get_now_next` request), **Status** and **Play / pause** carry the playing item's name in place of their own word and **Next** names the item that follows (not with Shuffle on, where Playlister chooses the next item only as it starts); with an older Playlister the keys show their own words, as before.
 
 ## VJ Rig (Studio Mode)
 

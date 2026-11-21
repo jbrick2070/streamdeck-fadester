@@ -1430,7 +1430,7 @@ private final class PillActionButton: NSControl {
                 self.fillChoices(preserveEdits: true)
                 self.catalogAt = Date()
                 if listsOnly {
-                    if !self.catalog.studio && !self.studioOff { self.studioChecksLeft = 12 }
+                    if !self.catalog.studio && !self.studioOff { self.studioChecksLeft = 12; self.studioCheckAt = Date().addingTimeInterval(10) }
                     self.studioOff = !self.catalog.studio // the OBS light's Studio Mode state follows every read
                     if loud { let msg = L("obsConnected", self.catalog.scenes.count); self.setStatus(msg); self.note(msg) } // controls already on
                     self.scanning = false; self.scanTask = nil; self.updateEnabled(); return
@@ -1438,7 +1438,7 @@ private final class PillActionButton: NSControl {
                 self.obsConnected = true
                 self.obsRunning = true
                 self.obsProblem = nil
-                if !self.catalog.studio && !self.studioOff { self.studioChecksLeft = 12 }
+                if !self.catalog.studio && !self.studioOff { self.studioChecksLeft = 12; self.studioCheckAt = Date().addingTimeInterval(10) }
                 self.studioOff = !self.catalog.studio
                 self.snapshot.stringValue = L("sceneSummary", self.catalog.program, self.catalog.preview, L(self.catalog.studio ? "on" : "off"))
                 self.setMeter(Readiness.vsMeter(self.catalog.visualSidechain) ?? "")

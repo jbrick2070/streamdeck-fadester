@@ -234,11 +234,17 @@ jobs:
             echo
           } > table.md
           gh release view "$TAG" --json body --jq '.body' > body.md
-          # A table this job wrote before (between its two markers) is replaced, so a second run repairs it.
-          awk '/^<!-- which-file -->$/ { skip = 1 } skip != 1 { print } /^<!-- \/which-file -->$/ { skip = 2 }' body.md > rest.md
-          if grep -q '^## Which file do I need?' rest.md; then
-            echo 'The release text has a table written by hand; only the files were replaced.'
-          else
-            cat table.md rest.md > notes.md
-            gh release edit "$TAG" --notes-file notes.md
-          fi
+          # This job owns the one table. Whatever is there is taken out first: a table this job wrote before (between
+          # its two markers), and any other "Which file do I need?" section, at any heading level, up to the next heading.
+          awk '
+            /^<!-- which-file -->$/ { mine = 1; next }
+            /^<!-- \/which-file -->$/ { mine = 0; next }
+            mine == 1 { next }
+            /^#+ +Which file do I need\?/ { other = 1; next }
+            other == 1 && /^#+ / { other = 0 }
+            other == 1 { next }
+            { print }
+          ' body.md | sed '/./,$!d' > rest.md
+          if grep -qi 'Which file do I need' rest.md; then echo 'An old table is still in the release text; it was not changed.'; exit 1; fi
+          cat table.md rest.md > notes.md
+          gh release edit "$TAG" --notes-file notes.md

@@ -75,9 +75,9 @@ namespace Fadester.TourBox {
       else if (line == "VJster link stopped") next.Clear();
       return next;
     }
-    /** Whether VJster's port is taken after this bridge line (VjsterDesk.cs and VjsterLink.cs print these). */
     /** How long until the next look at Studio Mode while its light is amber: 10 s for the first twelve looks, then a minute. */
     internal static int StudioLookSeconds(int quickLooksLeft) { return quickLooksLeft > 0 ? 10 : 60; }
+    /** Whether VJster's port is taken after this bridge line (VjsterDesk.cs and VjsterLink.cs print these). */
     internal static bool VjsterPortBusy(string line, bool now) {
       if ((line.StartsWith("VJster port ", StringComparison.Ordinal) && (line.Contains(" is in use") || line.Contains(" is held by "))) || line.StartsWith("The VJster port could not be opened", StringComparison.Ordinal)) return true;
       if (line.StartsWith("VJster link listening on ", StringComparison.Ordinal) || line == "VJster link stopped") return false;

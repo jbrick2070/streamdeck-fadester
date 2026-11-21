@@ -23,7 +23,7 @@
 ; checks that none lacks a message). Setup opens in the Windows display language, without asking. The log stays in
 ; English whatever the language.
 ; Log markers (for tests and support): OBS-RUNNING, COMPANION-RUNNING, OPENDECK-RUNNING, SKIP-NEWER, STORE-EDITION,
-; VJSTER-CLASH, OLD-VS, ORIGINAL-USER, DETECTED, PRETICK, INSTALLED, FAILED.
+; VJSTER-CLASH, MARKETPLACE-EDITION, BOTH-EDITIONS, OLD-VS, ORIGINAL-USER, DETECTED, PRETICK, INSTALLED, FAILED.
 
 #ifndef SuiteVersion
   #error Build with installer\build-suite.ps1, which passes the component defines.
@@ -81,6 +81,8 @@ NoteNewerExt=VJster Chrome extension %1 is already there; setup carries %2, so i
 NoteNewerSd=Fadester for OBS %1 is already in Stream Deck; setup carries %2, so Stream Deck is not asked to replace it.
 NoteOldVs=The old separate Visual Sidechain plugin is installed. Visual Sidechain is part of Midi Fadester now: keep Midi Fadester ticked and its installer removes the old plugin. If Midi Fadester is not installed by this setup, remove Visual Sidechain in Windows Installed apps.
 NoteStore=The Microsoft Store edition of Fadester Companion is already installed, so the standalone copy is unticked: two copies would fight over the OBS connection and VJster port 48150.
+NoteMarketplaceSd=Fadester for OBS%1 from the Elgato Marketplace is in Stream Deck, so setup adds no second copy (it carries %2). Update it in Stream Deck's Marketplace, or remove it in Stream Deck and run this setup again.
+NoteBothSd=Fadester for OBS is in Stream Deck twice: the Elgato Marketplace's copy%1 and the one from this setup. They are the same plugin under two IDs; remove one of them in Stream Deck.
 NoteVjsterClash=The standalone VJster plugin is installed. Fadester for OBS already includes VJster; keeping both makes them fight over port 48150, so remove the standalone VJster plugin in Stream Deck or OpenDeck.
 NoteNoObs=OBS Studio was not found on this PC, so the OBS plugins start unticked. Tick them if your OBS is in another folder.
 NoteNoDeck=No Stream Deck app and no OpenDeck were found, so Fadester for OBS starts unticked. Tick it if you want it anyway.
@@ -144,8 +146,11 @@ var
   { The person signed in at this PC, when setup was elevated with another account's credentials (FindSignedInUser). }
   SignedInChecked: Boolean;
   SignedInSid, SignedInAppData: String;
-  { Decided once per setup run: 0 not yet, 1 copy, 2 keep the newer copy that is installed. }
+  { Decided once per setup run: 0 not yet, 1 copy, 2 keep the newer copy that is installed. For StreamDeckOffer also
+    3: the Elgato Marketplace edition is in Stream Deck and this setup's is not, so no second copy is offered. }
   OpenDeckCopy, ExtensionCopy, StreamDeckOffer: Integer;
+  { Stream Deck holds the Elgato Marketplace edition and this setup's: said on the first and on the last page. }
+  BothEditions: Boolean;
   { Set when this run installed Fadester Companion: the last page then offers to open it. }
   CompanionInstalledNow: Boolean;
 
@@ -340,14 +345,65 @@ begin
   Result := OpenDeckCopy = 1;
 end;
 
-{ Stream Deck is asked to import the bundled Fadester for OBS only when it does not already hold a newer one. }
+{ The Elgato Marketplace sells the same plugin under the ID its product has had since 0.8 (PUBLISHING.md, "The
+  Elgato Marketplace edition"). Stream Deck holds the two IDs as two plugins: both in the action list, their VJster
+  parts contending for port 48150. Its folder in Stream Deck is what counts, when there is something in it: a plugin
+  from the Marketplace can come with a manifest that cannot be read, and an empty folder is not a plugin. }
+function MarketplaceEditionPresent(): Boolean;
+var
+  Found: TFindRec;
+begin
+  Result := False;
+  if FindFirst(UserAppData() + '\Elgato\StreamDeck\Plugins\com.jbrick2070.fadester-for-obs.sdPlugin\*', Found) then
+  begin
+    try
+      repeat
+        if (Found.Name <> '.') and (Found.Name <> '..') then Result := True;
+      until Result or not FindNext(Found);
+    finally
+      FindClose(Found);
+    end;
+  end;
+#ifdef BREAK_MARKETPLACE_GUARD
+  Result := False;
+#endif
+end;
+
+{ Its version in brackets with a space before, for a sentence: ' (0.8.0.0)'. Nothing when it cannot be read. }
+function MarketplaceEditionInBrackets(): String;
+begin
+  Result := ManifestVersion(UserAppData() + '\Elgato\StreamDeck\Plugins\com.jbrick2070.fadester-for-obs.sdPlugin\manifest.json', 'Version');
+  if Result <> '' then Result := ' (' + Result + ')';
+end;
+
+{ Stream Deck is asked to import the bundled Fadester for OBS only when it does not already hold a newer one, and
+  not when it holds the Elgato Marketplace edition alone: that would add a second copy of the same plugin. Where both
+  editions are there already, this setup's copy is handled as always and the person is told to remove one. }
 function StreamDeckOfferWanted(): Boolean;
+var
+  OwnManifest: String;
 begin
   if StreamDeckOffer = 0 then
   begin
     StreamDeckOffer := 1;
-    if NewerOnDisk('Fadester for OBS in Stream Deck', 'NoteNewerSd', UserAppData() + '\Elgato\StreamDeck\Plugins\io.github.jbrick2070.fadester-for-obs.sdPlugin\manifest.json', 'Version', '{#SdVersion}') then
-      StreamDeckOffer := 2;
+    OwnManifest := UserAppData() + '\Elgato\StreamDeck\Plugins\io.github.jbrick2070.fadester-for-obs.sdPlugin\manifest.json';
+    if MarketplaceEditionPresent() and not FileExists(OwnManifest) then
+    begin
+      StreamDeckOffer := 3;
+      Note('MARKETPLACE-EDITION', 'Fadester for OBS' + MarketplaceEditionInBrackets() + ' from the Elgato Marketplace is in Stream Deck; no second copy is offered (setup carries {#SdVersion}).',
+        FmtMessage(CustomMessage('NoteMarketplaceSd'), [MarketplaceEditionInBrackets(), '{#SdVersion}']));
+    end
+    else
+    begin
+      if MarketplaceEditionPresent() then
+      begin
+        BothEditions := True;
+        Note('BOTH-EDITIONS', 'Fadester for OBS is in Stream Deck twice: the Elgato Marketplace edition' + MarketplaceEditionInBrackets() + ' and this setup''s.',
+          FmtMessage(CustomMessage('NoteBothSd'), [MarketplaceEditionInBrackets()]));
+      end;
+      if NewerOnDisk('Fadester for OBS in Stream Deck', 'NoteNewerSd', OwnManifest, 'Version', '{#SdVersion}') then
+        StreamDeckOffer := 2;
+    end;
   end;
   Result := StreamDeckOffer = 1;
 end;
@@ -720,7 +776,12 @@ begin
     Deck := StreamDeckExe();
     if StandaloneVjsterPresent() then
       Log('VJSTER-CLASH: standalone VJster plugin still installed alongside Fadester for OBS.');
-    if not StreamDeckOfferWanted() then
+    StreamDeckOfferWanted(); { decided by now in every run; asked once more so that the lines below never read 0 }
+    if BothEditions then
+      Summary := Summary + FmtMessage(CustomMessage('NoteBothSd'), [MarketplaceEditionInBrackets()]) + #13#10;
+    if StreamDeckOffer = 3 then
+      Summary := Summary + FmtMessage(CustomMessage('NoteMarketplaceSd'), [MarketplaceEditionInBrackets(), '{#SdVersion}']) + #13#10
+    else if not StreamDeckOfferWanted() then
       Summary := Summary + FmtMessage(CustomMessage('NoteNewerSd'), [ManifestVersion(UserAppData() + '\Elgato\StreamDeck\Plugins\io.github.jbrick2070.fadester-for-obs.sdPlugin\manifest.json', 'Version'), '{#SdVersion}']) + #13#10
     else if (Deck <> '') and not WizardSilent() then
     begin

@@ -154,6 +154,57 @@ function Test-VjsterClash {
   } finally { Remove-Item -LiteralPath $vjsterDir -Recurse -Force -ErrorAction SilentlyContinue }
 }
 
+function Test-MarketplaceEdition {
+  Write-Host 'marketplace-edition: beside the Elgato Marketplace edition no second copy is offered; with both editions there, setup says so'
+  $elgato = Join-Path $env:APPDATA 'Elgato'
+  $plugins = Join-Path $elgato 'StreamDeck\Plugins'
+  # The topmost folder that is not there yet: everything from it down is made by this test, and removed by it.
+  $made = @($elgato, (Join-Path $elgato 'StreamDeck'), $plugins) | Where-Object { -not (Test-Path -LiteralPath $_) } | Select-Object -First 1
+  $market = Join-Path $plugins 'com.jbrick2070.fadester-for-obs.sdPlugin'
+  $own = Join-Path $plugins 'io.github.jbrick2070.fadester-for-obs.sdPlugin'
+  $marketManifest = Join-Path $market 'manifest.json'
+  # What the last page says is in the log as well ("Summary: ..."): in a silent run nothing is ever imported, so the
+  # last page's sentence is what shows which way setup decided.
+  $offered = 'Fadester for OBS is ready at '
+  try {
+    # An empty folder under the Marketplace's ID is not a plugin: setup offers its copy as always.
+    $null = New-Item -ItemType Directory -Force -Path $market
+    $r = Run-Setup $Setup @('/COMPONENTS="streamdeck"') 'marketplace-empty-folder'
+    Check ($r.Code -eq 0) "setup succeeds beside an empty folder (exit $($r.Code))"
+    Check ($r.Log -cnotmatch 'MARKETPLACE-EDITION:') 'an empty folder does not count as the Marketplace edition'
+    Check ($r.Log -cmatch [regex]::Escape($offered)) 'this setup''s copy is offered beside an empty folder'
+    Set-Content -LiteralPath $marketManifest -Value '{ "Name": "Fadester for OBS", "Version": "0.8.0.0", "UUID": "com.jbrick2070.fadester-for-obs" }' -Encoding ascii
+    $r = Run-Setup $Setup @('/COMPONENTS="streamdeck"') 'marketplace-edition'
+    Check ($r.Code -eq 0) "setup succeeds (exit $($r.Code))"
+    Check ($r.Log -cmatch 'MARKETPLACE-EDITION: Fadester for OBS \(0\.8\.0\.0\) from the Elgato Marketplace') 'log says the Marketplace edition is there and no second copy is offered'
+    Check ($r.Log -cnotmatch 'BOTH-EDITIONS:') 'one edition is not reported as two'
+    Check ($r.Log -cmatch 'Fadester for OBS \(0\.8\.0\.0\) from the Elgato Marketplace is in Stream Deck, so setup adds no second copy \(it carries ') 'the last page says no second copy is added, with both versions'
+    Check ($r.Log -cnotmatch [regex]::Escape($offered)) 'the last page does not offer this setup''s copy'
+    Check ((Get-Content -Raw -LiteralPath $marketManifest) -match '0\.8\.0\.0') 'the Marketplace edition is untouched'
+    # A manifest that cannot be read (a Marketplace plugin can come with one): still seen, and said without a version.
+    Set-Content -LiteralPath $marketManifest -Value 'not a manifest anyone can read' -Encoding ascii
+    $r = Run-Setup $Setup @('/COMPONENTS="streamdeck"') 'marketplace-unreadable'
+    Check ($r.Code -eq 0) "setup succeeds beside an unreadable manifest (exit $($r.Code))"
+    Check ($r.Log -cmatch 'MARKETPLACE-EDITION: Fadester for OBS from the Elgato Marketplace') 'the edition is seen by its folder'
+    Check ($r.Log -cmatch 'Fadester for OBS from the Elgato Marketplace is in Stream Deck, so setup adds no second copy') 'the last page says it without a version'
+    Set-Content -LiteralPath $marketManifest -Value '{ "Name": "Fadester for OBS", "Version": "0.8.0.0", "UUID": "com.jbrick2070.fadester-for-obs" }' -Encoding ascii
+    # Both editions there already: this setup's copy is handled as always, and the log says there are two.
+    $null = New-Item -ItemType Directory -Force -Path $own
+    Set-Content -LiteralPath (Join-Path $own 'manifest.json') -Value '{ "Name": "Fadester for OBS", "Version": "0.0.1.0" }' -Encoding ascii
+    $r = Run-Setup $Setup @('/COMPONENTS="streamdeck"') 'both-editions'
+    Check ($r.Code -eq 0) "setup succeeds with both editions (exit $($r.Code))"
+    Check ($r.Log -cmatch 'BOTH-EDITIONS: Fadester for OBS is in Stream Deck twice') 'log says the plugin is there twice'
+    Check ($r.Log -cnotmatch 'MARKETPLACE-EDITION:') 'the offer is not held back when this setup''s edition is there too'
+    Check ($r.Log -cmatch 'is in Stream Deck twice: the Elgato Marketplace''s copy \(0\.8\.0\.0\) and the one from this setup') 'the last page says the plugin is there twice'
+    Check ($r.Log -cmatch [regex]::Escape($offered)) 'this setup''s copy is offered as always'
+    Check ((Get-Content -Raw -LiteralPath $marketManifest) -match '0\.8\.0\.0') 'the Marketplace edition is still untouched'
+  } finally {
+    # Stream Deck's folder is the user's: the test removes only what it made.
+    Remove-Item -LiteralPath $market, $own -Recurse -Force -ErrorAction SilentlyContinue
+    if ($made) { Remove-Item -LiteralPath $made -Recurse -Force -ErrorAction SilentlyContinue }
+  }
+}
+
 function Test-KeepNewer {
   Write-Host 'keep-newer: a newer Fadester for OBS in OpenDeck and a newer unpacked VJster extension are not replaced; older ones are'
   $deckRoot = Join-Path $env:APPDATA 'opendeck'
@@ -208,7 +259,7 @@ function Test-Uninstall {
 
 $tests = [ordered]@{
   checksum = { Test-Checksum }; 'obs-running' = { Test-ObsRunning }; full = { Test-FullInstallWithStoreEdition }
-  companion = { Test-Companion }; downgrade = { Test-Downgrade }; 'vjster-clash' = { Test-VjsterClash }; 'keep-newer' = { Test-KeepNewer }; uninstall = { Test-Uninstall }
+  companion = { Test-Companion }; downgrade = { Test-Downgrade }; 'vjster-clash' = { Test-VjsterClash }; 'marketplace-edition' = { Test-MarketplaceEdition }; 'keep-newer' = { Test-KeepNewer }; uninstall = { Test-Uninstall }
 }
 # Mutation checks need their prerequisites in place first.
 $prereq = @{ downgrade = @('full'); 'store-edition' = @() }

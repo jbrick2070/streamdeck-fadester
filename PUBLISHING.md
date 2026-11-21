@@ -45,7 +45,7 @@ Both workflows pack it and start it as Stream Deck does, on Windows and on macOS
 
 For an upload: check in Maker Console which version and ID the product has today; use the tag's Windows artifact; **Create version**, upload the file, write the release notes from `CHANGELOG.md`; the listing's pictures and video must show this version's window. Publishing there is the owner's word, as every release is.
 
-Known limits. Stream Deck holds the two editions as two plugins: a computer should have one of them (README, "When something is off"). Suite Setup looks only for the GitHub edition, so on a computer that has the Marketplace edition it offers its own copy as well; with both, their VJster parts also contend for port 48150. The Marketplace edition is for Elgato's Stream Deck software only; OpenDeck gets the other ID.
+Known limits. Stream Deck holds the two editions as two plugins: a computer should have one of them (README, "When something is off"). With both, their VJster parts also contend for port 48150. Suite Setup looks for the Marketplace edition: beside it, it offers no copy of its own and says so, and where both are there already it says that one should be removed (`installer/README.md`). The Marketplace edition is for Elgato's Stream Deck software only; OpenDeck gets the other ID.
 
 ## Public introduction after final acceptance
 

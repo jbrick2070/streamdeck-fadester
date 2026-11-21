@@ -87,7 +87,7 @@ jobs:
         run: |
           $candidate = 'release\candidates\windows-macos'
           & .\installer\build-suite.ps1 -CompanionBuild $env:COMPANION_BUILD -Candidate $candidate -OutDir dist\suite
-          foreach ($g in 'OBS', 'STORE', 'DOWNGRADE', 'VJSTER') {
+          foreach ($g in 'OBS', 'STORE', 'DOWNGRADE', 'VJSTER', 'MARKETPLACE') {
             & .\installer\build-suite.ps1 -CompanionBuild $env:COMPANION_BUILD -Candidate $candidate -OutDir "dist\broken-$g" -Define "BREAK_$($g)_GUARD"
           }
           Get-ChildItem dist -Recurse -Filter '*.exe' | Where-Object { $_.FullName -notmatch '\\stage\\' } | ForEach-Object { $_.FullName }
@@ -150,6 +150,7 @@ jobs:
           - { test: store-edition, guard: STORE }
           - { test: downgrade, guard: DOWNGRADE }
           - { test: vjster-clash, guard: VJSTER }
+          - { test: marketplace-edition, guard: MARKETPLACE }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

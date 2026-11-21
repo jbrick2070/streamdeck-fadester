@@ -113,8 +113,12 @@ describe("Fadester Companion's and the installers' texts (QA-R306)", () => {
     const listing = listingOf(locale);
     expect(listing.length, "listing section").toBeGreaterThan(200);
     const lines = [...sentences, ...listing.split(/\r?\n/).map((line) => `listing: ${line}`)];
-    const hits = lines.filter((line) => pattern.test(line) && !allowed.some((phrase) => line.includes(phrase)));
+    // Only the allowed phrase itself is skipped, not the rest of its sentence or line.
+    const hits = lines.filter((line) => pattern.test(allowed.reduce((rest, phrase) => rest.split(phrase).join(" "), line)));
     expect(hits).toEqual([]);
+    for (const phrase of allowed) {
+      expect(lines.some((line) => line.includes(phrase)) && pattern.test(phrase), `allowed phrase no longer needed: ${phrase}`).toBe(true);
+    }
   });
 
   it("en: the Store listing uses no verb for \"take\"", () => {

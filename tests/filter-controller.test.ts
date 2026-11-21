@@ -428,6 +428,28 @@ describe("filter controller", () => {
     expect(aura.filterSettings.vs_effect_mix_pct).toBe(65);
   });
 
+  it("a step pressed while the last part of the one before is on its way to OBS still adds to it", async () => {
+    // The first step's value is written in slew steps: 40 -> 50 -> 60 -> 65. When the last one (65) is sent, nothing is
+    // queued any more, and until OBS answers the value known is still 60. A step in that moment counted from 60 and
+    // ended at 85 (seen as a rare failure of the test above on a busy computer).
+    const { filters, sceneUuid, aura } = await setup();
+    const send = filters.client.setSourceFilterSettings.bind(filters.client);
+    let release: (() => void) | null = null;
+    filters.client.setSourceFilterSettings = async (...args) => {
+      // The write that carries 65 is held on its way: sent by the controller, not yet at OBS.
+      if ((args[2] as Record<string, unknown>).vs_effect_mix_pct === 65) await new Promise<void>((resolve) => { release = resolve; });
+      return send(...args);
+    };
+    await expect(filters.step(mix(sceneUuid), 0.25)).resolves.toBe("done");
+    await vi.waitFor(() => expect(release).not.toBeNull(), { timeout: 3000, interval: 5 });
+    expect(aura.filterSettings.vs_effect_mix_pct).toBe(60);
+    await expect(filters.step(mix(sceneUuid), 0.25)).resolves.toBe("done");
+    release!();
+    await vi.waitFor(() => expect(aura.filterSettings.vs_effect_mix_pct).toBe(90), { timeout: 4000 });
+    await sleep(300);
+    expect(aura.filterSettings.vs_effect_mix_pct).toBe(90);
+  });
+
   // B-02: write spacing and glide progress were measured on the wall clock, which can be set back.
   it("keeps writing and gliding the right way when the wall clock is set back", async () => {
     const { server, filters, sceneUuid, aura } = await setup();

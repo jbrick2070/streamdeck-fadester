@@ -109,6 +109,11 @@ interface FilterRecord {
   /** Writes sent so far, and the number of the last write that carried each setting. */
   writes: number;
   writtenIn: Map<string, number>;
+  /**
+   * The values of the write that is out now. A queued value leaves `pending` when its last slew step is sent, a
+   * moment before OBS has it: a step pressed in that moment counts from here, not from the value last confirmed.
+   */
+  sending: Map<string, number>;
   drainTimer: ReturnType<typeof setTimeout> | null;
   settleTimer: ReturnType<typeof setTimeout> | null;
 }
@@ -489,7 +494,8 @@ export class FilterController extends EventEmitter {
     if (!glide || glide.token !== token) return "cancelled";
     // A step counts from where the setting is going: a value still queued (the rest of an earlier step, written a
     // slew step at a time) is the target that step asked for, and the value read is only how far it has got.
-    const queued = fromQueued ? record.pending.get(target.setting) : undefined;
+    // The last slew step of that value may be on its way to OBS: then it is no longer queued and not yet read back.
+    const queued = fromQueued ? record.pending.get(target.setting) ?? record.sending.get(target.setting) : undefined;
     const from = queued !== undefined ? queued : record.values[target.setting] as number;
     onFrom?.(from);
     const to = clampToRange(toValue(from), range);
@@ -529,7 +535,7 @@ export class FilterController extends EventEmitter {
         key, eventKey: filterKey(target.sourceUuid, target.filterName),
         sourceUuid: target.sourceUuid, filterName: target.filterName, filterKind: target.filterKind,
         read: "unknown", values: {}, enabled: null, error: null, pending: new Map(), ranges: new Map(),
-        owners: new Map(), inFlight: false, lastWriteAt: 0, writes: 0, writtenIn: new Map(),
+        owners: new Map(), inFlight: false, lastWriteAt: 0, writes: 0, writtenIn: new Map(), sending: new Map(),
         drainTimer: null, settleTimer: null
       };
       this.records.set(key, record);
@@ -691,6 +697,7 @@ export class FilterController extends EventEmitter {
     record.lastWriteAt = now;
     record.writes++;
     for (const setting of Object.keys(patch)) record.writtenIn.set(setting, record.writes);
+    record.sending = new Map(Object.entries(patch));
     this.globalNextWriteAt = now + this.globalIntervalMs;
     let stale = false;
     try {
@@ -711,6 +718,7 @@ export class FilterController extends EventEmitter {
       }
     } finally {
       record.inFlight = false;
+      record.sending.clear();
     }
     if (stale) {
       // Values of the new generation waited for this reply.

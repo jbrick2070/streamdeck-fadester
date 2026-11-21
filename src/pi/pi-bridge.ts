@@ -109,7 +109,7 @@ export interface PiTransport {
   persistGlobalSettings(settings: FadesterGlobalSettings): Promise<void>;
   /** The Language setting and the language the deck draws in (PLAN.md 11.1). */
   getLanguage?(): LanguageState;
-  /** Words for the two Midi Fadester pages, which stay in Stream Deck's language until they get the Language choice (R-LANG-3, PLAN.md step L.6); the plugin's own translator when absent. */
+  /** Another translator for what is sent to the two Midi Fadester pages; the plugin's own when absent, so the pages are worded in the Language choice (R-LANG-3, PLAN.md step L.6). */
   translate?: (key: string, params?: TextParams) => string;
 }
 
@@ -204,7 +204,7 @@ export class PropertyInspectorBridge {
     const tierLabel = (id: string): string => PROFILE_TIER_LABELS[id] ? this.tr(PROFILE_TIER_LABELS[id]) : id;
     return {
       event: "fadesterState",
-      // Worded here, in the pages' language (Stream Deck's until step L.6); the inspectors compare only `kind`.
+      // Worded here, in the pages' language (the Language choice); the inspectors compare only `kind`.
       status: {
         kind: status.kind,
         sentence: statusSentence(status, this.tr),

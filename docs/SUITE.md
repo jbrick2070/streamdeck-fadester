@@ -48,8 +48,15 @@ npm run opendeck:parity  # drives the suite like OpenDeck does, against a real O
 
 The live runs (`npm run test:obs-live`, `npm run opendeck:parity`, `tests/vj-rig-live-check.ts`, `tests/playlister-live-check.ts`) and Midi Fadester's and Visual Sidechain's own live runs use this machine's one test OBS, `C:\Users\jeffr\OBS-Studio-33-Portable`. It holds only settings. Its `bin`, `core` and `data` are directory links to the installed OBS 33, and `plugins\midi-fadester`, `plugins\obs-playlister` and `plugins\visual-sidechain` are links into the one plugin folder, `C:\ProgramData\obs-studio\plugins`, which the operator's OBS loads too. So there is one OBS and one set of plugins, and a run never changes the operator's own OBS settings. Every run refuses while any OBS is open. Remove a link with `rmdir`; never delete the folder with a recursive delete, which can follow a link and empty the installed OBS or the plugin folder.
 
+## One Language setting
+
+The plugin has one Language choice for every key, dial and settings page, Fadester's and VJster's. It is the `language` at the top of the stored settings. The message router (`src/suite/mux.ts`) hands it to the VJster plugin as its own `language` and takes VJster's saves of it back to the top, and tells each half when the other changed it, so both redraw at once. The Language box stays on both kinds of settings page, because a deck may hold only VJster keys; either box changes the one setting. Settings saved before this held two choices: Fadester's is kept when it named a language, otherwise VJster's, and the copy inside VJster's part is removed on the first read.
+
+In the suite's copy of VJster's settings page the Language box says "all Fadester for OBS controls" (`suitePageStrings` in `scripts/suite/assemble.ts` joins Fadester's words for it with the rest of VJster's note, in each of the 13 languages). The two Midi Fadester settings pages follow the choice too: they first paint in the language the plugin last resolved and take the language of each state message (`ui/pi-common.js`).
+
+The standalone VJster plugin (`com.jbrick2070.vjster.sdPlugin`) keeps its own Language setting; nothing changed there.
+
 ## Not done yet
 
 - VJster's Stream Deck profiles in the suite.
-- A single language setting for both halves: Fadester's and VJster's Language boxes are still separate, and each applies to its own actions.
 - Dutch names for VJster's actions in the host's action list (the Dutch file holds the plugin's own texts only, by design).

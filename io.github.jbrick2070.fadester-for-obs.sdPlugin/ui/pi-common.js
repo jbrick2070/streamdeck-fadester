@@ -18,7 +18,15 @@
  */
 (function () {
   const ALL_FX_ID = "__all_fx__";
-  // Texts come from ui/i18n.js (loaded first), in Stream Deck's language (R-I18N-1).
+  // Texts come from ui/i18n.js (loaded first), in the plugin's language: Stream Deck's, or the Language choice (R-LANG-3).
+  // The same memory the other Fadester pages use (ui/direct-pi.js), so this page first paints in the chosen language.
+  const LANGUAGE_MEMORY_KEY = "fadester:resolvedLanguage";
+  function recalledLanguage() {
+    try { return window.localStorage.getItem(LANGUAGE_MEMORY_KEY); } catch { return null; }
+  }
+  function rememberLanguage(code) {
+    try { window.localStorage.setItem(LANGUAGE_MEMORY_KEY, code); } catch { /* no storage: Stream Deck's language first next time */ }
+  }
   // Slot names below mirror Midi Fadester's API names and stay as the API has them.
   const T = function (key, params) { return window.FadesterI18n.t(key, params); };
   const CONTRACT_SLOT_FALLBACK = [
@@ -1150,8 +1158,11 @@
       inInfo,
       inActionInfo
     ) {
-      // Stream Deck's language first, so every text below is drawn in it.
-      window.FadesterI18n.setLanguage(window.FadesterI18n.languageFromInfo(inInfo));
+      // The language the plugin last resolved first; Stream Deck's when none is remembered. The first state message
+      // then says which language holds (followLanguage).
+      if (!window.FadesterI18n.setResolved(recalledLanguage())) {
+        window.FadesterI18n.setLanguage(window.FadesterI18n.languageFromInfo(inInfo));
+      }
       uuid = inPropertyInspectorUUID;
       actionInfo = JSON.parse(inActionInfo || "{}");
       currentSettings = (actionInfo.payload && actionInfo.payload.settings) || {};
@@ -1191,6 +1202,14 @@
         } else if (msg.event === "sendToPropertyInspector" && msg.payload) {
           const p = msg.payload;
           if (p.event === "fadesterState") {
+            // The Language choice (one for the whole plugin): another language refills the fixed texts in place and
+            // the lists and controls are drawn again in it; typed values and the open slot stay.
+            const language = p.language && p.language.resolved;
+            if (typeof language === "string" && language !== window.FadesterI18n.language() && window.FadesterI18n.setResolved(language)) {
+              lastSlotSignature = "";
+              bindControlsFn(currentSettings, saveAndRefresh);
+            }
+            if (typeof language === "string" && language === window.FadesterI18n.language()) rememberLanguage(language);
             applyState(p);
             if (typeof window.showFadesterPluginVersion === "function") window.showFadesterPluginVersion(p.pluginVersion);
           } else if (p.event === "slotValueChanged") {

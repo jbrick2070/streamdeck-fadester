@@ -45,6 +45,10 @@ export class MiniElement {
   get children(): MiniElement[] { return this.childNodes.filter((node): node is MiniElement => node instanceof MiniElement); }
   get firstChild(): Child | undefined { return this.childNodes[0]; }
 
+  /** Listeners a page adds; the tests that need them fire the `on...` properties, so these are only kept. */
+  public readonly listeners = new Map<string, Array<(event: unknown) => void>>();
+  addEventListener(type: string, listener: (event: unknown) => void): void { this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]); }
+  removeEventListener(type: string, listener: (event: unknown) => void): void { this.listeners.set(type, (this.listeners.get(type) ?? []).filter((kept) => kept !== listener)); }
   getAttribute(name: string): string | null { return this.attrs.has(name) ? this.attrs.get(name)! : null; }
   hasAttribute(name: string): boolean { return this.attrs.has(name); }
   setAttribute(name: string, value: string): void {

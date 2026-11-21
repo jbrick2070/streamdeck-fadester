@@ -76,14 +76,14 @@ describe("messages from the host", () => {
 describe("the one stored settings object", () => {
   const stored = { host: "127.0.0.1", port: 4455, password: "pw", language: "de", vjster: { port: 48160, obsToken: "t" } };
 
-  it("is read by Fadester without VJster's part and by VJster as only its own part, each answer carrying the read's id", () => {
+  it("is read by Fadester without VJster's part and by VJster as its own part with the plugin's Language, each answer carrying the read's id", () => {
     const { mux, host, children } = rig();
     mux.fromChild("fadester", { event: "getGlobalSettings", id: "f-1", context: PLUGIN });
     mux.fromChild("vjster", { event: "getGlobalSettings", id: "v-1", context: PLUGIN });
     expect(host).toEqual([{ event: "getGlobalSettings", context: PLUGIN, id: "suite-global-settings" }]); // one read for both
     mux.fromHost({ event: "didReceiveGlobalSettings", id: "suite-global-settings", payload: { settings: stored } });
     expect(children.fadester).toEqual([{ event: "didReceiveGlobalSettings", id: "f-1", payload: { settings: { host: "127.0.0.1", port: 4455, password: "pw", language: "de" } } }]);
-    expect(children.vjster).toEqual([{ event: "didReceiveGlobalSettings", id: "v-1", payload: { settings: { port: 48160, obsToken: "t" } } }]);
+    expect(children.vjster).toEqual([{ event: "didReceiveGlobalSettings", id: "v-1", payload: { settings: { port: 48160, obsToken: "t", language: "de" } } }]);
   });
 
   it("answers a later read from what it knows, without asking the host again", () => {
@@ -124,8 +124,77 @@ describe("the one stored settings object", () => {
     children.fadester.length = 0;
     mux.fromHost({ event: "sendToPlugin", action: SPEED, context: "c2", payload: { event: SUITE_GLOBAL_EVENT, settings: { port: 48199 } } });
     expect(host).toEqual([{ event: "setGlobalSettings", context: PLUGIN, payload: { host: "127.0.0.1", port: 4455, password: "pw", language: "de", vjster: { port: 48199 } } }]);
-    expect(children.vjster).toEqual([{ event: "didReceiveGlobalSettings", payload: { settings: { port: 48199 } } }]);
+    expect(children.vjster).toEqual([{ event: "didReceiveGlobalSettings", payload: { settings: { port: 48199, language: "de" } } }]);
     expect(children.fadester).toEqual([]);
+  });
+
+  describe("has one Language setting for both halves (U2-19)", () => {
+    const newsFor = (messages: Message[]) => messages.filter((m) => m.event === "didReceiveGlobalSettings" && m.id === undefined).map((m) => (m.payload as { settings: Record<string, unknown> }).settings);
+
+    it("a language picked in a Fadester page reaches VJster at once, and is stored once, at the top", () => {
+      const { mux, host, children } = rig();
+      mux.fromHost({ event: "didReceiveGlobalSettings", payload: { settings: stored } });
+      host.length = 0; children.vjster.length = 0; children.fadester.length = 0;
+      mux.fromChild("fadester", { event: "setGlobalSettings", context: PLUGIN, payload: { host: "127.0.0.1", port: 4455, password: "pw", language: "ja" } });
+      expect(host[0].payload).toEqual({ host: "127.0.0.1", port: 4455, password: "pw", language: "ja", vjster: { port: 48160, obsToken: "t" } });
+      expect(newsFor(children.vjster)).toEqual([{ port: 48160, obsToken: "t", language: "ja" }]);
+      expect(children.fadester).toEqual([]); // the one that saved is not told what it just said
+    });
+
+    it("a language picked in a VJster page reaches Fadester at once, and never stays inside VJster's part", () => {
+      const { mux, host, children } = rig();
+      mux.fromHost({ event: "didReceiveGlobalSettings", payload: { settings: stored } });
+      host.length = 0; children.vjster.length = 0; children.fadester.length = 0;
+      mux.fromChild("vjster", { event: "setGlobalSettings", context: PLUGIN, payload: { port: 48160, obsToken: "t", language: "tr" } });
+      expect(host[0].payload).toEqual({ host: "127.0.0.1", port: 4455, password: "pw", language: "tr", vjster: { port: 48160, obsToken: "t" } });
+      expect(newsFor(children.fadester)).toEqual([{ host: "127.0.0.1", port: 4455, password: "pw", language: "tr" }]);
+      expect(children.vjster).toEqual([]);
+    });
+
+    it("a save that does not change the language tells nobody, and a VJster save without one keeps the plugin's", () => {
+      const { mux, host, children } = rig();
+      mux.fromHost({ event: "didReceiveGlobalSettings", payload: { settings: stored } });
+      host.length = 0; children.vjster.length = 0; children.fadester.length = 0;
+      mux.fromChild("vjster", { event: "setGlobalSettings", context: PLUGIN, payload: { port: 48170, language: "de" } });
+      mux.fromChild("vjster", { event: "setGlobalSettings", context: PLUGIN, payload: { port: 48171 } });
+      mux.fromChild("fadester", { event: "setGlobalSettings", context: PLUGIN, payload: { host: "10.0.0.9", port: 4455, password: "pw", language: "de" } });
+      expect(children.fadester).toEqual([]);
+      expect(children.vjster).toEqual([]);
+      expect(mux.settings).toEqual({ host: "10.0.0.9", port: 4455, password: "pw", language: "de", vjster: { port: 48171 } });
+    });
+
+    it("Automatic chosen on one side is Automatic on the other", () => {
+      const { mux, children } = rig();
+      mux.fromHost({ event: "didReceiveGlobalSettings", payload: { settings: stored } });
+      children.vjster.length = 0;
+      mux.fromChild("fadester", { event: "setGlobalSettings", context: PLUGIN, payload: { host: "127.0.0.1", port: 4455, password: "pw", language: "auto" } });
+      expect(newsFor(children.vjster)).toEqual([{ port: 48160, obsToken: "t", language: "auto" }]);
+    });
+
+    it("settings saved with two Language choices become one: Fadester's when it picked a language, else VJster's", () => {
+      for (const [top, theirs, kept] of [["de", "fr", "de"], [undefined, "fr", "fr"], ["auto", "fr", "fr"], ["de", "auto", "de"], [undefined, "auto", undefined], ["auto", undefined, "auto"]] as const) {
+        const { mux, host, children } = rig();
+        const old = { host: "h", ...(top !== undefined ? { language: top } : {}), vjster: { port: 48160, ...(theirs !== undefined ? { language: theirs } : {}) } };
+        mux.fromHost({ event: "didReceiveGlobalSettings", payload: { settings: old } });
+        const label = `${String(top)} and ${String(theirs)}`;
+        expect(mux.settings.language, label).toBe(kept);
+        expect(mux.settings.vjster, label).toEqual({ port: 48160 });
+        // Written back once when VJster's part held a choice, so the next start reads one setting.
+        expect(host.filter((m) => m.event === "setGlobalSettings").map((m) => m.payload), label).toEqual(theirs !== undefined ? [mux.settings] : []);
+        expect(newsFor(children.fadester)[0].language, label).toBe(kept);
+        expect(newsFor(children.vjster)[0].language, label).toBe(kept);
+        expect("vjster" in newsFor(children.fadester)[0], label).toBe(false);
+      }
+    });
+
+    it("a language the page's copy carries is the plugin's too", () => {
+      const { mux, children } = rig();
+      mux.fromHost({ event: "didReceiveGlobalSettings", payload: { settings: stored } });
+      children.fadester.length = 0;
+      mux.fromHost({ event: "sendToPlugin", action: SPEED, context: "c2", payload: { event: SUITE_GLOBAL_EVENT, settings: { port: 48199, language: "ko" } } });
+      expect(mux.settings).toEqual({ host: "127.0.0.1", port: 4455, password: "pw", language: "ko", vjster: { port: 48199 } });
+      expect(newsFor(children.fadester)).toEqual([{ host: "127.0.0.1", port: 4455, password: "pw", language: "ko" }]);
+    });
   });
 
   it("treats a page's save with nothing in it as an empty part, not an error", () => {

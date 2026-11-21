@@ -10,6 +10,7 @@ The plugin, its settings pages and VJster (the Companion's and Suite Setup's cha
 - A scene key shows where its scene is: a red frame and PROGRAM while it is on Program, a green frame and PREVIEW while it is in Preview. A Source & Layer key that edits the Program scene is framed the same way.
 - With OBS not connected, the key and the first line of every settings page say what to do: **Turn on OBS WebSocket**, **Start OBS**, or the full sentence with the menu path.
 - A new deck is offered a ready-made layout in one line at the top of the settings page; a deck model without one says so.
+- **One Language setting for the whole plugin.** The Language box on a Fadester page and the one on a VJster page are the same setting: a change on either redraws every key and dial of both at once. Settings saved with two different choices keep Fadester's when it named a language, otherwise VJster's. The two Midi Fadester settings pages follow the choice too; until now they stayed in Stream Deck's language. (The standalone VJster plugin keeps its own setting.)
 - VJster: the extension's toolbar button opens its options and is marked while the link is down; its options page says "waiting" before a first link and "standing by" when another copy holds the link; the settings page in Stream Deck has a button to the extension and shows the plugin's version.
 
 ### Changed

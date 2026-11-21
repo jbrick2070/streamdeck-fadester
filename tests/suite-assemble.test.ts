@@ -91,12 +91,42 @@ describe("the assembly", () => {
     expect(assemble(dir)).toEqual([]);
   });
 
-  it("owns exactly forty files, all inside the suite plugin's folder", () => {
+  it("owns exactly forty-eight files, all inside the suite plugin's folder", () => {
     const files = wanted(ROOT);
     expect([...files.keys()].every((path) => !path.startsWith("../"))).toBe(true);
     expect(files.has("manifest.json")).toBe(true);
-    // The manifest, VJster's manifest, two language files for each of nine languages, fourteen images, the layout, and five page files.
-    expect(files.size).toBe(40);
+    // The manifest, VJster's manifest, two language files for each of thirteen languages, fourteen images, the layout, and five page files.
+    expect(LANGUAGES).toHaveLength(13);
+    expect(files.size).toBe(48);
+  });
+
+  it("words the Language box of VJster's page for the whole plugin, in every language (one Language setting, U2-19)", () => {
+    const tables = (path: string) => {
+      const source = lf(readFileSync(path, "utf8"));
+      return JSON.parse(source.slice(source.indexOf("= ") + 2, source.lastIndexOf(";"))) as Record<string, { pi: Record<string, string> }>;
+    };
+    const suite = tables(join(SUITE, "ui", "vjster", "i18n.js"));
+    const own = tables(join(VJSTER, "ui", "i18n.js"));
+    expect(Object.keys(suite).sort()).toEqual([...LANGUAGES].sort());
+    for (const language of LANGUAGES) {
+      const fadester = ((read(join(SUITE, `${language}.json`)) as { Localization: { pi: Record<string, string> } }).Localization.pi);
+      const { languageBadge, languageNote, ...rest } = suite[language].pi;
+      const { languageBadge: ownBadge, languageNote: ownNote, ...ownRest } = own[language].pi;
+      // Only the two Language texts differ from VJster's own page.
+      expect(rest, language).toEqual(ownRest);
+      expect(languageBadge, language).toBe(fadester.scopeAllControls);
+      expect(languageBadge, language).not.toBe(ownBadge);
+      // Fadester's first sentence (whom the choice is for), then the rest of VJster's note, which names what does not follow.
+      const first = /^.*?[.。]/.exec(fadester.languageNote)![0];
+      expect(languageNote.startsWith(first), language).toBe(true);
+      const tail = ownNote.slice(/^.*?[.。]/.exec(ownNote)![0].length).trim();
+      expect(tail.length, language).toBeGreaterThan(20);
+      expect(languageNote.endsWith(tail), language).toBe(true);
+      expect(languageNote, language).toContain("Fadester for OBS");
+      expect(languageNote.split("VJster").length, language).toBe(ownNote.split("VJster").length - 1);
+    }
+    // The standalone VJster plugin keeps its own words.
+    expect(own.en.pi.languageBadge).toBe("all VJster controls");
   });
 
   it("stops, rather than guess, when VJster's settings page changes shape", () => {

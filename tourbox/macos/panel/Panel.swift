@@ -211,8 +211,8 @@ private final class PillActionButton: NSControl {
         set { UserDefaults.standard.set(newValue, forKey: "fadester.vjsterSeen") }
     }
     /// Studio Mode off is read again every 10 s while the controls run, so turning it on in OBS by hand clears the light.
-    /// Twelve looks (two minutes) after the light turned amber, not for ever: someone who works without Studio Mode must
-    /// not have OBS asked every 10 s for the whole show.
+    /// Twelve looks 10 s apart (two minutes) after the light turned amber, then one a minute: someone who works without
+    /// Studio Mode must not have OBS asked every 10 s for the whole show.
     private var studioCheckAt = Date.distantPast, studioChecksLeft = 0
     /// The port last filled in from OBS's own settings file; another value in the box was typed by hand.
     private var filledPort: Int?
@@ -1073,9 +1073,10 @@ private final class PillActionButton: NSControl {
             performScan(silentIfOffline: true)
         }
         // Studio Mode off is on the OBS light: look again now and then, so turning it on in OBS itself clears the light.
-        if host.running && obsConnected && studioOff && studioChecksLeft > 0 && !mixOnlyChosen && !scanning && Date() >= studioCheckAt {
-            studioChecksLeft -= 1
-            studioCheckAt = Date().addingTimeInterval(10)
+        if host.running && obsConnected && studioOff && !mixOnlyChosen && !scanning && Date() >= studioCheckAt {
+            if studioChecksLeft > 0 { studioChecksLeft -= 1 }
+            // Ten seconds apart for the first twelve looks, then one a minute, so turning Studio Mode on by hand later still clears the light.
+            studioCheckAt = Date().addingTimeInterval(studioChecksLeft > 0 ? 10 : 60)
             performScan(silentIfOffline: true, listsOnly: true)
         }
         refreshIndicators()

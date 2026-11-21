@@ -16,6 +16,7 @@ BeforeIntro=すでに新しいバージョンがある、または競合する�
 NoteNewer=%1 %2 はすでにインストールされています。このセットアップに入っているのは %3 なので、そのままにします。
 NoteNewerOpenDeck=Fadester for OBS %1 はすでに OpenDeck にあります。このセットアップに入っているのは %2 なので、そのままにします。
 NoteNewerExt=VJster Chrome 拡張機能 %1 はすでにあります。このセットアップに入っているのは %2 なので、そのままにします。
+NoteNewerSd=Fadester for OBS %1 はすでに Stream Deck にあります。このセットアップに入っているのは %2 なので、Stream Deck に置き換えを求めません。
 NoteOldVs=以前の単体版 Visual Sidechain プラグインがインストールされています。Visual Sidechain は現在 Midi Fadester の一部です。Midi Fadester にチェックを入れたままにすると、そのインストーラーが古いプラグインを削除します。このセットアップで Midi Fadester をインストールしない場合は、Windows の「インストールされているアプリ」で Visual Sidechain を削除してください。
 NoteStore=Microsoft Store 版の Fadester Companion がすでにインストールされているため、単体版のチェックは外れています。2 つあると OBS への接続と VJster のポート 48150 を取り合います。
 NoteVjsterClash=単体版の VJster プラグインがインストールされています。Fadester for OBS にはすでに VJster が含まれており、両方あるとポート 48150 を取り合います。Stream Deck または OpenDeck で単体版の VJster プラグインを削除してください。

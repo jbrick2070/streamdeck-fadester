@@ -16,6 +16,7 @@ BeforeIntro=이미 더 새 버전이 있거나 충돌할 수 있는 구성 요�
 NoteNewer=%1 %2 버전이 이미 설치되어 있습니다. 이 설치 프로그램에는 %3 버전이 들어 있으므로 그대로 둡니다.
 NoteNewerOpenDeck=Fadester for OBS %1 버전이 이미 OpenDeck에 있습니다. 이 설치 프로그램에는 %2 버전이 들어 있으므로 그대로 둡니다.
 NoteNewerExt=VJster Chrome 확장 프로그램 %1 버전이 이미 있습니다. 이 설치 프로그램에는 %2 버전이 들어 있으므로 그대로 둡니다.
+NoteNewerSd=Fadester for OBS %1 버전이 이미 Stream Deck에 있습니다. 이 설치 프로그램에는 %2 버전이 들어 있으므로 Stream Deck에 교체를 요청하지 않습니다.
 NoteOldVs=예전의 별도 Visual Sidechain 플러그인이 설치되어 있습니다. Visual Sidechain은 이제 Midi Fadester에 포함됩니다. Midi Fadester를 선택한 채로 두면 해당 설치 프로그램이 예전 플러그인을 제거합니다. 이 설치 프로그램으로 Midi Fadester를 설치하지 않는다면 Windows의 ‘설치된 앱’에서 Visual Sidechain을 제거하세요.
 NoteStore=Microsoft Store 버전의 Fadester Companion이 이미 설치되어 있어 단독 설치본은 선택 해제되어 있습니다. 두 개가 있으면 OBS 연결과 VJster 포트 48150을 두고 서로 충돌합니다.
 NoteVjsterClash=단독 VJster 플러그인이 설치되어 있습니다. Fadester for OBS에는 이미 VJster가 들어 있으며, 둘 다 두면 포트 48150을 두고 충돌합니다. Stream Deck 또는 OpenDeck에서 단독 VJster 플러그인을 제거하세요.

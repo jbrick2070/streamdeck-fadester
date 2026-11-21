@@ -99,12 +99,12 @@ def cover():
            line(56, 99, 1144, 99, LINE), text(58, 186, "LIVE PRODUCTION", 18, WARM, "bold", MONO),
            text(55, 270, "OBS Fadester", 63, PAPER, "bold"),
            text(55, 340, "for TourBox", 63, PAPER, "bold"),
-           text(60, 397, "Cue scenes. Ride the mix.", 28, SECONDARY),
+           text(60, 397, "Choose scenes. Ride the mix.", 28, SECONDARY),
            text(60, 435, "Turn, press, hold Side.", 23, SECONDARY),
            rect(550, 149, 594, 383, PANEL, LINE, 8), *scene_fader_drawing(),
            line(56, 572, 1144, 572, LINE),
            text(58, 615, "Scenes • Audio • Media • Production tools", 30, PAPER, "bold"),
-           text(58, 648, "Native Tour menu  /  Windows companion", 16, SECONDARY, "normal", MONO)]
+           text(58, 648, "Native Tour menu  /  Fadester Companion", 16, SECONDARY, "normal", MONO)]
     for x, name, label in [(60, "scenes", "Scenes"), (174, "audio", "Audio"),
                             (288, "media", "Media"), (402, "capture", "Tools")]:
         out += [glyph(name, x, 472, 1.45, WARM if name in {"scenes", "audio"} else COOL),

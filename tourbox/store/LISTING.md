@@ -1,6 +1,6 @@
 # Fadester Companion: Microsoft Store listing (English)
 
-Paste each block into the matching field in Partner Center (Submission → Store listings → English). Images are in `listing/`. The same listing in nine more languages is in [LISTING-translations.md](LISTING-translations.md).
+Paste each block into the matching field in Partner Center (Submission → Store listings → English). Images are in `listing/`. The same listing in twelve more languages is in [LISTING-translations.md](LISTING-translations.md).
 
 ## Description
 
@@ -8,7 +8,7 @@ Fadester Companion turns the controllers you already own into a hands-on vision 
 
 Pull the right trigger of an Xbox or other XInput game controller like a real T-bar, and OBS's own T-bar follows. Hold A to push the mix and let go to leave it part-way. D-pad up and down walk your scene list, the left trigger ducks your music while you hold it, and the sticks ride a layer's opacity and blend mode and the speed of the video playing in Chrome through the free VJster extension. Every button can be remapped, with a second layer while LB is held, and Easy mode makes on-air switches need a short hold, so a bumped control does nothing.
 
-Got a TourBox? The same companion runs it too: the Dial is your T-bar, Scroll cues scenes and the Knob sets the video speed.
+Got a TourBox? The same companion runs it too: the Dial is your T-bar, Scroll puts scenes in Preview and the Knob sets the video speed.
 
 It keeps working while OBS is in front, talks only to OBS and the VJster extension on your own computer, and sends nothing to the internet.
 

@@ -44,6 +44,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # A manual run that names a release builds and tests that tag's own commit, not the branch it was started on.
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag != '' && format('refs/tags/{0}', inputs.release_tag) || '' }}
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           dotnet-version: 8.0.x
@@ -114,6 +116,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # A manual run that names a release builds and tests that tag's own commit, not the branch it was started on.
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag != '' && format('refs/tags/{0}', inputs.release_tag) || '' }}
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: Fadester-Suite-Setup-Windows-x64
@@ -149,6 +153,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # A manual run that names a release builds and tests that tag's own commit, not the branch it was started on.
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag != '' && format('refs/tags/{0}', inputs.release_tag) || '' }}
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: suite-guard-test-variants
@@ -181,11 +187,19 @@ jobs:
       - name: Wait for the release that release.yml drafts for this tag
         run: |
           case "$TAG" in v[0-9]*.[0-9]*.[0-9]*) ;; *) echo "Not a version tag: $TAG"; exit 1;; esac
+          # release.yml creates the draft first and uploads its files one by one afterwards: wait for the five files the
+          # table names (the plugin, the extension, the Windows ZIP and both Mac ZIPs), not only for the draft.
           for attempt in $(seq 1 80); do
-            if gh release view "$TAG" > /dev/null 2>&1; then exit 0; fi
+            if gh release view "$TAG" --json assets --jq '.assets[].name' > names.txt 2> /dev/null; then
+              missing=0
+              for pattern in '\.streamDeckPlugin$' '^vjster-chrome-extension-.*\.zip$' '^Fadester-Companion-Windows-x64-.*\.zip$' '^Fadester-Companion-macOS-arm64-.*\.zip$' '^Fadester-Companion-macOS-x64-.*\.zip$'; do
+                grep -Eq "$pattern" names.txt || missing=1
+              done
+              if [ "$missing" = 0 ]; then exit 0; fi
+            fi
             sleep 30
           done
-          echo "No release for $TAG after 40 minutes. Run this workflow again by hand with release_tag once the draft exists."
+          echo "The release for $TAG does not have its five files after 40 minutes. Run this workflow again by hand with release_tag once the draft is complete."
           exit 1
       - name: Attach the setup, and say which file is for which hardware
         run: |
@@ -199,12 +213,16 @@ jobs:
           win=$(pick '^Fadester-Companion-Windows-x64-.*\.zip$')
           arm=$(pick '^Fadester-Companion-macOS-arm64-.*\.zip$')
           intel=$(pick '^Fadester-Companion-macOS-x64-.*\.zip$')
+          for name in "$suite" "$plugin" "$extension" "$win" "$arm" "$intel"; do
+            if [ -z "$name" ]; then echo 'A file the table names is missing from the release; the release text was not changed.'; exit 1; fi
+          done
           {
+            echo '<!-- which-file -->'
             echo '## Which file do I need?'
             echo
             echo '| I have | Windows | Mac |'
             echo '| --- | --- | --- |'
-            echo "| Any of it, or all of it | **\`${suite}\`**: one setup, you tick what you own | No combined installer yet: take the files in the rows below |"
+            echo "| Any of it, or all of it | **\`${suite}\`**: one setup, you tick what you own | No combined installer yet: use the files in the rows below |"
             echo "| A Stream Deck (or OpenDeck) | \`${plugin}\` | The same file |"
             echo "| A TourBox | \`${win}\` | \`${arm}\` (Apple silicon) or \`${intel}\` (Intel) |"
             echo "| An Xbox or other game controller | \`${win}\` | Not on the Mac yet |"
@@ -212,12 +230,15 @@ jobs:
             echo "| YouTube videos to control from the deck or the TourBox | VJster Chrome extension: in the suite setup, or \`${extension}\` | \`${extension}\` |"
             echo
             echo 'The suite setup installs each part with its own installer, so each keeps its own entry in Windows **Installed apps**. It is not code-signed yet: Windows SmartScreen asks once (click **More info**, then **Run anyway**). The `.msix` is the Microsoft Store package and is not needed for a download from this page.'
+            echo '<!-- /which-file -->'
             echo
           } > table.md
           gh release view "$TAG" --json body --jq '.body' > body.md
-          if grep -q '^## Which file do I need?' body.md; then
-            echo 'The release text already has the table; only the files were replaced.'
+          # A table this job wrote before (between its two markers) is replaced, so a second run repairs it.
+          awk '/^<!-- which-file -->$/ { skip = 1 } skip != 1 { print } /^<!-- \/which-file -->$/ { skip = 2 }' body.md > rest.md
+          if grep -q '^## Which file do I need?' rest.md; then
+            echo 'The release text has a table written by hand; only the files were replaced.'
           else
-            cat table.md body.md > notes.md
+            cat table.md rest.md > notes.md
             gh release edit "$TAG" --notes-file notes.md
           fi

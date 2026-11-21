@@ -16,6 +16,7 @@ BeforeIntro=Onderdelen die al nieuwer zijn, of die zouden botsen, zijn eerst nie
 NoteNewer=%1 %2 is al geïnstalleerd; setup bevat %3, dus het blijft zoals het is.
 NoteNewerOpenDeck=Fadester for OBS %1 staat al in OpenDeck; setup bevat %2, dus het blijft zoals het is.
 NoteNewerExt=De VJster-extensie voor Chrome %1 staat er al; setup bevat %2, dus die blijft zoals hij is.
+NoteNewerSd=Fadester for OBS %1 staat al in Stream Deck; setup bevat %2, dus Stream Deck wordt niet gevraagd het te vervangen.
 NoteOldVs=De oude, losse plug-in Visual Sidechain is geïnstalleerd. Visual Sidechain is nu een onderdeel van Midi Fadester: laat Midi Fadester aangevinkt, dan verwijdert het installatieprogramma daarvan de oude plug-in. Als Midi Fadester niet door deze setup wordt geïnstalleerd, verwijder Visual Sidechain dan in Windows bij ‘Geïnstalleerde apps’.
 NoteStore=De Microsoft Store-editie van Fadester Companion is al geïnstalleerd, dus de losse kopie is niet aangevinkt: twee kopieën zouden vechten om de OBS-verbinding en om VJster-poort 48150.
 NoteVjsterClash=De losse VJster-plug-in is geïnstalleerd. Fadester for OBS bevat VJster al; met allebei vechten ze om poort 48150. Verwijder daarom de losse VJster-plug-in in Stream Deck of OpenDeck.

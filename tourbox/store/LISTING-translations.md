@@ -1,4 +1,4 @@
-# Fadester Companion: Store listings in nine more languages
+# Fadester Companion: Store listings in twelve more languages
 
 The same listing as [LISTING.md](LISTING.md), for version 0.1.7. In Partner Center, in the submission, add each language under Store listings → Add/remove languages (Additional Store listing languages), and paste its blocks. Reuse the English screenshots and images from `listing/`. Copyright, license terms and "Developed by" stay as in [LISTING.md](LISTING.md). Product features are one per box; keywords are seven, entered one at a time.
 
@@ -23,8 +23,8 @@ Benötigt OBS Studio mit eingeschaltetem WebSocket-Server (Werkzeuge → WebSock
 - Eine Mac-Version: Fadester Companion für Mac (Apple Silicon und Intel) liegt jetzt jeder Version auf GitHub bei.
 - Neue Anzeigen für TourBox und VJster in der Statusleiste, jede mit der einen Schaltfläche, die das Problem behebt, etwa „Console öffnen“ oder „So geht’s“.
 - „Zeigen, wo ich klicken muss“: Eine animierte Anleitung führt Sie durch den Import der Voreinstellung in TourBox Console.
-- „OBS in den Vordergrund“: Eine Schaltfläche im Hinweis und im Infobereich holt das Hauptfenster von OBS zurück.
-- Die Mac-App spricht dieselben 10 Sprachen wie die Windows-App.
+- „OBS in den Vordergrund“: Eine Schaltfläche im Hinweis holt das Hauptfenster von OBS zurück. Beim Schließen des Fensters bleibt die Steuerung eingeschaltet: Ein Symbol im Infobereich öffnet das Fenster wieder, startet oder stoppt die Steuerung und beendet die App.
+- Die Mac-App spricht dieselben 13 Sprachen wie die Windows-App.
 
 **Product features**
 
@@ -61,8 +61,8 @@ Necesita OBS Studio con su servidor WebSocket activado (Herramientas → Ajustes
 - Una versión para Mac: Fadester Companion para Mac (Apple silicon e Intel) se incluye ahora en cada versión publicada en GitHub.
 - Nuevas luces de TourBox y VJster en la franja de estado, cada una con el botón que lo arregla, como Abrir Console o Muéstramelo.
 - Muéstrame dónde hacer clic: una guía animada te lleva paso a paso por la importación del preajuste en TourBox Console.
-- Traer OBS al frente: un botón en el aviso, y en el menú de la bandeja, vuelve a mostrar la ventana principal de OBS.
-- La aplicación para Mac habla los mismos 10 idiomas que la de Windows.
+- Traer OBS al frente: un botón en el aviso vuelve a mostrar la ventana principal de OBS. Al cerrar la ventana, los controles siguen activos: un icono en el área de notificación abre de nuevo la ventana, inicia o detiene los controles y cierra la aplicación.
+- La aplicación para Mac habla los mismos 13 idiomas que la de Windows.
 
 **Product features**
 
@@ -99,8 +99,8 @@ Nécessite OBS Studio avec son serveur WebSocket activé (Outils → Paramètres
 - Une version Mac : Fadester Companion pour Mac (Apple silicon et Intel) est désormais fourni avec chaque version publiée sur GitHub.
 - Nouveaux voyants TourBox et VJster dans la barre d’état, chacun avec le bouton qui règle le problème, comme Ouvrir Console ou Montrez-moi.
 - Montrez-moi où cliquer : un guide animé vous accompagne pas à pas pour importer le préréglage dans TourBox Console.
-- Mettre OBS au premier plan : un bouton dans le rappel, et dans le menu de la zone de notification, ramène la fenêtre principale d’OBS.
-- L’application Mac parle les mêmes 10 langues que l’application Windows.
+- Mettre OBS au premier plan : un bouton dans le rappel ramène la fenêtre principale d’OBS. Fermer la fenêtre laisse les commandes actives : une icône dans la zone de notification rouvre la fenêtre, démarre ou arrête les commandes et quitte l’application.
+- L’application Mac parle les mêmes 13 langues que l’application Windows.
 
 **Product features**
 
@@ -137,8 +137,8 @@ Richiede OBS Studio con il server WebSocket attivo (Strumenti → Impostazioni d
 - Una versione per Mac: Fadester Companion per Mac (Apple silicon e Intel) ora è incluso in ogni versione pubblicata su GitHub.
 - Nuove spie di TourBox e VJster nella barra di stato, ognuna con il pulsante che risolve il problema, come Apri Console o Mostrami.
 - Mostrami dove fare clic: una guida animata ti accompagna passo passo nell’importazione del preset in TourBox Console.
-- Porta OBS in primo piano: un pulsante nel promemoria, e nel menu dell’area di notifica, riporta in vista la finestra principale di OBS.
-- L’app per Mac parla le stesse 10 lingue dell’app per Windows.
+- Porta OBS in primo piano: un pulsante nel promemoria riporta in vista la finestra principale di OBS. Chiudendo la finestra i controlli restano attivi: un’icona nell’area di notifica riapre la finestra, avvia o ferma i controlli ed esce dall’app.
+- L’app per Mac parla le stesse 13 lingue dell’app per Windows.
 
 **Product features**
 
@@ -175,8 +175,8 @@ WebSocket サーバーを有効にした OBS Studio が必要です（ツール 
 - Mac 版：Fadester Companion for Mac（Apple シリコンと Intel）が GitHub の各リリースに含まれるようになりました。
 - ステータス欄に TourBox と VJster のランプを追加しました。それぞれに「Console を開く」や「やり方を見る」など、問題を解決するボタンが一つ付きます。
 - 「クリックする場所を見る」：アニメーションのガイドで、TourBox Console へのプリセットのインポート手順を案内します。
-- 「OBS を前面に表示」：リマインダーとタスクトレイのメニューにあるボタンで、OBS のメインウィンドウを呼び戻せます。
-- Mac アプリも Windows アプリと同じ 10 言語に対応しました。
+- 「OBS を前面に表示」：リマインダーのボタンで、OBS のメインウィンドウを呼び戻せます。ウィンドウを閉じてもコントロールはオンのままです。通知領域のアイコンから、ウィンドウを開き直す、コントロールを開始・停止する、アプリを終了することができます。
+- Mac アプリも Windows アプリと同じ 13 言語に対応しました。
 
 **Product features**
 
@@ -213,8 +213,8 @@ WebSocket 서버가 켜진 OBS Studio가 필요합니다(도구 → WebSocket �
 - Mac 버전: Fadester Companion for Mac(Apple 실리콘 및 Intel)이 이제 GitHub의 모든 릴리스에 포함됩니다.
 - 상태 표시줄에 TourBox와 VJster 표시등이 새로 생겼고, 각각 'Console 열기'나 '방법 보기'처럼 문제를 해결하는 버튼이 하나씩 있습니다.
 - 클릭할 곳 보기: 애니메이션 안내가 TourBox Console에 프리셋을 가져오는 과정을 단계별로 보여 줍니다.
-- OBS를 앞으로 가져오기: 알림과 트레이 메뉴의 버튼으로 OBS 기본 창을 다시 앞으로 가져옵니다.
-- Mac 앱도 Windows 앱과 같은 10개 언어를 지원합니다.
+- OBS를 앞으로 가져오기: 알림의 버튼으로 OBS 기본 창을 다시 앞으로 가져옵니다. 창을 닫아도 컨트롤은 켜진 채로 유지됩니다. 알림 영역의 아이콘으로 창을 다시 열고, 컨트롤을 시작하거나 중지하고, 앱을 종료할 수 있습니다.
+- Mac 앱도 Windows 앱과 같은 13개 언어를 지원합니다.
 
 **Product features**
 
@@ -251,8 +251,8 @@ Fadester Companion превращает контроллеры, которые �
 - Версия для Mac: Fadester Companion для Mac (Apple silicon и Intel) теперь входит в каждый выпуск на GitHub.
 - Новые индикаторы TourBox и VJster в строке состояния, у каждого — одна кнопка, которая устраняет проблему, например «Открыть Console» или «Показать».
 - «Показать, где нажать»: анимированная подсказка шаг за шагом проводит через импорт пресета в TourBox Console.
-- «Вывести OBS вперёд»: кнопка в напоминании и в меню значка в трее возвращает главное окно OBS.
-- Приложение для Mac говорит на тех же 10 языках, что и приложение для Windows.
+- «Вывести OBS вперёд»: кнопка в напоминании возвращает главное окно OBS. Если закрыть окно, управление остаётся включённым: значок в области уведомлений снова открывает окно, запускает или останавливает управление и завершает приложение.
+- Приложение для Mac говорит на тех же 13 языках, что и приложение для Windows.
 
 **Product features**
 
@@ -289,8 +289,8 @@ OBS 在前台时它照样工作，只与你电脑上的 OBS 和 VJster 扩展通
 - Mac 版：Fadester Companion for Mac（Apple 芯片和 Intel）现已随 GitHub 上的每个版本一同发布。
 - 状态栏新增 TourBox 和 VJster 指示灯，每个都配有一个解决问题的按钮，例如“打开 Console”或“演示给我看”。
 - “告诉我点哪里”：动画引导一步步演示如何将预设导入 TourBox Console。
-- “将 OBS 置于前台”：提醒和托盘菜单中的按钮可将 OBS 主窗口调回前台。
-- Mac 应用现在与 Windows 应用一样支持 10 种语言。
+- “将 OBS 置于前台”：提醒中的按钮可将 OBS 主窗口调回前台。关闭窗口后控制仍保持开启：通知区域中的图标可重新打开窗口、启动或停止控制，以及退出应用。
+- Mac 应用现在与 Windows 应用一样支持 13 种语言。
 
 **Product features**
 
@@ -327,8 +327,8 @@ OBS 在前景時它照樣運作，只與你電腦上的 OBS 和 VJster 擴充功
 - Mac 版：Fadester Companion for Mac（Apple 晶片與 Intel）現在隨 GitHub 上的每個版本一同發布。
 - 狀態列新增 TourBox 與 VJster 指示燈，每個都附有一個解決問題的按鈕，例如「開啟 Console」或「示範給我看」。
 - 「告訴我按哪裡」：動畫導覽一步步示範如何將預設匯入 TourBox Console。
-- 「將 OBS 移至前景」：提醒與系統匣選單中的按鈕可將 OBS 主視窗帶回前景。
-- Mac 應用程式現在與 Windows 應用程式一樣支援 10 種語言。
+- 「將 OBS 移至前景」：提醒中的按鈕可將 OBS 主視窗帶回前景。關閉視窗後控制仍保持開啟：通知區域中的圖示可重新開啟視窗、啟動或停止控制，以及結束應用程式。
+- Mac 應用程式現在與 Windows 應用程式一樣支援 13 種語言。
 
 **Product features**
 
@@ -343,3 +343,117 @@ OBS 在前景時它照樣運作，只與你電腦上的 OBS 和 VJster 擴充功
 - OBS 在前景也能運作，不會有資料離開你的電腦
 
 **Keywords:** OBS · VJ · 視訊切換台 · 遊戲控制器 · Xbox 控制器 · TourBox · 直播
+
+## Nederlands (nl)
+
+**Description**
+
+Fadester Companion maakt van de controllers die je al hebt een beeldmixer voor OBS Studio die je met je handen bedient.
+
+Trek aan de rechtertrigger van een Xbox- of andere XInput-gamecontroller zoals aan een echte T-bar, en de T-bar van OBS zelf volgt. Houd A vast om de mix verder te duwen en laat los om hem halverwege te laten staan. Met de D-pad omhoog en omlaag loop je door je scènelijst, de linkertrigger dempt je muziek zolang je hem vasthoudt, en met de sticks regel je de dekking en de mengmodus van een laag en de snelheid van de video die in Chrome speelt via de gratis VJster-extensie. Elke knop kun je opnieuw toewijzen, met een tweede laag zolang je LB vasthoudt, en in de eenvoudige modus vraagt elke wissel on air om kort vasthouden, zodat een aangestoten knop niets doet.
+
+Heb je een TourBox? Dezelfde Companion bedient die ook: de Dial is je T-bar, met Scroll zet je scènes in Voorbeeld en de Knob regelt de videosnelheid.
+
+Het blijft werken terwijl OBS op de voorgrond staat, praat alleen met OBS en de VJster-extensie op je eigen computer en stuurt niets naar internet.
+
+Vereist OBS Studio met de WebSocket-server ingeschakeld (Hulpmiddelen → WebSocket-serverinstellingen). De T-bar heeft OBS Studio 33 in de Studiomodus nodig. Gratis en open source (GPL-2.0-or-later).
+
+**Short description:** Je gamecontroller als beeldmixer voor OBS Studio: een echte T-bar op de rechtertrigger, scènes op de D-pad, muziek op de linkertrigger.
+
+**What's new:** Versie 0.1.7:
+
+- Een Mac-versie: Fadester Companion voor Mac (Apple silicon en Intel) zit nu bij elke release op GitHub.
+- Nieuwe lampjes voor TourBox en VJster in de statusstrook, elk met de ene knop die het oplost, zoals Console openen of Laat zien.
+- Laat zien waar ik moet klikken: een geanimeerde gids leidt je door het importeren van de preset in TourBox Console.
+- OBS naar voren halen: een knop op de herinnering brengt het hoofdvenster van OBS terug. Als je het venster sluit, blijft de bediening aan: een pictogram in het systeemvak opent het venster weer, start of stopt de bediening en sluit de app af.
+- De Mac-app spreekt dezelfde 13 talen als de Windows-app.
+
+**Product features**
+
+- De rechtertrigger is een echte T-bar voor de Studiomodus van OBS
+- Houd A vast om de mix te duwen; laat los en hij blijft halverwege staan
+- D-pad omhoog en omlaag loopt door je scènelijst
+- De linkertrigger dempt je muziek zolang je hem vasthoudt
+- Elke knop opnieuw toe te wijzen, met een tweede laag onder LB
+- Eenvoudige modus: wissels on air vragen om kort vasthouden
+- Videosnelheid voor VJster in Chrome met de rechterstick
+- Bedient ook een TourBox: de Dial is je T-bar
+- Werkt terwijl OBS vooraan staat; niets verlaat je pc
+
+**Keywords:** OBS · VJ · beeldmixer · gamecontroller · Xbox-controller · TourBox · livestreamen
+
+## Português do Brasil (pt-BR)
+
+**Description**
+
+O Fadester Companion transforma os controles que você já tem em uma mesa de corte de vídeo para o OBS Studio que você opera com as mãos.
+
+Puxe o gatilho direito de um controle Xbox ou de outro controle XInput como um T-bar de verdade, e o próprio T-bar do OBS acompanha. Segure A para empurrar a mixagem e solte para deixá-la no meio do caminho. O direcional para cima e para baixo percorre a sua lista de cenas, o gatilho esquerdo abaixa a música enquanto você o segura, e os analógicos ajustam a opacidade e o modo de mesclagem de uma camada e a velocidade do vídeo que toca no Chrome pela extensão gratuita VJster. Todos os botões podem ser reatribuídos, com uma segunda camada enquanto LB está pressionado, e o Modo fácil exige segurar um instante para trocar o que está no ar, de modo que um esbarrão não faz nada.
+
+Tem um TourBox? O mesmo Companion também o opera: o Dial é o seu T-bar, o Scroll coloca cenas na Prévia e o Knob ajusta a velocidade do vídeo.
+
+Ele continua funcionando com o OBS na frente, conversa apenas com o OBS e com a extensão VJster no seu próprio computador e não envia nada para a internet.
+
+Requer o OBS Studio com o servidor WebSocket ativado (Ferramentas → Configurações do servidor WebSocket). O T-bar precisa do OBS Studio 33 no Modo Estúdio. Gratuito e de código aberto (GPL-2.0-or-later).
+
+**Short description:** Seu controle de jogo agora é uma mesa de corte para o OBS Studio: um T-bar de verdade no gatilho direito, cenas no direcional, música no gatilho esquerdo.
+
+**What's new:** Versão 0.1.7:
+
+- Uma versão para Mac: o Fadester Companion para Mac (Apple silicon e Intel) agora acompanha cada versão no GitHub.
+- Novas luzes de TourBox e VJster na faixa de status, cada uma com o botão que resolve o problema, como Abrir o Console ou Mostrar.
+- Mostrar onde clicar: um guia animado conduz você pela importação do preset no TourBox Console.
+- Trazer o OBS para a frente: um botão no lembrete traz de volta a janela principal do OBS. Fechar a janela mantém os controles ativados: um ícone na área de notificação abre a janela de novo, inicia ou para os controles e encerra o aplicativo.
+- O aplicativo para Mac fala os mesmos 13 idiomas do aplicativo para Windows.
+
+**Product features**
+
+- O gatilho direito é um T-bar de verdade para o Modo Estúdio do OBS
+- Segure A para empurrar a mixagem; solte para deixá-la no meio
+- O direcional para cima e para baixo percorre a sua lista de cenas
+- O gatilho esquerdo abaixa a música enquanto você o segura
+- Reatribua todos os botões, com uma segunda camada no LB
+- Modo fácil: trocas no ar exigem segurar um instante
+- Velocidade do vídeo do VJster no Chrome pelo analógico direito
+- Também opera um TourBox: o Dial é o seu T-bar
+- Funciona com o OBS na frente; nada sai do seu PC
+
+**Keywords:** OBS · VJ · mesa de corte · controle de jogo · controle Xbox · TourBox · transmissão ao vivo
+
+## Türkçe (tr)
+
+**Description**
+
+Fadester Companion, elinizdeki kumandaları OBS Studio için elle kullanılan bir görüntü mikserine dönüştürür.
+
+Bir Xbox veya başka bir XInput oyun kumandasının sağ tetiğini gerçek bir T-bar gibi çekin; OBS'in kendi T-bar'ı onu izler. Miksi ilerletmek için A'yı basılı tutun, yarı yolda bırakmak için bırakın. D-pad yukarı ve aşağı sahne listenizde gezinir, sol tetik basılı tuttuğunuz sürece müziği kısar, çubuklar ise bir katmanın opaklığını ve karışım modunu ve ücretsiz VJster uzantısıyla Chrome'da oynayan videonun hızını ayarlar. Her düğme yeniden atanabilir, LB basılıyken ikinci bir katmanla; Kolay mod ise yayındaki değişiklikler için kısa bir basılı tutma ister, böylece yanlışlıkla dokunulan bir düğme hiçbir şey yapmaz.
+
+TourBox'ınız mı var? Aynı Companion onu da çalıştırır: Dial sizin T-bar'ınızdır, Scroll sahneleri Önizleme'ye koyar ve Knob video hızını ayarlar.
+
+OBS öndeyken de çalışmaya devam eder, yalnızca kendi bilgisayarınızdaki OBS ve VJster uzantısıyla konuşur ve internete hiçbir şey göndermez.
+
+WebSocket sunucusu açık OBS Studio gerekir (Araçlar → WebSocket Sunucu Ayarları). T-bar için Stüdyo Modu'nda OBS Studio 33 gerekir. Ücretsiz ve açık kaynak (GPL-2.0-or-later).
+
+**Short description:** Oyun kumandanız artık OBS Studio için bir görüntü mikseri: sağ tetikte gerçek bir T-bar, D-pad'de sahneler, sol tetikte müzik.
+
+**What's new:** Sürüm 0.1.7:
+
+- Mac sürümü: Mac için Fadester Companion (Apple silicon ve Intel) artık GitHub'daki her sürümle birlikte geliyor.
+- Durum şeridinde yeni TourBox ve VJster ışıkları; her birinin yanında sorunu çözen tek düğme var, örneğin Console'u aç veya Göster.
+- Nereye tıklayacağımı göster: animasyonlu bir kılavuz, hazır ayarı TourBox Console'a içe aktarırken size yol gösterir.
+- OBS'i öne getir: hatırlatmadaki bir düğme OBS ana penceresini geri getirir. Pencereyi kapatmak kontrolleri açık bırakır: bildirim alanındaki bir simge pencereyi yeniden açar, kontrolleri başlatır veya durdurur ve uygulamadan çıkar.
+- Mac uygulaması, Windows uygulamasıyla aynı 13 dili konuşur.
+
+**Product features**
+
+- Sağ tetik, OBS Stüdyo Modu için gerçek bir T-bar'dır
+- Miksi itmek için A'yı basılı tutun; bırakınca yarı yolda kalır
+- D-pad yukarı ve aşağı sahne listenizde gezinir
+- Sol tetik, basılı tuttuğunuz sürece müziği kısar
+- Her düğmeyi yeniden atayın; LB basılıyken ikinci katman
+- Kolay mod: yayındaki değişiklikler kısa bir basılı tutma ister
+- Chrome'daki VJster için video hızı sağ çubukta
+- TourBox'ı da çalıştırır: Dial sizin T-bar'ınızdır
+- OBS öndeyken çalışır; hiçbir şey bilgisayarınızdan çıkmaz
+
+**Keywords:** OBS · VJ · görüntü mikseri · oyun kumandası · Xbox kumandası · TourBox · canlı yayın

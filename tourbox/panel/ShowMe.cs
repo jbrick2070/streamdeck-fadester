@@ -76,6 +76,8 @@ namespace Fadester.TourBox {
       return next;
     }
     /** Whether VJster's port is taken after this bridge line (VjsterDesk.cs and VjsterLink.cs print these). */
+    /** How long until the next look at Studio Mode while its light is amber: 10 s for the first twelve looks, then a minute. */
+    internal static int StudioLookSeconds(int quickLooksLeft) { return quickLooksLeft > 0 ? 10 : 60; }
     internal static bool VjsterPortBusy(string line, bool now) {
       if ((line.StartsWith("VJster port ", StringComparison.Ordinal) && (line.Contains(" is in use") || line.Contains(" is held by "))) || line.StartsWith("The VJster port could not be opened", StringComparison.Ordinal)) return true;
       if (line.StartsWith("VJster link listening on ", StringComparison.Ordinal) || line == "VJster link stopped") return false;
@@ -206,6 +208,7 @@ namespace Fadester.TourBox {
       if (!busy || VjsterPortBusy("VJster link listening on 127.0.0.1:48150", busy) ||
           !VjsterPortBusy("The VJster port could not be opened (AccessDenied). Trying again every 30 s.", false) || VjsterPortBusy("Music up", false))
         throw new InvalidOperationException("VJster port");
+      if (StudioLookSeconds(12) != 10 || StudioLookSeconds(1) != 10 || StudioLookSeconds(0) != 60) throw new InvalidOperationException("Studio Mode looks");
       // Held by the suite's own deck plugin: busy, but a grey light that says where the video is controlled.
       string deckLine = "VJster port 48150 is held by the VJster actions of Fadester for OBS on your Stream Deck or OpenDeck: the deck controls the video.";
       if (!VjsterPortBusy(deckLine, false) || !VjsterOnDeck(deckLine, false) || VjsterOnDeck("VJster port 48150 is in use, probably by the VJster actions in your Stream Deck or OpenDeck software.", true) ||

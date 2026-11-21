@@ -16,6 +16,7 @@ BeforeIntro=Os componentes que já são mais novos, ou que entrariam em conflito
 NoteNewer=%1 %2 já está instalado; o instalador traz a versão %3, então fica como está.
 NoteNewerOpenDeck=O Fadester for OBS %1 já está no OpenDeck; o instalador traz a versão %2, então fica como está.
 NoteNewerExt=A extensão VJster para o Chrome %1 já está lá; o instalador traz a versão %2, então fica como está.
+NoteNewerSd=O Fadester for OBS %1 já está no Stream Deck; o instalador traz a versão %2, então o Stream Deck não é solicitado a substituí-lo.
 NoteOldVs=O antigo plugin Visual Sidechain, que era separado, está instalado. O Visual Sidechain agora faz parte do Midi Fadester: mantenha o Midi Fadester marcado e o instalador dele remove o plugin antigo. Se o Midi Fadester não for instalado por este instalador, remova o Visual Sidechain em “Aplicativos instalados” do Windows.
 NoteStore=A edição da Microsoft Store do Fadester Companion já está instalada, então a cópia independente fica desmarcada: duas cópias disputariam a conexão com o OBS e a porta 48150 do VJster.
 NoteVjsterClash=O plugin VJster independente está instalado. O Fadester for OBS já inclui o VJster; com os dois, eles disputam a porta 48150. Remova o plugin VJster independente no Stream Deck ou no OpenDeck.

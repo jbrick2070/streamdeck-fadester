@@ -180,8 +180,8 @@ namespace Fadester.TourBox {
     // A video has been connected to VJster on this PC at some time (config.json vjsterSeen): until then its light does not nag.
     bool vjUsed;
     // Studio Mode off is read again every 10 s while it shows, so turning it on in OBS by hand clears the light too.
-    // Twelve looks (two minutes) after the light turned amber, not for ever: someone who works without Studio Mode must
-    // not have OBS asked every 10 s for the whole show. The Turn on button and every later read of OBS update it too.
+    // Twelve looks 10 s apart (two minutes) after the light turned amber, then one a minute: someone who works without
+    // Studio Mode must not have OBS asked every 10 s for the whole show, yet turning it on by hand later still clears the light.
     DateTime studioCheckAt=DateTime.MinValue; int studioChecksLeft;
     // The OBS port follows OBS's own settings file (as the password does) until someone types another one.
     bool portAuto=true, settingPort;
@@ -270,6 +270,9 @@ namespace Fadester.TourBox {
         if (w.Picked("anchor0")!="B" || w.Picked("anchor1")!="Gone" || w.Picked("anchor2")!="" || w.boxes["anchor1"].Text!="Unavailable: Gone" ||
             w.boxes["anchor2"].Text!="Unassigned" || w.boxes["anchor0"].Text!="B") throw new Exception("assignment lists");
       }
+      // A refused sign-in keeps its translated sentence in the header; the retry fact follows in the same language.
+      if (StillTrying(deText,"Problem.")!="Problem. "+deText.Get("stillTrying") || StillTrying(enText,null)!=enText.Get("stillTrying") ||
+          deText.Get("stillTrying")==enText.Get("stillTrying") || !deText.Get("stillTrying").Contains(deText.Get("save"))) throw new Exception("still trying");
       // The dark window builds too, with its own tab strip, and its page is dark.
       bool wasDark=Theme.Dark;
       try {
@@ -989,8 +992,9 @@ namespace Fadester.TourBox {
           live.Text=text.Get("sceneSummary",Val(next,"program","—"),Val(next,"preview","—"),studio);
           SetVsStatus(FormatVsMeter(text,Val(next,"visualSidechain"))??"");
           bool wasStudioOff=studioOff;
-          obsConnected=true; obsProblem=null; studioOff=knowsStudio && !studioMode; studioCheckAt=DateTime.Now.AddSeconds(10);
+          obsConnected=true; obsProblem=null; studioOff=knowsStudio && !studioMode;
           if(studioOff && !wasStudioOff) studioChecksLeft=12;
+          studioCheckAt=DateTime.Now.AddSeconds(Readiness.StudioLookSeconds(studioChecksLeft));
           ShowStatus();
           if(!quiet) Note(text.Get(worker==null?"obsReady":"obsConnected",List(next,"scenes").Length));
         }
@@ -1086,7 +1090,17 @@ namespace Fadester.TourBox {
       if(line=="SETTINGS-RELOADED") return; // the Save note already said so
       // The bridge's own line for a layer it picked: never shown (the sentence that follows it says the same in words).
       if(line.StartsWith(Readiness.PickedMarker,StringComparison.Ordinal)){ if(worker==p) TakePickedLayer(line); return; }
-      Note(TbarHint(line) ?? text.Explain(line));
+      // "Still trying:" follows a refused sign-in (bridge Program.cs). The header keeps the problem in the window's language,
+      // with the retry fact after it; the bridge's English sentence is never the header.
+      if(line.StartsWith("Still trying:",StringComparison.Ordinal)){ Note(StillTrying(text,lastOffline)); return; }
+      string shown=TbarHint(line) ?? text.Explain(line);
+      if(line.StartsWith("Offline:",StringComparison.OrdinalIgnoreCase)) lastOffline=shown;
+      Note(shown);
+    }
+    /** The last "Offline:" line as the window showed it, for the retry note that follows it. */
+    string lastOffline;
+    internal static string StillTrying(PanelText text,string problem) {
+      return String.IsNullOrWhiteSpace(problem) ? text.Get("stillTrying") : problem.Trim()+" "+text.Get("stillTrying");
     }
     /**
      * A layer the bridge picked by itself (DeskActions.FillLayers), from the line the bridge writes for the panel alone
@@ -1169,7 +1183,7 @@ namespace Fadester.TourBox {
           autoTries--; autoConnectAt=DateTime.Now.AddSeconds(5); var pending=Connect();
         }
         // Studio Mode off is on the OBS light: look again now and then, so turning it on in OBS itself clears the light.
-        if(running && obsConnected && studioOff && studioChecksLeft>0 && !mixOnly.Checked && !refreshing && DateTime.Now>=studioCheckAt){ studioChecksLeft--; studioCheckAt=DateTime.Now.AddSeconds(10); var again=Connect(true); }
+        if(running && obsConnected && studioOff && !mixOnly.Checked && !refreshing && DateTime.Now>=studioCheckAt){ if(studioChecksLeft>0) studioChecksLeft--; studioCheckAt=DateTime.Now.AddSeconds(Readiness.StudioLookSeconds(studioChecksLeft)); var again=Connect(true); }
       } } catch(Exception e) { Entry.Log("watch: "+e.Message); }
       ShowStatus();
     }

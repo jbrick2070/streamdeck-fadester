@@ -16,6 +16,7 @@ BeforeIntro=С компонентов, которые уже новее или �
 NoteNewer=%1 %2 уже установлен; в программе установки версия %3, поэтому он остаётся как есть.
 NoteNewerOpenDeck=Fadester for OBS %1 уже есть в OpenDeck; в программе установки версия %2, поэтому он остаётся как есть.
 NoteNewerExt=Расширение VJster для Chrome %1 уже есть; в программе установки версия %2, поэтому оно остаётся как есть.
+NoteNewerSd=Fadester for OBS %1 уже есть в Stream Deck; в программе установки версия %2, поэтому Stream Deck не предлагается его заменить.
 NoteOldVs=Установлен старый отдельный плагин Visual Sidechain. Теперь Visual Sidechain входит в Midi Fadester: оставьте флажок Midi Fadester, и его установщик удалит старый плагин. Если Midi Fadester этой программой не устанавливается, удалите Visual Sidechain в разделе Windows «Установленные приложения».
 NoteStore=Fadester Companion из Microsoft Store уже установлен, поэтому флажок отдельной копии снят: две копии будут спорить за подключение к OBS и за порт VJster 48150.
 NoteVjsterClash=Установлен отдельный плагин VJster. Fadester for OBS уже включает VJster; вместе они спорят за порт 48150, поэтому удалите отдельный плагин VJster в Stream Deck или OpenDeck.

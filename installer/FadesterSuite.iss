@@ -44,8 +44,9 @@ SolidCompression=yes
 WizardStyle=modern
 CloseApplications=no
 SetupLogging=yes
-; The Windows display language when it is one of the 13, else English: no language question at the start.
-ShowLanguageDialog=auto
+; The Windows display language when it is one of the 13, else English (the first language listed). "no": never a
+; language question; "auto" would ask on a Windows whose language is none of the 13.
+ShowLanguageDialog=no
 ; The OpenDeck task writes to the signed-in user's own OpenDeck folder on purpose ({code:OpenDeckPlugins}).
 UsedUserAreasWarning=no
 #ifdef SIGN
@@ -73,6 +74,7 @@ BeforeIntro=Components that are already newer, or would clash, start unticked:
 NoteNewer=%1 %2 is already installed; setup carries %3, so it is left as it is.
 NoteNewerOpenDeck=Fadester for OBS %1 is already in OpenDeck; setup carries %2, so it is left as it is.
 NoteNewerExt=VJster Chrome extension %1 is already there; setup carries %2, so it is left as it is.
+NoteNewerSd=Fadester for OBS %1 is already in Stream Deck; setup carries %2, so Stream Deck is not asked to replace it.
 NoteOldVs=The old separate Visual Sidechain plugin is installed. Visual Sidechain is part of Midi Fadester now: keep Midi Fadester ticked and its installer removes the old plugin. If Midi Fadester is not installed by this setup, remove Visual Sidechain in Windows Installed apps.
 NoteStore=The Microsoft Store edition of Fadester Companion is already installed, so the standalone copy is unticked: two copies would fight over the OBS connection and VJster port 48150.
 NoteVjsterClash=The standalone VJster plugin is installed. Fadester for OBS already includes VJster; keeping both makes them fight over port 48150, so remove the standalone VJster plugin in Stream Deck or OpenDeck.
@@ -136,7 +138,7 @@ var
   SignedInChecked: Boolean;
   SignedInSid, SignedInAppData: String;
   { Decided once per setup run: 0 not yet, 1 copy, 2 keep the newer copy that is installed. }
-  OpenDeckCopy, ExtensionCopy: Integer;
+  OpenDeckCopy, ExtensionCopy, StreamDeckOffer: Integer;
   { Set when this run installed Fadester Companion: the last page then offers to open it. }
   CompanionInstalledNow: Boolean;
 
@@ -190,12 +192,34 @@ end;
   use the suite. The person signed in is the one whose settings hive has this Windows session in it; their profile
   folder comes from the system's own list (HKLM ProfileList), which only an administrator can change. When that
   person and the elevated account are the same (the usual case), nothing differs. }
+{ The account that owns Explorer (the desktop) in this Windows session, as a SID; '' when it cannot be told. }
+function DesktopOwnerSid(Session: DWORD): String;
+var
+  Locator, Service, Found, Shell, Answer: Variant;
+begin
+  Result := '';
+  try
+    Locator := CreateOleObject('WbemScripting.SWbemLocator');
+    Service := Locator.ConnectServer('.', 'root\CIMV2');
+    Found := Service.ExecQuery('SELECT * FROM Win32_Process WHERE Name = ''explorer.exe'' AND SessionId = ' + IntToStr(Session));
+    if Found.Count > 0 then
+    begin
+      Shell := Found.ItemIndex(0);
+      Answer := Shell.ExecMethod_('GetOwnerSid');
+      if not VarIsNull(Answer.Sid) then Result := Answer.Sid;
+    end;
+  except
+    Log('Could not ask who owns the desktop: ' + GetExceptionMessage);
+    Result := '';
+  end;
+end;
+
 procedure FindSignedInUser();
 var
   Names: TArrayOfString;
   I, Changed: Integer;
   Session: DWORD;
-  Profile: String;
+  Profile, Owner: String;
 begin
   if SignedInChecked then Exit;
   SignedInChecked := True;
@@ -205,6 +229,10 @@ begin
   Changed := 0;
   if not ProcessIdToSessionId(GetCurrentProcessId(), Session) then Exit;
   if not RegGetSubkeyNames(HKEY_USERS, '', Names) then Exit;
+  { First choice: whoever owns the desktop of this session. An elevating administrator's settings can carry this
+    session's key as well, so the first match in the list below could be the administrator. }
+  Owner := DesktopOwnerSid(Session);
+  if (Owner <> '') and RegKeyExists(HKEY_USERS, Owner) then SignedInSid := Owner;
   for I := 0 to GetArrayLength(Names) - 1 do
     if ((Pos('S-1-5-21-', Names[I]) = 1) or (Pos('S-1-12-1-', Names[I]) = 1)) and (Pos('_Classes', Names[I]) = 0) then
       if (SignedInSid = '') and RegKeyExists(HKEY_USERS, Names[I] + '\Volatile Environment\' + IntToStr(Session)) then
@@ -303,6 +331,18 @@ begin
       OpenDeckCopy := 2;
   end;
   Result := OpenDeckCopy = 1;
+end;
+
+{ Stream Deck is asked to import the bundled Fadester for OBS only when it does not already hold a newer one. }
+function StreamDeckOfferWanted(): Boolean;
+begin
+  if StreamDeckOffer = 0 then
+  begin
+    StreamDeckOffer := 1;
+    if NewerOnDisk('Fadester for OBS in Stream Deck', 'NoteNewerSd', UserAppData() + '\Elgato\StreamDeck\Plugins\io.github.jbrick2070.fadester-for-obs.sdPlugin\manifest.json', 'Version', '{#SdVersion}') then
+      StreamDeckOffer := 2;
+  end;
+  Result := StreamDeckOffer = 1;
 end;
 
 function ExtensionCopyWanted(): Boolean;
@@ -460,6 +500,10 @@ begin
   end;
   if StandaloneVjsterPresent() then
     Note('VJSTER-CLASH', 'The standalone VJster plugin is installed; with Fadester for OBS they fight over port 48150.', CustomMessage('NoteVjsterClash'));
+  { Decided here, not first while files are copied, so a newer copy that will be kept is on this page too. }
+  StreamDeckOfferWanted();
+  ExtensionCopyWanted();
+  if OpenDeckPresent() then OpenDeckCopyWanted();
   if Notes <> '' then
     CreateOutputMsgMemoPage(wpWelcome, CustomMessage('BeforeTitle'), CustomMessage('BeforeSub'), CustomMessage('BeforeIntro'), Notes);
 end;
@@ -563,7 +607,9 @@ begin
     Deck := StreamDeckExe();
     if StandaloneVjsterPresent() then
       Log('VJSTER-CLASH: standalone VJster plugin still installed alongside Fadester for OBS.');
-    if (Deck <> '') and not WizardSilent() then
+    if not StreamDeckOfferWanted() then
+      Summary := Summary + FmtMessage(CustomMessage('NoteNewerSd'), [ManifestVersion(UserAppData() + '\Elgato\StreamDeck\Plugins\io.github.jbrick2070.fadester-for-obs.sdPlugin\manifest.json', 'Version'), '{#SdVersion}']) + #13#10
+    else if (Deck <> '') and not WizardSilent() then
     begin
       { Stream Deck installs the plugin itself, as the signed-in user, so its own files are never written behind its back. }
       if ShellExecAsOriginalUser('open', Package, '', '', SW_SHOWNORMAL, ewNoWait, Code) then

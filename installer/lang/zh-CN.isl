@@ -16,6 +16,7 @@ BeforeIntro=已经是更新版本或会互相冲突的组件，一开始不勾�
 NoteNewer=已安装 %1 %2；安装程序自带的是 %3，因此保持原样。
 NoteNewerOpenDeck=OpenDeck 中已有 Fadester for OBS %1；安装程序自带的是 %2，因此保持原样。
 NoteNewerExt=已有 VJster Chrome 扩展程序 %1；安装程序自带的是 %2，因此保持原样。
+NoteNewerSd=Stream Deck 中已有 Fadester for OBS %1；安装程序自带的是 %2，因此不会让 Stream Deck 替换它。
 NoteOldVs=已安装旧的独立 Visual Sidechain 插件。Visual Sidechain 现在是 Midi Fadester 的一部分：保持勾选 Midi Fadester，它的安装程序会移除旧插件。如果本次不安装 Midi Fadester，请在 Windows 的“已安装的应用”中移除 Visual Sidechain。
 NoteStore=已安装 Microsoft Store 版的 Fadester Companion，因此不勾选独立版：两个副本会争用 OBS 连接和 VJster 端口 48150。
 NoteVjsterClash=已安装独立的 VJster 插件。Fadester for OBS 已包含 VJster；两者并存会争用端口 48150，请在 Stream Deck 或 OpenDeck 中移除独立的 VJster 插件。

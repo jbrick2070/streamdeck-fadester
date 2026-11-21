@@ -31,8 +31,9 @@ WizardStyle=modern
 ; The panel holds this mutex while it is open, so setup asks to close it instead of replacing files in use.
 AppMutex=Local\FadesterTourBoxPanel
 CloseApplications=no
-; The Windows display language when it is one of the suite's 13, else English: no language question at the start.
-ShowLanguageDialog=auto
+; The Windows display language when it is one of the suite's 13, else English (the first language listed). "no":
+; never a language question; "auto" would ask on a Windows whose language is none of the 13.
+ShowLanguageDialog=no
 #ifdef SIGN
 SignTool=fadester
 #endif

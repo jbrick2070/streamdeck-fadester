@@ -37,7 +37,8 @@ describe("installer languages", () => {
     for (const code of others) expect(list, code).toContain(`lang\\${code}.isl`);
     for (const script of [suite, companion]) {
       expect(script).toContain('#include "lang\\languages.iss"');
-      expect(script).toContain("ShowLanguageDialog=auto");
+      // "no": never a language question; "auto" asks when Windows speaks none of the 13.
+      expect(script).toContain("ShowLanguageDialog=no");
     }
   });
 

@@ -16,6 +16,7 @@ BeforeIntro=Zaten daha yeni olan veya çakışacak bileşenlerin işareti başla
 NoteNewer=%1 %2 zaten yüklü; kurulumda %3 sürümü var, bu yüzden olduğu gibi bırakılıyor.
 NoteNewerOpenDeck=Fadester for OBS %1 zaten OpenDeck'te; kurulumda %2 sürümü var, bu yüzden olduğu gibi bırakılıyor.
 NoteNewerExt=VJster Chrome uzantısı %1 zaten orada; kurulumda %2 sürümü var, bu yüzden olduğu gibi bırakılıyor.
+NoteNewerSd=Fadester for OBS %1 zaten Stream Deck'te; kurulumda %2 sürümü var, bu yüzden Stream Deck'ten onu değiştirmesi istenmiyor.
 NoteOldVs=Eski, ayrı Visual Sidechain eklentisi yüklü. Visual Sidechain artık Midi Fadester'ın bir parçası: Midi Fadester'ı işaretli bırakın, onun yükleyicisi eski eklentiyi kaldırır. Midi Fadester bu kurulumla yüklenmiyorsa, Visual Sidechain'i Windows'ta “Yüklü uygulamalar” bölümünden kaldırın.
 NoteStore=Fadester Companion'ın Microsoft Store sürümü zaten yüklü, bu yüzden bağımsız kopyanın işareti kaldırıldı: iki kopya OBS bağlantısı ve VJster'ın 48150 numaralı bağlantı noktası için çakışır.
 NoteVjsterClash=Bağımsız VJster eklentisi yüklü. Fadester for OBS zaten VJster'ı içerir; ikisi birlikte 48150 numaralı bağlantı noktası için çakışır. Bu yüzden bağımsız VJster eklentisini Stream Deck veya OpenDeck'ten kaldırın.

@@ -30,22 +30,22 @@
       <li>從開始功能表開啟 <strong>Fadester Companion</strong>。若使用 ZIP 壓縮檔，請完整解壓縮，再執行 <strong>Fadester Companion.exe</strong>。</li>
       <li>開啟 OBS。在 TourBox Console 中，使用預設清單旁的匯入按鈕載入 <code>presets/zh-TW/OBS Fadester for TourBox.tb</code>。關閉自動切換（<strong>Auto Switch</strong>）並選擇 <strong>OBS Fadester for TourBox</strong>：這樣無論前景是 OBS、Chrome 還是其他應用程式，一個預設都能使用。只有在保持 Auto Switch 開啟時，才需要將預設連結至 OBS；若要在 Chrome 位於前景時控制影片，也請連結至 Google Chrome。只需匯入所用語言的版本。 請使用 Fadester 中的<strong>匯入到 TourBox Console</strong>按鈕；請勿按兩下 <code>.tb</code> 檔案。</li>
       <li>在 OBS 開啟<strong>工具 → WebSocket 伺服器設定</strong>，啟用伺服器並開啟驗證。若要在 OBS Studio <strong>33</strong> 使用手動淡入淡出，請開啟<strong>工作室模式</strong>、選擇<strong>淡入淡出（Fade）</strong>轉場，並讓預覽與節目畫面之間的白色推桿保持可見。</li>
-      <li>在 Fadester 讀取 OBS 的場景和輸入來源。視需要輸入 OBS 的連接埠與密碼。在 TourBox Console 選擇 <strong>OBS Fadester for TourBox</strong>，接著在 Fadester 儲存設定並啟動控制。請保持 Fadester 開啟。</li>
+      <li>在 Fadester 讀取 OBS 的場景和輸入來源。視需要輸入 OBS 的連接埠與密碼。在 TourBox Console 選擇 <strong>OBS Fadester for TourBox</strong>。控制會自動啟動：視窗上方的<strong>控制</strong>指示燈若為綠色，TourBox 即可使用；若不是綠色，請按一下它旁邊的<strong>啟動</strong>。</li>
     </ol>
     <p>如果 Windows 使用其他顯示語言，請關閉 Fadester，然後在解壓縮後的資料夾中開啟 PowerShell，執行 <code>&amp; '.\Fadester Companion.exe' --language zh-TW</code>。</p>
 
     <h2>用兩個不同的場景練習</h2>
     <ul>
-      <li>轉動 <strong>Scroll</strong> 滾輪可更換預覽場景，節目輸出保持不變。按下滾輪可在面板中查看兩個場景的名稱。</li>
+      <li>轉動 <strong>Scroll</strong> 滾輪可更換預覽場景，節目輸出保持不變。按下滾輪可在<strong>活動紀錄</strong>分頁中查看兩個場景的名稱。</li>
       <li>緩慢轉動扁平的 <strong>Dial</strong> 轉盤，OBS 推桿會移動並混合兩個場景。要取消進行中的轉場，請按住 <strong>Side</strong> 再按下 <strong>Dial</strong>。順時針轉動時，推桿一律移向預覽，下一次轉場也一樣。一次轉場完成後，請稍候片刻再繼續轉動。</li>
       <li>在 Chrome 中播放 YouTube 影片（需要免費的 VJster 擴充功能）。轉動凸起的 <strong>Knob</strong> 旋鈕可改變速度，按住轉動可微調，按下可播放或暫停影片。輕按 <strong>Side</strong> 可將速度恢復為 1 倍。</li>
-      <li>VJster 只能控制 Chrome 中的 YouTube，無法控制 OBS 中的 YouTube 瀏覽器來源。請用 Chrome 的視窗擷取在 OBS 中顯示影片。 請新增 Chrome 的應用程式音訊擷取以取得聲音。</li>
+      <li>若要直接控制 OBS 中的 YouTube 影片，請在設定中填入該影片，按一下<strong>複製 OBS 瀏覽器來源 URL</strong>，再將網址貼到 OBS 的瀏覽器來源。</li>
       <li>在 Fadester 指定音樂輸入來源。按住 <strong>Side</strong> 並轉動扁平的 <strong>Dial</strong> 可調整其音量。按住 <strong>Top</strong> 時，Knob、Scroll 和 Dial 控制 VJ 圖層（混合模式與不透明度）。未選擇的圖層會在第一次使用時自動從正在播出的場景中選取（圖層 1 = 最上層的可見畫面，圖層 2 = 其下一層），並儲存到<strong>指派設定</strong>中。</li>
       <li>輕按 <strong>Short</strong> 只會查看錄影狀態。<strong>復原音訊變更</strong>位於 <strong>Tour</strong> 選單中。</li>
     </ul>
 
     <h2>調整整體混音</h2>
-    <p>在設定中啟用 OBS 混音器的所有輸入控制，然後儲存並啟動控制。按住 <strong>Side</strong> 並轉動 <strong>Knob</strong> 可調整群組音量。透過 <strong>Tour</strong> 選單可以將整體混音淡出至靜音，或恢復原有音量。已靜音的輸入來源會保持靜音。</p>
+    <p>在設定中啟用 OBS 混音器的所有輸入控制，然後按一下<strong>停止</strong>，再按一下<strong>啟動</strong>。按住 <strong>Side</strong> 並轉動 <strong>Knob</strong> 可調整群組音量。透過 <strong>Tour</strong> 選單可以將整體混音淡出至靜音，或恢復原有音量。已靜音的輸入來源會保持靜音。</p>
 
     <h2>取得協助</h2>
     <p>背景程序的診斷訊息以英文顯示。若控制沒有回應，請確認 TourBox Console 目前啟用的預設，並查看 Fadester 的活動記錄。</p>

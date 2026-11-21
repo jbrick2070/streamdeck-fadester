@@ -62,6 +62,20 @@ jobs:
         run: node --import tsx scripts/suite/package-candidate.ts
       - name: Run the full test suite against the built tree
         run: npm test
+      # The Elgato Marketplace edition is the same build under the Marketplace product's ID
+      # (com.jbrick2070.fadester-for-obs). It is packed from the tree built above, unpacked and started as Stream
+      # Deck starts it, so a package that cannot run under that ID never reaches an upload.
+      - name: Pack the Elgato Marketplace edition and start it as Stream Deck does
+        run: |
+          set -euo pipefail
+          node --import tsx scripts/suite/package-marketplace.ts
+          package=release/marketplace/com.jbrick2070.fadester-for-obs.streamDeckPlugin
+          test -f "$package"
+          unpacked="$RUNNER_TEMP/fadester-marketplace"
+          rm -rf "$unpacked"
+          mkdir -p "$unpacked"
+          unzip -q "$package" -d "$unpacked"
+          FADESTER_SMOKE_PLUGIN_DIR="$unpacked/com.jbrick2070.fadester-for-obs.sdPlugin" npx vitest run tests/suite-launch-smoke.test.ts
       - name: Identify developer artifacts
         run: |
           node --input-type=module <<'NODE'
@@ -74,6 +88,13 @@ jobs:
         with:
           name: Fadester-developer-candidate-${{ matrix.platform }}-${{ matrix.arch }}
           path: release/candidates/windows-macos/*
+          retention-days: 3
+          if-no-files-found: error
+          compression-level: 0
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: Fadester-for-OBS-Elgato-Marketplace-${{ matrix.platform }}-${{ matrix.arch }}
+          path: release/marketplace/*
           retention-days: 3
           if-no-files-found: error
           compression-level: 0

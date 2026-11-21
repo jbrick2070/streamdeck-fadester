@@ -28,7 +28,8 @@
     "test:obs-live": "node --import tsx tests/obs-live-conformance.ts",
     "pi:harness": "node --import tsx scripts/pi-harness.ts",
     "validate": "streamdeck validate io.github.jbrick2070.fadester-for-obs.sdPlugin",
-    "pack": "streamdeck pack io.github.jbrick2070.fadester-for-obs.sdPlugin --output release --force"
+    "pack": "streamdeck pack io.github.jbrick2070.fadester-for-obs.sdPlugin --output release --force",
+    "pack:marketplace": "node --import tsx scripts/suite/package-marketplace.ts"
   },
   "dependencies": {
     "@elgato/streamdeck": "3.0.3",

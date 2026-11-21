@@ -35,6 +35,18 @@ Prepare the package, name/description, release notes, support/setup links, a 192
 
 Use screenshots from the final approved UI and real hardware, not the fake-server harness as evidence of device verification. Keep a public setup/troubleshooting page explaining how to enable OBS WebSocket and connect, and how to install optional Midi Fadester and Visual Sidechain integrations. Publish only after the operator has approved the hardware pass and Elgato has completed its review.
 
+## The Elgato Marketplace edition
+
+The Marketplace product has had the ID `com.jbrick2070.fadester-for-obs` since 0.8. Every other download (GitHub, Suite Setup, OpenDeck) has been `io.github.jbrick2070.fadester-for-obs` since 0.10, because the OpenDeck catalogue asks for an ID on a domain the author controls. Maker Console refuses a package whose ID is not the product's, and Stream Deck stores a person's keys under the plugin's ID, so an update on the Marketplace must keep the old one. The two editions are the same code and the same nineteen actions.
+
+`npm run build`, then `npm run pack:marketplace` (`scripts/suite/package-marketplace.ts`) writes `release/marketplace/com.jbrick2070.fadester-for-obs.streamDeckPlugin` and `MARKETPLACE.json` (version, checksum). The script copies the built plugin folder, writes the Marketplace ID into every file that names the other one (the manifest, the code, the settings pages, the language files, the layouts and the actions inside the fourteen profiles), and stops unless: no file names the other ID any more, the actions are the same as in the folder it was made from, and the ten actions of 0.8 are all still there (a key placed with 0.8 must find its action after the update). Elgato's own tool then validates and packs it. Nothing is installed, uploaded or published.
+
+Both workflows pack it and start it as Stream Deck does, on Windows and on macOS: `streamdeck-cross-platform.yml` on every pull request and push (artifact `Fadester-for-OBS-Elgato-Marketplace-<platform>-<arch>`, kept 3 days) and `release.yml` on a tag (artifact `marketplace-fadester-for-obs-<platform>-<arch>`, kept 30 days). It is never attached to the GitHub release: two editions of one plugin would be offered side by side there.
+
+For an upload: check in Maker Console which version and ID the product has today; use the tag's Windows artifact; **Create version**, upload the file, write the release notes from `CHANGELOG.md`; the listing's pictures and video must show this version's window. Publishing there is the owner's word, as every release is.
+
+Known limits. Stream Deck holds the two editions as two plugins: a computer should have one of them (README, "When something is off"). Suite Setup looks only for the GitHub edition, so on a computer that has the Marketplace edition it offers its own copy as well. The Marketplace edition is for Elgato's Stream Deck software only; OpenDeck gets the other ID.
+
 ## Public introduction after final acceptance
 
 The operator wants an OBS Reddit introduction only when the workflow is final and a sizzle video introduces all three plugins. First complete the hardware pass and remaining UI changes, then capture the finished workflow. A short sequence can introduce Midi's shared controls, show Stream Deck configuring and operating them, and finish with Visual Sidechain's reactive effects and Clean. Prepare the post around that real demonstration and obtain the operator's approval before posting. No video production or public posting is part of this integration pass.

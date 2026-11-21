@@ -134,6 +134,7 @@ A robot (a cue list or an AI agent) uses the same doors through the API, or thro
 | **PANIC SENT** | Visual Sidechain's Panic is on. Hold **Restore visuals** for 0.8 s to bring the effects back. |
 | A key changed the picture on Program in Studio Mode | A scene's content is shared: when Preview and Program show the same scene, layer edits change both. The control is framed red and labels that scene PROGRAM. |
 | A numbered scene key does nothing | OBS has fewer scenes than the number. Add a scene, or pin the key to a named scene in its settings page. |
+| *Fadester for OBS* is listed twice in Stream Deck's actions | The plugin from the Elgato Marketplace and the one from this page are the same plugin under two IDs, and Stream Deck holds them as two. Keep one and remove the other in Stream Deck. Keys keep the copy they were placed with, so re-place the keys of the copy you remove. |
 
 When OBS goes away, the plugin reconnects by itself and every key shows the same short reason, with a broken-link picture.
 

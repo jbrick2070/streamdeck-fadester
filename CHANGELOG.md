@@ -46,6 +46,7 @@ Fadester Companion stays 0.1.17 until the release sets its number.
 - The OBS light has **Open OBS** and, when Studio Mode is off, **Turn on**. The OBS port fills itself in from OBS, as the password does.
 - Mac: Edit, Window and About menus (Command-V works in the fields), a status line of two lines, and a short read-me for users in the ZIP.
 - The version is in the title of every window and on the last line of the quick guide.
+- **Open when I sign in**, a tick box under the buttons, off until you tick it. Windows ZIP and installer: a start-up entry for your account (Task Manager and Settings → Apps → Startup list it and can switch it off). Microsoft Store: the package's own start-up task. Mac (macOS 13 or later): a login item, listed in System Settings → General → Login Items.
 - A shorter Setup page on Windows and on the Mac: each numbered step is one sentence and its button. The OBS port and password, the long explanations, **All OBS mixer inputs** and **VJster** are folded away behind **Details** or **Show**; a closed section says its state in a few words ("Off", "On, Chrome & OBS page, port 48150"). A part opens by itself when its light needs it (OBS refuses the password or does not answer; the VJster light is amber or red), and the window remembers which parts you left open. **Assign your inputs** is one sentence with an **Assignments** button.
 
 #### Changed

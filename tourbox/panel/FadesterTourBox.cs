@@ -77,6 +77,8 @@ namespace Fadester.TourBox {
         return GetCurrentPackageFamilyName(ref length,name)==0 ? name.ToString() : null;
       } catch(EntryPointNotFoundException) { return null; } // Windows 7 has no packages
     }
+    /** Whether this is the Microsoft Store package (its start with Windows is a start-up task, not a Run value: SignIn.cs). */
+    internal static bool Packaged { get { return PackageFamily()!=null; } }
     /** Where Windows keeps, for a package, a folder the app asked for under %LOCALAPPDATA%; null for a folder elsewhere. */
     internal static string Redirected(string dir,string localAppData,string family) {
       string local=localAppData.TrimEnd('\\');
@@ -205,6 +207,8 @@ namespace Fadester.TourBox {
     // Ending: the bridge the panel is ending, so whichever sees it exit first says so in the same words.
     Process stopTimedOut, ending;
     CheckBox enableMix, mixOnly, enableVjster, enableGamepad, easyMode;
+    // "Open when I sign in": off until ticked; the box shows what Windows reports (SignIn.cs).
+    CheckBox signIn; bool settingSignIn;
     // The game controller tab, from presets/gamepad.json (checked against the bridge by its self-test).
     DataGridView padGrid; ComboBox fastSpeed, slowSpeed;
     string[] padControls = new string[0], padOnly = new string[0];
@@ -230,6 +234,7 @@ namespace Fadester.TourBox {
       PanelText.Test();
       Readiness.Test();
       Theme.Test();
+      SignInStart.Test();
       VjsterObsPage.Test();
       // The wheel over a closed drop-down or number box scrolls the page and leaves the value alone.
       using (var page=new Panel {AutoScroll=true,Size=new Size(200,100)}) {
@@ -266,7 +271,7 @@ namespace Fadester.TourBox {
       foreach (var locale in PanelText.AllLocales) {
         using (var w = new PanelWindow(new PanelText(locale), true)) {
           w.ShowStatus(); w.ShowStartButton();
-          if (w.start.Text.Length == 0 || w.tray != null || w.obsLight == null) throw new Exception("window " + locale);
+          if (w.start.Text.Length == 0 || w.tray != null || w.obsLight == null || w.signIn.Checked || w.signIn.Text.Length == 0) throw new Exception("window " + locale);
         }
       }
       // The assignment lists show words for "none" and for a name OBS no longer has; what is saved stays the name.
@@ -359,7 +364,7 @@ namespace Fadester.TourBox {
       Font=new Font("Segoe UI",10); BackColor=Color.White; StartPosition=FormStartPosition.CenterScreen;
       var grid=new TableLayoutPanel {Dock=DockStyle.Fill,ColumnCount=1,RowCount=5, Padding=new Padding(14)};
       grid.RowStyles.Add(new RowStyle(SizeType.Absolute,100)); grid.RowStyles.Add(new RowStyle(SizeType.AutoSize)); grid.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-      grid.RowStyles.Add(new RowStyle(SizeType.Percent,100)); grid.RowStyles.Add(new RowStyle(SizeType.Absolute,104));
+      grid.RowStyles.Add(new RowStyle(SizeType.Percent,100)); grid.RowStyles.Add(new RowStyle(SizeType.Absolute,128));
       grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100)); // the window's width bounds every row, so the lights wrap
       Controls.Add(grid);
       var head=new Panel {Dock=DockStyle.Fill,BackColor=navy,Padding=new Padding(12)};
@@ -512,13 +517,15 @@ namespace Fadester.TourBox {
       AddButton(bar,text.Get("guide"),delegate { OpenPath(text.GuidePath(folder)); });
       // Shown only when config.json cannot be read, so the file can be found and repaired (a Store install keeps it elsewhere).
       openSettings=AddButton(bar,text.Get("openSettings"),delegate { OpenPath(SettingsFolder.Holding(settings)); }); openSettings.Visible=false;
+      signIn=new CheckBox {Text=text.Get("openAtSignIn"),AutoSize=true,UseMnemonic=false,Margin=new Padding(6,0,3,0)};
+      signIn.CheckedChanged+=async delegate { if(!settingSignIn) await SetSignIn(signIn.Checked); };
       // Always in view under the buttons (it used to sit at the bottom of a long Setup page), matching the Mac panel's footer.
-      var footer=new TableLayoutPanel {Dock=DockStyle.Fill,ColumnCount=1,RowCount=2,Margin=new Padding(0)};
+      var footer=new TableLayoutPanel {Dock=DockStyle.Fill,ColumnCount=1,RowCount=3,Margin=new Padding(0)};
       footer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));
-      footer.RowStyles.Add(new RowStyle(SizeType.Percent,100)); footer.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+      footer.RowStyles.Add(new RowStyle(SizeType.Percent,100)); footer.RowStyles.Add(new RowStyle(SizeType.AutoSize)); footer.RowStyles.Add(new RowStyle(SizeType.AutoSize));
       var keepOpen=new Label {Text=text.Get("keepOpen"),AutoSize=true,UseMnemonic=false,ForeColor=Color.FromArgb(90,98,112),Margin=new Padding(4,2,4,0)};
       footer.ClientSizeChanged+=delegate { keepOpen.MaximumSize=new Size(Math.Max(200,footer.ClientSize.Width-12),0); };
-      footer.Controls.Add(bar,0,0); footer.Controls.Add(keepOpen,0,1);
+      footer.Controls.Add(bar,0,0); footer.Controls.Add(signIn,0,1); footer.Controls.Add(keepOpen,0,2);
       grid.Controls.Add(footer,0,4);
       Theme.Apply(this,navy,accent,stopRed);
       ShowStatus();
@@ -530,7 +537,7 @@ namespace Fadester.TourBox {
         // Never taller or wider than the screen it opens on (a 1080p laptop at 150 % has less room than the window asks for).
         var room=Screen.FromControl(this).WorkingArea;
         if(Width>room.Width || Height>room.Height){ Size=new Size(Math.Min(Width,room.Width),Math.Min(Height,room.Height)); Location=new Point(room.Left+(room.Width-Width)/2,room.Top+(room.Height-Height)/2); }
-        if(inert) return; ListenForShow(); ReadFolds(); ReadSettings(); ReadMap(); ReadPad(); Watch(); watch.Start(); if(!invalidConfig) await Connect(); };
+        if(inert) return; ListenForShow(); ReadFolds(); var signInRead=ReadSignIn(); ReadSettings(); ReadMap(); ReadPad(); Watch(); watch.Start(); if(!invalidConfig) await Connect(); };
       FormClosing+=async (s,e)=>{
         if(inert) return;
         Entry.Log("closing: "+e.CloseReason+(worker==null?"":", controls running")); if(worker==null)return;
@@ -547,6 +554,24 @@ namespace Fadester.TourBox {
         e.Cancel=true; if(closing)return; closing=true; await StopControls(); closing=false;
         if(worker==null)Close(); else { quitting=false; ShowFromTray(); Note(text.Get("stillClosing")); }
       };
+    }
+    void ShowSignIn(SignInState state) { if(IsDisposed) return; settingSignIn=true; signIn.Checked=state==SignInState.On; settingSignIn=false; }
+    /** The box shows what Windows has: its own switch (Settings → Apps → Startup, Task Manager) may have changed since. */
+    async Task ReadSignIn() {
+      bool packaged=SettingsFolder.Packaged; string exe=Application.ExecutablePath;
+      try { ShowSignIn(await Task.Run(()=>SignInStart.Read(packaged,exe))); }
+      catch(Exception e) { Entry.Log("sign-in state: "+e.Message); }
+    }
+    /** Ticked or cleared by the user. When Windows has it switched off, only Windows' own page turns it on: say so and open it. */
+    async Task SetSignIn(bool on) {
+      bool packaged=SettingsFolder.Packaged; string exe=Application.ExecutablePath;
+      signIn.Enabled=false;
+      try {
+        var now=await Task.Run(()=>SignInStart.Set(packaged,exe,on));
+        ShowSignIn(now);
+        if(on && now==SignInState.Blocked){ Note(text.Get("signInSettings")); OpenPath("ms-settings:startupapps"); }
+      } catch(Exception e) { Entry.Log("sign-in: "+e); ShowSignIn(SignInState.Off); Note(text.Get("signInFailed",e.Message)); }
+      finally { if(!IsDisposed) signIn.Enabled=true; }
     }
     /** Whether closing the window only hides it: the user's own close, with the controls on and an icon to come back from. */
     internal static bool HidesOnClose(bool userClosing,bool controlsOn,bool quitting,bool hasTray) { return userClosing && controlsOn && !quitting && hasTray; }

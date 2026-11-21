@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import AppKit
+import ServiceManagement
 import ApplicationServices
 
 private func rgb(_ red: CGFloat, _ green: CGFloat, _ blue: CGFloat) -> NSColor { NSColor(srgbRed: red / 255, green: green / 255, blue: blue / 255, alpha: 1) }
@@ -267,6 +268,8 @@ private final class PillActionButton: NSControl {
     private let host = HostController()
     private var hud: FeedbackHud?
     private var importGuideWindow: TourBoxImportWindow?
+    /// "Open when I sign in" (U3-06): a login item of the app itself, off until ticked. macOS 13 and later.
+    private var openAtLogin = NSButton(checkboxWithTitle: L("openAtSignIn"), target: nil, action: nil)
     /// The folded parts of the Setup page, and which of them the user left open (a preference of this window, not a setting of the controls).
     private var folds: [SetupFold] = []
     private var obsFold: SetupFold?, mixFold: SetupFold?, vjFold: SetupFold?
@@ -550,6 +553,12 @@ private final class PillActionButton: NSControl {
         let feedbackButton = button(L("feedback"), #selector(toggleFeedback))
         let guideButton = button(L("guide"), #selector(guide))
         root.addArrangedSubview(horizontal([primaryButton, saveButton, feedbackButton, guideButton]))
+        // The box shows what macOS has: System Settings → General → Login Items can switch it off too.
+        if #available(macOS 13.0, *) {
+            openAtLogin.target = self; openAtLogin.action = #selector(openAtLoginToggled)
+            openAtLogin.state = !previewMode && SMAppService.mainApp.status == .enabled ? .on : .off
+            root.addArrangedSubview(openAtLogin)
+        }
         root.addArrangedSubview(label(L("macKeepOpen"), small: true))
 
         vjster.target = self; vjster.action = #selector(vjsterToggled)
@@ -969,6 +978,24 @@ private final class PillActionButton: NSControl {
     @objc private func layer1Changed() { fill("layer1Source", catalog.items[selected("layer1Scene")] ?? [], keep: "") }
     @objc private func layer2Changed() { fill("layer2Source", catalog.items[selected("layer2Scene")] ?? [], keep: "") }
     @objc private func vjsterToggled() { refreshIndicators() }
+    /// Ticked or cleared by the user. The app registers itself as a login item (no helper, no entitlement); when macOS
+    /// wants the user's approval, say so and open Login Items.
+    @objc private func openAtLoginToggled() {
+        guard #available(macOS 13.0, *), !previewMode else { return }
+        let service = SMAppService.mainApp
+        let wanted = openAtLogin.state == .on
+        do {
+            if wanted { try service.register() } else { try service.unregister() }
+        } catch {
+            let message = L("signInFailed", error.localizedDescription)
+            setStatus(message); note(message)
+        }
+        if wanted && service.status == .requiresApproval {
+            setStatus(L("macLoginApprove")); note(L("macLoginApprove"))
+            SMAppService.openSystemSettingsLoginItems()
+        }
+        openAtLogin.state = service.status == .enabled ? .on : .off
+    }
     @objc private func mixToggled() {
         if mix.state != .on { mixOnly.state = .off }
         updateEnabled()

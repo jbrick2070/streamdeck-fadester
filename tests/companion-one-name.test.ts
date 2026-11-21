@@ -127,4 +127,30 @@ describe("Fadester Companion has one name on every file", () => {
       expect(text, workflow).toContain("build.ps1 -OutDir $out -Version $v");
     }
   });
+
+  it("gives the Store package the release's version when none is passed, never a fixed one", () => {
+    // make-msix.ps1 had -Version = '0.1.1.0', the first package ever submitted: only the workflows, which pass the
+    // number, built the right one, and a run by hand built 0.1.1.0 whatever the release was.
+    const msix = read("tourbox/store/make-msix.ps1");
+    const params = msix.split(/\r?\n/).find((line) => line.startsWith("param("));
+    expect(params).toBeDefined();
+    expect(params).toContain("[string]$Version,");
+    expect(params).not.toMatch(/\$Version\s*=/);
+    expect(msix).not.toMatch(/\$Version\s*=\s*'\d/);
+    // The default is read where build.ps1 reads it, in the four-part form the Store wants, before the form is checked.
+    const fallback = "$Version = \"$((Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $PSScriptRoot '..\\..\\installer\\components.json') | ConvertFrom-Json).components.companion.version).0\"";
+    expect(msix).toContain(`if (-not $Version) {`);
+    expect(msix).toContain(fallback);
+    expect(msix.indexOf(fallback)).toBeLessThan(msix.indexOf("if ($Version -notmatch"));
+    // The manifest holds a placeholder, so no number can be left behind in it.
+    expect(read("tourbox/store/AppxManifest.xml")).toContain('Version="$VERSION$"');
+    expect(msix).toContain(".Replace('$VERSION$', $Version)");
+    // A release never depends on the default: both workflows still pass the number.
+    for (const workflow of [".github/workflows/release.yml", ".github/workflows/tourbox-windows.yml"]) {
+      expect(read(workflow), workflow).toContain('-Version "$v.0"');
+    }
+    // And today's number has the form the script accepts.
+    const release = (JSON.parse(read("installer/components.json")) as { components: { companion: { version: string } } }).components.companion.version;
+    expect(`${release}.0`).toMatch(/^\d{1,5}\.\d{1,5}\.\d{1,5}\.0$/);
+  });
 });

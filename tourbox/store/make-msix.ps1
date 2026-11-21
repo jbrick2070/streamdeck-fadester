@@ -2,13 +2,20 @@
 # Builds the Microsoft Store package (MSIX) of the companion as Fadester Companion from a finished tourbox\build.ps1
 # build. The package is unsigned: the Store signs it after certification. For a local try, -Register registers the
 # unpacked layout with Windows instead (needs Developer Mode; remove it again with Remove-AppxPackage).
-# The Store refuses a second package with the same version and different contents, even within one draft:
-# raise -Version for every package you upload (0.1.1.0 was the first one submitted). An existing package of the same
-# version is never replaced unless -Overwrite is given. Only a build that build.ps1 finished (build-complete.txt beside
-# its 'Fadester Companion' folder) is used; a folder extracted from a release ZIP is refused.
-#   .\make-msix.ps1 [-Build "...\dist\build-...\Fadester Companion"] [-Version 0.1.1.0] [-Register] [-Overwrite]
-param([string]$Build, [string]$Version = '0.1.1.0', [string]$OutDir = (Join-Path $PSScriptRoot '..\dist'), [switch]$Register, [switch]$Overwrite)
+# The version is the release's own. Without -Version it is Fadester Companion's in installer\components.json with
+# ".0" added (1.5.0 gives 1.5.0.0), as tourbox\build.ps1 reads it and as the workflows pass it; -Version overrides it.
+# (Until 1.5.0 the default was a fixed 0.1.1.0, the first package ever submitted, so a run by hand built that number.)
+# The Store refuses a second package with the same version and different contents, even within one draft: a package
+# that changed after an upload needs a higher number, so raise the Companion's version or pass a higher -Version.
+# An existing package of the same version is never replaced unless -Overwrite is given. Only a build that build.ps1
+# finished (build-complete.txt beside its 'Fadester Companion' folder) is used; a folder extracted from a release ZIP
+# is refused.
+#   .\make-msix.ps1 [-Build "...\dist\build-...\Fadester Companion"] [-Version 1.5.0.0] [-Register] [-Overwrite]
+param([string]$Build, [string]$Version, [string]$OutDir = (Join-Path $PSScriptRoot '..\dist'), [switch]$Register, [switch]$Overwrite)
 $ErrorActionPreference = 'Stop'
+if (-not $Version) {
+  $Version = "$((Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $PSScriptRoot '..\..\installer\components.json') | ConvertFrom-Json).components.companion.version).0"
+}
 # The Store wants Major.Minor.Build with the fourth number 0.
 if ($Version -notmatch '^\d{1,5}\.\d{1,5}\.\d{1,5}\.0$' -or ($Version.Split('.') | Where-Object { [int]$_ -gt 65535 })) {
   throw "Version must look like 0.1.0.0 (each number up to 65535, the last 0), not $Version."

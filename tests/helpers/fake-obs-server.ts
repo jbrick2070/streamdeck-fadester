@@ -159,6 +159,37 @@ export const FAKE_HOTKEY_NAMES = [
 const NATIVE_TBAR_TOP = 1023;
 const NATIVE_TBAR_CLAMP = 102;
 
+/**
+ * obs-websocket's event categories (EventSubscription). A client gets an event only when the mask it sent in Identify
+ * has the event's category; without a mask it gets every category below the high-volume ones (All).
+ */
+export const FAKE_EVENT_CATEGORY = {
+  General: 1 << 0, Config: 1 << 1, Scenes: 1 << 2, Inputs: 1 << 3, Transitions: 1 << 4, Filters: 1 << 5,
+  Outputs: 1 << 6, SceneItems: 1 << 7, MediaInputs: 1 << 8, Vendors: 1 << 9, Ui: 1 << 10,
+  InputVolumeMeters: 1 << 16, InputActiveStateChanged: 1 << 17, InputShowStateChanged: 1 << 18, SceneItemTransformChanged: 1 << 19
+} as const;
+export const FAKE_EVENT_SUBSCRIPTION_ALL = (1 << 11) - 1;
+
+/** The category obs-websocket 5 files an event type under. */
+export function fakeEventCategory(eventType: string): number {
+  const c = FAKE_EVENT_CATEGORY;
+  if (eventType === "VendorEvent") return c.Vendors;
+  if (eventType === "StudioModeStateChanged" || eventType === "ScreenshotSaved") return c.Ui;
+  if (eventType === "InputVolumeMeters") return c.InputVolumeMeters;
+  if (eventType === "InputActiveStateChanged") return c.InputActiveStateChanged;
+  if (eventType === "InputShowStateChanged") return c.InputShowStateChanged;
+  if (eventType === "SceneItemTransformChanged") return c.SceneItemTransformChanged;
+  if (/^(CurrentSceneCollection|SceneCollectionList|CurrentProfile|ProfileList)/.test(eventType)) return c.Config;
+  if (/^(CurrentSceneTransition|SceneTransition)/.test(eventType)) return c.Transitions;
+  if (eventType.startsWith("SceneItem")) return c.SceneItems;
+  if (eventType.startsWith("SourceFilter")) return c.Filters;
+  if (eventType.startsWith("MediaInput")) return c.MediaInputs;
+  if (eventType.startsWith("Input")) return c.Inputs;
+  if (/^(Scene|CurrentProgramScene|CurrentPreviewScene)/.test(eventType)) return c.Scenes;
+  if (/^(Stream|Record|ReplayBuffer|VirtualCam)/.test(eventType)) return c.Outputs;
+  return c.General;
+}
+
 /** Every request type `handleObsRequest` answers; `GetVersion.availableRequests` by default. */
 const FAKE_REQUEST_TYPES = [
   "GetVersion", "GetStudioModeEnabled", "SetStudioModeEnabled", "GetSceneList", "GetInputList", "GetInputKindList",
@@ -1239,22 +1270,27 @@ export class FakeObsServer {
     eventData: Record<string, unknown>,
     vendorName: string = FADESTER_VENDOR_NAME
   ): void {
-    const payload = JSON.stringify({
-      op: 5,
-      d: {
-        eventType: "VendorEvent",
-        eventIntent: 1 << 9,
-        eventData: {
-          vendorName,
-          eventType,
-          eventData
-        }
-      }
-    });
+    this.sendEvent("VendorEvent", { vendorName, eventType, eventData });
+  }
+
+  /** The event mask each identified client asked for (Identify's `eventSubscriptions`). */
+  private readonly subscriptions = new WeakMap<WebSocket, number>();
+  /** How many clients each emitted event type was held back from, for a mask without its category. */
+  public readonly eventsNotSubscribed = new Map<string, number>();
+
+  /** As obs-websocket does: only to identified clients, and only to those whose mask has the event's category. */
+  private sendEvent(eventType: string, eventData: Record<string, unknown>): void {
+    const category = fakeEventCategory(eventType);
+    const payload = JSON.stringify({ op: 5, d: { eventType, eventIntent: category, eventData } });
     for (const c of this.clients) {
-      if (c.readyState === WebSocket.OPEN) {
-        c.send(payload);
+      if (c.readyState !== WebSocket.OPEN) continue;
+      const mask = this.subscriptions.get(c);
+      if (mask === undefined) continue;
+      if ((mask & category) === 0) {
+        this.eventsNotSubscribed.set(eventType, (this.eventsNotSubscribed.get(eventType) ?? 0) + 1);
+        continue;
       }
+      c.send(payload);
     }
   }
 
@@ -1318,19 +1354,7 @@ export class FakeObsServer {
     eventType: string,
     eventData: Record<string, unknown>
   ): void {
-    const payload = JSON.stringify({
-      op: 5,
-      d: {
-        eventType,
-        eventIntent: 1 << 2,
-        eventData
-      }
-    });
-    for (const c of this.clients) {
-      if (c.readyState === WebSocket.OPEN) {
-        c.send(payload);
-      }
-    }
+    this.sendEvent(eventType, eventData);
   }
 
   /** Sends this text frame, as it is, to every connected client: for frames OBS itself would never send. */
@@ -1354,11 +1378,18 @@ export class FakeObsServer {
           return;
         }
       }
+      const wanted = msg.d.eventSubscriptions;
+      this.subscriptions.set(ws, typeof wanted === "number" ? wanted : FAKE_EVENT_SUBSCRIPTION_ALL);
       ws.send(JSON.stringify({ op: 2, d: { negotiatedRpcVersion: 1 } }));
       return;
     }
 
     if (msg.op === 6) {
+      // A request before Identify: obs-websocket closes with NotIdentified.
+      if (!this.subscriptions.has(ws)) {
+        ws.close(4007, "You attempted to send a message without first sending `Identify` parameters.");
+        return;
+      }
       const requestId = String(msg.d.requestId ?? "");
       const requestType = String(msg.d.requestType ?? "");
       const requestData = (msg.d.requestData ?? {}) as Record<string, unknown>;
@@ -2074,7 +2105,7 @@ export class FakeObsServer {
               }
               this.visualSidechainSignals = {
                 ...this.visualSidechainSignals,
-                bpm: Math.max(60, Math.min(200, rawBpm))
+                bpm: Math.max(30, Math.min(300, rawBpm)) // Visual Sidechain's own range
               };
             } else if (vReqType === "lock_bpm") {
               const nextLocked = typeof vReqData.locked === "boolean"
@@ -2153,7 +2184,11 @@ export class FakeObsServer {
         requestType: vReqType,
         responseData
       });
+      return;
     }
+
+    // A request type this model does not have: obs-websocket answers UnknownRequestType at once (never silence).
+    this.sendResponse(ws, requestId, requestType, false, 204, "Your request type is not valid.");
   }
 
   private handleVendorCall(

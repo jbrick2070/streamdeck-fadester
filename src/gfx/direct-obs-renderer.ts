@@ -12,7 +12,7 @@ import {
   textWidth
 } from "../../packages/streamdeck-fadester-shared/src/text-fit.js";
 import { PLAYLISTER_PALETTE as P } from "../../packages/streamdeck-fadester-shared/src/palette.js";
-import { formatNumber, t } from "../i18n/strings.js";
+import { formatNumber, localeTag, t } from "../i18n/strings.js";
 import type { AccentName } from "../types/settings.js";
 
 export { textFitAttributes, toSvgDataUri, toStripUri };
@@ -34,7 +34,7 @@ export function accentColor(accent: AccentName | undefined): string {
   return ACCENT_COLORS[accent ?? "default"] ?? ACCENT_COLORS.default;
 }
 
-export type DirectKeyIcon = "scene" | "next" | "previous" | "shuffle" | "cut" | "take"
+export type DirectKeyIcon = "scene" | "next" | "previous" | "shuffle" | "cut" | "transition"
   | "volume-up" | "volume-down" | "source-next" | "source-previous" | "show" | "hide"
   | "layer-up" | "layer-down" | "blend" | "reset"
   | "media-previous" | "media-next" | "play-pause" | "stop" | "restart" | "status"
@@ -71,9 +71,21 @@ export interface DirectKeyRenderInput {
   accent?: AccentName;
   /** A large state word in place of the subtitle (a Look key's ON or OFF). */
   badge?: { text: string; on: boolean };
+  /**
+   * The key's scene is on air now: on Program (a red frame and the word for Program at the top), or in Preview in
+   * Studio Mode (green). Frame and word together, so it is not told by colour alone. Drawn only on a working key.
+   */
+  onAir?: "program" | "preview";
 }
 
 const LATIN = "Segoe UI,Arial,sans-serif";
+
+/** The width the on-air word (PROGRAM, PREVIEW) is fitted to on a key's tag. */
+export const ON_AIR_TAG_TEXT_WIDTH = 68;
+
+/** OBS cannot be reached: two halves of a chain link pulled apart, used for nothing else. */
+const KEY_BROKEN_LINK_GLYPH =
+  '<path d="M54 28h-7a7 7 0 0 0 0 14h7"/><path d="M66 28h7a7 7 0 0 1 0 14h-7"/><path d="M57 48l6-26"/>';
 
 /** A text shortened by width (never by character count), squeezed into its
  * box, and its font list (CJK fonts for CJK text): `font-family` and fit attributes, then the content. */
@@ -160,18 +172,26 @@ function renderSceneMixerSvg(input: DirectDialRenderInput): string {
 
 export function renderDirectKeySvg(input: DirectKeyRenderInput): string {
   const unavailable = !input.connected || Boolean(input.problem);
+  // No OBS at all is not one key's problem: every key says the same thing, so it says it large (what to do, in the
+  // title's place) with a picture of its own, a broken link, and keeps its name in the small band. A problem of the
+  // key itself (its scene is gone, it needs Studio Mode) keeps the name large and the warning triangle.
+  const offline = input.configured && !input.connected;
+  const onAir = input.configured && !unavailable ? input.onAir : undefined;
+  const onAirColor = onAir === "program" ? P.programRed : P.previewGreen;
   const border = !input.configured
     ? P.trackBorder
     : unavailable
       ? "#df6d38"
-      : accentColor(input.accent);
-  const title = input.configured
+      : onAir ? onAirColor : accentColor(input.accent);
+  const ownTitle = input.configured
     ? input.title || t("keyDefaultTitle")
     : input.unboundSubtitle ? input.title || t("keyChooseAction") : t("keyChooseAction");
+  const offlineReason = input.reason || t("obsNotConnected");
+  const title = offline ? offlineReason : ownTitle;
   const subtitle = !input.configured
     ? input.unboundSubtitle || t("keyOpenInspector")
-    : !input.connected
-      ? input.reason || t("obsNotConnected")
+    : offline
+      ? ownTitle
       : input.problem || input.subtitle || t("keyReady");
   const icon = input.icon || "scene";
   const titleLayout = keyTitleLines(title);
@@ -183,17 +203,24 @@ export function renderDirectKeySvg(input: DirectKeyRenderInput): string {
   const glyphColor = hasAccent(input.accent) ? accentColor(input.accent) : P.accentYellow;
   const glyph = !input.configured
     ? `<path d="M60 21v28M46 35h28"/>`
-    : unavailable
-      ? '<path d="M60 19 80 52H40Z"/><path d="M60 29v10m0 6v1"/>'
-      : keyGlyph(icon, glyphColor);
+    : offline
+      ? KEY_BROKEN_LINK_GLYPH
+      : unavailable
+        ? '<path d="M60 19 80 52H40Z"/><path d="M60 29v10m0 6v1"/>'
+        : keyGlyph(icon, glyphColor);
   const badge = input.badge && input.configured && !unavailable ? input.badge : undefined;
   const badgeText = badge ? boxText(badge.text, 13, 96) : undefined;
+  // The on-air word, in OBS's own terms and in capitals, on a tag across the top edge.
+  const onAirText = onAir ? boxText(t(onAir === "program" ? "cellProgram" : "cellPreview").toLocaleUpperCase(localeTag()), 9, ON_AIR_TAG_TEXT_WIDTH) : undefined;
   return [
-    `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" data-icon="${icon}">`,
-    `<title>${escapeXml(title)} — ${escapeXml(subtitle)}</title>`,
-    `<rect x="3" y="3" width="114" height="114" rx="14" fill="${P.bgTop}" stroke="${border}" stroke-width="3"/>`,
-    `<rect x="31" y="12" width="58" height="44" rx="13" fill="${P.trackBg}"/>`,
-    `<g fill="none" stroke="${unavailable && input.configured ? P.orangeAccent : glyphColor}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">${glyph}</g>`,
+    `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" data-icon="${icon}"${onAir ? ` data-on-air="${onAir}"` : ""}${offline ? ' data-offline="true"' : ""}>`,
+    `<title>${escapeXml(ownTitle)} — ${escapeXml(offline ? offlineReason : subtitle)}</title>`,
+    `<rect x="${onAir ? 4 : 3}" y="${onAir ? 4 : 3}" width="${onAir ? 112 : 114}" height="${onAir ? 112 : 114}" rx="14" fill="${P.bgTop}" stroke="${border}" stroke-width="${onAir ? 5 : 3}"/>`,
+    `<rect x="31" y="${onAir ? 19 : 12}" width="58" height="${onAir ? 37 : 44}" rx="13" fill="${P.trackBg}"/>`,
+    `<g fill="none" stroke="${unavailable && input.configured ? P.orangeAccent : glyphColor}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"${onAir ? ' transform="translate(0 3)"' : ""}>${glyph}</g>`,
+    onAir && onAirText
+      ? `<rect x="22" y="2" width="76" height="15" rx="7" fill="${onAirColor}"/><text x="60" y="13" text-anchor="middle" fill="${P.bgTop}" ${onAirText.attrs} font-weight="800">${onAirText.text}</text>`
+      : "",
     titleMarkup,
     badge && badgeText
       ? `<rect x="9" y="93" width="102" height="20" rx="6" fill="${badge.on ? glyphColor : P.trackBg}" stroke="${glyphColor}" stroke-width="3"/><text x="60" y="108" text-anchor="middle" fill="${badge.on ? P.bgTop : P.whiteGlyph}" ${badgeText.attrs} font-weight="800">${badgeText.text}</text>`
@@ -773,7 +800,7 @@ function keyGlyph(icon: DirectKeyIcon, color: string = P.accentYellow): string {
     case "source-next": return '<path d="M45 18h27v6M45 50h27v-6"/>' + arrow(false);
     case "shuffle": return '<path d="M43 24h7l20 22h7m-8-7 8 7-8 5M43 46h7l20-22h7m-8-5 8 5-8 7"/>';
     case "cut": return '<path d="M43 25h11v20H43zm23 0h11v20H66zM60 18v34"/>';
-    case "take": return '<path d="m51 22 22 13-22 13Z"/>';
+    case "transition": return '<path d="m51 22 22 13-22 13Z"/>';
     case "volume-up":
     case "volume-down": return '<path d="M41 30h7l10-8v26l-10-8h-7Z"/>' +
       (icon === "volume-up" ? '<path d="M66 35h14m-7-7v14"/>' : '<path d="M66 35h14"/>');

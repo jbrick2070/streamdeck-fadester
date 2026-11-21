@@ -382,8 +382,8 @@ export const MUTATIONS: readonly Mutation[] = [
     id: "M-V-43",
     rule: "a page that is left says its video is gone",
     file: "vjster-extension/src/bridge-core.ts",
-    from: "  win.addEventListener(\"pagehide\", () => toWorker(",
-    to: "  win.addEventListener(\"pagehide-never\" as \"pagehide\", () => toWorker(",
+    from: "  win.addEventListener(\"pagehide\", () => {",
+    to: "  win.addEventListener(\"pagehide-never\" as \"pagehide\", () => {",
     tests: ["tests/vjster-ext-wiring.test.ts"]
   },
   {
@@ -422,8 +422,8 @@ export const MUTATIONS: readonly Mutation[] = [
     id: "M-V-48",
     rule: "a link that opens asks every tab for fresh state",
     file: "vjster-extension/src/router.ts",
-    from: "    this.deps.refreshTabs();\n    this.pushTarget(null);",
-    to: "    this.pushTarget(null);",
+    from: "    this.deps.refreshTabs();\n    // A new link knows nothing",
+    to: "    // A new link knows nothing",
     tests: ["tests/vjster-ext-router.test.ts", "tests/vjster-ext-link.test.ts"]
   },
   {

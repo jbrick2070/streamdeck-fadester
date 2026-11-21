@@ -156,7 +156,7 @@ describe("OBS Filter control", () => {
   it("draws the value or the problem, never a blank control", async () => {
     const { server, client, filters, sceneUuid, aura } = await setup();
     const unboundDial = control(filters, true, {});
-    await unboundDial.waitImage((svg) => svg.includes(">Choose OBS control<") && svg.includes(">Open its inspector<"));
+    await unboundDial.waitImage((svg) => svg.includes(">Choose OBS control<") && svg.includes(">Open its settings<"));
     const unboundKey = control(filters, false, { keyOperation: "toggle" });
     await unboundKey.waitImage((svg) => svg.includes(">Filter on/off<") && svg.includes(">Choose a filter<"));
     await unboundKey.controller.keyDown();
@@ -249,7 +249,7 @@ describe("OBS Filter control", () => {
       expect(hash(renderDirectKeySvg({ ...key, accent }))).toBe("c919c6bf82fae337");
       expect(hash(renderDirectKeySvg({ ...key, problem: "Missing", accent }))).toBe("fe176bfb49987539");
       expect(hash(renderDirectDialSvg({ ...dial, accent }))).toBe("99d7d9fcdb04c07f");
-      expect(hash(renderDirectDialSvg({ ...mixer, accent }))).toBe("a9fe2dc8dc3a1d30");
+      expect(hash(renderDirectDialSvg({ ...mixer, accent }))).toBe("5a736982b56a55bc"); // the caption under the T-bar says "Press: Preview to Program" since pass 2
       expect(hash(renderVisualPanicKeySvg({ ...restore, accent }))).toBe("93642f15a67330bb");
     }
     const brass = renderDirectKeySvg({ ...key, accent: "brass" });

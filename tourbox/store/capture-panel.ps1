@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
-# Opens the companion's panel, captures each of its tabs as a PNG for the Store screenshots, and closes it again.
-# It saves nothing and starts no controls; on opening the panel only reads the scene list from OBS.
+# Opens Fadester Companion's window, captures each of its tabs as a PNG for the Store screenshots, and closes it again.
+# It saves nothing. Since the controls start by themselves, opening the window reads OBS and turns the controls on (unless
+# they were last stopped by hand): run it on a rehearsal OBS, never during a show, and quit from the icon beside the clock.
 #   .\capture-panel.ps1 -Panel "...\Fadester Companion.exe" -OutDir captures
 param([Parameter(Mandatory)][string]$Panel, [Parameter(Mandatory)][string]$OutDir)
 $ErrorActionPreference = 'Stop'

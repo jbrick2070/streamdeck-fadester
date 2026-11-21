@@ -162,6 +162,9 @@ async function sendStatus(): Promise<void> {
     portHolder: portHolder ? { product: portHolder.product, version: portHolder.version, port: portHolder.port } : null,
     obsPage: pages.size > 0,
     obsAlwaysOn: current.obsAlwaysOn,
+    // The plugin this page belongs to and its version, shown at the foot of the page.
+    product: linkIdentity.product,
+    version: linkIdentity.version,
     ...obsAddress(null)
   });
 }

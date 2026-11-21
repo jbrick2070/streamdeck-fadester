@@ -2,7 +2,7 @@
 /* VJster settings page, sized for Stream Deck's property inspector. */
 :root {
   color-scheme: dark;
-  font: 12px/1.45 "Segoe UI", Arial, sans-serif;
+  font: 12px/1.45 system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
   color: #e6e6ee;
   background: #2d2d2d;
 }
@@ -90,4 +90,25 @@ h2 .scope {
 }
 #obs-address.found {
   color: #3dffa0;
+}
+/* A closed section: its title is the line to click. */
+.fold > summary {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #a0a0b4;
+  padding: 10px 0 4px;
+  cursor: pointer;
+}
+#status {
+  margin-bottom: 6px;
+}
+#get-extension {
+  margin-bottom: 8px;
+}
+[hidden] {
+  display: none !important;
+}
+.version {
+  margin-top: 14px;
 }

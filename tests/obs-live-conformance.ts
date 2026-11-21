@@ -200,7 +200,7 @@ async function runLiveConformance(): Promise<void> {
 
     if (
       statusSentence(wrongPwStatus) !==
-      "Wrong password. Check OBS Tools > WebSocket Server Settings > Show Connect Info."
+      "Wrong password. In OBS: Tools > WebSocket Server Settings > Show Connect Info. Trying again every 30 seconds."
     ) {
       throw new Error(`Unexpected wrong-password sentence: ${statusSentence(wrongPwStatus)}`);
     }

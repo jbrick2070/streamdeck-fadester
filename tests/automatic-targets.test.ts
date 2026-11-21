@@ -5,6 +5,16 @@ import {
 } from "../src/obs/automatic-targets.js";
 
 describe("automatic mixer targets", () => {
+  it("reads a stored label or input that is not text as none, and never throws (B-03)", () => {
+    const odd = { labelOverride: 5, inputName: 3 } as unknown as { labelOverride?: string; inputName?: string };
+    expect(() => migrateAutomaticInputSettings(odd)).not.toThrow();
+    expect(migrateAutomaticInputSettings(odd)).toBe(odd);
+    const numberInput = { labelOverride: "Music", inputName: 3 } as unknown as { labelOverride?: string; inputName?: string };
+    expect(migrateAutomaticInputSettings(numberInput)).toMatchObject({ inputName: "__audio_main__", presetBindingsVersion: 1 });
+    const list = { labelOverride: ["Mic"], inputName: null } as unknown as { labelOverride?: string; inputName?: string };
+    expect(migrateAutomaticInputSettings(list)).toBe(list);
+  });
+
   it("prefers exact main-audio roles in order, case-insensitively", () => {
     const names = ["System Audio", "Desktop", "DESKTOP AUDIO", "mUsIc", "Mic/Aux"];
     expect(resolveAutomaticInputName("__audio_main__", names)).toBe("mUsIc");

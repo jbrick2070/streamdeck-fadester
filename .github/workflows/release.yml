@@ -47,8 +47,82 @@ jobs:
           if-no-files-found: error
           compression-level: 0
 
+  # The package above is built on Linux, where every test that loads the packaged native addon (koffi) is skipped.
+  # The same commit is built, packed and tested again where the plugin really runs, and the draft waits for both:
+  # a package that cannot load on Windows or macOS never reaches a draft release.
+  streamdeck-native:
+    name: Fadester for OBS package, loaded and tested (${{ matrix.platform }}-${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - runner: windows-2025
+            platform: win32
+            arch: x64
+          - runner: macos-15
+            platform: darwin
+            arch: arm64
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          architecture: ${{ matrix.arch }}
+          package-manager-cache: false
+      - name: Confirm native host and Node runtime
+        env:
+          EXPECTED_PLATFORM: ${{ matrix.platform }}
+          EXPECTED_ARCH: ${{ matrix.arch }}
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          assert.equal(process.platform, process.env.EXPECTED_PLATFORM);
+          assert.equal(process.arch, process.env.EXPECTED_ARCH);
+          NODE
+      - run: npm ci
+      - name: Build, validate and pack
+        run: node --import tsx scripts/suite/package-candidate.ts
+      - name: Full test suite against the built tree (starts the built plugin and loads its native addon)
+        run: npm test
+      # The tree can hold a file the package lacks: the packed .streamDeckPlugin itself is unpacked and started.
+      - name: Unpack the packed plugin and start it as Stream Deck does
+        run: |
+          set -euo pipefail
+          package=release/candidates/windows-macos/io.github.jbrick2070.fadester-for-obs.streamDeckPlugin
+          test -f "$package"
+          unpacked="$RUNNER_TEMP/fadester-packed"
+          rm -rf "$unpacked"
+          mkdir -p "$unpacked"
+          unzip -q "$package" -d "$unpacked"
+          FADESTER_SMOKE_PLUGIN_DIR="$unpacked/io.github.jbrick2070.fadester-for-obs.sdPlugin" npx vitest run tests/suite-launch-smoke.test.ts
+
+  # The tag names Fadester for OBS's version. Fadester Companion (installer/components.json) and the VJster Chrome
+  # extension (vjster-extension/manifest.json) are attached under versions of their own: a release that changed one of
+  # them and kept its number would publish two different builds under one version, so the release stops here instead.
+  # Each is compared with the release that first carried its present version, over the files that go into it (the
+  # Companion's include the VJster OBS page). scripts/release-component-versions.mjs; PUBLISHING.md says what to raise.
+  companion-version:
+    name: Companion and VJster extension versions moved with their code
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: A changed component needs a new version of its own
+        run: node scripts/release-component-versions.mjs "$GITHUB_SHA"
+
   companion:
     name: Fadester Companion ZIP and Store package
+    needs: [companion-version]
     runs-on: windows-2025
     timeout-minutes: 20
     env:
@@ -92,6 +166,7 @@ jobs:
 
   companion-macos:
     name: Fadester Companion Mac app (${{ matrix.arch }})
+    needs: [companion-version]
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 25
     strategy:
@@ -143,7 +218,7 @@ jobs:
 
   draft:
     name: Create the draft release
-    needs: [streamdeck, companion, companion-macos]
+    needs: [streamdeck, streamdeck-native, companion, companion-macos]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -158,11 +233,18 @@ jobs:
           {
             echo "Draft built from \`$GITHUB_SHA\`. Test on real hardware before publishing."
             echo
+            # The "Which file do I need?" table is written by the Suite Setup workflow when it attaches the setup to this
+            # release (suite-installer.yml, its attach job): one table, in one place. Until it has run, this line
+            # stands in its place, between the same two markers, so that job replaces it with the table.
+            echo "<!-- which-file -->"
+            echo "Which file is for which hardware: the \`.streamDeckPlugin\` file is for a Stream Deck; the Fadester Companion files below are for a TourBox or a game controller. Fadester Suite Setup and the full table are added here when its tests have passed."
+            echo "<!-- /which-file -->"
+            echo
             echo "### Fadester Companion"
             echo
             echo "- Windows: \`$(ls Fadester-Companion-Windows-x64-*.zip)\` (and the Store package \`$(ls FadesterCompanion_*.msix)\`)."
             echo "- Mac, Apple silicon: \`$(ls Fadester-Companion-macOS-arm64-*.zip)\`. Mac, Intel: \`$(ls Fadester-Companion-macOS-x64-*.zip)\`."
-            echo "  The Mac app is ad-hoc signed and not notarized. Unzip it and move **Fadester Companion.app** to Applications. The first time, right-click (or Control-click) the app and choose **Open**, then **Open** again; or try to open it once, then go to **System Settings → Privacy & Security** and click **Open Anyway**."
+            echo "  The Mac app is ad-hoc signed and not notarized. Unzip it and move **Fadester Companion.app** to Applications. macOS refuses to open it the first time: try to open it once, then go to **System Settings → Privacy & Security**, scroll down and click **Open Anyway**. (On macOS 14 and older you can instead Control-click the app and choose **Open**, then **Open** again.)"
             echo "  Verified in CI on both architectures: the build and the app's self-tests. Not yet verified on a real Mac: the window on screen, physical TourBox control and the Accessibility prompt. Fadester Companion keeps a typed OBS password in memory only; Keychain saving (the Fadester for OBS plugin on macOS failed with -25293 in testing) is still unverified."
             echo
             echo "### Checksums (SHA-256)"

@@ -1,6 +1,6 @@
 # Fadester Companion: Microsoft Store listing (English)
 
-Paste each block into the matching field in Partner Center (Submission → Store listings → English). Images are in `listing/`. The same listing in nine more languages is in [LISTING-translations.md](LISTING-translations.md).
+Paste each block into the matching field in Partner Center (Submission → Store listings → English). Images are in `listing/`. The same listing in twelve more languages is in [LISTING-translations.md](LISTING-translations.md).
 
 ## Description
 
@@ -8,7 +8,7 @@ Fadester Companion turns the controllers you already own into a hands-on vision 
 
 Pull the right trigger of an Xbox or other XInput game controller like a real T-bar, and OBS's own T-bar follows. Hold A to push the mix and let go to leave it part-way. D-pad up and down walk your scene list, the left trigger ducks your music while you hold it, and the sticks ride a layer's opacity and blend mode and the speed of the video playing in Chrome through the free VJster extension. Every button can be remapped, with a second layer while LB is held, and Easy mode makes on-air switches need a short hold, so a bumped control does nothing.
 
-Got a TourBox? The same companion runs it too: the Dial is your T-bar, Scroll cues scenes and the Knob sets the video speed.
+Got a TourBox? The same companion runs it too: the Dial is your T-bar, Scroll puts scenes in Preview and the Knob sets the video speed.
 
 It keeps working while OBS is in front, talks only to OBS and the VJster extension on your own computer, and sends nothing to the internet.
 
@@ -25,8 +25,8 @@ Version 0.1.7:
 - A Mac version: Fadester Companion for Mac (Apple silicon and Intel) now comes with every release on GitHub.
 - New TourBox and VJster lights in the status strip, each with the one button that fixes it, such as Open Console or Show me.
 - Show me where to click: an animated guide walks you through importing the preset into TourBox Console.
-- Bring OBS to Front: a button on the reminder, and in the tray menu, brings OBS's main window back.
-- The Mac app speaks the same 10 languages as the Windows app.
+- Bring OBS to Front: a button on the reminder brings OBS's main window back. Closing the window keeps the controls on: an icon in the notification area opens the window again, starts or stops the controls, and quits.
+- The Mac app speaks the same 13 languages as the Windows app.
 
 ## Product features
 
@@ -64,7 +64,7 @@ Fadester Companion controls OBS Studio, which must run on the same PC. To test:
 
 1. Install OBS Studio 33 (free, https://obsproject.com). In OBS open Tools → WebSocket Server Settings, tick Enable WebSocket server, keep authentication on and note the password. Turn on Studio Mode, select the Fade transition, and add two scenes.
 2. Open Fadester Companion. It connects by itself: the header says it is connected and how many scenes it found. If it does not connect, type the WebSocket password in OBS password (filled in from OBS) and click Read scenes and inputs from OBS.
-3. On the Setup tab, tick Use an Xbox or XInput game controller, then click Save & start controls. With an Xbox controller connected, press D-pad down to cue a scene and pull the right trigger: OBS's T-bar follows; pulled all the way, the scene goes to Program. Holding A also pushes the T-bar.
+3. On the Setup tab, tick Use an Xbox or XInput game controller, then click Stop and Start at the bottom left of the window (the controls start by themselves the first time, without the controller). With an Xbox controller connected, press D-pad down to put a scene in Preview and pull the right trigger: OBS's T-bar follows; pulled all the way, the scene goes to Program. Holding A also pushes the T-bar.
 
 Without OBS running, the app opens and says that OBS is not answering; the controls do nothing. No account or sign-in is needed, and the app makes no internet connection.
 

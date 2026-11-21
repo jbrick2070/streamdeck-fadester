@@ -67,7 +67,7 @@ describe("Stream Deck language files (R-I18N-5)", () => {
     });
 
     it(`${f.lang}.json says who drafted it, and keeps VJster's names out of OBS, YouTube and Google`, () => {
-      expect(String(localization(f)._comment ?? "")).toMatch(/Claude Opus/);
+      expect(String(localization(f)._comment ?? "")).toMatch(/Claude (Opus|Fable)/);
       for (const a of manifest.Actions) {
         const entry = f.json[a.UUID] as { Name?: string } | undefined;
         expect(String(entry?.Name ?? "").toLowerCase(), `${f.lang} ${a.UUID}`).not.toMatch(/obs|youtube|google/);

@@ -47,7 +47,8 @@ describe("Step 1.3 — Playlister Runtime SVG Renderer (Dial Cells & Keys)", () 
     expect(svg).toContain(PLAYLISTER_PALETTE.previewGreen);
     expect(svg).toContain(PLAYLISTER_PALETTE.orangeAccent);
     expect(svg).toContain('stroke-width="4"');
-    expect(svg).toContain("Press to take Preview");
+    expect(svg).toContain("Press: Preview to Program");
+    expect(svg).not.toMatch(/\btake\b/i);
   });
 
   it("shows custom audio press instructions but gives connection problems priority", () => {

@@ -7,13 +7,14 @@
   <link rel="stylesheet" href="pi.css" />
 </head>
 <body>
+  <div id="direct-top-status" class="status-banner status-info" style="display:none;"></div>
+  <button id="direct-top-layouts" class="btn secondary" type="button" style="display:none;"></button>
   <h3><span data-i18n="sceneHeading">Scene &amp; transition</span> <span class="scope" data-i18n="scopeThisKey">this key</span></h3>
-  <p class="muted" data-i18n="sceneIntro">Previous, Next, and Random work with every scene in your current OBS collection. Automatic Scene 1/2/3 follows the OBS scene-list order, including renamed or reordered scenes.</p>
+  <p class="muted" data-i18n="sceneIntro">Scene 1, 2, 3 follow the order of your scene list in OBS. Previous, Next and Random use every scene.</p>
   <div id="direct-scene-status" class="status-banner status-info" style="display:none;"></div>
   <div class="row">
     <label for="obs-scene-target" data-i18n="sceneLabel">Scene</label>
     <select id="obs-scene-target"></select>
-    <button id="obs-scene-refresh" class="btn secondary" type="button" data-i18n="refresh">Refresh</button>
   </div>
   <div class="row">
     <label for="obs-scene-operation" data-i18n="whenPressed">When pressed</label>
@@ -27,6 +28,7 @@
     <label for="obs-transition-name" data-i18n="transitionLabel">Transition</label>
     <select id="obs-transition-name"></select>
   </div>
+  <details id="obs-scene-timing" class="fold"><summary data-i18n="foldTiming">Timing</summary>
   <div class="row" id="obs-scene-length-row">
     <label for="obs-scene-length" data-i18n="quantizeLengthLabel">Length</label>
     <select id="obs-scene-length">
@@ -51,8 +53,8 @@
       <option value="next_bar" data-i18n="quantizeStartBar">Next bar</option>
     </select>
   </div>
-  <p id="obs-scene-quantize-hint" class="muted" data-i18n="quantizeHint">Without Visual Sidechain tempo, fires immediately with the millisecond fallback and shows NO TEMPO. Max wait 1 bar (4 s); press again to fire now, hold to cancel.</p>
-  <p id="obs-scene-hint" class="muted" data-i18n="sceneHint">Cut and Transition work in regular and Studio Mode. Preview and Current Preview need Studio Mode. A chosen transition applies to this press and preserves the scene’s saved transition override.</p>
+  <p id="obs-scene-quantize-hint" class="muted" data-i18n="quantizeHint">With no tempo, it starts at once and the key shows NO TEMPO. Press again to start now; hold to cancel.</p>
+  </details>
   <div class="row">
     <label for="obs-scene-label" data-i18n="label">Label</label>
     <input id="obs-scene-label" type="text" maxlength="14" placeholder="From OBS (leave blank)" data-i18n-placeholder="placeholderFromObs" />
@@ -119,6 +121,8 @@
       if (durationLabel) durationLabel.textContent = T(selectedBeats > 0 ? "quantizeFallbackMs" : "durationMs");
       if (startRow) startRow.style.display = canQuantize ? "" : "none";
       if (quantizeHint) quantizeHint.style.display = canQuantize && (selectedBeats > 0 || selectedStart !== "now") ? "" : "none";
+      // Length and Start are folded away until one of them is set to something other than OBS's own duration, now.
+      if (window.directObsFold) window.directObsFold("obs-scene-timing", selectedLength !== "obs" || selectedStart !== "now", canQuantize);
       if (banner) {
         let text = "";
         const indexMatch = /^__scene_index_(\d+)__$/.exec(selectedTarget);
@@ -153,8 +157,6 @@
       };
       if (startEl) startEl.onchange = function () { save({ quantizeStart: startEl.value }); };
       if (label) label.onchange = function () { save({ labelOverride: label.value.trim() }); };
-      const refresh = document.getElementById("obs-scene-refresh");
-      if (refresh) refresh.onclick = function () { window.directObsRefresh(); };
     });
   </script>
 </body>

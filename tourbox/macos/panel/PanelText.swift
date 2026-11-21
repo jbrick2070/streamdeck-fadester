@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import Foundation
 
-/// The Mac panel's language: the same 10 languages and words as the Windows panel (tourbox/panel/PanelText.cs),
+/// The Mac panel's language: the same 13 languages and words as the Windows panel (tourbox/panel/PanelText.cs),
 /// from the catalog that make-strings.cjs generates into PanelStrings.swift.
 enum PanelText {
     private static let table: [String: [String]] = {
@@ -22,6 +22,8 @@ enum PanelText {
         if ["zh-tw", "zh-hk", "zh-mo", "zh-cht", "zh-hant"].contains(code) || code.hasPrefix("zh-hant-") { return "zh-TW" }
         if ["zh", "zh-cn", "zh-sg", "zh-chs", "zh-hans"].contains(code) || code.hasPrefix("zh-hans-") { return "zh-CN" }
         let primary = String(code.split(separator: "-").first ?? "")
+        // Portuguese is Brazilian Portuguese (pt-BR), for Portugal too: nearer than English.
+        if primary == "pt" { return "pt-BR" }
         return PanelStrings.locales.contains(primary) ? primary : "en"
     }
 
@@ -52,12 +54,21 @@ enum PanelText {
         func check(_ okay: Bool, _ label: String) throws { if !okay { throw PanelFailure.message("Self-test: " + label) } }
         let previous = locale
         defer { use(previous) }
-        try check(table.count > 100 && PanelStrings.locales.count == 10, "panel catalog loads")
-        try check(normalize("zh-Hant-HK") == "zh-TW" && normalize("zh-Hans-CN") == "zh-CN" && normalize("de-DE") == "de" && normalize("pt-BR") == "en", "panel language selection")
+        try check(table.count > 100 && PanelStrings.locales.count == 13, "panel catalog loads")
+        try check(normalize("zh-Hant-HK") == "zh-TW" && normalize("zh-Hans-CN") == "zh-CN" && normalize("de-DE") == "de" && normalize("pt-BR") == "pt-BR" && normalize("pt_PT") == "pt-BR" && normalize("nl-NL") == "nl" && normalize("tr-TR") == "tr" && normalize("sv-SE") == "en", "panel language selection")
         use("de"); try check(L("setup") == "Einrichtung" && L("obsConnected", 14).contains("14"), "German panel text")
-        use("en"); try check(L("saveStart") == "Save & start controls" && L("no.such.key") == "no.such.key", "English panel text")
+        use("nl"); try check(L("saveStart") == "Starten", "Dutch panel text")
+        use("pt-BR"); try check(L("stop") == "Parar", "Brazilian Portuguese panel text")
+        use("tr"); try check(L("stop") == "Durdur", "Turkish panel text")
+        use("en"); try check(L("saveStart") == "Start" && L("stop") == "Stop" && L("no.such.key") == "no.such.key", "English panel text")
         try check(choose(from: ["--language", "ja", "--self-test"]) == ["--self-test"] && locale == "ja", "--language argument")
     }
+}
+
+/// A secondary window's title with the app's version, so a picture of any window says which build it is.
+func titledWithVersion(_ title: String) -> String {
+    let version = (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)?.trimmingCharacters(in: .whitespaces) ?? ""
+    return version.isEmpty ? title : title + "  ·  Fadester Companion " + version
 }
 
 /// The panel text for key in the panel's language; {0}, {1}… take values.

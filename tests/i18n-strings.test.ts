@@ -15,6 +15,7 @@ import {
   t,
   translate
 } from "../src/i18n/strings.js";
+import { TAKE_VERBS } from "./helpers/take-verbs.js";
 import { templatePlaceholders, wordText } from "../packages/streamdeck-fadester-shared/src/i18n.js";
 import { statusCellReason, statusSentence } from "../packages/streamdeck-fadester-shared/src/status-text.js";
 import { ObsVendorClient } from "../packages/streamdeck-fadester-shared/src/obs/obs-vendor-client.js";
@@ -43,13 +44,18 @@ function useLanguage(language: string): void {
 afterEach(() => setLanguage("en", null));
 
 describe("language files (R-I18N-5)", () => {
-  it("ships every required language, and only the plugin's nine languages", () => {
+  it("ships every required language, and only the plugin's thirteen languages", () => {
     const present = presentLanguages();
     for (const language of REQUIRED_LANGUAGES) expect(present, language).toContain(language);
     for (const language of present) expect(PLUGIN_LANGUAGES).toContain(language);
     // Dutch is one of them, though Stream Deck cannot select it (PLAN.md 11.1).
-    expect(present).toContain("nl");
-    expect(STREAM_DECK_LANGUAGES).not.toContain("nl");
+    expect(present).toHaveLength(13);
+    // Five of them Stream Deck cannot select (PLAN.md 11.1): their files hold Localization only.
+    for (const language of ["nl", "it", "pt_BR", "ru", "tr"]) {
+      expect(present).toContain(language);
+      expect(STREAM_DECK_LANGUAGES).not.toContain(language);
+      expect(Object.keys(readLanguageFile(language)), language).toEqual(["Localization"]);
+    }
   });
 
   it.each(presentLanguages())("%s.json is UTF-8 JSON without a BOM and has every deck key with English's placeholders", (language) => {
@@ -99,7 +105,9 @@ describe("language files (R-I18N-5)", () => {
     setLanguage("nl", readLanguageTable("nl", PLUGIN_DIR));
     expect(t("keyReady")).toBe("Gereed");
     expect(t("sceneOpCut")).toBe("Cut");
-    expect(t("infobarPreview", { scene: "Camera" })).toBe("VOORBEELD  Camera");
+    expect(t("infobarPreview", { scene: "Camera" })).toBe("VOORVERT.  Camera");
+    // OBS's own Dutch word for Preview, whole where there is room.
+    expect(t("mixerNext")).toBe("VOORVERTONING");
   });
 
   it("en.json holds the built-in English table exactly", () => {
@@ -186,20 +194,99 @@ describe("German on the deck", () => {
       currentPreviewScene: "", currentTransition: "", inputVolumes: {}, tbarPosition: 0
     };
     expect(buildNeoInfobarFeedback(true, catalog)).toEqual({
-      status: "OBS verbunden", live: "LIVE  Opening", preview: "VORSCHAU  Studio-Modus aus"
+      status: "OBS verbunden", live: "PROGRAMM  Opening", preview: "VORSCHAU  Studio-Modus aus"
     });
     const key = renderDirectKeySvg({ connected: true, reason: "", title: "", configured: false });
-    expect(key).toContain("OBS-Aktion wählen");
-    expect(key).toContain("Inspektor öffnen");
+    expect(key).toContain("Nicht eingerichtet");
+    expect(key).toContain("Einstellungen öffnen");
     const dial = renderDirectDialSvg({ connected: true, reason: "", label: "Mic", value: 0.4, configured: true });
     expect(dial).toContain("40 %");
     const mixer = renderDirectDialSvg({
       connected: true, reason: "", label: "", value: 0.5, configured: true, target: "tbar",
       studioMode: true, programSceneName: "A", previewSceneName: "B"
     });
-    expect(mixer).toContain("NÄCHSTE");
-    expect(mixer).toContain("Drücken: Nächste live schalten");
-    expect(mixer).not.toContain("Press to take Preview");
+    // OBS's own words for the two scenes, in every language (never LIVE and NEXT), and no "take".
+    expect(mixer).toContain("PROGRAMM");
+    expect(mixer).toContain("VORSCHAU");
+    expect(mixer).not.toContain("NÄCHSTE");
+    expect(mixer).toContain("Drücken: Vorschau ins Programm");
+    expect(mixer).not.toContain("Press: Preview to Program");
+  });
+
+  it.each([
+    ["it", "PROGRAMMA", "ANTEPRIMA", "Premi: anteprima in Programma", "Programma · Taglio"],
+    ["pt_BR", "PROGRAMA", "PRÉ-VIS.", "Aperte: pré-visualização para o Programa", "Programa · Corte"],
+    ["ru", "ПЕРЕДАЧА", "ПРЕДПРОСМОТР", "Нажать: предпросмотр в передачу", "В передачу · Обрезка"],
+    ["tr", "PROGRAM", "ÖNİZLEME", "Bas: Önizleme Program'a", "Program'a · Kes"]
+  ])("%s draws OBS's own words for Program and Preview, and no word that means \"take\"", (language, program, preview, press, subtitle) => {
+    useLanguage(language);
+    const mixer = renderDirectDialSvg({
+      connected: true, reason: "", label: "", value: 0.5, configured: true, target: "tbar",
+      studioMode: true, programSceneName: "A", previewSceneName: "B"
+    });
+    expect(mixer).toContain(program);
+    expect(mixer).toContain(preview);
+    expect(mixer).toContain(press.split("'")[0]);
+    expect(t("sceneSubtitle", { role: t("sceneRoleTake"), operation: t("sceneOpCut") })).toBe(subtitle);
+    // The texts that say "Preview to Program" in English: none uses a verb for "take" (prendere, tomar, pegar, levar,
+    // взять, брать, almak), on the deck or on the settings pages.
+    const taking = /prend|pigli|\btom(ar|e|a)\b|\bpeg(ar|ue|a)\b|\blev(ar|e|a)\b|взять|возьм|бер[её]т|брать|\bal(ın|ır|mak)?(?![\p{L}])/iu;
+    const page = readLanguageFile(language).Localization.pi as Record<string, string>;
+    const texts = [
+      ...(["sceneTargetTakePreview", "sceneRoleTake", "mixerPressTake", "pressBlendTake", "errorTakeUnconfirmed", "mixerAutoQueue"] as const).map((key) => t(key)),
+      ...["pressFinish", "instrFinish", "pressCombined", "instrCombined", "pressSceneHintCombined", "targetCurrentPreview", "tbarHintPress", "faderBannerStudio", "tbarOn"].map((key) => page[key])
+    ];
+    for (const text of texts) {
+      expect(typeof text, language).toBe("string");
+      expect(text, language).not.toMatch(taking);
+    }
+  });
+
+  // Every text of every language, in all three families of tables: the plugin's (keys, dials, settings pages), VJster's
+  // and the Chrome extension's. None may use its language's verb for "take" (QA-A02 of both rounds: German "nehmen"
+  // and French "prendre" sat on a settings page because only four languages were checked). Compounds that mean
+  // something else are not matched: German "übernehmen" (apply) and "angenommen" (accepted), Russian "выбрать".
+  // Ordinary speech, not a product action: a second copy of the extension "takes over" the link, and reloaded tabs
+  // are "taken along"; English help text uses the verb the same way.
+  const TAKE_ALLOWED: Record<string, readonly string[]> = {
+    en: ["extension:statusStandby", "plugin:pi.accelerationHint"],
+    // "prise en charge" is the French for "supported".
+    fr: ["extension:statusStandby", "plugin:statusVersionMismatch"],
+    es: ["extension:statusStandby"],
+    nl: ["extension:statusStandby", "extension:statusAllSites"]
+  };
+
+  it.each(Object.keys(TAKE_VERBS))("%s: no text of the plugin, VJster or the extension uses a verb for \"take\"", (language) => {
+    const texts: Array<[string, string]> = [];
+    const walk = (family: string, value: unknown, path: string): void => {
+      if (typeof value === "string") texts.push([`${family}:${path}`, value]);
+      else if (value && typeof value === "object") for (const [key, inner] of Object.entries(value)) walk(family, inner, path ? `${path}.${key}` : key);
+    };
+    walk("plugin", readLanguageFile(language).Localization, "");
+    const vjster = JSON.parse(readFileSync(join(PLUGIN_DIR, "..", "com.jbrick2070.vjster.sdPlugin", `${language}.json`), "utf8")) as { Localization: Record<string, unknown> };
+    const { _comment: _drafter, ...vjsterTexts } = vjster.Localization;
+    walk("vjster", vjsterTexts, "");
+    const extension = JSON.parse(readFileSync(join(PLUGIN_DIR, "..", "vjster-extension", "_locales", language, "messages.json"), "utf8")) as Record<string, { message: string }>;
+    for (const [key, entry] of Object.entries(extension)) texts.push([`extension:${key}`, entry.message]);
+    expect(texts.length).toBeGreaterThan(900);
+    const allowed = TAKE_ALLOWED[language] ?? [];
+    const hits = texts.filter(([where, text]) => TAKE_VERBS[language].test(text) && !allowed.includes(where)).map(([where, text]) => `${where}: ${text}`);
+    expect(hits).toEqual([]);
+    const stale = allowed.filter((where) => !texts.some(([place, text]) => place === where && TAKE_VERBS[language].test(text)));
+    expect(stale, "allowed but no longer a hit").toEqual([]);
+  });
+
+  it("the take-verb patterns catch what they are for, and leave the look-alikes", () => {
+    const caught: Array<[string, string]> = [["en", "Press to take Preview"], ["de", "Aktuellen nehmen"], ["de", "Nimm die Vorschau"], ["fr", "Prendre l’actuelle"],
+      ["es", "Tomar la vista previa"], ["nl", "Voorvertoning overnemen"], ["it", "Prendi l'anteprima"], ["pt_BR", "Levar ao Programa"],
+      ["ru", "Взять пароль из OBS"], ["tr", "Önizlemeyi al"], ["ja", "プレビューをテイク"], ["ko", "미리보기 테이크"], ["zh_CN", "Take 预览"]];
+    for (const [language, text] of caught) expect(TAKE_VERBS[language].test(text), `${language}: ${text}`).toBe(true);
+    const left: Array<[string, string]> = [["de", "In OBS übernehmen"], ["de", "bis ein Wiederherstellen angenommen wird"], ["fr", "y compris les actions"],
+      ["es", "automática"], ["it", "Playlister sta aprendo un file"], ["ru", "Выбрать предпр."], ["ru", "Нажать: убрать и вернуть"],
+      ["tr", "Geçiş yine de çalışır"], ["tr", "kapalı"], ["nl", "Voorvertoning naar Programma"]];
+    for (const [language, text] of left) {
+      expect(TAKE_VERBS[language].test(text), `${language}: ${text}`).toBe(false);
+    }
   });
 
   it("words the Midi Fadester cells through the injected translator", () => {

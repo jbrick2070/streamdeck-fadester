@@ -52,6 +52,12 @@
   "statusLinkDown": {
     "message": "Nicht verbunden. Prüfen Sie das Programm, das Sie verwenden:"
   },
+  "statusFirstWait": {
+    "message": "Warte auf VJster. Eines davon tun:"
+  },
+  "statusStandby": {
+    "message": "In Bereitschaft. Eine andere Kopie dieser Erweiterung (ein anderes Chrome-Profil oder ein anderer Browser) hält die Verbindung; diese übernimmt, sobald jene schließt."
+  },
   "linkDownCompanion": {
     "message": "Fadester Companion: auf diesem Computer öffnen und prüfen, dass die Steuerung an ist."
   },
@@ -63,6 +69,9 @@
   },
   "statusLinkChecking": {
     "message": "Verbindung mit VJster wird hergestellt…"
+  },
+  "reloadTabsNote": {
+    "message": "Video-Tabs, die schon vor der Installation oder Aktualisierung von VJster offen waren: einmal neu laden."
   },
   "statusBadPort": {
     "message": "Eine ganze Zahl von 1024 bis 65535 verwenden; $DEFAULT$ ist der Standard.",

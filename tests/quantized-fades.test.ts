@@ -270,6 +270,58 @@ describe("Quantized, operator-armed fades (P1-4)", () => {
     };
   }
 
+  it("a Scene key keeps its failure reason through unrelated OBS events, until the scenes change or the next press (B-09)", async () => {
+    const { server, directClient } = await setupSuite({});
+    const sink = keySink();
+    const key = new ObsSceneTransitionKeyInstanceController(directClient, sink.sink, { sceneTarget: "Scene 3", operation: "cut" }, 10);
+    cleanup.push(() => key.disappear());
+    key.appear();
+    server.failNextProgramSwitch = true;
+    await key.handleKeyDown();
+    expect(sink.alerts()).toBe(1);
+    await vi.waitFor(() => expect(sink.lastSvg()).toContain("Switch failed"));
+    // A volume change, as a running fade sends many of: the reason stays.
+    await directClient.nudgeInputVolume("Desktop Audio", -0.1);
+    await directClient.nudgeInputVolume("Desktop Audio", 0.05);
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    expect(sink.lastSvg()).toContain("Switch failed");
+    // The scene on Program changes: what refused the press may have gone, so the key draws from the scenes again.
+    server.emitObsEvent("CurrentProgramSceneChanged", { sceneName: "Scene Preview" });
+    await vi.waitFor(() => expect(directClient.getCatalog().currentProgramScene).toBe("Scene Preview"));
+    await vi.waitFor(() => expect(sink.lastSvg()).not.toContain("Switch failed"));
+  });
+
+  it("an OBS Fade key says why a fade failed, until the next press (B-11)", async () => {
+    const { server, directClient } = await setupSuite({});
+    const sink = keySink();
+    const key = new ObsFadeKeyInstanceController(directClient, sink.sink, { inputName: "Desktop Audio", to: 0, durationMs: 400 }, 10);
+    cleanup.push(() => key.disappear());
+    key.appear();
+    // OBS refuses a write in the middle of the fade (the input went away): the volume is left part-way.
+    type Handler = (ws: unknown, id: string, type: string, data: Record<string, unknown>) => Promise<void>;
+    const native = server as unknown as { handleObsRequest: Handler; sendResponse(ws: unknown, id: string, type: string, ok: boolean, code: number, comment: string): void };
+    const original = native.handleObsRequest.bind(server);
+    let refused = false;
+    native.handleObsRequest = async (ws, id, type, data) => {
+      if (!refused && type === "SetInputVolume") {
+        refused = true;
+        native.sendResponse(ws, id, type, false, 600, "No source was found by that name.");
+        return;
+      }
+      await original(ws, id, type, data);
+    };
+    await key.handleKeyDown();
+    await vi.waitFor(() => expect(sink.alerts()).toBe(1), { timeout: 3000 });
+    await vi.waitFor(() => expect(sink.lastSvg()).toContain("No source was found"));
+    // Other OBS events leave the reason on the key.
+    server.emitObsEvent("CurrentProgramSceneChanged", { sceneName: "Scene Preview" });
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    expect(sink.lastSvg()).toContain("No source was found");
+    // The next press clears it.
+    await key.handleKeyDown();
+    await vi.waitFor(() => expect(sink.lastSvg()).not.toContain("No source was found"));
+  });
+
   it("sends quantized auto_fade ms to Midi Fadester without contract changes, shows ARMED / NO TEMPO, and never fires from audio alone", async () => {
     const { server, store, signals } = await setupSuite({ visualSidechainVendor: "tempo" });
     await vi.waitFor(() => expect(signals.getSnapshot().availability).toBe("loaded"));

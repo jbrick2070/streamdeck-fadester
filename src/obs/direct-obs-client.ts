@@ -4,7 +4,7 @@
  * requests so the Stream Deck plugin remains useful without Midi Fadester or
  * a connected MIDI controller.
  */
-import { FadesterGlobalSettings } from "../types/settings.js";
+import { FadesterGlobalSettings, clampDurationMs } from "../types/settings.js";
 import { ConnectionStatusInfo } from "../../packages/streamdeck-fadester-shared/src/types.js";
 import { automaticInputRole, resolveAutomaticInputName } from "./automatic-targets.js";
 import { WholeMixClient } from "./whole-mix.js";
@@ -280,7 +280,8 @@ export interface DirectObsCatalog {
 
 export type DirectObsClientOptions = Pick<
   ObsVendorClientOptions,
-  "baseReconnectMs" | "maxReconnectMs" | "requestTimeoutMs" | "notReadyRetryMs" | "keepaliveMs" | "readSavedPassword"
+  "baseReconnectMs" | "maxReconnectMs" | "requestTimeoutMs" | "notReadyRetryMs" | "keepaliveMs" | "readSavedPassword" | "readSavedServer" |
+  "wrongPasswordRetryMs"
 > & {
   /** How long a sent PAUSE waits for an observed PAUSED before the key says "unconfirmed" (tests shorten it). */
   mediaPauseWaitMs?: number;
@@ -459,6 +460,19 @@ export class DirectObsClient extends ObsVendorClient {
   private nativeReach: "unknown" | "following" | "permission" | "unreachable" | "unavailable" = "unknown";
   /** The selected transition's kind, as last read: OBS's slider mixes only with a Fade. */
   private transitionKind = "";
+  /** Why the last catalog read got no scene list, or null. */
+  private sceneListFailure: unknown = null;
+  /** The connection (connectionGeneration) on which a scene list was last read and applied; -1 before the first. */
+  private sceneListReadOn = -1;
+  /**
+   * Scenes whose own transition override this client changed for one switch and could not put back, because the
+   * connection dropped in between: the temporary value it set and the value that was there. Put back after the next
+   * connection, if OBS still holds the temporary value.
+   */
+  private readonly leftOverrides = new Map<string, {
+    set: { transitionName: string; transitionDuration: number | null };
+    previous: { transitionName: unknown; transitionDuration: unknown };
+  }>();
 
   public constructor(
     initialSettings?: FadesterGlobalSettings,
@@ -543,6 +557,9 @@ export class DirectObsClient extends ObsVendorClient {
   }
 
   public override reconnectNow(): void {
+    // From "connected" the base client reports OBS unreachable first, and the status listener above resets everything
+    // and emits connectionReset; from any other status nothing changes, so it is emitted here. Once, either way.
+    const wasConnected = this.getStatus().kind === "connected";
     this.saveDisconnectedThrow();
     this.collectionChanging = false;
     this.connectionGeneration++;
@@ -557,8 +574,8 @@ export class DirectObsClient extends ObsVendorClient {
     this.filterDefaults.clear();
     this.endNative();
     super.reconnectNow();
+    if (wasConnected) return;
     this.invalidateMediaTargets();
-    // A reconnect keeps the status "connected" (no statusChanged): the filter controls and the panic latch learn it here.
     this.emit("connectionReset");
   }
 
@@ -580,6 +597,7 @@ export class DirectObsClient extends ObsVendorClient {
   }
 
   public async refreshCatalog(): Promise<DirectObsCatalog> {
+    this.sceneListFailure = null;
     if (this.collectionChanging) return this.getCatalog();
     const generation = ++this.catalogRefreshGeneration;
     const revisions = { ...this.catalogEventRevisions };
@@ -605,6 +623,9 @@ export class DirectObsClient extends ObsVendorClient {
     if (scenes.status === "fulfilled") {
       next.scenes = sceneNamesInDisplayOrder(scenes.value.scenes);
       next.sceneDetails = readSceneDetails(scenes.value.scenes);
+      this.sceneListReadOn = this.connectionGeneration;
+    } else {
+      this.sceneListFailure = scenes.reason;
     }
     if (inputs.status === "fulfilled") {
       next.inputs = stringArray(inputs.value.inputs, "inputName");
@@ -2115,6 +2136,9 @@ export class DirectObsClient extends ObsVendorClient {
         this.native?.invalidate?.();
       }
       if (left && !restoreTried) restored = await this.restoreStudioMode();
+      // The take failed before Studio Mode was left: no Studio Mode event of its own is coming, so none may be
+      // swallowed (a change the operator makes in the next 1.5 s is a real one).
+      if (!left) this.tbarStudioEventsToIgnore = 0;
       if (left && !restored) {
         this.tbarStudioEventsToIgnore = 0;
         this.tbarThrow = null;
@@ -2395,7 +2419,7 @@ export class DirectObsClient extends ObsVendorClient {
       }
       const clampedDurationMs =
         !isCut && typeof transitionDurationMs === "number" && Number.isFinite(transitionDurationMs) && transitionDurationMs > 0
-          ? Math.max(50, Math.min(20000, Math.round(transitionDurationMs)))
+          ? clampDurationMs(transitionDurationMs)
           : null;
       const switchScene = async (): Promise<void> => {
         // This native request performs a transition in both normal and Studio
@@ -2440,12 +2464,46 @@ export class DirectObsClient extends ObsVendorClient {
       this.requireControlGeneration(generation);
       await switchScene();
     } finally {
-      if (generation === this.controlGeneration) {
-        await this.sendObsRequest("SetSceneSceneTransitionOverride", {
-          sceneName,
-          transitionName: previous.transitionName ?? null,
-          transitionDuration: previous.transitionDuration ?? null
-        });
+      await this.putOverrideBack(sceneName, { transitionName, transitionDuration }, previous, generation);
+    }
+  }
+
+  /**
+   * Puts a scene's own transition override back after a switch. When the connection dropped in between it cannot be
+   * sent now, and the temporary override (a Cut, say) would stay saved on that scene in OBS: it is kept and put back
+   * after the next connection. A scene collection change drops it (the scene belongs to the collection that left).
+   */
+  private async putOverrideBack(
+    sceneName: string,
+    set: { transitionName: string; transitionDuration: number | null },
+    previous: Record<string, unknown>,
+    generation: number
+  ): Promise<void> {
+    const before = { transitionName: previous.transitionName ?? null, transitionDuration: previous.transitionDuration ?? null };
+    if (generation === this.controlGeneration) {
+      await this.sendObsRequest("SetSceneSceneTransitionOverride", { sceneName, ...before });
+      return;
+    }
+    if (!this.isIdentified() && !this.collectionChanging && !this.leftOverrides.has(sceneName)) {
+      this.leftOverrides.set(sceneName, { set, previous: before });
+    }
+  }
+
+  /** After a connection: every override left behind is put back, when OBS still holds exactly the temporary value. */
+  private async restoreLeftOverrides(): Promise<void> {
+    const left = [...this.leftOverrides];
+    this.leftOverrides.clear();
+    for (const [sceneName, entry] of left) {
+      try {
+        if (!this.catalog.scenes.includes(sceneName)) continue;
+        const now = await this.sendObsRequest("GetSceneSceneTransitionOverride", { sceneName });
+        const sameName = (now.transitionName ?? null) === entry.set.transitionName;
+        const sameDuration = entry.set.transitionDuration === null || (now.transitionDuration ?? null) === entry.set.transitionDuration;
+        if (sameName && sameDuration) {
+          await this.sendObsRequest("SetSceneSceneTransitionOverride", { sceneName, ...entry.previous });
+        }
+      } catch {
+        // Not put back this time: the scene keeps the override until the user changes it in OBS.
       }
     }
   }
@@ -2486,13 +2544,7 @@ export class DirectObsClient extends ObsVendorClient {
       this.requireControlGeneration(generation);
       await switchScene();
     } finally {
-      if (generation === this.controlGeneration) {
-        await this.sendObsRequest("SetSceneSceneTransitionOverride", {
-          sceneName,
-          transitionName: previous.transitionName ?? null,
-          transitionDuration: previous.transitionDuration ?? null
-        });
-      }
+      await this.putOverrideBack(sceneName, { transitionName: effectiveTransition, transitionDuration }, previous, generation);
     }
   }
 
@@ -2520,6 +2572,7 @@ export class DirectObsClient extends ObsVendorClient {
 
   protected override async initializeAfterIdentify(): Promise<void> {
     const connection = this.connectionGeneration;
+    const socket = this.currentSocket();
     let ready = false;
     try {
       const versionData = await this.sendObsRequest("GetVersion");
@@ -2537,6 +2590,20 @@ export class DirectObsClient extends ObsVendorClient {
         MEDIA_REQUIRED_REQUESTS.every((request) => available.includes(request)) ? "ok" : "unsupported";
       await this.refreshCatalog();
       if (connection !== this.connectionGeneration) return;
+      // A read that a newer refresh replaced (an OBS event arrived meanwhile) applied nothing and recorded no failure,
+      // and the newer one may still be out or may have failed quietly: read again until this connection has a scene
+      // list or a read of it has failed. A collection that is changing reads nothing; its end starts a refresh.
+      for (let again = 0; again < 3 && this.sceneListReadOn !== connection && this.sceneListFailure === null && !this.collectionChanging; again += 1) {
+        await this.refreshCatalog();
+        if (connection !== this.connectionGeneration) return;
+      }
+      // "Connected" only on the socket this sync started on, still identified. A socket that closed during the first
+      // read changes no status (it was "unreachable" already), so nothing else would stop this.
+      if (socket === null || this.currentSocket() !== socket || !this.isIdentified()) return;
+      // And only with a scene list: without it every scene control would be empty behind a green status. NotReady is
+      // tried again on this socket by the base client; any other failure drops the socket and reconnects.
+      if (this.sceneListFailure !== null) throw this.sceneListFailure;
+      if (this.sceneListReadOn !== connection && !this.collectionChanging) throw new Error("OBS scene list was not read");
       this.reconnectAttempt = 0;
       this.haltedReason = "none";
       this.setStatus({
@@ -2546,6 +2613,7 @@ export class DirectObsClient extends ObsVendorClient {
       ready = true;
       this.emitDirectState();
       void this.refreshNativeTbar(false);
+      void this.restoreLeftOverrides();
       // A fade OBS already has open (the plugin restarted mid-fade): the dial shows it and the next turn carries it on.
       void this.queueTbar((generation) => this.pickUpOpenFade(generation).then(() => this.catalog.tbarPosition))
         .catch(() => undefined);
@@ -2599,6 +2667,7 @@ export class DirectObsClient extends ObsVendorClient {
     }
     if (eventType === "CurrentSceneCollectionChanging" || eventType === "CurrentSceneCollectionChanged") {
       this.collectionChanging = eventType === "CurrentSceneCollectionChanging";
+      this.leftOverrides.clear();
       if (this.collectionChanging) this.wholeMix.reset();
       else this.wholeMix.refresh();
       this.controlGeneration++;
@@ -2731,8 +2800,7 @@ export class DirectObsClient extends ObsVendorClient {
       eventType === "InputCreated" ||
       eventType === "InputRemoved" ||
       eventType === "InputNameChanged" ||
-      eventType === "CurrentSceneCollectionChanged" ||
-      eventType === "SceneTransitionListChanged"
+      eventType === "CurrentSceneCollectionChanged"
     ) {
       void this.refreshCatalog();
     }

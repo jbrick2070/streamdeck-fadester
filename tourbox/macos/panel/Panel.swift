@@ -2,17 +2,30 @@
 import AppKit
 import ApplicationServices
 
-private let navyColor = NSColor(srgbRed: 26 / 255, green: 34 / 255, blue: 51 / 255, alpha: 1)
-private let accentColor = NSColor(srgbRed: 38 / 255, green: 90 / 255, blue: 158 / 255, alpha: 1)
-private let stripColor = NSColor(srgbRed: 241 / 255, green: 244 / 255, blue: 249 / 255, alpha: 1)
-private let reminderBgColor = NSColor(srgbRed: 255 / 255, green: 241 / 255, blue: 214 / 255, alpha: 1)
-private let reminderFgColor = NSColor(srgbRed: 107 / 255, green: 74 / 255, blue: 0 / 255, alpha: 1)
+private func rgb(_ red: CGFloat, _ green: CGFloat, _ blue: CGFloat) -> NSColor { NSColor(srgbRed: red / 255, green: green / 255, blue: blue / 255, alpha: 1) }
+/// One colour for the light appearance and one for the dark one: the window follows the Mac's Appearance setting.
+/// The colour is chosen each time it is drawn, so switching the Mac between Light and Dark needs no restart.
+private func adaptive(light: NSColor, dark: NSColor) -> NSColor {
+    NSColor(name: nil) { appearance in appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? dark : light }
+}
+/// The header, the feedback window and the buttons: the same in both appearances (white text on them).
+private let navyColor = rgb(26, 34, 51)
+private let accentColor = rgb(38, 90, 158)
+/// Text that is navy on the light window: headings, the lights' words, the Program/Preview line.
+private let inkColor = adaptive(light: rgb(26, 34, 51), dark: rgb(226, 232, 244))
+/// Text that is the accent blue on the light window: sub-headings, the meter line, the preset note.
+private let accentTextColor = adaptive(light: rgb(38, 90, 158), dark: rgb(128, 176, 240))
+private let panelColor = adaptive(light: .white, dark: rgb(30, 33, 40))
+private let stripColor = adaptive(light: rgb(241, 244, 249), dark: rgb(44, 50, 63))
+private let reminderBgColor = adaptive(light: rgb(255, 241, 214), dark: rgb(84, 62, 14))
+private let reminderFgColor = adaptive(light: rgb(107, 74, 0), dark: rgb(255, 220, 150))
+private let grantedColor = adaptive(light: rgb(40, 140, 72), dark: rgb(110, 210, 140))
 
 private final class FlippedDocument: NSView { override var isFlipped: Bool { true } }
 
 private final class PanelBackground: NSView {
     override var isOpaque: Bool { true }
-    override func draw(_ dirtyRect: NSRect) { NSColor.white.setFill(); dirtyRect.fill() }
+    override func draw(_ dirtyRect: NSRect) { panelColor.setFill(); dirtyRect.fill() }
 }
 
 private final class RoundedCardView: NSView {
@@ -90,7 +103,7 @@ private final class PillActionButton: NSControl {
         super.init(frame: frameRect)
         translatesAutoresizingMaskIntoConstraints = false
         words.font = .boldSystemFont(ofSize: 12.5)
-        words.textColor = navyColor
+        words.textColor = inkColor
         actionButton.isHidden = true
         actionButton.onClick = { [weak self] in
             if let id = self?.actionId { self?.onAction?(id) }
@@ -139,7 +152,7 @@ private final class PillActionButton: NSControl {
             backing: .buffered,
             defer: false
         )
-        panel.title = L("lastAction")
+        panel.title = titledWithVersion(L("lastAction"))
         panel.level = .floating
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
@@ -178,7 +191,7 @@ private final class PillActionButton: NSControl {
     private let previewMode: Bool
     private let paths: RuntimePaths
     private var settings = Settings(), catalog = Catalog(), invalidSettings = false, scanning = false, terminating = false
-    private var obsConnected = false, obsRunning = false, obsHidden = false, studioOff = false, tourboxConsoleRunning = false, tourboxConsoleInstalled = true, frontIsObs = false, frontIsChrome = false, vjsterPortBusy = false, axTrusted = true
+    private var obsConnected = false, obsRunning = false, obsHidden = false, studioOff = false, tourboxConsoleRunning = false, tourboxConsoleInstalled = true, frontIsObs = false, frontIsChrome = false, vjsterPortBusy = false, vjsterOnDeck = false, axTrusted = true
     private var bannerActionId = "openObs"
     private var obsProblem: String?
     private var vjsterPeers: Set<String> = []
@@ -189,7 +202,23 @@ private final class PillActionButton: NSControl {
     /// Try again was pressed with the controls off: the next scan that reads OBS starts them.
     private var startAfterScan = false
     // Whether Console holds an older OBS Fadester preset than ours (Model.swift PresetAge, FIX-9): read every few seconds, said once.
-    private var presetState = PresetState.none, shippedShortcuts: Set<String>?, presetCheckAt = Date.distantPast, toldOldPreset = false
+    private var presetState = PresetState.unknown, shippedShortcuts: Set<String>?, presetCheckAt = Date.distantPast, toldOldPreset = false
+    /// What Console's files looked like at the last complete read (PresetAge.stamp): unchanged, they are not read again.
+    private var presetStamp: String?
+    /// A video has been connected to VJster on this Mac at some time: until then its light does not nag.
+    private var vjsterUsed: Bool {
+        get { UserDefaults.standard.bool(forKey: "fadester.vjsterSeen") }
+        set { UserDefaults.standard.set(newValue, forKey: "fadester.vjsterSeen") }
+    }
+    /// Studio Mode off is read again every 10 s while the controls run, so turning it on in OBS by hand clears the light.
+    /// Twelve looks 10 s apart (two minutes) after the light turned amber, then one a minute: someone who works without
+    /// Studio Mode must not have OBS asked every 10 s for the whole show.
+    private var studioCheckAt = Date.distantPast, studioChecksLeft = 0
+    /// The port last filled in from OBS's own settings file; another value in the box was typed by hand.
+    private var filledPort: Int?
+    /// The menu-bar icon: with the controls on, closing the window hides it and the show goes on.
+    private var statusItem: NSStatusItem?
+    private var statusToggle: NSMenuItem?
     /// TourBox Console's Auto Switch and whether its selected preset is ours (Model.swift PresetAge): they decide the reminder strip.
     private var startedWith: Settings?
     private var catalogAt = Date.distantPast
@@ -198,6 +227,7 @@ private final class PillActionButton: NSControl {
     private var rememberedControls: String? { UserDefaults.standard.string(forKey: "fadester.controlsLastAction") }
     private func rememberControls(_ onOff: String) { UserDefaults.standard.set(onOff, forKey: "fadester.controlsLastAction") }
     private var nextAutoScan = Date.distantFuture
+    private var nextSlowScan = Date.distantPast
     private var watchTimer: Timer?
     private var scanTask: Task<Void, Never>?
     private let host = HostController()
@@ -212,7 +242,7 @@ private final class PillActionButton: NSControl {
     private var reminderCard = RoundedCardView(fill: reminderBgColor, radius: 5)
     private var reminderLabel = NSTextField(wrappingLabelWithString: "")
     private var reminderAction = PillActionButton()
-    private var status = NSTextField(labelWithString: L("macLookingForObs"))
+    private var status = NSTextField(wrappingLabelWithString: L("macLookingForObs"))
     private var snapshot = NSTextField(wrappingLabelWithString: L("macSnapshotHint"))
     // The Visual Sidechain meter (P1-3), from a scan or the running controls' VS-METER lines, as on Windows.
     private var vsLine = NSTextField(labelWithString: "")
@@ -265,10 +295,16 @@ private final class PillActionButton: NSControl {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         build()
+        // Never taller or wider than the screen it opens on (a 13-inch laptop has less room than the window asks for).
+        if let room = (window.screen ?? NSScreen.main)?.visibleFrame, window.frame.height > room.height || window.frame.width > room.width {
+            window.setFrame(NSRect(x: room.minX, y: room.minY, width: min(window.frame.width, room.width), height: min(window.frame.height, room.height)), display: false)
+        }
         window.center()
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         guard !previewMode else { return }
+        makeStatusItem()
+        followObsPort()
         watchDesktop()
         watchTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.watchDesktop() }
@@ -282,6 +318,52 @@ private final class PillActionButton: NSControl {
         }
     }
 
+    /// The icon in the menu bar (top right of the screen): Open, Start or Stop, and Quit. It is what brings the window
+    /// back after it was closed with the controls on.
+    private func makeStatusItem() {
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        if let icon = NSApplication.shared.applicationIconImage.copy() as? NSImage {
+            icon.size = NSSize(width: 18, height: 18)
+            item.button?.image = icon
+        } else {
+            item.button?.title = "F"
+        }
+        item.button?.toolTip = window.title
+        let menu = NSMenu()
+        let open = NSMenuItem(title: L("trayOpen"), action: #selector(showWindow), keyEquivalent: "")
+        open.target = self; menu.addItem(open)
+        let toggle = NSMenuItem(title: L("saveStart"), action: #selector(toggleControls), keyEquivalent: "")
+        toggle.target = self; menu.addItem(toggle)
+        menu.addItem(.separator())
+        menu.addItem(withTitle: L("macQuit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
+        item.menu = menu
+        statusItem = item; statusToggle = toggle
+    }
+
+    @objc private func showWindow() {
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    /// A click on the Dock icon with the window closed brings it back.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if !flag && !previewMode { showWindow() }
+        return true
+    }
+
+    /// The OBS port fills itself in from OBS's own settings file, as the password does, until a port is typed by hand
+    /// (that is how another OBS is chosen). Never while the controls run, and never onto VJster's port.
+    private func followObsPort() {
+        guard settings.portAuto, !host.running, !previewMode, !invalidSettings else { return }
+        // A value that is not the one filled in last was typed: it stays, and current() saves that choice.
+        if let filled = filledPort, port.stringValue.trimmingCharacters(in: .whitespaces) != String(filled) { return }
+        if filledPort == nil && port.stringValue.trimmingCharacters(in: .whitespaces) != String(settings.port) { return }
+        guard let found = LocalFiles.obsPort() else { filledPort = filledPort ?? settings.port; return }
+        let vjPort = Int(vjsterPort.stringValue.trimmingCharacters(in: .whitespaces)) ?? settings.vjsterPort
+        if vjster.state == .on && found == vjPort { filledPort = filledPort ?? settings.port; return }
+        port.stringValue = String(found); filledPort = found
+    }
+
     /// The app's version (CFBundleShortVersionString in Info.plist); "" when the bundle does not say.
     static func appVersion() -> String {
         (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)?.trimmingCharacters(in: .whitespaces) ?? ""
@@ -289,7 +371,9 @@ private final class PillActionButton: NSControl {
 
     func build() {
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 920, height: 856), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
-        window.appearance = NSAppearance(named: .aqua)
+        // Light or dark with the Mac (System Settings → Appearance). The setup diagram and the Show-me windows are
+        // drawn in fixed colours on their own light card, so they stay light.
+        diagramView.appearance = NSAppearance(named: .aqua)
         window.contentView = PanelBackground(frame: NSRect(x: 0, y: 0, width: 920, height: 856))
         let version = Panel.appVersion()
         window.title = version.isEmpty ? "Fadester Companion" : "Fadester Companion " + version
@@ -315,7 +399,12 @@ private final class PillActionButton: NSControl {
         titleLabel.textColor = .white
         status.font = .systemFont(ofSize: 13, weight: .regular)
         status.textColor = NSColor(srgbRed: 228 / 255, green: 234 / 255, blue: 245 / 255, alpha: 1)
-        status.lineBreakMode = .byTruncatingTail
+        // Two lines, then an ellipsis, as on Windows; the whole message is the tooltip and the newest line in Activity.
+        status.isSelectable = false
+        status.maximumNumberOfLines = 2
+        status.lineBreakMode = .byWordWrapping
+        status.cell?.truncatesLastVisibleLine = true
+        status.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         let headerText = NSStackView(views: [titleLabel, status])
         headerText.orientation = .vertical; headerText.alignment = .leading; headerText.spacing = 4
         headerText.translatesAutoresizingMaskIntoConstraints = false
@@ -347,7 +436,7 @@ private final class PillActionButton: NSControl {
             headerRow.bottomAnchor.constraint(equalTo: headerCard.bottomAnchor, constant: -12),
             versionLabel.topAnchor.constraint(equalTo: headerCard.topAnchor, constant: 12),
             versionLabel.trailingAnchor.constraint(equalTo: headerCard.trailingAnchor, constant: -16),
-            status.widthAnchor.constraint(lessThanOrEqualTo: headerCard.widthAnchor, constant: -90)
+            status.widthAnchor.constraint(lessThanOrEqualTo: headerCard.widthAnchor, constant: -100)
         ])
 
         // 2. Top live readiness indicator strip (OBS, TourBox, VJster, Controls + quick Start/Stop).
@@ -423,7 +512,7 @@ private final class PillActionButton: NSControl {
         let feedbackButton = button(L("feedback"), #selector(toggleFeedback))
         let guideButton = button(L("guide"), #selector(guide))
         root.addArrangedSubview(horizontal([primaryButton, saveButton, feedbackButton, guideButton]))
-        root.addArrangedSubview(label(L("keepOpen"), small: true))
+        root.addArrangedSubview(label(L("macKeepOpen"), small: true))
 
         vjster.target = self; vjster.action = #selector(vjsterToggled)
         mix.target = self; mix.action = #selector(mixToggled)
@@ -450,7 +539,7 @@ private final class PillActionButton: NSControl {
             guard let self else { return }
             self.setMeter("")
             self.vjsterPeers.removeAll()
-            self.vjsterPortBusy = false
+            self.vjsterPortBusy = false; self.vjsterOnDeck = false
             self.updateEnabled()
             if self.terminating { NSApp.reply(toApplicationShouldTerminate: true); return }
             // Without VJster the host stops when OBS goes away: look for OBS again, and the next scan that reads it starts the controls,
@@ -467,6 +556,7 @@ private final class PillActionButton: NSControl {
 
     private func setStatus(_ text: String) {
         status.stringValue = text
+        status.toolTip = text // the line is cut at the window's width; the whole message is here and in Activity
         hud?.set(text)
     }
 
@@ -494,10 +584,10 @@ private final class PillActionButton: NSControl {
         let stack = NSStackView(); stack.orientation = .vertical; stack.alignment = .leading; stack.spacing = 10; return stack
     }
     private func heading(_ title: String, in stack: NSStackView) {
-        let text = label(title); text.font = .boldSystemFont(ofSize: 14.5); text.textColor = navyColor; stack.addArrangedSubview(text)
+        let text = label(title); text.font = .boldSystemFont(ofSize: 14.5); text.textColor = inkColor; stack.addArrangedSubview(text)
     }
     private func subheading(_ title: String, in stack: NSStackView) {
-        let text = label(title); text.font = .boldSystemFont(ofSize: 13); text.textColor = accentColor; stack.addArrangedSubview(text)
+        let text = label(title); text.font = .boldSystemFont(ofSize: 13); text.textColor = accentTextColor; stack.addArrangedSubview(text)
     }
     private func paragraph(_ text: String, in stack: NSStackView) {
         let field = label(text); stack.addArrangedSubview(field); field.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
@@ -512,7 +602,7 @@ private final class PillActionButton: NSControl {
         if host.running && obsConnected && Date().timeIntervalSince(catalogAt) > 10 { performScan(silentIfOffline: true, listsOnly: true) }
     }
     private func scrolling(_ stack: NSStackView) -> NSScrollView {
-        let scroll = NSScrollView(); scroll.hasVerticalScroller = true; scroll.drawsBackground = true; scroll.backgroundColor = .white
+        let scroll = NSScrollView(); scroll.hasVerticalScroller = true; scroll.drawsBackground = true; scroll.backgroundColor = panelColor
         let document = FlippedDocument(); document.translatesAutoresizingMaskIntoConstraints = false; scroll.documentView = document
         stack.translatesAutoresizingMaskIntoConstraints = false; document.addSubview(stack)
         NSLayoutConstraint.activate([
@@ -542,11 +632,11 @@ private final class PillActionButton: NSControl {
         scanButton = button(L("discover"), #selector(scan))
         stack.addArrangedSubview(scanButton)
         snapshot.font = .boldSystemFont(ofSize: 12.5)
-        snapshot.textColor = navyColor
+        snapshot.textColor = inkColor
         stack.addArrangedSubview(snapshot)
         snapshot.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         vsLine.font = .systemFont(ofSize: 12.5, weight: .medium)
-        vsLine.textColor = accentColor
+        vsLine.textColor = accentTextColor
         vsLine.stringValue = vsStatus
         vsLine.isHidden = vsStatus.isEmpty
         stack.addArrangedSubview(vsLine)
@@ -571,7 +661,7 @@ private final class PillActionButton: NSControl {
             importNote.isHidden = true
         }
         importNote.font = .systemFont(ofSize: 12, weight: .medium)
-        importNote.textColor = accentColor
+        importNote.textColor = accentTextColor
         stack.addArrangedSubview(importNote)
         importNote.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
 
@@ -584,6 +674,17 @@ private final class PillActionButton: NSControl {
 
         heading(L("cueTitle"), in: stack)
         paragraph(L("macCueHint"), in: stack)
+
+        // The optional sections, in the order of the Windows panel: Assign your inputs, Whole mix, VJster.
+        heading(L("inputsTitle"), in: stack)
+        paragraph(L("inputsHint"), in: stack)
+
+        heading(L("mixTitle"), in: stack)
+        stack.addArrangedSubview(mix); edits.append(mix)
+        paragraph(L("mixHint"), in: stack)
+        stack.addArrangedSubview(mixOnly); edits.append(mixOnly)
+        number(L("mixStep"), key: "mixStepDb", in: stack)
+        number(L("mixFade"), key: "mixFadeMs", in: stack)
 
         heading(L("vjsterTitle"), in: stack)
         vjsterPort.widthAnchor.constraint(equalToConstant: 86).isActive = true
@@ -603,13 +704,6 @@ private final class PillActionButton: NSControl {
         stack.addArrangedSubview(horizontal([label(L("vjsterVideo")), vjsterVideo, copyObsUrlButton]))
         edits += [vjster, vjsterPort, vjsterTarget, vjsterExtensionId]
         paragraph(L("macVjsterHint"), in: stack)
-
-        heading(L("mixTitle"), in: stack)
-        stack.addArrangedSubview(mix); edits.append(mix)
-        paragraph(L("mixHint"), in: stack)
-        stack.addArrangedSubview(mixOnly); edits.append(mixOnly)
-        number(L("mixStep"), key: "mixStepDb", in: stack)
-        number(L("mixFade"), key: "mixFadeMs", in: stack)
         return scrolling(stack)
     }
 
@@ -737,6 +831,7 @@ private final class PillActionButton: NSControl {
     private func activityPage() -> NSView {
         let scroll = NSScrollView(); scroll.hasVerticalScroller = true; scroll.hasHorizontalScroller = false
         activity.isEditable = false; activity.isSelectable = true; activity.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
+        activity.textColor = .labelColor; activity.backgroundColor = .textBackgroundColor
         activity.textContainerInset = NSSize(width: 14, height: 14); activity.isVerticallyResizable = true; activity.isHorizontallyResizable = false
         activity.autoresizingMask = [.width]; activity.textContainer?.widthTracksTextView = true
         scroll.documentView = activity; return scroll
@@ -819,6 +914,7 @@ private final class PillActionButton: NSControl {
     private func current() throws -> Settings {
         var result = settings
         guard let value = Int(port.stringValue.trimmingCharacters(in: .whitespaces)) else { throw PanelFailure.message(L("macErrPort")) }; result.port = value
+        if result.portAuto && value != (filledPort ?? settings.port) { result.portAuto = false }
         guard let vjPort = Int(vjsterPort.stringValue.trimmingCharacters(in: .whitespaces)) else { throw PanelFailure.message(L("macErrVjPort")) }; result.vjsterPort = vjPort
         result.vjsterEnabled = vjster.state == .on
         result.vjsterTarget = vjsterTarget.selectedItem?.representedObject as? String ?? "both"
@@ -846,13 +942,14 @@ private final class PillActionButton: NSControl {
         let controlsOn = host.running
         let canAct = !scanning && !invalidSettings && !previewMode
         let consoleReady = tourboxConsoleInstalled || tourboxConsoleRunning
-        let obsState = Readiness.obs(connected: obsConnected, running: obsRunning, problem: obsProblem, studioOff: studioOff, controlsOn: controlsOn)
         let onlyMix = mixOnlyChosen
+        // Stream Deck-only mode serves OBS's mixer and needs no Studio Mode: its light does not ask for it.
+        let obsState = Readiness.obs(connected: obsConnected, running: obsRunning, problem: obsProblem, studioOff: studioOff && !onlyMix, controlsOn: controlsOn)
         // Stream Deck-only mode needs no Accessibility: it moves no T-bar.
         let axReady = axTrusted || onlyMix
-        let tbState = Readiness.tourBox(consoleRunning: tourboxConsoleRunning, consoleInstalled: consoleReady, mixOnly: onlyMix, oldPreset: presetState == .old)
+        let tbState = Readiness.tourBox(consoleRunning: tourboxConsoleRunning, consoleInstalled: consoleReady, mixOnly: onlyMix, oldPreset: presetState == .old, noPreset: presetState == .none)
         let vjEnabled = vjster.state == .on
-        let vjState = Readiness.vjster(enabled: vjEnabled, controlsOn: controlsOn, connectedPeers: vjsterPeers.count, portBusy: vjsterPortBusy, mixOnly: onlyMix)
+        let vjState = Readiness.vjster(enabled: vjEnabled, controlsOn: controlsOn, connectedPeers: vjsterPeers.count, portBusy: vjsterPortBusy, mixOnly: onlyMix, usedBefore: vjsterUsed, onDeck: vjsterOnDeck)
         let ctlState = Readiness.controls(running: controlsOn, armed: host.isArmed, axTrusted: axReady, obsConnected: obsConnected)
 
         let syncState: PresetSyncState = lastSavedPreset != nil
@@ -867,7 +964,7 @@ private final class PillActionButton: NSControl {
         openConsoleStepButton?.title = consoleReady ? L("macOpenConsoleStep") : L("macDownloadConsoleStep")
         grantAxButton?.bezelColor = axTrusted ? nil : accentColor
         axStatusLabel.stringValue = axTrusted ? L("macAxGranted") : L("macAxNeeded")
-        axStatusLabel.textColor = axTrusted ? NSColor(srgbRed: 40 / 255, green: 140 / 255, blue: 72 / 255, alpha: 1) : reminderFgColor
+        axStatusLabel.textColor = axTrusted ? grantedColor : reminderFgColor
         importGuideWindow?.update(savedPreset: lastSavedPreset, consoleInstalled: consoleReady)
 
         let parsedVjPort = Int(vjsterPort.stringValue.trimmingCharacters(in: .whitespaces)) ?? settings.vjsterPort
@@ -875,7 +972,7 @@ private final class PillActionButton: NSControl {
             obsLamp: obsState.lamp,
             obsRunning: obsRunning,
             obsConnected: obsConnected,
-            studioOff: studioOff,
+            studioOff: studioOff && !onlyMix,
             frontIsObs: frontIsObs,
             obsAction: obsState.action ?? "server",
             tourBoxLamp: tbState.lamp,
@@ -909,14 +1006,19 @@ private final class PillActionButton: NSControl {
     /// Compare Console's stored presets with the one this Companion ships, every 5 s (Console writes them when they change), FIX-9.
     private func checkPresetAge() {
         presetCheckAt = Date().addingTimeInterval(5)
-        // An unreadable shipped preset is read again next time rather than turning the check off for good.
-        if shippedShortcuts?.isEmpty ?? true { shippedShortcuts = PresetAge.shipped(paths.localizedPreset) }
-        // A preset Console is still writing (or a file it holds) keeps the last answer instead of a false one.
-        consoleAutoSwitch = PresetAge.autoSwitch(); activeFadester = PresetAge.activeIsFadester(shipped: shippedShortcuts ?? [])
-        if shippedLayout == nil { shippedLayout = PresetAge.layout(PresetAge.unzip(paths.localizedPreset)) }
-        let (stored, complete, layouts) = PresetAge.stored()
-        guard complete else { return }
-        presetState = PresetAge.judge(shipped: shippedShortcuts ?? [], stored: stored, shippedLayout: shippedLayout, layouts: layouts)
+        // Nothing in Console's folder changed since the last complete read: nothing is opened or parsed again.
+        let stamp = PresetAge.stamp()
+        if stamp != presetStamp || (shippedShortcuts?.isEmpty ?? true) {
+            // An unreadable shipped preset is read again next time rather than turning the check off for good.
+            if shippedShortcuts?.isEmpty ?? true { shippedShortcuts = PresetAge.shipped(paths.localizedPreset) }
+            // A preset Console is still writing (or a file it holds) keeps the last answer instead of a false one.
+            consoleAutoSwitch = PresetAge.autoSwitch(); activeFadester = PresetAge.activeIsFadester(shipped: shippedShortcuts ?? [])
+            if shippedLayout == nil { shippedLayout = PresetAge.layout(PresetAge.unzip(paths.localizedPreset)) }
+            let (stored, complete, layouts) = PresetAge.stored()
+            guard complete else { return }
+            presetState = PresetAge.judge(shipped: shippedShortcuts ?? [], stored: stored, shippedLayout: shippedLayout, layouts: layouts)
+            presetStamp = stamp
+        }
         // Said once, and only where the TourBox light shows it: Console running and not in Stream Deck-only mode.
         if presetState == .old && !toldOldPreset && tourboxConsoleRunning && !mixOnlyChosen { toldOldPreset = true; note(L("tbOldNote")) }
         if presetState != .old { toldOldPreset = false }
@@ -925,7 +1027,10 @@ private final class PillActionButton: NSControl {
     private func watchDesktop() {
         defer { if !previewMode && Date() >= presetCheckAt { checkPresetAge() } }
         guard !previewMode else { return }
+        let wasTrusted = axTrusted
         axTrusted = AXIsProcessTrusted()
+        // Accessibility was just granted: the controls start now, as they would have at launch (never after Stop).
+        if axTrusted && !wasTrusted { autoStartIfWanted() }
         let apps = NSWorkspace.shared.runningApplications
         let obsApp = apps.first {
             $0.bundleIdentifier == "com.obsproject.obs-studio" || $0.localizedName == "OBS" || $0.localizedName == "OBS Studio"
@@ -960,6 +1065,20 @@ private final class PillActionButton: NSControl {
             nextAutoScan = Date().addingTimeInterval(4.5)
             performScan(silentIfOffline: true)
         }
+        // Without VJster, or in Stream Deck-only mode, the host ends when OBS goes away and the four tries above are
+        // soon used up: while OBS runs and Stop was not pressed, keep looking every 15 s (F-04).
+        if obsRunning && !host.running && !obsConnected && autoTries == 0 && !scanning && !invalidSettings && rememberedControls != "off" &&
+            (obsProblem == nil || obsProblem == "obs-no-answer") && Date() >= nextSlowScan {
+            nextSlowScan = Date().addingTimeInterval(15)
+            performScan(silentIfOffline: true)
+        }
+        // Studio Mode off is on the OBS light: look again now and then, so turning it on in OBS itself clears the light.
+        if host.running && obsConnected && studioOff && !mixOnlyChosen && !scanning && Date() >= studioCheckAt {
+            if studioChecksLeft > 0 { studioChecksLeft -= 1 }
+            // Ten seconds apart for the first twelve looks, then one a minute, so turning Studio Mode on by hand later still clears the light.
+            studioCheckAt = Date().addingTimeInterval(studioChecksLeft > 0 ? 10 : 60)
+            performScan(silentIfOffline: true, listsOnly: true)
+        }
         refreshIndicators()
     }
 
@@ -977,7 +1096,17 @@ private final class PillActionButton: NSControl {
         }
         vjsterPeers = Readiness.vjsterPeers(after: safeLine, current: vjsterPeers)
         vjsterPortBusy = Readiness.vjsterPortBusy(after: safeLine, current: vjsterPortBusy)
-        if safeLine.hasPrefix("OFFLINE:") {
+        vjsterOnDeck = Readiness.vjsterOnDeck(after: safeLine, current: vjsterOnDeck)
+        // The first video ever connected here: from now on a missing one is worth an amber light.
+        if !vjsterPeers.isEmpty && !vjsterUsed { vjsterUsed = true }
+        // Preview or the T-bar was used with Studio Mode off: the OBS light says so, with its Turn on button.
+        if Readiness.saysStudioOff(safeLine) && !studioOff { studioOff = true; studioChecksLeft = 12; studioCheckAt = Date().addingTimeInterval(10) }
+        // The T-bar is unavailable for a reason the panel can explain (the other controls keep working): say it in the
+        // status line, in the panel's language, not only as an English line on the Activity tab (F-02).
+        if let reason = HostController.tbarReason(safeLine) { setStatus(reason) }
+        if safeLine.hasPrefix("T-BAR:") {
+            // Not an OBS failure: OBS stays connected and only the T-bar waits.
+        } else if safeLine.hasPrefix("OFFLINE:") {
             obsConnected = false
             setMeter("")
             let problem = Readiness.obsProblem(from: safeLine)
@@ -1054,6 +1183,7 @@ private final class PillActionButton: NSControl {
         case "importPreset": saveAndGuidePreset()
         case "downloadConsole": downloadTourBoxConsole()
         case "grantAx": grantAccessibility()
+        case "studioOn": turnOnStudio()
         case "studio", "password", "server", "vjsterWait", "vjsterPort":
             openObsShowMe(mode: action)
         default: break
@@ -1105,6 +1235,31 @@ private final class PillActionButton: NSControl {
         win.show(relativeTo: window)
     }
 
+    /// The OBS light's Turn on button: asks OBS to switch Studio Mode on, then reads OBS again. Only on that click.
+    private func turnOnStudio() {
+        guard !scanning && !previewMode && !invalidSettings else { return }
+        let targetPort = host.running ? settings.port : (Int(port.stringValue.trimmingCharacters(in: .whitespaces)) ?? settings.port)
+        let secret: String, client: ObsDiscovery
+        do {
+            secret = try LocalFiles.password(port: targetPort, override: password.stringValue)
+            client = try ObsDiscovery(port: targetPort)
+        } catch { failure(error); return }
+        scanning = true; updateEnabled()
+        Task { [weak self] in
+            guard let self else { return }
+            var turnedOn = false
+            do { try await client.turnOnStudioMode(password: secret); turnedOn = true }
+            catch { self.failure(error) }
+            self.scanning = false
+            if turnedOn {
+                self.studioOff = false
+                let said = L("studioTurnedOn"); self.setStatus(said); self.note(said)
+            }
+            self.updateEnabled()
+            if turnedOn { self.performScan(silentIfOffline: true, listsOnly: self.host.running) }
+        }
+    }
+
     private func updateEnabled() {
         // Editing and Save stay open while the controls run: Save hands the new settings to the running host.
         let editable = !scanning
@@ -1120,11 +1275,17 @@ private final class PillActionButton: NSControl {
             primaryButton?.bezelColor = accentColor
             primaryButton?.isEnabled = editable && !invalidSettings && !previewMode
         }
+        statusToggle?.title = primaryButton?.title ?? L("saveStart")
         refreshIndicators()
     }
 
     /// The last Activity line, so the same message again becomes one line with a count, as on Windows (ActivityText).
     private var lastNote = "", lastNoteCount = 0, lastNoteRange: NSRange?
+    /// Activity lines carry their font and a colour that follows the light or dark appearance (text added without
+    /// attributes is black, whatever the window's colour).
+    private static let activityAttributes: [NSAttributedString.Key: Any] = [
+        .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .regular), .foregroundColor: NSColor.labelColor
+    ]
 
     private func note(_ text: String) {
         let safe = redact(text, secrets: [password.stringValue, settings.vjsterObsToken])
@@ -1134,11 +1295,11 @@ private final class PillActionButton: NSControl {
         let line = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .medium) + "  " + shown + "\n"
         guard let storage = activity.textStorage else { return }
         if repeated, let range = lastNoteRange, NSMaxRange(range) <= storage.length {
-            storage.replaceCharacters(in: range, with: line)
+            storage.replaceCharacters(in: range, with: NSAttributedString(string: line, attributes: Self.activityAttributes))
             lastNoteRange = NSRange(location: range.location, length: (line as NSString).length)
         } else {
             lastNoteRange = NSRange(location: storage.length, length: (line as NSString).length)
-            storage.append(NSAttributedString(string: line))
+            storage.append(NSAttributedString(string: line, attributes: Self.activityAttributes))
         }
         if activity.string.count > 60_000 { activity.string = String(activity.string.suffix(45_000)); lastNoteRange = nil }
         activity.scrollToEndOfDocument(nil)
@@ -1198,7 +1359,7 @@ private final class PillActionButton: NSControl {
                 return
             }
             vjsterPeers.removeAll()
-            vjsterPortBusy = false
+            vjsterPortBusy = false; vjsterOnDeck = false
             try host.start(paths: paths, config: LocalFiles.settings, password: secret, mixEnabled: proposed.mixEnabled, mixOnly: proposed.mixOnly, extraSecrets: [proposed.vjsterObsToken])
             startedWith = proposed
             updateEnabled()
@@ -1234,6 +1395,7 @@ private final class PillActionButton: NSControl {
     /// 2026-11-17: the lists stayed empty until Read scenes was clicked). It changes no light and starts nothing.
     private func performScan(silentIfOffline: Bool, listsOnly: Bool = false, loud: Bool = false) {
         guard (listsOnly || !host.running) && !scanning && !previewMode && !invalidSettings else { return }
+        if !listsOnly { followObsPort() }
         let targetPort: Int
         // A refresh while the controls run asks the OBS the host uses (the saved port), not an unsaved edit.
         if listsOnly { targetPort = settings.port } else if let parsed = Int(port.stringValue.trimmingCharacters(in: .whitespaces)), (1...65535).contains(parsed) {
@@ -1268,12 +1430,15 @@ private final class PillActionButton: NSControl {
                 self.fillChoices(preserveEdits: true)
                 self.catalogAt = Date()
                 if listsOnly {
+                    if !self.catalog.studio && !self.studioOff { self.studioChecksLeft = 12; self.studioCheckAt = Date().addingTimeInterval(10) }
+                    self.studioOff = !self.catalog.studio // the OBS light's Studio Mode state follows every read
                     if loud { let msg = L("obsConnected", self.catalog.scenes.count); self.setStatus(msg); self.note(msg) } // controls already on
                     self.scanning = false; self.scanTask = nil; self.updateEnabled(); return
                 }
                 self.obsConnected = true
                 self.obsRunning = true
                 self.obsProblem = nil
+                if !self.catalog.studio && !self.studioOff { self.studioChecksLeft = 12; self.studioCheckAt = Date().addingTimeInterval(10) }
                 self.studioOff = !self.catalog.studio
                 self.snapshot.stringValue = L("sceneSummary", self.catalog.program, self.catalog.preview, L(self.catalog.studio ? "on" : "off"))
                 self.setMeter(Readiness.vsMeter(self.catalog.visualSidechain) ?? "")
@@ -1430,7 +1595,12 @@ private final class PillActionButton: NSControl {
 
     @objc private func guide() { if !previewMode { NSWorkspace.shared.open(paths.guide) } }
 
-    func windowShouldClose(_ sender: NSWindow) -> Bool { NSApp.terminate(nil); return false }
+    /// With the controls on, closing the window only hides it: the show goes on, and the icon in the menu bar (or the Dock
+    /// icon) brings it back. Quit, in the menu bar icon's menu or the app menu, stops the controls and ends the app.
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        if host.running && statusItem != nil { window.orderOut(nil); return false }
+        NSApp.terminate(nil); return false
+    }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         watchTimer?.invalidate(); watchTimer = nil

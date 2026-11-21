@@ -42,7 +42,7 @@ $panelSources=@(Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'panel') -Fi
 $panelVersion=Join-Path $stage 'PanelVersion.g.cs'
 [IO.File]::WriteAllText($panelVersion,"[assembly: System.Reflection.AssemblyVersion(`"$numericVersion`")]`r`n[assembly: System.Reflection.AssemblyFileVersion(`"$numericVersion`")]`r`n[assembly: System.Reflection.AssemblyInformationalVersion(`"$Version`")]`r`n",[Text.UTF8Encoding]::new($false))
 $panelSources+=$panelVersion
-& $csc /nologo /target:winexe /optimize+ /codepage:65001 "/win32icon:$(Join-Path $PSScriptRoot 'panel\fadester.ico')" "/out:$panel" /r:System.dll /r:System.Core.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.Web.Extensions.dll @panelSources
+& $csc /nologo /target:winexe /optimize+ /codepage:65001 "/win32icon:$(Join-Path $PSScriptRoot 'panel\fadester.ico')" "/win32manifest:$(Join-Path $PSScriptRoot 'panel\app.manifest')" "/out:$panel" /r:System.dll /r:System.Core.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.Web.Extensions.dll @panelSources
 if($LASTEXITCODE){throw 'Panel build failed.'}
 $paneltest=Start-Process -WindowStyle Hidden -FilePath $panel -ArgumentList '--self-test' -PassThru -Wait
 if($paneltest.ExitCode){throw 'Panel self-test failed.'}
@@ -68,7 +68,7 @@ Copy-Item -LiteralPath (Join-Path $vjObsSrc 'player.html') -Destination $vjObsDe
 Copy-Item -LiteralPath (Join-Path $vjObsSrc 'player.js') -Destination $vjObsDest
 & (Join-Path $bundle 'FadesterCompanionBridge.exe') --self-test --map (Join-Path $presets 'map.json')
 if($LASTEXITCODE){throw 'Packaged bridge self-test failed.'}
-& node (Join-Path $PSScriptRoot 'make-guide.cjs') (Join-Path $bundle 'START-HERE.html')
+& node (Join-Path $PSScriptRoot 'make-guide.cjs') (Join-Path $bundle 'START-HERE.html') $Version
 if($LASTEXITCODE){throw 'Quick-guide generation failed.'}
 Copy-Item -LiteralPath $guideDir -Destination (Join-Path $bundle 'guide') -Recurse
 Copy-Item -LiteralPath $guideDir -Destination (Join-Path $sources 'guide') -Recurse
@@ -77,7 +77,7 @@ foreach($bank in $map.presets.PSObject.Properties.Name){foreach($ext in 'svg','p
 foreach($id in 'scenes','fade','audio','media','overlay','capture','transition','diagnostics'){if(!(Test-Path -LiteralPath (Join-Path $art "icons/$id.png"))){throw "Missing action icon $id."}}
 Copy-Item -LiteralPath $art -Destination (Join-Path $bundle 'artwork') -Recurse
 Copy-Item -LiteralPath $art -Destination (Join-Path $sources 'artwork') -Recurse
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'GALLERY.txt') -Destination $bundle
+# GALLERY.txt (the notes for TourBox's preset gallery) is not for the person who downloads the ZIP: it goes with the source below.
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'README.md') -Destination $bundle
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'REHEARSAL.md') -Destination $bundle
 $license=Join-Path (Split-Path $PSScriptRoot) 'LICENSE'
@@ -91,7 +91,7 @@ foreach($file in Get-ChildItem -LiteralPath $PSScriptRoot -File) {if($file.Exten
 foreach($sub in 'presets','bridge','panel','tests','native'){
   $src=Join-Path $PSScriptRoot $sub; $dest=Join-Path $sources $sub
   $null=New-Item -ItemType Directory -Force $dest
-  foreach($file in Get-ChildItem -LiteralPath $src -File){if($file.Extension -in '.tb','.json','.py','.cjs','.mjs','.cs','.csproj','.cpp','.vcxproj','.md','.ps1','.txt','.js','.xml','.ico'){Copy-Item -LiteralPath $file.FullName -Destination $dest}}
+  foreach($file in Get-ChildItem -LiteralPath $src -File){if($file.Extension -in '.tb','.json','.py','.cjs','.mjs','.cs','.csproj','.cpp','.vcxproj','.md','.ps1','.txt','.js','.xml','.ico','.manifest'){Copy-Item -LiteralPath $file.FullName -Destination $dest}}
 }
 foreach($rel in 'vjster-page','vjster-page\src','src\vjster\shared','vjster-extension\src'){
   $src=Join-Path $repoRoot $rel; $dest=Join-Path (Join-Path $bundle 'source') $rel

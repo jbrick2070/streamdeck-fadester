@@ -11,7 +11,7 @@ import {
 import { mixProblem } from "../obs/whole-mix.js";
 import { DirectObsClient } from "../obs/direct-obs-client.js";
 import { VisualSignals } from "../control/visual-signals.js";
-import { QuantizedKeyArm } from "../control/quantized-fade.js";
+import { QuantizedKeyArm, quantizeBadge } from "../control/quantized-fade.js";
 import { automaticInputRoleName, migrateAutomaticInputSettings } from "../obs/automatic-targets.js";
 import { customCaption } from "../obs/preset-captions.js";
 import {
@@ -30,6 +30,7 @@ import {
 } from "../gfx/direct-obs-renderer.js";
 import { DIAL_HOLD_THRESHOLD_MS } from "./dial-math.js";
 import { statusCellReason } from "../../packages/streamdeck-fadester-shared/src/status-text.js";
+import { LocalText, errorLocalText, ownText, wordText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
 import { formatNumber, onLanguageChanged, t, translate } from "../i18n/strings.js";
 
 interface KeyImageSink {
@@ -45,11 +46,17 @@ export class ObsFadeKeyInstanceController {
   private offLanguage: () => void = () => {};
   private readonly rateLimiter: CellRateLimiter<string>;
   private readonly arm: QuantizedKeyArm;
+  /** Why the last fade failed or was cut short; drawn on the key until the next press, a new setting or a new connection. */
+  private lastError: LocalText | null = null;
   private readonly onStateChanged = (): void => {
     if (!this.client.isConnected()) {
       this.arm.cancelSilently();
     }
     this.renderNow();
+  };
+  private readonly onStatusChanged = (): void => {
+    this.lastError = null;
+    this.onStateChanged();
   };
 
   public constructor(
@@ -75,7 +82,7 @@ export class ObsFadeKeyInstanceController {
     this.visible = true;
     this.offLanguage();
     this.offLanguage = onLanguageChanged(() => this.renderNow());
-    this.client.on("statusChanged", this.onStateChanged);
+    this.client.on("statusChanged", this.onStatusChanged);
     this.client.on("directStateChanged", this.onStateChanged);
     this.client.on("wholeMixChanged", this.onStateChanged);
     this.syncMixObserver();
@@ -88,9 +95,10 @@ export class ObsFadeKeyInstanceController {
     this.offLanguage = () => {};
     this.arm.dispose();
     this.rateLimiter.dispose();
-    this.client.off("statusChanged", this.onStateChanged);
+    this.client.off("statusChanged", this.onStatusChanged);
     this.client.off("directStateChanged", this.onStateChanged);
     this.client.off("wholeMixChanged", this.onStateChanged);
+    this.lastError = null;
     this.syncMixObserver();
   }
 
@@ -106,12 +114,17 @@ export class ObsFadeKeyInstanceController {
     ) {
       this.arm.cancelSilently();
     }
+    this.lastError = null;
     this.syncMixObserver();
     this.renderNow();
   }
 
   public async handleKeyDown(now = this.clock()): Promise<void> {
     const all = this.settings.target === "all_inputs";
+    if (this.lastError !== null) {
+      this.lastError = null;
+      this.renderNow();
+    }
     if (!this.arm.isArmed()) {
       if (!all && !this.settings.inputName) {
         await this.sink.showAlert();
@@ -133,7 +146,7 @@ export class ObsFadeKeyInstanceController {
         if (!this.client.isConnected()) return;
         if (all) {
           try { await this.client.wholeMix.command(this.settings.to ? "mix.restore" : "mix.fadeOut"); }
-          catch { await this.sink.showAlert(); }
+          catch { if (this.visible) await this.sink.showAlert(); }
           return;
         }
         void this.client
@@ -142,7 +155,14 @@ export class ObsFadeKeyInstanceController {
             this.settings.to,
             effectiveMs ?? this.settings.durationMs
           )
-          .catch(async () => this.sink.showAlert());
+          .catch(async (error: unknown) => {
+            // The volume may be left part-way (the input went, the collection changed, the link dropped): the key
+            // says why until the next press. A key that left the page gets no alert.
+            this.lastError = errorLocalText(error, ownText("errorControlChanged"));
+            if (!this.visible) return;
+            this.renderNow();
+            await this.sink.showAlert();
+          });
       },
       now
     );
@@ -179,15 +199,7 @@ export class ObsFadeKeyInstanceController {
         : this.settings.durationMs === 0
           ? t(up ? "fadeUpNow" : "fadeDownNow")
           : t(up ? "fadeUpSeconds" : "fadeDownSeconds", { s: formatNumber(this.settings.durationMs / 1000, 3) });
-    const bannerKind = this.arm.getBanner();
-    const badge =
-      bannerKind === "armed"
-        ? { text: t("quantizeArmed"), on: true }
-        : bannerKind === "no_tempo"
-          ? { text: t("quantizeNoTempo"), on: false }
-          : bannerKind === "cancelled"
-            ? { text: t("quantizeCancelled"), on: false }
-            : undefined;
+    const badge = quantizeBadge(this.arm.getBanner());
     this.rateLimiter.push(
       renderDirectKeySvg({
         connected: this.client.isConnected(),
@@ -199,7 +211,8 @@ export class ObsFadeKeyInstanceController {
         accent: this.settings.accent,
         badge,
         problem: all ? mixProblem(this.client.wholeMix.state) : !inputName && configured
-          ? role ? t("roleUnavailable", { role }) : t("audioInputUnavailable") : undefined
+          ? role ? t("roleUnavailable", { role }) : t("audioInputUnavailable")
+          : this.lastError ? wordText(this.lastError, translate) : undefined
       })
     );
   }

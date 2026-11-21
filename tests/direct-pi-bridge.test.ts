@@ -25,7 +25,10 @@ describe("Shared direct OBS connection settings", () => {
     const duplicate = bridge.handleMessage({ event: "directUpdateGlobalSettings", host: "127.0.0.1", port: 4455 });
     release();
     await Promise.all([first, duplicate]);
-    expect(persisted.map((entry) => entry.password)).toEqual(["new-test-password", "new-test-password"]);
+    // A save without a typed password leaves the stored one alone (it carries no password key at all, C-03)...
+    expect(persisted.map((entry) => entry.password)).toEqual(["new-test-password", undefined]);
+    expect("password" in persisted[1]).toBe(false);
+    // ...and the client keeps the one it has.
     expect(client.getSettings().password).toBe("new-test-password");
     const anotherInspector = new DirectObsPropertyInspectorBridge(client, {
       sendToPropertyInspector: (payload) => payloads.push(payload),

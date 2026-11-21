@@ -1,6 +1,6 @@
 {
   "extDescription": {
-    "message": "Скорость и качество видео в Chrome со Stream Deck, OpenDeck, TourBox или геймпада Xbox. Связь только с этим компьютером."
+    "message": "Скорость и качество видео в Chrome со Stream Deck, OpenDeck, TourBox или геймпадом Xbox. Связь только с этим компьютером."
   },
   "htmlLang": {
     "message": "ru"
@@ -52,17 +52,26 @@
   "statusLinkDown": {
     "message": "Нет подключения. Проверьте программу, которой вы пользуетесь:"
   },
+  "statusFirstWait": {
+    "message": "Ожидание VJster. Сделайте одно из следующего:"
+  },
+  "statusStandby": {
+    "message": "В ожидании. Связь держит другая копия этого расширения (другой профиль Chrome или другой браузер); эта подключится, когда та закроется."
+  },
   "linkDownCompanion": {
     "message": "Fadester Companion: откройте её на этом компьютере и проверьте, что управление включено."
   },
   "linkDownDeck": {
-    "message": "Stream Deck или OpenDeck: откройте страницу с клавишей или регулятором VJster или отметьте «Не отключать связь» в настройках VJster."
+    "message": "Stream Deck или OpenDeck: откройте страницу с клавишей или ручкой VJster или отметьте «Не отключать связь» в настройках VJster."
   },
   "linkDownPort": {
     "message": "Порт здесь должен совпадать с портом в настройках VJster этой программы."
   },
   "statusLinkChecking": {
     "message": "Подключение к VJster…"
+  },
+  "reloadTabsNote": {
+    "message": "Вкладки с видео, открытые до установки или обновления VJster, нужно один раз перезагрузить."
   },
   "statusBadPort": {
     "message": "Введите целое число от 1024 до 65535; по умолчанию $DEFAULT$.",

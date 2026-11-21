@@ -3,8 +3,10 @@
 <html lang="en">
 <head><meta charset="utf-8" /><title>Fadester for OBS — Source &amp; Layer</title><link rel="stylesheet" href="pi.css" /></head>
 <body>
+  <div id="direct-top-status" class="status-banner status-info" style="display:none;"></div>
+  <button id="direct-top-layouts" class="btn secondary" type="button" style="display:none;"></button>
   <h3><span data-i18n="layerHeading">Source &amp; layer</span> <span class="scope" data-i18n="scopeThisControl">this control</span></h3>
-  <p class="muted" data-i18n="layerIntro">Browse the sources already in your scene. The deck shares one selected source per scene until the plugin restarts or the scene collection changes. Browsing keeps your layer order unchanged.</p>
+  <p class="muted" data-i18n="layerIntro">Browse the sources already in your scene. The whole deck shares one selected source per scene. Browsing keeps your layer order unchanged.</p>
   <div id="layer-status" class="status-banner status-info" data-i18n="layerStatusConnect">Connect OBS to list sources.</div>
   <div class="row"><label for="layer-scope" data-i18n="sceneLabel">Scene</label><select id="layer-scope">
     <option value="auto" data-i18n="scopeAuto">Follow Preview in Studio Mode, Program otherwise</option>
@@ -12,7 +14,7 @@
     <option value="fixed" data-i18n="scopeFixed">A specific scene</option>
   </select></div>
   <div class="row" id="layer-scene-row"><label for="layer-scene" data-i18n="whichScene">Which scene</label><select id="layer-scene"></select></div>
-  <div class="row" id="layer-operation-row"><label for="layer-operation" data-i18n="buttonDoes">Button does</label><select id="layer-operation">
+  <div class="row" id="layer-operation-row"><label for="layer-operation" data-i18n="buttonDoes">Key does</label><select id="layer-operation">
     <option value="select_next" data-i18n="opSelectNext">Select next source</option><option value="select_previous" data-i18n="opSelectPrevious">Select previous source</option>
     <option value="show_hide" data-i18n="opShowHide">Show / hide selected source</option>
     <optgroup label="Creative controls" data-i18n-label="creativeControls"><option value="move_up" data-i18n="opMoveUp">Move layer up</option><option value="move_down" data-i18n="opMoveDown">Move layer down</option>
@@ -29,7 +31,7 @@
   <div class="row" id="layer-item-row"><label for="layer-item" data-i18n="fixedSource">Fixed source</label><select id="layer-item"></select></div>
   <p class="muted" data-i18n="fixedNote">To save a source on a control across restarts, choose a non-browsing action and select A fixed source above.</p>
   <div class="row" id="layer-reorder-row"><label for="layer-reorder" data-i18n="reordering">Reordering</label><input id="layer-reorder" type="checkbox" /><span class="hint" data-i18n="reorderHint">Allow this control to change layer order</span></div>
-  <p class="muted" id="layer-live-note" data-i18n="liveNote">Layer edits change scene content immediately. Even in Studio Mode, editing a scene also on Program changes the live output. Blend modes are discrete choices, not a smooth crossfade.</p>
+  <p class="muted" id="layer-live-note" data-i18n="liveNote">This changes the picture on Program at once.</p>
   <p class="muted" data-i18n="groupsNote">Lists show top-level sources and groups; a group is controlled as one layer.</p>
   <div class="row"><label for="layer-label" data-i18n="label">Label</label><input id="layer-label" maxlength="20" placeholder="Automatic" data-i18n-placeholder="placeholderAutomatic" /></div>
   <div class="row"><label></label><button class="btn secondary" id="layer-refresh" type="button" data-i18n="refreshSources">Refresh sources</button></div>
@@ -69,6 +71,9 @@
       assign("layer-scope", scope); assign("layer-operation", operation); assign("layer-dial-mode", dialMode);
       assign("layer-target", settings.target || "selected"); assign("layer-label", generatedLabel ? "" : settings.labelOverride || "");
       el("layer-reorder").checked = settings.allowReorder === true;
+      // Said only when it is true now: this control edits the scene that is on Program (browsing edits nothing).
+      const liveNote = document.getElementById("layer-live-note");
+      if (liveNote) liveNote.style.display = sceneName && sceneName === catalog.currentProgramScene && !browsing ? "" : "none";
       window.directObsFillSelect(el("layer-scene"), (catalog.scenes || []).map(function (name) { return { value: name, text: name }; }), settings.sceneName || "", T("chooseScene"));
       const fixedItems = (scene && scene.layers || []).map(function (item) {
         return { value: String(item.sceneItemId), text: T(item.enabled ? "itemShown" : "itemHidden", { source: item.sourceName }) };

@@ -1,0 +1,55 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-2.0-or-later -->
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Início rápido · Fadester Companion</title>
+  <link rel="stylesheet" href="quickstart.css">
+</head>
+<body>
+  <main>
+    <header>
+      <p>Início rápido · Windows x64</p>
+      <h1>Fadester Companion</h1>
+      <p>Prepare cenas, faça fades manuais e ajuste o áudio no OBS Studio com um controle de jogo ou com o seu TourBox.</p>
+    </header>
+
+    <h2>Sem TourBox? Use um controle de jogo</h2>
+    <ol>
+      <li>Abra o OBS. Em <strong>Ferramentas → Configurações do servidor WebSocket</strong>, ative o servidor e mantenha a autenticação ativada. Depois abra o <strong>Fadester Companion</strong>: ele se conecta sozinho, e a janela diz o que fazer se não conseguir. O T-bar precisa do OBS 33, com a janela principal do OBS aberta e o T-bar visível.</li>
+      <li>Na aba <strong>Configuração</strong>, marque <strong>Usar um controle de jogo Xbox ou XInput</strong> e deixe o <strong>Modo fácil</strong> marcado. Na primeira vez os controles iniciam sozinhos, ainda sem o controle de jogo: clique em <strong>Parar</strong> e depois em <strong>Iniciar</strong>, no canto inferior esquerdo da janela, para que iniciem com ele. Você pode pular a importação do preset.</li>
+      <li>No OBS, ative o <strong>Modo Estúdio</strong> (se estiver desativado, a luz <strong>OBS</strong> no alto da janela tem um botão <strong>Ativar</strong>) e escolha <strong>Esmaecer (Fade)</strong>. Pressione o direcional para baixo para preparar a próxima cena da lista do OBS, e para cima para a anterior.</li>
+      <li>Puxe o gatilho direito: o T-bar do OBS acompanha e, puxado até o fim, a Pré-visualização vai para o Programa. Ou segure <strong>A</strong>: depois de 0,15 s o T-bar avança enquanto você segura, e no fim a Pré-visualização está no Programa. Solte para deixá-lo no meio do caminho; segure A de novo para continuar.</li>
+      <li><strong>B</strong> corta, <strong>View</strong> volta ao Programa, o gatilho esquerdo abaixa a música enquanto você o segura, e o direcional para a esquerda e para a direita ajusta a música. Você pode mudar qualquer botão na aba <strong>Controle de jogo</strong>.</li>
+    </ol>
+    <p>Fechar esta janela não para os controles: o Fadester Companion continua na área de notificação, ao lado do relógio. Para parar, clique em Parar, ou clique com o botão direito nesse ícone e escolha Sair do Fadester Companion.</p>
+
+    <h2>Conectar o TourBox ao OBS</h2>
+    <ol>
+      <li>Abra o <strong>Fadester Companion</strong> pelo menu Iniciar. Se você usa o ZIP, extraia-o por inteiro e abra <strong>Fadester Companion.exe</strong>.</li>
+      <li>Abra o OBS. No TourBox Console, use o botão ao lado de Preset List para importar <code>presets/pt-BR/OBS Fadester for TourBox.tb</code>. Desative o <strong>Auto Switch</strong> e selecione <strong>OBS Fadester for TourBox</strong>: assim um único preset funciona com qualquer programa na frente (OBS, Chrome ou outro). Somente se você mantiver o Auto Switch ativado, vincule o preset ao OBS e, para controlar vídeos com o Chrome na frente, também ao Google Chrome. Importe apenas uma versão de idioma. Use o botão <strong>Importar no TourBox Console</strong> na janela do Fadester; não dê dois cliques no arquivo <code>.tb</code>.</li>
+      <li>No OBS, abra <strong>Ferramentas → Configurações do servidor WebSocket</strong> e ative o servidor com autenticação. Para o fade manual no OBS Studio <strong>33</strong>, ative o <strong>Modo Estúdio</strong>, escolha <strong>Esmaecer (Fade)</strong> e mantenha visível o controle deslizante branco entre a Pré-visualização e o Programa.</li>
+      <li>O Fadester lê a porta e a senha do OBS e inicia os controles sozinho. Selecione <strong>OBS Fadester for TourBox</strong> no TourBox Console. Quando a luz <strong>Controles</strong>, no alto da janela, está verde, o TourBox funciona; se ela disser que estão desligados, clique em <strong>Iniciar</strong> ao lado dela.</li>
+    </ol>
+    <p>Se o Windows usa outro idioma de exibição, feche o Fadester e, na pasta extraída, execute no PowerShell: <code>&amp; '.\Fadester Companion.exe' --language pt-BR</code>.</p>
+
+    <h2>Pratique com duas cenas diferentes</h2>
+    <ul>
+      <li>Gire a roda <strong>Scroll</strong> para trocar a Pré-visualização. O Programa continua igual. Um toque mostra os nomes das duas cenas na aba <strong>Atividade</strong>.</li>
+      <li>Gire devagar o <strong>Dial</strong> plano para mover o controle deslizante do OBS e misturar as cenas. Para cancelar um fade em andamento, segure <strong>Side</strong> e pressione o <strong>Dial</strong>. Girar no sentido horário sempre move o T-bar em direção à Pré-visualização, também na próxima transição. Depois de uma transição concluída, espere um instante antes de girar de novo.</li>
+      <li>Reproduza um vídeo do YouTube no Chrome (com a extensão gratuita VJster). Gire o <strong>Knob</strong> elevado para mudar a velocidade; pressione e gire para passos finos. Pressione-o para reproduzir ou pausar o vídeo. Toque em <strong>Side</strong> para voltar a velocidade a 1x.</li>
+      <li>Para controlar um vídeo do YouTube direto no OBS, informe-o em Configuração, clique em <strong>Copiar URL da Fonte de navegador do OBS</strong> e cole o endereço em uma fonte de navegador do OBS.</li>
+      <li>Atribua uma entrada de música no Fadester. Segure <strong>Side</strong> e gire o <strong>Dial</strong> plano para ajustar o volume dela. Com <strong>Top</strong> pressionado, Knob, Scroll e Dial controlam as camadas de VJ (modo de mesclagem e opacidade). As camadas que você não escolheu são preenchidas pelo Fadester no primeiro uso a partir da cena ao vivo (Camada 1 = a imagem visível mais acima, Camada 2 = a seguinte) e salvas em Atribuições.</li>
+      <li>Um toque em <strong>Short</strong> apenas mostra o status da gravação. <strong>Desfazer última mudança de áudio</strong> fica no menu <strong>Tour</strong>.</li>
+    </ul>
+
+    <h2>Ajustar a mixagem inteira</h2>
+    <p>Em Configuração, ative o controle de todas as entradas do mixer do OBS e clique em <strong>Parar</strong> e depois em <strong>Iniciar</strong>. Segure <strong>Side</strong> e gire o <strong>Knob</strong> para mudar o nível do grupo. No menu <strong>Tour</strong> você pode silenciar a mixagem com um fade e restaurar os níveis anteriores. As entradas silenciadas continuam silenciadas.</p>
+
+    <h2>Ajuda</h2>
+    <p>As mensagens de diagnóstico dos controles aparecem em inglês. Se um controle não responder, confira o preset ativo no TourBox Console e abra a aba Atividade no Fadester.</p>
+    <p><a href="../START-HERE.html" hreflang="en">Guia completo e referência de controles (em inglês)</a> · <a href="../START-HERE.html#recovery" hreflang="en">Solução de problemas (em inglês)</a></p>
+  </main>
+</body>
+</html>

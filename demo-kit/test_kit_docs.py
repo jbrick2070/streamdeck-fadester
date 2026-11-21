@@ -211,7 +211,7 @@ class Readme(unittest.TestCase):
 
     def test_the_readme_says_studio_mode_cue_and_fade(self):
         # K.6: the profile is a Studio Mode layout; a scene key cues, the dial fades.
-        for words in ("Studio Mode", "cues that scene in Preview", "fade it in with the dial"):
+        for words in ("Studio Mode", "puts that scene in Preview", "fade it in with the dial"):
             self.assertIn(f"the README does not say {words!r}", kd.readme_problems(README.replace(words, "x"), IDS))
         self.assertNotIn("first key cuts to", README)
         self.assertIn(f"Suite Demo Kit {kd.KIT_VERSION}", README)

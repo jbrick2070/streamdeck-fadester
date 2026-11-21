@@ -108,6 +108,9 @@ const IsWindow = user32.func("__stdcall", "IsWindow", "int32", ["uint64"]);
 const IsIconic = user32.func("__stdcall", "IsIconic", "int32", ["uint64"]);
 const OpenProcess = kernel32.func("__stdcall", "OpenProcess", "uint64", ["uint32", "int32", "uint32"]);
 const CloseHandle = kernel32.func("__stdcall", "CloseHandle", "int32", ["uint64"]);
+// Windows' own last error. koffi.errno() is the C runtime's errno, which Win32 calls such as OpenProcess do not set;
+// koffi keeps the thread's last-error value between calls, so this reads the one the call before it left.
+const GetLastError = kernel32.func("__stdcall", "GetLastError", "uint32", []);
 const WaitForSingleObject = kernel32.func("__stdcall", "WaitForSingleObject", "uint32", ["uint64", "uint32"]);
 const QueryFullProcessImageNameW = kernel32.func("__stdcall", "QueryFullProcessImageNameW", "int32", ["uint64", "uint32", "void *", "void *"]);
 const GetExtendedTcpTable = iphlpapi.func("__stdcall", "GetExtendedTcpTable", "uint32", ["void *", "void *", "int32", "uint32", "uint32", "uint32"]);
@@ -240,7 +243,7 @@ export class UiaSlider {
     initializeCom();
     this.process = toPtr(OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZE, 0, pid) as number | bigint);
     if (this.process === 0n) {
-      const err = koffi.errno();
+      const err = GetLastError() as number;
       throw new UiaRefusal(
         err === ERROR_ACCESS_DENIED ? "OBS is running as administrator." : "target OBS process unavailable",
         err === ERROR_ACCESS_DENIED ? "admin" : "refused"

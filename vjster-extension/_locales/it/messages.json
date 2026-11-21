@@ -1,0 +1,104 @@
+{
+  "extDescription": {
+    "message": "Controlla velocità e qualità dei video di Chrome da Stream Deck, OpenDeck, TourBox o pad Xbox. Parla solo con questo computer."
+  },
+  "htmlLang": {
+    "message": "it"
+  },
+  "optionsTitle": {
+    "message": "Opzioni di VJster"
+  },
+  "companionNote": {
+    "message": "VJster ha bisogno di un programma gratuito su questo computer: Fadester for OBS o il plugin VJster (per Stream Deck o OpenDeck), oppure Fadester Companion. Da sola questa estensione non fa nulla."
+  },
+  "linkGet": {
+    "message": "Download"
+  },
+  "linkHelp": {
+    "message": "Passi di installazione"
+  },
+  "linkPrivacy": {
+    "message": "Informativa sulla privacy"
+  },
+  "portLabel": {
+    "message": "Porta del collegamento"
+  },
+  "save": {
+    "message": "Salva"
+  },
+  "portNote": {
+    "message": "La porta che VJster usa in Fadester for OBS, nel plugin VJster o in Fadester Companion, solo su questo computer. Cambiala solo se l'hai cambiata lì."
+  },
+  "idLabel": {
+    "message": "ID di questa estensione"
+  },
+  "idNote": {
+    "message": "Per far collegare solo questa estensione, incolla l'ID nelle impostazioni VJster di Fadester for OBS, del plugin VJster o di Fadester Companion."
+  },
+  "allSites": {
+    "message": "Controlla i video su tutti i siti, non solo su YouTube"
+  },
+  "allSitesNote": {
+    "message": "Solo la velocità: la qualità richiede il player di YouTube. Togli la spunta per tenere VJster solo su YouTube."
+  },
+  "statusLinkUp": {
+    "message": "Collegato a VJster sulla porta $PORT$.",
+    "placeholders": {
+      "port": {
+        "content": "$1"
+      }
+    }
+  },
+  "statusLinkDown": {
+    "message": "Non collegato. Controlla il programma che usi:"
+  },
+  "statusFirstWait": {
+    "message": "In attesa di VJster. Fai una di queste cose:"
+  },
+  "statusStandby": {
+    "message": "In attesa. Un'altra copia di questa estensione (un altro profilo di Chrome o un altro browser) tiene il collegamento; questa subentra quando quella si chiude."
+  },
+  "linkDownCompanion": {
+    "message": "Fadester Companion: aprilo su questo computer e controlla che i suoi controlli siano attivi."
+  },
+  "linkDownDeck": {
+    "message": "Stream Deck o OpenDeck: mostra una pagina con un tasto o una manopola VJster, oppure spunta “Tieni attivo il collegamento” nelle impostazioni di VJster."
+  },
+  "linkDownPort": {
+    "message": "La porta qui deve essere la stessa delle impostazioni VJster di quel programma."
+  },
+  "statusLinkChecking": {
+    "message": "Collegamento a VJster…"
+  },
+  "reloadTabsNote": {
+    "message": "Schede video già aperte prima di installare o aggiornare VJster: ricaricale una volta."
+  },
+  "statusBadPort": {
+    "message": "Usa un numero intero da 1024 a 65535; $DEFAULT$ è il valore predefinito.",
+    "placeholders": {
+      "default": {
+        "content": "$1"
+      }
+    }
+  },
+  "statusSaved": {
+    "message": "Salvato. Ora VJster si collega alla porta $PORT$.",
+    "placeholders": {
+      "port": {
+        "content": "$1"
+      }
+    }
+  },
+  "statusNotAllowed": {
+    "message": "Non consentito: VJster resta solo su YouTube."
+  },
+  "statusAllSites": {
+    "message": "Ora VJster controlla i video su tutti i siti. Ricarica le schede aperte per includerle."
+  },
+  "statusYouTubeOnly": {
+    "message": "VJster è tornato solo su YouTube."
+  },
+  "statusYouTubeOnlyKept": {
+    "message": "VJster è tornato solo su YouTube; Chrome ha mantenuto l'autorizzazione per tutti i siti, rimuovila nella pagina dei dettagli dell'estensione."
+  }
+}

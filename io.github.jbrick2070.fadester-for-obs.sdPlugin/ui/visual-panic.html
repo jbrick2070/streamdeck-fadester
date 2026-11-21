@@ -7,9 +7,11 @@
   <link rel="stylesheet" href="pi.css" />
 </head>
 <body>
+  <div id="direct-top-status" class="status-banner status-info" style="display:none;"></div>
+  <button id="direct-top-layouts" class="btn secondary" type="button" style="display:none;"></button>
   <h3><span data-i18n="vpHeading">Visual Panic</span> <span class="scope" data-i18n="scopeThisKey">this key</span></h3>
   <p class="muted" data-i18n="vpIntro">Sends Visual Sidechain's own Panic or Restore visuals through OBS's hotkeys; OBS does not need to be in front.</p>
-  <p class="muted" data-i18n="vpCheckNote">This key needs Visual Sidechain, which comes with Midi Fadester 0.9.0 or newer in OBS. Try it once before the show: hold Restore visuals. If the key then says Needs Midi Fadester, OBS has no Visual Sidechain.</p>
+  <p class="muted" data-i18n="vpCheckNote">Needs Visual Sidechain, which comes with Midi Fadester 0.9.0 or newer. Try it once before the show: hold Restore visuals.</p>
   <div class="row">
     <label for="vp-operation" data-i18n="whenPressed">When pressed</label>
     <select id="vp-operation">
@@ -17,7 +19,7 @@
       <option value="restore" data-i18n="vpOptRestore">Restore visuals (hold 0.8 s)</option>
     </select>
   </div>
-  <p class="muted" data-i18n="vpNote">Every Panic press is sent. Panic keys show PANIC SENT until Restore visuals is accepted or OBS reconnects; meanwhile no Visual Sidechain filter is written from the deck. Restore visuals with no Panic before it changes nothing.</p>
+  <p class="muted" data-i18n="vpNote">Panic keys show PANIC SENT until Restore visuals is accepted or OBS reconnects. Until then the deck writes no Visual Sidechain filter.</p>
   <div class="row">
     <label for="vp-label" data-i18n="label">Label</label>
     <input id="vp-label" type="text" maxlength="14" placeholder="Automatic (leave blank)" data-i18n-placeholder="placeholderAutomaticBlank" />

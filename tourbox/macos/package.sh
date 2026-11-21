@@ -37,7 +37,8 @@ for preset in "$app/Contents/Resources/presets/"*/"OBS Fadester for TourBox.tb";
   mkdir -p "$folder/presets/$locale"
   cp "$preset" "$folder/presets/$locale/"
 done
-cp "$repo/tourbox/macos/panel/README.md" "$folder/README.md"
+# The read-me for the person who downloads the ZIP; the developer notes (panel/README.md) stay in the repository.
+cp "$repo/tourbox/macos/panel/USER-README.md" "$folder/README.md"
 cp "$repo/LICENSE" "$folder/LICENSE"
 mkdir -p "$folder/runtime-notices"
 cp "$app/Contents/Resources/runtime-notices/"* "$folder/runtime-notices/"

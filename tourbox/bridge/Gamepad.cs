@@ -364,7 +364,7 @@ internal sealed class PadReader(IReadOnlyDictionary<string, string> map, bool ea
             if (!Active(s, ordinaryControl))
             {
                 string seconds = (PadControls.OrdinaryTakeMs / 1000.0).ToString("0.0#", System.Globalization.CultureInfo.InvariantCulture);
-                Notes.Add($"Game controller: {ActionNames.Control(ordinaryControl)} was let go too soon. OBS plays its own transition here, so a take needs a {seconds} s hold (easy mode).");
+                Notes.Add($"Game controller: {ActionNames.Control(ordinaryControl)} was let go too soon. OBS plays its own transition here, so Preview to Program needs a {seconds} s hold (easy mode).");
                 ordinaryControl = null;
             }
             else if (nowMs >= ordinaryDue) { ordinaryControl = null; actions.Add(PadControls.TakeNow); }
@@ -391,7 +391,7 @@ internal sealed class PadReader(IReadOnlyDictionary<string, string> map, bool ea
     }
 
     private string ParkedWays() =>
-        $"Hold {ControlFor("take", "the take")} to carry on, press {ControlFor("take.cut", "a cut")} to finish at once or {ControlFor("fader.cancel", "Cancel")} to go back to Program.";
+        $"Hold {ControlFor("take", "Preview to Program")} to carry on, press {ControlFor("take.cut", "a cut")} to finish at once or {ControlFor("fader.cancel", "Cancel")} to go back to Program.";
 
     private string ControlFor(string action, string otherwise) =>
         map.FirstOrDefault(kv => kv.Value == action && !kv.Key.StartsWith(PadControls.ShiftPrefix, StringComparison.OrdinalIgnoreCase)).Key is { } control

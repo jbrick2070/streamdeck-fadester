@@ -284,7 +284,10 @@ describe("Step 1.1 — Manifest, Layout, Icons & Repository Hygiene", () => {
         bytes[0] === 0xef &&
         bytes[1] === 0xbb &&
         bytes[2] === 0xbf;
-      expect(hasBom, `BOM found in ${file}`).toBe(false);
+      // Inno Setup reads a language file (.isl) as UTF-8 only when it starts with a BOM; without one it uses the
+      // ANSI code page and the translations come out garbled. So every .isl has one, and no other file does: an .isl
+      // that loses its BOM fails here just as a BOM anywhere else does.
+      expect(hasBom, file.endsWith(".isl") ? `no BOM on ${file} (Inno Setup needs one)` : `BOM found in ${file}`).toBe(file.endsWith(".isl"));
 
       // Google's site verification file has to stay exactly as Google issued it.
       if (/[\\/]google[0-9a-f]{16}\.html$/.test(file)) continue;

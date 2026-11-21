@@ -137,8 +137,8 @@ internal static class HostSelfTests
         Check(ingress.SubmitLine("action vjster.speed.up", out _), "read-only vjster.speed.up reaches guard");
         await Refused(() => readOnly.Dispatch(Pop(ingress)));
 
-        // What a session leaves for the next one of the same run (a reconnect): the duck and an owed transition, never a
-        // T-bar position, and the next session's desk starts from it.
+        // What a session leaves for the next one of the same run (a reconnect): the duck, an owed transition and a
+        // part-thrown T-bar, and the next session's desk starts from it without sending anything.
         int callsBefore = calls.Count, nativeBefore = nativeCalls;
         var duck = new AudioDesk.Duck("Synthetic Music", -3, -18);
         var owedCut = new StudioFader.Owed("Cut", "Fade", System.Diagnostics.Stopwatch.GetTimestamp());
@@ -147,15 +147,17 @@ internal static class HostSelfTests
             Owed = owedCut, Sweep = new StudioFader.Sweep(new StudioFader.Scenes("Fixture A", "Fixture B"), "fade-uuid"), Position = 0.4, Direction = -1, TakeAt = 7
         }, duck);
         var kept = MacDevelopmentHost.Carry(left);
-        Check(kept.Duck == duck && kept.Fader.Owed == owedCut && kept.Fader.Sweep is null && kept.Fader.Position == 0 &&
-              kept.Fader.Direction == -1 && kept.Fader.TakeAt == 7, "a session leaves its duck and owed transition, not a T-bar position");
+        Check(kept.Duck == duck && kept.Fader.Owed == owedCut && kept.Fader.Sweep is not null && kept.Fader.Position == 0.4 &&
+              kept.Fader.Direction == -1 && kept.Fader.TakeAt == 7, "a session leaves its duck, its owed transition and a part-thrown T-bar");
         var resumed = new HostSession(config, ingress, generation, Rpc, Native, () => true, CancellationToken.None, resume: kept);
         var again = resumed.Desk.Leave();
-        Check(again.Duck == duck && again.Fader.Owed == owedCut && again.Fader.Sweep is null && resumed.Desk.TbarPosition == 0,
-            "the next session's desk starts with the duck and the owed transition");
+        Check(again.Duck == duck && again.Fader.Owed == owedCut && again.Fader.Sweep is not null && resumed.Desk.TbarPosition == 0.4,
+            "the next session's desk starts with the duck, the owed transition and the part-thrown T-bar");
         Check(new HostSession(config, ingress, generation, Rpc, Native, () => true, CancellationToken.None).Desk.Leave() is { Duck: null, Fader.Owed: null },
             "a first session starts with nothing carried");
         Check(calls.Count == callsBefore && nativeCalls == nativeBefore, "carrying memory into a session sends nothing to OBS or the native T-bar");
+
+        await CheckTbarGate();
 
         var noVjster = new HostSession(config, ingress, generation, Rpc, Native, () => true, CancellationToken.None);
         Check(ingress.SubmitLine("action vjster.speed.up", out _), "disabled vjster action admitted");
@@ -183,6 +185,61 @@ internal static class HostSelfTests
         await Refused(() => withVjster.Dispatch(staleVj));
 
         LogPass();
+    }
+    /// <summary>
+    /// A T-bar that cannot be read at a session's start holds up the T-bar only (F-02): the move is a refusal that wrote
+    /// nothing, the next look is at most every two seconds, and the first read that succeeds lets the T-bar go.
+    /// </summary>
+    static async Task CheckTbarGate()
+    {
+        long clock = 0; int reads = 0, moves = 0, at = 0; Exception? failure = new InvalidOperationException("Accessibility denied; grant the responsible app");
+        var said = new List<string>();
+        Task<int> Read() { reads++; return failure is null ? Task.FromResult(at) : Task.FromException<int>(failure); }
+        Task Move(double from, double to) { moves++; return Task.CompletedTask; }
+        int carriedTick = 0;
+        var gate = new MacDevelopmentHost.TbarGate(Read, Move, () => carriedTick, said.Add, () => clock);
+        Check(await gate.LookAsync() == "Accessibility denied; grant the responsible app" && gate.Blocked is not null, "an unreadable T-bar is remembered with its reason");
+        clock = 500;
+        try { await gate.MoveAsync(0, 0.05); throw new InvalidOperationException("Host check: blocked T-bar moved."); }
+        catch (NativeRefusal refusal) { Check(refusal.Message.Contains("Accessibility denied") && reads == 1 && moves == 0, "a blocked T-bar refuses without writing or looking again at once"); }
+        clock = 2600;
+        try { await gate.MoveAsync(0, 0.05); throw new InvalidOperationException("Host check: blocked T-bar moved."); }
+        catch (NativeRefusal) { Check(reads == 2 && moves == 0, "after two seconds a move looks again, and still refuses while the T-bar cannot be read"); }
+        failure = null; clock = 5000;
+        await gate.MoveAsync(0, 0.05);
+        Check(reads == 3 && moves == 1 && gate.Blocked is null && said.Count == 1 && said[0].StartsWith("T-BAR:", StringComparison.Ordinal), "the first read that succeeds lets the T-bar go, and says so once");
+        await gate.MoveAsync(0.05, 0.1);
+        Check(reads == 3 && moves == 2 && said.Count == 1, "an open T-bar moves without another look");
+        // Not parked: someone's own part-way T-bar blocks; the last session's own part-thrown sweep does not.
+        at = 400; gate = new MacDevelopmentHost.TbarGate(Read, Move, () => carriedTick, said.Add, () => clock);
+        Check(await gate.LookAsync() == MacDevelopmentHost.TbarGate.NotParked, "a T-bar part-way that is not ours waits");
+        carriedTick = 400;
+        Check(await gate.LookAsync() is null, "a T-bar where the last session's own sweep left it is taken over");
+        // The fader treats the gate's refusal as "nothing written": no latch, and the next move works once the T-bar is back.
+        var obsCalls = new List<string>(); double cursor = 0; bool studio = true;
+        Task<JsonObject> Rpc(string request, JsonObject? args)
+        {
+            obsCalls.Add(request);
+            return Task.FromResult(request switch
+            {
+                "GetVersion" => new JsonObject { ["obsVersion"] = "33.0.1" },
+                "GetStudioModeEnabled" => new JsonObject { ["studioModeEnabled"] = studio },
+                "GetSceneList" => new JsonObject { ["currentProgramSceneUuid"] = "a", ["currentPreviewSceneUuid"] = "b" },
+                "GetCurrentSceneTransitionCursor" => new JsonObject { ["transitionCursor"] = cursor },
+                "GetCurrentSceneTransition" => new JsonObject { ["transitionKind"] = "fade_transition", ["transitionName"] = "Fade", ["transitionUuid"] = "fade", ["transitionDuration"] = 300 },
+                "GetSceneSceneTransitionOverride" => new JsonObject(),
+                _ => new JsonObject()
+            });
+        }
+        failure = new InvalidOperationException("expected exactly one native OBS T-bar"); at = 0; carriedTick = 0; clock = 10_000;
+        gate = new MacDevelopmentHost.TbarGate(Read, Move, () => carriedTick, said.Add, () => clock);
+        await gate.LookAsync();
+        var fader = new StudioFader(Rpc, 0.25, gate.MoveAsync, allowAutoCloseout: false);
+        try { await fader.DispatchAsync("fader.forward"); throw new InvalidOperationException("Host check: blocked T-bar started a throw."); }
+        catch (NativeRefusal) { }
+        Check(fader.Position == 0 && !obsCalls.Any(call => call.StartsWith("Set", StringComparison.Ordinal) || call.StartsWith("Trigger", StringComparison.Ordinal)),
+            "a blocked T-bar starts no throw and writes nothing to OBS");
+        await fader.DispatchAsync("fader.cancel"); // no latch was set: Cancel has nothing to clear and does not throw
     }
     static void LogPass() => Console.WriteLine("PASS: host bounded ingress, source timestamps, rotary/button expiry, generation invalidation, deliberate ramp lifetime, real DeskActions pre-write expiry, no native fallback and read-only action/backend guards.");
 }

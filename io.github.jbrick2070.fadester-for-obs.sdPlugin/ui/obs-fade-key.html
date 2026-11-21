@@ -7,8 +7,10 @@
   <link rel="stylesheet" href="pi.css" />
 </head>
 <body>
+  <div id="direct-top-status" class="status-banner status-info" style="display:none;"></div>
+  <button id="direct-top-layouts" class="btn secondary" type="button" style="display:none;"></button>
   <h3><span data-i18n="fadeHeading">OBS fade</span> <span class="scope" data-i18n="scopeThisKey">this key</span></h3>
-  <p class="muted" data-i18n="fadeIntro">Starts with Main audio from your current OBS mixer. Choose a fixed input to keep this button assigned to it.</p>
+  <p class="muted" data-i18n="fadeIntro">Starts with Main audio from your current OBS mixer. Choose a fixed input to keep this key assigned to it.</p>
   <div id="direct-fade-status" class="status-banner status-info" style="display:none;"></div>
   <div class="row">
     <label for="obs-fade-target" data-i18n="control">Control</label>
@@ -20,12 +22,17 @@
   <div class="row" id="obs-fade-input-row">
     <label for="obs-fade-input" data-i18n="mixerInput">Mixer input</label>
     <select id="obs-fade-input"></select>
-    <button id="obs-fade-refresh" class="btn secondary" type="button" data-i18n="refresh">Refresh</button>
   </div>
   <div class="row">
     <label for="obs-fade-to" data-i18n="fadeTo">Fade to</label>
     <select id="obs-fade-to"><option id="obs-fade-up" value="1" data-i18n="percent100">100 %</option><option id="obs-fade-down" value="0" data-i18n="percent0">0 %</option></select>
   </div>
+  <div class="row" id="obs-fade-duration-row">
+    <label id="obs-fade-duration-label" for="obs-fade-duration" data-i18n="durationMs">Duration (ms)</label>
+    <input id="obs-fade-duration" type="number" min="0" max="20000" step="50" value="1000" />
+  </div>
+  <p id="obs-fade-duration-note" class="muted" data-i18n="fadeInstantNote">0 ms is instant. Any new volume move cancels a running fade for that input.</p>
+  <details id="obs-fade-timing" class="fold"><summary data-i18n="foldTiming">Timing</summary>
   <div class="row" id="obs-fade-beats-row">
     <label for="obs-fade-beats" data-i18n="quantizeLengthLabel">Length</label>
     <select id="obs-fade-beats">
@@ -37,11 +44,6 @@
       <option value="16" data-i18n="quantizeBeats16">16 beats (4 bars)</option>
     </select>
   </div>
-  <div class="row" id="obs-fade-duration-row">
-    <label id="obs-fade-duration-label" for="obs-fade-duration" data-i18n="durationMs">Duration (ms)</label>
-    <input id="obs-fade-duration" type="number" min="0" max="20000" step="50" value="1000" />
-  </div>
-  <p id="obs-fade-duration-note" class="muted" data-i18n="fadeInstantNote">0 ms is instant. Any new volume move cancels a running fade for that input.</p>
   <div class="row" id="obs-fade-start-row">
     <label for="obs-fade-start" data-i18n="quantizeStartLabel">Start</label>
     <select id="obs-fade-start">
@@ -50,7 +52,8 @@
       <option value="next_bar" data-i18n="quantizeStartBar">Next bar</option>
     </select>
   </div>
-  <p id="obs-fade-quantize-note" class="muted" data-i18n="quantizeHint">Without Visual Sidechain tempo, fires immediately with the millisecond fallback and shows NO TEMPO. Max wait 1 bar (4 s); press again to fire now, hold to cancel.</p>
+  <p id="obs-fade-quantize-note" class="muted" data-i18n="quantizeHint">With no tempo, it starts at once and the key shows NO TEMPO. Press again to start now; hold to cancel.</p>
+  </details>
   <div class="row">
     <label for="obs-fade-label" data-i18n="label">Label</label>
     <input id="obs-fade-label" type="text" maxlength="14" placeholder="From OBS (leave blank)" data-i18n-placeholder="placeholderFromObs" />
@@ -90,6 +93,8 @@
       });
       if (durationLabel) durationLabel.textContent = T(!all && selectedBeats > 0 ? "quantizeFallbackMs" : "durationMs");
       if (quantizeNote) quantizeNote.style.display = (!all && selectedBeats > 0) || selectedStart !== "now" ? "" : "none";
+      // A length in beats and a start on the beat are folded away until one of them is in use.
+      if (window.directObsFold) window.directObsFold("obs-fade-timing", (!all && selectedBeats > 0) || selectedStart !== "now");
       const up = document.getElementById("obs-fade-up"), down = document.getElementById("obs-fade-down");
       if (up) up.textContent = T(all ? "mixRestore" : "percent100");
       if (down) down.textContent = T(all ? "mixFadeOut" : "percent0");
@@ -128,8 +133,6 @@
       };
       if (start) start.onchange = function () { save({ quantizeStart: start.value }); };
       if (label) label.onchange = function () { save({ labelOverride: label.value.trim() }); };
-      const refresh = document.getElementById("obs-fade-refresh");
-      if (refresh) refresh.onclick = function () { window.directObsRefresh(); };
     });
   </script>
 </body>

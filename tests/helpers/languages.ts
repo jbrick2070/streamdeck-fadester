@@ -9,20 +9,20 @@ export const PLUGIN_DIR = resolve(process.cwd(), "io.github.jbrick2070.fadester-
  * The languages that must ship. Extend this one list when a language is added;
  * every other test takes its languages from the files present.
  */
-export const REQUIRED_LANGUAGES: readonly string[] = ["en", "de", "es", "fr", "ja", "ko", "zh_CN", "zh_TW", "nl"];
+export const REQUIRED_LANGUAGES: readonly string[] = ["en", "de", "es", "fr", "ja", "ko", "zh_CN", "zh_TW", "nl", "it", "pt_BR", "ru", "tr"];
 
 export function languageFilePath(language: string): string {
   return join(PLUGIN_DIR, `${language}.json`);
 }
 
-/** The plugin's nine languages (Stream Deck's eight and Dutch) that have a `<lang>.json` at the plugin root. */
+/** The plugin's thirteen languages (Stream Deck's eight and Dutch, Italian, Brazilian Portuguese, Russian, Turkish) that have a `<lang>.json` at the plugin root. */
 export function presentLanguages(): string[] {
   return PLUGIN_LANGUAGES.filter((language) => existsSync(languageFilePath(language)));
 }
 
 /**
  * The present languages the Stream Deck app itself reads (its Name, Description and action texts): Stream Deck's
- * eight. Dutch has `Localization` only until step L.7 adds its manifest texts (PLAN.md 11.2, D-L4).
+ * eight. The other five have `Localization` only: Stream Deck offers none of them (PLAN.md 11.2, D-L4).
  */
 export function appReadLanguages(): string[] {
   return presentLanguages().filter((language) => (STREAM_DECK_LANGUAGES as readonly string[]).includes(language));

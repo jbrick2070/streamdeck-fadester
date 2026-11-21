@@ -52,6 +52,12 @@
   "statusLinkDown": {
     "message": "接続されていません。お使いのプログラムを確認してください："
   },
+  "statusFirstWait": {
+    "message": "VJster を待っています。次のいずれかを行ってください："
+  },
+  "statusStandby": {
+    "message": "待機中です。この拡張機能の別のコピー（別の Chrome プロファイルまたはブラウザ）がリンクを使用しています。そちらが閉じると、こちらが引き継ぎます。"
+  },
   "linkDownCompanion": {
     "message": "Fadester Companion：このパソコンで開き、コントロールがオンになっているか確認してください。"
   },
@@ -63,6 +69,9 @@
   },
   "statusLinkChecking": {
     "message": "VJster に接続中…"
+  },
+  "reloadTabsNote": {
+    "message": "VJster のインストールまたは更新の前から開いていた動画タブは、一度再読み込みしてください。"
   },
   "statusBadPort": {
     "message": "1024～65535 の整数を入力してください。デフォルトは $DEFAULT$ です。",

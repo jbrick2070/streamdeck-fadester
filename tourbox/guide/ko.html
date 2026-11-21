@@ -18,12 +18,12 @@
     <h2>TourBox가 없나요? 게임 컨트롤러를 쓰세요</h2>
     <ol>
       <li>OBS를 여세요. <strong>도구 → WebSocket 서버 설정</strong>에서 서버를 켜고 인증은 켜 둔 채로 두세요. 그런 다음 <strong>Fadester Companion</strong>을 여세요. 자동으로 연결되며, 연결할 수 없으면 창에 해야 할 일이 표시됩니다. T바를 쓰려면 OBS 33이 필요하고, OBS 기본 창을 T바가 보이도록 열어 두어야 합니다.</li>
-      <li><strong>설정</strong> 탭에서 <strong>Xbox 또는 XInput 컨트롤러 사용</strong>을 켜고, <strong>쉬운 모드</strong>는 켠 채로 두고, <strong>저장 &amp; 컨트롤 시작</strong>을 클릭합니다. 프리셋 가져오기는 건너뛰어도 됩니다.</li>
+      <li><strong>설정</strong> 탭에서 <strong>Xbox 또는 XInput 컨트롤러 사용</strong>을 켜고, <strong>쉬운 모드</strong>는 켠 채로 둡니다. 컨트롤은 처음에 컨트롤러 없이 자동으로 시작됩니다. 창 왼쪽 아래의 <strong>중지</strong>를 클릭한 다음 <strong>시작</strong>을 클릭하면 컨트롤러와 함께 다시 시작됩니다. 프리셋 가져오기는 건너뛰어도 됩니다.</li>
       <li>OBS에서 <strong>스튜디오 모드</strong>를 켜고 <strong>페이드(Fade)</strong>를 선택합니다. 십자키 아래로 OBS 목록의 다음 장면을, 위로 이전 장면을 미리 보기에 올립니다.</li>
       <li>오른쪽 트리거를 당기면 OBS의 T바가 따라 움직이고, 끝까지 당기면 프로그램으로 전환됩니다. 또는 <strong>A</strong>를 누르고 있으면 0.15초 뒤부터 누르는 동안 T바가 움직이고 끝에 닿으면 전환됩니다. 중간에 놓으면 그 자리에 멈추고, A를 다시 누르고 있으면 이어서 움직입니다.</li>
       <li><strong>B</strong>는 컷, <strong>View</strong>는 프로그램으로 되돌리기, 왼쪽 트리거는 누르는 동안 음악 줄이기, 십자키 좌우는 음악 조절입니다. 어떤 버튼이든 <strong>게임 컨트롤러</strong> 탭에서 바꿀 수 있습니다.</li>
     </ol>
-    <p>작업하는 동안 이 창을 열어 두세요. 창을 닫으면 컨트롤이 중지됩니다.</p>
+    <p>이 창을 닫아도 컨트롤은 중지되지 않습니다. Fadester Companion은 시계 옆 알림 영역에 남아 있습니다. 중지하려면 중지를 클릭하거나, 그 아이콘을 마우스 오른쪽 버튼으로 클릭하고 Fadester Companion 종료를 선택하세요.</p>
 
     <h2>TourBox를 OBS에 연결하기</h2>
     <ol>
@@ -36,10 +36,10 @@
 
     <h2>서로 다른 두 장면으로 연습하기</h2>
     <ul>
-      <li><strong>Scroll</strong> 휠을 돌리면 미리 보기 장면만 바뀌고 프로그램은 그대로 유지됩니다. 휠을 누르면 두 장면의 이름이 패널에 표시됩니다.</li>
+      <li><strong>Scroll</strong> 휠을 돌리면 미리 보기 장면만 바뀌고 프로그램은 그대로 유지됩니다. 휠을 누르면 두 장면의 이름이 <strong>활동 로그</strong> 탭에 표시됩니다.</li>
       <li>평평한 <strong>Dial</strong>을 천천히 돌리면 OBS 슬라이더가 움직이면서 두 장면이 섞입니다. 진행 중인 전환을 취소하려면 <strong>Side</strong>를 누른 상태에서 <strong>Dial</strong>을 누릅니다. 시계 방향으로 돌리면 다음 전환에서도 항상 T-바가 미리 보기 쪽으로 움직입니다. 전환이 끝나면 잠시 기다린 후 다시 돌리세요.</li>
       <li>Chrome에서 YouTube 동영상을 재생합니다(무료 VJster 확장 프로그램 필요). 돌출된 <strong>Knob</strong>을 돌려 속도를 바꾸고, 누른 채 돌리면 미세 조정됩니다. 누르면 동영상을 재생하거나 일시 정지합니다. <strong>Side</strong>를 짧게 누르면 속도가 1배로 돌아갑니다.</li>
-      <li>VJster는 Chrome의 YouTube만 제어하며 OBS의 YouTube 브라우저 소스는 제어할 수 없습니다. OBS에는 Chrome 윈도우 캡처로 표시하세요. 소리는 Chrome의 애플리케이션 오디오 캡처를 추가하세요.</li>
+      <li>OBS 안의 YouTube 동영상을 직접 제어하려면 설정에서 동영상을 입력하고 <strong>OBS 브라우저 소스 URL 복사</strong>를 클릭한 다음, 그 주소를 OBS 브라우저 소스에 붙여 넣습니다.</li>
       <li>Fadester에서 음악 입력을 지정합니다. <strong>Side</strong>를 누른 상태에서 평평한 <strong>Dial</strong>을 돌려 음량을 조절합니다. <strong>Top</strong>을 누른 상태의 Knob, Scroll, Dial은 VJ 레이어(블렌드 모드와 불투명도)를 조절합니다. 선택하지 않은 레이어는 처음 사용할 때 현재 방송 중인 장면에서 자동으로 채워지고(레이어 1 = 맨 위의 보이는 화면, 레이어 2 = 그 아래 화면) <strong>할당</strong>에 저장됩니다.</li>
       <li><strong>Short</strong>를 짧게 누르면 녹화 상태만 확인합니다. <strong>오디오 변경 실행 취소</strong>는 <strong>Tour</strong> 메뉴에 있습니다.</li>
     </ul>

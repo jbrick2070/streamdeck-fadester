@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Builds the Mac panel's string catalog (PanelStrings.swift) from the Windows panel's catalog
 // (tourbox/panel/PanelText.cs and PanelExtraText.cs) plus the Mac-only strings in mac-strings.json,
-// so both panels speak the same 10 languages with the same words.
+// so both panels speak the same 13 languages with the same words.
 //   node tourbox/macos/panel/make-strings.cjs          write PanelStrings.swift
 //   node tourbox/macos/panel/make-strings.cjs --check  fail if PanelStrings.swift is out of date
 'use strict';
@@ -11,9 +11,9 @@ const path = require('path');
 
 const here = __dirname;
 const repo = path.resolve(here, '..', '..', '..');
-const LOCALES = ['en', 'es', 'fr', 'zh-CN', 'de', 'it', 'ja', 'ko', 'ru', 'zh-TW'];
+const LOCALES = ['en', 'es', 'fr', 'zh-CN', 'de', 'it', 'ja', 'ko', 'ru', 'zh-TW', 'nl', 'pt-BR', 'tr'];
 const BUILT_IN = ['en', 'es', 'fr', 'zh-CN']; // the order of PanelText.cs's arrays
-const EXTRA = ['de', 'it', 'ja', 'ko', 'ru', 'zh-TW']; // PanelExtraText.cs's dictionaries
+const EXTRA = ['de', 'it', 'ja', 'ko', 'ru', 'zh-TW', 'nl', 'pt-BR', 'tr']; // PanelExtraText.cs's dictionaries
 const files = {
   text: path.join(repo, 'tourbox', 'panel', 'PanelText.cs'),
   extra: path.join(repo, 'tourbox', 'panel', 'PanelExtraText.cs'),
@@ -97,7 +97,7 @@ function parseExtra(source) {
 
 const placeholders = text => (text.match(/\{\d+\}/g) || []).slice().sort().join(',');
 
-/** The whole catalog: key -> [10 texts in LOCALES order]. Throws on any gap, clash or placeholder mismatch. */
+/** The whole catalog: key -> [13 texts in LOCALES order]. Throws on any gap, clash or placeholder mismatch. */
 function catalog() {
   const builtIn = parseBuiltIn(fs.readFileSync(files.text, 'utf8'));
   const extra = parseExtra(fs.readFileSync(files.extra, 'utf8'));

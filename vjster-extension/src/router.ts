@@ -40,6 +40,8 @@ export class Router {
   private focusedWindowId: number | null = null;
   private pinnedTabId: number | null = null;
   private lastTarget: number | null = null;
+  /** The last state sent to the link, as text (without its id), to skip an equal one. */
+  private lastPushed: string | null = null;
 
   constructor(private readonly deps: RouterDeps) {}
 
@@ -143,6 +145,8 @@ export class Router {
   /** The link (re)opened: ask the tabs for fresh state and tell the plugin what is current (R-LNK-4). */
   linkOpened(): void {
     this.deps.refreshTabs();
+    // A new link knows nothing: the current state goes out even when it equals the last one sent on the old link.
+    this.lastPushed = null;
     this.pushTarget(null);
   }
 
@@ -205,7 +209,14 @@ export class Router {
     const target = this.target();
     this.lastTarget = target;
     const record = target === null ? undefined : this.tabs.get(target);
-    this.deps.sendToLink(this.report(record?.state ?? NO_VIDEO, record?.host ?? null, inReplyTo));
+    const report = this.report(record?.state ?? NO_VIDEO, record?.host ?? null, inReplyTo);
+    // The same state again says nothing new: a page that reports many times a second without changing costs the
+    // plugin nothing (it would parse each one and redraw every VJster key). An answer always goes out.
+    const { id: _id, inReplyTo: _reply, ...content } = report;
+    const text = JSON.stringify([target, content]);
+    if (inReplyTo === null && text === this.lastPushed) return;
+    this.lastPushed = text;
+    this.deps.sendToLink(report);
   }
 
   private report(state: PageState, host: string | null, inReplyTo: string | null): StateReport {

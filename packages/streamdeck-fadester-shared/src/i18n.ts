@@ -19,9 +19,14 @@ export type LocalText =
   | { readonly verbatim: string };
 
 export const SHARED_EN = {
-  statusUnreachable: "OBS is not running or the websocket is off (Tools > WebSocket Server Settings)",
+  statusUnreachable: "OBS is not running, or its WebSocket server is off. In OBS: Tools > WebSocket Server Settings > Enable WebSocket server.",
   statusUnreachableShort: "OBS not connected",
-  statusWrongPassword: "Wrong password. Check OBS Tools > WebSocket Server Settings > Show Connect Info.",
+  statusWebsocketOff: "OBS's WebSocket server is off. In OBS: Tools > WebSocket Server Settings > Enable WebSocket server.",
+  statusWebsocketOffShort: "Turn on OBS WebSocket",
+  statusObsNotRunning: "OBS does not answer. Start OBS.",
+  statusObsNotRunningShort: "Start OBS",
+  statusWrongPassword: "Wrong password. In OBS: Tools > WebSocket Server Settings > Show Connect Info.",
+  statusWrongPasswordRetrying: "Wrong password. In OBS: Tools > WebSocket Server Settings > Show Connect Info. Trying again every {seconds} seconds.",
   statusWrongPasswordShort: "Wrong password",
   statusMissingPlugin: "{plugin} is not installed in OBS",
   statusVersionMismatch: "{plugin} API version {apiVersion} is newer than supported version {supported}. Update {surface}.",

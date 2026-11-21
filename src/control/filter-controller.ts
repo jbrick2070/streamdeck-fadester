@@ -109,6 +109,11 @@ interface FilterRecord {
   /** Writes sent so far, and the number of the last write that carried each setting. */
   writes: number;
   writtenIn: Map<string, number>;
+  /**
+   * The values of the write that is out now. A queued value leaves `pending` when its last slew step is sent, a
+   * moment before OBS has it: a step pressed in that moment counts from here, not from the value last confirmed.
+   */
+  sending: Map<string, number>;
   drainTimer: ReturnType<typeof setTimeout> | null;
   settleTimer: ReturnType<typeof setTimeout> | null;
 }
@@ -153,8 +158,18 @@ function settingKey(target: Pick<FilterTarget, "sourceUuid" | "filterName" | "fi
   return `${recordKey(target)}\u0000${target.setting}`;
 }
 
+/** The least time between two on/off writes to one filter: at most three a second (see ABRUPT_WRITE_SPACING_MS). */
+export const FILTER_TOGGLE_SPACING_MS = 334;
+
 export class FilterController extends EventEmitter {
   private readonly records = new Map<string, FilterRecord>();
+  private readonly toggleTurns = new WeakMap<FilterRecord, Promise<void>>();
+  private readonly lastToggleAt = new WeakMap<FilterRecord, number>();
+  /**
+   * The one turn that waits behind the on/off write now running. Later presses of the same connection join it instead
+   * of queueing, and are counted: the turn flips when the presses it stands for are odd, and writes nothing when even.
+   */
+  private readonly toggleWaiting = new WeakMap<FilterRecord, { promise: Promise<boolean>; generation: number; presses: number }>();
   /** The targets visible controls show, re-read on every reconnect and collection change. */
   private readonly watched = new Map<number, FilterTarget>();
   private watchId = 0;
@@ -403,15 +418,50 @@ export class FilterController extends EventEmitter {
     if (this.panicLatched && isVisualSidechainKind(target.filterKind)) throw new DirectObsError(ownText("filterLatched"), 409);
     const generation = this.generation;
     const record = this.recordFor(target);
-    await this.readFilter(record, generation);
-    this.requireReady(record, { ...target, setting: "" }, generation);
-    if (this.panicLatched && isVisualSidechainKind(target.filterKind)) throw new DirectObsError(ownText("filterLatched"), 409);
-    const next = record.enabled !== true;
-    await this.client.setSourceFilterEnabled(target.sourceUuid, target.filterName, next);
-    if (generation !== this.generation) throw new DirectObsError(ownText("errorControlChanged"), 400);
-    record.enabled = next;
-    this.emit("changed", record.eventKey);
-    return next;
+    // A filter going on and off changes the picture at once: at most three times a second per filter, however fast
+    // the key is pressed. One turn may wait behind the one that is running; any further press meanwhile joins that
+    // waiting turn, so a mashed key never leaves flips running after the hands are off. No press is lost: the waiting
+    // turn counts the presses it stands for and ends where their number says (three quick taps end flipped, four end
+    // where they began). A press made after a reconnect or a collection change never joins a turn from before it,
+    // which is about to fail: it gets a turn of its own.
+    const waiting = this.toggleWaiting.get(record);
+    if (waiting && waiting.generation === generation) {
+      waiting.presses += 1;
+      return waiting.promise;
+    }
+    const running = this.toggleTurns.get(record);
+    const entry = { promise: undefined as unknown as Promise<boolean>, generation, presses: 1 };
+    const turn: Promise<boolean> = (running ?? Promise.resolve()).then(async () => {
+      // From here on no press joins this turn: its count is final.
+      if (this.toggleWaiting.get(record) === entry) this.toggleWaiting.delete(record);
+      const flips = entry.presses % 2 === 1;
+      if (flips) {
+        const wait = (this.lastToggleAt.get(record) ?? -Infinity) + FILTER_TOGGLE_SPACING_MS - performance.now();
+        if (wait > 0) await new Promise<void>((resolve) => setTimeout(resolve, Math.min(wait, FILTER_TOGGLE_SPACING_MS)));
+      }
+      if (generation !== this.generation) throw new DirectObsError(ownText("errorControlChanged"), 400);
+      await this.readFilter(record, generation);
+      this.requireReady(record, { ...target, setting: "" }, generation);
+      // An even number of presses asks for the state the filter has: nothing is written.
+      if (!flips) return record.enabled === true;
+      if (this.panicLatched && isVisualSidechainKind(target.filterKind)) throw new DirectObsError(ownText("filterLatched"), 409);
+      const next = record.enabled !== true;
+      this.lastToggleAt.set(record, performance.now());
+      await this.client.setSourceFilterEnabled(target.sourceUuid, target.filterName, next);
+      if (generation !== this.generation) throw new DirectObsError(ownText("errorControlChanged"), 400);
+      record.enabled = next;
+      this.emit("changed", record.eventKey);
+      return next;
+    });
+    entry.promise = turn;
+    if (running) this.toggleWaiting.set(record, entry);
+    // The line goes on after a press that failed, and is empty again once its last press is done.
+    const settled = turn.then(() => undefined, () => undefined);
+    this.toggleTurns.set(record, settled);
+    void settled.then(() => {
+      if (this.toggleTurns.get(record) === settled) this.toggleTurns.delete(record);
+    });
+    return turn;
   }
 
   // ---- Internals ----
@@ -444,7 +494,8 @@ export class FilterController extends EventEmitter {
     if (!glide || glide.token !== token) return "cancelled";
     // A step counts from where the setting is going: a value still queued (the rest of an earlier step, written a
     // slew step at a time) is the target that step asked for, and the value read is only how far it has got.
-    const queued = fromQueued ? record.pending.get(target.setting) : undefined;
+    // The last slew step of that value may be on its way to OBS: then it is no longer queued and not yet read back.
+    const queued = fromQueued ? record.pending.get(target.setting) ?? record.sending.get(target.setting) : undefined;
     const from = queued !== undefined ? queued : record.values[target.setting] as number;
     onFrom?.(from);
     const to = clampToRange(toValue(from), range);
@@ -484,7 +535,7 @@ export class FilterController extends EventEmitter {
         key, eventKey: filterKey(target.sourceUuid, target.filterName),
         sourceUuid: target.sourceUuid, filterName: target.filterName, filterKind: target.filterKind,
         read: "unknown", values: {}, enabled: null, error: null, pending: new Map(), ranges: new Map(),
-        owners: new Map(), inFlight: false, lastWriteAt: 0, writes: 0, writtenIn: new Map(),
+        owners: new Map(), inFlight: false, lastWriteAt: 0, writes: 0, writtenIn: new Map(), sending: new Map(),
         drainTimer: null, settleTimer: null
       };
       this.records.set(key, record);
@@ -646,6 +697,7 @@ export class FilterController extends EventEmitter {
     record.lastWriteAt = now;
     record.writes++;
     for (const setting of Object.keys(patch)) record.writtenIn.set(setting, record.writes);
+    record.sending = new Map(Object.entries(patch));
     this.globalNextWriteAt = now + this.globalIntervalMs;
     let stale = false;
     try {
@@ -666,6 +718,7 @@ export class FilterController extends EventEmitter {
       }
     } finally {
       record.inFlight = false;
+      record.sending.clear();
     }
     if (stale) {
       // Values of the new generation waited for this reply.

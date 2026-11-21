@@ -46,6 +46,25 @@ const lastState = (sent: Message[]) => [...sent].reverse().find((m) => m.type ==
 let n = 0;
 const intent = (body: Record<string, unknown>): Intent => ({ v: 1, id: `i-${++n}`, target: "browser", ...body }) as Intent;
 
+describe("Router: an unchanged state is not sent again (D-03)", () => {
+  it("skips a report equal to the last one sent, sends a changed one, and sends again on a new link", () => {
+    const { router, sent } = setup();
+    router.pageState(5, 1, playing(), "www.youtube.com", null);
+    const first = sent.length;
+    expect(first).toBeGreaterThan(0);
+    // The page reports the same state again and again (a title that flickers back, a script that posts in a loop).
+    for (let i = 0; i < 200; i++) router.pageState(5, 1, playing(), "www.youtube.com", null);
+    expect(sent.length).toBe(first);
+    router.pageState(5, 1, playing(1.5), "www.youtube.com", null);
+    expect(sent.length).toBe(first + 1);
+    expect(lastState(sent).rate).toBe(1.5);
+    // A link that just opened knows nothing: the same state goes out again.
+    router.linkOpened();
+    expect(sent.length).toBe(first + 2);
+    expect(lastState(sent).rate).toBe(1.5);
+  });
+});
+
 describe("Router: the registry (R-TGT-1)", () => {
   it("tracks a tab once its video plays, not before", () => {
     const { router } = setup();

@@ -26,7 +26,7 @@ describe("the extension says it needs the VJster plugin", () => {
   it("names every companion in every language, in a description the store accepts", () => {
     const localeDir = join(dir, "_locales");
     const languages = readdirSync(localeDir);
-    expect(languages.length).toBe(12);
+    expect(languages.length).toBe(13);
     for (const language of languages) {
       const messages = JSON.parse(readFileSync(join(localeDir, language, "messages.json"), "utf8")) as Record<string, { message: string }>;
       const description = messages.extDescription.message;

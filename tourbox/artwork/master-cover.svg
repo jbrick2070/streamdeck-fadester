@@ -14,7 +14,7 @@
 <text x="58" y="186" fill="#FFBC74" font-family="Courier New,Courier,monospace" font-size="18" font-weight="bold">LIVE PRODUCTION</text>
 <text x="55" y="270" fill="#F8F4E5" font-family="Arial,Helvetica,sans-serif" font-size="63" font-weight="bold">OBS Fadester</text>
 <text x="55" y="340" fill="#F8F4E5" font-family="Arial,Helvetica,sans-serif" font-size="63" font-weight="bold">for TourBox</text>
-<text x="60" y="397" fill="#C0D1C6" font-family="Arial,Helvetica,sans-serif" font-size="28" font-weight="normal">Cue scenes. Ride the mix.</text>
+<text x="60" y="397" fill="#C0D1C6" font-family="Arial,Helvetica,sans-serif" font-size="28" font-weight="normal">Choose scenes. Ride the mix.</text>
 <text x="60" y="435" fill="#C0D1C6" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="normal">Turn, press, hold Side.</text>
 <rect x="550" y="149" width="594" height="383" rx="8" fill="#19372E" stroke="#46665C" stroke-width="1"/>
 <text x="582" y="195" fill="#FFBC74" font-family="Courier New,Courier,monospace" font-size="15" font-weight="bold">A  /  PROGRAM</text>
@@ -59,7 +59,7 @@
 <path d="M822 469L822 495" fill="none" stroke="#6D4E35" stroke-width="2"/>
 <path d="M56 572L1144 572" fill="none" stroke="#46665C" stroke-width="1"/>
 <text x="58" y="615" fill="#F8F4E5" font-family="Arial,Helvetica,sans-serif" font-size="30" font-weight="bold">Scenes • Audio • Media • Production tools</text>
-<text x="58" y="648" fill="#C0D1C6" font-family="Courier New,Courier,monospace" font-size="16" font-weight="normal">Native Tour menu  /  Windows companion</text>
+<text x="58" y="648" fill="#C0D1C6" font-family="Courier New,Courier,monospace" font-size="16" font-weight="normal">Native Tour menu  /  Fadester Companion</text>
 <g transform="translate(60 472) scale(1.45)" fill="none" stroke="#FFBC74" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><rect x="2" y="4" width="14" height="11" rx="1.5"/><path d="M7 18h11a2 2 0 0 0 2-2V9M10 21h8M8 9l3 2-3 2z"/></g>
 <text x="60" y="529" fill="#C0D1C6" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="bold">Scenes</text>
 <g transform="translate(174 472) scale(1.45)" fill="none" stroke="#FFBC74" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M5 3v7m0 5v6m7-18v12m0 4v2m7-18v3m0 4v11"/><path d="M2.5 10h5v4h-5zM9.5 15h5v4h-5zM16.5 6h5v4h-5z"/></g>

@@ -16,7 +16,7 @@
     </header>
 
     <h2>La prima apertura</h2>
-    <p>Sposta <strong>Fadester Companion.app</strong> in <strong>Applicazioni</strong>. Apple non ha autenticato (notarizzato) l’app, quindi la prima volta fai clic sull’app tenendo premuto Ctrl (o con il tasto destro), scegli <strong>Apri</strong> e poi di nuovo <strong>Apri</strong>. Oppure prova ad aprirla una volta, poi fai clic su <strong>Apri comunque</strong> in <strong>Impostazioni di Sistema → Privacy e sicurezza</strong>.</p>
+    <p>Sposta <strong>Fadester Companion.app</strong> in <strong>Applicazioni</strong>. Apple non ha autenticato (notarizzato) l’app, quindi la prima volta macOS non la apre. Prova ad aprirla una volta, poi fai clic su <strong>Apri comunque</strong> in <strong>Impostazioni di Sistema → Privacy e sicurezza</strong>. (Fino a macOS 14 puoi anche fare clic sull’app tenendo premuto Ctrl e scegliere <strong>Apri</strong>.)</p>
 
     <h2>Collega la TourBox a OBS</h2>
     <ol>
@@ -24,22 +24,22 @@
       <li>In Fadester Companion fai clic su <strong>1. Salva preset TourBox (.tb)…</strong> e salva il preset nella tua lingua in una cartella visibile, per esempio Download.</li>
       <li>Fai clic su <strong>2. Apri TourBox Console</strong> (o su <strong>Mostrami dove fare clic</strong>). In TourBox Console fai clic sull’icona di importazione accanto all’elenco dei preset, apri <code>OBS Fadester for TourBox.tb</code>, disattiva <strong>Auto Switch</strong> e seleziona <strong>OBS Fadester for TourBox</strong>: così un solo preset funziona qualunque app sia in primo piano. Solo se lasci attivo Auto Switch, fai clic su <strong>Not Linked</strong>, scegli <strong>OBS</strong> e fai clic su <strong>Save</strong>; associalo anche a Google Chrome per controllare i video con Chrome in primo piano. Importa una sola versione linguistica e non il file per Windows.</li>
       <li>Fai clic su <strong>Concedi Accessibilità a Fadester Companion…</strong> e attiva Fadester Companion in <strong>Impostazioni di Sistema → Privacy e sicurezza → Accessibilità</strong>. Se compaiono anche <strong>Fadester Companion T-bar</strong> e <strong>Fadester Companion Shortcuts</strong>, attiva anche quelli. TourBox Console ha un proprio permesso.</li>
-      <li>In <strong>Assegnazioni</strong> scegli le scene e l’ingresso musicale. Fai clic su <strong>Salva &amp; avvia controlli</strong> e attendi <strong>Controlli: attivi</strong>. Lascia aperto Fadester Companion.</li>
+      <li>In <strong>Assegnazioni</strong> scegli le scene e l’ingresso musicale. I controlli partono da soli una volta concessa l’Accessibilità: attendi <strong>Controlli: attivi</strong> (se la spia dice che sono spenti, fai clic su <strong>Avvia</strong> lì accanto). Chiudere la finestra non ferma i controlli: l’app resta nella barra dei menu, in alto a destra.</li>
     </ol>
     <p>Il preset per Mac usa <strong>Control + Opzione + Maiuscole</strong> per le azioni di OBS e <strong>Control + Maiuscole</strong> o <strong>Opzione + Maiuscole</strong> per video e livelli; mai Comando.</p>
 
     <h2>Fai una prova con due scene diverse</h2>
     <ul>
-      <li>Gira la rotella <strong>Scroll</strong> per cambiare la scena in Anteprima. La scena in Programma resta la stessa. Premi la rotella per vedere i nomi di entrambe le scene nel pannello.</li>
+      <li>Gira la rotella <strong>Scroll</strong> per cambiare la scena in Anteprima. La scena in Programma resta la stessa. Premi la rotella per vedere i nomi di entrambe le scene nella scheda <strong>Attività</strong>.</li>
       <li>Gira lentamente il <strong>Dial</strong> piatto per spostare il cursore di OBS e passare da una scena all’altra. Per annullare una dissolvenza in corso, tieni premuto <strong>Side</strong> e premi <strong>Dial</strong>. In senso orario il cursore va sempre verso l’anteprima, anche per la dissolvenza successiva. Dopo una dissolvenza completa, attendi un attimo prima di girare di nuovo.</li>
       <li>Riproduci un video YouTube in Chrome (con l’estensione gratuita VJster). Gira la manopola rialzata <strong>Knob</strong> per cambiare la velocità; premi e ruota per passi fini. Premila per avviare o mettere in pausa il video. Tocca <strong>Side</strong> per riportare la velocità a 1x.</li>
       <li>Per controllare un video YouTube direttamente in OBS, inseriscilo in Configurazione, fai clic su <strong>Copia URL per la sorgente browser di OBS</strong> e incolla l’indirizzo in una sorgente browser di OBS.</li>
-      <li>Assegna un ingresso musicale nel pannello di Fadester. Tieni premuto <strong>Side</strong> e gira il <strong>Dial</strong> piatto per regolarne il volume. Con <strong>Top</strong> premuto, Knob, Scroll e Dial controllano i livelli VJ (metodo di fusione e opacità). I livelli non scelti si compilano da soli dalla scena in onda la prima volta che li usi (livello 1 = l’immagine visibile più in alto, livello 2 = quella successiva) e vengono salvati in <strong>Assegnazioni</strong>.</li>
+      <li>Assegna un ingresso musicale in Fadester Companion. Tieni premuto <strong>Side</strong> e gira il <strong>Dial</strong> piatto per regolarne il volume. Con <strong>Top</strong> premuto, Knob, Scroll e Dial controllano i livelli VJ (metodo di fusione e opacità). I livelli non scelti si compilano da soli dalla scena in onda la prima volta che li usi (livello 1 = l’immagine visibile più in alto, livello 2 = quella successiva) e vengono salvati in <strong>Assegnazioni</strong>.</li>
       <li>Un tocco su <strong>Short</strong> mostra solo lo stato della registrazione. <strong>Annulla mod. audio</strong> si trova nel menu <strong>Tour</strong>.</li>
     </ul>
 
     <h2>Regola tutto il mix</h2>
-    <p>Nella configurazione, abilita il controllo di tutti gli ingressi del mixer OBS, quindi salva e avvia i controlli. Tieni premuto <strong>Side</strong> e gira <strong>Knob</strong> per regolare il livello del gruppo. Dal menu <strong>Tour</strong> puoi sfumare il mix fino al silenzio o ripristinare i livelli precedenti. Gli ingressi silenziati restano tali.</p>
+    <p>Nella configurazione, abilita il controllo di tutti gli ingressi del mixer OBS, quindi fai clic su <strong>Ferma</strong> e poi su <strong>Avvia</strong>. Tieni premuto <strong>Side</strong> e gira <strong>Knob</strong> per regolare il livello del gruppo. Dal menu <strong>Tour</strong> puoi sfumare il mix fino al silenzio o ripristinare i livelli precedenti. Gli ingressi silenziati restano tali.</p>
 
     <h2>Assistenza</h2>
     <p>La diagnostica del processo in background è in inglese. Se un comando non risponde, controlla il preset attivo in TourBox Console e consulta il registro attività di Fadester.</p>

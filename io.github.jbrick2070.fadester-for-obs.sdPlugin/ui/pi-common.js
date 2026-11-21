@@ -51,6 +51,10 @@
   let passwordDirty = false;
   let requestCounter = 0;
   const pendingReplies = new Map();
+  // This page's own mark in its request ids (every page starts counting at 1).
+  const PAGE_ID = Math.random().toString(36).slice(2, 8);
+  // The answer each request is waiting for.
+  const REPLY_EVENTS = { getCatalog: "catalog", setSlot: "setSlotResult" };
   let overviewCatalog = null;
   let sourceCatalogCache = {};
   // Every state message redraws an open editor, and a failed getCatalog makes the plugin send two more state
@@ -76,8 +80,6 @@
   let catalogGeneration = 0;
   let applySequence = 0;
   let applying = false;
-  let profileDraft = null;
-  let profileLoading = false;
 
   function markEditorDirty() {
     editorDirty = true;
@@ -125,7 +127,10 @@
   /** sendToPlugin with a reply promise keyed by requestId. */
   function request(payload) {
     requestCounter += 1;
-    const requestId = "pi_" + requestCounter;
+    // The plugin answers whichever page is open: the id names this page, so an answer meant for the page that was
+    // open before (it counted from 1 too) is never taken for one of ours.
+    const requestId = "pi_" + PAGE_ID + "_" + requestCounter;
+    const expects = REPLY_EVENTS[payload.event];
     return new Promise(function (resolve) {
       const timer = setTimeout(function () {
         pendingReplies.delete(requestId);
@@ -133,8 +138,11 @@
         resolve({ error: T("noReply"), noReply: true });
       }, 6000);
       pendingReplies.set(requestId, function (reply) {
+        // An answer of another kind is not this request's answer; the request keeps waiting for its own.
+        if (expects && reply && reply.event !== expects) return false;
         clearTimeout(timer);
         resolve(reply);
+        return true;
       });
       sendToPlugin(Object.assign({ requestId: requestId }, payload));
     });
@@ -207,12 +215,8 @@
 
       '<h3><span data-i18n="controllerHeading">Controller</span> <span class="scope" data-i18n="scopeShared">shared</span></h3>',
       '<div id="ctrl-status" class="status-banner status-info"></div>',
-      '<details class="editor"><summary data-i18n="switchProfile">Switch controller profile</summary>',
-      '<p class="muted" data-i18n="profileIntro">Loading a profile resets slot defaults in Midi Fadester for every surface. Only the active profile reports what the connected desk can do; this list is the API contract’s known profiles. Only APC40 mkII is verified on real hardware.</p>',
-      '<div class="row"><label for="profile-select" data-i18n="profile">Profile</label><select id="profile-select"></select></div>',
-      '<div class="row"><label></label><button id="profile-load" class="btn danger" type="button" data-i18n="loadProfile">Load profile</button></div>',
-      '<div id="profile-result" class="status-banner" style="display:none;"></div>',
-      "</details>",
+      // The controller profile is chosen in Midi Fadester's own settings: loading one resets every slot of the MIDI
+      // desk, which is not a setting of one Stream Deck key. This page only says which profile is active.
 
       '<h3><span data-i18n="connHeading">OBS connection</span> <span class="scope" data-i18n="scopeAllControls">all Fadester for OBS controls</span></h3>',
       '<div id="conn-status" class="status-banner status-err" data-i18n="connWaitingPlugin">Waiting for the plugin…</div>',
@@ -223,6 +227,7 @@
       '<div class="row"><label for="conn-port" data-i18n="port">Port</label><input type="number" id="conn-port" value="4455" min="1" max="65535" /></div>',
       '<div class="row"><label for="conn-password" data-i18n="password">OBS password</label><input type="password" id="conn-password" autocomplete="off" placeholder="Filled in from OBS on this computer" data-i18n-placeholder="passwordPlaceholderFromObs" /></div>',
       '<div class="row"><label></label><button id="conn-test-btn" class="btn" type="button" data-i18n="saveAndTest">Save for all controls &amp; test</button><span class="hint" id="conn-hint"></span></div>',
+      '<div class="row" id="conn-use-obs-row" style="display:none"><label></label><button id="conn-use-obs" class="btn secondary" type="button" data-i18n="connUseObsPassword">Use OBS\'s own password</button></div>',
       '</details>'
     ].join("");
     window.FadesterI18n.apply(mount);
@@ -263,6 +268,10 @@
       selectedSlot,
       list.map(function (s) { return [s.id, slotOptionText(s), s.kind]; })
     ]);
+    // The reason above the list follows the chosen slot at once, also when the list is not rebuilt (it keeps the
+    // focus right after a choice, or nothing in it changed).
+    const chosen = list.find(function (s) { return s.id === selectedSlot; });
+    setBanner($("slot-reason-banner"), chosen && chosen.available === false && chosen.reason ? chosen.reason : "", "err");
     if (signature === lastSlotSignature) return;
     if (document.activeElement === selectEl) return; // never rebuild under the operator's cursor
     lastSlotSignature = signature;
@@ -311,7 +320,6 @@
   // ---------------------------------------------------------------- controller panel
   function updateControllerPanel(state) {
     const statusEl = $("ctrl-status");
-    const profileSel = $("profile-select");
     if (!statusEl) return;
     statusEl.innerHTML = "";
     const connected = state.status && state.status.kind === "connected";
@@ -342,22 +350,6 @@
       statusEl.appendChild(sm);
     }
 
-    if (profileSel && document.activeElement !== profileSel) {
-      const active = state.profile ? state.profile.slug : "";
-      fillSelect(
-        profileSel,
-        (state.knownProfiles || []).map(function (kp) {
-          return {
-            value: kp.slug,
-            text: T(kp.slug === active ? "profileOptionActive" : "profileOption", { name: kp.displayName, tier: kp.tierLabel })
-          };
-        }),
-        profileDraft === null ? active : profileDraft,
-        ""
-      );
-    }
-    const loadBtn = $("profile-load");
-    if (loadBtn) loadBtn.disabled = !connected || profileLoading;
   }
 
   // ---------------------------------------------------------------- connection panel
@@ -378,6 +370,14 @@
           ? "passwordPlaceholderSavedAll"
           : "passwordPlaceholderFromObs");
       }
+    }
+    // The way back from a typed password to the one OBS saved on this computer (an emptied box is "no change"):
+    // offered while a typed password is stored and OBS is on this computer, as on the Fadester for OBS pages.
+    const useObsRow = $("conn-use-obs-row");
+    if (useObsRow) {
+      const host = state.connection ? String(state.connection.host || "").trim().toLowerCase() : "";
+      const local = host === "127.0.0.1" || host === "localhost" || host === "::1" || host === "[::1]";
+      useObsRow.style.display = state.connection && state.connection.passwordSet && local ? "" : "none";
     }
     const connEditor = $("conn-editor");
     if (connEditor && !connEditor.dataset.initialized && state.connection) {
@@ -1043,34 +1043,6 @@
     }
   }
 
-  function bindControllerPanel() {
-    const loadBtn = $("profile-load");
-    const sel = $("profile-select");
-    if (!loadBtn || !sel) return;
-    sel.addEventListener("change", function () { profileDraft = sel.value; });
-    loadBtn.addEventListener("click", function () {
-      const name = sel.value;
-      const resultEl = $("profile-result");
-      if (!name) {
-        setBanner(resultEl, T("chooseProfileFirst"), "err");
-        return;
-      }
-      loadBtn.disabled = true;
-      profileLoading = true;
-      setBanner(resultEl, T("loadingProfile"), "info");
-      request({ event: "loadProfile", name: name }).then(function (reply) {
-        loadBtn.disabled = false;
-        profileLoading = false;
-        if (reply && reply.ok) {
-          if (profileDraft === name) profileDraft = null;
-          setBanner(resultEl, T("profileLoaded", { name: reply.loaded || name }), "ok");
-        } else {
-          setBanner(resultEl, (reply && reply.error) || T("profileRejected"), "err");
-        }
-      });
-    });
-  }
-
   function bindConnectionPanel() {
     const btn = $("conn-test-btn");
     const hostEl = $("conn-host");
@@ -1101,6 +1073,14 @@
     }
     if (hostEl) hostEl.addEventListener("change", pushGlobalConn);
     if (portEl) portEl.addEventListener("change", pushGlobalConn);
+    const useObs = $("conn-use-obs");
+    if (useObs) {
+      useObs.addEventListener("click", function () {
+        if (passEl) passEl.value = "";
+        passwordDirty = false;
+        sendToPlugin({ event: "useObsPassword" });
+      });
+    }
     if (btn) {
       btn.addEventListener("click", function () {
         pushGlobalConn();
@@ -1162,7 +1142,6 @@
   window.initFadesterPropertyInspector = function (bindControlsFn) {
     renderSharedSections($("shared-sections"));
     bindEditor();
-    bindControllerPanel();
 
     window.connectElgatoStreamDeckSocket = function (
       inPort,
@@ -1218,8 +1197,7 @@
             applySlotValue(p);
           } else if (p.requestId && pendingReplies.has(p.requestId)) {
             const cb = pendingReplies.get(p.requestId);
-            pendingReplies.delete(p.requestId);
-            cb(p);
+            if (cb(p) !== false) pendingReplies.delete(p.requestId);
           }
         }
       };

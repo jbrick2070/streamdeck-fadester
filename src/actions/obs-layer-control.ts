@@ -138,7 +138,7 @@ export class ObsLayerInstanceController {
     const reason = wordText(this.lastError ?? state.error, translate) ||
       statusCellReason(this.layers.client.getStatus(), translate);
     const connected = this.layers.client.isConnected();
-    const loaded = Boolean(this.layers.getCatalog()[state.sceneName]);
+    const loaded = this.layers.hasScene(state.sceneName);
     const missingSource = t(!connected ? "layerConnectObs" : !state.sceneName ? "layerChooseScene" :
       !loaded ? "layerLoading" : fixedTarget && this.settings.sceneItemId >= 0 && !layer ? "layerFixedUnavailable" :
         state.layers.length ? "layerChooseSource" : "layerNoSources");
@@ -160,7 +160,10 @@ export class ObsLayerInstanceController {
         // A shipped caption ("Prev source") is a default: the key draws its translated operation.
         title: customCaption("layerKey", this.settings) || operationLabel,
         subtitle: layer ? t("layerKeySubtitle", { state: operation.startsWith("blend_") ? blend : shownState, source: name }) : missingSource,
-        ...(!layer && connected ? { problem: missingSource } : {})
+        ...(!layer && connected ? { problem: missingSource } : {}),
+        // A key that changes the picture on Program says so before it is pressed (browsing changes nothing in OBS).
+        onAir: layer && !operation.startsWith("select_") && state.sceneName === this.layers.client.getCatalog().currentProgramScene
+          ? "program" : undefined
       }));
       return;
     }
@@ -184,10 +187,10 @@ export class ObsLayerInstanceController {
     this.limiter.push([
       '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100">',
       `<defs><linearGradient id="layerBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${P.bgTop}"/><stop offset="100%" stop-color="${P.bgBottom}"/></linearGradient></defs>`,
-      `<rect x="2" y="2" width="196" height="96" rx="11" fill="url(#layerBg)" stroke="${reason || !layer ? P.accentYellow : accentColor(this.settings.accent)}" stroke-width="3"/>`,
+      `<rect x="2" y="2" width="196" height="96" rx="11" fill="url(#layerBg)" stroke="${reason || !layer ? "#df6d38" : accentColor(this.settings.accent)}" stroke-width="3"/>`,
       `<text x="100" y="22" text-anchor="middle" fill="${live ? P.programRed : preview ? P.previewGreen : accentColor(this.settings.accent)}" ${header.attrs}>${header.text}</text>`,
       `<text x="100" y="47" text-anchor="middle" fill="${P.whiteGlyph}" ${sourceText.attrs} font-weight="700">${sourceText.text}</text>`,
-      `<text x="100" y="69" text-anchor="middle" fill="${reason || !layer ? P.accentYellow : P.mutedText}" ${statusText.attrs}>${statusText.text}</text>`,
+      `<text x="100" y="69" text-anchor="middle" fill="${reason || !layer ? P.orangeAccent : P.mutedText}" ${statusText.attrs}>${statusText.text}</text>`,
       `<text x="100" y="89" text-anchor="middle" fill="${P.accentYellow}" ${footerText.attrs}>${footerText.text}</text>`,
       '</svg>'
     ].join(""));

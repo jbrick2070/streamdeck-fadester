@@ -19,7 +19,8 @@
 body {
   background: var(--background);
   color: var(--text);
-  font-family: "Segoe UI", Arial, sans-serif;
+  /* The system's own interface font first: Segoe UI on Windows, San Francisco on a Mac (not Arial). */
+  font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
   font-size: 12px;
   margin: 0;
   padding: 10px 12px;
@@ -270,12 +271,28 @@ details.direct-optional {
   border: 1px solid #352546;
 }
 .chk-dot {
-  width: 9px;
-  height: 9px;
+  width: 13px;
+  height: 13px;
   border-radius: 50%;
   flex-shrink: 0;
-  margin-top: 4px;
+  margin-top: 2px;
   background: #777B86;
+  /* The mark inside (a tick, "!" or "i"): the state is never told by colour alone. */
+  color: #09070D;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 13px;
+  text-align: center;
+}
+.chk-dot.chk-note {
+  background: #8B8496;
+}
+.chk-group {
+  margin: 8px 0 3px;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
 }
 .chk-dot.chk-ok {
   background: #22C55E;
@@ -317,4 +334,35 @@ details.direct-optional {
   margin-top: 2px;
   font-size: 11px;
   color: #FFF49A;
+}
+/* The connection state as the page's first line while OBS is not connected. */
+#direct-top-status {
+  margin: 0 0 8px;
+}
+/* While OBS is not connected, a key's own banner would name a scene or an input that is only missing because OBS is. */
+body.obs-offline > .status-banner:not(#direct-top-status) {
+  display: none !important;
+}
+/* The one line that offers a ready-made layout on a new deck. */
+#direct-top-layouts {
+  display: block;
+  width: 100%;
+  margin: 0 0 8px;
+  text-align: left;
+}
+/* The plugin's own settings, behind one line at the foot of every key's page. */
+details.plugin-footer {
+  margin-top: 14px;
+}
+details.plugin-footer > summary {
+  color: var(--text-muted);
+}
+/* A fold inside a key's own fields (Timing, Advanced). */
+details.fold {
+  margin: 6px 0;
+}
+details.fold > summary {
+  cursor: pointer;
+  color: var(--purple-light);
+  padding: 4px 0;
 }

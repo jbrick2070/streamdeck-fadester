@@ -43,42 +43,47 @@
    */
   var FIELDS = {
     speed: [
-      ["label", "fieldLabel", "text", "speed"],
+      ["target", "fieldControl", "select", TARGETS, "browser"],
       ["step", "fieldStep", "select", STEPS, "0.25"],
       ["fineStep", "fieldFineStep", "select", STEPS, "0.05"],
       ["extended", "fieldExtended", "check", false],
       ["hold", "fieldHoldSpeed", "check", true],
-      ["target", "fieldControl", "select", TARGETS, "browser"]
+      ["label", "fieldLabel", "text", "speed"]
     ],
     quality: [
-      ["label", "fieldLabel", "text", "quality"],
+      ["target", "fieldControl", "select", TARGETS, "browser"],
       ["hold", "fieldHoldLevel", "check", true],
-      ["target", "fieldControl", "select", TARGETS, "browser"]
+      ["label", "fieldLabel", "text", "quality"]
     ],
     "speed-preset": [
+      ["target", "fieldControl", "select", TARGETS, "browser"],
       ["rate", "fieldRate", "number", 1],
       ["extended", "fieldDirect", "check", false],
-      ["hold", "fieldHoldSpeed", "check", true],
-      ["target", "fieldControl", "select", TARGETS, "browser"]
+      ["hold", "fieldHoldSpeed", "check", true]
     ],
     "speed-step": [
+      ["target", "fieldControl", "select", TARGETS, "browser"],
       ["direction", "fieldDirection", "select", [["1", "@faster"], ["-1", "@slower"]], "1"],
       ["step", "fieldStepSize", "select", STEPS, "0.25"],
-      ["extended", "fieldExtendedShort", "check", false],
-      ["target", "fieldControl", "select", TARGETS, "browser"]
+      ["extended", "fieldExtendedShort", "check", false]
     ],
     "quality-preset": [
+      ["target", "fieldControl", "select", TARGETS, "browser"],
       ["level", "fieldLevel", "select", LEVELS, "auto"],
-      ["hold", "fieldHoldLevel", "check", true],
-      ["target", "fieldControl", "select", TARGETS, "browser"]
+      ["hold", "fieldHoldLevel", "check", true]
     ],
     pin: [],
     transport: [["target", "fieldControl", "select", TARGETS, "browser"]]
   };
 
+  /** The VJster extension's page in the Chrome Web Store. */
+  var EXTENSION_URL = "https://chromewebstore.google.com/detail/daohboebokfmamkblejcpbblfnaijgnb";
+  /** The OBS page section opens by itself when this control drives the OBS page; after that it is the user's. */
+  var obsSectionFor = null;
+
   var STRINGS = window.VJSTER_PI_STRINGS || {};
-  /** The Language choice's languages: Stream Deck's eight and Dutch, as the plugin stores and resolves them. */
-  var PLUGIN_LANGUAGES = ["en", "de", "es", "fr", "ja", "ko", "zh_CN", "zh_TW", "nl"];
+  /** The Language choice's languages: Stream Deck's eight and Dutch, Italian, Brazilian Portuguese, Russian and Turkish, as the plugin stores and resolves them. */
+  var PLUGIN_LANGUAGES = ["en", "de", "es", "fr", "ja", "ko", "zh_CN", "zh_TW", "nl", "it", "pt_BR", "ru", "tr"];
   /** The language the texts are in: Stream Deck's, its base language, or English; then the one the plugin resolved. */
   var lang = "en";
 
@@ -191,6 +196,14 @@
     var box = document.getElementById("fields");
     box.textContent = "";
     relabels = [];
+    // The OBS page section is open when this control drives the OBS page; a change of Control opens or closes it
+    // once, and after that the user's own click stays.
+    var drivesObs = settings.target === "obs" || settings.target === "both";
+    if (obsSectionFor !== drivesObs) {
+      obsSectionFor = drivesObs;
+      var obsSection = document.getElementById("obs-section");
+      if (obsSection) obsSection.open = drivesObs;
+    }
     var fields = FIELDS[kind] || [];
     if (fields.length === 0) {
       box.appendChild(
@@ -268,6 +281,12 @@
     };
     box.textContent = words[s.portInUse ? "port-in-use" : s.browser] || String(s.browser);
     box.className = "status " + (s.browser === "connected" ? "ok" : "bad");
+    // Not linked, and the port is free: the usual reason is that the extension is not in Chrome yet.
+    document.getElementById("get-extension").hidden = s.browser === "connected" || Boolean(s.portInUse);
+    // Every settings page shows its version: the plugin this page belongs to (Fadester for OBS in the suite).
+    if (typeof s.product === "string" && typeof s.version === "string" && s.product && s.version) {
+      document.getElementById("version").textContent = s.product + " " + s.version;
+    }
     if (s.badIds > 0) {
       var allBad = s.badIds >= (s.extensionIds || []).length;
       box.textContent = allBad ? t("noValidId") : t(s.badIds === 1 ? "badIdOne" : "badIdMany", { n: s.badIds });
@@ -321,6 +340,11 @@
     if (SUITE) send({ event: "sendToPlugin", action: PREFIX + kind, context: context, payload: { event: "suiteGlobal", settings: copy } });
     else send({ event: "setGlobalSettings", context: context, payload: copy });
   }
+
+  // Stream Deck opens the address in the user's browser (a settings page cannot navigate away itself).
+  document.getElementById("get-extension").addEventListener("click", function () {
+    send({ event: "openUrl", payload: { url: EXTENSION_URL } });
+  });
 
   document.getElementById("obs-always").addEventListener("change", function (event) {
     global.obsAlwaysOn = event.target.checked;

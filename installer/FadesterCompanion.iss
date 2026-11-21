@@ -31,27 +31,39 @@ WizardStyle=modern
 ; The panel holds this mutex while it is open, so setup asks to close it instead of replacing files in use.
 AppMutex=Local\FadesterTourBoxPanel
 CloseApplications=no
+; The Windows display language when it is one of the suite's 13, else English (the first language listed). "no":
+; never a language question; "auto" would ask on a Windows whose language is none of the 13.
+ShowLanguageDialog=no
 #ifdef SIGN
 SignTool=fadester
 #endif
 
 [Languages]
-Name: "english"; MessagesFile: "compiler:Default.isl"
+#include "lang\languages.iss"
+
+[CustomMessages]
+; English. The other 12 languages are in installer\lang\<code>.isl, shared with FadesterSuite.iss.
+OpenCompanion=Open Fadester Companion
+IconGuide=Fadester Companion quick guide
+StopCompanionRunning=Fadester Companion is running. Click Stop in Fadester Companion and close its window (or choose Quit from its icon beside the clock), then run setup again.
+UninstallRunning=Fadester Companion is running. Quit it (Stop, then close its window), then uninstall again.
 
 [Files]
 Source: "{#CompanionSource}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\Fadester Companion"; Filename: "{app}\Fadester Companion.exe"
-Name: "{group}\Fadester Companion quick guide"; Filename: "{app}\START-HERE.html"
+Name: "{group}\{cm:IconGuide}"; Filename: "{app}\START-HERE.html"
 
 [Run]
-Filename: "{app}\Fadester Companion.exe"; Description: "Open Fadester Companion"; Flags: nowait postinstall skipifsilent runasoriginaluser
+Filename: "{app}\Fadester Companion.exe"; Description: "{cm:OpenCompanion}"; Flags: nowait postinstall skipifsilent runasoriginaluser
 
 [InstallDelete]
 ; Files of an install made before the rename (0.1.3 and earlier).
 Type: files; Name: "{app}\Fadester for TourBox.exe"
 Type: files; Name: "{app}\FadesterTourBoxBridge.exe"
+; The guide's shortcut had its English name in every language up to 0.1.17.
+Type: files; Name: "{group}\Fadester Companion quick guide.lnk"; Check: GuideNameTranslated
 
 [UninstallDelete]
 ; Only files the app itself may leave in its own folder. %LOCALAPPDATA%\FadesterTourBox (settings, logs) is kept.
@@ -73,6 +85,11 @@ begin
   end;
 end;
 
+function GuideNameTranslated(): Boolean;
+begin
+  Result := CustomMessage('IconGuide') <> 'Fadester Companion quick guide';
+end;
+
 // True while the app or its engine runs, under today's names or the ones used up to 0.1.3.
 function CompanionRunning(): Boolean;
 begin
@@ -84,7 +101,7 @@ function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
   Result := '';
   if CompanionRunning() then
-    Result := 'Fadester Companion is running. Click Stop in Fadester Companion, close its window, and run setup again.';
+    Result := CustomMessage('StopCompanionRunning');
 end;
 
 function InitializeUninstall(): Boolean;
@@ -92,7 +109,7 @@ begin
   Result := True;
   if CompanionRunning() then
   begin
-    SuppressibleMsgBox('Fadester Companion is running. Close it, then uninstall again.', mbError, MB_OK, IDOK);
+    SuppressibleMsgBox(CustomMessage('UninstallRunning'), mbError, MB_OK, IDOK);
     Result := False;
   end;
 end;

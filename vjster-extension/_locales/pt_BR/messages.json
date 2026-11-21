@@ -52,17 +52,26 @@
   "statusLinkDown": {
     "message": "Não conectado. Verifique o programa que você usa:"
   },
+  "statusFirstWait": {
+    "message": "Aguardando o VJster. Faça uma destas coisas:"
+  },
+  "statusStandby": {
+    "message": "Em espera. Outra cópia desta extensão (outro perfil do Chrome ou outro navegador) está com a conexão; esta assume quando aquela fechar."
+  },
   "linkDownCompanion": {
     "message": "Fadester Companion: abra-o neste computador e confira se os controles estão ligados."
   },
   "linkDownDeck": {
-    "message": "Stream Deck ou OpenDeck: mostre uma página com uma tecla ou um botão giratório do VJster, ou marque “Manter a conexão ligada” nas configurações do VJster."
+    "message": "Stream Deck ou OpenDeck: mostre uma página com uma tecla ou um dial do VJster, ou marque “Manter a conexão ligada” nas configurações do VJster."
   },
   "linkDownPort": {
     "message": "A porta aqui deve ser a mesma das configurações do VJster desse programa."
   },
   "statusLinkChecking": {
     "message": "Conectando ao VJster…"
+  },
+  "reloadTabsNote": {
+    "message": "Abas de vídeo que já estavam abertas antes de instalar ou atualizar o VJster: recarregue-as uma vez."
   },
   "statusBadPort": {
     "message": "Use um número inteiro de 1024 a 65535; $DEFAULT$ é o padrão.",
@@ -84,7 +93,7 @@
     "message": "Não permitido: o VJster continua só no YouTube."
   },
   "statusAllSites": {
-    "message": "O VJster agora controla vídeos em todos os sites. Recarregue as guias abertas para incluí-las."
+    "message": "O VJster agora controla vídeos em todos os sites. Recarregue as abas abertas para incluí-las."
   },
   "statusYouTubeOnly": {
     "message": "O VJster voltou a funcionar só no YouTube."

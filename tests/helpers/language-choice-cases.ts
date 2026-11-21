@@ -29,7 +29,7 @@ export const LANGUAGE_CHOICE_CASES: readonly LanguageChoiceCase[] = [
   { stored: "zh_CN", app: "en", resolved: "zh_CN", choice: "zh_CN", unknown: false },
   { stored: "zh_TW", app: "ko", resolved: "zh_TW", choice: "zh_TW", unknown: false },
   // Anything else acts as Automatic: not in the list, another spelling, not a string.
-  { stored: "pt_BR", app: "de", resolved: "de", choice: "auto", unknown: true },
+  { stored: "sv_SE", app: "de", resolved: "de", choice: "auto", unknown: true },
   { stored: "NL", app: "en", resolved: "en", choice: "auto", unknown: true },
   { stored: "nl-NL", app: "fr", resolved: "fr", choice: "auto", unknown: true },
   { stored: "nl_NL", app: "es", resolved: "es", choice: "auto", unknown: true },

@@ -303,6 +303,9 @@ export class PropertyInspectorBridge {
       case "testConnection":
         await this.queueConnection(() => this.handleTestConnection());
         return;
+      case "useObsPassword":
+        await this.queueConnection(() => this.handleUseObsPassword());
+        return;
       case "getCatalog":
         await this.handleGetCatalog(msg);
         return;
@@ -328,11 +331,25 @@ export class PropertyInspectorBridge {
           ? msg.host.trim()
           : DEFAULT_GLOBAL_SETTINGS.host,
       port: Number(msg.port ?? DEFAULT_GLOBAL_SETTINGS.port),
-      password:
-        typeof msg.password === "string" ? msg.password : current.password
+      // No password typed: the stored one is left alone (it is never overwritten with what this session happens to know).
+      ...(typeof msg.password === "string" ? { password: msg.password } : {})
     };
     await this.transport.persistGlobalSettings(next);
+    this.client.updateSettings({ ...next, password: next.password ?? this.client.getSettings().password ?? current.password });
+    this.broadcast();
+  }
+
+  /**
+   * The explicit way to drop a typed password, as on the Fadester for OBS pages: from then on the client signs in with
+   * the one OBS saved on this computer, read fresh at each sign-in (an emptied password box is "no change", never
+   * "no password"). Then a test.
+   */
+  public async handleUseObsPassword(): Promise<void> {
+    const current = this.client.getSettings();
+    const next: FadesterGlobalSettings = { host: current.host, port: current.port, password: "" };
+    await this.transport.persistGlobalSettings(next);
     this.client.updateSettings(next);
+    await this.handleTestConnection();
     this.broadcast();
   }
 

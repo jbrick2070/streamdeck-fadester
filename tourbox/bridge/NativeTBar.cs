@@ -53,6 +53,14 @@ internal sealed class NativeTBar(int port) : IDisposable
         return owners.Single();
     }
 
+    private const int AccessDenied = 5; // ERROR_ACCESS_DENIED
+    /// <summary>
+    /// Windows refuses a normal program any hold on one run as administrator, and UI Automation into its window too, so
+    /// the T-bar cannot work in that setup. Nothing was written: a refusal, so no Cancel is needed, and a take falls
+    /// back to OBS's own (StudioFader.SlidePlanAsync).
+    /// </summary>
+    internal const string ElevatedObs = "OBS is running as administrator, so Windows blocks the T-bar. Close OBS and start it normally (or start Fadester Companion as administrator too). Fade, Cut and the other controls still work.";
+
     private void Open()
     {
         if (helper != null && !helper.HasExited && target is { HasExited: false }) return;
@@ -61,7 +69,8 @@ internal sealed class NativeTBar(int port) : IDisposable
         if (!target.ProcessName.Equals("obs64", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("The local WebSocket listener isn't OBS Studio.");
         // Hold the OS handle for this connection; a recycled PID is not the same process.
-        _ = target.Handle;
+        try { _ = target.Handle; }
+        catch (System.ComponentModel.Win32Exception e) when (e.NativeErrorCode == AccessDenied) { throw new NativeRefusal(ElevatedObs); }
         string exe = Path.Combine(AppContext.BaseDirectory, "FadesterNativeSlider.exe");
         if (!File.Exists(exe)) throw new FileNotFoundException("A file of the app is missing: FadesterNativeSlider.exe. Install Fadester Companion again, or extract the whole ZIP again, to use the T-bar.", exe);
         var start = new ProcessStartInfo(exe)

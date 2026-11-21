@@ -16,7 +16,7 @@
     </header>
 
     <h2>Beim ersten Öffnen</h2>
-    <p>Bewegen Sie <strong>Fadester Companion.app</strong> in den Ordner <strong>Programme</strong>. Die App ist nicht von Apple beglaubigt (notarisiert). Klicken Sie deshalb beim ersten Mal bei gedrückter Control-Taste (oder mit der rechten Maustaste) auf die App, wählen Sie <strong>Öffnen</strong> und dann noch einmal <strong>Öffnen</strong>. Oder versuchen Sie einmal, sie zu öffnen, und klicken Sie dann in <strong>Systemeinstellungen → Datenschutz &amp; Sicherheit</strong> auf <strong>Dennoch öffnen</strong>.</p>
+    <p>Bewegen Sie <strong>Fadester Companion.app</strong> in den Ordner <strong>Programme</strong>. Die App ist nicht von Apple beglaubigt (notarisiert), deshalb öffnet macOS sie beim ersten Mal nicht. Versuchen Sie einmal, sie zu öffnen, und klicken Sie dann in <strong>Systemeinstellungen → Datenschutz &amp; Sicherheit</strong> auf <strong>Dennoch öffnen</strong>. (Bis macOS 14 können Sie stattdessen bei gedrückter Control-Taste auf die App klicken und <strong>Öffnen</strong> wählen.)</p>
 
     <h2>TourBox mit OBS verbinden</h2>
     <ol>
@@ -24,13 +24,13 @@
       <li>Klicken Sie in Fadester Companion auf <strong>1. TourBox-Preset speichern (.tb)…</strong> und speichern Sie das Preset in Ihrer Sprache an einem gut sichtbaren Ort, zum Beispiel unter Downloads.</li>
       <li>Klicken Sie auf <strong>2. TourBox Console öffnen</strong> (oder auf <strong>Zeigen, wo ich klicken muss</strong>). Klicken Sie in TourBox Console auf das Importsymbol neben der Preset-Liste, öffnen Sie <code>OBS Fadester for TourBox.tb</code>, schalten Sie <strong>Auto Switch</strong> aus und wählen Sie <strong>OBS Fadester for TourBox</strong>: Dann funktioniert ein einziges Preset, egal welches Programm im Vordergrund ist. Nur wenn Sie Auto Switch eingeschaltet lassen, klicken Sie auf <strong>Not Linked</strong>, wählen Sie <strong>OBS</strong> und klicken Sie auf <strong>Save</strong>; verknüpfen Sie das Preset auch mit Google Chrome, um Videos mit Chrome im Vordergrund zu steuern. Importieren Sie nur eine Sprachversion und nicht die Windows-Datei.</li>
       <li>Klicken Sie auf <strong>Fadester Companion Bedienungshilfen erlauben…</strong> und schalten Sie Fadester Companion unter <strong>Systemeinstellungen → Datenschutz &amp; Sicherheit → Bedienungshilfen</strong> ein. Wenn dort auch <strong>Fadester Companion T-bar</strong> und <strong>Fadester Companion Shortcuts</strong> stehen, schalten Sie sie ebenfalls ein. TourBox Console hat eine eigene Berechtigung.</li>
-      <li>Wählen Sie unter <strong>Zuweisungen</strong> Ihre Szenen und den Musikeingang. Klicken Sie auf <strong>Speichern &amp; Steuerung starten</strong> und warten Sie auf <strong>Steuerung: ein</strong>. Lassen Sie Fadester Companion geöffnet.</li>
+      <li>Wählen Sie unter <strong>Zuweisungen</strong> Ihre Szenen und den Musikeingang. Die Steuerung startet von selbst, sobald die Bedienungshilfen erlaubt sind: Warten Sie auf <strong>Steuerung: ein</strong> (zeigt die Lampe „aus“, klicken Sie daneben auf <strong>Starten</strong>). Das Schließen des Fensters stoppt die Steuerung nicht: Die App bleibt in der Menüleiste oben rechts.</li>
     </ol>
     <p>Das Mac-Preset verwendet <strong>Control + Option + Shift</strong> für die OBS-Aktionen und <strong>Control + Shift</strong> oder <strong>Option + Shift</strong> für Video und Ebenen, nie Command.</p>
 
     <h2>Mit zwei unterschiedlichen Szenen üben</h2>
     <ul>
-      <li>Drehen Sie das <strong>Scroll</strong>-Rad, um die Vorschau zu wechseln. Das Programm bleibt unverändert. Ein Druck zeigt beide Szenennamen im Bedienfenster an.</li>
+      <li>Drehen Sie das <strong>Scroll</strong>-Rad, um die Vorschau zu wechseln. Das Programm bleibt unverändert. Ein Druck zeigt beide Szenennamen auf der Registerkarte <strong>Aktivität</strong> an.</li>
       <li>Drehen Sie das flache <strong>Dial</strong> langsam, um den OBS-Schieberegler zu bewegen und die Szenen zu mischen. Zum Abbrechen einer laufenden Überblendung halten Sie <strong>Side</strong> gedrückt und drücken das <strong>Dial</strong>. Drehen im Uhrzeigersinn bewegt den T-Bar immer Richtung Vorschau, auch beim nächsten Übergang. Warten Sie nach einem fertigen Übergang einen Moment, bevor Sie weiterdrehen.</li>
       <li>Spielen Sie ein YouTube-Video in Chrome ab (mit der kostenlosen VJster-Erweiterung). Drehen Sie den erhöhten <strong>Knob</strong>, um das Tempo zu ändern; drücken und drehen Sie ihn für feine Schritte. Drücken Sie ihn, um das Video abzuspielen oder anzuhalten. Tippen Sie auf <strong>Side</strong>, um das Tempo auf 1x zurückzusetzen.</li>
       <li>Um ein YouTube-Video direkt in OBS zu steuern, geben Sie es in der Einrichtung ein, klicken Sie auf <strong>OBS-Browserquellen-URL kopieren</strong> und fügen Sie die Adresse in eine Browserquelle in OBS ein.</li>
@@ -39,7 +39,7 @@
     </ul>
 
     <h2>Gesamte Mischung regeln</h2>
-    <p>Aktivieren Sie in der Einrichtung die Steuerung aller OBS-Mixereingänge und speichern und starten Sie die Steuerung. Halten Sie <strong>Side</strong> gedrückt und drehen Sie den <strong>Knob</strong>, um den Gruppenpegel zu ändern. Im <strong>Tour</strong>-Menü können Sie die Mischung bis zur Stille ausblenden und die vorherigen Pegel wiederherstellen. Stummgeschaltete Eingänge bleiben stumm.</p>
+    <p>Aktivieren Sie in der Einrichtung die Steuerung aller OBS-Mixereingänge und klicken Sie auf <strong>Stoppen</strong> und dann auf <strong>Starten</strong>. Halten Sie <strong>Side</strong> gedrückt und drehen Sie den <strong>Knob</strong>, um den Gruppenpegel zu ändern. Im <strong>Tour</strong>-Menü können Sie die Mischung bis zur Stille ausblenden und die vorherigen Pegel wiederherstellen. Stummgeschaltete Eingänge bleiben stumm.</p>
 
     <h2>Hilfe</h2>
     <p>Diagnosemeldungen des Hintergrunddienstes erscheinen auf Englisch. Wenn eine Steuerung nicht reagiert, prüfen Sie das aktive Preset in TourBox Console und öffnen Sie das Aktivitätsprotokoll in Fadester.</p>

@@ -30,9 +30,9 @@ Every scene fills the whole frame; nothing is shown side by side.
 | 5 | Kit Playlister 50% | the hurdles clip in a Playlister set to 50 % speed, with Restart from the deck |
 | 6 | Kit Speed Page | a YouTube video in a browser source whose speed the deck sets live with VJster |
 
-Each page of the deck drives one scene: its first key cues that scene in Preview; fade it in with the dial.
-Dial 1 on every page is the scene mixer: turn it to blend Preview into Program, press it to take
-the next scene live. No key cuts straight to Program.
+Each page of the deck drives one scene: its first key puts that scene in Preview; fade it in with the dial.
+Dial 1 on every page is the T-bar (Scene blend): turn it to blend Preview into Program, press it to put
+Preview on Program. No key cuts straight to Program.
 
 **About speed.** Playlister speed is a setting (Properties > Speed); changing it restarts the clip,
 which is why the kit has a 100 % scene and a 50 % scene instead of a speed dial. Live speed is
@@ -53,7 +53,7 @@ VJster's: in OBS it plays the video at 0.25x to 2x, set from the deck while it p
    Scene Collection > Import, pick `Suite Demo Kit.json`, press Import, and choose
    Scene Collection > Suite Demo Kit.
 4. Turn Studio Mode on (the Studio Mode button under the preview, or View > Studio Mode). The
-   kit's scene keys cue in Preview and the scene mixer dial fades into Program; without Studio
+   kit's scene keys put scenes in Preview and the Scene blend dial fades into Program; without Studio
    Mode the scene keys refuse and the dial shows that Studio Mode is off.
 5. Tools > WebSocket Server Settings: tick Enable WebSocket server. Put the address and password into
    one Fadester key's settings in Stream Deck; the other keys use the same connection.
@@ -76,9 +76,9 @@ VJster's: in OBS it plays the video at 0.25x to 2x, set from the deck while it p
 
 | Page | Keys | Dials |
 |---|---|---|
-| Visuals | Scene 2 (cue Kit Visuals), Look 1, Look 2, Look 3, Next page, Scene 1 (cue Kit Welcome), Restore, PANIC | Scene blend, Effect mix, Reactivity, Mix B |
-| Layers | Scene 3 (cue Kit Layers), Show / hide Layer A, Show / hide Layer B, Still, Next page, Scene 6 (cue Kit Speed Page), Restore, PANIC | Scene blend, Layer A fade, Layer B fade, Kit Beat |
-| Clips | Scene 4 (cue Kit Playlister), Previous, Play / pause, Next, Next page, Scene 5 (cue Kit Playlister 50%), Restart (the 50 % one), PANIC | Scene blend, Effect mix, Layer A fade, Kit Beat |
+| Visuals | Scene 2 (Kit Visuals to Preview), Look 1, Look 2, Look 3, Next page, Scene 1 (Kit Welcome to Preview), Restore, PANIC | Scene blend, Effect mix, Reactivity, Mix B |
+| Layers | Scene 3 (Kit Layers to Preview), Show / hide Layer A, Show / hide Layer B, Still, Next page, Scene 6 (Kit Speed Page to Preview), Restore, PANIC | Scene blend, Layer A fade, Layer B fade, Kit Beat |
+| Clips | Scene 4 (Kit Playlister to Preview), Previous, Play / pause, Next, Next page, Scene 5 (Kit Playlister 50% to Preview), Restart (the 50 % one), PANIC | Scene blend, Effect mix, Layer A fade, Kit Beat |
 
 Next page sits bottom left and PANIC bottom right on every page.
 

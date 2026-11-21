@@ -24,11 +24,11 @@ const PLUGIN_EN = {
   mixDb: "{db} dB",
   // Direct OBS client errors
   errorNoVolume: "OBS did not return a volume for '{input}'.",
-  errorRoleUnavailable: "{role} is unavailable. Choose an OBS mixer input in the inspector.",
+  errorRoleUnavailable: "{role} is unavailable. Choose an OBS mixer input in the settings.",
   errorChooseInput: "Choose an existing OBS mixer input first.",
   errorConnectBeforeStudio: "Connect to OBS before preparing a Studio layout.",
   errorStudioNotEnabled: "OBS Studio Mode could not be enabled.",
-  errorTakeUnconfirmed: "OBS did not take Preview. Check Program in OBS.",
+  errorTakeUnconfirmed: "OBS did not put Preview on Program. Check Program in OBS.",
   errorTbarNeedsStudio: "Scene T-bar needs OBS Studio Mode.",
   errorSceneIndexUnavailableOne: "Scene {n} is unavailable; OBS has {count} scene.",
   errorSceneIndexUnavailableMany: "Scene {n} is unavailable; OBS has {count} scenes.",
@@ -173,7 +173,7 @@ const PLUGIN_EN = {
   audioInput: "Audio input {n}",
   audioInputAutomatic: "Audio input {n} (automatic)",
   // Scene & Transition key
-  sceneTargetTakePreview: "Take Preview",
+  sceneTargetTakePreview: "Preview to Program",
   sceneTargetNext: "Next scene",
   sceneTargetPrevious: "Previous scene",
   sceneTargetRandom: "Random scene",
@@ -188,10 +188,10 @@ const PLUGIN_EN = {
   sceneRoleNext: "Next",
   sceneRolePrevious: "Previous",
   sceneRoleRandom: "Random",
-  sceneRoleTake: "Take",
+  sceneRoleTake: "To Program",
   sceneSubtitle: "{role} · {operation}",
   // OBS Fade key
-  fadeTitle: "OBS Fade",
+  fadeTitle: "Audio Fade",
   fadeUpNow: "Up now",
   fadeDownNow: "Down now",
   fadeUpSeconds: "Up {s}s",
@@ -209,11 +209,11 @@ const PLUGIN_EN = {
   pressPreviousBlend: "Press: previous blend",
   pressNormalBlend: "Press: Normal blend",
   pressShowHide: "Press: show / hide",
-  pressBlendTake: "Press: blend + take Preview",
+  pressBlendTake: "Press: blend, then to Program",
   pressDisabled: "Press disabled",
   // Direct renderer
   dialChooseControl: "Choose OBS control",
-  dialOpenInspector: "Open its inspector",
+  dialOpenInspector: "Open its settings",
   obsNotConnected: "OBS not connected",
   studioModeOff: "Studio Mode is off",
   mixerLiveScene: "Program",
@@ -221,12 +221,12 @@ const PLUGIN_EN = {
   mixerTurnOnStudio: "Turn on OBS Studio Mode",
   mixerChooseDifferent: "Choose a different Preview",
   mixerAutoQueue: "Turn to fade · auto-queues Preview",
-  mixerPressTake: "Press to take Preview",
+  mixerPressTake: "Press: Preview to Program",
   mixerLive: "PROGRAM",
   mixerNext: "PREVIEW",
   keyDefaultTitle: "OBS",
-  keyChooseAction: "Choose OBS action",
-  keyOpenInspector: "Open inspector",
+  keyChooseAction: "Not set up",
+  keyOpenInspector: "Open its settings",
   keyReady: "Ready",
   // Source & Layer key and dial
   layerOpNextSource: "Next source",
@@ -257,11 +257,11 @@ const PLUGIN_EN = {
   layerHeader: "{role}: {scene}",
   layerHeaderNone: "OBS SOURCES",
   layerFooterConnect: "Connect OBS to control",
-  layerFooterChooseScene: "Choose scene in inspector",
+  layerFooterChooseScene: "Choose scene in settings",
   layerFooterWaiting: "Waiting for OBS sources",
   layerFooterAddSources: "Add sources in OBS",
   layerFooterBrowse: "Turn to browse sources",
-  layerFooterChooseSource: "Choose source in inspector",
+  layerFooterChooseSource: "Choose source in settings",
   layerFooterSelectOnDeck: "Select a source on the deck",
   // OBS Scene Info Bar (Stream Deck Neo)
   infobarDisconnected: "OBS disconnected",
@@ -278,7 +278,7 @@ const PLUGIN_EN = {
   mfNeedsUpdateSentence: "Update Midi Fadester in OBS to use '{request}'.",
   vsNeedsUpdateSentence: "Update Midi Fadester in OBS (it includes Visual Sidechain) to use '{request}'.",
   // Texts the plugin sends to the property inspectors
-  setupErrorStudio: "Press Enable Studio Mode & open current starter layout.",
+  setupErrorStudio: "Press Turn on Studio Mode and open.",
   setupErrorFallback: "Could not prepare this OBS layout.",
   piChooseSlot: "Choose a slot first.",
   piEnabledNotApplied: "Midi Fadester did not apply the enabled state. Update Midi Fadester to a build that supports slot enable controls.",
@@ -314,17 +314,42 @@ export const STREAM_DECK_LANGUAGES = ["en", "de", "es", "fr", "ja", "ko", "zh_CN
 
 /**
  * The languages the plugin's own Language setting offers: Stream Deck's and
- * Dutch, which the app cannot select (PLAN.md 11, R-LANG-1). A fixed choice
- * must be one of these exactly.
+ * Dutch, Italian, Brazilian Portuguese, Russian and Turkish, which the app
+ * cannot select (PLAN.md 11, R-LANG-1): thirteen, the suite's list. A fixed
+ * choice must be one of these exactly.
  */
-export const PLUGIN_LANGUAGES = [...STREAM_DECK_LANGUAGES, "nl"] as const;
+export const PLUGIN_LANGUAGES = [...STREAM_DECK_LANGUAGES, "nl", "it", "pt_BR", "ru", "tr"] as const;
 
 export type PluginLanguage = (typeof PLUGIN_LANGUAGES)[number];
+
+/**
+ * Each language in its own word, as the Language choice lists it (never translated, D-L3). This and the two lists
+ * above are the one place a language is added: the settings pages get them through the generated ui/i18n.js.
+ */
+export const LANGUAGE_NAMES: Readonly<Record<PluginLanguage, string>> = {
+  en: "English",
+  de: "Deutsch",
+  es: "Español",
+  fr: "Français",
+  ja: "日本語",
+  ko: "한국어",
+  zh_CN: "简体中文",
+  zh_TW: "繁體中文",
+  nl: "Nederlands",
+  it: "Italiano",
+  pt_BR: "Português (Brasil)",
+  ru: "Русский",
+  tr: "Türkçe"
+};
 
 export type LanguageTable = Readonly<Record<string, unknown>>;
 
 let activeLanguage = "en";
 let activeTable: LanguageTable = {};
+/** The active table's texts as `lookupText` chose them, by key: each is checked once per language, not on every draw. */
+let activeTexts = new Map<string, string>();
+/** Number formatters by language and digits (building one costs far more than a format call). */
+const numberFormats = new Map<string, Intl.NumberFormat>();
 const languageListeners = new Set<(language: string) => void>();
 
 /**
@@ -353,7 +378,12 @@ export function lookupText(table: LanguageTable, key: StringKey): string {
 
 /** The active language's text for `key`, placeholders filled. */
 export function t(key: StringKey, params?: TextParams): string {
-  return fillTemplate(lookupText(activeTable, key), params);
+  let text = activeTexts.get(key);
+  if (text === undefined) {
+    text = lookupText(activeTable, key);
+    activeTexts.set(key, text);
+  }
+  return fillTemplate(text, params);
 }
 
 /** The same translator, typed for the shared package (any key string). */
@@ -379,6 +409,7 @@ export function setLanguage(language: string, table?: LanguageTable | null): voi
   const previous = activeLanguage;
   activeLanguage = language || "en";
   activeTable = table && typeof table === "object" ? table : {};
+  activeTexts = new Map();
   // Only a changed code redraws the deck (an equal one re-sends nothing, PLAN.md 11.1).
   if (activeLanguage === previous) return;
   for (const listener of [...languageListeners]) {
@@ -402,7 +433,13 @@ export function localeTag(language = activeLanguage): string {
 /** A display number in the active language ("1.5" in English, "1,5" in German). */
 export function formatNumber(value: number, maximumFractionDigits = 2): string {
   try {
-    return new Intl.NumberFormat(localeTag(), { maximumFractionDigits, useGrouping: false }).format(value);
+    const id = `${activeLanguage}|${maximumFractionDigits}`;
+    let format = numberFormats.get(id);
+    if (!format) {
+      format = new Intl.NumberFormat(localeTag(), { maximumFractionDigits, useGrouping: false });
+      numberFormats.set(id, format);
+    }
+    return format.format(value);
   } catch {
     return String(value);
   }

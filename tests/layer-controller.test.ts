@@ -422,6 +422,53 @@ describe("Direct OBS shared layer controls", () => {
     }
   );
 
+  it("spaces picture-changing writes on the Program scene (at most three a second), not on another scene (B-04)", async () => {
+    const { obs, controller } = setup();
+    const at: number[] = [];
+    const send = obs.sendObsRequest.bind(obs);
+    obs.sendObsRequest = async (type, data) => {
+      if (type !== "GetSceneItemList") at.push(performance.now());
+      return send(type, data);
+    };
+    const live: LayerSettings = { scope: "fixed", sceneName: "Live", target: "fixed", sceneItemId: 102 };
+    // A dial spun fast, a key mashed: three blend changes and a show/hide asked for at once.
+    await Promise.all([
+      controller.perform(live, "blend_next"),
+      controller.perform(live, "blend_next"),
+      controller.perform(live, "show_hide"),
+      controller.perform(live, "blend_next")
+    ]);
+    expect(at.length).toBe(4);
+    for (let i = 1; i < at.length; i++) expect(at[i] - at[i - 1]).toBeGreaterThanOrEqual(300);
+    // Every one still landed, each worked out from the scene as it was at its turn.
+    expect(obs.scenes.get("Live")![1].sceneItemBlendMode).toBe("OBS_BLEND_SCREEN");
+    expect(obs.scenes.get("Live")![1].sceneItemEnabled).toBe(false);
+
+    // The Preview scene is not on air: nothing is held back.
+    at.length = 0;
+    const preview: LayerSettings = { scope: "fixed", sceneName: "Preview", target: "fixed", sceneItemId: 202 };
+    await Promise.all([controller.perform(preview, "blend_next"), controller.perform(preview, "blend_next"), controller.perform(preview, "blend_next")]);
+    expect(at.length).toBe(3);
+    expect(at[2] - at[0]).toBeLessThan(250);
+  });
+
+  it("moves the selection from the list already read, without asking OBS again (B-07)", async () => {
+    const { obs, controller } = setup();
+    const settings: LayerSettings = { scope: "fixed", sceneName: "Fixed" };
+    await controller.refresh(settings);
+    const readsBefore = obs.reads.length;
+    await controller.perform(settings, "select_next");
+    await controller.perform(settings, "select_next", 2);
+    await controller.perform(settings, "select_previous");
+    expect(obs.reads.length).toBe(readsBefore);
+    expect(controller.getScene(settings).selectedId).toBe(301);
+    // An edit still reads the scene first.
+    await controller.perform(settings, "show_hide");
+    expect(obs.reads.length).toBeGreaterThan(readsBefore);
+    expect(controller.hasScene("Fixed")).toBe(true);
+    expect(controller.hasScene("Nowhere")).toBe(false);
+  });
+
   it("serializes rapid gestures for a scene so toggles and blend increments accumulate", async () => {
     const { obs, controller } = setup();
     const settings: LayerSettings = { scope: "fixed", sceneName: "Live" };

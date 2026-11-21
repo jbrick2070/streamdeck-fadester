@@ -32,3 +32,36 @@ export function forEachShadowRoot(root: ScanRoot, visit: (shadow: ScanRoot) => v
   }
   return count;
 }
+
+/** A whole-page search waits this long after the change that asked for it, so a burst of changes is one search. */
+export const WHOLE_SCAN_SETTLE_MS = 1000;
+/** Whole-page searches are at least this far apart, however busy the page is. */
+export const WHOLE_SCAN_SPACING_MS = 5000;
+
+/**
+ * Asks for a search of the whole page, seldom. The search of added nodes cannot find a shadow root that is attached
+ * to an element already in the page (a web-component player whose script arrives after its markup: the upgrade adds no
+ * node), so every change on the page also asks for one whole search: it runs once the changes have settled, and at
+ * most once per WHOLE_SCAN_SPACING_MS. No change, no search.
+ */
+export class WholeScan {
+  private timer: ReturnType<typeof setTimeout> | null = null;
+  private last = Number.NEGATIVE_INFINITY;
+
+  constructor(
+    private readonly run: () => void,
+    private readonly now: () => number = () => Date.now(),
+    private readonly later: (run: () => void, ms: number) => ReturnType<typeof setTimeout> = (run, ms) => setTimeout(run, ms)
+  ) {}
+
+  /** A change happened: one whole search is due (nothing more while one is already waiting). */
+  request(): void {
+    if (this.timer !== null) return;
+    const wait = Math.max(WHOLE_SCAN_SETTLE_MS, this.last + WHOLE_SCAN_SPACING_MS - this.now());
+    this.timer = this.later(() => {
+      this.timer = null;
+      this.last = this.now();
+      this.run();
+    }, wait);
+  }
+}

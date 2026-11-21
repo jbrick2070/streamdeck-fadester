@@ -31,8 +31,9 @@ export const VS_RESYNC_DOWNBEAT_HOTKEY = "visual_sidechain_resync_downbeat";
 
 const SPECTRUM_BINS = 32;
 const DEFAULT_BPM = 120;
-const MIN_BPM = 30;
-const MAX_BPM = 300;
+/** Visual Sidechain's own tempo range; the deck's BPM dial uses the same one, so a turn never jumps into a narrower range. */
+export const MIN_BPM = 30;
+export const MAX_BPM = 300;
 /** Maximum local interpolation span without a fresh signal frame before holding position. */
 const MAX_LOCAL_INTERPOLATION_SEC = 5;
 
@@ -153,6 +154,9 @@ function emptySnapshot(nowMs: number): VisualSignalsSnapshot {
 
 export class VisualSignals extends EventEmitter {
   private snapshot: VisualSignalsSnapshot;
+  /** The tempo a BPM turn still on its way is aiming for, and how many such requests are out. */
+  private pendingBpm: number | null = null;
+  private bpmRequests = 0;
   private connectionGen = 0;
   private remotePanic = false;
 
@@ -321,6 +325,21 @@ export class VisualSignals extends EventEmitter {
 
   public async resyncDownbeat(): Promise<void> {
     await this.sendTempoCommand("resync_downbeat", undefined, VS_RESYNC_DOWNBEAT_HOTKEY);
+  }
+
+  /**
+   * Turns the tempo by whole BPM. Ticks that arrive while an earlier turn's request is still on its way add to that
+   * turn's target, not to the tempo last heard from OBS, so a fast spin loses none.
+   */
+  public async nudgeBpm(ticks: number): Promise<void> {
+    const target = clampBpm(Math.round((this.pendingBpm ?? this.snapshot.bpm) + ticks));
+    this.pendingBpm = target;
+    this.bpmRequests++;
+    try {
+      await this.setBpm(target);
+    } finally {
+      if (--this.bpmRequests === 0) this.pendingBpm = null;
+    }
   }
 
   public async setBpm(bpm: number): Promise<void> {

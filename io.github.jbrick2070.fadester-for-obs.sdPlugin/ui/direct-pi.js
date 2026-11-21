@@ -8,10 +8,19 @@
   let currentState = null;
   let passwordDirty = false;
   let bindControls = null;
-  let connectionEditorInitialized = false;
   let layoutBusy = false;
   // What the last layout or Studio request was ("layout" or "studio"): its result says what was done.
   let setupAction = "layout";
+  // The layout or Studio request now out: its id (only its own answer ends it), and the timer that ends the wait when
+  // no answer comes (a plugin restarted meanwhile never sends one).
+  let setupRequestId = "";
+  let setupCounter = 0;
+  let setupTimer = null;
+  // This page's own mark in its request ids: the plugin answers whichever page is open.
+  const PAGE_ID = Math.random().toString(36).slice(2, 8);
+  // The footer and the connection fold open by themselves once, when the first state says something there needs doing.
+  let footerInitialized = false;
+  const PRODUCT_NAME = "Fadester for OBS";
   // A connection test is running: the status line says so until the plugin reports the test done.
   let connectionTesting = false;
   let connectionTestTimer = null;
@@ -19,13 +28,13 @@
   const CONNECTION_TEST_LIMIT_MS = 10000;
   // Texts come from ui/i18n.js (loaded first), in the plugin's language: Stream Deck's, or the Language choice (R-LANG-3).
   const T = function (key, params) { return window.FadesterI18n.t(key, params); };
-  // The Language choice (PLAN.md 11.1): Automatic, then the nine languages by their own names, never translated (D-L3).
-  const LANGUAGE_CHOICES = [
-    ["en", "English"], ["de", "Deutsch"], ["es", "Español"], ["fr", "Français"], ["ja", "日本語"],
-    ["ko", "한국어"], ["zh_CN", "简体中文"], ["zh_TW", "繁體中文"], ["nl", "Nederlands"]
-  ];
+  // The Language choice (PLAN.md 11.1): Automatic, then the plugin's languages by their own names, never translated
+  // (D-L3). The list is the plugin's own (src/i18n/strings.ts), written into ui/i18n.js with the texts.
+  const LANGUAGE_CHOICES = window.FadesterI18n.languageChoices();
   // Every plugin's inspectors share one file:// origin, so the key names this plugin.
   const LANGUAGE_MEMORY_KEY = "fadester:resolvedLanguage";
+  // The line that offers a ready-made layout at the top of the page goes once it was used (this computer remembers).
+  const LAYOUT_HINT_KEY = "fadester:layoutHintSeen";
 
   function $(id) {
     return document.getElementById(id);
@@ -54,10 +63,22 @@
 
   /** The language the plugin last resolved, remembered for the next page's first paint (D-L5). */
   function recalledLanguage() {
+    return recall(LANGUAGE_MEMORY_KEY);
+  }
+
+  function recall(key) {
     try {
-      return window.localStorage.getItem(LANGUAGE_MEMORY_KEY);
+      return window.localStorage.getItem(key);
     } catch {
       return null;
+    }
+  }
+
+  function remember(key, value) {
+    try {
+      window.localStorage.setItem(key, value);
+    } catch {
+      // No storage: the page works the same, it only shows the hint again next time.
     }
   }
 
@@ -121,6 +142,14 @@
       '<div class="row" id="direct-accent-row"><label for="direct-accent" data-i18n="accentLabel">Accent</label><select id="direct-accent">',
       '<option value="default" data-i18n="accentDefault">Fadester violet</option><option value="brass" data-i18n="accentBrass">Brass</option>',
       '<option value="teal" data-i18n="accentTeal">Teal</option><option value="magenta" data-i18n="accentMagenta">Magenta</option></select></div>',
+      // What this control needs from OBS right now, with the button that does it.
+      '<div id="direct-studio-setup" style="display:none"><p class="muted" data-i18n="studioSetupNote">This control uses Studio Mode. Prepare Preview from your existing scenes to start mixing.</p>',
+      '<button id="direct-studio-prepare" class="btn" type="button">Enable Studio Mode &amp; prepare Preview</button></div>',
+      '<div id="direct-setup-status" class="status-banner" style="display:none"></div>',
+      '<p class="muted" id="direct-opendeck-starter" style="display:none"></p>',
+      // Everything that belongs to the whole plugin, not to this key, behind one closed line at the foot of the page.
+      // The line itself says which version this is and whether OBS is connected.
+      '<details id="direct-plugin-footer" class="editor plugin-footer"><summary id="direct-footer-summary">Fadester for OBS</summary>',
       // One Language for the whole plugin, kept by the plugin (PLAN.md 11.1); the page only asks for a change.
       '<h3><span data-i18n="languageHeading">Language</span> <span class="scope" data-i18n="scopeAllControls">all Fadester for OBS controls</span></h3>',
       '<div class="row"><label for="direct-language" data-i18n="languageHeading">Language</label><select id="direct-language">',
@@ -129,40 +158,37 @@
         return '<option value="' + entry[0] + '" lang="' + entry[0].replace("_", "-") + '">' + entry[1] + "</option>";
       }).join(""),
       '</select></div>',
-      '<p class="muted" id="direct-language-note" data-i18n="languageNote">Applies to all Fadester for OBS controls. Stream Deck\'s own menus, action list, tooltips and dial hints stay in Stream Deck\'s language.</p>',
+      '<p class="muted" id="direct-language-note" data-i18n="languageNote">For every Fadester for OBS key and dial. Stream Deck\'s own menus stay in Stream Deck\'s language.</p>',
       '<h3><span data-i18n="connHeading">OBS connection</span> <span class="scope" data-i18n="scopeAllControls">all Fadester for OBS controls</span></h3>',
-      '<div id="direct-conn-status" class="status-banner status-err" data-i18n="connWaiting">Waiting for OBS…</div>',
-      '<p class="muted" id="direct-conn-hint" data-i18n="connHintOnce">Connect once for every Fadester for OBS button and dial.</p>',
-      '<details id="direct-conn-editor" class="editor" open><summary id="direct-conn-summary" data-i18n="connSetupOnce">Set up OBS once</summary>',
-      '<p class="muted" data-i18n="connAppliesAll">These settings apply to all Fadester for OBS controls on all your layouts. The OBS password is filled in from OBS on this computer; type one only if signing in fails.</p>',
+      '<div id="direct-conn-status" class="status-banner status-info" data-i18n="connWaiting">Looking for OBS…</div>',
+      '<p class="muted" id="direct-conn-hint" data-i18n="connHintShared">One OBS connection is shared by all Fadester for OBS keys and dials.</p>',
+      // The one way to drop a typed password (an emptied box is "no change"): shown only while one is stored.
+      '<div class="row" id="direct-conn-own-row" style="display:none"><label></label><button id="direct-conn-use-obs" class="btn secondary" type="button" data-i18n="connUseObsPassword">Use OBS\'s own password</button></div>',
+      // With OBS on this computer there is nothing to fill in, so the fields stay folded away.
+      '<details id="direct-conn-editor" class="editor"><summary id="direct-conn-summary" data-i18n="connOtherComputer">OBS on another computer, or another port</summary>',
+      '<p class="muted" data-i18n="connAppliesAll">With OBS on this computer there is nothing to fill in: the port and the password are read from OBS. Fill this in for OBS on another computer, or when signing in fails.</p>',
       '<div class="row"><label for="direct-conn-host" data-i18n="host">Host</label><input id="direct-conn-host" type="text" value="127.0.0.1" /></div>',
       '<div class="row"><label for="direct-conn-port" data-i18n="port">Port</label><input id="direct-conn-port" type="number" value="4455" min="1" max="65535" /></div>',
-      '<div class="row"><label for="direct-conn-password" data-i18n="password">OBS password</label><input id="direct-conn-password" type="password" autocomplete="off" placeholder="Filled in from OBS on this computer" data-i18n-placeholder="passwordPlaceholderFromObs" /></div>',
-      '<div class="row"><label></label><button id="direct-conn-read-obs" class="btn secondary" type="button" data-i18n="obsSavedReadBtn">Use OBS\'s saved password</button></div>',
-      '<p class="muted" id="direct-obs-saved-hint" style="display:none"></p>',
-      '<div id="direct-obs-saved-preview" class="status-banner status-info" style="display:none"></div>',
-      '<div class="row" id="direct-obs-saved-apply-row" style="display:none"><label></label><button id="direct-conn-apply-obs" class="btn secondary" type="button" data-i18n="obsSavedApplyBtn">Fill port &amp; save password</button></div>',
+      '<div class="row"><label for="direct-conn-password" data-i18n="password">OBS password</label><input id="direct-conn-password" type="password" autocomplete="off" placeholder="Automatic" data-i18n-placeholder="passwordPlaceholderFromObs" /></div>',
       '<div class="row"><label></label><button id="direct-conn-test" class="btn" type="button" data-i18n="saveAndTest">Save for all controls &amp; test</button></div>',
       '</details>',
       '<details id="direct-setup-checklist" class="editor"><summary data-i18n="chkHeading">Setup checklist</summary>',
-      '<p class="muted" data-i18n="chkIntro">One-pass readiness check for OBS, the T-bar, optional OBS plugins, and the VJster link.</p>',
+      '<p class="muted" data-i18n="chkIntro">Red is what must be fixed. Everything else is a note.</p>',
       '<div id="direct-checklist-list" class="checklist-list"></div>',
       '<div class="editor-actions"><button id="direct-checklist-refresh" class="btn secondary" type="button" data-i18n="chkCheckAgain">Check again</button></div>',
       '</details>',
-      '<div id="direct-studio-setup" style="display:none"><p class="muted" data-i18n="studioSetupNote">This control uses Studio Mode. Prepare Preview from your existing scenes to start mixing.</p>',
-      '<button id="direct-studio-prepare" class="btn" type="button">Enable Studio Mode &amp; prepare Preview</button></div>',
-      '<div id="direct-setup-status" class="status-banner" style="display:none"></div>',
-      '<p class="muted" id="direct-opendeck-starter" style="display:none"></p>',
       '<details id="direct-elgato-layouts" class="editor"><summary data-i18n="layoutsSummary">Ready-made layouts</summary>',
-      '<p class="muted" data-i18n="layoutsIntro">Open an editable full, half, or creative desk. Scene buttons follow your current OBS scene list automatically. Main audio and microphone controls use matching OBS mixer inputs when available.</p>',
-      '<p class="muted" data-i18n="layoutsInstallNote">The current starter installs as an editable profile once. Any older layouts you customized stay available.</p>',
+      '<p class="muted" id="direct-layouts-none" style="display:none" data-i18n="layoutsNone">No ready-made layout for this deck yet. Drag Scene onto a key to begin.</p>',
+      '<div id="direct-layouts-body">',
+      '<p class="muted" data-i18n="layoutsIntro">Fills this deck with keys that already follow your scenes and audio. You can change every key.</p>',
       '<div class="row"><label for="direct-layout" data-i18n="layoutLabel">Layout</label><select id="direct-layout"></select></div>',
-      '<div class="row"><label></label><button id="direct-layout-open" class="btn" type="button">Open current starter layout</button></div>',
+      '<div class="row"><label></label><button id="direct-layout-open" class="btn" type="button">Open this layout</button></div>',
       '<p class="muted" id="direct-layout-hint" style="display:none"></p>',
-      '<p class="muted" data-i18n="layoutsOrderNote">Everyday Source Desks keep layer order fixed. Creative Layer Lab enables its labelled reorder controls.</p>',
+      '<p class="muted" data-i18n="layoutsInstallNote">The layout installs once as a profile you can edit. Layouts you changed earlier stay.</p>',
+      '</div>',
       '</details>',
-      '<details class="editor direct-optional"><summary data-i18n="optionalSummary">Optional: Midi Fadester integration</summary>',
-      '<p class="muted" data-i18n="optionalNote">You do not need Midi Fadester, an APC40, or any MIDI controller for the controls above. The separately labelled <em data-slot="actions" data-i18n="optionalActions">Midi Fadester (optional)</em> actions keep advanced shared slots and A/B layer mixing for people who use that setup.</p>',
+      // The lists follow OBS by themselves; this is the last resort when one looks stale.
+      '<div class="editor-actions"><button id="direct-refresh-lists" class="btn secondary" type="button" data-i18n="refreshLists">Refresh lists</button></div>',
       '</details>'
     ].join("");
     window.FadesterI18n.apply(mount);
@@ -171,19 +197,7 @@
     const port = $("direct-conn-port");
     const password = $("direct-conn-password");
     const test = $("direct-conn-test");
-    const readObs = $("direct-conn-read-obs");
-    const applyObs = $("direct-conn-apply-obs");
     const refreshChecklist = $("direct-checklist-refresh");
-    function syncObsSavedHostGate() {
-      const val = (host ? host.value : "127.0.0.1").trim().toLowerCase();
-      const local = val === "" || val === "127.0.0.1" || val === "localhost" || val === "::1" || val === "[::1]";
-      if (readObs) readObs.disabled = !local;
-      const hostHint = $("direct-obs-saved-hint");
-      if (hostHint) {
-        hostHint.textContent = local ? "" : T("obsSavedNonLocal");
-        hostHint.style.display = local ? "none" : "";
-      }
-    }
     function pushConnection() {
       const payload = {
         event: "directUpdateGlobalSettings",
@@ -200,35 +214,37 @@
       password.oninput = function () { passwordDirty = password.value !== ""; };
       password.onchange = pushConnection;
     }
-    if (host) {
-      host.oninput = syncObsSavedHostGate;
-      host.onchange = function () {
-        syncObsSavedHostGate();
-        pushConnection();
-      };
-    }
+    if (host) host.onchange = pushConnection;
     if (port) port.onchange = pushConnection;
-    if (readObs) readObs.onclick = function () {
-      sendToPlugin({ event: "directReadObsSavedConfig", host: host ? host.value : "127.0.0.1" });
-    };
-    if (applyObs) applyObs.onclick = function () {
+    const useObs = $("direct-conn-use-obs");
+    if (useObs) useObs.onclick = function () {
+      // The stored password goes; the plugin signs in with OBS's own saved one and tests at once.
       passwordDirty = false;
-      connectionTesting = true;
-      window.clearTimeout(connectionTestTimer);
-      connectionTestTimer = window.setTimeout(endConnectionTest, CONNECTION_TEST_LIMIT_MS);
-      setBanner($("direct-conn-status"), T("connTesting"), "info");
-      sendToPlugin({ event: "directApplyObsSavedConfig" });
+      if (password) password.value = "";
+      startConnectionTest();
+      sendToPlugin({ event: "directUseObsPassword" });
+    };
+    const refreshLists = $("direct-refresh-lists");
+    if (refreshLists) refreshLists.onclick = function () { window.directObsRefresh(); };
+    const topLayouts = $("direct-top-layouts");
+    if (topLayouts) topLayouts.onclick = function () {
+      // Straight to the layout picker; the line has done its job and does not come back.
+      const footer = $("direct-plugin-footer");
+      const layouts = $("direct-elgato-layouts");
+      if (footer) footer.open = true;
+      if (layouts) {
+        layouts.open = true;
+        if (typeof layouts.scrollIntoView === "function") layouts.scrollIntoView();
+      }
+      remember(LAYOUT_HINT_KEY, "1");
+      topLayouts.style.display = "none";
     };
     if (refreshChecklist) refreshChecklist.onclick = function () {
       sendToPlugin({ event: "directRunChecklist" });
     };
     if (test) test.onclick = function () {
       pushConnection();
-      // Feedback that the test runs, also when its result is the same sentence as before; the button stays usable.
-      connectionTesting = true;
-      window.clearTimeout(connectionTestTimer);
-      connectionTestTimer = window.setTimeout(endConnectionTest, CONNECTION_TEST_LIMIT_MS);
-      setBanner($("direct-conn-status"), T("connTesting"), "info");
+      startConnectionTest();
       sendToPlugin({ event: "directTestConnection" });
     };
     const languagePicker = $("direct-language");
@@ -241,11 +257,10 @@
       const select = $("direct-layout");
       const layout = currentState && (currentState.layouts || []).find(function (item) { return item.slug === (select && select.value); });
       if (layout && !layoutBusy) {
-        layoutBusy = true;
-        setupAction = "layout";
+        beginSetup("layout");
         updateLayoutButton();
         setBanner($("direct-setup-status"), T("layoutPreparing"), "info");
-        sendToPlugin({ event: "directActivateLayout", slug: layout.slug, prepareStudio: layout.obsMode === "studio" });
+        sendToPlugin({ event: "directActivateLayout", slug: layout.slug, prepareStudio: layout.obsMode === "studio", requestId: setupRequestId });
       }
     };
     const layoutPicker = $("direct-layout");
@@ -253,12 +268,44 @@
     const prepareStudio = $("direct-studio-prepare");
     if (prepareStudio) prepareStudio.onclick = function () {
       if (layoutBusy) return;
-      layoutBusy = true;
-      setupAction = "studio";
+      beginSetup("studio");
       updateStudioSetup();
       setBanner($("direct-setup-status"), T("studioPreparing"), "info");
-      sendToPlugin({ event: "directPrepareStudio" });
+      sendToPlugin({ event: "directPrepareStudio", requestId: setupRequestId });
     };
+  }
+
+  /** Feedback that a connection test runs, also when its result is the same sentence as before; the button stays usable. */
+  function startConnectionTest() {
+    connectionTesting = true;
+    window.clearTimeout(connectionTestTimer);
+    connectionTestTimer = window.setTimeout(endConnectionTest, CONNECTION_TEST_LIMIT_MS);
+    setBanner($("direct-conn-status"), T("connTesting"), "info");
+  }
+
+  /** A layout or Studio Mode request leaves: "Preparing…" until its own answer, or until the wait runs out. */
+  function beginSetup(action) {
+    layoutBusy = true;
+    setupAction = action;
+    setupCounter += 1;
+    setupRequestId = "setup_" + PAGE_ID + "_" + setupCounter;
+    window.clearTimeout(setupTimer);
+    setupTimer = window.setTimeout(function () {
+      // No answer (the plugin restarted meanwhile): the buttons come back and the page says so.
+      setupTimer = null;
+      if (!layoutBusy) return;
+      endSetup();
+      setBanner($("direct-setup-status"), T("setupNoAnswer"), "err");
+    }, CONNECTION_TEST_LIMIT_MS);
+  }
+
+  function endSetup() {
+    window.clearTimeout(setupTimer);
+    setupTimer = null;
+    layoutBusy = false;
+    setupRequestId = "";
+    updateLayoutButton();
+    updateStudioSetup();
   }
 
   function updateLayoutButton() {
@@ -413,57 +460,6 @@
     return item.fix || "";
   }
 
-  function updateObsSavedConfigPreview(state) {
-    const preview = state && state.obsSavedConfigPreview;
-    const banner = $("direct-obs-saved-preview");
-    const applyRow = $("direct-obs-saved-apply-row");
-    const readObs = $("direct-conn-read-obs");
-    const hostHint = $("direct-obs-saved-hint");
-    const hostEl = $("direct-conn-host");
-    const hostVal = ((hostEl ? hostEl.value : "") || (state && state.connection && state.connection.host) || "127.0.0.1").trim().toLowerCase();
-    const local = hostVal === "" || hostVal === "127.0.0.1" || hostVal === "localhost" || hostVal === "::1" || hostVal === "[::1]";
-    if (readObs) readObs.disabled = !local;
-    if (hostHint) {
-      hostHint.textContent = local ? "" : T("obsSavedNonLocal");
-      hostHint.style.display = local ? "none" : "";
-    }
-    if (!preview) {
-      setBanner(banner, "");
-      if (applyRow) applyRow.style.display = "none";
-      return;
-    }
-    const previewParams = {
-      source: preview.sourceRelPath || "obs-studio/plugin_config/obs-websocket/config.json",
-      port: preview.serverPort || 4455
-    };
-    let text = "";
-    let kind = "info";
-    let canApply = false;
-    if (preview.ok) {
-      text = preview.serverEnabled === false ? T("obsSavedServerOff", previewParams) : T("obsSavedFound", previewParams);
-      kind = preview.serverEnabled === false ? "warn" : "ok";
-      canApply = true;
-    } else if (preview.reason === "no_password" && preview.authRequired === false && preview.serverPort) {
-      text = T("obsSavedAuthOff", previewParams);
-      kind = "ok";
-      canApply = true;
-    } else if (preview.reason === "no_password") {
-      text = T("obsSavedNoPassword", previewParams);
-      kind = "warn";
-    } else if (preview.reason === "missing_file") {
-      text = T("obsSavedMissing", previewParams);
-      kind = "warn";
-    } else if (preview.reason === "non_local") {
-      text = T("obsSavedNonLocal");
-      kind = "warn";
-    } else {
-      text = T("obsSavedInvalid", previewParams);
-      kind = "warn";
-    }
-    setBanner(banner, text, kind);
-    if (applyRow) applyRow.style.display = canApply ? "" : "none";
-  }
-
   function updateSetupChecklist(state) {
     const list = $("direct-checklist-list");
     if (!list) return;
@@ -476,11 +472,26 @@
       list.appendChild(waiting);
       return;
     }
+    let group = "";
+    let neededFails = false;
     report.items.forEach(function (item) {
+      // Three groups: what every control needs, what only the T-bar dial needs, and the optional extras.
+      if (item.group && item.group !== group) {
+        group = item.group;
+        const heading = document.createElement("div");
+        heading.className = "chk-group";
+        heading.textContent = T(group === "needed" ? "chkGroupNeeded" : group === "tbar" ? "chkGroupTbar" : "chkGroupOptional");
+        list.appendChild(heading);
+      }
+      if (item.group === "needed" && item.state === "fail") neededFails = true;
       const row = document.createElement("div");
       row.className = "chk-row";
       const dot = document.createElement("span");
       dot.className = "chk-dot chk-" + (item.state || "unknown");
+      // A mark inside the dot, so the state is not told by colour alone.
+      dot.textContent = item.state === "ok" ? "✓" : item.state === "fail" || item.state === "warn" ? "!"
+        : item.state === "note" || item.state === "info" ? "i" : "";
+      dot.setAttribute("aria-hidden", "true");
       row.appendChild(dot);
       const body = document.createElement("div");
       body.className = "chk-body";
@@ -505,41 +516,69 @@
       row.appendChild(body);
       list.appendChild(row);
     });
+    // Something that must be fixed: the checklist is open when the user gets to it.
+    const fold = $("direct-setup-checklist");
+    if (fold && neededFails) fold.open = true;
+  }
+
+  /** Whether a ready-made layout was already offered and looked at on this computer. */
+  function layoutHintSeen() {
+    return recall(LAYOUT_HINT_KEY) === "1";
   }
 
   function updateConnection(state) {
     const connection = state.connection || {};
     const status = state.status || {};
+    const connected = status.kind === "connected";
     const host = $("direct-conn-host");
     const port = $("direct-conn-port");
     const hint = $("direct-conn-hint");
     const password = $("direct-conn-password");
     const editor = $("direct-conn-editor");
-    const summary = $("direct-conn-summary");
+    const footer = $("direct-plugin-footer");
+    // The plugin says whether the host is this computer (one rule, the plugin's); an older plugin does not say.
+    const local = connection.local !== false;
     if (host && document.activeElement !== host) host.value = connection.host || "127.0.0.1";
     if (port && document.activeElement !== port) port.value = String(connection.port || 4455);
-    if (hint) hint.textContent = T(status.kind === "wrong_password"
-      ? "connHintRejected"
+    const followedPort = connected && connection.portInUse && connection.portInUse !== connection.port ? connection.portInUse : 0;
+    if (hint) hint.textContent = status.kind === "wrong_password"
+      ? T("connHintRejected")
       : connection.passwordSet
-      ? "connHintSaved"
-      : connection.obsSaved && status.kind === "connected"
-      ? "passwordFromObs"
-      : "connHintShared");
-    if (summary) summary.textContent = T(connection.passwordSet || status.kind === "connected"
-      ? "connEdit" : "connSetupOnce");
+      ? T("connHintSaved")
+      : followedPort
+      ? T("connPortFromObs", { port: followedPort })
+      : connection.obsSaved && connected
+      ? T("passwordFromObs")
+      : T("connHintShared");
+    // A typed password is stored: the one way to drop it and go back to OBS's own.
+    const ownRow = $("direct-conn-own-row");
+    if (ownRow) ownRow.style.display = connection.passwordSet && local ? "" : "none";
     if (password && !passwordDirty && document.activeElement !== password) {
       password.value = "";
       password.placeholder = T(connection.passwordSet ? "passwordPlaceholderSaved" : "passwordPlaceholderFromObs");
     }
-    if (editor && !connectionEditorInitialized) {
-      editor.open = !(connection.passwordSet || status.kind === "connected") || status.kind === "wrong_password";
-      connectionEditorInitialized = true;
+    // Once, from the first state: with OBS on this computer nothing here needs filling in, so everything stays
+    // folded. A refused password, or OBS on another computer that does not answer, opens what has to be looked at.
+    if (!footerInitialized) {
+      footerInitialized = true;
+      const needsHands = status.kind === "wrong_password" || (!connected && !local);
+      if (editor) editor.open = needsHands;
+      if (footer && needsHands) footer.open = true;
     }
-    const kind = status.kind === "connected" ? "ok" : "err";
     // The status sentence arrives worded in the plugin's language (the same as this page's). While a test
     // runs, the line keeps saying so (in the page's current language).
-    if (connectionTesting) setBanner($("direct-conn-status"), T("connTesting"), "info");
-    else setBanner($("direct-conn-status"), status.sentence || T("connWaiting"), kind);
+    const sentence = connectionTesting ? T("connTesting") : status.sentence || T("connWaiting");
+    const kind = connectionTesting || !status.kind ? "info" : connected ? "ok" : "err";
+    setBanner($("direct-conn-status"), sentence, kind);
+    // Not connected: what to do is the first line of the page, above the key's own fields, and the key's own
+    // banners (which would name a missing scene or input that is only missing because OBS is) stay out of the way.
+    setBanner($("direct-top-status"), connected ? "" : sentence, kind);
+    if (document.body) document.body.className = connected ? "" : "obs-offline";
+    const summary = $("direct-footer-summary");
+    if (summary) {
+      const params = { product: PRODUCT_NAME, version: state.pluginVersion || "", obsVersion: status.obsVersion || "" };
+      summary.textContent = (connected ? T("footerConnected", params) : T("footerNotConnected", params)).replace(/\s+/g, " ").trim();
+    }
     const layouts = state.layouts || [];
     const openDeck = state.openDeckStarter;
     const hostHint = $("direct-opendeck-starter");
@@ -550,12 +589,23 @@
       hostHint.textContent = !openDeck ? "" : openDeck.profileName
         ? T("openDeckPickStarter", { name: openDeck.profileName }) : T("openDeckManualStarter");
     }
+    // A deck model with no ready-made layout says so, in place of an empty list and a dead button.
+    const none = $("direct-layouts-none");
+    const body = $("direct-layouts-body");
+    if (none) none.style.display = layouts.length === 0 ? "" : "none";
+    if (body) body.style.display = layouts.length === 0 ? "none" : "";
+    // A new deck: one line at the top offers a ready-made layout, until it was looked at once.
+    const topLayouts = $("direct-top-layouts");
+    if (topLayouts) {
+      const offer = connected && !openDeck && layouts.length > 0 && !layoutHintSeen();
+      topLayouts.textContent = T("layoutTopHint");
+      topLayouts.style.display = offer ? "" : "none";
+    }
     const picker = $("direct-layout");
     const selected = picker && picker.value || "";
     fillSelect(picker, layouts.map(function (layout) { return { value: layout.slug, text: layout.name }; }), selected, T("layoutChoose"));
     updateLayoutButton();
     updateStudioSetup();
-    updateObsSavedConfigPreview(state);
     updateSetupChecklist(state);
   }
 
@@ -597,6 +647,20 @@
     updateAccent();
   }
 
+  /**
+   * A fold inside a key's own fields (Timing, Advanced). It opens by itself when a setting inside it is in use, so
+   * nothing that acts is hidden; when that changes it follows once, and otherwise the user's own click stays.
+   * `shown === false` takes the whole fold away (its rows do not apply to this key now).
+   */
+  const foldWanted = {};
+  window.directObsFold = function (id, inUse, shown) {
+    const fold = $(id);
+    if (!fold) return;
+    fold.style.display = shown === false ? "none" : "";
+    if (foldWanted[id] === Boolean(inUse)) return;
+    foldWanted[id] = Boolean(inUse);
+    fold.open = Boolean(inUse);
+  };
   window.directObsFillSelect = fillSelect;
   window.directObsMixHint = function (state) {
     const availability = state && state.wholeMix && state.wholeMix.availability;
@@ -645,7 +709,7 @@
       inActionInfo
     ) {
       // The language the plugin last resolved first, with no hold (D-L5); Stream Deck's language when none is
-      // remembered or the remembered one is not one of the nine. The plugin's first state message settles it.
+      // remembered or the remembered one is not one of the thirteen. The plugin's first state message settles it.
       if (!window.FadesterI18n.setResolved(recalledLanguage())) {
         window.FadesterI18n.setLanguage(window.FadesterI18n.languageFromInfo(inInfo));
       }
@@ -683,12 +747,15 @@
           sendToPlugin({ event: "directRunChecklist" });
         }
         if (message.event === "sendToPropertyInspector" && message.payload && message.payload.event === "directSetupResult") {
-          layoutBusy = false;
+          // Only the answer to this page's own request: one meant for the page that was open before says nothing
+          // here (an answer without an id is from a plugin that does not send them back yet).
+          if (message.payload.requestId && message.payload.requestId !== setupRequestId) return;
+          if (!layoutBusy) return;
           // Each request says what it did: a layout opened, or Studio Mode and Preview made ready.
           const done = setupAction === "studio" ? T("studioPrepared") : T("setupDone");
+          if (message.payload.ok && setupAction === "layout") remember(LAYOUT_HINT_KEY, "1");
+          endSetup();
           setBanner($("direct-setup-status"), message.payload.ok ? done : message.payload.error || T("setupFailed"), message.payload.ok ? "ok" : "err");
-          updateLayoutButton();
-          updateStudioSetup();
         }
       };
     };

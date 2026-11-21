@@ -406,6 +406,13 @@ internal static class VjsterSelfTests
         var clash = new VjsterLink(port, null, _ => { });
         try { await clash.StartAsync(); throw new Exception("VJster self-test: two links bound one port"); }
         catch (VjsterPortInUseException e) { Check(e.Port == port, "the error names the port"); }
+        // What Activity says meanwhile: the suite's own deck plugin is named (the panels show a grey light for it); any
+        // other answer, or none, is the plain "in use" line, and a holder's own words never reach the line.
+        string deck = VjsterHost.PortInUseLine(48150, "Fadester for OBS"), plain = VjsterHost.PortInUseLine(48150, null);
+        Check(deck.StartsWith("VJster port 48150 is held by the VJster actions of Fadester for OBS ", StringComparison.Ordinal) && !deck.Contains(" is in use"), "the suite's deck plugin is named as the holder");
+        Check(VjsterHost.PortInUseLine(48150, "VJster").Contains(" is held by the VJster actions of VJster "), "the standalone VJster plugin is named as the holder");
+        Check(plain.StartsWith("VJster port 48150 is in use, probably by ", StringComparison.Ordinal) && !plain.Contains(" is held by "), "an unknown holder is the plain line");
+        Check(VjsterHost.PortInUseLine(48150, "Fadester Companion") == plain && VjsterHost.PortInUseLine(48150, "x is held by the VJster actions of y") == plain, "no other holder's words are printed");
         await link.StopAsync();
         Check(!link.Running && !link.Connected, "stopped");
         await clash.StartAsync();

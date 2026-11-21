@@ -19,7 +19,13 @@ import { probeVjsterPortStatus, type VjsterPortProbeResult } from "../vjster/plu
 
 export const PLAYLISTER_INPUT_KIND = "obs_playlister_source";
 
+/**
+ * "fail" (red) is only for what every control needs: OBS reachable and the password accepted. A row of another group
+ * that does not hold is a "note" (grey): Studio Mode off, a transition other than Fade or an OBS version other than
+ * the tested one stop nothing but the T-bar dial, and nobody should be told to reinstall OBS to switch scenes.
+ */
 export type ChecklistDotState =
+  | "note"
   | "ok"
   | "fail"
   | "warn"
@@ -71,8 +77,28 @@ export interface ChecklistItemMeta {
   readonly holder?: string;
 }
 
+/** What a row is needed for: every control, the T-bar dial (and Preview keys), or an optional extra. */
+export type ChecklistGroup = "needed" | "tbar" | "optional";
+
+export const CHECKLIST_GROUPS: Readonly<Record<ChecklistItemId, ChecklistGroup>> = {
+  obs_reachable: "needed",
+  password_accepted: "needed",
+  obs_version: "tbar",
+  studio_mode: "tbar",
+  fade_selected: "tbar",
+  obs_not_elevated: "tbar",
+  window_not_minimised: "tbar",
+  macos_accessibility: "tbar",
+  midi_fadester: "optional",
+  visual_sidechain: "optional",
+  playlister: "optional",
+  vjster_port_holder: "optional"
+};
+
 export interface SetupChecklistItem {
   readonly id: ChecklistItemId;
+  /** Absent only on items built outside `evaluateSetupChecklist` (tests). */
+  readonly group?: ChecklistGroup;
   readonly state: ChecklistDotState;
   readonly code: ChecklistReasonCode;
   readonly detail: string;
@@ -179,6 +205,8 @@ export async function detectPlaylisterPlugin(
 interface Win32ChecklistBindings {
   GetExtendedTcpTable: (...args: unknown[]) => number;
   OpenProcess: (...args: unknown[]) => number | bigint;
+  /** Windows' last error (koffi.errno() is the C runtime's errno, which Win32 calls do not set). */
+  GetLastError: () => number;
   CloseHandle: (...args: unknown[]) => number;
   QueryFullProcessImageNameW: (...args: unknown[]) => number;
   OpenProcessToken: (...args: unknown[]) => number;
@@ -244,6 +272,7 @@ function getWin32Bindings(): Win32ChecklistBindings | null {
         "int32",
         "uint32"
       ]) as Win32ChecklistBindings["OpenProcess"],
+      GetLastError: kernel32.func("__stdcall", "GetLastError", "uint32", []) as Win32ChecklistBindings["GetLastError"],
       CloseHandle: kernel32.func("__stdcall", "CloseHandle", "int32", [
         "uint64"
       ]) as Win32ChecklistBindings["CloseHandle"],
@@ -355,7 +384,7 @@ export function defaultProbeLocalObsProcess(port: number, platform: string): Loc
 
   const proc = BigInt(win.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZE, 0, pid));
   if (proc === 0n) {
-    if (loadKoffi()?.errno() === ERROR_ACCESS_DENIED) {
+    if (win.GetLastError() === ERROR_ACCESS_DENIED) {
       return { elevated: "fail", minimised: "unknown" };
     }
     return { elevated: "unknown", minimised: "unknown" };
@@ -760,7 +789,7 @@ export async function evaluateSetupChecklist(
         state: "fail",
         code: "unreachable",
         detail: `${settings.host}:${settings.port}`,
-        fix: "Open OBS and enable Tools > WebSocket Server Settings on this host and port.",
+        fix: "Start OBS, then tick Tools > WebSocket Server Settings > Enable WebSocket server.",
         meta: { port: settings.port }
       };
 
@@ -779,7 +808,7 @@ export async function evaluateSetupChecklist(
           state: "fail",
           code: "wrong_password",
           detail: "Rejected",
-          fix: "Press Use OBS's saved password above or enter OBS's WebSocket password, then press Save for all controls & test.",
+          fix: "Type OBS's WebSocket password under OBS connection, or press Use OBS's own password there.",
           meta: {}
         }
       : {
@@ -815,7 +844,7 @@ export async function evaluateSetupChecklist(
           state: "fail",
           code: "not_obs_33",
           detail: obsVer ? `OBS ${obsVer}` : "OBS version unknown",
-          fix: "Install OBS Studio 33.x so all Fadester controls and the native T-bar match tested behaviour.",
+          fix: "Tested with OBS 33. Other versions usually work; the T-bar dial moves OBS's own slider only on OBS 33.",
           meta: { obsVersion: obsVer || "unknown" }
         };
 
@@ -842,7 +871,7 @@ export async function evaluateSetupChecklist(
           state: "fail",
           code: "studio_off",
           detail: "Off",
-          fix: "Turn on Studio Mode in OBS (View > Studio Mode).",
+          fix: "Only for the T-bar dial and Preview keys: turn on Studio Mode in OBS (View > Studio Mode).",
           meta: {}
         };
 
@@ -879,7 +908,7 @@ export async function evaluateSetupChecklist(
               state: "fail",
               code: "not_fade",
               detail: trName,
-              fix: "Select the Fade transition in OBS's Scene Transitions dock.",
+              fix: "Only for the T-bar dial: select the Fade transition in OBS's Scene Transitions dock.",
               meta: { transitionName: trName }
             };
     } catch {
@@ -1094,22 +1123,27 @@ export async function evaluateSetupChecklist(
     };
   }
 
+  const items: SetupChecklistItem[] = [
+    reachableItem,
+    passwordItem,
+    obsVersionItem,
+    studioItem,
+    fadeItem,
+    elevatedItem,
+    minimisedItem,
+    macAxItem,
+    mfItem,
+    vsItem,
+    playlisterItem,
+    vjsterItem
+  ].map((item) => {
+    const group = CHECKLIST_GROUPS[item.id];
+    // Red only for what is needed; anything else that does not hold is a note.
+    return { ...item, group, state: group !== "needed" && item.state === "fail" ? "note" : item.state };
+  });
   return {
     checkedAtMs: now(),
-    items: [
-      reachableItem,
-      passwordItem,
-      obsVersionItem,
-      studioItem,
-      fadeItem,
-      elevatedItem,
-      minimisedItem,
-      macAxItem,
-      mfItem,
-      vsItem,
-      playlisterItem,
-      vjsterItem
-    ],
+    items,
     playlisterPlugin
   };
 }

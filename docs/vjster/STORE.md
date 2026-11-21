@@ -25,7 +25,7 @@ The zip has no `key`: the store refuses one on a first upload and gives the exte
 
 **Name:** VJster
 
-**Short description** (the manifest's, in all 12 languages): the dashboard reads it from the zip.
+**Short description** (the manifest's, in all 13 languages): the dashboard reads it from the zip.
 
 **Detailed description:**
 

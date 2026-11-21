@@ -4,9 +4,9 @@
 
 ## Install
 
-1. Download the ZIP for your Mac (Apple silicon: `arm64`; Intel: `x64`; Apple menu → **About This Mac** shows which) and unzip it. The `Fadester Companion` folder holds the app, the TourBox preset `OBS Fadester for TourBox.tb` (English labels; `presets/<language>/` holds the same preset with translated labels), the full guide `START-HERE.html`, translated quick starts in `guide/<language>.html`, this read-me and the license.
+1. Download the ZIP for your Mac (Apple silicon: `arm64`; Intel: `x64`; Apple menu → **About This Mac** shows which) and unzip it. The `Fadester Companion` folder holds the app, the TourBox preset `OBS Fadester for TourBox.tb` (English labels; `presets/<language>/` holds the same preset with translated labels), the full guide `START-HERE.html`, translated quick starts in `guide/<language>.html`, a short read-me for users (`USER-README.md` here, shipped as `README.md`) and the license.
 2. Move **Fadester Companion.app** to Applications.
-3. The app is not signed or notarized by Apple, so macOS will refuse to open it the first time. To allow it, right-click (or Control-click) the app and choose **Open**, then **Open** again; or try to open it once, then go to **System Settings → Privacy & Security** and click **Open Anyway**.
+3. The app is not signed or notarized by Apple, so macOS will refuse to open it the first time. Try to open it once, then go to **System Settings → Privacy & Security**, scroll down and click **Open Anyway**. (On macOS 14 and older you can instead Control-click the app and choose **Open**, then **Open** again; newer macOS no longer offers that.)
 4. Grant Accessibility when Setup asks (see below). TourBox Console needs its own permissions.
 
 Not yet checked on a real Mac: opening a downloaded copy past Gatekeeper, the window on screen, the Accessibility prompt for the bundled helper, and control of OBS from a physical TourBox. CI checks the build and the self-tests only. Please report what you find, with your Mac (Apple silicon or Intel) and macOS version.
@@ -30,7 +30,7 @@ command-line launch is not proof of the GUI's Accessibility attribution.
 Start never moves OBS into position, substitutes invisible fading or retries an
 uncertain action. Connected appears only after the host's READY acknowledgement.
 Startup without READY is stopped after 30 seconds. Stop/quit closes only the owned
-host and releases its shortcuts; it sends no fade cancellation, take or level
+host and releases its shortcuts; it sends no fade cancellation, transition or level
 restore. Review OBS after an interrupted transition.
 
 ## Build and offline checks
@@ -72,7 +72,7 @@ show no window, read no user settings and make no connection.
 
 Accessibility attribution from the GUI, source assignments, menu/modifier behavior, fast
 rotary input and end-to-end OBS actions still need a supervised Mac rehearsal.
-The panel speaks the Windows panel's 10 languages (the Mac's first preferred
+The panel speaks the Windows panel's 13 languages (the Mac's first preferred
 language, or `--language CODE`). Its strings come from `tourbox/panel/PanelText.cs`,
 `PanelExtraText.cs` and the Mac-only `mac-strings.json`, generated into
 `PanelStrings.swift` by `node tourbox/macos/panel/make-strings.cjs` (build.sh and
@@ -82,7 +82,7 @@ The panel saves the TourBox preset and opens the quick start in its own language
 build.sh writes each language's Mac preset with `tourbox/presets/build_macos.py
 --localized-out` (the same shortcuts, translated labels, as `build.py` makes the Windows
 ones) and copies `guide/<language>.html`. `--self-test` checks that every language has
-both in the built app, and measures every Setup-diagram label and button in all 10
+both in the built app, and measures every Setup-diagram label and button in all 13
 languages at the narrowest diagram width, failing if any would need text smaller than
 8 points or leave its box.
 **Use only Stream Deck, OpenDeck or MIDI** runs the host with `--mix-only`: no

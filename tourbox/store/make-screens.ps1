@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
-# Frames the panel captures from capture-panel.ps1 into 1920x1080 Store screenshots: the window at its own size
+# Frames the window captures from capture-panel.ps1 into 1920x1080 Store screenshots: the window at its own size
 # (sharp, never stretched) on the right, a caption on the left. Writes listing\Screenshot-<n>.png.
 #   .\make-screens.ps1 -Captures <folder with panel-1.png ... panel-5.png>
 param([Parameter(Mandatory)][string]$Captures)
@@ -18,8 +18,8 @@ $screens = @(
       'Pick the sources to ride: duck the music', 'with the left trigger, step a playlist,',
       'blend two VJ layers.') },
   @{ Panel = 4; Title = @('Got a TourBox?', "It's in too."); Lines = @(
-      'The same companion runs a TourBox:', 'the Dial is your T-bar, Scroll cues scenes,',
-      'the Knob sets the video speed in VJster.') }
+      'Fadester Companion also runs a TourBox:', 'the Dial is your T-bar, Scroll puts scenes', 'in Preview, and the Knob sets the video',
+      'speed in VJster.') }
 )
 function DataUri($file) { 'data:image/png;base64,' + [Convert]::ToBase64String([IO.File]::ReadAllBytes($file)) }
 $logo = DataUri (Join-Path $PSScriptRoot 'assets\Square150x150Logo.scale-200.png')

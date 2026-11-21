@@ -109,6 +109,17 @@ export interface ObsVendorClientOptions {
    * passes the reader; without one (the tests) nothing is read from disk.
    */
   readSavedPassword?: (host: string, port: number) => string;
+  /**
+   * Reads what OBS saved about its own WebSocket server on this computer (its port and its "Enable" tick), or null
+   * when nothing is known (another host, no file). With it the client says which of the two usual causes keeps OBS
+   * out of reach, and, while no password is typed, also tries OBS's own port when the configured one does not answer.
+   */
+  readSavedServer?: (host: string) => { port: number | null; enabled: boolean | null } | null;
+  /**
+   * After OBS refused the password, the sign-in is tried again this often (OBS's saved password may have changed, or
+   * the user corrected it in OBS). Slow on purpose: OBS logs every refused sign-in. 0 never tries again by itself.
+   */
+  wrongPasswordRetryMs?: number;
 }
 
 export interface ObsVendorStateMeta {
@@ -143,12 +154,12 @@ export function computeObsWebSocketAuth(
     .digest("base64");
 }
 
-export function makeUnreachableStatus(): ConnectionStatusInfo {
-  return { kind: "obs_unreachable" };
+export function makeUnreachableStatus(reason?: ConnectionStatusInfo["unreachableReason"]): ConnectionStatusInfo {
+  return reason ? { kind: "obs_unreachable", unreachableReason: reason } : { kind: "obs_unreachable" };
 }
 
-export function makeWrongPasswordStatus(): ConnectionStatusInfo {
-  return { kind: "wrong_password" };
+export function makeWrongPasswordStatus(retryMs = 0): ConnectionStatusInfo {
+  return retryMs > 0 ? { kind: "wrong_password", retrySeconds: Math.round(retryMs / 1000) } : { kind: "wrong_password" };
 }
 
 export function makeMissingPluginStatus(
@@ -182,6 +193,12 @@ export class ObsVendorClient<
   protected readonly notReadyRetryMs: number;
   protected readonly requestTimeoutMs: number;
   private readonly readSavedPassword: ((host: string, port: number) => string) | undefined;
+  private readonly readSavedServer: ObsVendorClientOptions["readSavedServer"];
+  private readonly wrongPasswordRetryMs: number;
+  /** OBS's own saved port, while the client tries it in place of the configured one (no password typed, this computer). */
+  private portFromObs: number | null = null;
+  /** The socket now open, or last open, reached Identified. */
+  private socketIdentified = false;
   /** The last sign-in used the password OBS saved on this computer (none was typed). */
   private signedInWithSavedPassword = false;
 
@@ -227,6 +244,47 @@ export class ObsVendorClient<
     this.notReadyRetryMs = options?.notReadyRetryMs ?? 250;
     this.keepaliveMs = options?.keepaliveMs ?? 20000;
     this.readSavedPassword = options?.readSavedPassword;
+    this.readSavedServer = options?.readSavedServer;
+    this.wrongPasswordRetryMs = Math.max(0, options?.wrongPasswordRetryMs ?? 30000);
+  }
+
+  /** The port the client connects to now: the configured one, or OBS's own saved port while that is being followed. */
+  public getActivePort(): number {
+    return this.portFromObs ?? this.settings.port;
+  }
+
+  /** What OBS saved about its own server on this computer, or null. Never throws. */
+  private savedServer(): { port: number | null; enabled: boolean | null } | null {
+    if (!this.readSavedServer) return null;
+    try {
+      return this.readSavedServer(this.settings.host);
+    } catch {
+      return null;
+    }
+  }
+
+  /** "OBS cannot be reached", with the cause when OBS's own saved settings on this computer name it. */
+  private unreachableStatus(): ConnectionStatusInfo {
+    const saved = this.savedServer();
+    if (saved?.enabled === false) return makeUnreachableStatus("websocket_off");
+    if (saved?.enabled === true) return makeUnreachableStatus("obs_not_running");
+    return makeUnreachableStatus();
+  }
+
+  /**
+   * After an attempt that never reached Identified: the next one goes to the other port. With no password typed, the
+   * configured port and OBS's own saved port take turns, so a user who changed the port in OBS types nothing here.
+   */
+  private chooseNextPort(): void {
+    if (this.portFromObs !== null) {
+      this.portFromObs = null;
+      return;
+    }
+    if (this.settings.password !== "") return;
+    const saved = this.savedServer();
+    if (saved && saved.enabled !== false && saved.port !== null && saved.port !== this.settings.port) {
+      this.portFromObs = saved.port;
+    }
   }
 
   /** True when no password was typed and the client signs in with the one OBS saved on this computer. */
@@ -289,6 +347,7 @@ export class ObsVendorClient<
       before.host !== this.settings.host ||
       before.port !== this.settings.port ||
       before.password !== this.settings.password;
+    if (changed) this.portFromObs = null;
     if (changed && !this.stopped) {
       this.reconnectNow();
       return true;
@@ -322,6 +381,9 @@ export class ObsVendorClient<
     this.reconnectAttempt = 0;
     this.clearReconnectTimer();
     this.cleanupSocket();
+    // The old socket is gone and nothing has answered at the address in use yet: "connected" would be untrue until
+    // the new attempt has finished its first sync.
+    if (this.status.kind === "connected") this.setStatus(this.unreachableStatus());
     this.openSocket();
   }
 
@@ -452,19 +514,21 @@ export class ObsVendorClient<
     }
   }
 
-  private openSocket(): void {
-    if (this.stopped || this.haltedReason !== "none") {
+  private openSocket(afterWrongPassword = false): void {
+    if (this.stopped || (this.haltedReason !== "none" && !(afterWrongPassword && this.haltedReason === "wrong_password"))) {
       return;
     }
     this.cleanupSocket();
     this.connectAttemptCount++;
-    const url = `ws://${this.settings.host}:${this.settings.port}`;
+    this.socketIdentified = false;
+    const url = `ws://${this.settings.host}:${this.getActivePort()}`;
     let socket: WebSocket;
     try {
       socket = new WebSocket(url);
     } catch {
       // An address ws cannot parse (a host typed with its port, "127.0.0.1:4455"; a bare IPv6 address) throws here,
       // synchronously. No socket and no throw: the status says OBS cannot be reached; a corrected Host reconnects.
+      this.haltedReason = this.haltedReason === "wrong_password" ? "none" : this.haltedReason;
       this.setStatus(makeUnreachableStatus());
       return;
     }
@@ -501,18 +565,22 @@ export class ObsVendorClient<
       }
 
       if (code === 4009) {
+        // Gestures do not retry a refused password (OBS logs each one). The client itself tries again slowly, with the
+        // password OBS has saved by then, and the status says so.
         this.haltedReason = "wrong_password";
         this.clearReconnectTimer();
-        this.setStatus(makeWrongPasswordStatus());
+        this.setStatus(makeWrongPasswordStatus(this.wrongPasswordRetryMs));
+        this.scheduleWrongPasswordRetry();
         return;
       }
 
-      if (this.haltedReason === "missing_plugin") {
-        // If OBS itself closed after missing_plugin, revert to unreachable and resume backoff
+      if (this.haltedReason === "missing_plugin" || this.haltedReason === "wrong_password") {
+        // OBS itself closed after missing_plugin, or went away between two password attempts: unreachable, backoff again.
         this.haltedReason = "none";
       }
+      if (!this.socketIdentified) this.chooseNextPort();
 
-      this.setStatus(makeUnreachableStatus());
+      this.setStatus(this.unreachableStatus());
       this.scheduleReconnect();
     });
   }
@@ -552,7 +620,7 @@ export class ObsVendorClient<
         if (!password && this.readSavedPassword) {
           // No password typed: sign in with the one OBS saved on this computer, read fresh on each sign-in.
           try {
-            password = this.readSavedPassword(this.settings.host, this.settings.port);
+            password = this.readSavedPassword(this.settings.host, this.getActivePort());
           } catch {
             password = "";
           }
@@ -580,6 +648,7 @@ export class ObsVendorClient<
     if (op === 2) {
       // Identified
       this.identified = true;
+      this.socketIdentified = true;
       void this.syncAfterIdentify(this.ws);
       return;
     }
@@ -859,6 +928,21 @@ export class ObsVendorClient<
       this.reconnectTimer = null;
       this.openSocket();
     }, delay);
+  }
+
+  /** One slow attempt after a refused password; another refusal comes back here through the close handler. */
+  private scheduleWrongPasswordRetry(): void {
+    if (this.stopped || this.wrongPasswordRetryMs <= 0 || this.reconnectTimer !== null) return;
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      if (this.haltedReason === "wrong_password") this.openSocket(true);
+    }, this.wrongPasswordRetryMs);
+    this.reconnectTimer.unref?.();
+  }
+
+  /** The socket in use, for a sync that must end on the socket it started on. */
+  protected currentSocket(): object | null {
+    return this.ws;
   }
 
   private clearReconnectTimer(): void {

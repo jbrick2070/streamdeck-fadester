@@ -21,6 +21,20 @@ final class NativeLease {
             close(fd); throw NativeFailure.guardFailed("another native slider helper already owns this OBS PID")
         }
         descriptor = fd
+        // One empty lock file per OBS process used to stay behind for ever. The files of OBS processes that are gone
+        // are of use to nobody: remove them. One whose process still runs, or that a helper holds, is left alone, and a
+        // file is only unlinked while this process holds its lock, so an active lock is never unlinked.
+        if let names = try? FileManager.default.contentsOfDirectory(atPath: base.path) {
+            for name in names where name.hasPrefix("obs-") && name.hasSuffix(".lock") {
+                guard let other = Int32(name.dropFirst(4).dropLast(5)), other > 0, other != pid else { continue }
+                if kill(other, 0) == 0 || errno != ESRCH { continue }
+                let stale = base.appendingPathComponent(name)
+                let probe = open(stale.path, O_RDWR | O_CLOEXEC | O_NOFOLLOW)
+                if probe < 0 { continue }
+                if flock(probe, LOCK_EX | LOCK_NB) == 0 { unlink(stale.path) }
+                close(probe)
+            }
+        }
     }
     deinit { close(descriptor) }
 }

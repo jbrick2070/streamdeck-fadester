@@ -185,12 +185,13 @@ describe("P1-5 Guided Setup Pass", () => {
       expect(readSpy).not.toHaveBeenCalled();
     });
 
-    it("previews what was read on request in DirectObsPropertyInspectorBridge and applies port + password without echoing secrets to the page", async () => {
+    it("drops a typed password only on the explicit 'Use OBS's own password', then signs in with OBS's saved one, and no secret reaches the page", async () => {
       const server = new FakeObsServer({ password: "saved-obs-password", missingPlugin: true });
       const port = await server.start();
       cleanup.push(() => server.stop());
 
-      const client = new DirectObsClient({ host: "127.0.0.1", port: 1, password: "" }, { baseReconnectMs: 60_000 });
+      const client = new DirectObsClient({ host: "127.0.0.1", port: 1, password: "" },
+        { baseReconnectMs: 60_000, wrongPasswordRetryMs: 0, readSavedPassword: () => "saved-obs-password" });
       cleanup.push(() => client.stop());
 
       const payloads: Record<string, unknown>[] = [];
@@ -200,42 +201,26 @@ describe("P1-5 Guided Setup Pass", () => {
         persistGlobalSettings: async (next) => {
           savedSettings.push({ ...next });
         },
-        readObsSavedConfig: ({ host } = {}) =>
-          readObsWebsocketConfig({
-            host,
-            configPath: "/Users/test/Library/Application Support/obs-studio/plugin_config/obs-websocket/config.json",
-            readFile: () =>
-              JSON.stringify({
-                server_enabled: true,
-                auth_required: true,
-                server_port: port,
-                server_password: "saved-obs-password"
-              })
-          })
+        // (the bridge reads nothing from disk any more: the client signs in with OBS's saved password itself)
       });
 
-      await bridge.handleMessage({ event: "directReadObsSavedConfig", host: "127.0.0.1" });
-      // Preview was shown BEFORE applying; client settings are still untouched.
-      expect(client.getSettings().password).toBe("");
-      expect(savedSettings).toHaveLength(0);
-      expect(payloads.at(-1)?.obsSavedConfigPreview).toEqual({
-        ok: true,
-        sourceRelPath: "obs-studio/plugin_config/obs-websocket/config.json",
-        serverPort: port,
-        serverEnabled: true,
-        authRequired: true,
-        passwordFound: true
-      });
-
+      // A password typed long ago is stored and is wrong by now.
+      await bridge.handleMessage({ event: "directUpdateGlobalSettings", host: "127.0.0.1", port, password: "typed-long-ago" });
+      expect(savedSettings.at(-1)).toEqual({ host: "127.0.0.1", port, password: "typed-long-ago" });
+      // An emptied password box changes nothing...
+      await bridge.handleMessage({ event: "directUpdateGlobalSettings", host: "127.0.0.1", port });
+      expect(client.getSettings().password).toBe("typed-long-ago");
+      // ...the explicit action does: the stored password goes, and OBS's own saved one is used from then on.
       client.start();
-      await bridge.handleMessage({ event: "directApplyObsSavedConfig" });
-      expect(savedSettings).toEqual([{ host: "127.0.0.1", port, password: "saved-obs-password" }]);
-      expect(client.isConnected()).toBe(true);
+      await bridge.handleMessage({ event: "directUseObsPassword" });
+      expect(savedSettings.at(-1)).toEqual({ host: "127.0.0.1", port, password: "" });
+      expect(client.getSettings().password).toBe("");
+      await vi.waitFor(() => expect(client.isConnected()).toBe(true), { timeout: 3000 });
       const latestState = [...payloads].reverse().find((p) => p.event === "directObsState");
       expect(latestState).toMatchObject({
-        connection: { host: "127.0.0.1", port, passwordSet: true },
-        obsSavedConfigPreview: null
+        connection: { host: "127.0.0.1", port, portInUse: port, local: true, passwordSet: false, obsSaved: true }
       });
+      expect(payloads.some((p) => p.event === "directTestDone")).toBe(true);
       expect(JSON.stringify(payloads)).not.toContain("saved-obs-password");
       expect(JSON.stringify(payloads)).not.toContain("/Users/test");
     });
@@ -315,11 +300,13 @@ describe("P1-5 Guided Setup Pass", () => {
       });
       expect(byId(offlineReport.items, "obs_reachable")).toMatchObject({
         state: "fail",
+        group: "needed",
         code: "unreachable",
-        fix: "Open OBS and enable Tools > WebSocket Server Settings on this host and port."
+        fix: "Start OBS, then tick Tools > WebSocket Server Settings > Enable WebSocket server."
       });
       expect(byId(offlineReport.items, "macos_accessibility")).toMatchObject({
-        state: "fail",
+        state: "note",
+        group: "tbar",
         code: "ax_denied",
         fix: "Allow Stream Deck (or OpenDeck) in System Settings > Privacy & Security > Accessibility."
       });
@@ -352,7 +339,7 @@ describe("P1-5 Guided Setup Pass", () => {
       expect(byId(badPwdReport.items, "password_accepted")).toMatchObject({
         state: "fail",
         code: "wrong_password",
-        fix: "Press Use OBS's saved password above or enter OBS's WebSocket password, then press Save for all controls & test."
+        fix: "Type OBS's WebSocket password under OBS connection, or press Use OBS's own password there."
       });
       expect(byId(badPwdReport.items, "macos_accessibility")).toMatchObject({
         state: "unknown",
@@ -385,27 +372,27 @@ describe("P1-5 Guided Setup Pass", () => {
       });
 
       expect(byId(failingObsReport.items, "obs_version")).toMatchObject({
-        state: "fail",
+        state: "note",
         code: "not_obs_33",
-        fix: "Install OBS Studio 33.x so all Fadester controls and the native T-bar match tested behaviour."
+        fix: "Tested with OBS 33. Other versions usually work; the T-bar dial moves OBS's own slider only on OBS 33."
       });
       expect(byId(failingObsReport.items, "studio_mode")).toMatchObject({
-        state: "fail",
+        state: "note",
         code: "studio_off",
-        fix: "Turn on Studio Mode in OBS (View > Studio Mode)."
+        fix: "Only for the T-bar dial and Preview keys: turn on Studio Mode in OBS (View > Studio Mode)."
       });
       expect(byId(failingObsReport.items, "fade_selected")).toMatchObject({
-        state: "fail",
+        state: "note",
         code: "not_fade",
-        fix: "Select the Fade transition in OBS's Scene Transitions dock."
+        fix: "Only for the T-bar dial: select the Fade transition in OBS's Scene Transitions dock."
       });
       expect(byId(failingObsReport.items, "obs_not_elevated")).toMatchObject({
-        state: "fail",
+        state: "note",
         code: "elevated",
         fix: "Close OBS and start it normally without Run as administrator."
       });
       expect(byId(failingObsReport.items, "window_not_minimised")).toMatchObject({
-        state: "fail",
+        state: "note",
         code: "minimised",
         fix: "Restore OBS's main window from the taskbar so the native T-bar can reach it."
       });

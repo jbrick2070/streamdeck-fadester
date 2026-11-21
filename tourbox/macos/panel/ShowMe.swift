@@ -578,6 +578,7 @@ private final class SheetBackground: NSView {
 @MainActor final class TourBoxImportWindow {
     private let panel: NSPanel
     private let canvas: ShowMeCanvas
+    private var closeWatch: NSObjectProtocol?
     private let whyLabel = NSTextField(wrappingLabelWithString: "")
     private let stepsSummary = NSTextField(wrappingLabelWithString: "")
     private var stepButtons: [NSButton] = []
@@ -611,10 +612,14 @@ private final class SheetBackground: NSView {
             defer: false
         )
         panel.appearance = NSAppearance(named: .aqua)
-        panel.title = L("showTbTitle")
+        panel.title = titledWithVersion(L("showTbTitle"))
         panel.level = .floating
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
+        // The title-bar close button closes the panel without close() below: stop the animation timer then, too (F-07).
+        closeWatch = NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: panel, queue: .main) { [weak canvas] _ in
+            Task { @MainActor in canvas?.stopAnimation() }
+        }
 
         let root = SheetBackground(frame: NSRect(x: 0, y: 0, width: 580, height: 504))
         panel.contentView = root
@@ -775,6 +780,7 @@ private final class SheetBackground: NSView {
 @MainActor final class ObsShowMeWindow {
     private let panel: NSPanel
     private let canvas: ShowMeCanvas
+    private var closeWatch: NSObjectProtocol?
     private var onCheckAgain: (() -> Void)?
 
     init(mode: ShowMeCanvas.Mode, title: String, detail: String, actionTitle: String?, onAction: (() -> Void)?) {
@@ -787,10 +793,14 @@ private final class SheetBackground: NSView {
             defer: false
         )
         panel.appearance = NSAppearance(named: .aqua)
-        panel.title = title
+        panel.title = titledWithVersion(title)
         panel.level = .floating
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
+        // The title-bar close button closes the panel without close() below: stop the animation timer then, too (F-07).
+        closeWatch = NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: panel, queue: .main) { [weak canvas] _ in
+            Task { @MainActor in canvas?.stopAnimation() }
+        }
 
         let root = SheetBackground(frame: NSRect(x: 0, y: 0, width: 580, height: 400))
         panel.contentView = root
@@ -1116,7 +1126,9 @@ private final class SheetBackground: NSView {
         let obsBtnAction: String
         if !state.obsRunning {
             obsBtnTitle = L("macBtnOpenObs"); obsBtnAction = "openObs"
-        } else if !state.obsConnected || (state.studioOff && !state.controlsRunning) {
+        } else if state.obsConnected && state.studioOff {
+            obsBtnTitle = L("btnTurnOn"); obsBtnAction = "studioOn"
+        } else if !state.obsConnected {
             obsBtnTitle = L("btnShowMe"); obsBtnAction = state.obsAction
         } else if state.controlsRunning && !state.frontIsObs {
             obsBtnTitle = L("dgFocusObs"); obsBtnAction = "openObs"
@@ -1211,7 +1223,7 @@ private final class SheetBackground: NSView {
         let obsNote: String
         if !state.obsRunning { obsNote = L("dgObsNotRunning") }
         else if !state.obsConnected { obsNote = L("dgObsSetup") }
-        else if state.studioOff && !state.controlsRunning { obsNote = L("dgObsStudio") }
+        else if state.studioOff { obsNote = L("dgObsStudio") }
         else if state.controlsRunning && !state.frontIsObs { obsNote = L("dgObsFront") }
         else { obsNote = L("dgObsLive") }
         blocks.append(TextBlock(id: "obsNote", lines: [TextLine(text: obsNote, size: 10.0, bold: false, color: Self.mutedDark)],

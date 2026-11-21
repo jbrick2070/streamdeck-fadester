@@ -20,11 +20,12 @@ import {
   sceneTargetIndex
 } from "../obs/direct-obs-client.js";
 import { VisualSignals } from "../control/visual-signals.js";
-import { QuantizedKeyArm } from "../control/quantized-fade.js";
+import { QuantizedKeyArm, quantizeBadge } from "../control/quantized-fade.js";
 import {
   DEFAULT_OBS_SCENE_TRANSITION_KEY_SETTINGS,
   ObsSceneOperation,
   ObsSceneTransitionKeySettings,
+  clampDurationMs,
   normalizeAccent,
   normalizeLabelOverride,
   normalizeQuantizeBeats,
@@ -93,13 +94,29 @@ export class ObsSceneTransitionKeyInstanceController {
   private readonly rateLimiter: CellRateLimiter<string>;
   private readonly arm: QuantizedKeyArm;
   private readonly clock: () => number;
-  private readonly onStateChanged = (): void => {
+  /** The scenes as they were when `lastError` was set: the reason stays until they change, or the next press. */
+  private lastErrorScenes = "";
+  private readonly onStatusChanged = (): void => {
     if (!this.client.isConnected()) {
       this.arm.cancelSilently();
     }
     this.lastError = null;
     this.renderNow();
   };
+  private readonly onStateChanged = (): void => {
+    if (!this.client.isConnected()) {
+      this.arm.cancelSilently();
+    }
+    // A volume change, a T-bar move or another scene event says nothing about why this press failed: the reason stays
+    // on the key until what refused it may have gone (the scene list, Program, Preview or Studio Mode changed).
+    if (this.lastError !== null && this.sceneSignature() !== this.lastErrorScenes) this.lastError = null;
+    this.renderNow();
+  };
+
+  private sceneSignature(): string {
+    const catalog = this.client.getCatalog();
+    return JSON.stringify([catalog.studioMode, catalog.currentProgramScene, catalog.currentPreviewScene, catalog.scenes]);
+  }
 
   public constructor(
     private readonly client: DirectObsClient,
@@ -125,7 +142,7 @@ export class ObsSceneTransitionKeyInstanceController {
     this.visible = true;
     this.offLanguage();
     this.offLanguage = onLanguageChanged(() => this.renderNow());
-    this.client.on("statusChanged", this.onStateChanged);
+    this.client.on("statusChanged", this.onStatusChanged);
     this.client.on("directStateChanged", this.onStateChanged);
     this.renderNow();
   }
@@ -136,7 +153,7 @@ export class ObsSceneTransitionKeyInstanceController {
     this.offLanguage = () => {};
     this.arm.dispose();
     this.rateLimiter.dispose();
-    this.client.off("statusChanged", this.onStateChanged);
+    this.client.off("statusChanged", this.onStatusChanged);
     this.client.off("directStateChanged", this.onStateChanged);
   }
 
@@ -215,7 +232,8 @@ export class ObsSceneTransitionKeyInstanceController {
       this.lastError = null;
     } catch (error) {
       this.lastError = errorLocalText(error, ownText("sceneControlFailed"));
-      await this.sink.showAlert();
+      this.lastErrorScenes = this.sceneSignature();
+      if (this.visible) await this.sink.showAlert();
     }
     this.renderNow();
   }
@@ -243,12 +261,14 @@ export class ObsSceneTransitionKeyInstanceController {
     }
     const title = customLabel || resolved || targetLabel(target) || t("sceneTitleFallback");
     // A chosen OBS transition keeps its OBS name; only our own words are translated.
+    // OBS's own transition, the one selected in OBS now, is named too ("Next · Fade", "Next · Stinger"): a Fade
+    // reads as Fade on every product. The general word only stands in while OBS has not said which it is.
     const operation = this.settings.operation === "preview"
       ? t("sceneOpPreview")
       : this.settings.operation === "cut" || this.settings.transitionName === OBS_TRANSITION_CUT
         ? t("sceneOpCut")
         : this.settings.transitionName === OBS_TRANSITION_CURRENT || !this.settings.transitionName
-          ? t("sceneOpTransition")
+          ? (this.client.isConnected() && catalog.currentTransition) || t("sceneOpTransition")
           : this.settings.transitionName;
     const role = isAutomatic ? t("sceneRoleIndex", { n: sceneTargetIndex(target)! + 1 })
       : target === DIRECT_SCENE_NEXT ? t("sceneRoleNext")
@@ -256,15 +276,7 @@ export class ObsSceneTransitionKeyInstanceController {
           : target === DIRECT_SCENE_RANDOM ? t("sceneRoleRandom")
             : target === DIRECT_SCENE_CURRENT_PREVIEW ? t("sceneRoleTake") : "";
     const subtitle = role ? t("sceneSubtitle", { role, operation }) : operation;
-    const bannerKind = this.arm.getBanner();
-    const badge =
-      bannerKind === "armed"
-        ? { text: t("quantizeArmed"), on: true }
-        : bannerKind === "no_tempo"
-          ? { text: t("quantizeNoTempo"), on: false }
-          : bannerKind === "cancelled"
-            ? { text: t("quantizeCancelled"), on: false }
-            : undefined;
+    const badge = quantizeBadge(this.arm.getBanner());
     this.rateLimiter.push(
       renderDirectKeySvg({
         connected: this.client.isConnected() && !reason,
@@ -275,10 +287,15 @@ export class ObsSceneTransitionKeyInstanceController {
           : target === DIRECT_SCENE_NEXT ? "next"
             : target === DIRECT_SCENE_PREVIOUS ? "previous"
               : this.settings.operation === "cut" ? "cut"
-                : this.settings.operation === "transition" ? "take" : "scene",
+                : this.settings.operation === "transition" ? "transition" : "scene",
         configured,
         accent: this.settings.accent,
-        badge
+        badge,
+        // Which of the deck's scene keys is on air: its scene is on Program, or in Preview in Studio Mode. The key
+        // that puts Preview on Program is not marked (its scene is always the one in Preview).
+        onAir: !resolved || target === DIRECT_SCENE_CURRENT_PREVIEW ? undefined
+          : resolved === catalog.currentProgramScene ? "program"
+            : catalog.studioMode && resolved === catalog.currentPreviewScene ? "preview" : undefined
       })
     );
   }
@@ -288,9 +305,7 @@ export class ObsSceneTransitionKeyInstanceController {
   ): Required<ObsSceneTransitionKeySettings> {
     const rawMs = Number(raw?.durationMs ?? DEFAULT_OBS_SCENE_TRANSITION_KEY_SETTINGS.durationMs);
     const rounded = Math.round(rawMs);
-    const durationMs = Number.isFinite(rounded) && rounded > 0
-      ? Math.max(50, Math.min(20000, rounded))
-      : 0;
+    const durationMs = Number.isFinite(rounded) && rounded > 0 ? clampDurationMs(rounded) : 0;
     return {
       sceneTarget:
         typeof raw?.sceneTarget === "string" ? raw.sceneTarget.trim() : DEFAULT_OBS_SCENE_TRANSITION_KEY_SETTINGS.sceneTarget,

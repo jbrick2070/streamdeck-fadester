@@ -13,7 +13,7 @@ const UI = join(PLUGIN_DIR, "ui");
 const DIRECT_PAGES = readdirSync(UI).filter((name) => name.endsWith(".html")
   && /<script src="direct-pi\.js"><\/script>/.test(readFileSync(join(UI, name), "utf8")));
 const MEMORY_KEY = "fadester:resolvedLanguage";
-const ENDONYMS = ["English", "Deutsch", "Español", "Français", "日本語", "한국어", "简体中文", "繁體中文", "Nederlands"];
+const ENDONYMS = ["English", "Deutsch", "Español", "Français", "日本語", "한국어", "简体中文", "繁體中文", "Nederlands", "Italiano", "Português (Brasil)", "Русский", "Türkçe"];
 const en = readLanguageFile("en").Localization.pi as Record<string, string>;
 const de = readLanguageFile("de").Localization.pi as Record<string, string>;
 const nl = readLanguageFile("nl").Localization.pi as Record<string, string>;
@@ -142,7 +142,7 @@ describe("the direct pages' Language section (R-LANG-1, R-LANG-6)", () => {
     expect(DIRECT_PAGES.length).toBe(10);
   });
 
-  it.each(DIRECT_PAGES)("%s has the section: Automatic, the nine by their own names, the note", (page) => {
+  it.each(DIRECT_PAGES)("%s has the section: Automatic, the thirteen by their own names, the note", (page) => {
     const h = openPage(page);
     const select = h.byId("direct-language");
     expect(select.tag).toBe("select");
@@ -184,18 +184,22 @@ describe("a Language change (R-LANG-4)", () => {
   it("refills the open page in place when the plugin's broadcast brings another language", () => {
     const h = openPage("obs-fade-key.html", { settings: { inputName: "Gone" } });
     h.receive(state({ choice: "auto", resolved: "en" }));
-    expect(h.byId("direct-conn-summary").textContent).toBe(en.connEdit);
+    expect(h.byId("direct-conn-summary").textContent).toBe(en.connOtherComputer);
     expect(h.byId("direct-fade-status").textContent).toBe(en.fadeInputUnavailable);
     // The operator's page: a host typed but not yet saved (still focused), the layouts section opened,
     // the connection editor closed, and a result banner from an earlier action.
     const host = h.byId("direct-conn-host");
     host.value = "192.168.1.20";
     h.document.activeElement = host;
-    const layouts = h.document.querySelectorAll("details").find((details) => details.id !== "direct-conn-editor")!;
+    const layouts = h.byId("direct-elgato-layouts");
     layouts.open = true;
     const editor = h.byId("direct-conn-editor");
     editor.open = false;
-    h.receive({ event: "directSetupResult", ok: true });
+    h.byId("direct-studio-prepare").onclick?.();
+    h.receive({ event: "directSetupResult", ok: true, requestId: h.toPlugin().at(-1)!.requestId });
+    expect(h.byId("direct-setup-status").textContent).toBe(en.studioPrepared);
+    h.byId("direct-studio-prepare").onclick?.();
+    h.receive({ event: "directSetupResult", ok: false, error: en.setupDone, requestId: h.toPlugin().at(-1)!.requestId });
     expect(h.byId("direct-setup-status").textContent).toBe(en.setupDone);
 
     h.receive(state({ choice: "de", resolved: "de" }, { connection: { host: "127.0.0.1", port: 4455, passwordSet: true } }));
@@ -206,7 +210,7 @@ describe("a Language change (R-LANG-4)", () => {
     expect(headings(h.document)).toContain(`${de.connHeading} ${de.scopeAllControls}`);
     expect(headings(h.document)).toContain(`${de.fadeHeading} ${de.scopeThisKey}`);
     // Dynamic texts: the shared summary and hint, and the page's own banner.
-    expect(h.byId("direct-conn-summary").textContent).toBe(de.connEdit);
+    expect(h.byId("direct-conn-summary").textContent).toBe(de.connOtherComputer);
     expect(h.byId("direct-conn-hint").textContent).toBe(de.connHintSaved);
     expect(h.byId("direct-fade-status").textContent).toBe(de.fadeInputUnavailable);
     expect(h.byId("direct-conn-password").placeholder).toBe(de.passwordPlaceholderSaved);
@@ -226,7 +230,7 @@ describe("a Language change (R-LANG-4)", () => {
     expect(englishLeft(h.document).length).toBeGreaterThan(0);
     h.receive(state({ choice: "de", resolved: "de" }));
     expect(englishLeft(h.document)).toEqual([]);
-    expect(h.byId("direct-conn-summary").textContent).toBe(de.connEdit);
+    expect(h.byId("direct-conn-summary").textContent).toBe(de.connOtherComputer);
     expect(h.byId("direct-conn-hint").textContent).toBe(de.connHintSaved);
   });
 
@@ -236,7 +240,7 @@ describe("a Language change (R-LANG-4)", () => {
     expect(englishLeft(h.document, nl).length).toBeGreaterThan(0);
     h.receive(state({ choice: "nl", resolved: "nl" }));
     expect(englishLeft(h.document, nl)).toEqual([]);
-    expect(h.byId("direct-conn-summary").textContent).toBe(nl.connEdit);
+    expect(h.byId("direct-conn-summary").textContent).toBe(nl.connOtherComputer);
     expect(h.byId("direct-conn-hint").textContent).toBe(nl.connHintSaved);
   });
 
@@ -249,16 +253,17 @@ describe("a Language change (R-LANG-4)", () => {
     expect(headings(h.document)).toContain(`${nl.languageHeading} ${nl.scopeAllControls}`);
     expect(h.byId("direct-language-note").textContent).toBe(nl.languageNote);
     expect(h.byId("direct-language").value).toBe("nl");
-    // The select's Automatic is worded, the nine endonyms are not.
+    // The select's Automatic is worded, the thirteen endonyms are not.
     expect(h.byId("direct-language").options.map((option) => option.textContent)).toEqual([nl.languageAuto, ...ENDONYMS]);
   });
 
   it("keeps a result banner when the language stays the same", () => {
     const h = openPage("obs-fade-key.html");
     h.receive(state({ choice: "auto", resolved: "en" }));
-    h.receive({ event: "directSetupResult", ok: true });
+    h.byId("direct-studio-prepare").onclick?.();
+    h.receive({ event: "directSetupResult", ok: true, requestId: h.toPlugin().at(-1)!.requestId });
     h.receive(state({ choice: "en", resolved: "en" }));
-    expect(h.byId("direct-setup-status").textContent).toBe(en.setupDone);
+    expect(h.byId("direct-setup-status").textContent).toBe(en.studioPrepared);
   });
 });
 
@@ -284,7 +289,7 @@ describe("the select follows the stored choice", () => {
   it("an unknown stored value shows Automatic", () => {
     const h = openPage("obs-fader-dial.html");
     h.receive(state({ choice: "en", resolved: "en" }));
-    h.receive(state({ choice: "pt_BR", resolved: "en" }));
+    h.receive(state({ choice: "sv_SE", resolved: "en" }));
     expect(h.byId("direct-language").value).toBe("auto");
   });
 
@@ -326,7 +331,7 @@ describe("first paint from the remembered language (D-L5, no hold)", () => {
   it("does not remember a resolved language the page refused", () => {
     const h = openPage("obs-fade-key.html");
     h.receive(state({ choice: "de", resolved: "de" }));
-    h.receive(state({ choice: "auto", resolved: "pt_BR" }));
+    h.receive(state({ choice: "auto", resolved: "sv_SE" }));
     expect(h.i18n.language()).toBe("de");
     expect(h.memory.get(MEMORY_KEY)).toBe("de");
   });
@@ -342,7 +347,7 @@ describe("first paint from the remembered language (D-L5, no hold)", () => {
     expect(headings(h.document)).toContain(`${en.connHeading} ${en.scopeAllControls}`);
   });
 
-  it.each(["pt_BR", "NL", "nl-NL", "", "{\"lang\":\"de\"}"])("a remembered %j that is not one of the nine gives Stream Deck's language", (stale) => {
+  it.each(["sv_SE", "NL", "nl-NL", "", "{\"lang\":\"de\"}"])("a remembered %j that is not one of the thirteen gives Stream Deck's language", (stale) => {
     const h = openPage("obs-fade-key.html", { appLanguage: "de", memory: { [MEMORY_KEY]: stale } });
     expect(h.i18n.language()).toBe("de");
   });
@@ -426,17 +431,40 @@ describe("the shared sections say what happened", () => {
     picker.value = regularLayout.slug;
     picker.onchange?.();
     h.byId("direct-layout-open").onclick?.();
-    expect(h.toPlugin().at(-1)).toEqual({ event: "directActivateLayout", slug: regularLayout.slug, prepareStudio: false });
-    h.receive({ event: "directSetupResult", ok: true });
+    const first = h.toPlugin().at(-1)!;
+    expect(first).toEqual({ event: "directActivateLayout", slug: regularLayout.slug, prepareStudio: false, requestId: first.requestId });
+    expect(String(first.requestId)).toMatch(/^setup_[a-z0-9]+_1$/);
+    // An answer meant for the page that was open before (another id) says nothing here (C-07).
+    h.receive({ event: "directSetupResult", ok: true, requestId: "setup_other_1" });
+    expect(h.byId("direct-setup-status").textContent).toBe(en.layoutPreparing);
+    h.receive({ event: "directSetupResult", ok: true, requestId: first.requestId });
     expect(h.byId("direct-setup-status").textContent).toBe(en.setupDone);
     h.byId("direct-studio-prepare").onclick?.();
-    expect(h.toPlugin().at(-1)).toEqual({ event: "directPrepareStudio" });
-    h.receive({ event: "directSetupResult", ok: true });
+    const second = h.toPlugin().at(-1)!;
+    expect(second).toEqual({ event: "directPrepareStudio", requestId: second.requestId });
+    expect(second.requestId).not.toBe(first.requestId);
+    h.receive({ event: "directSetupResult", ok: true, requestId: second.requestId });
     expect(h.byId("direct-setup-status").textContent).toBe(en.studioPrepared);
     // A failure shows the plugin's own sentence.
     h.byId("direct-layout-open").onclick?.();
-    h.receive({ event: "directSetupResult", ok: false, error: "Could not prepare this OBS layout." });
+    h.receive({ event: "directSetupResult", ok: false, error: "Could not prepare this OBS layout.", requestId: h.toPlugin().at(-1)!.requestId });
     expect(h.byId("direct-setup-status").textContent).toBe("Could not prepare this OBS layout.");
+  });
+
+  it("'Preparing…' ends by itself when the plugin never answers (C-06)", () => {
+    const h = openPage("obs-fader-dial.html", { settings: { target: "tbar" } });
+    h.receive(state({ choice: "auto", resolved: "en" }, { layouts: [regularLayout] }));
+    h.byId("direct-studio-prepare").onclick?.();
+    expect(h.byId("direct-studio-prepare").disabled).toBe(true);
+    expect(h.byId("direct-studio-prepare").textContent).toBe(en.preparing);
+    // The plugin restarted meanwhile: no answer ever comes. The page's own timer ends the wait.
+    h.runTimers();
+    expect(h.byId("direct-studio-prepare").disabled).toBe(false);
+    expect(h.byId("direct-setup-status").textContent).toBe(en.setupNoAnswer);
+    // The late answer to that request is not taken for a new one's.
+    h.byId("direct-studio-prepare").onclick?.();
+    h.receive({ event: "directSetupResult", ok: true, requestId: "setup_gone_1" });
+    expect(h.byId("direct-studio-prepare").disabled).toBe(true);
   });
 });
 

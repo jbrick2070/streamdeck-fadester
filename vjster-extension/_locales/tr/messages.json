@@ -52,17 +52,26 @@
   "statusLinkDown": {
     "message": "Bağlı değil. Kullandığınız programı kontrol edin:"
   },
+  "statusFirstWait": {
+    "message": "VJster bekleniyor. Şunlardan birini yapın:"
+  },
+  "statusStandby": {
+    "message": "Beklemede. Bağlantı bu uzantının başka bir kopyasında (başka bir Chrome profili veya tarayıcı); o kapanınca bu devralır."
+  },
   "linkDownCompanion": {
     "message": "Fadester Companion: bu bilgisayarda açın ve kontrollerinin açık olduğunu kontrol edin."
   },
   "linkDownDeck": {
-    "message": "Stream Deck ya da OpenDeck: VJster tuşu ya da düğmesi olan bir sayfa gösterin veya VJster ayarlarında “Bağlantıyı açık tut” seçeneğini işaretleyin."
+    "message": "Stream Deck ya da OpenDeck: VJster tuşu ya da kadranı olan bir sayfa gösterin veya VJster ayarlarında “Bağlantıyı açık tut” seçeneğini işaretleyin."
   },
   "linkDownPort": {
     "message": "Buradaki bağlantı noktası, o programın VJster ayarlarındakiyle aynı olmalıdır."
   },
   "statusLinkChecking": {
     "message": "VJster'e bağlanılıyor…"
+  },
+  "reloadTabsNote": {
+    "message": "VJster kurulmadan veya güncellenmeden önce açık olan video sekmelerini bir kez yeniden yükleyin."
   },
   "statusBadPort": {
     "message": "1024 ile 65535 arasında bir tam sayı kullanın; varsayılan değer $DEFAULT$.",

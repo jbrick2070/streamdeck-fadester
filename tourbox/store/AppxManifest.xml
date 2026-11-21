@@ -28,7 +28,10 @@
     <Resource Language="it" />
     <Resource Language="ja" />
     <Resource Language="ko" />
+    <Resource Language="nl" />
+    <Resource Language="pt-BR" />
     <Resource Language="ru" />
+    <Resource Language="tr" />
     <Resource Language="zh-CN" />
     <Resource Language="zh-TW" />
   </Resources>

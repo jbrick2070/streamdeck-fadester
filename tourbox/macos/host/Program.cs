@@ -28,14 +28,48 @@ internal static class MacDevelopmentHost
     /// so Restore still knows the level to go back to, and a transition a cut or a sweep still owes, which goes back
     /// with the operator's next take, cut, T-bar move or Cancel (StudioFader.RepayAsync). As on Windows, except that
     /// nothing is written when a session starts or ends: this host writes to OBS only on a fresh command. A T-bar left
-    /// part-way is therefore not carried: a session starts only with OBS's T-bar parked (RunSession), and by then the
-    /// sweep is over.
+    /// part-way is carried too, but not closed out for the operator as Windows does: the next session keeps it when
+    /// OBS's T-bar still sits there (StudioFader.ResumeWithoutWritingAsync), and the operator's next Dial turn, Fade,
+    /// Cut or Cancel acts on it.
     /// </summary>
     static DeskActions.Memory? carried;
-    internal static DeskActions.Memory Carry(DeskActions.Memory left)
+    internal static DeskActions.Memory Carry(DeskActions.Memory left) => left;
+    /// <summary>
+    /// OBS's T-bar could not be read, or is not where a session may take it over: every other control works, and only
+    /// the T-bar waits (F-02). It used to refuse the whole session, so with Studio Mode off, or Accessibility stale after
+    /// an update, Music, Preview, Fade and Cut were refused too and the panel said "waiting for OBS". Each T-bar move
+    /// first looks again (at most every two seconds), and the first read that succeeds lets the T-bar go.
+    /// </summary>
+    internal sealed class TbarGate(Func<Task<int>> read, Func<double, double, Task> move, Func<int> carriedTick, Action<string> log, Func<long>? clockMs = null)
     {
-        left.Fader.Sweep = null; left.Fader.Position = 0;
-        return left;
+        readonly Func<long> now = clockMs ?? (() => Environment.TickCount64);
+        string? blocked; long lookedAt;
+        internal string? Blocked => blocked;
+        internal const string NotParked = "OBS's native T-bar is not parked at zero; move it back to its start in OBS.";
+        /// <summary>The start-up look: read-only, and it never forces an operator-owned handle to zero.</summary>
+        internal async Task<string?> LookAsync()
+        {
+            lookedAt = now();
+            try
+            {
+                int at = await read();
+                // Where the last session's own part-thrown sweep left it is not "someone else's": that sweep is carried.
+                blocked = at == 0 || at == carriedTick() ? null : NotParked;
+            }
+            catch (Exception error) when (error is not OperationCanceledException) { blocked = error.Message; }
+            return blocked;
+        }
+        internal async Task MoveAsync(double from, double to)
+        {
+            if (blocked is { } why)
+            {
+                // Nothing was written, so a refusal: the fader needs no Cancel, and a Fade or Cut still goes out.
+                if (now() - lookedAt < 2000) throw new NativeRefusal(why);
+                if (await LookAsync() is { } still) throw new NativeRefusal(still);
+                log("T-BAR: OBS's T-bar can be read again; the Dial works.");
+            }
+            await move(from, to);
+        }
     }
     /// <summary>A layer the desk picked by itself, for the panel: the one line it saves a layer from (PanelLine).</summary>
     static void WritePick(int layer, string scene, string source) => (panelOut ?? Console.Out).WriteLine(PanelLine.PickedLayer(layer, scene, source));
@@ -176,6 +210,8 @@ internal static class MacDevelopmentHost
         Input is dropped while offline, on old generations, or when the queue is full.
         Reconnect is explicit. Failed/uncertain actions are never replayed.
         EOF, quit, Ctrl+C and SIGTERM stop without a cleanup T-bar or volume reset.
+        A T-bar that cannot be read at start (Studio Mode off, no Accessibility, not parked) no
+        longer refuses the session: the other controls work and a T-BAR: line says why.
         """);
 
     public static async Task<int> Main(string[] args)
@@ -271,7 +307,7 @@ internal static class MacDevelopmentHost
                 if (vjster is not null) await vjster.DisposeAsync();
             }
             WriteControl(Control.Stopped);
-            Log("No automatic T-bar reset, take or level restore was sent.");
+            Log("No automatic T-bar reset, transition or level restore was sent.");
             return 0;
         }
         catch (OperationCanceledException) { WriteControl(Control.Stopped); Log("Input disarmed."); return 0; }
@@ -435,6 +471,8 @@ internal static class MacDevelopmentHost
         }
     }
     static readonly TimeSpan OfflineFirstWait = TimeSpan.FromSeconds(5), OfflineLongestWait = TimeSpan.FromSeconds(60);
+    /// <summary>OBS counts a cut as running for about a second after it (StudioFader); look again once it has stopped. As on Windows.</summary>
+    const int CutRecheckMs = 1500;
     /// <summary>
     /// The host without OBS: the same shortcuts and HostSession, whose OBS calls are refused, so VJster's actions behave
     /// exactly as with OBS. Returns true to look for OBS again (OBS's port opened after at least minWait, or Reconnect),
@@ -520,8 +558,12 @@ internal static class MacDevelopmentHost
         ingress.Disarm();
         using var obs = connection;
         using var native = new MacNativeTBar(config.Port, nativeApp);
-        // This is a read-only warmup. Never force an operator-owned handle to zero.
-        if (await native.ReadAsync() != 0) throw new InvalidOperationException("OBS's native T-bar is not parked at zero; check OBS before starting this host.");
+        // This is a read-only warmup. Never force an operator-owned handle to zero. A T-bar that cannot be read or is
+        // not parked no longer refuses the session: only the T-bar waits (TbarGate).
+        var tbar = new TbarGate(native.ReadAsync, native.MoveAsync,
+            () => !readOnly && carried is { Fader: { Sweep: not null, Position: > 0 } left } ? MacNativeTBar.Tick(left.Position) : 0, Log);
+        string? tbarBlocked = await tbar.LookAsync();
+        stop.ThrowIfCancellationRequested();
         await obs.Call("GetVersion"); // The same authenticated socket must survive native PID binding.
         stop.ThrowIfCancellationRequested();
         if (obs.Disconnected.IsCompleted) throw new IOException("OBS disconnected during native validation.");
@@ -538,10 +580,17 @@ internal static class MacDevelopmentHost
         // A late completion from an earlier helper must never disarm a new session.
         _ = obs.Disconnected.ContinueWith(_ => ingress.Disarm(generation), TaskScheduler.Default);
         if (shortcuts is not null) _ = shortcuts.Done.ContinueWith(_ => ingress.Disarm(generation), TaskScheduler.Default);
-        var session = new HostSession(config, ingress, generation, obs.Call, native.MoveAsync,
+        var session = new HostSession(config, ingress, generation, obs.Call, tbar.MoveAsync,
             () => !obs.Disconnected.IsCompleted && (shortcuts is null || !shortcuts.Done.IsCompleted), stop, readOnly, native.ReadAsync, vjster,
             onPick: WritePick, resume: readOnly ? null : carried);
         var desk = session.Desk;
+        // A T-bar the last session left part-way: kept for the operator's next command if OBS's still sits there, else
+        // forgotten. Read-only, as everything at a session's start.
+        if (!readOnly)
+        {
+            try { string said = await desk.ResumeWithoutWritingAsync(); if (said.Length > 0) Log(said); }
+            catch (Exception error) when (!stop.IsCancellationRequested) { Log("After reconnecting: " + error.Message); }
+        }
         obs.InputVolumeChanged += desk.OnVolumeChanged; obs.InputLevelChangedById += desk.OnMixInputLevelChanged;
         // Midi Fadester's APC40 transport drives VJster off this session's loop (VjsterRemote), as on Windows.
         if (!readOnly && vjster is not null) obs.VendorEvent += new VjsterRemote(vjster, Log).OnVendorEvent;
@@ -559,21 +608,38 @@ internal static class MacDevelopmentHost
             }
             WriteControl(Control.Ready, generation);
             Log(readOnly ? "Read-only host ready; no OBS writes, native moves, mix provider or shortcut registration."
-                : "Host armed; native T-bar available, grouped mix " + (config.MixEnabled ? "enabled." : "disabled.") +
+                : "Host armed; native T-bar " + (tbarBlocked is null ? "available" : "waiting") + ", grouped mix " + (config.MixEnabled ? "enabled." : "disabled.") +
                   (shortcuts is null ? " Stdin input only." : " Exclusive Mac shortcuts enabled."));
+            // After READY, so the panel's status line ends on the reason and what still works.
+            if (tbarBlocked is not null && !readOnly) Log("T-BAR: " + tbarBlocked + " The other controls work; the T-bar is looked at again when the Dial is turned.");
             long lastHeldTurn = 0;
+            // Both waits outlive a loop turn. recheck: about 1.5 s after a cut OBS can switch back to Cut as the cut ends, so
+            // the operator's transition is looked at again then, not only with the next fader action (as on Windows; F-01).
+            Task<bool>? available = null; Task? recheck = null;
             while (!stop.IsCancellationRequested && !obs.Disconnected.IsCompleted)
             {
-                var available = ingress.Commands.Reader.WaitToReadAsync(stop).AsTask();
-                Task completed = shortcuts is null ? await Task.WhenAny(available, obs.Disconnected)
-                    : await Task.WhenAny(available, obs.Disconnected, shortcuts.Done);
+                available ??= ingress.Commands.Reader.WaitToReadAsync(stop).AsTask();
+                var waits = new List<Task> { available, obs.Disconnected };
+                if (shortcuts is not null) waits.Add(shortcuts.Done);
+                if (recheck is not null) waits.Add(recheck);
+                await Task.WhenAny(waits);
                 if (shortcuts is not null && shortcuts.Done.IsCompleted)
                 {
                     await shortcuts.Done;
                     throw new ShortcutInputStopped();
                 }
-                if (completed != available) break;
-                if (!await available || !ingress.Commands.Reader.TryRead(out var command)) continue;
+                if (obs.Disconnected.IsCompleted) break;
+                if (recheck is { IsCompleted: true })
+                {
+                    recheck = null;
+                    if (stop.IsCancellationRequested) break;
+                    try { string said = await desk.RecheckTransitionAsync(); if (said.Length > 0) Log("RESULT take.cut: " + said); }
+                    catch (Exception error) when (!stop.IsCancellationRequested) { Log("After the cut: " + error.Message); }
+                    continue;
+                }
+                if (!available.IsCompleted) continue;
+                bool more = await available; available = null;
+                if (!more || !ingress.Commands.Reader.TryRead(out var command)) continue;
                 if (!ingress.Current(command) || !ingress.Fresh(command)) { Log("DROPPED: expired input or old connection generation."); continue; }
                 long nowStamp = System.Diagnostics.Stopwatch.GetTimestamp();
                 if (KeyGuards.IsStrayFaderTick(command.Action, lastHeldTurn, nowStamp)) { Log("DROPPED: stray T-bar tick right after a held Dial turn."); continue; }
@@ -581,6 +647,7 @@ internal static class MacDevelopmentHost
                 if (!readOnly && command.Action == "bridge.reconnect") { reconnect = true; break; }
                 try { Log("RESULT " + command.Action + ": " + await session.Dispatch(command)); }
                 catch (Exception error) when (!stop.IsCancellationRequested) { Log("REFUSED " + command.Action + ": " + error.Message); }
+                if (!readOnly && command.Action == "take.cut") recheck = Task.Delay(CutRecheckMs, stop);
             }
         }
         finally

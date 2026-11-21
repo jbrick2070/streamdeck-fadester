@@ -23,7 +23,7 @@ The Chrome extension is on the [Chrome Web Store](https://chromewebstore.google.
 
 **2. The Chrome extension.** Needs Chrome 116 or later. Add [VJster from the Chrome Web Store](https://chromewebstore.google.com/detail/daohboebokfmamkblejcpbblfnaijgnb). It asks for access to YouTube and to a socket on this computer (`ws://127.0.0.1`), and for the storage and alarms permissions. Its options page opens once. The page shows the extension's id (`daohboebokfmamkblejcpbblfnaijgnb` for the store version): to let only this extension connect, paste it into the **Only this extension** field on VJster's settings page.
 
-**3. First check.** Put a VJster action on the deck (or switch to a VJster profile) and play a YouTube video in Chrome. Within a few seconds the SPEED strip (Stream Deck +) or the 1x key (other decks) shows the video playing. Turn the dial: the video follows.
+**3. First check.** Put a VJster action on the deck (or switch to a VJster profile) and play a YouTube video in Chrome. A video that was already open when you added the extension works too in the GitHub build; with the Chrome Web Store build, reload that tab once (the extension's options page says so). Within a few seconds the SPEED strip (Stream Deck +) or the 1x key (other decks) shows the video playing. Turn the dial: the video follows.
 
 **4. The OBS page (optional).** This plays a YouTube video inside OBS at the speed the deck sets.
 
@@ -51,17 +51,17 @@ Good to know about the OBS page:
 
 ## Languages
 
-VJster's plugin, its keys and dials and its settings page come in nine languages: English, German, Spanish, French, Japanese, Korean, Simplified Chinese, Traditional Chinese and Dutch. Choose under **Language** on the settings page; **Automatic** follows Stream Deck's language. The choice applies to all VJster controls and survives restarts. Stream Deck's own menus, action list, tooltips and dial hints stay in Stream Deck's language.
+VJster's plugin, its keys and dials and its settings page come in thirteen languages, the same thirteen as the rest of the Fadester suite: English, German, Spanish, French, Italian, Japanese, Korean, Dutch, Brazilian Portuguese, Russian, Turkish, Simplified Chinese and Traditional Chinese. Choose under **Language** on the settings page; **Automatic** follows Stream Deck's language. Stream Deck itself offers eight of them, so Dutch, Italian, Brazilian Portuguese, Russian and Turkish are always chosen there by hand. The choice applies to all VJster controls and survives restarts. Stream Deck's own menus, action list, tooltips and dial hints stay in Stream Deck's language.
 
 The Chrome extension follows Chrome's language. The OBS page's address carries Stream Deck's language (`&hl=de`, for example); without it the page uses OBS's language. The page shows text only when its address is incomplete or YouTube's player does not load. With no translation for a word, the English text is shown.
 
 | Part | Languages | Files |
 |---|---|---|
-| Stream Deck plugin and its settings page | English, German, Spanish, French, Japanese, Korean, Chinese (Simplified), Chinese (Traditional), Dutch | `com.jbrick2070.vjster.sdPlugin/<lang>.json` |
-| Chrome extension (description, options page) | English, German, Spanish, French, Japanese, Korean, Dutch, Portuguese (Brazil), Russian, Turkish, Chinese (Simplified), Chinese (Traditional) | `vjster-extension/_locales/<lang>/messages.json` |
-| OBS page (its setup notes) | English, German, Spanish, French, Japanese, Korean, Portuguese (Brazil), Russian, Turkish, Chinese (Simplified), Chinese (Traditional) | `vjster-page/src/page-text.ts` |
+| Stream Deck plugin and its settings page | English, German, Spanish, French, Italian, Japanese, Korean, Dutch, Portuguese (Brazil), Russian, Turkish, Chinese (Simplified), Chinese (Traditional) | `com.jbrick2070.vjster.sdPlugin/<lang>.json` |
+| Chrome extension (description, options page) | The same thirteen | `vjster-extension/_locales/<lang>/messages.json` |
+| OBS page (its setup notes) | The same thirteen | `vjster-page/src/page-text.ts` |
 
-The English texts were written with Claude Opus 5.5, an AI model. Every other language was drafted by Claude and reviewed by a second AI model, Gemini 4 Argon, whose corrections were taken; no native speaker has checked them yet. Chrome's `messages.json` format has no room for a comment, so this note stands for those files. Corrections are welcome as a GitHub issue or pull request on `jbrick2070/streamdeck-fadester`: name the file, the text and your suggested wording. Words drawn on keys must stay short (a test checks they fit).
+The English texts were written with Claude Opus 5.5, an AI model. Every other language was drafted by Claude. A second AI model, Gemini 4 Argon, reviewed the earlier ones and its corrections were applied; the plugin's Italian, Brazilian Portuguese, Russian and Turkish, the extension's Italian and the OBS page's Italian and Dutch (drafted by Claude Fable 5.2) have had no second review yet. No native speaker has checked any of them. Chrome's `messages.json` format has no room for a comment, so this note stands for those files. Corrections are welcome as a GitHub issue or pull request on `jbrick2070/streamdeck-fadester`: name the file, the text and your suggested wording. Words drawn on keys must stay short (a test checks they fit).
 
 ## Uninstall
 

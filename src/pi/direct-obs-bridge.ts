@@ -5,13 +5,7 @@ import { resolveAutomaticInputName } from "../obs/automatic-targets.js";
 import { LayerController, LayerSettings } from "../control/layer-controller.js";
 import type { TapeDecks } from "../control/tape-decks.js";
 import type { VisualSignals } from "../control/visual-signals.js";
-import {
-  readObsWebsocketConfig,
-  toObsWebsocketConfigPreview,
-  type ObsWebsocketConfigPreview,
-  type ObsWebsocketConfigReadResult,
-  type ReadObsWebsocketConfigOptions
-} from "../../packages/streamdeck-fadester-shared/src/obs/obs-websocket-config.js";
+import { isLoopbackObsHost } from "../../packages/streamdeck-fadester-shared/src/obs/obs-websocket-config.js";
 import {
   evaluateSetupChecklist,
   type PlaylisterPluginInfo,
@@ -38,6 +32,8 @@ export interface DirectPiIncomingMessage {
   [key: string]: unknown;
   event?: string;
   host?: string;
+  /** The page's own id for a layout or Studio Mode request; it comes back with `directSetupResult`. */
+  requestId?: string;
   port?: number | string;
   password?: string;
 }
@@ -147,8 +143,6 @@ export interface DirectPiTransport {
   getVjsterPort?(): number | undefined;
   /** Optional overrides for deterministic setup-checklist tests. */
   checklistOptions?: SetupChecklistOptions;
-  /** Optional override for reading OBS's saved obs-websocket config in fixture tests. */
-  readObsSavedConfig?: (options?: ReadObsWebsocketConfigOptions) => ObsWebsocketConfigReadResult;
 }
 
 /**
@@ -164,10 +158,6 @@ export class DirectObsPropertyInspectorBridge {
    * the status "connected"), and a list read across a reset is dropped.
    */
   private filterEpoch = 0;
-  /** Last read OBS WebSocket config kept in plugin process memory only (never sent to the page). */
-  private pendingObsSavedConfig: ObsWebsocketConfigReadResult | null = null;
-  /** Redacted preview of what was read from OBS's local config file. */
-  private obsSavedConfigPreview: ObsWebsocketConfigPreview | null = null;
   /** Monotonic counter for one-shot setup checklist runs. */
   private checklistSeq = 0;
   /** Latest one-shot setup checklist report. */
@@ -219,11 +209,14 @@ export class DirectObsPropertyInspectorBridge {
       connection: {
         host: settings.host,
         port: settings.port,
+        // The port in use when it is not the one set here: OBS's own saved port, followed while no password is typed.
+        portInUse: this.client.getActivePort?.() ?? settings.port,
+        // OBS on this computer: its saved port and password are used, and nothing has to be typed.
+        local: isLoopbackObsHost(settings.host),
         passwordSet: settings.password.length > 0,
         // Signed in with the password OBS saved on this computer (no password typed); the password itself never travels.
         obsSaved: this.client.usesSavedObsPassword?.() ?? false
       },
-      obsSavedConfigPreview: this.obsSavedConfigPreview,
       setupChecklist: this.lastChecklist,
       playlisterPlugin,
       catalog,
@@ -272,24 +265,11 @@ export class DirectObsPropertyInspectorBridge {
       case "directRunChecklist":
         await this.runChecklist();
         return true;
-      case "directReadObsSavedConfig": {
-        const current = this.client.getSettings();
-        const host =
-          typeof msg.host === "string" && msg.host.trim()
-            ? msg.host.trim()
-            : current.host;
-        const reader = this.transport.readObsSavedConfig ?? readObsWebsocketConfig;
-        const read = reader({ host });
-        this.pendingObsSavedConfig = read;
-        this.obsSavedConfigPreview = toObsWebsocketConfigPreview(read);
-        this.broadcast();
-        return true;
-      }
-      case "directApplyObsSavedConfig":
-        await this.queueConnection(() => this.applyObsSavedConfig());
-        return true;
       case "directUpdateGlobalSettings":
         await this.queueConnection(() => this.updateGlobalSettings(msg));
+        return true;
+      case "directUseObsPassword":
+        await this.queueConnection(() => this.useObsOwnPassword());
         return true;
       case "directTestConnection":
         await this.queueConnection(() => this.testConnection());
@@ -344,11 +324,14 @@ export class DirectObsPropertyInspectorBridge {
         return true;
       case "directActivateLayout": {
         const layout = READY_LAYOUTS.find((entry) => entry.slug === msg.slug);
+        // The page's own id for this request goes back with the answer: an answer for the page that was open
+        // before is not taken by the page open now (C-07).
+        const setupId = typeof msg.requestId === "string" ? { requestId: msg.requestId } : {};
         // OpenDeck has its own starter, and a layout for another deck cannot open here: the page still gets an
         // answer, so its "Preparing…" never stays.
         if (this.transport.getOpenDeckStarter?.() || !layout || layout.deviceType !== this.transport.getDeviceType?.() ||
           !this.transport.activateLayout) {
-          this.sendSetupError(undefined);
+          this.sendSetupError(undefined, setupId);
         } else {
           try {
             if (layout.obsMode === "studio") {
@@ -358,30 +341,32 @@ export class DirectObsPropertyInspectorBridge {
               }
             }
             await this.transport.activateLayout(layout.slug);
-            this.transport.sendToPropertyInspector({ event: "directSetupResult", ok: true });
+            this.transport.sendToPropertyInspector({ event: "directSetupResult", ok: true, ...setupId });
           } catch (error) {
-            this.sendSetupError(error);
+            this.sendSetupError(error, setupId);
           }
         }
         return true;
       }
-      case "directPrepareStudio":
+      case "directPrepareStudio": {
+        const setupId = typeof msg.requestId === "string" ? { requestId: msg.requestId } : {};
         try {
           await this.client.prepareStudioLayout();
           this.broadcast();
-          this.transport.sendToPropertyInspector({ event: "directSetupResult", ok: true });
+          this.transport.sendToPropertyInspector({ event: "directSetupResult", ok: true, ...setupId });
         } catch (error) {
-          this.sendSetupError(error);
+          this.sendSetupError(error, setupId);
         }
         return true;
+      }
       default:
         return false;
     }
   }
 
-  private sendSetupError(error: unknown): void {
+  private sendSetupError(error: unknown, setupId: { requestId?: string } = {}): void {
     this.transport.sendToPropertyInspector({
-      event: "directSetupResult", ok: false,
+      event: "directSetupResult", ok: false, ...setupId,
       error: errorText(error, ownText("setupErrorFallback"), translate)
     });
   }
@@ -398,30 +383,13 @@ export class DirectObsPropertyInspectorBridge {
     this.broadcast();
   }
 
-  private async applyObsSavedConfig(): Promise<void> {
-    const read = this.pendingObsSavedConfig;
-    if (!read) {
-      this.broadcast();
-      return;
-    }
-    const canApplyPassword = read.ok;
-    const canApplyAuthOff =
-      !read.ok &&
-      read.reason === "no_password" &&
-      read.authRequired === false &&
-      typeof read.serverPort === "number";
-    if (!canApplyPassword && !canApplyAuthOff) {
-      this.broadcast();
-      return;
-    }
+  /**
+   * The explicit way to drop a typed password: from then on the client signs in with the one OBS saved on this
+   * computer, read fresh at each sign-in (an emptied password box is "no change", never "no password"). Then a test.
+   */
+  private async useObsOwnPassword(): Promise<void> {
     const current = this.client.getSettings();
-    const next: FadesterGlobalSettings = {
-      host: current.host || DEFAULT_GLOBAL_SETTINGS.host,
-      port: canApplyPassword ? read.serverPort : (read.serverPort ?? current.port),
-      password: canApplyPassword ? read.password : ""
-    };
-    this.pendingObsSavedConfig = null;
-    this.obsSavedConfigPreview = null;
+    const next: FadesterGlobalSettings = { host: current.host, port: current.port, password: "" };
     await this.transport.persistGlobalSettings(next);
     this.client.updateSettings(next);
     await this.testConnection();
@@ -435,13 +403,13 @@ export class DirectObsPropertyInspectorBridge {
           ? msg.host.trim()
           : DEFAULT_GLOBAL_SETTINGS.host,
       port: Number(msg.port ?? DEFAULT_GLOBAL_SETTINGS.port),
-      // A password only reaches this bridge if the operator typed it locally.
-      password: typeof msg.password === "string" ? msg.password : current.password
+      // A password only reaches this bridge if the operator typed it locally. Without one the save leaves the stored
+      // password alone: this session may not know it (a start-up read that came late), and must never write "" over it.
+      ...(typeof msg.password === "string" ? { password: msg.password } : {})
     };
-    this.pendingObsSavedConfig = null;
-    this.obsSavedConfigPreview = null;
     await this.transport.persistGlobalSettings(next);
-    this.client.updateSettings(next);
+    // After the save: the saver has given the client the stored password by now.
+    this.client.updateSettings({ ...next, password: next.password ?? this.client.getSettings().password ?? current.password });
     this.broadcast();
   }
 

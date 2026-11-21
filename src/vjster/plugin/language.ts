@@ -3,7 +3,7 @@
 // R-LANG-1..5). The SDK's translator is bound once to Stream Deck's language,
 // so VJster reads its `<lang>.json` files itself: Automatic keeps today's rule
 // (the app's language by exact code, its base, then English), a fixed choice
-// is one of the nine plugin languages exactly as written. VJster cannot import
+// is one of the thirteen plugin languages exactly as written. VJster cannot import
 // src/i18n/ (its bundle is built from src/vjster only), so the choice rule is a
 // copy of Fadester's; tests/helpers/language-choice-cases.ts runs both.
 
@@ -11,12 +11,12 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { stringsFrom, type DeckKey, type Strings } from "./strings.js";
 
-/** Stream Deck's eight languages and Dutch, as a fixed choice is stored. */
-export const PLUGIN_LANGUAGES = ["en", "de", "es", "fr", "ja", "ko", "zh_CN", "zh_TW", "nl"] as const;
+/** Stream Deck's eight languages and Dutch, Italian, Brazilian Portuguese, Russian and Turkish, as a fixed choice is stored. */
+export const PLUGIN_LANGUAGES = ["en", "de", "es", "fr", "ja", "ko", "zh_CN", "zh_TW", "nl", "it", "pt_BR", "ru", "tr"] as const;
 export type PluginLanguage = (typeof PLUGIN_LANGUAGES)[number];
 export type LanguageChoice = "auto" | PluginLanguage;
 
-/** A stored value as a choice: absent or "auto" is Automatic; one of the nine exactly; anything else Automatic and `unknown`. */
+/** A stored value as a choice: absent or "auto" is Automatic; one of the thirteen exactly; anything else Automatic and `unknown`. */
 export function normalizeChoice(stored: unknown): { choice: LanguageChoice; unknown: boolean } {
   if (stored === undefined || stored === "auto") return { choice: "auto", unknown: false };
   const fixed = PLUGIN_LANGUAGES.find((language) => language === stored);

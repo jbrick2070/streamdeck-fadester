@@ -45,8 +45,8 @@ Modulator) and `shot` six (one per scene); every other line of the table is one 
 | monitoring | `Kit Beat` on Monitor and Output at -12 dB |
 | quiet | `Kit Beat` muted for the rest of the run |
 | studio-mode | K.6: Studio Mode on for the run (turned on if it was off, off again at the end) |
-| preview-cues | K.6: every scene cued in Preview by UUID, as the profile's scene keys do; then `Kit Visuals` cued and the T-bar at 0.25, 0.5, 0.75 blends it into Program (OBS logs the manual transition), as turning the scene mixer dial does |
-| mixer-take | K.6, with Fadester's fix for OBS 33.0.1 (PLAN 12, `R-ACT-4`): the scene mixer's press sent as Fadester now sends it (`DirectObsClient.takeTbar`): `SetTBarPosition` 1.0 **without** release (a release always cancels on OBS 33.0.1, because `obs_frontend_set_tbar_position` never moves the T-bar widget that `TBarReleased` reads), then Studio Mode off and on again; the press takes Next live: Program must be `Kit Visuals` by `GetCurrentProgramScene`, Studio Mode on, and the OBS log must show "Switched to regular Preview mode" then "Switched to Preview/Program mode" and no "Manual transition cancelled". Preview then gets the previous Live, as Fadester sets it |
+| preview-cues | K.6: every scene put in Preview by UUID, as the profile's scene keys do; then `Kit Visuals` put in Preview and the T-bar at 0.25, 0.5, 0.75 fades it into Program (OBS logs the manual transition), as turning the T-bar dial does |
+| mixer-take | K.6, with Fadester's fix for OBS 33.0.1 (PLAN 12, `R-ACT-4`): the T-bar dial's press sent as Fadester now sends it (`DirectObsClient.takeTbar`): `SetTBarPosition` 1.0 **without** release (a release always cancels on OBS 33.0.1, because `obs_frontend_set_tbar_position` never moves the T-bar widget that `TBarReleased` reads), then Studio Mode off and on again; the press puts Preview on Program: Program must be `Kit Visuals` by `GetCurrentProgramScene`, Studio Mode on, and the OBS log must show "Switched to regular Preview mode" then "Switched to Preview/Program mode" and no "Manual transition cancelled". Preview then gets the scene that was on Program, as Fadester sets it |
 | beat-signals | Visual Sidechain's `get_signals` shows the beat while `Kit Beat` plays (muted) and nothing when it is paused |
 | reacts: each look, the Audio Modulator | with `Kit Motion` (the train clip) paused and that filter alone, the picture moves with the beat and stands still without it (Look Kaleido: rotation held at 0, and "without" is its Reactivity at 0, since its beat phase keeps turning) |
 | panic-restore | Visual Sidechain's Panic and Restore hotkeys are logged; Panic changes the filters; Restore puts every setting back |
@@ -105,18 +105,18 @@ the imported collection in Studio Mode with the WebSocket server on, and one Fad
 its address and password:
 
 1. Double-click `Suite Demo Kit +.streamDeckProfile` and switch to it.
-2. Visuals page: Scene 2 cues Kit Visuals in Preview; the Scene blend dial (dial 1) fades it into
-   Program, a press takes it live; Look 1, 2, 3 toggle Look Prism, Kaleido, Pulse on the train
+2. Visuals page: Scene 2 puts Kit Visuals in Preview; the Scene blend dial (dial 1) fades it into
+   Program, a press puts it on Program; Look 1, 2, 3 toggle Look Prism, Kaleido, Pulse on the train
    clip; Effect mix, Reactivity and Mix B move the looks (a press drops and returns); Scene 1
-   cues Kit Welcome.
+   puts Kit Welcome in Preview.
 3. PANIC (on every page) sets the looks to pass-through; Restore (on the first two pages) brings
    them back.
-4. Layers page: Scene 3 cues Kit Layers; Show / hide on Layer A (the sprint) and Layer B (the
+4. Layers page: Scene 3 puts Kit Layers in Preview; Show / hide on Layer A (the sprint) and Layer B (the
    hurdles); Still takes Look Prism's reactivity to 0 over 2 s and leaves it there; the Layer A
-   fade and Layer B fade dials; the Kit Beat dial changes the beat's volume; Scene 6 cues the
-   Speed Page.
-5. Clips page: Scene 4 cues Kit Playlister; Previous, Play / pause and Next move its clips;
-   Scene 5 cues Kit Playlister 50%; Restart restarts the 50 % clip; the dials are Scene blend,
+   fade and Layer B fade dials; the Kit Beat dial changes the beat's volume; Scene 6 puts the
+   Speed Page in Preview.
+5. Clips page: Scene 4 puts Kit Playlister in Preview; Previous, Play / pause and Next move its clips;
+   Scene 5 puts Kit Playlister 50% in Preview; Restart restarts the 50 % clip; the dials are Scene blend,
    Effect mix, Layer A fade and Kit Beat.
 6. The next-page key (bottom left) steps through the three pages. With Studio Mode off, a scene
    key refuses and the Scene blend dial says so.

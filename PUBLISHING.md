@@ -38,3 +38,30 @@ Use screenshots from the final approved UI and real hardware, not the fake-serve
 ## Public introduction after final acceptance
 
 The operator wants an OBS Reddit introduction only when the workflow is final and a sizzle video introduces all three plugins. First complete the hardware pass and remaining UI changes, then capture the finished workflow. A short sequence can introduce Midi's shared controls, show Stream Deck configuring and operating them, and finish with Visual Sidechain's reactive effects and Clean. Prepare the post around that real demonstration and obtain the operator's approval before posting. No video production or public posting is part of this integration pass.
+
+## Version numbers at a release
+
+A tag `vX.Y.Z` releases Fadester for OBS X.Y.Z; `package.json` and the plugin's `manifest.json` must say the same (the release workflow checks it). Two other things are attached to every release under versions of their own, and the workflow's job **Companion and VJster extension versions moved with their code** (`scripts/release-component-versions.mjs`) stops a tag that changed one of them without raising its number. Each is compared with the release that first carried its present version:
+
+| Component | Raise | When any of these changed since that release |
+|---|---|---|
+| Fadester Companion | `components.companion.version` in `installer/components.json`, and what the tests keep equal to it (`tourbox/macos/panel/Info.plist`; `tests/companion-one-name.test.ts` names the rest) | `tourbox/`, `vjster-page/`, `src/vjster/shared/`, and the three files of `vjster-extension/src/` the OBS page is built from (`adapter-core.ts`, `link-client.ts`, `page-state.ts`) |
+| VJster Chrome extension | `version` in `vjster-extension/manifest.json` | `vjster-extension/`, `src/vjster/shared/` |
+
+The second pass (branches `pass2/plugin` and `pass2/companion`) changed both and raised neither, on purpose: version numbers move in one separate step, when the suite goes to 1.5. Do that step in this order; each line names every file that holds the number.
+
+1. **Fadester for OBS** (the tag's number, `X.Y.Z`):
+   - `package.json` (`version`), then `npm install --package-lock-only` so `package-lock.json` follows;
+   - `io.github.jbrick2070.fadester-for-obs.sdPlugin/manifest.json` (`Version`, as `X.Y.Z.0`);
+   - `README.md`: the first paragraph (**Fadester for OBS X.Y.Z**) and the example foot line under "Then, if you like" (`Fadester for OBS X.Y.Z · Connected to OBS …`).
+2. **The standalone VJster plugin**: `Version` in `com.jbrick2070.vjster.sdPlugin/manifest.json` (four parts), and the number in the first line of `docs/vjster/README.md` (**VJster A.B.C**) and in `docs/vjster/TESTING.md` ("… `manifest.json` (A.B.C.0 today)"). It is not attached to this repository's releases, so no job checks it; its keys, pages and languages changed in the second pass.
+3. **The VJster Chrome extension**: `version` in `vjster-extension/manifest.json`. Nothing else holds it. (`components.vjsterExtension.version` in `installer/components.json` is the version Suite Setup installs, which is behind it today; it moves with the pins in step 8.)
+4. **Fadester Companion**: `components.companion.version` in `installer/components.json` and `CFBundleShortVersionString` in `tourbox/macos/panel/Info.plist`. `tests/companion-one-name.test.ts` fails when the two differ; the Windows build and both workflows read the number from `components.json`.
+5. **Refresh the copies**: `npm run suite:assemble`. It rewrites `assets/manifest.json` (a copy of the Fadester manifest) and `io.github.jbrick2070.fadester-for-obs.sdPlugin/vjster/manifest.json` (a copy of the VJster manifest); until it has run, `tests/suite-assemble.test.ts` reports both as different. Then `npm run build`, which also rebuilds the bundled profiles.
+6. **The changelog**: the **Unreleased** heading in `CHANGELOG.md` becomes the new version and date, with its first line saying which Companion and extension versions the release ships.
+7. **Check, then commit, then check the versions**: `npm test`, `npm run build` and `npm run validate` on the edited files. Commit steps 1 to 6. Only then run `node scripts/release-component-versions.mjs` (after `git fetch --tags`): it reads the committed files (`HEAD`), not the working folder, so before the commit it still reports the old numbers and stops. Every line must start with `ok`.
+8. **After the release is published**, not before: `node installer/update-pins.mjs …` downloads each published file you name and rewrites its `version`, `file`, `url` and `sha256` in `installer/components.json` (`--sd` for `fadesterForObs`, `--ext` for `vjsterExtension`, `--midi` for `midiFadester`, `--playlister`); it changes no other file. `--ext` also needs `--ext-tag <tag>` or `--sd`, which say which release holds the extension's zip; without one the script stops. Then edit `installer/README.md` by hand: the example command under **Shipping a new plugin version** (`--sd 0.12.16`) and the sentence under **Pins wait for publication** ("Fadester for OBS 0.12.16"). Until then those entries are only the labels of the last published files; a candidate build takes the plugin's version from the candidate itself.
+
+Version numbers that are floors, not the current version, stay as they are unless the requirement itself changes: "VJster 0.2.1 or later", "Fadester for OBS 0.11.0", "Visual Sidechain 0.6.0" and "Stream Deck 7.6" in `demo-kit/README.md` (the phrases `demo-kit/kit_docs.py` `README_MUSTS` requires there, so change both together), "Fadester for OBS 0.12.14 (or later) and VJster 0.2.1" in `demo-kit/TESTING.md`, "Midi Fadester 0.9.0 or newer" in the plugin's texts, and the tag in the example of `.github/workflows/suite-installer.yml`. The version numbers inside `tests/release-component-versions.test.ts` are a pretend history and never change.
+
+To see what a tag would say before pushing it: `node scripts/release-component-versions.mjs` (it needs the release tags, `git fetch --tags`, and it reads the last commit, so commit first; `node scripts/release-component-versions.mjs <commit>` checks another commit).

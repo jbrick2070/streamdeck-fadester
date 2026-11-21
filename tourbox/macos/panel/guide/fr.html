@@ -16,7 +16,7 @@
     </header>
 
     <h2>Première ouverture</h2>
-    <p>Déplacez <strong>Fadester Companion.app</strong> dans <strong>Applications</strong>. Apple n’a pas notarié l’app : la première fois, cliquez dessus en maintenant la touche Contrôle (ou avec le bouton droit), choisissez <strong>Ouvrir</strong>, puis de nouveau <strong>Ouvrir</strong>. Ou essayez de l’ouvrir une fois, puis cliquez sur <strong>Ouvrir quand même</strong> dans <strong>Réglages Système → Confidentialité et sécurité</strong>.</p>
+    <p>Déplacez <strong>Fadester Companion.app</strong> dans <strong>Applications</strong>. Apple n’a pas notarié l’app : macOS refuse donc de l’ouvrir la première fois. Essayez de l’ouvrir une fois, puis cliquez sur <strong>Ouvrir quand même</strong> dans <strong>Réglages Système → Confidentialité et sécurité</strong>. (Jusqu’à macOS 14, vous pouvez aussi cliquer sur l’app en maintenant la touche Contrôle et choisir <strong>Ouvrir</strong>.)</p>
 
     <h2>Connecter la TourBox à OBS</h2>
     <ol>
@@ -24,13 +24,13 @@
       <li>Dans Fadester Companion, cliquez sur <strong>1. Enregistrer le préréglage TourBox (.tb)…</strong> et enregistrez le préréglage dans votre langue dans un dossier visible, par exemple Téléchargements.</li>
       <li>Cliquez sur <strong>2. Ouvrir TourBox Console</strong> (ou sur <strong>Montrez-moi où cliquer</strong>). Dans TourBox Console, cliquez sur l’icône d’importation à côté de la liste des préréglages, ouvrez <code>OBS Fadester for TourBox.tb</code>, désactivez <strong>Auto Switch</strong> et sélectionnez <strong>OBS Fadester for TourBox</strong> : un seul préréglage fonctionne alors quelle que soit l’application au premier plan. Seulement si vous laissez Auto Switch activé, cliquez sur <strong>Not Linked</strong>, choisissez <strong>OBS</strong> et cliquez sur <strong>Save</strong> ; associez-le aussi à Google Chrome pour piloter les vidéos avec Chrome au premier plan. N’importez qu’une seule version linguistique, et jamais le fichier Windows.</li>
       <li>Cliquez sur <strong>Autoriser l’accessibilité pour Fadester Companion…</strong> et activez Fadester Companion dans <strong>Réglages Système → Confidentialité et sécurité → Accessibilité</strong>. Si <strong>Fadester Companion T-bar</strong> et <strong>Fadester Companion Shortcuts</strong> y figurent aussi, activez-les également. TourBox Console a sa propre autorisation.</li>
-      <li>Dans <strong>Affectations</strong>, choisissez vos scènes et l’entrée musicale. Cliquez sur <strong>Enregistrer et démarrer</strong> et attendez <strong>Commandes : actives</strong>. Gardez Fadester Companion ouvert.</li>
+      <li>Dans <strong>Affectations</strong>, choisissez vos scènes et l’entrée musicale. Les commandes démarrent d’elles-mêmes une fois l’Accessibilité accordée : attendez <strong>Commandes : actives</strong> (si le voyant indique qu’elles sont inactives, cliquez sur <strong>Démarrer</strong> à côté). Fermer la fenêtre n’arrête pas les commandes : l’app reste dans la barre des menus, en haut à droite.</li>
     </ol>
     <p>Le préréglage Mac utilise <strong>Contrôle + Option + Maj</strong> pour les actions OBS et <strong>Contrôle + Maj</strong> ou <strong>Option + Maj</strong> pour la vidéo et les calques ; jamais Commande.</p>
 
     <h2>Essayer avec deux scènes distinctes</h2>
     <ul>
-      <li>Tournez la molette <strong>Scroll</strong> pour changer la scène dans Aperçu sans modifier Programme. Appuyez dessus pour afficher les noms des deux scènes dans le panneau.</li>
+      <li>Tournez la molette <strong>Scroll</strong> pour changer la scène dans Aperçu sans modifier Programme. Appuyez dessus pour afficher les noms des deux scènes dans l’onglet <strong>Activité</strong>.</li>
       <li>Tournez doucement le <strong>Dial</strong> plat pour déplacer le curseur d’OBS et fondre les scènes. Pour annuler un fondu en cours, maintenez <strong>Side</strong> et appuyez sur <strong>Dial</strong>. Dans le sens horaire, le curseur va toujours vers l’aperçu, y compris pour le fondu suivant. Après un fondu complet, attendez un instant avant de tourner à nouveau.</li>
       <li>Lisez une vidéo YouTube dans Chrome (avec l’extension gratuite VJster). Tournez le <strong>Knob</strong> surélevé pour changer la vitesse ; appuyez et tournez pour des pas fins. Appuyez dessus pour lire ou mettre en pause la vidéo. Appuyez brièvement sur <strong>Side</strong> pour revenir à la vitesse 1x.</li>
       <li>Pour piloter une vidéo YouTube directement dans OBS, saisissez-la dans Configuration, cliquez sur <strong>Copier l’URL pour la source navigateur OBS</strong> et collez l’adresse dans une source navigateur d’OBS.</li>
@@ -39,10 +39,10 @@
     </ul>
 
     <h2>Régler tout le mixage</h2>
-    <p>Si les commandes sont actives, cliquez sur <strong>Arrêter les commandes</strong>. Dans <strong>Configuration</strong>, activez <strong>Piloter toutes les entrées du mixeur OBS</strong>, puis cliquez sur <strong>Enregistrer et démarrer</strong>. Maintenez <strong>Side</strong> et tournez <strong>Knob</strong> pour régler le groupe. Le menu <strong>Tour</strong> permet de baisser le mixage jusqu’au silence et de rétablir les niveaux précédents. Les entrées en sourdine le restent.</p>
+    <p>Si les commandes sont actives, cliquez sur <strong>Arrêter</strong>. Dans <strong>Configuration</strong>, activez <strong>Piloter toutes les entrées du mixeur OBS</strong>, puis cliquez sur <strong>Démarrer</strong>. Maintenez <strong>Side</strong> et tournez <strong>Knob</strong> pour régler le groupe. Le menu <strong>Tour</strong> permet de baisser le mixage jusqu’au silence et de rétablir les niveaux précédents. Les entrées en sourdine le restent.</p>
 
     <h2>Aide</h2>
-    <p>Les diagnostics du pont Fadester sont en anglais. Si une commande ne répond pas, vérifiez le préréglage actif dans TourBox Console et consultez l’onglet <strong>Activité</strong> de Fadester.</p>
+    <p>Les messages de diagnostic des commandes de Fadester sont en anglais. Si une commande ne répond pas, vérifiez le préréglage actif dans TourBox Console et consultez l’onglet <strong>Activité</strong> de Fadester.</p>
     <p>Le pilotage complet d’OBS avec une TourBox n’a pas encore été répété sur un Mac. Entraînez-vous avec des scènes de test avant le direct.</p>
     <p>Si macOS utilise une autre langue, quittez Fadester Companion et exécutez dans Terminal <code>open -a "Fadester Companion" --args --language fr</code>.</p>
     <p><a href="../START-HERE.html" hreflang="en">Guide complet et liste des commandes (en anglais)</a> · <a href="../START-HERE.html#recovery" hreflang="en">Dépannage (en anglais)</a></p>

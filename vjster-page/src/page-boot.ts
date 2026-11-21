@@ -14,6 +14,8 @@ import type { SettleTimers } from "./settle.js";
 export const API_URL = "https://www.youtube.com/iframe_api";
 /** Waits before trying YouTube's script again; the last one repeats. */
 export const SCRIPT_RETRY_MS = [2000, 4000, 8000, 16000, 30000] as const;
+/** How long the "standing by" note stays on the page (it is in the OBS output). */
+export const STANDBY_NOTE_MS = 15000;
 
 export interface PlayerOptions {
   width: string;
@@ -61,10 +63,32 @@ export function bootPage(env: BootEnv): ObsPage | null {
 
   let counter = 0;
   const prefix = Math.floor(env.random() * 36 ** 6).toString(36);
-  const page = new ObsPage({ params, openSocket: env.openSocket, timers: env.timers, newId: () => `o${prefix}-${++counter}`, random: env.random });
+  // Standing by (another page with this address holds the link): said on the page for a short while, since the page
+  // is the picture that goes on air. Back on the link, the note goes at once.
+  // Two notes can be due at once (standing by, and the player that did not load): the standing-by one is shown while
+  // it lasts, and when it goes the other is still there, not wiped with it.
+  let standbyNote: unknown = null;
+  let standbyText = "";
+  let playerText = "";
+  const draw = (): void => env.show(standbyText || playerText);
+  const onStandby = (standby: boolean): void => {
+    if (standbyNote !== null) env.timers.clearTimeout(standbyNote);
+    standbyNote = null;
+    standbyText = standby ? note(lang, "standby") : "";
+    draw();
+    if (standby) {
+      standbyNote = env.timers.setTimeout(() => {
+        standbyNote = null;
+        standbyText = "";
+        draw();
+      }, STANDBY_NOTE_MS);
+    }
+  };
+  const page = new ObsPage({ params, openSocket: env.openSocket, timers: env.timers, newId: () => `o${prefix}-${++counter}`, random: env.random, onStandby });
 
   env.onApiReady(() => {
-    env.show("");
+    playerText = "";
+    draw();
     let player: EmbedPlayer | null = null;
     player = env.createPlayer("player", {
       width: "100%",
@@ -80,7 +104,10 @@ export function bootPage(env: BootEnv): ObsPage | null {
         onError: () => page.playerError()
       }
     });
-    if (!player) env.show(note(lang, "playerMissing"));
+    if (!player) {
+      playerText = note(lang, "playerMissing");
+      draw();
+    }
   });
 
   let attempt = 0;
@@ -88,7 +115,8 @@ export function bootPage(env: BootEnv): ObsPage | null {
     env.addScript(API_URL, () => {
       const wait = SCRIPT_RETRY_MS[Math.min(attempt, SCRIPT_RETRY_MS.length - 1)];
       attempt++;
-      env.show(note(lang, "retry", { s: String(Math.round(wait / 1000)) }));
+      playerText = note(lang, "retry", { s: String(Math.round(wait / 1000)) });
+      draw();
       env.timers.setTimeout(load, wait);
     });
   load();

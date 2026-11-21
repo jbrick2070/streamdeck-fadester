@@ -18,34 +18,34 @@
     <h2>Niente TourBox? Usa un controller di gioco</h2>
     <ol>
       <li>Apri OBS. In <strong>Strumenti → Impostazioni del server WebSocket</strong>, abilita il server e lascia attiva l’autenticazione. Poi apri <strong>Fadester Companion</strong>: si connette da solo e, se non ci riesce, la sua finestra dice cosa fare. Il T-bar richiede OBS 33, con la finestra principale di OBS aperta e il T-bar visibile.</li>
-      <li>Nella scheda <strong>Configurazione</strong> seleziona <strong>Usa un controller Xbox o XInput</strong>, lascia attiva la <strong>Modalità facile</strong> e fai clic su <strong>Salva &amp; avvia controlli</strong>. Puoi saltare l’importazione del preset.</li>
+      <li>Nella scheda <strong>Configurazione</strong> seleziona <strong>Usa un controller Xbox o XInput</strong> e lascia attiva la <strong>Modalità facile</strong>. La prima volta i controlli partono da soli, ancora senza il controller: fai clic su <strong>Ferma</strong> e poi su <strong>Avvia</strong>, in basso a sinistra nella finestra, perché ripartano con il controller. Puoi saltare l’importazione del preset.</li>
       <li>In OBS attiva la <strong>Modalità studio</strong> e scegli <strong>Dissolvenza (Fade)</strong>. Premi giù sul D-pad per mettere in anteprima la scena successiva dell’elenco di OBS, su per quella precedente.</li>
       <li>Tira il grilletto destro: il T-bar di OBS lo segue e, tirato fino in fondo, passa al Programma. Oppure tieni premuto <strong>A</strong>: dopo 0,15 s il T-bar avanza finché lo tieni premuto e passa al Programma alla fine. Rilascialo per lasciarlo a metà; tieni di nuovo premuto A per continuare.</li>
       <li><strong>B</strong> taglia, <strong>View</strong> torna al Programma, il grilletto sinistro abbassa la musica finché lo tieni premuto e il D-pad a sinistra e a destra regola la musica. Cambia qualsiasi pulsante nella scheda <strong>Controller di gioco</strong>.</li>
     </ol>
-    <p>Tieni aperta questa finestra mentre lavori. Chiudendola, i controlli si fermano.</p>
+    <p>Chiudere questa finestra non ferma i controlli: Fadester Companion resta nell'area di notifica, accanto all'orologio. Per fermarli fai clic su Ferma, oppure fai clic con il tasto destro su quell'icona e scegli Esci da Fadester Companion.</p>
 
     <h2>Collega TourBox a OBS</h2>
     <ol>
       <li>Apri <strong>Fadester Companion</strong> dal menu Start. Se usi lo ZIP, estrailo per intero e avvia <strong>Fadester Companion.exe</strong>.</li>
       <li>Apri OBS. In TourBox Console, usa il comando di importazione accanto all’elenco dei preset per caricare <code>presets/it/OBS Fadester for TourBox.tb</code>. Disattiva il cambio automatico (<strong>Auto Switch</strong>) e seleziona <strong>OBS Fadester for TourBox</strong>: così un solo preset funziona qualunque applicazione sia in primo piano (OBS, Chrome o altre). Solo se lasci attivo Auto Switch, associa il preset a OBS e anche a Google Chrome per controllare i video con Chrome in primo piano. Importa una sola versione linguistica. Usa il pulsante <strong>Importa in TourBox Console</strong> di Fadester; non fare doppio clic sul file <code>.tb</code>.</li>
       <li>In OBS, apri <strong>Strumenti → Impostazioni del server WebSocket</strong> e abilita il server con l’autenticazione attiva. Per la dissolvenza manuale in OBS Studio <strong>33</strong>, attiva la <strong>Modalità studio</strong>, scegli <strong>Dissolvenza (Fade)</strong> e lascia visibile il cursore bianco tra Anteprima e Programma.</li>
-      <li>In Fadester, leggi le scene e gli ingressi da OBS. Se necessario, inserisci la porta e la password impostate in OBS. Seleziona <strong>OBS Fadester for TourBox</strong> in TourBox Console, poi salva e avvia i controlli in Fadester. Lascia Fadester aperto.</li>
+      <li>In Fadester, leggi le scene e gli ingressi da OBS. Se necessario, inserisci la porta e la password impostate in OBS. Seleziona <strong>OBS Fadester for TourBox</strong> in TourBox Console. I controlli partono da soli: se la spia <strong>Controlli</strong> in alto nella finestra è verde, il TourBox funziona; se non lo è, fai clic su <strong>Avvia</strong> lì accanto.</li>
     </ol>
     <p>Se la lingua di visualizzazione di Windows è diversa, chiudi Fadester ed esegui <code>&amp; '.\Fadester Companion.exe' --language it</code> in PowerShell dalla cartella estratta.</p>
 
     <h2>Fai una prova con due scene diverse</h2>
     <ul>
-      <li>Gira la rotella <strong>Scroll</strong> per cambiare la scena in Anteprima. La scena in Programma resta la stessa. Premi la rotella per vedere i nomi di entrambe le scene nel pannello.</li>
+      <li>Gira la rotella <strong>Scroll</strong> per cambiare la scena in Anteprima. La scena in Programma resta la stessa. Premi la rotella per vedere i nomi di entrambe le scene nella scheda <strong>Attività</strong>.</li>
       <li>Gira lentamente il <strong>Dial</strong> piatto per spostare il cursore di OBS e passare da una scena all’altra. Per annullare una dissolvenza in corso, tieni premuto <strong>Side</strong> e premi <strong>Dial</strong>. In senso orario il cursore va sempre verso l’anteprima, anche per la dissolvenza successiva. Dopo una dissolvenza completa, attendi un attimo prima di girare di nuovo.</li>
       <li>Riproduci un video YouTube in Chrome (con l’estensione gratuita VJster). Gira la manopola rialzata <strong>Knob</strong> per cambiare la velocità; premi e ruota per passi fini. Premila per avviare o mettere in pausa il video. Tocca <strong>Side</strong> per riportare la velocità a 1x.</li>
-      <li>VJster controlla YouTube solo in Chrome, non una sorgente browser con YouTube in OBS. Mostra il video in OBS con una cattura finestra di Chrome. Per il suono, aggiungi una cattura audio applicazione di Chrome.</li>
-      <li>Assegna un ingresso musicale nel pannello di Fadester. Tieni premuto <strong>Side</strong> e gira il <strong>Dial</strong> piatto per regolarne il volume. Con <strong>Top</strong> premuto, Knob, Scroll e Dial controllano i livelli VJ (metodo di fusione e opacità). I livelli non scelti si compilano da soli dalla scena in onda la prima volta che li usi (livello 1 = l’immagine visibile più in alto, livello 2 = quella successiva) e vengono salvati in <strong>Assegnazioni</strong>.</li>
+      <li>Per controllare un video YouTube direttamente in OBS, inseriscilo in Configurazione, fai clic su <strong>Copia URL per la sorgente browser di OBS</strong> e incolla l’indirizzo in una sorgente browser di OBS.</li>
+      <li>Assegna un ingresso musicale in Fadester Companion. Tieni premuto <strong>Side</strong> e gira il <strong>Dial</strong> piatto per regolarne il volume. Con <strong>Top</strong> premuto, Knob, Scroll e Dial controllano i livelli VJ (metodo di fusione e opacità). I livelli non scelti si compilano da soli dalla scena in onda la prima volta che li usi (livello 1 = l’immagine visibile più in alto, livello 2 = quella successiva) e vengono salvati in <strong>Assegnazioni</strong>.</li>
       <li>Un tocco su <strong>Short</strong> mostra solo lo stato della registrazione. <strong>Annulla mod. audio</strong> si trova nel menu <strong>Tour</strong>.</li>
     </ul>
 
     <h2>Regola tutto il mix</h2>
-    <p>Nella configurazione, abilita il controllo di tutti gli ingressi del mixer OBS, quindi salva e avvia i controlli. Tieni premuto <strong>Side</strong> e gira <strong>Knob</strong> per regolare il livello del gruppo. Dal menu <strong>Tour</strong> puoi sfumare il mix fino al silenzio o ripristinare i livelli precedenti. Gli ingressi silenziati restano tali.</p>
+    <p>Nella configurazione, abilita il controllo di tutti gli ingressi del mixer OBS, quindi fai clic su <strong>Ferma</strong> e poi su <strong>Avvia</strong>. Tieni premuto <strong>Side</strong> e gira <strong>Knob</strong> per regolare il livello del gruppo. Dal menu <strong>Tour</strong> puoi sfumare il mix fino al silenzio o ripristinare i livelli precedenti. Gli ingressi silenziati restano tali.</p>
 
     <h2>Assistenza</h2>
     <p>La diagnostica del processo in background è in inglese. Se un comando non risponde, controlla il preset attivo in TourBox Console e consulta il registro attività di Fadester.</p>

@@ -7,10 +7,14 @@
     <link rel="stylesheet" href="vjster.css" />
   </head>
   <body>
+    <!-- First: whether Chrome is linked, and where to get the extension when it is not. -->
+    <div id="status" class="status" data-i18n="checking">Checking...</div>
+    <button id="get-extension" type="button" hidden data-i18n="getExtension">Get the VJster extension for Chrome</button>
+
     <section id="fields"></section>
 
     <!-- One Language for all of VJster, kept by the plugin (docs/vjster/PLAN.md 9); the page only asks for a change. -->
-    <!-- The nine languages are named in their own words and never translated. -->
+    <!-- The thirteen languages are named in their own words and never translated. -->
     <section class="global">
       <h2><span data-i18n="languageHeading">Language</span> <span class="scope" data-i18n="languageBadge">all VJster controls</span></h2>
       <label class="row">
@@ -26,28 +30,18 @@
           <option value="zh_CN" lang="zh-CN">简体中文</option>
           <option value="zh_TW" lang="zh-TW">繁體中文</option>
           <option value="nl" lang="nl">Nederlands</option>
+          <option value="it" lang="it">Italiano</option>
+          <option value="pt_BR" lang="pt-BR">Português (Brasil)</option>
+          <option value="ru" lang="ru">Русский</option>
+          <option value="tr" lang="tr">Türkçe</option>
         </select>
       </label>
       <p class="note" data-i18n="languageNote">Applies to all VJster controls. Stream Deck's own menus, action list, tooltips and dial hints stay in Stream Deck's language. The OBS page and the Chrome extension keep their own language.</p>
     </section>
 
-    <section class="global">
-      <h2 data-i18n="linkTitle">VJster link</h2>
-      <div id="status" class="status" data-i18n="checking">Checking...</div>
-      <label class="row">
-        <span data-i18n="port">Port</span>
-        <input id="port" type="number" min="1024" max="65535" />
-      </label>
-      <label class="row">
-        <span data-i18n="onlyExtension">Only this extension</span>
-        <input id="ext" type="text" placeholder="any extension" data-i18n-placeholder="anyExtension" spellcheck="false" />
-      </label>
-      <p class="note" data-i18n="extensionNote">Leave empty to accept any Chrome extension, or paste the id the VJster extension shows in its options. Everything stays on this computer.</p>
-      <button id="save-global" type="button" data-i18n="saveLink">Save link settings</button>
-    </section>
-
-    <section class="global">
-      <h2 data-i18n="obsTitle">OBS page</h2>
+    <!-- Open by itself only when this control drives the OBS page (Control: OBS page or Both). -->
+    <details id="obs-section" class="global fold">
+      <summary data-i18n="obsTitle">OBS page</summary>
       <div id="obs-status" class="status" data-i18n="checking">Checking...</div>
       <label class="row">
         <span data-i18n="videoInput">YouTube link or id</span>
@@ -64,7 +58,26 @@
       </label>
       <p class="note" data-i18n="keepOnNote">OBS loads the page only when it starts or when the source is refreshed, so the link stays on while Stream Deck runs. This turns on by itself the first time an OBS page connects.</p>
       <p class="note" data-i18n="obsNote">In OBS, add a Browser source, untick Local file, and paste this address as its URL. Then set an action's Control to OBS page or Both. The address carries this computer's OBS page key: keep it out of screenshots and chat.</p>
-    </section>
+    </details>
+
+    <!-- Repair and safety settings almost nobody needs. -->
+    <details id="advanced" class="global fold">
+      <summary data-i18n="advanced">Advanced</summary>
+      <h2 data-i18n="linkTitle">VJster link</h2>
+      <label class="row">
+        <span data-i18n="port">Port</span>
+        <input id="port" type="number" min="1024" max="65535" />
+      </label>
+      <label class="row">
+        <span data-i18n="onlyExtension">Only this extension</span>
+        <input id="ext" type="text" placeholder="any extension" data-i18n-placeholder="anyExtension" spellcheck="false" />
+      </label>
+      <p class="note" data-i18n="extensionNote">Leave empty to accept any Chrome extension, or paste the id the VJster extension shows in its options. Everything stays on this computer.</p>
+      <button id="save-global" type="button" data-i18n="saveLink">Save link settings</button>
+    </details>
+
+    <!-- Every settings page shows the version of the plugin it belongs to. -->
+    <p id="version" class="note version"></p>
 
     <script src="i18n.js"></script>
     <script src="vjster.js"></script>

@@ -11,7 +11,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Fadester.TourBox {
-  internal enum PresetState { None, Current, Old }
+  /** Unknown: Console's presets could not be read (yet), or none were found to judge. None: Console holds presets, and none is an OBS Fadester preset. */
+  internal enum PresetState { Unknown, None, Current, Old }
 
   internal static class PresetAge {
     static readonly Regex Block = new Regex("<ShortDesc>(.*?)</ShortDesc>", RegexOptions.Singleline | RegexOptions.CultureInvariant);
@@ -35,12 +36,13 @@ namespace Fadester.TourBox {
     }
 
     /**
-     * None: no Fadester preset in Console. Old: one of them lacks a shortcut of the shipped preset, or (when Console kept
+     * Unknown: nothing to judge (our own preset unreadable, or no stored preset found: Console's folder is missing or in a
+     * format this does not know). None: Console holds presets and none is a Fadester preset. Old: one of them lacks a shortcut of the shipped preset, or (when Console kept
      * its import copy) its buttons are laid out differently: 0.12.11 swapped bare Side and Short without changing the set of
      * shortcuts (hand test 2026-11-17). layouts[i] is stored[i]'s button layout, or null when unknown.
      */
     internal static PresetState Judge(HashSet<string> shipped, IList<HashSet<string>> stored, string shippedLayout = null, IList<string> layouts = null) {
-      if (shipped == null || shipped.Count == 0) return PresetState.None;
+      if (shipped == null || shipped.Count == 0 || stored == null || stored.Count == 0) return PresetState.Unknown;
       bool any = false;
       for (int i = 0; i < stored.Count; i++) {
         var preset = stored[i];
@@ -113,6 +115,29 @@ namespace Fadester.TourBox {
     }
 
     /**
+     * What Console's files looked like when they were last read: each stored preset, its import copy, customConfig and
+     * tableid by name, size and time of last change. While it is the same, nothing needs reading again (the panel used
+     * to read and pattern-match every preset every 5 s for the whole show). Null when the listing itself fails.
+     */
+    internal static string Stamp() {
+      string root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TourBox Console");
+      var parts = new List<string>();
+      try {
+        foreach (string dir in new[] { Path.Combine(root, "presets"), Path.Combine(root, "import") }) {
+          var info = new DirectoryInfo(dir);
+          if (!info.Exists) { parts.Add(dir + ":none"); continue; }
+          foreach (var file in info.GetFiles().OrderBy(f => f.Name, StringComparer.Ordinal))
+            parts.Add(file.FullName + ":" + file.Length + ":" + file.LastWriteTimeUtc.Ticks);
+        }
+        foreach (string name in new[] { "customConfig", "tableid" }) {
+          var file = new FileInfo(Path.Combine(root, name));
+          parts.Add(name + ":" + (file.Exists ? file.Length + ":" + file.LastWriteTimeUtc.Ticks : "none"));
+        }
+      } catch (IOException) { return null; } catch (UnauthorizedAccessException) { return null; } catch (System.Security.SecurityException) { return null; }
+      return string.Join("|", parts);
+    }
+
+    /**
      * TourBox Console's Auto Switch (its customConfig entry switchByProcess): true, false, or null when Console's settings
      * cannot be read. Off, one selected preset serves every application in front (hand test 2026-11-17).
      */
@@ -150,7 +175,8 @@ namespace Fadester.TourBox {
       if (shipped.Count != 20 || !shipped.Contains("14:7")) throw new InvalidOperationException("Preset shortcuts parse");
       if (Judge(shipped, new[] { factory }) != PresetState.None || Judge(shipped, new[] { factory, current }) != PresetState.Current ||
           Judge(shipped, new[] { old }) != PresetState.Old || Judge(shipped, new[] { current, old }) != PresetState.Old ||
-          Judge(new HashSet<string>(), new[] { old }) != PresetState.None)
+          Judge(new HashSet<string>(), new[] { old }) != PresetState.Unknown || Judge(shipped, new HashSet<string>[0]) != PresetState.Unknown ||
+          Judge(null, new[] { current }) != PresetState.Unknown)
         throw new InvalidOperationException("Preset age decision");
       if (ParseAutoSwitch("<map><entry><string>switchByProcess</string>\n    <string>false</string></entry></map>") != false ||
           ParseAutoSwitch("<entry><string>switchByProcess</string><string>true</string></entry>") != true || ParseAutoSwitch("<map/>") != null ||

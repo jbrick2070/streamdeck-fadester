@@ -24,7 +24,7 @@ internal static class MixSelfTests
         var video = new Source("Visual", 1, 1);
         var composite = new Source("Nested", 2 | 64, 1);
         var all = new ConcurrentDictionary<Guid, Source>(new[] { a, b, zero, video, composite }.ToDictionary(x => x.Id));
-        int reads = 0, writes = 0, musicWrites = 0; bool failAfterSet = false; string collection = "Disposable";
+        int reads = 0, writes = 0, musicWrites = 0; bool failAfterSet = false; string collection = "Disposable"; string? spoilOnFail = null;
         var appeared = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var late = new Source("New capture", 2, 0.32);
         MixDesk? desk = null;
@@ -51,7 +51,12 @@ internal static class MixSelfTests
                         {
                             src.Level = arg["inputVolumeMul"]!.GetValue<double>(); writes++; if (src == a) musicWrites++; desk?.OnVolume(src.Id, src.Level);
                             if (src == late && src.Level == 0) appeared.TrySetResult();
-                            if (failAfterSet) { failAfterSet = false; throw new IOException("simulated lost setter reply"); }
+                            if (failAfterSet)
+                            {
+                                failAfterSet = false;
+                                if (spoilOnFail is { } file) { spoilOnFail = null; File.WriteAllText(file, "{ not a journal"); }
+                                throw new IOException("simulated lost setter reply");
+                            }
                         }
                         break;
                     }
@@ -156,6 +161,18 @@ internal static class MixSelfTests
             Check((await desk.Status())["recovering"]!.GetValue<bool>(), "a cut-off fade is recoverable after restart");
             await desk.Set(0, 0);
             Check(a.Level == .75 && late.Level == .32 && !Directory.EnumerateFiles(directory, "*.json").Any(f => f == journalFile), "recovered from a cut-off fade to the original levels");
+
+            // A journal that cannot be read at the moment of a mixer error (a scanner holds it, or it is damaged) must not
+            // replace that error or stop the mixer: the first error is the one reported and the levels in memory stand.
+            await desk.Set(-6, 0);
+            byte[] good = File.ReadAllBytes(journalFile);
+            failAfterSet = true; spoilOnFail = journalFile;
+            try { await desk.Set(-12, 0); throw new Exception("loss not detected"); }
+            catch (IOException e) { Check(e.Message == "simulated lost setter reply", "the mixer's own error is reported, not the journal's"); }
+            Check(((string?)(await desk.Status())["error"])?.Contains("journal could not be read") == true, "an unreadable journal is named in the mixer's status");
+            File.WriteAllBytes(journalFile, good);
+            await desk.Set(0, 0);
+            Check(a.Level == .75 && late.Level == .32, "after an unreadable journal the original levels still come back");
 
             var deskActions = new DeskActions(cfg, Rpc);
             string persistedId1 = BridgeConfig.ResolveProviderId(cfg.MixStateDirectory);

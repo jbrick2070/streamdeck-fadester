@@ -297,7 +297,7 @@ private final class PillActionButton: NSControl {
     private var vjsterPort = NSTextField(string: "48150"), vjsterExtensionId = NSTextField(string: ""), vjsterVideo = NSTextField(string: "")
     private var vjsterTarget = NSPopUpButton(frame: .zero, pullsDown: false)
     private var fields: [String: NSTextField] = [:], choices: [String: NSPopUpButton] = [:]
-    private var scanButton: NSButton!, primaryButton: NSButton!, saveButton: NSButton!, copyObsUrlButton: NSButton!, firstFourButton: NSButton!, savePresetStepButton: NSButton!, openConsoleStepButton: NSButton!, grantAxButton: NSButton!
+    private var scanButton: NSButton!, primaryButton: NSButton!, saveButton: NSButton!, copyObsUrlButton: NSButton!, firstFourButton: NSButton!, savePresetStepButton: NSButton!, grantAxButton: NSButton!
     private var axStatusLabel = NSTextField(wrappingLabelWithString: "")
     private var activity = NSTextView()
     private var mapRows: [ControlMapRow] = []
@@ -724,14 +724,15 @@ private final class PillActionButton: NSControl {
 
         heading(L("macControllerTitle"), in: stack)
         subheading(L("macPresetTitle"), in: stack)
-        savePresetStepButton = button(L("macSavePreset"), #selector(saveAndGuidePreset))
+        // One button, named as on Windows (U3-23): it saves the preset to Downloads without a question, copies its
+        // path, opens TourBox Console and shows where to click there.
+        savePresetStepButton = button(L("openPreset"), #selector(saveAndGuidePreset))
         savePresetStepButton.bezelStyle = .rounded
         savePresetStepButton.bezelColor = accentColor
-        openConsoleStepButton = button(L("macOpenConsoleStep"), #selector(openOrDownloadConsole))
         let showGuideBtn = button(L("btnShowWhere"), #selector(showImportGuide))
-        stack.addArrangedSubview(horizontal([savePresetStepButton, openConsoleStepButton, showGuideBtn]))
+        stack.addArrangedSubview(horizontal([savePresetStepButton, showGuideBtn]))
         if LocalFiles.presetSyncState(bundledHash: bundledPresetHash, savedHash: savedPresetHash) == .updateAvailable {
-            importNote.stringValue = L("macPresetUpdated")
+            importNote.stringValue = L("macPresetUpdated", L("openPreset"))
             importNote.isHidden = false
         } else {
             importNote.isHidden = true
@@ -741,8 +742,7 @@ private final class PillActionButton: NSControl {
         stack.addArrangedSubview(importNote)
         importNote.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         let presetPart = fold("tourbox", in: stack)
-        paragraph(L("macPresetSteps"), in: presetPart.content)
-        paragraph(L("importAutoHint"), in: presetPart.content)
+        paragraph(L("macImportSteps", L("macDownloads")), in: presetPart.content)
         let downloadConsoleBtn = button(L("macDownloadConsole"), #selector(downloadTourBoxConsole))
         let presetSquareBtn = button(L("macPresetSquare"), #selector(openPresetSquare))
         presetPart.content.addArrangedSubview(horizontal([label(L("macTourBoxInfo"), small: true), downloadConsoleBtn, presetSquareBtn]))
@@ -1074,8 +1074,6 @@ private final class PillActionButton: NSControl {
         // The port and password are needed when OBS runs and refuses the sign-in or does not answer; VJster's fields when its light is amber or red.
         call(obsFold, needed: Readiness.needsObsFields(connected: obsConnected, running: obsRunning, problem: obsProblem))
         call(vjFold, needed: vjState.lamp == .amber || vjState.lamp == .red)
-        savePresetStepButton?.title = syncState == .updateAvailable ? L("macSavePresetUpdated") : L("macSavePreset")
-        openConsoleStepButton?.title = consoleReady ? L("macOpenConsoleStep") : L("macDownloadConsoleStep")
         grantAxButton?.bezelColor = axTrusted ? nil : accentColor
         axStatusLabel.stringValue = axTrusted ? L("macAxGranted") : L("macAxNeeded")
         axStatusLabel.textColor = axTrusted ? grantedColor : reminderFgColor
@@ -1617,41 +1615,51 @@ private final class PillActionButton: NSControl {
         note(L("macPresetSquareOpened") + " https://www.tourboxtech.com/en/presets/")
     }
 
-    @objc private func openOrDownloadConsole() {
-        guard !previewMode else { return }
-        if lastSavedPreset == nil && savedPresetHash == nil {
-            importNote.stringValue = L("macNeedPreset")
-            importNote.isHidden = false
-        }
-        if tourboxConsoleInstalled || tourboxConsoleRunning {
-            openTourBoxConsole()
-        } else {
-            downloadTourBoxConsole()
-        }
+    /// The preset is saved: remember it, copy its path for TourBox Console's file window (Command-Shift-G, Command-V,
+    /// Return) and say where it is and what to press.
+    private func presetSaved(_ presetBytes: Data, at url: URL) {
+        let hash = LocalFiles.sha256Hex(presetBytes)
+        bundledPresetHash = hash
+        savedPresetHash = hash
+        try? LocalFiles.recordPresetSaved(bundledHash: hash)
+        lastSavedPreset = url
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(url.path, forType: .string)
+        let folder = url.deletingLastPathComponent().lastPathComponent
+        importNote.stringValue = L("macPresetInDownloads", url.path)
+        importNote.isHidden = false
+        setStatus(L("macPresetSavedStatus", folder))
+        note(L("macPresetInDownloads", url.path))
+        refreshIndicators()
     }
 
+    /// The Mac preset goes to Downloads without a question (U3-23), replacing an older copy there. macOS may ask once
+    /// whether Fadester Companion may use the Downloads folder; when the answer is no, or the folder cannot be written
+    /// for another reason, the save dialog is the fallback.
+    private func savePresetToDownloads() -> URL? {
+        guard !previewMode else { return nil }
+        do {
+            let presetBytes = try Data(contentsOf: paths.localizedPreset)
+            guard let downloads = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first else { return savePresetDialog() }
+            let url = try LocalFiles.savePreset(presetBytes, in: downloads)
+            presetSaved(presetBytes, at: url)
+            return url
+        } catch {
+            return savePresetDialog()
+        }
+    }
 
     private func savePresetDialog() -> URL? {
         guard !previewMode else { return nil }
         let save = NSSavePanel()
-        save.nameFieldStringValue = "OBS Fadester for TourBox.tb"
+        save.nameFieldStringValue = LocalFiles.presetFileName
         save.title = L("macSaveDialogTitle")
         save.message = L("macSaveDialogMessage")
         guard save.runModal() == .OK, let url = save.url else { return nil }
         do {
             let presetBytes = try Data(contentsOf: paths.localizedPreset)
             try presetBytes.write(to: url, options: .atomic)
-            let hash = LocalFiles.sha256Hex(presetBytes)
-            bundledPresetHash = hash
-            savedPresetHash = hash
-            try? LocalFiles.recordPresetSaved(bundledHash: hash)
-            lastSavedPreset = url
-            let folder = url.deletingLastPathComponent().lastPathComponent
-            importNote.stringValue = L("macPresetSaved", url.path)
-            importNote.isHidden = false
-            setStatus(L("macPresetSavedStatus", folder))
-            note(L("macPresetSaved", url.path))
-            refreshIndicators()
+            presetSaved(presetBytes, at: url)
             return url
         } catch {
             failure(error)
@@ -1659,10 +1667,11 @@ private final class PillActionButton: NSControl {
         }
     }
 
+    /// Import into TourBox Console: save to Downloads, open Console when it is installed, and show where to click.
     @objc private func saveAndGuidePreset() {
-        if savePresetDialog() != nil {
-            showImportGuide()
-        }
+        guard savePresetToDownloads() != nil else { return }
+        if tourboxConsoleInstalled || tourboxConsoleRunning { openTourBoxConsole() }
+        showImportGuide()
     }
 
     @objc private func showImportGuide() {
@@ -1676,7 +1685,8 @@ private final class PillActionButton: NSControl {
         let guide = TourBoxImportWindow(
             savedPreset: lastSavedPreset,
             consoleInstalled: consoleReady,
-            onSavePreset: { [weak self] in self?.savePresetDialog() },
+            // The first save goes to Downloads; "Save Another Copy…" asks where.
+            onSavePreset: { [weak self] in self?.lastSavedPreset == nil ? self?.savePresetToDownloads() : self?.savePresetDialog() },
             onOpenConsole: { [weak self] in self?.openTourBoxConsole() },
             onDownloadConsole: { [weak self] in self?.downloadTourBoxConsole() }
         )

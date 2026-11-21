@@ -166,6 +166,30 @@ enum LocalFiles {
     static let support = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/FadesterTourBox", isDirectory: true)
     static let settings = support.appendingPathComponent("panel-config.json")
     static let presetStamp = support.appendingPathComponent("saved-preset.sha256")
+    /// The name TourBox Console's file window shows for the preset.
+    static let presetFileName = "OBS Fadester for TourBox.tb"
+    /// Writes the preset into a folder under its own name, replacing an older copy, and returns where it is.
+    static func savePreset(_ bytes: Data, in folder: URL) throws -> URL {
+        let url = folder.appendingPathComponent(presetFileName)
+        try bytes.write(to: url, options: .atomic)
+        return url
+    }
+    /// Offline check of savePreset in a folder of its own under the temporary folder.
+    static func presetSaveSelfTest() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("fadester-preset-test-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let first = try savePreset(Data("one".utf8), in: folder)
+        let second = try savePreset(Data("two".utf8), in: folder)
+        guard first == second, first.lastPathComponent == presetFileName, try Data(contentsOf: second) == Data("two".utf8),
+              try FileManager.default.contentsOfDirectory(atPath: folder.path) == [presetFileName] else {
+            throw PanelFailure.message("Self-test: the preset is saved once, under its own name, and a newer save replaces it")
+        }
+        do {
+            _ = try savePreset(Data("x".utf8), in: folder.appendingPathComponent("missing"))
+            throw PanelFailure.message("Self-test: a folder that cannot be written must fail, so the save dialog can take over")
+        } catch PanelFailure.message(let text) { throw PanelFailure.message(text) } catch { }
+    }
     static func sha256Hex(_ data: Data) -> String {
         SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }

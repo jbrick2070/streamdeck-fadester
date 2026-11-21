@@ -46,7 +46,7 @@ Sources: `tourbox/panel/FadesterTourBox.cs` and `ShowMe.cs` (Windows), `tourbox/
 | --- | --- | --- | --- |
 | 1 Connect to OBS | Port and password filled in from OBS (a typed port is kept), Read scenes and inputs, Program/Preview summary, Visual Sidechain meter line | Same | Same |
 | Setup diagram | None | Clickable setup diagram | **Gap** on Windows |
-| 2 Controller | "Choose your controller": game controller (Easy mode) and TourBox: **Import into TourBox Console** copies the preset path, opens Console and opens the **Show me where to click** guide (also its own button) | "Set up your TourBox": save the `.tb`, open Console, **Show me where to click**, **Download TourBox Console…**, **TourBox Preset Square…** | Same guide. **Intentional**: the game controller is Windows only, and the Mac saves the `.tb` with a save dialog. **Gap**: the two download links are Mac only |
+| 2 Controller | "Choose your controller": game controller (Easy mode) and TourBox: **Import into TourBox Console** copies the preset path, opens Console and opens the **Show me where to click** guide (also its own button) | "Set up your TourBox": **Import into TourBox Console** saves the `.tb` to Downloads without a save window, copies its path, opens Console and opens the **Show me where to click** guide (also its own button); under **Details**, **Download TourBox Console…** and **TourBox Preset Square…** | Same button and guide. **Intentional**: the game controller is Windows only; the Mac's `.tb` is inside the app, so it is first saved to Downloads (the save window is the fallback when Downloads cannot be written). **Gap**: the two download links are Mac only |
 | macOS Accessibility | Not applicable | Grant Accessibility, native helper window, status | **Intentional** (macOS permission) |
 | 3 Try Preview | Present | Present | Same |
 | Assign your inputs | One sentence under step 3 with an **Assignments** button | Same | Same |
@@ -83,7 +83,7 @@ These match on both systems:
 | OBS WebSocket server, password | Animation with OBS's labels in the panel's language | Same |
 | Studio Mode | No window: the OBS light's **Turn on** button asks OBS | Same |
 | VJster waiting for video, VJster port in use | Two-way card (Chrome or OBS page; quit Stream Deck or pick another port) | Same words |
-| TourBox import | Animation: Import, paste the copied path, open, then select the preset (Auto Switch off) | Animation: Import, pick the file in the Finder dialog, open, then select the preset (Auto Switch off), with step buttons |
+| TourBox import | Animation: Import, paste the copied path, open, then select the preset (Auto Switch off) | Animation: Import, pick the file in the Finder dialog, open, then select the preset (Auto Switch off), with step buttons; once the preset is saved, a line under it gives the quicker way (⌘⇧G, ⌘V, Return: the path is copied). Whether TourBox Console's file window takes ⌘⇧G was not checked on a Mac with Console |
 
 TourBox Console's own labels (Preset List, Import, Auto Switch) stay in English in both animations and texts, as Console shows them.
 

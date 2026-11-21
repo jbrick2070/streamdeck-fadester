@@ -581,6 +581,8 @@ private final class SheetBackground: NSView {
     private var closeWatch: NSObjectProtocol?
     private let whyLabel = NSTextField(wrappingLabelWithString: "")
     private let stepsSummary = NSTextField(wrappingLabelWithString: "")
+    /// Shown once the preset is saved and its path copied: the keys that skip the search in Console's file window.
+    private let pathTip = NSTextField(wrappingLabelWithString: L("macGoToFolderTip"))
     private var stepButtons: [NSButton] = []
     private var saveBtn: NSButton!
     private var openBtn: NSButton!
@@ -663,6 +665,10 @@ private final class SheetBackground: NSView {
         stepsSummary.font = .systemFont(ofSize: 12, weight: .medium)
         stack.addArrangedSubview(stepsSummary)
         stepsSummary.widthAnchor.constraint(equalToConstant: 540).isActive = true
+        pathTip.font = .systemFont(ofSize: 12)
+        pathTip.textColor = .secondaryLabelColor
+        stack.addArrangedSubview(pathTip)
+        pathTip.widthAnchor.constraint(equalToConstant: 540).isActive = true
 
         saveBtn = NSButton(title: L("macSavePresetShort"), target: self, action: #selector(saveTapped))
         saveBtn.bezelStyle = .rounded
@@ -710,6 +716,7 @@ private final class SheetBackground: NSView {
         }
         openBtn.title = consoleInstalled ? L("macOpenConsoleStep") : L("macDownloadConsoleStep")
         stepsSummary.stringValue = L("macImportSteps", folder)
+        pathTip.isHidden = savedPreset == nil
     }
 
     @objc private func selectStep(_ sender: NSButton) {

@@ -28,10 +28,6 @@
   </div>
   <p id="obs-fader-tbar-hint" class="muted" style="display:none;">Turn to fade Preview into Program. Needs Studio Mode.</p>
   <p id="obs-fader-slider-status" class="muted" style="display:none;"></p>
-  <div id="obs-fader-cycle-row" style="display:none;">
-    <div class="row"><label for="obs-fader-cycle" data-i18n="sceneLoop">Scene loop</label><input id="obs-fader-cycle" type="checkbox" /><span class="hint" data-i18n="sceneLoopHint">Queue the next scene after each transition</span></div>
-    <p class="muted" data-i18n="sceneLoopNote">After your fade finishes, the following scene in the OBS scene list becomes Preview. Wraps to the first scene at the end. You still control every fade with the dial.</p>
-  </div>
   <div class="row"><label for="obs-fader-press" data-i18n="dialPress">Dial press</label><select id="obs-fader-press">
     <option value="finish_transition" data-i18n="pressFinish">Preview to Program</option>
     <option value="next_blend" data-i18n="pressNextBlend">Next blend mode on selected source</option>
@@ -46,6 +42,10 @@
     <p class="muted" id="obs-fader-press-hint">This source selection is shared with Source &amp; Layer controls on the deck.</p>
   </div>
   <details id="obs-fader-advanced" class="fold"><summary data-i18n="foldAdvanced">Advanced</summary>
+  <div id="obs-fader-cycle-row" style="display:none;">
+    <div class="row"><label for="obs-fader-cycle" data-i18n="sceneLoop">Scene loop</label><input id="obs-fader-cycle" type="checkbox" /><span class="hint" data-i18n="sceneLoopHint">Queue the next scene after each transition</span></div>
+    <p class="muted" data-i18n="sceneLoopNote">After your fade finishes, the following scene in the OBS scene list becomes Preview. Wraps to the first scene at the end. You still control every fade with the dial.</p>
+  </div>
   <div class="row" id="obs-fader-step-row">
     <label for="obs-fader-step" data-i18n="stepPerTick">Step per tick</label>
     <select id="obs-fader-step">
@@ -145,9 +145,11 @@
         if (row) row.style.display = selectedTarget === "all_inputs" ? "none" : "";
       });
       if (tbarHint) tbarHint.style.display = selectedTarget === "tbar" ? "" : "none";
-      // Step and acceleration are folded away while they are at their defaults; the whole mix has neither.
+      // Step, acceleration and the T-bar's scene loop are folded away while they are at their defaults (U2-07); a fold
+      // that holds a setting in use opens by itself. The whole mix has none of them.
       if (window.directObsFold) window.directObsFold("obs-fader-advanced",
-        (settings.stepPerTick !== undefined && Number(settings.stepPerTick) !== 0.02) || settings.acceleration === false,
+        (settings.stepPerTick !== undefined && Number(settings.stepPerTick) !== 0.02) || settings.acceleration === false
+          || (selectedTarget === "tbar" && settings.autoQueueNextScene === true),
         selectedTarget !== "all_inputs");
       const sliderStatus = document.getElementById("obs-fader-slider-status");
       const sliderKeys = {

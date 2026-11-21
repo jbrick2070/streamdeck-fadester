@@ -213,7 +213,7 @@ ${master}
 <dt>Preview moves but the Dial will not mix</dt><dd>Check for two distinct scenes, Studio Mode and a Fade among OBS's scene transitions; the Dial mixes with it even while Cut is selected. Clear a conflicting Preview scene transition override. Keep the main OBS window open with the T-bar visible. If someone moved the handle, finish or cancel that gesture in OBS, check both scenes, then hold Side and press Dial to reset.</dd>
 <dt>A meter, overlay or clip does not respond</dt><dd>Read scenes and inputs again after renaming a source. Check the role under Assignments and click Save. <b>Undo last audio change</b> in the Tour menu undoes the last supported audio adjustment. Observe the actual mixer if a restore was interrupted.</dd>
 <dt>No actions arrive</dt><dd>Open Activity. Check the OBS server, port and password, start one listener, and clear any shortcut conflict it identifies. Focus OBS and press Scroll for a read-only scene check.</dd></dl>
-<p class="note">Full-size desktop TourBox with three pushable rotaries, Side, Tour, C1/C2 and D-pad. This control reference uses the same map as the shipped preset and the <b>Control map</b> tab. <a href="presets/map.json">Open the bundled shortcut map</a>.</p></section>
+<p class="note">Full-size desktop TourBox with three pushable rotaries, Side, Tour, C1/C2 and D-pad. This control reference uses the same map as the shipped preset and the <b>Control map</b> tab.</p></section>
 <footer><p>Fadester Companion${guideVersion} · Community project by Jeffrey Brick · Offline quick guide</p></footer></main></body></html>`;
 
 const outputPath = process.argv[2] || path.join(__dirname, 'dist', 'START-HERE.html');

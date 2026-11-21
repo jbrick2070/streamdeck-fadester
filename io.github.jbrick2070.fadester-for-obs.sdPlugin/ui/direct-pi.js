@@ -9,6 +9,8 @@
   let passwordDirty = false;
   let bindControls = null;
   let layoutBusy = false;
+  // The operator chose in the layout list (also "Choose a ready-made layout"): the page stops suggesting one.
+  let layoutPicked = false;
   // What the last layout or Studio request was ("layout" or "studio"): its result says what was done.
   let setupAction = "layout";
   // The layout or Studio request now out: its id (only its own answer ends it), and the timer that ends the wait when
@@ -264,7 +266,7 @@
       }
     };
     const layoutPicker = $("direct-layout");
-    if (layoutPicker) layoutPicker.onchange = updateLayoutButton;
+    if (layoutPicker) layoutPicker.onchange = function () { layoutPicked = true; updateLayoutButton(); };
     const prepareStudio = $("direct-studio-prepare");
     if (prepareStudio) prepareStudio.onclick = function () {
       if (layoutBusy) return;
@@ -521,6 +523,20 @@
     if (fold && neededFails) fold.open = true;
   }
 
+  /**
+   * The ready-made layout to offer first: the Scene Desk for OBS's mode (Studio Mode on, or off), else a layout that
+   * works in either mode, else the first. studioMode is null while OBS is not connected: the regular Scene Desk then,
+   * which needs nothing from OBS to open.
+   */
+  function suggestedLayout(layouts, studioMode) {
+    if (!layouts || layouts.length === 0) return null;
+    const mode = studioMode ? "studio" : "regular";
+    const sceneDesk = function (layout) { return /(^|-)scene-(desk|regular)$/.test(layout.slug); };
+    return layouts.find(function (layout) { return layout.obsMode === mode && sceneDesk(layout); })
+      || layouts.find(function (layout) { return layout.obsMode === "either"; })
+      || layouts[0];
+  }
+
   /** Whether a ready-made layout was already offered and looked at on this computer. */
   function layoutHintSeen() {
     return recall(LAYOUT_HINT_KEY) === "1";
@@ -601,9 +617,13 @@
       topLayouts.textContent = T("layoutTopHint");
       topLayouts.style.display = offer ? "" : "none";
     }
+    // The layout that fits OBS as it is now comes first and is already chosen (U2-04): the Scene Desk for OBS's mode,
+    // Studio or regular. A choice the operator made stays; the other layouts follow in their own order.
     const picker = $("direct-layout");
-    const selected = picker && picker.value || "";
-    fillSelect(picker, layouts.map(function (layout) { return { value: layout.slug, text: layout.name }; }), selected, T("layoutChoose"));
+    const suggested = suggestedLayout(layouts, state.catalog ? state.catalog.studioMode === true : null);
+    const ordered = suggested ? [suggested].concat(layouts.filter(function (layout) { return layout !== suggested; })) : layouts;
+    const selected = picker && picker.value || (!layoutPicked && suggested ? suggested.slug : "");
+    fillSelect(picker, ordered.map(function (layout) { return { value: layout.slug, text: layout.name }; }), selected, T("layoutChoose"));
     updateLayoutButton();
     updateStudioSetup();
     updateSetupChecklist(state);

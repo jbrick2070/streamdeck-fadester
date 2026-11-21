@@ -424,6 +424,72 @@ describe("the shared sections say what happened", () => {
     expect(hint.style.display).toBe("none");
   });
 
+  it("offers first, already chosen, the Scene Desk that fits OBS's mode, and keeps the operator's own choice (U2-04)", () => {
+    const sourceDesk = { slug: "plus-source-desk", name: "[Either Mode] Source Desk +", obsMode: "either" };
+    const all = [sourceDesk, studioLayout, regularLayout];
+    const options = (h: ReturnType<typeof openPage>) => h.byId("direct-layout").children.map((option) => option.value);
+    // Studio Mode off: the regular Scene Desk, with the button ready.
+    const h = openPage("obs-fade-key.html");
+    h.receive(state({ choice: "auto", resolved: "en" }, { layouts: all }));
+    expect(options(h)).toEqual(["", regularLayout.slug, sourceDesk.slug, studioLayout.slug]);
+    expect(h.byId("direct-layout").value).toBe(regularLayout.slug);
+    expect(h.byId("direct-layout-open").disabled).toBe(false);
+    expect(h.byId("direct-layout-open").textContent).toBe(en.layoutOpen);
+    // Studio Mode is turned on in OBS while the page is open: a list that already shows a layout keeps it, so nothing
+    // changes under the pointer.
+    h.receive(state({ choice: "auto", resolved: "en" }, { layouts: all, catalog: { inputVolumes: {}, studioMode: true } }));
+    expect(h.byId("direct-layout").value).toBe(regularLayout.slug);
+    // A page opened with Studio Mode on starts on the Studio Scene Desk.
+    const studio = openPage("obs-fade-key.html");
+    studio.receive(state({ choice: "auto", resolved: "en" }, { layouts: all, catalog: { inputVolumes: {}, studioMode: true } }));
+    expect(options(studio)).toEqual(["", studioLayout.slug, sourceDesk.slug, regularLayout.slug]);
+    expect(studio.byId("direct-layout").value).toBe(studioLayout.slug);
+    expect(studio.byId("direct-layout-open").textContent).toBe(en.layoutOpenPrepare);
+    // Not connected: the regular one, which opens without OBS.
+    const off = openPage("obs-fade-key.html");
+    off.receive(state({ choice: "auto", resolved: "en" }, { ...offline, layouts: all }));
+    expect(off.byId("direct-layout").value).toBe(regularLayout.slug);
+    expect(off.byId("direct-layout-open").disabled).toBe(false);
+    // A deck with no Scene Desk (the Mini): its either-mode layout.
+    const mini = openPage("obs-fade-key.html");
+    mini.receive(state({ choice: "auto", resolved: "en" }, { layouts: [{ slug: "mini-source-desk", name: "[Either Mode] Source Desk Mini", obsMode: "either" }] }));
+    expect(mini.byId("direct-layout").value).toBe("mini-source-desk");
+    // The operator picks "Choose a ready-made layout" again: the page does not put its suggestion back.
+    const picker = h.byId("direct-layout");
+    picker.value = "";
+    picker.onchange?.();
+    h.receive(state({ choice: "auto", resolved: "en" }, { layouts: all }));
+    expect(picker.value).toBe("");
+    expect(h.byId("direct-layout-open").disabled).toBe(true);
+    // No layout for this deck model: nothing is chosen and the page says so.
+    const none = openPage("obs-fade-key.html");
+    none.receive(state({ choice: "auto", resolved: "en" }, { layouts: [] }));
+    expect(none.byId("direct-layout").value).toBe("");
+    expect(none.byId("direct-layouts-none").style.display).toBe("");
+  });
+
+  it("the T-bar's Scene loop sits under Advanced, which opens by itself when the loop is on (U2-07)", () => {
+    const inFold = (h: ReturnType<typeof openPage>) => {
+      let node: MiniElement | undefined = h.byId("obs-fader-cycle-row").parent;
+      while (node && node.id !== "obs-fader-advanced") node = node.parent;
+      return node !== undefined;
+    };
+    const plain = openPage("obs-fader-dial.html", { settings: { target: "tbar" } });
+    plain.receive(state({ choice: "auto", resolved: "en" }));
+    expect(inFold(plain)).toBe(true);
+    expect(plain.byId("obs-fader-cycle-row").style.display).toBe("");
+    expect(plain.byId("obs-fader-advanced").open).toBe(false);
+    const looping = openPage("obs-fader-dial.html", { settings: { target: "tbar", autoQueueNextScene: true } });
+    looping.receive(state({ choice: "auto", resolved: "en" }));
+    expect(looping.byId("obs-fader-advanced").open).toBe(true);
+    expect(looping.byId("obs-fader-cycle").checked).toBe(true);
+    // An audio dial has no scene loop: a leftover setting does not open the fold, and the row stays away.
+    const audio = openPage("obs-fader-dial.html", { settings: { target: "input_volume", autoQueueNextScene: true } });
+    audio.receive(state({ choice: "auto", resolved: "en" }));
+    expect(audio.byId("obs-fader-advanced").open).toBe(false);
+    expect(audio.byId("obs-fader-cycle-row").style.display).toBe("none");
+  });
+
   it("opening a layout and preparing Studio Mode each say what was done", () => {
     const h = openPage("obs-fader-dial.html", { settings: { target: "tbar" } });
     h.receive(state({ choice: "auto", resolved: "en" }, { layouts: [regularLayout] }));

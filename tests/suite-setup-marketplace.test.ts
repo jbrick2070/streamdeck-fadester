@@ -23,8 +23,10 @@ function body(name: string): string {
 describe("Suite Setup and the Elgato Marketplace edition", () => {
   it("looks for the Marketplace edition's folder where Stream Deck keeps plugins, under the Marketplace's ID", () => {
     const present = body("MarketplaceEditionPresent");
-    // the folder is what counts: a plugin from the Marketplace can come with a manifest that cannot be read
-    expect(present).toContain(`DirExists(UserAppData() + '\\Elgato\\StreamDeck\\Plugins\\${MARKETPLACE_ID}.sdPlugin')`);
+    // the folder is what counts, when something is in it: a plugin from the Marketplace can come with a manifest
+    // that cannot be read, and an empty folder is not a plugin
+    expect(present).toContain(`FindFirst(UserAppData() + '\\Elgato\\StreamDeck\\Plugins\\${MARKETPLACE_ID}.sdPlugin\\*', Found)`);
+    expect(present).toContain("if (Found.Name <> '.') and (Found.Name <> '..') then Result := True;");
     // the broken-guard variant switches exactly this off
     expect(present).toMatch(/#ifdef BREAK_MARKETPLACE_GUARD\n\s*Result := False;\n#endif/);
     // the version is shown in brackets when it can be read, and left out when it cannot
@@ -36,6 +38,8 @@ describe("Suite Setup and the Elgato Marketplace edition", () => {
       // the bracket is part of %1: no space before it and no brackets around it in the sentence
       expect(english, key).toMatch(/\S%1/);
       expect(english, key).not.toContain("(%1)");
+      // the version is the plugin's: never right after "Stream Deck", where it reads as Stream Deck's own
+      expect(english, key).not.toContain("Stream Deck%1");
     }
   });
 

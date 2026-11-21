@@ -81,7 +81,7 @@ NoteNewerExt=VJster Chrome extension %1 is already there; setup carries %2, so i
 NoteNewerSd=Fadester for OBS %1 is already in Stream Deck; setup carries %2, so Stream Deck is not asked to replace it.
 NoteOldVs=The old separate Visual Sidechain plugin is installed. Visual Sidechain is part of Midi Fadester now: keep Midi Fadester ticked and its installer removes the old plugin. If Midi Fadester is not installed by this setup, remove Visual Sidechain in Windows Installed apps.
 NoteStore=The Microsoft Store edition of Fadester Companion is already installed, so the standalone copy is unticked: two copies would fight over the OBS connection and VJster port 48150.
-NoteMarketplaceSd=Fadester for OBS from the Elgato Marketplace is in Stream Deck%1, so setup adds no second copy (it carries %2). Update it in Stream Deck's Marketplace, or remove it in Stream Deck and run this setup again.
+NoteMarketplaceSd=Fadester for OBS%1 from the Elgato Marketplace is in Stream Deck, so setup adds no second copy (it carries %2). Update it in Stream Deck's Marketplace, or remove it in Stream Deck and run this setup again.
 NoteBothSd=Fadester for OBS is in Stream Deck twice: the Elgato Marketplace's copy%1 and the one from this setup. They are the same plugin under two IDs; remove one of them in Stream Deck.
 NoteVjsterClash=The standalone VJster plugin is installed. Fadester for OBS already includes VJster; keeping both makes them fight over port 48150, so remove the standalone VJster plugin in Stream Deck or OpenDeck.
 NoteNoObs=OBS Studio was not found on this PC, so the OBS plugins start unticked. Tick them if your OBS is in another folder.
@@ -347,11 +347,23 @@ end;
 
 { The Elgato Marketplace sells the same plugin under the ID its product has had since 0.8 (PUBLISHING.md, "The
   Elgato Marketplace edition"). Stream Deck holds the two IDs as two plugins: both in the action list, their VJster
-  parts contending for port 48150. Its folder in Stream Deck is what counts: a plugin from the Marketplace can
-  come with a manifest that cannot be read. }
+  parts contending for port 48150. Its folder in Stream Deck is what counts, when there is something in it: a plugin
+  from the Marketplace can come with a manifest that cannot be read, and an empty folder is not a plugin. }
 function MarketplaceEditionPresent(): Boolean;
+var
+  Found: TFindRec;
 begin
-  Result := DirExists(UserAppData() + '\Elgato\StreamDeck\Plugins\com.jbrick2070.fadester-for-obs.sdPlugin');
+  Result := False;
+  if FindFirst(UserAppData() + '\Elgato\StreamDeck\Plugins\com.jbrick2070.fadester-for-obs.sdPlugin\*', Found) then
+  begin
+    try
+      repeat
+        if (Found.Name <> '.') and (Found.Name <> '..') then Result := True;
+      until Result or not FindNext(Found);
+    finally
+      FindClose(Found);
+    end;
+  end;
 #ifdef BREAK_MARKETPLACE_GUARD
   Result := False;
 #endif

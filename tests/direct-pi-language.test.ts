@@ -438,6 +438,12 @@ describe("the shared sections say what happened", () => {
     // Studio Mode is turned on in OBS while the page is open and nothing was picked by hand: the offer follows OBS.
     h.receive(state({ choice: "auto", resolved: "en" }, { layouts: all, catalog: { inputVolumes: {}, studioMode: true } }));
     expect(h.byId("direct-layout").value).toBe(studioLayout.slug);
+    // Opening the list and keeping what it shows is a choice too: it stays when OBS changes mode.
+    const kept = openPage("obs-fade-key.html");
+    kept.receive(state({ choice: "auto", resolved: "en" }, { layouts: all }));
+    kept.byId("direct-layout").onclick?.();
+    kept.receive(state({ choice: "auto", resolved: "en" }, { layouts: all, catalog: { inputVolumes: {}, studioMode: true } }));
+    expect(kept.byId("direct-layout").value).toBe(regularLayout.slug);
     // Once the operator picked one, it stays whatever OBS does.
     h.byId("direct-layout").value = sourceDesk.slug;
     h.byId("direct-layout").onchange?.();

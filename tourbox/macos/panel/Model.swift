@@ -168,6 +168,12 @@ enum LocalFiles {
     static let presetStamp = support.appendingPathComponent("saved-preset.sha256")
     /// The name TourBox Console's file window shows for the preset.
     static let presetFileName = "OBS Fadester for TourBox.tb"
+    /// The file name every text and drawing shows for the preset: the one it was written under this time, which is
+    /// "OBS Fadester for TourBox 2.tb" when an older, different copy was already there; the preset's own name before a save.
+    static func shownPresetName(saved: URL?) -> String {
+        let name = saved?.lastPathComponent ?? ""
+        return name.isEmpty ? presetFileName : name
+    }
     /// Puts the preset into a folder and returns where it is, without ever replacing a different file (QA-C01): a file
     /// of that name with the same bytes is used as it is; when its bytes differ (the user's own export, an older
     /// preset kept on purpose) the preset is written beside it as "OBS Fadester for TourBox 2.tb", then 3, as Finder
@@ -182,9 +188,15 @@ enum LocalFiles {
                 if let existing = try? Data(contentsOf: url), existing == bytes { return url }
                 continue
             }
-            // Fails, rather than replaces, should a file of this name appear between the look and the write.
-            try bytes.write(to: url, options: .withoutOverwriting)
-            return url
+            // Fails, rather than replaces, should a file of this name appear between the look and the write: the next
+            // number is tried then. Any other failure (no such folder, no permission) is the caller's to handle.
+            do {
+                try bytes.write(to: url, options: .withoutOverwriting)
+                return url
+            } catch {
+                if FileManager.default.fileExists(atPath: url.path) { continue }
+                throw error
+            }
         }
         throw PanelFailure.message("Too many copies of " + presetFileName + " in " + folder.lastPathComponent + ".")
     }
@@ -213,6 +225,15 @@ enum LocalFiles {
               try Data(contentsOf: first) == Data("one".utf8), try Data(contentsOf: second) == Data("two".utf8), try Data(contentsOf: third) == Data("three".utf8),
               try FileManager.default.contentsOfDirectory(atPath: folder.path).count == 3 else {
             throw PanelFailure.message("Self-test: a different file of the preset's name is never replaced; the preset is written beside it")
+        }
+        // What the user reads names the file that was written this time, never the older one beside it (QA-R201).
+        let stepsText = Readiness.importSteps(saved: second)
+        let whyText = L("macImportWhySaved", folder.lastPathComponent, shownPresetName(saved: second))
+        guard shownPresetName(saved: second) == "OBS Fadester for TourBox 2.tb", shownPresetName(saved: nil) == presetFileName,
+              stepsText.contains("open OBS Fadester for TourBox 2.tb"), stepsText.contains(folder.lastPathComponent),
+              whyText.contains("Saved OBS Fadester for TourBox 2.tb in"), !stepsText.contains("TourBox.tb"), !whyText.contains("TourBox.tb"),
+              Readiness.importSteps(saved: nil).contains("open " + presetFileName), Readiness.importSteps(saved: nil).contains(L("macDownloads")) else {
+            throw PanelFailure.message("Self-test: the import steps and the guide name the file that was written, also when it is a numbered copy")
         }
         do {
             _ = try savePreset(Data("x".utf8), in: folder.appendingPathComponent("missing"))
@@ -312,6 +333,12 @@ enum Readiness {
     static func vjsterSummary(on: Bool, target: String, port: Int) -> String { on ? L("sumVjster", target, String(port)) : L("off") }
     /// Whether the OBS port and password are worth showing: OBS runs here and refuses the sign-in or does not answer.
     static func needsObsFields(connected: Bool, running: Bool, problem: String?) -> Bool { !connected && running && problem != nil }
+    /// The Setup page's three import steps, naming the folder and the file the preset was written to; before a save,
+    /// Downloads and the preset's own name.
+    static func importSteps(saved: URL?) -> String {
+        let folder = saved?.deletingLastPathComponent().lastPathComponent ?? ""
+        return L("macImportSteps", folder.isEmpty || folder == "/" ? L("macDownloads") : folder, LocalFiles.shownPresetName(saved: saved))
+    }
     /// A light needs a closed part of the Setup page: it opens once per problem, so a part the user closed again stays closed.
     static func opensFold(needed: Bool, called: Bool, open: Bool) -> Bool { needed && !called && !open }
     /// The parts to open again at the next start: the ones the user opened, never one a light opened (QA-C04).

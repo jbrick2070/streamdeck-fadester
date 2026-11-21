@@ -50,6 +50,43 @@ describe("Mac quick starts", () => {
   });
 });
 
+describe("what macOS shows when it asks for the Downloads folder (QA-R202)", () => {
+  const apple = ["en", "de", "es", "fr", "it", "ja", "ko", "nl", "pt-BR", "ru", "tr", "zh-Hans", "zh-Hant"];
+  it("is said in the suite's 13 languages, each in its own words, and the build carries and checks them", () => {
+    const folders = readdirSync(join(repo, "tourbox/macos/panel/lproj")).sort();
+    expect(folders).toEqual(apple.map((language) => `${language}.lproj`).sort());
+    const sentences = apple.map((language) => {
+      const table = read(`tourbox/macos/panel/lproj/${language}.lproj/InfoPlist.strings`);
+      const sentence = /^"NSDownloadsFolderUsageDescription" = "([^"]+)";\r?$/m.exec(table)?.[1] ?? "";
+      expect(sentence, language).toContain("Fadester Companion");
+      expect(sentence, language).toContain("TourBox Console");
+      return sentence;
+    });
+    expect(new Set(sentences).size).toBe(13);
+    expect(read("tourbox/macos/panel/Info.plist")).toContain(`<string>${sentences[0]}</string>`);
+    const build = read("tourbox/macos/panel/build.sh");
+    expect(build).toContain('cp "$folder/InfoPlist.strings" "$resources/$(basename "$folder")/InfoPlist.strings"');
+    expect(build).toContain("Expected 13 InfoPlist.strings languages");
+    // The app's own self-test reads each one from the built bundle.
+    expect(read("tourbox/macos/panel/HostController.swift")).toContain('language + ".lproj/InfoPlist.strings"');
+  });
+
+  it("the guides do not state the preset's file name as the only one (QA-R201)", () => {
+    for (const locale of locales) expect(read(`tourbox/macos/panel/guide/${locale}.html`), locale).toContain("<code>OBS Fadester for TourBox 2.tb</code>");
+    expect(read("tourbox/macos/panel/make-guide.py").split("OBS Fadester for TourBox 2.tb").length - 1).toBe(2);
+    const strings = JSON.parse(read("tourbox/macos/panel/mac-strings.json")) as { strings: Record<string, string[]> };
+    for (const key of ["macImportSteps", "macImportWhySaved"]) {
+      for (const text of strings.strings[key]) {
+        expect(text, key).toContain("{1}");
+        expect(text, key).not.toContain(".tb");
+      }
+    }
+    const swift = read("tourbox/macos/panel/ShowMe.swift");
+    expect(swift).not.toContain('text("OBS Fadester for TourBox.tb"');
+    expect(swift).toContain("text(fileName, at:");
+  });
+});
+
 describe("Mac helper names", () => {
   const files = [
     "tourbox/macos/panel/HostController.swift", "tourbox/macos/panel/build.sh", "tourbox/macos/package.sh",

@@ -267,6 +267,8 @@
     };
     const layoutPicker = $("direct-layout");
     if (layoutPicker) layoutPicker.onchange = function () { layoutPicked = true; updateLayoutButton(); };
+    // Opening the list and keeping the layout it shows is a choice too (no change event then): it stays.
+    if (layoutPicker) layoutPicker.onclick = function () { layoutPicked = true; };
     const prepareStudio = $("direct-studio-prepare");
     if (prepareStudio) prepareStudio.onclick = function () {
       if (layoutBusy) return;

@@ -157,7 +157,7 @@ section 9.
 
 | ID | Requirement |
 |----|-------------|
-| R-LANG-1 | VJster has its own plugin-wide `language` global setting, `"auto"` or one of en, de, es, fr, ja, ko, zh_CN, zh_TW, nl; absent means `"auto"`. It is set apart from Fadester for OBS's, and the settings page's note says it covers all VJster controls. |
+| R-LANG-1 | VJster has its own plugin-wide `language` global setting, `"auto"` or one of the thirteen en, de, es, fr, ja, ko, zh_CN, zh_TW, nl, it, pt_BR, ru, tr; absent means `"auto"`. It is set apart from Fadester for OBS's, and the settings page's note says it covers all VJster controls. |
 | R-LANG-2 | Automatic is today's behaviour: the app's language by exact code, base, then English (so `zh-CN` stays English), no extra redraw, no page delay. |
 | R-LANG-3 | A fixed language covers every word VJster draws on keys and dials and its settings page (static and dynamic texts, `<html lang>`); the rate keeps its dot. Not covered: the OBS page and the Chrome extension; the OBS page address keeps `hl=` in the app's language (D-L7). |
 | R-LANG-4 | A change redraws every visible VJster key and dial without a restart; an open settings page re-labels in place, keeping unfinished input in action fields and in the port and extension-id boxes, and re-words the status and OBS status. |

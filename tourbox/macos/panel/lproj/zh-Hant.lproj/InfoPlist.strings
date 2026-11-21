@@ -1,0 +1,2 @@
+/* Why macOS is asked for the Downloads folder: the system prompt shows this sentence. */
+"NSDownloadsFolderUsageDescription" = "Fadester Companion 會將 TourBox 預設集儲存到「下載項目」，以便 TourBox Console 匯入。";

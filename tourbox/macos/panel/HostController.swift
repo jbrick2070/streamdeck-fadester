@@ -24,6 +24,13 @@ struct RuntimePaths {
     static func selfTest(resources: URL) throws {
         let paths = RuntimePaths(resources: resources)
         guard FileManager.default.fileExists(atPath: paths.resources.appendingPathComponent("START-HERE.html").path) else { return } // not run from the app
+        // The sentence macOS shows when it asks for Downloads is there in each of the 13 languages (QA-R202).
+        for language in ["en", "de", "es", "fr", "it", "ja", "ko", "nl", "pt-BR", "ru", "tr", "zh-Hans", "zh-Hant"] {
+            let file = paths.resources.appendingPathComponent(language + ".lproj/InfoPlist.strings")
+            guard let table = (try? String(contentsOf: file, encoding: .utf8))?.propertyListFromStringsFileFormat(), !(table["NSDownloadsFolderUsageDescription"] ?? "").isEmpty else {
+                throw PanelFailure.message("Self-test: InfoPlist.strings for " + language + " is missing or has no Downloads sentence")
+            }
+        }
         let previous = PanelText.locale
         defer { PanelText.use(previous) }
         for locale in PanelStrings.locales {

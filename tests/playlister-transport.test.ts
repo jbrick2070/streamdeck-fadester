@@ -347,6 +347,15 @@ describe("Playlister transport key", () => {
       expect(cleanName("clip \ud83c one")).toBe("clip  one");
       expect(() => encodeURIComponent(cleanName("\udfac" + "w".repeat(300) + "\ud83c"))).not.toThrow();
       expect(cutName("abc", 10)).toBe("abc");
+      // Without Intl.Segmenter the cut is between code points: a joined family may lose members, but never half a pair.
+      expect(cutName("y".repeat(155) + "👨‍👩‍👧‍👦 family film", 160, null)).toBe("y".repeat(155) + "👨‍👩");
+      expect(cutName("x".repeat(159) + "🎬", 160, null)).toBe("x".repeat(159));
+      expect(() => encodeURIComponent(cutName("🎬".repeat(200), 161, null))).not.toThrow();
+      expect(cutName("🎬".repeat(200), 161, null)).toBe("🎬".repeat(80));
+      // One letter under more marks than the limit holds: the name is cut inside that pile, never emptied.
+      const pile = "a" + "\u0301".repeat(300) + " tail";
+      expect(cutName(pile, 160)).toBe("a" + "\u0301".repeat(159));
+      expect(cleanName(pile)).toHaveLength(160);
       expect(readNowNext({ found: true, playing: "D:\\clips\\a.mp4", next: "b.mp4" })).toEqual({ playing: "a.mp4", next: "b.mp4", nextDecided: true });
       expect(readNowNext({ found: false })).toBeNull();
       expect(readNowNext({ sources: [] })).toBeNull();

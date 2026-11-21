@@ -36,18 +36,25 @@ const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[
 
 /** The start of a name, at most `limit` UTF-16 units long, cut between whole characters as a reader sees them
  *  (an emoji, a family of emoji joined together, a letter with its accents), never inside one (QA-C02). */
-export function cutName(name: string, limit: number): string {
+export function cutName(name: string, limit: number, graphemes: ((text: string) => string[]) | null = intlGraphemes): string {
   if (name.length <= limit) return name;
-  const pieces = typeof Intl !== "undefined" && typeof Intl.Segmenter === "function"
-    ? Array.from(new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(name), (part) => part.segment)
-    : Array.from(name);
-  let out = "";
-  for (const piece of pieces) {
-    if (out.length + piece.length > limit) break;
-    out += piece;
-  }
-  return out;
+  const fill = (pieces: string[]): string => {
+    let out = "";
+    for (const piece of pieces) {
+      if (out.length + piece.length > limit) break;
+      out += piece;
+    }
+    return out;
+  };
+  // Without Intl.Segmenter, and for a name whose first character alone is longer than the limit (a letter under a
+  // pile of marks), the cut is between code points: never half a pair, and never an empty name.
+  return (graphemes ? fill(graphemes(name)) : "") || fill(Array.from(name));
 }
+
+/** A text as the characters a reader sees, by Intl.Segmenter; null where the runtime has none. */
+const intlGraphemes: ((text: string) => string[]) | null = typeof Intl !== "undefined" && typeof Intl.Segmenter === "function"
+  ? (text) => Array.from(new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(text), (part) => part.segment)
+  : null;
 
 /** A name as a key may show it: one line, trimmed, bounded, whole characters only, and never a path. */
 export function cleanName(value: unknown): string {

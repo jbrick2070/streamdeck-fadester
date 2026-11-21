@@ -209,6 +209,8 @@ namespace Fadester.TourBox {
     CheckBox enableMix, mixOnly, enableVjster, enableGamepad, easyMode;
     // "Open when I sign in": off until ticked; the box shows what Windows reports (SignIn.cs).
     CheckBox signIn; bool settingSignIn;
+    // Who decides when Windows set it by policy: its own line under the box, wrapped to the window (QA-R203, QA-R204).
+    Label signInNote; TableLayoutPanel mainGrid;
     // The game controller tab, from presets/gamepad.json (checked against the bridge by its self-test).
     DataGridView padGrid; ComboBox fastSpeed, slowSpeed;
     string[] padControls = new string[0], padOnly = new string[0];
@@ -305,11 +307,12 @@ namespace Fadester.TourBox {
       }
       using (var w = new PanelWindow(new PanelText("en"), true)) {
         w.ShowSignIn(SignInState.OnByPolicy);
-        if (!w.signIn.Checked || w.signIn.Enabled || !w.signIn.Text.EndsWith(enText.Get("signInManaged"))) throw new Exception("sign-in box: on by policy");
+        if (!w.signIn.Checked || w.signIn.Enabled || w.signIn.Text!="Open when I sign in" || w.signInNote.Text!=enText.Get("signInManaged") ||
+            !w.SignInNoteShown() || w.mainGrid.RowStyles[4].Height!=168 || !w.signInNote.AutoSize) throw new Exception("sign-in box: on by policy");
         w.ShowSignIn(SignInState.OffByPolicy);
-        if (w.signIn.Checked || w.signIn.Enabled) throw new Exception("sign-in box: off by policy");
+        if (w.signIn.Checked || w.signIn.Enabled || !w.SignInNoteShown()) throw new Exception("sign-in box: off by policy");
         w.ShowSignIn(SignInState.Blocked);
-        if (w.signIn.Checked || !w.signIn.Enabled || w.signIn.Text!="Open when I sign in") throw new Exception("sign-in box: switched off in Windows");
+        if (w.signIn.Checked || !w.signIn.Enabled || w.SignInNoteShown() || w.mainGrid.RowStyles[4].Height!=128) throw new Exception("sign-in box: switched off in Windows");
       }
       if (MixSummary(deText,false,false)!=deText.Get("off") || VjsterSummary(enText,false,"x",1)!="Off" || !VjsterSummary(deText,true,"Ziel",48150).Contains("48150")) throw new Exception("fold summaries");
       // A refused sign-in keeps its translated sentence in the header; the retry fact follows in the same language.
@@ -357,7 +360,7 @@ namespace Fadester.TourBox {
     internal static void Render(PanelText text, string file, int tab, bool open = false) {
       Application.EnableVisualStyles();
       using (var w = new PanelWindow(text, true)) {
-        if (open) { foreach (var fold in w.folds) w.SetFold(fold, true); w.enableGamepad.Checked = true; }
+        if (open) { foreach (var fold in w.folds) w.SetFold(fold, true); w.enableGamepad.Checked = true; w.ShowSignIn(SignInState.OnByPolicy); }
         w.StartPosition = FormStartPosition.Manual; w.Location = new Point(-32000, -32000); w.ShowInTaskbar = false;
         w.Show();
         foreach (Control c in w.Controls[0].Controls) { var tabs = c as TabControl; if (tabs != null && tab > 0 && tab < tabs.TabCount) tabs.SelectedIndex = tab; }
@@ -375,7 +378,7 @@ namespace Fadester.TourBox {
       // The window and taskbar show the exe's own icon, not WinForms' default one.
       try { Icon=Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch (Exception e) { Entry.Log("icon: "+e.Message); }
       Font=new Font("Segoe UI",10); BackColor=Color.White; StartPosition=FormStartPosition.CenterScreen;
-      var grid=new TableLayoutPanel {Dock=DockStyle.Fill,ColumnCount=1,RowCount=5, Padding=new Padding(14)};
+      var grid=new TableLayoutPanel {Dock=DockStyle.Fill,ColumnCount=1,RowCount=5, Padding=new Padding(14)}; mainGrid=grid;
       grid.RowStyles.Add(new RowStyle(SizeType.Absolute,100)); grid.RowStyles.Add(new RowStyle(SizeType.AutoSize)); grid.RowStyles.Add(new RowStyle(SizeType.AutoSize));
       grid.RowStyles.Add(new RowStyle(SizeType.Percent,100)); grid.RowStyles.Add(new RowStyle(SizeType.Absolute,128));
       grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100)); // the window's width bounds every row, so the lights wrap
@@ -533,12 +536,13 @@ namespace Fadester.TourBox {
       signIn=new CheckBox {Text=text.Get("openAtSignIn"),AutoSize=true,UseMnemonic=false,Margin=new Padding(6,0,3,0)};
       signIn.CheckedChanged+=async delegate { if(!settingSignIn) await SetSignIn(signIn.Checked); };
       // Always in view under the buttons (it used to sit at the bottom of a long Setup page), matching the Mac panel's footer.
-      var footer=new TableLayoutPanel {Dock=DockStyle.Fill,ColumnCount=1,RowCount=3,Margin=new Padding(0)};
+      var footer=new TableLayoutPanel {Dock=DockStyle.Fill,ColumnCount=1,RowCount=4,Margin=new Padding(0)};
       footer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));
-      footer.RowStyles.Add(new RowStyle(SizeType.Percent,100)); footer.RowStyles.Add(new RowStyle(SizeType.AutoSize)); footer.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+      footer.RowStyles.Add(new RowStyle(SizeType.Percent,100)); footer.RowStyles.Add(new RowStyle(SizeType.AutoSize)); footer.RowStyles.Add(new RowStyle(SizeType.AutoSize)); footer.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+      signInNote=new Label {Text=text.Get("signInManaged"),AutoSize=true,UseMnemonic=false,Visible=false,ForeColor=Color.FromArgb(90,98,112),Margin=new Padding(24,0,4,2)};
       var keepOpen=new Label {Text=text.Get("keepOpen"),AutoSize=true,UseMnemonic=false,ForeColor=Color.FromArgb(90,98,112),Margin=new Padding(4,2,4,0)};
-      footer.ClientSizeChanged+=delegate { keepOpen.MaximumSize=new Size(Math.Max(200,footer.ClientSize.Width-12),0); };
-      footer.Controls.Add(bar,0,0); footer.Controls.Add(signIn,0,1); footer.Controls.Add(keepOpen,0,2);
+      footer.ClientSizeChanged+=delegate { keepOpen.MaximumSize=new Size(Math.Max(200,footer.ClientSize.Width-12),0); signInNote.MaximumSize=new Size(Math.Max(200,footer.ClientSize.Width-32),0); };
+      footer.Controls.Add(bar,0,0); footer.Controls.Add(signIn,0,1); footer.Controls.Add(signInNote,0,2); footer.Controls.Add(keepOpen,0,3);
       grid.Controls.Add(footer,0,4);
       Theme.Apply(this,navy,accent,stopRed);
       ShowStatus();
@@ -568,13 +572,17 @@ namespace Fadester.TourBox {
         if(worker==null)Close(); else { quitting=false; ShowFromTray(); Note(text.Get("stillClosing")); }
       };
     }
+    /** Whether the line that says who decides is asked to show (a window that is not on screen reports every child hidden). */
+    bool signInNoteWanted;
+    internal bool SignInNoteShown() { return signInNoteWanted; }
     /** The box as Windows has it. Set by policy (the Store build): ticked or not as it is, greyed, and it says who decides (QA-C05). */
     void ShowSignIn(SignInState state) {
       if(IsDisposed) return;
       bool managed=SignInStart.Managed(state);
       settingSignIn=true; signIn.Checked=SignInStart.Ticked(state); settingSignIn=false;
       signIn.Enabled=!managed;
-      signIn.Text=managed ? text.Get("openAtSignIn")+". "+text.Get("signInManaged") : text.Get("openAtSignIn");
+      // The sentence is a line of its own: nothing is joined to the label, so it reads right in every language and wraps.
+      if(signInNoteWanted!=managed){ signInNoteWanted=managed; signInNote.Visible=managed; mainGrid.RowStyles[4].Height=managed ? 168 : 128; }
     }
     /** The box shows what Windows has: its own switch (Settings → Apps → Startup, Task Manager) may have changed since. */
     async Task ReadSignIn() {

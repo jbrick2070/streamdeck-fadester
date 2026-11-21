@@ -292,6 +292,8 @@ private final class PillActionButton: NSControl {
     private var vsLine = NSTextField(labelWithString: "")
     private var vsStatus = ""
     private var importNote = NSTextField(wrappingLabelWithString: "")
+    /// The three import steps on the Setup page; they name the file as it was written this time (QA-R201).
+    private lazy var presetSteps: NSTextField = label("")
     private var port = NSTextField(string: "4455"), password = NSSecureTextField(string: "")
     private var mix = NSButton(checkboxWithTitle: L("enableMix"), target: nil, action: nil)
     // Stream Deck, OpenDeck and MIDI only (the host's --mix-only), as on Windows.
@@ -745,7 +747,9 @@ private final class PillActionButton: NSControl {
         stack.addArrangedSubview(importNote)
         importNote.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         let presetPart = fold("tourbox", in: stack)
-        paragraph(L("macImportSteps", L("macDownloads")), in: presetPart.content)
+        presetSteps.stringValue = Readiness.importSteps(saved: lastSavedPreset)
+        presetPart.content.addArrangedSubview(presetSteps)
+        presetSteps.widthAnchor.constraint(equalTo: presetPart.content.widthAnchor).isActive = true
         let downloadConsoleBtn = button(L("macDownloadConsole"), #selector(downloadTourBoxConsole))
         let presetSquareBtn = button(L("macPresetSquare"), #selector(openPresetSquare))
         presetPart.content.addArrangedSubview(horizontal([label(L("macTourBoxInfo"), small: true), downloadConsoleBtn, presetSquareBtn]))
@@ -1081,6 +1085,7 @@ private final class PillActionButton: NSControl {
         axStatusLabel.stringValue = axTrusted ? L("macAxGranted") : L("macAxNeeded")
         axStatusLabel.textColor = axTrusted ? grantedColor : reminderFgColor
         importGuideWindow?.update(savedPreset: lastSavedPreset, consoleInstalled: consoleReady)
+        presetSteps.stringValue = Readiness.importSteps(saved: lastSavedPreset)
 
         let parsedVjPort = Int(vjsterPort.stringValue.trimmingCharacters(in: .whitespaces)) ?? settings.vjsterPort
         diagramView.state = SetupDiagramView.State(

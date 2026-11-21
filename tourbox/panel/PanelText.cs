@@ -240,7 +240,7 @@ namespace Fadester.TourBox {
       { "foldDetails", new[] { "Details", "Detalles", "Détails", "详情" } },
       { "foldShow", new[] { "Show", "Mostrar", "Afficher", "显示" } },
       { "foldHide", new[] { "Hide", "Ocultar", "Masquer", "隐藏" } },
-      { "connectShort", new[] { "Open OBS. Fadester Companion finds it and signs in by itself.", "Abre OBS. Fadester Companion lo encuentra e inicia sesión por sí solo.", "Ouvrez OBS. Fadester Companion le trouve et s’y connecte tout seul.", "打开 OBS。Fadester Companion 会自动找到它并登录。" } },
+      { "connectShort", new[] { "Open OBS. Fadester Companion finds it and connects by itself.", "Abre OBS. Fadester Companion lo encuentra y se conecta por sí solo.", "Ouvrez OBS. Fadester Companion le trouve et s’y connecte tout seul.", "打开 OBS。Fadester Companion 会自动找到它并连接。" } },
       { "cueShort", new[] { "Turn Scroll one step on the TourBox, or press D-pad down on the game controller: Preview changes and Program stays.", "Gira Scroll un paso en el TourBox, o pulsa la cruceta hacia abajo en el mando: la vista previa cambia y el programa sigue igual.", "Tournez Scroll d’un cran sur le TourBox, ou appuyez sur le bas du pavé directionnel de la manette : l’aperçu change et le programme reste.", "将 TourBox 的 Scroll 转动一格，或按手柄方向键的下键：预览会切换，节目保持不变。" } },
       { "sumMixOnly", new[] { "On, Stream Deck only", "Activo, solo Stream Deck", "Activé, Stream Deck seul", "开启，仅 Stream Deck" } },
       { "sumVjster", new[] { "On, {0}, port {1}", "Activo, {0}, puerto {1}", "Activé, {0}, port {1}", "开启，{0}，端口 {1}" } },

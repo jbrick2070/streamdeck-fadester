@@ -50,6 +50,10 @@ describe("Fadester Companion: open when I sign in", () => {
     expect(mac.match(/try service\.register\(\)/g)?.length).toBe(1);
     expect(mac).toMatch(/@objc private func openAtLoginToggled\(\) \{\n\s+guard #available\(macOS 13\.0, \*\), !previewMode else \{ return \}/);
     expect(mac).toContain("SMAppService.mainApp.status == .enabled ? .on : .off");
+    // The Mac box is worded as macOS words it (Open at Login; ログイン, not the Windows サインイン).
+    expect(mac).toContain('checkboxWithTitle: L("macOpenAtLogin")');
+    const strings = JSON.parse(read("tourbox/macos/panel/mac-strings.json")) as { locales: string[]; strings: Record<string, string[]> };
+    expect(strings.strings.macOpenAtLogin[strings.locales.indexOf("ja")]).toBe("ログイン時に開く");
     // No helper bundle, entitlement or launch agent: nothing that needs a signing identity.
     expect(mac).not.toMatch(/SMLoginItemSetEnabled|LaunchAgents|loginItem\(identifier/);
   });

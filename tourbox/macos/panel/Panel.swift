@@ -269,7 +269,7 @@ private final class PillActionButton: NSControl {
     private var hud: FeedbackHud?
     private var importGuideWindow: TourBoxImportWindow?
     /// "Open when I sign in" (U3-06): a login item of the app itself, off until ticked. macOS 13 and later.
-    private var openAtLogin = NSButton(checkboxWithTitle: L("openAtSignIn"), target: nil, action: nil)
+    private var openAtLogin = NSButton(checkboxWithTitle: L("macOpenAtLogin"), target: nil, action: nil)
     /// The folded parts of the Setup page, and which of them the user left open (a preference of this window, not a setting of the controls).
     private var folds: [SetupFold] = []
     private var obsFold: SetupFold?, mixFold: SetupFold?, vjFold: SetupFold?

@@ -29,7 +29,7 @@ Sources: `tourbox/panel/FadesterTourBox.cs` and `ShowMe.cs` (Windows), `tourbox/
 | Tabs | Setup, Assignments, Game controller, Control map, Activity (native tabs) | Setup, Assignments, Control map, Activity (four buttons) | **Intentional**: the game controller is Windows only (XInput). **Gap**: the tab control looks different |
 | Footer buttons | **Start** / **Stop** (red while on), Save assignments, Show / hide feedback, Quick guide (Open settings only when `config.json` cannot be read) | Same four buttons | Same |
 | First run | The controls start by themselves | The controls start by themselves once Accessibility is granted | **Intentional**: no system prompt at launch on the Mac |
-| Open when I sign in | A tick box under the buttons, off until ticked. ZIP and installer: one value under the user's `Run` key; Store: the package's start-up task (`uap5:StartupTask`, `Enabled="false"`). The box shows what Windows reports, and when Windows has it switched off it opens Settings → Apps → Startup | The same tick box on macOS 13 and later: the app registers itself as a login item (`SMAppService.mainApp`, no helper, entitlement or signing secret). When macOS wants approval it opens Login Items. Not shown on macOS 12 | Same. The Store task and the Mac login item were built without a run: check them by hand. An ad-hoc signed Mac app may have to be ticked again after an update |
+| Open when I sign in | A tick box under the buttons, off until ticked. ZIP and installer: one value under the user's `Run` key; Store: the package's start-up task (`uap5:StartupTask`, `Enabled="false"`). The box shows what Windows reports, and when Windows has it switched off it opens Settings → Apps → Startup | The same tick box, worded **Open at Login** as macOS words it, on macOS 13 and later: the app registers itself as a login item (`SMAppService.mainApp`, no helper, entitlement or signing secret). When macOS wants approval it opens Login Items. Not shown on macOS 12 | Same. The Store task and the Mac login item were built without a run: check them by hand. An ad-hoc signed Mac app may have to be ticked again after an update |
 | Closing the window | With the controls on it hides to the notification area (icon beside the clock: Open, Start / Stop, Quit) | With the controls on it hides; the menu-bar icon (top right) has Open, Start / Stop, Quit, and the Dock icon reopens the window | Same behaviour, each system's own place |
 | Note under the footer | Says where the icon is and how to quit | The same, in the Mac's words | Same |
 | App menus | None (a Windows window has none) | Fadester Companion (About, Hide, Quit), Edit (Undo, Redo, Cut, Copy, Paste, Select All), Window | **Intentional** |
@@ -49,7 +49,7 @@ Sources: `tourbox/panel/FadesterTourBox.cs` and `ShowMe.cs` (Windows), `tourbox/
 | 2 Controller | "Choose your controller": game controller (Easy mode) and TourBox: **Import into TourBox Console** copies the preset path, opens Console and opens the **Show me where to click** guide (also its own button) | "Set up your TourBox": **Import into TourBox Console** saves the `.tb` to Downloads without a save window, copies its path, opens Console and opens the **Show me where to click** guide (also its own button); under **Details**, **Download TourBox Console…** and **TourBox Preset Square…** | Same button and guide. **Intentional**: the game controller is Windows only; the Mac's `.tb` is inside the app, so it is first saved to Downloads (the save window is the fallback when Downloads cannot be written). **Gap**: the two download links are Mac only |
 | macOS Accessibility | Not applicable | Grant Accessibility, native helper window, status | **Intentional** (macOS permission) |
 | 3 Try Preview | Present | Present | Same |
-| Assign your inputs | One sentence under step 3 with an **Assignments** button | Same | Same |
+| Assigning inputs | No heading of its own: one sentence under step 3 with an **Assignments** button | Same | Same |
 | Optional sections | Whole mix, then VJster, each one line with its state and **Show** / **Hide** | Same | Same |
 | Optional: VJster | Enable, port, extension ID, Target, OBS video URL / ID, Copy OBS Browser Source URL | Same fields | Same |
 | Optional: Whole mix | Enable, **Use only Stream Deck, OpenDeck or MIDI**, step (dB), fade (ms) | Same | Same. The Mac runs `FadesterMacHost --run --mix-only`: no shortcut helper, native T-bar, Accessibility or VJster. |
@@ -83,7 +83,7 @@ These match on both systems:
 | OBS WebSocket server, password | Animation with OBS's labels in the panel's language | Same |
 | Studio Mode | No window: the OBS light's **Turn on** button asks OBS | Same |
 | VJster waiting for video, VJster port in use | Two-way card (Chrome or OBS page; quit Stream Deck or pick another port) | Same words |
-| TourBox import | Animation: Import, paste the copied path, open, then select the preset (Auto Switch off) | Animation: Import, pick the file in the Finder dialog, open, then select the preset (Auto Switch off), with step buttons; once the preset is saved, a line under it gives the quicker way (⌘⇧G, ⌘V, Return: the path is copied). Whether TourBox Console's file window takes ⌘⇧G was not checked on a Mac with Console |
+| TourBox import | Animation: Import, paste the copied path, open, then select the preset (Auto Switch off) | Animation: Import, pick the file in the Finder dialog, open, then select the preset (Auto Switch off), with step buttons; once the preset is saved, a line under it gives the quicker way (⌘⇧G, ⌘V, Return: the path is copied) and says to pick the file by hand if the window does not accept it. ⌘⇧G is the standard shortcut of the macOS file window; whether TourBox Console's own window is that one was not checked on a Mac with Console, which is why every text names the other way too |
 
 TourBox Console's own labels (Preset List, Import, Auto Switch) stay in English in both animations and texts, as Console shows them.
 
@@ -115,7 +115,7 @@ No action is called "take" anywhere: the TourBox label is **Preview to Program**
 
 ## The shorter Setup page
 
-Built on both systems (UI review U3-05). Each numbered step is one sentence and its button:
+Built on both systems (UI review U3-05). Each numbered step is a short line and its button:
 1. **Connect to OBS**: "Open OBS. Fadester Companion finds it and signs in by itself.", **Read scenes and inputs from OBS**, and under **Details** the long explanation, the OBS port and the OBS password.
 2. **Controller**: the game controller's tick box (Windows; Easy mode and its explanation appear once it is ticked), the TourBox import buttons, and under **Details** the import's explanation. The Mac keeps its Accessibility part in view.
 3. **Try Preview**: one sentence, **Details** for the long one, then the sentence about assignments with an **Assignments** button that opens that tab.

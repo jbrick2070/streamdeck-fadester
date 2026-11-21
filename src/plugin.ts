@@ -20,6 +20,7 @@ import { FilterController } from "./control/filter-controller.js";
 import { VisualSafety } from "./control/visual-safety.js";
 import { VisualSignals } from "./control/visual-signals.js";
 import { TapeDecks } from "./control/tape-decks.js";
+import { PlaylisterNowNext } from "./control/playlister-now-next.js";
 import { ObsFilterControlAction } from "./actions/obs-filter-control.js";
 import { VisualPanicKeyAction } from "./actions/visual-panic-key.js";
 import { VisualMeterAction } from "./actions/visual-meter.js";
@@ -72,6 +73,8 @@ const filters = new FilterController(directClient);
 const visualSafety = new VisualSafety(directClient, filters);
 const visualSignals = new VisualSignals(directClient, visualSafety);
 const tapeDecks = new TapeDecks(directClient);
+// What each Playlister plays now and next, for the Playlister transport keys.
+const playlisterNowNext = new PlaylisterNowNext(directClient);
 
 // The Language setting (PLAN.md 11.1): a change redraws every visible control and refills the pages.
 const languageChoice = new LanguageChoiceController({
@@ -172,7 +175,7 @@ streamDeck.actions.registerAction(new ObsFadeKeyAction(directClient, visualSigna
 streamDeck.actions.registerAction(new ObsSceneTransitionKeyAction(directClient, visualSignals));
 streamDeck.actions.registerAction(new ObsLayerControlAction(layers));
 streamDeck.actions.registerAction(new ObsNeoInfobarAction(directClient, visualSignals));
-streamDeck.actions.registerAction(new PlaylisterTransportKeyAction(directClient));
+streamDeck.actions.registerAction(new PlaylisterTransportKeyAction(directClient, playlisterNowNext));
 streamDeck.actions.registerAction(new ObsFilterControlAction(filters));
 streamDeck.actions.registerAction(new VisualPanicKeyAction(visualSafety, directClient));
 streamDeck.actions.registerAction(new VisualMeterAction(visualSignals, directClient));

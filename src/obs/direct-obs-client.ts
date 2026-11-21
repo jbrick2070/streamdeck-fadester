@@ -481,7 +481,8 @@ export class DirectObsClient extends ObsVendorClient {
     super(initialSettings, {
       ...options,
       surfaceDisplayName: "Fadester for OBS",
-      extraVendorNames: ["visual-sidechain"]
+      // Visual Sidechain's signals and decks, and Playlister's "now playing" (src/control/playlister-now-next.ts).
+      extraVendorNames: ["visual-sidechain", "obs-playlister"]
     });
     this.mediaPauseWaitMs = options?.mediaPauseWaitMs ?? MEDIA_PAUSE_WAIT_MS;
     this.nativeOption = options?.nativeTbar ?? defaultNativeTbar;

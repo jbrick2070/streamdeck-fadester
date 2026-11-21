@@ -1265,6 +1265,20 @@ export class FakeObsServer {
     };
   }
 
+  /**
+   * Playlister's `obs-playlister` vendor: by source UUID, the fields `get_now_next` answers with. null (the default)
+   * is an OBS whose Playlister has no such vendor (an older one), answered like any missing vendor.
+   */
+  public playlisterNowNext: Map<string, Record<string, unknown>> | null = null;
+  public playlisterVendorLog: Array<{ requestType: string; requestData: Record<string, unknown> }> = [];
+
+  /** Sets what a Playlister plays now and next and sends `now_next_changed`, as Playlister does when it changes. */
+  public setPlaylisterNowNext(inputUuid: string, fields: Record<string, unknown>): void {
+    if (!this.playlisterNowNext) this.playlisterNowNext = new Map();
+    this.playlisterNowNext.set(inputUuid, fields);
+    this.emitVendorEvent("now_next_changed", { source_uuid: inputUuid, ...fields }, "obs-playlister");
+  }
+
   public emitVendorEvent(
     eventType: string,
     eventData: Record<string, unknown>,
@@ -1900,6 +1914,23 @@ export class FakeObsServer {
       const vendorName = String(requestData.vendorName ?? "");
       const vReqType = String(requestData.requestType ?? "");
       const vReqData = (requestData.requestData ?? {}) as Record<string, unknown>;
+
+      // Playlister's own vendor (its README, "For controllers and scripts"): what a source plays now and next.
+      if (vendorName === "obs-playlister" && this.playlisterNowNext) {
+        this.playlisterVendorLog.push({ requestType: vReqType, requestData: vReqData });
+        if (vReqType !== "get_now_next") {
+          this.sendResponse(ws, requestId, requestType, false, 600, "No request was found by that name.");
+          return;
+        }
+        const uuid = String(vReqData.source_uuid ?? "");
+        const entry = this.playlisterNowNext.get(uuid);
+        this.sendResponse(ws, requestId, requestType, true, 100, "", {
+          vendorName,
+          requestType: vReqType,
+          responseData: entry ? { found: true, source_uuid: uuid, ...entry } : { found: false }
+        });
+        return;
+      }
 
       if (vendorName === "visual-sidechain" && this.visualSidechainVendor !== "none") {
         if (this.hotkeyDelayMs > 0) await new Promise((r) => setTimeout(r, this.hotkeyDelayMs));

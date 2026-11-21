@@ -3,6 +3,12 @@
  * Playlister transport keys (PLAN.md 9.3, R-PLT-1, R-PLT-6): Previous, Next,
  * Play / pause, Stop, Restart and Status for one Playlister source, driven
  * through the direct client's media queue and drawn from what it observed.
+ *
+ * When Playlister says what it plays (its obs-websocket vendor request,
+ * src/control/playlister-now-next.ts), the Status and Play / pause keys carry
+ * the playing item's name as their title and the Next key names the item that
+ * follows in its band. A key with a label of its own keeps it, and a
+ * Playlister that does not answer leaves every key as it was.
  */
 import {
   action,
@@ -14,6 +20,7 @@ import {
 } from "@elgato/streamdeck";
 import { DirectObsClient, MEDIA_QUEUE_LIMIT, MediaStateWord, MediaTargetState } from "../obs/direct-obs-client.js";
 import { detectPlaylisterPlugin } from "../obs/setup-checklist.js";
+import type { NowNext, PlaylisterNowNext } from "../control/playlister-now-next.js";
 import { customCaption } from "../obs/preset-captions.js";
 import {
   DEFAULT_PLAYLISTER_TRANSPORT_SETTINGS,
@@ -64,6 +71,19 @@ const STATE_WORDS: Readonly<Record<MediaStateWord, StringKey>> = {
   unknown: "mediaStateUnknown"
 };
 
+/**
+ * What a key draws from Playlister's "now playing": the playing item's name in the title's place on the Status and
+ * Play / pause keys, the following item's name in the band of the Next key. Each is absent when Playlister has not
+ * said, when there is no such item, or (the title) when the key has a label of its own: the key then draws its
+ * usual words.
+ */
+export function nowNextWords(operation: PlaylisterOperation, nowNext: NowNext | null, hasOwnLabel: boolean): { title?: string; subtitle?: string } {
+  if (!nowNext) return {};
+  if ((operation === "status" || operation === "playpause") && !hasOwnLabel && nowNext.playing) return { title: nowNext.playing };
+  if (operation === "next" && nowNext.next) return { subtitle: nowNext.next };
+  return {};
+}
+
 /** m:ss up to 99:59, h:mm:ss beyond (a two-hour item fits the subtitle). */
 export function formatMediaClock(ms: number): string {
   const total = Math.max(0, Math.floor(ms / 1000));
@@ -94,6 +114,8 @@ export class PlaylisterTransportInstanceController {
   private offLanguage: () => void = () => {};
   private readonly rateLimiter: CellRateLimiter<string>;
   private releaseWatch: () => void = () => {};
+  /** Ends this key's following of Playlister's "now playing". */
+  private releaseNowNext: () => void = () => {};
   /** This key's last failed press, cleared on the next press, a retarget or an observed state change. */
   private lastError: LocalText | null = null;
   private lastObservedState: MediaStateWord = "unknown";
@@ -126,7 +148,9 @@ export class PlaylisterTransportInstanceController {
     private readonly client: DirectObsClient,
     private readonly sink: KeyImageSink,
     initialSettings?: PlaylisterTransportSettings,
-    rateLimitMs = 100
+    rateLimitMs = 100,
+    /** Playlister's "now playing"; without it the key draws the operation and the state, as before. */
+    private readonly nowNext?: PlaylisterNowNext
   ) {
     this.settings = this.mergeSettings(initialSettings);
     this.rateLimiter = new CellRateLimiter<string>(async (svg) => {
@@ -165,6 +189,8 @@ export class PlaylisterTransportInstanceController {
     this.client.off("mediaStateChanged", this.onMediaStateChanged);
     this.releaseWatch();
     this.releaseWatch = () => {};
+    this.releaseNowNext();
+    this.releaseNowNext = () => {};
   }
 
   public updateSettings(settings: PlaylisterTransportSettings): void {
@@ -177,6 +203,8 @@ export class PlaylisterTransportInstanceController {
       this.lastObservedState = "unknown";
       this.releaseWatch();
       this.releaseWatch = () => {};
+      this.releaseNowNext();
+      this.releaseNowNext = () => {};
       // A watch belongs to a visible key only.
       if (this.visible) this.acquireWatch();
     }
@@ -212,6 +240,7 @@ export class PlaylisterTransportInstanceController {
 
   private acquireWatch(): void {
     this.releaseWatch = this.client.watchMedia(this.settings.inputUuid);
+    this.releaseNowNext = this.nowNext?.watch(this.settings.inputUuid, () => this.renderNow()) ?? (() => {});
   }
 
   private async refreshPluginPresence(): Promise<void> {
@@ -234,7 +263,9 @@ export class PlaylisterTransportInstanceController {
     }
     const uuid = this.settings.inputUuid;
     const operation = this.settings.operation;
-    const title = customCaption("playlister", this.settings) || t(OPERATION_WORDS[operation]);
+    const ownLabel = customCaption("playlister", this.settings);
+    const named = nowNextWords(operation, uuid ? this.nowNext?.get(uuid) ?? null : null, Boolean(ownLabel));
+    const title = ownLabel || named.title || t(OPERATION_WORDS[operation]);
     const icon = OPERATION_ICONS[operation];
     const connected = this.client.isConnected();
     const reason = statusCellReason(this.client.getStatus(), translate);
@@ -262,7 +293,8 @@ export class PlaylisterTransportInstanceController {
     }
     this.push(renderDirectKeySvg({
       connected, reason, title, icon, configured: true, accent: this.settings.accent,
-      subtitle: describeMediaState(state),
+      // The Next key names what follows; a press under way, a full queue or an unknown outcome still says so first.
+      subtitle: named.subtitle && state.pending === "none" && state.queued < MEDIA_QUEUE_LIMIT ? named.subtitle : describeMediaState(state),
       ...(problem ? { problem } : {})
     }));
   }
@@ -288,7 +320,7 @@ export class PlaylisterTransportInstanceController {
 export class PlaylisterTransportKeyAction extends SingletonAction<PlaylisterTransportSettings> {
   private readonly instances = new Map<string, PlaylisterTransportInstanceController>();
 
-  public constructor(private readonly client: DirectObsClient) {
+  public constructor(private readonly client: DirectObsClient, private readonly nowNext?: PlaylisterNowNext) {
     super();
   }
 
@@ -305,7 +337,9 @@ export class PlaylisterTransportKeyAction extends SingletonAction<PlaylisterTran
         setImage: (image) => key.setImage(image),
         showAlert: () => key.showAlert()
       },
-      ev.payload.settings
+      ev.payload.settings,
+      undefined,
+      this.nowNext
     );
     this.instances.set(key.id, controller);
     controller.appear(ev.payload.settings);

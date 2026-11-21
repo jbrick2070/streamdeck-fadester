@@ -164,6 +164,14 @@ describe("staging the Marketplace edition", () => {
       .toEqual([`${MARKETPLACE_ID}.fader`, `${MARKETPLACE_ID}.obs-fade`]);
   });
 
+  it("names the file when a language file or the manifest is not valid JSON", () => {
+    const source = fakePlugin(ALL_ACTIONS);
+    writeFileSync(join(source, "en.json"), `{ "${SUITE_ID}.fader": `);
+    expect(() => stageMarketplace(source, temp())).toThrow(/en\.json is not valid JSON/);
+    writeFileSync(join(source, "manifest.json"), "{ not json");
+    expect(() => stageMarketplace(source, temp())).toThrow(/manifest\.json is not valid JSON/);
+  });
+
   it("refuses a result that still names the other ID, in a file it does not rewrite", () => {
     const source = fakePlugin(ALL_ACTIONS);
     writeFileSync(join(source, "imgs", "odd.png"), Buffer.from(`\x89PNG ${SUITE_ID}`, "latin1"));
@@ -196,7 +204,10 @@ describe("staging the Marketplace edition", () => {
     expect(named.filter((entry) => /^[a-z_A-Z]+\.json$/.test(entry.where)).length).toBe(languageKeys.length);
     // the built code, when a build is there: the twelve actions Fadester registers itself (VJster's seven are put
     // together from the ID and a kind, and are checked by kind)
-    if (existsSync(join(SUITE_DIR, "bin", "fadester.js"))) {
+    const built = existsSync(join(SUITE_DIR, "bin", "fadester.js"));
+    // every workflow builds before it runs the whole suite: there, a missing build is a fault, not a reason to skip
+    if (process.env.CI) expect(built, "the built bin/fadester.js").toBe(true);
+    if (built) {
       const own = staged.actions.filter((action) => !action.startsWith("vjster-")).map((action) => `${MARKETPLACE_ID}.${action}`);
       const inCode = named.filter((entry) => entry.where === "bin/fadester.js").map((entry) => entry.id);
       expect([...new Set(inCode)].sort()).toEqual(own.sort());

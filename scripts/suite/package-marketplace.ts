@@ -43,6 +43,15 @@ export function reId(text: string): string {
 
 const isUtf8 = (bytes: Buffer): boolean => Buffer.from(bytes.toString("utf8"), "utf8").equals(bytes);
 
+/** JSON.parse whose fault names the file it was reading. */
+function parse(text: string, where: string): unknown {
+  try {
+    return JSON.parse(text.replace(/^\uFEFF/, ""));
+  } catch (error) {
+    throw new Error(`${where} is not valid JSON: ${(error as Error).message}`);
+  }
+}
+
 /**
  * The same bytes with the Marketplace ID wherever the other one stood. Bytes that do not name the ID come back
  * untouched, whatever they are; bytes that name it must be valid UTF-8 text, or this stops.
@@ -126,13 +135,6 @@ export function filesNaming(dir: string, id: string): string[] {
  */
 export function actionIdsIn(dir: string): Array<{ id: string; where: string }> {
   const found: Array<{ id: string; where: string }> = [];
-  const parse = (text: string, where: string): unknown => {
-    try {
-      return JSON.parse(text.replace(/^\uFEFF/, ""));
-    } catch (error) {
-      throw new Error(`${where} is not valid JSON: ${(error as Error).message}`);
-    }
-  };
   const walk = (value: unknown, key: string, where: string): void => {
     if (Array.isArray(value)) for (const item of value) walk(item, key, where);
     else if (value && typeof value === "object") for (const [name, item] of Object.entries(value)) walk(item, name, where);
@@ -176,7 +178,7 @@ export interface Staged {
  * does not name the ID is copied byte for byte. Stream Deck's own logs (logs/, *.log) are left out.
  */
 export function stageMarketplace(sourceDir: string, outDir: string): Staged {
-  const source = JSON.parse(readFileSync(join(sourceDir, "manifest.json"), "utf8")) as { UUID: string; Actions: { UUID: string }[] };
+  const source = parse(readFileSync(join(sourceDir, "manifest.json"), "utf8"), join(sourceDir, "manifest.json")) as { UUID: string; Actions: { UUID: string }[] };
   if (source.UUID !== SUITE_ID) throw new Error(`${sourceDir}: expected the plugin ${SUITE_ID}, found ${source.UUID}`);
   const dir = join(outDir, `${MARKETPLACE_ID}.sdPlugin`);
   rmSync(dir, { recursive: true, force: true });
@@ -201,7 +203,7 @@ export function stageMarketplace(sourceDir: string, outDir: string): Staged {
 
   const left = filesNaming(dir, SUITE_ID);
   if (left.length) throw new Error(`These files still name ${SUITE_ID}: ${left.join(", ")}`);
-  const manifest = JSON.parse(readFileSync(join(dir, "manifest.json"), "utf8")) as { UUID: string; Version: string; Actions: { UUID: string }[] };
+  const manifest = parse(readFileSync(join(dir, "manifest.json"), "utf8"), "The staged manifest.json") as { UUID: string; Version: string; Actions: { UUID: string }[] };
   if (manifest.UUID !== MARKETPLACE_ID) throw new Error(`The staged manifest's UUID is ${manifest.UUID}`);
   const short = (uuid: string, id: string): string => {
     if (!uuid.startsWith(id + ".")) throw new Error(`The action ${uuid} is not under ${id}`);

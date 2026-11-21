@@ -728,6 +728,29 @@ describe("the page's start-up (R-OBS-2)", () => {
     page?.stop();
   });
 
+  it("the standing-by note leaves the note about YouTube's player in place when it goes", () => {
+    const x = env(`?v=${VIDEO}`, `#token=${TOKEN}`, { scriptFails: 1 });
+    const sockets: Array<{ readyState: number; onopen: (() => void) | null; onclose: ((ev: { code: number }) => void) | null }> = [];
+    (x.e as { openSocket: unknown }).openSocket = () => {
+      const socket = { readyState: 0, send: () => undefined, close: () => undefined, onopen: null, onclose: null, onerror: null, onmessage: null };
+      sockets.push(socket as never);
+      return socket;
+    };
+    const page = bootPage(x.e);
+    const retry = x.shown.at(-1)!;
+    expect(retry).toMatch(/trying again/);
+    sockets[0].readyState = 1;
+    sockets[0].onopen?.();
+    // Linked: no standing-by note, and the player's note is not wiped.
+    expect(x.shown.at(-1)).toBe(retry);
+    sockets[0].readyState = 3;
+    sockets[0].onclose?.({ code: 4000 });
+    expect(x.shown.at(-1)).toMatch(/another VJster page holds the link/);
+    x.timers.find((timer) => timer.ms === STANDBY_NOTE_MS)!.fn();
+    expect(x.shown.at(-1)).toBe(retry);
+    page?.stop();
+  });
+
   it("says what is missing and adds no script when the address is incomplete", () => {
     const x = env(`?v=${VIDEO}`, "");
     expect(bootPage(x.e)).toBeNull();

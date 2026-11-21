@@ -38,3 +38,22 @@ Use screenshots from the final approved UI and real hardware, not the fake-serve
 ## Public introduction after final acceptance
 
 The operator wants an OBS Reddit introduction only when the workflow is final and a sizzle video introduces all three plugins. First complete the hardware pass and remaining UI changes, then capture the finished workflow. A short sequence can introduce Midi's shared controls, show Stream Deck configuring and operating them, and finish with Visual Sidechain's reactive effects and Clean. Prepare the post around that real demonstration and obtain the operator's approval before posting. No video production or public posting is part of this integration pass.
+
+## Version numbers at a release
+
+A tag `vX.Y.Z` releases Fadester for OBS X.Y.Z; `package.json` and the plugin's `manifest.json` must say the same (the release workflow checks it). Two other things are attached to every release under versions of their own, and the workflow's job **Companion and VJster extension versions moved with their code** (`scripts/release-component-versions.mjs`) stops a tag that changed one of them without raising its number. Each is compared with the release that first carried its present version:
+
+| Component | Raise | When any of these changed since that release |
+|---|---|---|
+| Fadester Companion | `components.companion.version` in `installer/components.json`, and what the tests keep equal to it (`tourbox/macos/panel/Info.plist`; `tests/companion-one-name.test.ts` names the rest) | `tourbox/`, `vjster-page/`, `src/vjster/shared/`, and the three files of `vjster-extension/src/` the OBS page is built from (`adapter-core.ts`, `link-client.ts`, `page-state.ts`) |
+| VJster Chrome extension | `version` in `vjster-extension/manifest.json` | `vjster-extension/`, `src/vjster/shared/` |
+
+The second pass (branches `pass2/plugin` and `pass2/companion`) changed both and raised neither, on purpose: version numbers move in one separate step, when the suite goes to 1.5. That step must raise all of these together, or the first tag after it stops at this job:
+
+- `package.json`, `package-lock.json` and `io.github.jbrick2070.fadester-for-obs.sdPlugin/manifest.json` (Fadester for OBS, the tag's number), and the version in the first paragraph of `README.md`;
+- `components.companion.version` and `components.fadesterForObs.version` (and any other entry that moved) in `installer/components.json`, with `tourbox/macos/panel/Info.plist`;
+- `version` in `vjster-extension/manifest.json` (`components.vjsterExtension.version` in `installer/components.json` is the version Suite Setup installs, which is behind it today);
+- `Version` in `com.jbrick2070.vjster.sdPlugin/manifest.json`, the standalone VJster plugin (not attached to this repository's releases, so no job checks it; its keys, pages and languages changed in the second pass);
+- the changelog's **Unreleased** heading becomes the new version.
+
+To see what a tag would say before pushing it: `node scripts/release-component-versions.mjs` (it needs the release tags: `git fetch --tags`).

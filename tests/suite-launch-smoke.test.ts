@@ -3,6 +3,10 @@
 // against a pretend host. It must register, start both of its plugins (Fadester and VJster) from the built files, and
 // each must answer a key that appears. Skipped when the plugin is not built; the release workflow builds it first and
 // runs this on Linux, Windows and macOS.
+//
+// FADESTER_SMOKE_PLUGIN_DIR names another copy of the .sdPlugin folder to start instead of the tree's: the release
+// workflow unpacks the packed .streamDeckPlugin there, so a file that `streamdeck pack` left out fails here and not on
+// a user's computer (QA-A02). With it set, a missing file is a failure, never a skip.
 import { spawn, type ChildProcess } from "node:child_process";
 import { existsSync } from "node:fs";
 import { createServer } from "node:net";
@@ -11,9 +15,11 @@ import { afterEach, describe, expect, it } from "vitest";
 import { WebSocketServer, type WebSocket } from "ws";
 import { VJSTER_NAMESPACE, suiteActionId } from "../src/suite/actions.js";
 
-const PLUGIN_DIR = resolve("io.github.jbrick2070.fadester-for-obs.sdPlugin");
+const UNPACKED = (process.env.FADESTER_SMOKE_PLUGIN_DIR ?? "").trim();
+const PLUGIN_DIR = resolve(UNPACKED || "io.github.jbrick2070.fadester-for-obs.sdPlugin");
 const ENTRY = join(PLUGIN_DIR, "bin", "plugin.js");
-const built = existsSync(ENTRY) && existsSync(join(PLUGIN_DIR, "bin", "fadester.js")) && existsSync(join(PLUGIN_DIR, "bin", "vjster", "plugin.js"));
+const NEEDED = [ENTRY, join(PLUGIN_DIR, "bin", "fadester.js"), join(PLUGIN_DIR, "bin", "vjster", "plugin.js"), join(PLUGIN_DIR, "manifest.json")];
+const built = NEEDED.every((file) => existsSync(file));
 const UUID = "io.github.jbrick2070.fadester-for-obs";
 const SCENE_ACTION = `${UUID}.scene-transition`;
 
@@ -27,6 +33,12 @@ async function closedPort(): Promise<number> {
 }
 
 type Message = Record<string, unknown> & { event?: string; context?: string };
+
+describe.runIf(UNPACKED !== "")("the unpacked package is complete (QA-A02)", () => {
+  it("holds the launcher, both plugins and the manifest", () => {
+    expect(NEEDED.filter((file) => !existsSync(file))).toEqual([]);
+  });
+});
 
 describe.skipIf(!built)("the built plugin starts as Stream Deck starts it (G-02)", () => {
   let host: WebSocketServer | undefined;

@@ -143,7 +143,6 @@ export interface DirectPiTransport {
   getVjsterPort?(): number | undefined;
   /** Optional overrides for deterministic setup-checklist tests. */
   checklistOptions?: SetupChecklistOptions;
-  /** Optional override for reading OBS's saved obs-websocket config in fixture tests. */
 }
 
 /**

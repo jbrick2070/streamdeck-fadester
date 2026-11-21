@@ -89,13 +89,27 @@ jobs:
       - run: npm ci
       - name: Build, validate and pack
         run: node --import tsx scripts/suite/package-candidate.ts
-      - name: Full test suite against the built tree (starts the packed plugin and loads its native addon)
+      - name: Full test suite against the built tree (starts the built plugin and loads its native addon)
         run: npm test
+      # The tree can hold a file the package lacks: the packed .streamDeckPlugin itself is unpacked and started.
+      - name: Unpack the packed plugin and start it as Stream Deck does
+        run: |
+          set -euo pipefail
+          package=release/candidates/windows-macos/io.github.jbrick2070.fadester-for-obs.streamDeckPlugin
+          test -f "$package"
+          unpacked="$RUNNER_TEMP/fadester-packed"
+          rm -rf "$unpacked"
+          mkdir -p "$unpacked"
+          unzip -q "$package" -d "$unpacked"
+          FADESTER_SMOKE_PLUGIN_DIR="$unpacked/io.github.jbrick2070.fadester-for-obs.sdPlugin" npx vitest run tests/suite-launch-smoke.test.ts
 
-  # Fadester Companion's version comes from installer/components.json, not from the tag. Two releases that change
-  # tourbox/ and keep the number would publish two different builds under one version: the release stops here instead.
+  # The tag names Fadester for OBS's version. Fadester Companion (installer/components.json) and the VJster Chrome
+  # extension (vjster-extension/manifest.json) are attached under versions of their own: a release that changed one of
+  # them and kept its number would publish two different builds under one version, so the release stops here instead.
+  # Each is compared with the release that first carried its present version, over the files that go into it (the
+  # Companion's include the VJster OBS page). scripts/release-component-versions.mjs; PUBLISHING.md says what to raise.
   companion-version:
-    name: Fadester Companion version moved with its code
+    name: Companion and VJster extension versions moved with their code
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -103,21 +117,8 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - name: A changed tourbox/ needs a new Companion version
-        run: |
-          previous=$(git describe --tags --abbrev=0 --match 'v[0-9]*.[0-9]*.[0-9]*' "$GITHUB_SHA^" 2>/dev/null || true)
-          if [ -z "$previous" ]; then echo "No earlier release tag: nothing to compare."; exit 0; fi
-          now=$(node -p "require('./installer/components.json').components.companion.version")
-          before=$(git show "$previous:installer/components.json" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s).components.companion.version))")
-          if git diff --quiet "$previous" "$GITHUB_SHA" -- tourbox; then
-            echo "tourbox/ is unchanged since $previous (Companion $now)."
-          elif [ "$now" = "$before" ]; then
-            echo "tourbox/ changed since $previous, and Fadester Companion is still $now."
-            echo "Raise components.companion.version in installer/components.json (and the files the tests keep equal to it), then tag again."
-            exit 1
-          else
-            echo "tourbox/ changed since $previous: Fadester Companion $before -> $now."
-          fi
+      - name: A changed component needs a new version of its own
+        run: node scripts/release-component-versions.mjs "$GITHUB_SHA"
 
   companion:
     name: Fadester Companion ZIP and Store package

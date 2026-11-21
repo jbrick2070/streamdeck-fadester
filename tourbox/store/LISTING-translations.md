@@ -2,6 +2,8 @@
 
 The same listing as [LISTING.md](LISTING.md), for version 1.5.0. In Partner Center, in the submission, add each language under Store listings → Add/remove languages (Additional Store listing languages), and paste its blocks. Reuse the English screenshots and images from `listing/`. Copyright, license terms and "Developed by" stay as in [LISTING.md](LISTING.md). Product features are one per box; keywords are seven, entered one at a time.
 
+Who has read these texts: a model wrote them, and a second model (Antigravity) read all twelve against the English and against the app's own window texts (`tourbox/panel/PanelText.cs`, `PanelExtraText.cs`) on 21 November 2026, in three rounds, until it had nothing left to report. Its corrections are in. No native speaker has read them yet.
+
 ## Deutsch (de)
 
 **Description**
@@ -10,7 +12,7 @@ Fadester Companion macht die Controller, die Sie schon besitzen, zu einem Bildmi
 
 Ziehen Sie den rechten Trigger eines Xbox- oder anderen XInput-Controllers wie einen echten T-Bar, und der T-Bar von OBS folgt. Halten Sie A, um die Überblendung voranzuschieben, und lassen Sie los, um sie auf halbem Weg stehen zu lassen. Mit dem Steuerkreuz nach oben und unten gehen Sie Ihre Szenenliste durch, der linke Trigger senkt die Musik, solange Sie ihn halten, und die Sticks regeln Deckkraft und Mischmodus einer Ebene sowie das Tempo des Videos, das in Chrome über die kostenlose VJster-Erweiterung läuft. Jede Taste lässt sich neu belegen, mit einer zweiten Belegung bei gehaltenem LB, und im einfachen Modus brauchen Umschaltungen auf Sendung ein kurzes Gedrückthalten, damit ein versehentlich angestoßenes Bedienelement nichts bewirkt.
 
-Sie haben eine TourBox? Die steuert derselbe Companion auch: Das Dial ist Ihr T-Bar, Scroll wählt Szenen vor, und der Knob stellt das Videotempo ein.
+Sie haben eine TourBox? Die steuert derselbe Companion auch: Das Dial ist Ihr T-Bar, Scroll lädt Szenen in die Vorschau, und der Knob stellt das Videotempo ein.
 
 Er arbeitet weiter, während OBS im Vordergrund ist, spricht nur mit OBS und der VJster-Erweiterung auf Ihrem eigenen Computer und sendet nichts ins Internet.
 
@@ -32,14 +34,14 @@ Benötigt OBS Studio mit eingeschaltetem WebSocket-Server (Werkzeuge → WebSock
 **Product features**
 
 - Der rechte Trigger ist ein echter T-Bar für den Studiomodus von OBS
-- A halten, um die Überblendung zu schieben; loslassen lässt sie halb stehen
+- A halten, um die Überblendung zu schieben; Loslassen lässt sie halb stehen
 - Steuerkreuz hoch und runter geht Ihre Szenenliste durch
 - Der linke Trigger senkt die Musik, solange Sie ihn halten
 - Jede Taste neu belegbar, mit zweiter Belegung bei gehaltenem LB
 - Einfacher Modus: Umschaltungen auf Sendung brauchen kurzes Gedrückthalten
 - Videotempo für VJster in Chrome mit dem rechten Stick
 - Steuert auch eine TourBox: Das Dial ist Ihr T-Bar
-- Arbeitet, während OBS vorne ist; nichts verlässt Ihren PC
+- Arbeitet, während OBS im Vordergrund ist; nichts verlässt Ihren PC
 
 **Keywords:** OBS · VJ · Bildmischer · Gamecontroller · Xbox-Controller · TourBox · Livestreaming
 
@@ -51,7 +53,7 @@ Fadester Companion convierte los mandos que ya tienes en un mezclador de vídeo 
 
 Aprieta el gatillo derecho de un mando de Xbox u otro mando XInput como si fuera un T-bar de verdad, y el T-bar de OBS lo sigue. Mantén pulsado A para avanzar la mezcla y suéltalo para dejarla a medio camino. Arriba y abajo en la cruceta recorren tu lista de escenas, el gatillo izquierdo baja la música mientras lo mantienes, y los sticks ajustan la opacidad y el modo de fusión de una capa y la velocidad del vídeo que se reproduce en Chrome con la extensión gratuita VJster. Puedes reasignar todos los botones, con una segunda asignación mientras mantienes LB, y el Modo fácil exige mantener pulsado un momento para los cambios en emisión, así que un golpe accidental no hace nada.
 
-¿Tienes una TourBox? El mismo companion también la controla: el Dial es tu T-bar, Scroll prepara escenas y el Knob ajusta la velocidad del vídeo.
+¿Tienes una TourBox? El mismo companion también la controla: el Dial es tu T-bar, Scroll pone escenas en Vista previa y el Knob ajusta la velocidad del vídeo.
 
 Sigue funcionando con OBS en primer plano, solo se comunica con OBS y con la extensión VJster en tu propio ordenador y no envía nada a internet.
 
@@ -68,7 +70,7 @@ Necesita OBS Studio con su servidor WebSocket activado (Herramientas → Ajustes
 - Al cerrar la ventana, los controles siguen activos: un icono en el área de notificación abre de nuevo la ventana, inicia o detiene los controles y cierra la aplicación.
 - Una ventana oscura cuando Windows está en modo oscuro.
 - 13 idiomas: neerlandés, portugués de Brasil y turco son nuevos. La versión aparece en el título de cada ventana.
-- Corregido: el fundido del mando de juego sale también cuando no se puede leer el T-bar de OBS, un corte ya no retiene la pulsación siguiente y una contraseña que OBS rechazó se vuelve a probar sola.
+- Corregido: el fundido del mando de juego se ejecuta también cuando no se puede leer el T-bar de OBS, un corte ya no retiene la pulsación siguiente y una contraseña que OBS rechazó se vuelve a probar sola.
 
 **Product features**
 
@@ -92,7 +94,7 @@ Fadester Companion transforme les manettes que vous possédez déjà en mélange
 
 Tirez la gâchette droite d’une manette Xbox ou d’une autre manette XInput comme un vrai T-bar, et le T-bar d’OBS suit. Maintenez A pour pousser le mélange et relâchez pour le laisser à mi-chemin. Le haut et le bas du pavé directionnel parcourent votre liste de scènes, la gâchette gauche baisse la musique tant que vous la tenez, et les sticks règlent l’opacité et le mode de fusion d’un calque ainsi que la vitesse de la vidéo lue dans Chrome grâce à l’extension gratuite VJster. Chaque bouton peut être réaffecté, avec un second jeu d’actions tant que LB est maintenu, et le Mode facile exige un bref maintien pour les changements à l’antenne : une commande heurtée par mégarde ne fait rien.
 
-Vous avez une TourBox ? Le même companion la pilote aussi : le Dial est votre T-bar, Scroll prépare les scènes et le Knob règle la vitesse de la vidéo.
+Vous avez une TourBox ? Le même companion la pilote aussi : le Dial est votre T-bar, Scroll place les scènes dans l’aperçu et le Knob règle la vitesse de la vidéo.
 
 Il continue de fonctionner quand OBS est au premier plan, ne communique qu’avec OBS et l’extension VJster sur votre propre ordinateur, et n’envoie rien sur Internet.
 
@@ -115,7 +117,7 @@ Nécessite OBS Studio avec son serveur WebSocket activé (Outils → Paramètres
 
 - La gâchette droite est un vrai T-bar pour le mode Studio d’OBS
 - Maintenez A pour pousser le mélange ; relâchez pour le laisser à mi-chemin
-- Le haut et le bas du pavé parcourent votre liste de scènes
+- Le haut et le bas du pavé directionnel parcourent votre liste de scènes
 - La gâchette gauche baisse la musique tant que vous la tenez
 - Réaffectez chaque bouton, avec un second jeu d’actions sous LB
 - Mode facile : les changements à l’antenne demandent un bref maintien
@@ -133,7 +135,7 @@ Fadester Companion trasforma i controller che hai già in un mixer video manuale
 
 Tira il grilletto destro di un controller Xbox o di un altro controller XInput come un vero T-bar, e il T-bar di OBS lo segue. Tieni premuto A per spingere il mix e rilascialo per lasciarlo a metà. Su e giù sul D-pad scorrono l’elenco delle scene, il grilletto sinistro abbassa la musica finché lo tieni premuto e gli stick regolano l’opacità e il metodo di fusione di un livello e la velocità del video in riproduzione in Chrome con l’estensione gratuita VJster. Ogni pulsante si può riassegnare, con una seconda serie di azioni tenendo premuto LB, e la Modalità facile richiede di tenere premuto per un istante per i cambi in onda, così un urto accidentale non fa nulla.
 
-Hai una TourBox? Lo stesso companion la controlla: il Dial è il tuo T-bar, Scroll prepara le scene e il Knob regola la velocità del video.
+Hai una TourBox? Lo stesso companion la controlla: il Dial è il tuo T-bar, Scroll mette le scene in Anteprima e il Knob regola la velocità del video.
 
 Continua a funzionare con OBS in primo piano, comunica solo con OBS e con l’estensione VJster sul tuo computer e non invia nulla su Internet.
 
@@ -149,7 +151,7 @@ Richiede OBS Studio con il server WebSocket attivo (Strumenti → Impostazioni d
 - Apri all'accesso: una casella sotto i pulsanti, disattivata finché non la selezioni.
 - Chiudendo la finestra i controlli restano attivi: un’icona nell’area di notifica riapre la finestra, avvia o ferma i controlli ed esce dall’app.
 - Una finestra scura quando Windows è in modalità scura.
-- 13 lingue: olandese, portoghese brasiliano e turco sono nuove. La versione è nel titolo di ogni finestra.
+- 13 lingue: olandese, portoghese brasiliano e turco sono nuovi. La versione è nel titolo di ogni finestra.
 - Corretto: la dissolvenza del controller di gioco parte anche quando il T-bar di OBS non può essere letto, un taglio non blocca più la pressione successiva e una password rifiutata da OBS viene riprovata da sola.
 
 **Product features**
@@ -174,7 +176,7 @@ Fadester Companion は、手持ちのコントローラーを OBS Studio 用の�
 
 Xbox などの XInput 対応コントローラーの右トリガーを本物の T バーのように引くと、OBS の T バーが追従します。A を押し続けるとミックスが進み、離すと途中で止まります。十字キーの上下でシーン一覧を移動し、左トリガーを押している間は音楽を下げ、スティックでレイヤーの不透明度とブレンドモード、そして無料の VJster 拡張機能を通じて Chrome で再生中の動画の速度を調整します。すべてのボタンを割り当て直せるほか、LB を押している間は 2 つ目の割り当てが使えます。かんたんモードでは放送中の切り替えに短い長押しが必要なので、うっかり触れても何も起きません。
 
-TourBox をお持ちですか？同じコンパニオンで操作できます。Dial が T バー、Scroll でシーンを選び、Knob で動画の速度を調整します。
+TourBox をお持ちですか？同じコンパニオンで操作できます。Dial が T バー、Scroll でシーンをプレビューに入れ、Knob で動画の速度を調整します。
 
 OBS が前面にあっても動作し続け、通信するのは同じコンピューター上の OBS と VJster 拡張機能だけで、インターネットには何も送りません。
 
@@ -215,7 +217,7 @@ Fadester Companion은 이미 가지고 있는 컨트롤러를 OBS Studio용 손�
 
 Xbox나 다른 XInput 게임 컨트롤러의 오른쪽 트리거를 진짜 T바처럼 당기면 OBS의 T바가 따라 움직입니다. A를 누르고 있으면 믹스가 진행되고, 놓으면 중간에 멈춥니다. 십자키 위아래로 장면 목록을 이동하고, 왼쪽 트리거를 누르는 동안 음악이 줄어들며, 스틱으로 레이어의 불투명도와 혼합 모드, 그리고 무료 VJster 확장 프로그램을 통해 Chrome에서 재생 중인 동영상의 속도를 조절합니다. 모든 버튼을 다시 지정할 수 있고, LB를 누르고 있는 동안에는 두 번째 지정이 적용됩니다. 쉬운 모드에서는 방송 중 전환을 하려면 잠깐 누르고 있어야 하므로 실수로 건드려도 아무 일도 일어나지 않습니다.
 
-TourBox가 있나요? 같은 컴패니언으로 조작할 수 있습니다. Dial은 T바, Scroll은 장면 선택, Knob은 동영상 속도 조절입니다.
+TourBox가 있으십니까? 같은 컴패니언으로 조작할 수 있습니다. Dial은 T바, Scroll은 미리보기 장면 선택, Knob은 동영상 속도 조절입니다.
 
 OBS가 앞에 있어도 계속 작동하며, 같은 컴퓨터의 OBS와 VJster 확장 프로그램하고만 통신하고 인터넷으로는 아무것도 보내지 않습니다.
 
@@ -240,7 +242,7 @@ WebSocket 서버가 켜진 OBS Studio가 필요합니다(도구 → WebSocket �
 - A를 누르고 있으면 믹스 진행, 놓으면 중간에 정지
 - 십자키 위아래로 장면 목록 이동
 - 왼쪽 트리거를 누르는 동안 음악 줄이기
-- 모든 버튼 재지정, LB를 누르면 두 번째 지정
+- 모든 버튼 재지정, LB를 누르고 있으면 두 번째 지정
 - 쉬운 모드: 방송 중 전환은 잠깐 누르고 있어야 실행
 - 오른쪽 스틱으로 Chrome의 VJster 동영상 속도 조절
 - TourBox도 지원: Dial이 T바
@@ -256,7 +258,7 @@ Fadester Companion превращает контроллеры, которые �
 
 Нажимайте правый триггер геймпада Xbox или другого геймпада XInput, как настоящий T-bar, и T-bar в OBS следует за ним. Удерживайте A, чтобы продвигать переход, и отпустите, чтобы оставить его на полпути. Крестовина вверх и вниз листает список сцен, левый триггер приглушает музыку, пока вы его держите, а стики регулируют непрозрачность и режим наложения слоя, а также скорость видео, которое играет в Chrome через бесплатное расширение VJster. Любую кнопку можно переназначить, со вторым набором действий при удержании LB, а Простой режим требует короткого удержания для переключений в эфире, так что случайное нажатие ничего не делает.
 
-Есть TourBox? Тот же companion управляет и им: Dial — ваш T-bar, Scroll выбирает сцены, а Knob задаёт скорость видео.
+Есть TourBox? Тот же companion управляет и им: Dial — ваш T-bar, Scroll выводит сцены в Предпросмотр, а Knob задаёт скорость видео.
 
 Он продолжает работать, когда OBS на переднем плане, общается только с OBS и расширением VJster на вашем компьютере и ничего не отправляет в интернет.
 
@@ -273,7 +275,7 @@ Fadester Companion превращает контроллеры, которые �
 - Если закрыть окно, управление остаётся включённым: значок в области уведомлений снова открывает окно, запускает или останавливает управление и завершает работу приложения.
 - Тёмное окно, когда в Windows включён тёмный режим.
 - 13 языков: добавлены нидерландский, бразильский португальский и турецкий. Версия указана в заголовке каждого окна.
-- Исправлено: плавный переход с геймпада выполняется и тогда, когда T-bar в OBS не удаётся прочитать; резкая склейка больше не задерживает следующее нажатие; пароль, который OBS не принял, пробуется снова автоматически.
+- Исправлено: плавный переход с геймпада выполняется и тогда, когда T-bar в OBS не удаётся прочитать; резкая склейка больше не задерживает следующее нажатие; пароль, который OBS не принял, отправляется повторно автоматически.
 
 **Product features**
 
@@ -285,7 +287,7 @@ Fadester Companion превращает контроллеры, которые �
 - Простой режим: переключения в эфире требуют короткого удержания
 - Скорость видео VJster в Chrome правым стиком
 - Управляет и TourBox: Dial — ваш T-bar
-- Работает, когда OBS впереди; ничто не покидает ваш ПК
+- Работает, когда OBS на переднем плане; ничто не покидает ваш ПК
 
 **Keywords:** OBS · VJ · видеомикшер · геймпад · геймпад Xbox · TourBox · прямой эфир
 
@@ -297,7 +299,7 @@ Fadester Companion 把你已有的控制器变成 OBS Studio 的手动视频切�
 
 像真正的 T-bar 一样扣下 Xbox 或其他 XInput 游戏手柄的右扳机，OBS 自己的 T-bar 就会跟着移动。按住 A 推进混合，松开则停在中途。方向键上下浏览场景列表，按住左扳机时音乐会压低，摇杆可调节图层的不透明度和混合模式，以及通过免费 VJster 扩展在 Chrome 中播放的视频速度。每个按钮都可以重新分配，按住 LB 时还有第二套操作；简易模式下，直播中的切换需要短暂按住，误碰不会生效。
 
-有 TourBox？同一个 Companion 也能控制它：Dial 是你的 T-bar，Scroll 选择场景，Knob 调节视频速度。
+有 TourBox？同一个 Companion 也能控制它：Dial 是你的 T-bar，Scroll 将场景放入预览，Knob 调节视频速度。
 
 OBS 在前台时它照样工作，只与你电脑上的 OBS 和 VJster 扩展通信，不向互联网发送任何内容。
 
@@ -338,7 +340,7 @@ Fadester Companion 把你手上的控制器變成 OBS Studio 的手動視訊切�
 
 像真正的 T-bar 一樣扣下 Xbox 或其他 XInput 遊戲控制器的右扳機，OBS 自己的 T-bar 就會跟著移動。按住 A 推進混合，放開則停在中途。十字鍵上下瀏覽場景清單，按住左扳機時音樂會壓低，搖桿可調整圖層的不透明度與混合模式，以及透過免費 VJster 擴充功能在 Chrome 中播放的影片速度。每個按鈕都能重新指定，按住 LB 時還有第二組操作；簡易模式下，直播中的切換需要短暫按住，誤觸不會生效。
 
-有 TourBox？同一個 Companion 也能控制它：Dial 是你的 T-bar，Scroll 選擇場景，Knob 調整影片速度。
+有 TourBox？同一個 Companion 也能控制它：Dial 是你的 T-bar，Scroll 將場景放入預覽，Knob 調整影片速度。
 
 OBS 在前景時它照樣運作，只與你電腦上的 OBS 和 VJster 擴充功能通訊，不會傳送任何內容到網際網路。
 
@@ -377,11 +379,11 @@ OBS 在前景時它照樣運作，只與你電腦上的 OBS 和 VJster 擴充功
 
 Fadester Companion maakt van de controllers die je al hebt een beeldmixer voor OBS Studio die je met je handen bedient.
 
-Trek aan de rechtertrigger van een Xbox- of andere XInput-gamecontroller zoals aan een echte T-bar, en de T-bar van OBS zelf volgt. Houd A vast om de mix verder te duwen en laat los om hem halverwege te laten staan. Met de D-pad omhoog en omlaag loop je door je scènelijst, de linkertrigger dempt je muziek zolang je hem vasthoudt, en met de sticks regel je de dekking en de mengmodus van een laag en de snelheid van de video die in Chrome speelt via de gratis VJster-extensie. Elke knop kun je opnieuw toewijzen, met een tweede laag zolang je LB vasthoudt, en in de eenvoudige modus vraagt elke wissel on air om kort vasthouden, zodat een aangestoten knop niets doet.
+Trek aan de rechtertrigger van een Xbox- of andere XInput-gamecontroller zoals aan een echte T-bar, en de T-bar van OBS zelf volgt. Houd A vast om de mix verder te duwen en laat los om hem halverwege te laten staan. Met de D-pad omhoog en omlaag loop je door je scènelijst, de linkertrigger dempt je muziek zolang je hem vasthoudt, en met de sticks regel je de dekking en de mengmodus van een laag en de snelheid van de video die in Chrome speelt via de gratis VJster-extensie. Elke knop kun je opnieuw toewijzen, met een tweede laag zolang je LB vasthoudt, en in de eenvoudige modus vraagt elke wissel on air om kort vasthouden, zodat een per ongeluk aangeraakte knop niets doet.
 
 Heb je een TourBox? Dezelfde Companion bedient die ook: de Dial is je T-bar, met Scroll zet je scènes in Voorvertoning en de Knob regelt de videosnelheid.
 
-Het blijft werken terwijl OBS op de voorgrond staat, praat alleen met OBS en de VJster-extensie op je eigen computer en stuurt niets naar internet.
+De app blijft werken terwijl OBS op de voorgrond staat, praat alleen met OBS en de VJster-extensie op je eigen computer en stuurt niets naar internet.
 
 Vereist OBS Studio met de WebSocket-server ingeschakeld (Hulpmiddelen → WebSocket-serverinstellingen). De T-bar heeft OBS Studio 33 in de Studiomodus nodig. Gratis en open source (GPL-2.0-or-later).
 
@@ -408,7 +410,7 @@ Vereist OBS Studio met de WebSocket-server ingeschakeld (Hulpmiddelen → WebSoc
 - Eenvoudige modus: wissels on air vragen om kort vasthouden
 - Videosnelheid voor VJster in Chrome met de rechterstick
 - Bedient ook een TourBox: de Dial is je T-bar
-- Werkt terwijl OBS vooraan staat; niets verlaat je pc
+- Werkt terwijl OBS op de voorgrond staat; niets verlaat je pc
 
 **Keywords:** OBS · VJ · beeldmixer · gamecontroller · Xbox-controller · TourBox · livestreamen
 
@@ -437,7 +439,7 @@ Requer o OBS Studio com o servidor WebSocket ativado (Ferramentas → Configura�
 - Fechar a janela mantém os controles ativados: um ícone na área de notificação abre a janela de novo, inicia ou para os controles e encerra o aplicativo.
 - Uma janela escura quando o Windows está no modo escuro.
 - 13 idiomas: holandês, português do Brasil e turco são novos. A versão aparece no título de cada janela.
-- Corrigido: o fade do controle de jogo sai mesmo quando o T-bar do OBS não pode ser lido, um corte não segura mais o próximo toque no botão, e uma senha que o OBS recusou é tentada de novo sozinha.
+- Corrigido: o fade do controle de jogo é executado mesmo quando o T-bar do OBS não pode ser lido, um corte não segura mais o próximo toque no botão, e uma senha que o OBS recusou é tentada de novo automaticamente.
 
 **Product features**
 
@@ -459,7 +461,7 @@ Requer o OBS Studio com o servidor WebSocket ativado (Ferramentas → Configura�
 
 Fadester Companion, elinizdeki kumandaları OBS Studio için elle kullanılan bir görüntü mikserine dönüştürür.
 
-Bir Xbox veya başka bir XInput oyun kumandasının sağ tetiğini gerçek bir T-bar gibi çekin; OBS'in kendi T-bar'ı onu izler. Miksi ilerletmek için A'yı basılı tutun, yarı yolda bırakmak için bırakın. D-pad yukarı ve aşağı sahne listenizde gezinir, sol tetik basılı tuttuğunuz sürece müziği kısar, çubuklar ise bir katmanın opaklığını ve karışım modunu ve ücretsiz VJster uzantısıyla Chrome'da oynayan videonun hızını ayarlar. Her düğme yeniden atanabilir, LB basılıyken ikinci bir katmanla; Kolay mod ise yayındaki değişiklikler için kısa bir basılı tutma ister, böylece yanlışlıkla dokunulan bir düğme hiçbir şey yapmaz.
+Bir Xbox veya başka bir XInput oyun kumandasının sağ tetiğini gerçek bir T-bar gibi çekin; OBS'in kendi T-bar'ı onu izler. Miksi ilerletmek için A'yı basılı tutun, yarıda durdurmak için bırakın. D-pad yukarı ve aşağı sahne listenizde gezinir, sol tetik basılı tuttuğunuz sürece müziği kısar, çubuklar ise bir katmanın opaklığını ve karışım modunu ve ücretsiz VJster uzantısıyla Chrome'da oynatılan videonun hızını ayarlar. Her düğme, LB basılıyken ikinci bir katmanla birlikte yeniden atanabilir; Kolay mod ise yayındaki değişiklikler için kısa bir basılı tutma ister, böylece yanlışlıkla dokunulan bir düğme hiçbir şey yapmaz.
 
 TourBox'ınız mı var? Aynı Companion onu da çalıştırır: Dial sizin T-bar'ınızdır, Scroll sahneleri Önizleme'ye koyar ve Knob video hızını ayarlar.
 
@@ -483,7 +485,7 @@ WebSocket sunucusu açık OBS Studio gerekir (Araçlar → WebSocket Sunucu Ayar
 **Product features**
 
 - Sağ tetik, OBS Stüdyo Modu için gerçek bir T-bar'dır
-- Miksi itmek için A'yı basılı tutun; bırakınca yarı yolda kalır
+- Miksi ilerletmek için A'yı basılı tutun; bırakınca yarıda kalır
 - D-pad yukarı ve aşağı sahne listenizde gezinir
 - Sol tetik, basılı tuttuğunuz sürece müziği kısar
 - Her düğmeyi yeniden atayın; LB basılıyken ikinci katman

@@ -4,6 +4,11 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 
 ## Unreleased
 
+### Fadester Companion and Suite Setup
+
+#### Changed
+- The Microsoft Store listing in twelve languages (`tourbox/store/LISTING-translations.md`) has had a second model's review: 27 corrections in three rounds. The largest group is the sentence about the TourBox's Scroll, which in nine languages said that it selects scenes and now says, as the English does, that it puts them in Preview. No native speaker has read the texts yet.
+
 ## 1.5.0 - 2026-11-20
 This release ships Fadester for OBS 1.5.0 (0.12.16 before it), Fadester Companion 1.5.0 (0.1.17), the VJster Chrome extension 1.5.0 (0.1.6), the standalone VJster plugin 1.5.0 (0.2.1) and Fadester Suite Setup 1.5.0 (named by its build date until now). It is the suite-wide step to 1.5: every product of the Fadester suite carries version 1.5 from here on, Midi Fadester and Playlister in their own repositories too, so that one round of hand tests on Windows and on the Mac covers them all. The number is the suite's. No plugin id and no action id changed, so the keys and profiles you have from 0.12 keep working.
 

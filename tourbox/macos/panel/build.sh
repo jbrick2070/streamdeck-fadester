@@ -12,6 +12,12 @@ python="${PYTHON:-python3}"
 resources="$app/Contents/Resources"
 mkdir -p "$app/Contents/MacOS" "$resources/presets" "$resources/artwork/icons"
 cp Info.plist "$app/Contents/Info.plist"
+# What macOS shows when it asks for the Downloads folder, in the suite's 13 languages (lproj/<language>.lproj/InfoPlist.strings).
+for folder in lproj/*.lproj; do
+  mkdir -p "$resources/$(basename "$folder")"
+  cp "$folder/InfoPlist.strings" "$resources/$(basename "$folder")/InfoPlist.strings"
+done
+test "$(ls -d "$resources"/*.lproj | wc -l | tr -d " ")" = 13 || { echo "Expected 13 InfoPlist.strings languages" >&2; exit 1; }
 # The version the app shows is the release's: Fadester Companion's in installer/components.json.
 companion_version="$("$python" -c 'import json, sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["components"]["companion"]["version"])' "$repo/installer/components.json")"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $companion_version" "$app/Contents/Info.plist"

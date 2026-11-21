@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import AppKit
+import ServiceManagement
 import ApplicationServices
 
 private func rgb(_ red: CGFloat, _ green: CGFloat, _ blue: CGFloat) -> NSColor { NSColor(srgbRed: red / 255, green: green / 255, blue: blue / 255, alpha: 1) }
@@ -139,6 +140,43 @@ private final class PillActionButton: NSControl {
     }
 }
 
+/// A part of the Setup page that stays closed until asked for (U3-05), as on Windows: a numbered step's Details link, or
+/// an optional section's title with its state in a few words and Show / Hide.
+@MainActor private final class SetupFold: NSObject {
+    let id: String
+    let section: Bool
+    let link = NSButton(title: "", target: nil, action: nil)
+    let summary = NSTextField(labelWithString: "")
+    let content = NSStackView()
+    private(set) var open = false
+    /// A light asked for this part and it was opened for that: a later Hide by the user then stays.
+    var called = false
+    /// Open because the user opened it (or left it open last time): only these are remembered. A part a light opened
+    /// is open for that problem, not for every start after it (QA-C04).
+    var byUser = false
+    var toggled: (() -> Void)?
+
+    init(id: String, section: Bool) {
+        self.id = id; self.section = section
+        super.init()
+        link.isBordered = false
+        link.target = self; link.action = #selector(clicked)
+        content.orientation = .vertical; content.alignment = .leading; content.spacing = 10
+        summary.font = .systemFont(ofSize: 12.5)
+        summary.textColor = .secondaryLabelColor
+        set(false)
+    }
+
+    func set(_ value: Bool) {
+        open = value
+        let words = L(value ? "foldHide" : section ? "foldShow" : "foldDetails") + (value ? " ▴" : " ▾")
+        link.attributedTitle = NSAttributedString(string: words, attributes: [.foregroundColor: accentTextColor, .font: NSFont.systemFont(ofSize: 12.5)])
+        content.isHidden = !value
+    }
+
+    @objc private func clicked() { set(!open); byUser = open; toggled?() }
+}
+
 @MainActor private final class FeedbackHud {
     private let panel: NSPanel
     private let textField = NSTextField(wrappingLabelWithString: "")
@@ -233,6 +271,12 @@ private final class PillActionButton: NSControl {
     private let host = HostController()
     private var hud: FeedbackHud?
     private var importGuideWindow: TourBoxImportWindow?
+    /// "Open when I sign in" (U3-06): a login item of the app itself, off until ticked. macOS 13 and later.
+    private var openAtLogin = NSButton(checkboxWithTitle: L("macOpenAtLogin"), target: nil, action: nil)
+    /// The folded parts of the Setup page, and which of them the user left open (a preference of this window, not a setting of the controls).
+    private var folds: [SetupFold] = []
+    private var obsFold: SetupFold?, mixFold: SetupFold?, vjFold: SetupFold?
+    private var openFolds: [String] { UserDefaults.standard.stringArray(forKey: "fadester.openFolds") ?? [] }
     private var showMeWindow: ObsShowMeWindow?
     private var window: NSWindow!
     private var tabs: NSTabView!
@@ -248,6 +292,8 @@ private final class PillActionButton: NSControl {
     private var vsLine = NSTextField(labelWithString: "")
     private var vsStatus = ""
     private var importNote = NSTextField(wrappingLabelWithString: "")
+    /// The three import steps on the Setup page; they name the file as it was written this time (QA-R201).
+    private lazy var presetSteps: NSTextField = label("")
     private var port = NSTextField(string: "4455"), password = NSSecureTextField(string: "")
     private var mix = NSButton(checkboxWithTitle: L("enableMix"), target: nil, action: nil)
     // Stream Deck, OpenDeck and MIDI only (the host's --mix-only), as on Windows.
@@ -256,7 +302,7 @@ private final class PillActionButton: NSControl {
     private var vjsterPort = NSTextField(string: "48150"), vjsterExtensionId = NSTextField(string: ""), vjsterVideo = NSTextField(string: "")
     private var vjsterTarget = NSPopUpButton(frame: .zero, pullsDown: false)
     private var fields: [String: NSTextField] = [:], choices: [String: NSPopUpButton] = [:]
-    private var scanButton: NSButton!, primaryButton: NSButton!, saveButton: NSButton!, copyObsUrlButton: NSButton!, firstFourButton: NSButton!, savePresetStepButton: NSButton!, openConsoleStepButton: NSButton!, grantAxButton: NSButton!
+    private var scanButton: NSButton!, primaryButton: NSButton!, saveButton: NSButton!, copyObsUrlButton: NSButton!, firstFourButton: NSButton!, savePresetStepButton: NSButton!, grantAxButton: NSButton!
     private var axStatusLabel = NSTextField(wrappingLabelWithString: "")
     private var activity = NSTextView()
     private var mapRows: [ControlMapRow] = []
@@ -512,6 +558,12 @@ private final class PillActionButton: NSControl {
         let feedbackButton = button(L("feedback"), #selector(toggleFeedback))
         let guideButton = button(L("guide"), #selector(guide))
         root.addArrangedSubview(horizontal([primaryButton, saveButton, feedbackButton, guideButton]))
+        // The box shows what macOS has: System Settings → General → Login Items can switch it off too.
+        if #available(macOS 13.0, *) {
+            openAtLogin.target = self; openAtLogin.action = #selector(openAtLoginToggled)
+            openAtLogin.state = !previewMode && SMAppService.mainApp.status == .enabled ? .on : .off
+            root.addArrangedSubview(openAtLogin)
+        }
         root.addArrangedSubview(label(L("macKeepOpen"), small: true))
 
         vjster.target = self; vjster.action = #selector(vjsterToggled)
@@ -615,20 +667,45 @@ private final class PillActionButton: NSControl {
         return scroll
     }
 
+    /// Starts a folded part under what was just added: with a title an optional section, without one a step's Details.
+    private func fold(_ id: String, title: String? = nil, in stack: NSStackView) -> SetupFold {
+        let part = SetupFold(id: id, section: title != nil)
+        if let title {
+            let text = NSTextField(labelWithString: title)
+            text.font = .boldSystemFont(ofSize: 14.5); text.textColor = inkColor
+            text.lineBreakMode = .byTruncatingTail
+            text.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+            stack.addArrangedSubview(horizontal([text, part.summary, part.link]))
+        } else {
+            stack.addArrangedSubview(part.link)
+        }
+        stack.addArrangedSubview(part.content)
+        part.content.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
+        part.toggled = { [weak self] in
+            guard let self, !self.previewMode else { return }
+            UserDefaults.standard.set(Readiness.foldsToRemember(self.folds.map { ($0.id, $0.byUser) }), forKey: "fadester.openFolds")
+        }
+        if !previewMode && openFolds.contains(id) { part.set(true); part.byUser = true }
+        folds.append(part)
+        return part
+    }
+    /// A light asks for something inside a closed part: open it, once per problem.
+    private func call(_ part: SetupFold?, needed: Bool) {
+        guard let part else { return }
+        if Readiness.opensFold(needed: needed, called: part.called, open: part.open) { part.set(true) }
+        part.called = needed
+    }
+
     private func setup() -> NSView {
         let stack = column()
         diagramView.onAction = { [weak self] action in self?.handleDiagramAction(action) }
         stack.addArrangedSubview(diagramView)
         diagramView.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
 
+        // Each step is one sentence and its button; the port and password OBS already gave, the long explanations and
+        // the two optional sections are folded away until asked for, or until a light needs them (U3-05, as on Windows).
         heading(L("connectTitle"), in: stack)
-        paragraph(L("connectHint"), in: stack)
-        port.widthAnchor.constraint(equalToConstant: 86).isActive = true
-        password.widthAnchor.constraint(equalToConstant: 220).isActive = true
-        password.placeholderString = L("macPasswordPlaceholder")
-        stack.addArrangedSubview(horizontal([label(L("port")), port, label(L("password")), password]))
-        edits += [port, password]
-        paragraph(L("macPasswordHint"), in: stack)
+        paragraph(L("connectShort"), in: stack)
         scanButton = button(L("discover"), #selector(scan))
         stack.addArrangedSubview(scanButton)
         snapshot.font = .boldSystemFont(ofSize: 12.5)
@@ -640,22 +717,27 @@ private final class PillActionButton: NSControl {
         vsLine.stringValue = vsStatus
         vsLine.isHidden = vsStatus.isEmpty
         stack.addArrangedSubview(vsLine)
+        let obsPart = fold("obs", in: stack)
+        obsFold = obsPart
+        paragraph(L("connectHint"), in: obsPart.content)
+        port.widthAnchor.constraint(equalToConstant: 86).isActive = true
+        password.widthAnchor.constraint(equalToConstant: 220).isActive = true
+        password.placeholderString = L("macPasswordPlaceholder")
+        obsPart.content.addArrangedSubview(horizontal([label(L("port")), port, label(L("password")), password]))
+        edits += [port, password]
+        paragraph(L("macPasswordHint"), in: obsPart.content)
 
         heading(L("macControllerTitle"), in: stack)
         subheading(L("macPresetTitle"), in: stack)
-        paragraph(L("macPresetSteps"), in: stack)
-        savePresetStepButton = button(L("macSavePreset"), #selector(saveAndGuidePreset))
+        // One button, named as on Windows (U3-23): it saves the preset to Downloads without a question, copies its
+        // path, opens TourBox Console and shows where to click there.
+        savePresetStepButton = button(L("openPreset"), #selector(saveAndGuidePreset))
         savePresetStepButton.bezelStyle = .rounded
         savePresetStepButton.bezelColor = accentColor
-        openConsoleStepButton = button(L("macOpenConsoleStep"), #selector(openOrDownloadConsole))
         let showGuideBtn = button(L("btnShowWhere"), #selector(showImportGuide))
-        stack.addArrangedSubview(horizontal([savePresetStepButton, openConsoleStepButton, showGuideBtn]))
-        paragraph(L("importAutoHint"), in: stack)
-        let downloadConsoleBtn = button(L("macDownloadConsole"), #selector(downloadTourBoxConsole))
-        let presetSquareBtn = button(L("macPresetSquare"), #selector(openPresetSquare))
-        stack.addArrangedSubview(horizontal([label(L("macTourBoxInfo"), small: true), downloadConsoleBtn, presetSquareBtn]))
+        stack.addArrangedSubview(horizontal([savePresetStepButton, showGuideBtn]))
         if LocalFiles.presetSyncState(bundledHash: bundledPresetHash, savedHash: savedPresetHash) == .updateAvailable {
-            importNote.stringValue = L("macPresetUpdated")
+            importNote.stringValue = L("macPresetUpdated", L("openPreset"))
             importNote.isHidden = false
         } else {
             importNote.isHidden = true
@@ -664,6 +746,13 @@ private final class PillActionButton: NSControl {
         importNote.textColor = accentTextColor
         stack.addArrangedSubview(importNote)
         importNote.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
+        let presetPart = fold("tourbox", in: stack)
+        presetSteps.stringValue = Readiness.importSteps(saved: lastSavedPreset)
+        presetPart.content.addArrangedSubview(presetSteps)
+        presetSteps.widthAnchor.constraint(equalTo: presetPart.content.widthAnchor).isActive = true
+        let downloadConsoleBtn = button(L("macDownloadConsole"), #selector(downloadTourBoxConsole))
+        let presetSquareBtn = button(L("macPresetSquare"), #selector(openPresetSquare))
+        presetPart.content.addArrangedSubview(horizontal([label(L("macTourBoxInfo"), small: true), downloadConsoleBtn, presetSquareBtn]))
 
         subheading(L("macAxTitle"), in: stack)
         paragraph(L("macAxHint"), in: stack)
@@ -673,37 +762,45 @@ private final class PillActionButton: NSControl {
         stack.addArrangedSubview(horizontal([grantAxButton, button(L("macNativeHelper"), #selector(permission)), axStatusLabel]))
 
         heading(L("cueTitle"), in: stack)
-        paragraph(L("macCueHint"), in: stack)
-
-        // The optional sections, in the order of the Windows panel: Assign your inputs, Whole mix, VJster.
-        heading(L("inputsTitle"), in: stack)
+        paragraph(L("macCueShort"), in: stack)
+        let cuePart = fold("cue", in: stack)
+        paragraph(L("macCueHint"), in: cuePart.content)
+        // Assign your inputs is one sentence here, with the button that opens its tab.
         paragraph(L("inputsHint"), in: stack)
+        let toAssignments = button(L("assignments"), #selector(selectTab(_:)))
+        toAssignments.tag = 1
+        stack.addArrangedSubview(toAssignments)
 
-        heading(L("mixTitle"), in: stack)
-        stack.addArrangedSubview(mix); edits.append(mix)
-        paragraph(L("mixHint"), in: stack)
-        stack.addArrangedSubview(mixOnly); edits.append(mixOnly)
-        number(L("mixStep"), key: "mixStepDb", in: stack)
-        number(L("mixFade"), key: "mixFadeMs", in: stack)
+        // The optional sections, in the order of the Windows panel: Whole mix, VJster. Each is one line until opened.
+        let mixPart = fold("mix", title: L("mixTitle"), in: stack)
+        mixFold = mixPart
+        mixPart.content.addArrangedSubview(mix); edits.append(mix)
+        paragraph(L("mixHint"), in: mixPart.content)
+        mixPart.content.addArrangedSubview(mixOnly); edits.append(mixOnly)
+        number(L("mixStep"), key: "mixStepDb", in: mixPart.content)
+        number(L("mixFade"), key: "mixFadeMs", in: mixPart.content)
 
-        heading(L("vjsterTitle"), in: stack)
+        let vjPart = fold("vjster", title: L("vjsterTitle"), in: stack)
+        vjFold = vjPart
+        let vjStack = vjPart.content
         vjsterPort.widthAnchor.constraint(equalToConstant: 86).isActive = true
         vjsterTarget.widthAnchor.constraint(greaterThanOrEqualToConstant: 205).isActive = true
         vjsterTarget.removeAllItems()
         for (titleText, code) in [(L("vjsterTargetBoth"), "both"), (L("vjsterTargetBrowser"), "browser"), (L("vjsterTargetObs"), "obs")] {
             vjsterTarget.addItem(withTitle: titleText); vjsterTarget.lastItem?.representedObject = code
         }
-        stack.addArrangedSubview(vjster)
-        stack.addArrangedSubview(horizontal([label(L("vjsterPort")), vjsterPort, label(L("vjsterTarget")), vjsterTarget]))
+        vjStack.addArrangedSubview(vjster)
+        vjStack.addArrangedSubview(horizontal([label(L("vjsterPort")), vjsterPort, label(L("vjsterTarget")), vjsterTarget]))
         vjsterExtensionId.widthAnchor.constraint(equalToConstant: 300).isActive = true
         vjsterExtensionId.placeholderString = L("macExtensionPlaceholder")
-        stack.addArrangedSubview(horizontal([label(L("vjsterExtensionId")), vjsterExtensionId]))
+        vjStack.addArrangedSubview(horizontal([label(L("vjsterExtensionId")), vjsterExtensionId]))
         vjsterVideo.widthAnchor.constraint(equalToConstant: 300).isActive = true
         vjsterVideo.placeholderString = L("macVideoPlaceholder")
         copyObsUrlButton = button(L("copyObsUrl"), #selector(copyObsUrl))
-        stack.addArrangedSubview(horizontal([label(L("vjsterVideo")), vjsterVideo, copyObsUrlButton]))
+        vjStack.addArrangedSubview(horizontal([label(L("vjsterVideo")), vjsterVideo, copyObsUrlButton]))
         edits += [vjster, vjsterPort, vjsterTarget, vjsterExtensionId]
-        paragraph(L("macVjsterHint"), in: stack)
+        paragraph(L("macVjsterHint"), in: vjStack)
+        vjsterTarget.target = self; vjsterTarget.action = #selector(vjsterToggled)
         return scrolling(stack)
     }
 
@@ -888,6 +985,24 @@ private final class PillActionButton: NSControl {
     @objc private func layer1Changed() { fill("layer1Source", catalog.items[selected("layer1Scene")] ?? [], keep: "") }
     @objc private func layer2Changed() { fill("layer2Source", catalog.items[selected("layer2Scene")] ?? [], keep: "") }
     @objc private func vjsterToggled() { refreshIndicators() }
+    /// Ticked or cleared by the user. The app registers itself as a login item (no helper, no entitlement); when macOS
+    /// wants the user's approval, say so and open Login Items.
+    @objc private func openAtLoginToggled() {
+        guard #available(macOS 13.0, *), !previewMode else { return }
+        let service = SMAppService.mainApp
+        let wanted = openAtLogin.state == .on
+        do {
+            if wanted { try service.register() } else { try service.unregister() }
+        } catch {
+            let message = L("signInFailed", error.localizedDescription)
+            setStatus(message); note(message)
+        }
+        if wanted && service.status == .requiresApproval {
+            setStatus(L("macLoginApprove")); note(L("macLoginApprove"))
+            SMAppService.openSystemSettingsLoginItems()
+        }
+        openAtLogin.state = service.status == .enabled ? .on : .off
+    }
     @objc private func mixToggled() {
         if mix.state != .on { mixOnly.state = .off }
         updateEnabled()
@@ -960,12 +1075,17 @@ private final class PillActionButton: NSControl {
         vjsterLight.display(vjState, enabled: true)
         controlsLight.display(ctlState, enabled: controlsOn || !axReady || canAct)
         mixOnly.isEnabled = mix.state == .on && !controlsOn && !scanning
-        savePresetStepButton?.title = syncState == .updateAvailable ? L("macSavePresetUpdated") : L("macSavePreset")
-        openConsoleStepButton?.title = consoleReady ? L("macOpenConsoleStep") : L("macDownloadConsoleStep")
+        mixFold?.summary.stringValue = Readiness.mixSummary(on: mix.state == .on, only: onlyMix)
+        vjFold?.summary.stringValue = Readiness.vjsterSummary(on: vjEnabled, target: vjsterTarget.titleOfSelectedItem ?? "",
+                                                              port: Int(vjsterPort.stringValue.trimmingCharacters(in: .whitespaces)) ?? settings.vjsterPort)
+        // The port and password are needed when OBS runs and refuses the sign-in or does not answer; VJster's fields when its light is amber or red.
+        call(obsFold, needed: Readiness.needsObsFields(connected: obsConnected, running: obsRunning, problem: obsProblem))
+        call(vjFold, needed: vjState.lamp == .amber || vjState.lamp == .red)
         grantAxButton?.bezelColor = axTrusted ? nil : accentColor
         axStatusLabel.stringValue = axTrusted ? L("macAxGranted") : L("macAxNeeded")
         axStatusLabel.textColor = axTrusted ? grantedColor : reminderFgColor
         importGuideWindow?.update(savedPreset: lastSavedPreset, consoleInstalled: consoleReady)
+        presetSteps.stringValue = Readiness.importSteps(saved: lastSavedPreset)
 
         let parsedVjPort = Int(vjsterPort.stringValue.trimmingCharacters(in: .whitespaces)) ?? settings.vjsterPort
         diagramView.state = SetupDiagramView.State(
@@ -1503,41 +1623,52 @@ private final class PillActionButton: NSControl {
         note(L("macPresetSquareOpened") + " https://www.tourboxtech.com/en/presets/")
     }
 
-    @objc private func openOrDownloadConsole() {
-        guard !previewMode else { return }
-        if lastSavedPreset == nil && savedPresetHash == nil {
-            importNote.stringValue = L("macNeedPreset")
-            importNote.isHidden = false
-        }
-        if tourboxConsoleInstalled || tourboxConsoleRunning {
-            openTourBoxConsole()
-        } else {
-            downloadTourBoxConsole()
-        }
+    /// The preset is saved: remember it, copy its path for TourBox Console's file window (Command-Shift-G, Command-V,
+    /// Return) and say where it is and what to press.
+    private func presetSaved(_ presetBytes: Data, at url: URL) {
+        let hash = LocalFiles.sha256Hex(presetBytes)
+        bundledPresetHash = hash
+        savedPresetHash = hash
+        try? LocalFiles.recordPresetSaved(bundledHash: hash)
+        lastSavedPreset = url
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(url.path, forType: .string)
+        let folder = url.deletingLastPathComponent().lastPathComponent
+        importNote.stringValue = L("macPresetInDownloads", url.path)
+        importNote.isHidden = false
+        setStatus(L("macPresetSavedStatus", folder))
+        note(L("macPresetInDownloads", url.path))
+        refreshIndicators()
     }
 
+    /// The Mac preset goes to Downloads without a question (U3-23). A copy that is already there is used; a different
+    /// file of that name is never replaced (the preset then gets the next number, LocalFiles.savePreset). macOS may ask once
+    /// whether Fadester Companion may use the Downloads folder; when the answer is no, or the folder cannot be written
+    /// for another reason, the save dialog is the fallback.
+    private func savePresetToDownloads() -> URL? {
+        guard !previewMode else { return nil }
+        do {
+            let presetBytes = try Data(contentsOf: paths.localizedPreset)
+            guard let downloads = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first else { return savePresetDialog() }
+            let url = try LocalFiles.savePreset(presetBytes, in: downloads)
+            presetSaved(presetBytes, at: url)
+            return url
+        } catch {
+            return savePresetDialog()
+        }
+    }
 
     private func savePresetDialog() -> URL? {
         guard !previewMode else { return nil }
         let save = NSSavePanel()
-        save.nameFieldStringValue = "OBS Fadester for TourBox.tb"
+        save.nameFieldStringValue = LocalFiles.presetFileName
         save.title = L("macSaveDialogTitle")
         save.message = L("macSaveDialogMessage")
         guard save.runModal() == .OK, let url = save.url else { return nil }
         do {
             let presetBytes = try Data(contentsOf: paths.localizedPreset)
             try presetBytes.write(to: url, options: .atomic)
-            let hash = LocalFiles.sha256Hex(presetBytes)
-            bundledPresetHash = hash
-            savedPresetHash = hash
-            try? LocalFiles.recordPresetSaved(bundledHash: hash)
-            lastSavedPreset = url
-            let folder = url.deletingLastPathComponent().lastPathComponent
-            importNote.stringValue = L("macPresetSaved", url.path)
-            importNote.isHidden = false
-            setStatus(L("macPresetSavedStatus", folder))
-            note(L("macPresetSaved", url.path))
-            refreshIndicators()
+            presetSaved(presetBytes, at: url)
             return url
         } catch {
             failure(error)
@@ -1545,10 +1676,11 @@ private final class PillActionButton: NSControl {
         }
     }
 
+    /// Import into TourBox Console: save to Downloads, open Console when it is installed, and show where to click.
     @objc private func saveAndGuidePreset() {
-        if savePresetDialog() != nil {
-            showImportGuide()
-        }
+        guard savePresetToDownloads() != nil else { return }
+        if tourboxConsoleInstalled || tourboxConsoleRunning { openTourBoxConsole() }
+        showImportGuide()
     }
 
     @objc private func showImportGuide() {
@@ -1562,7 +1694,8 @@ private final class PillActionButton: NSControl {
         let guide = TourBoxImportWindow(
             savedPreset: lastSavedPreset,
             consoleInstalled: consoleReady,
-            onSavePreset: { [weak self] in self?.savePresetDialog() },
+            // The first save goes to Downloads; "Save Another Copy…" asks where.
+            onSavePreset: { [weak self] in self?.lastSavedPreset == nil ? self?.savePresetToDownloads() : self?.savePresetDialog() },
             onOpenConsole: { [weak self] in self?.openTourBoxConsole() },
             onDownloadConsole: { [weak self] in self?.downloadTourBoxConsole() }
         )

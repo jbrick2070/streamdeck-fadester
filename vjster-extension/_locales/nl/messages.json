@@ -100,5 +100,23 @@
   },
   "statusYouTubeOnlyKept": {
     "message": "VJster werkt weer alleen op YouTube; Chrome heeft de toestemming voor alle sites behouden, verwijder die op de detailpagina van de extensie."
+  },
+  "tabThis": {
+    "message": "VJster bedient de video in dit tabblad."
+  },
+  "tabThisPinned": {
+    "message": "VJster is vastgezet op dit tabblad."
+  },
+  "tabOther": {
+    "message": "VJster bedient een video in een ander tabblad."
+  },
+  "tabOtherPinned": {
+    "message": "VJster is vastgezet op een ander tabblad."
+  },
+  "tabNone": {
+    "message": "Nog geen tabblad met een video. Open een YouTube-video."
+  },
+  "popupOptions": {
+    "message": "Opties"
   }
 }

@@ -14,12 +14,16 @@
 ; per-user checks (the Store edition, the standalone VJster plugin, OpenDeck) and the OpenDeck copy use the signed-in
 ; person's own settings and folders, not the administrator's (FindSignedInUser).
 ; Fadester for OBS in OpenDeck and the unpacked VJster extension are never replaced by an older copy either.
+; First run, with the wizard on screen: the components start ticked from what this PC has (PretickFromThisPc). OBS
+; Studio missing unticks the OBS plugins; no Stream Deck app and no OpenDeck unticks Fadester for OBS; no TourBox
+; Console and no game controller unticks Fadester Companion. Each is said on the "Before you choose" page and can be
+; ticked again. A silent run, /COMPONENTS or /TYPE, and a PC where this setup ran before keep the choice already made.
 ; Languages: the suite's 13. English is in [CustomMessages] below; the others are in installer\lang\<code>.isl, one
 ; file per language for this setup and FadesterCompanion.iss together (tests/companion-installer-languages.test.ts
 ; checks that none lacks a message). Setup opens in the Windows display language, without asking. The log stays in
 ; English whatever the language.
 ; Log markers (for tests and support): OBS-RUNNING, COMPANION-RUNNING, OPENDECK-RUNNING, SKIP-NEWER, STORE-EDITION,
-; VJSTER-CLASH, OLD-VS, ORIGINAL-USER, INSTALLED, FAILED.
+; VJSTER-CLASH, OLD-VS, ORIGINAL-USER, DETECTED, PRETICK, INSTALLED, FAILED.
 
 #ifndef SuiteVersion
   #error Build with installer\build-suite.ps1, which passes the component defines.
@@ -78,6 +82,9 @@ NoteNewerSd=Fadester for OBS %1 is already in Stream Deck; setup carries %2, so 
 NoteOldVs=The old separate Visual Sidechain plugin is installed. Visual Sidechain is part of Midi Fadester now: keep Midi Fadester ticked and its installer removes the old plugin. If Midi Fadester is not installed by this setup, remove Visual Sidechain in Windows Installed apps.
 NoteStore=The Microsoft Store edition of Fadester Companion is already installed, so the standalone copy is unticked: two copies would fight over the OBS connection and VJster port 48150.
 NoteVjsterClash=The standalone VJster plugin is installed. Fadester for OBS already includes VJster; keeping both makes them fight over port 48150, so remove the standalone VJster plugin in Stream Deck or OpenDeck.
+NoteNoObs=OBS Studio was not found on this PC, so the OBS plugins start unticked. Tick them if your OBS is in another folder.
+NoteNoDeck=No Stream Deck app and no OpenDeck were found, so Fadester for OBS starts unticked. Tick it if you want it anyway.
+NoteNoController=No TourBox Console and no game controller were found, so Fadester Companion starts unticked. Tick it if you want it anyway.
 StopObsOpen=OBS Studio is open. Close OBS Studio (File > Exit), then run setup again. Setup never closes OBS for you, so a live show is never cut.
 StopCompanionRunning=Fadester Companion is running. Click Stop in Fadester Companion and close its window (or choose Quit from its icon beside the clock), then run setup again.
 StopOpenDeckOpen=OpenDeck is open. Close OpenDeck, then run setup again.
@@ -446,6 +453,111 @@ begin
   if not FileExists(Result) then Result := '';
 end;
 
+{ ---------- what this PC has: the components start ticked from it (UI review U3-07) ---------- }
+
+type
+  { XINPUT_STATE: a packet number and the controller's 12 bytes of buttons, triggers and sticks. }
+  TPadState = record
+    Packet, A, B, C: DWORD;
+  end;
+
+function XInputGetState(Index: DWORD; var State: TPadState): DWORD;
+  external 'XInputGetState@xinput1_4.dll stdcall delayload';
+
+{ An Xbox or other XInput game controller that is plugged in or switched on now. }
+function GamepadConnected(): Boolean;
+var
+  I: Integer;
+  State: TPadState;
+begin
+  Result := False;
+  try
+    for I := 0 to 3 do
+      if XInputGetState(I, State) = 0 then Result := True;
+  except
+    Log('Could not look for a game controller: ' + GetExceptionMessage);
+    Result := False;
+  end;
+end;
+
+function TourBoxConsolePresent(): Boolean;
+begin
+  Result := FileExists(ExpandConstant('{commonpf64}\TourBox Console\TourBox Console.exe')) or
+            FileExists(ExpandConstant('{commonpf32}\TourBox Console\TourBox Console.exe'));
+end;
+
+{ OBS Studio: its installer's own registry entry, its usual folder, the settings folder it makes on first start, or OBS running now. }
+function ObsPresent(): Boolean;
+var
+  Folder: String;
+begin
+  Result := RegQueryStringValue(HKLM32, 'SOFTWARE\OBS Studio', '', Folder) or RegQueryStringValue(HKLM64, 'SOFTWARE\OBS Studio', '', Folder) or
+            FileExists(ExpandConstant('{commonpf64}\obs-studio\bin\64bit\obs64.exe')) or DirExists(UserAppData() + '\obs-studio') or
+            ProcessRunning('obs64.exe');
+end;
+
+{ The Stream Deck app (its program or the signed-in person's settings folder) or OpenDeck. }
+function DeckAppPresent(): Boolean;
+begin
+  Result := (StreamDeckExe() <> '') or DirExists(UserAppData() + '\Elgato\StreamDeck') or OpenDeckPresent();
+end;
+
+{ A choice that is already made and must stand: a silent run, components or a type named on the command line, or an
+  earlier run of this setup on this PC (the wizard then starts from what was chosen that time). }
+function ChoiceAlreadyMade(): Boolean;
+var
+  Tail: String;
+begin
+  Tail := Uppercase(GetCmdTail);
+  Result := WizardSilent() or (Pos('/COMPONENTS=', Tail) > 0) or (Pos('/TYPE=', Tail) > 0) or (Pos('/LOADINF=', Tail) > 0) or
+            (InstalledVersion('{#SuiteAppId}') <> '');
+end;
+
+function YesNo(const Value: Boolean): String;
+begin
+  if Value then Result := 'yes' else Result := 'no';
+end;
+
+{ What is found stays ticked, what is not found starts unticked and is named on the "Before you choose" page. A part
+  of the suite that is already installed counts as found, so an update is never unticked. }
+procedure PretickFromThisPc();
+var
+  HasObs, HasDeck, HasController: Boolean;
+begin
+  if ChoiceAlreadyMade() then
+  begin
+    Log('PRETICK: not applied (a silent run, the command line or an earlier run of this setup decides).');
+    Exit;
+  end;
+  HasObs := ObsPresent() or (InstalledVersion('{#MfAppId}') <> '') or (InstalledVersion('{#PlAppId}') <> '');
+  HasDeck := DeckAppPresent();
+  HasController := TourBoxConsolePresent() or GamepadConnected() or (InstalledVersion('{#CoAppId}') <> '');
+  Log('DETECTED: obs=' + YesNo(HasObs) + ' deck=' + YesNo(HasDeck) + ' controller=' + YesNo(HasController));
+  { Nothing found says nothing about what this person has: everything stays ticked, as before. }
+  if not (HasObs or HasDeck or HasController) then Exit;
+  if not HasObs then
+  begin
+    WizardSelectComponents('!obs\mf,!obs\pl,!obs');
+    Note('PRETICK', 'OBS Studio was not found, so the OBS plugins start unticked.', CustomMessage('NoteNoObs'));
+  end;
+  if not HasDeck then
+  begin
+    WizardSelectComponents('!streamdeck');
+    Note('PRETICK', 'No Stream Deck app and no OpenDeck were found, so Fadester for OBS starts unticked.', CustomMessage('NoteNoDeck'));
+  end;
+  if not HasController then
+  begin
+    WizardSelectComponents('!companion');
+    Note('PRETICK', 'No TourBox Console and no game controller were found, so Fadester Companion starts unticked.', CustomMessage('NoteNoController'));
+  end;
+  { The Chrome extension is driven from a deck or from Fadester Companion: with neither, it starts unticked too. }
+  if not HasDeck and not HasController then
+  begin
+    WizardSelectComponents('!vjsterext');
+    Log('PRETICK: the VJster Chrome extension starts unticked (no deck app and no controller).');
+  end;
+end;
+
 function AnyPluginSelected(): Boolean;
 begin
   Result := WizardIsComponentSelected('obs\mf') or WizardIsComponentSelected('obs\pl');
@@ -473,6 +585,7 @@ procedure InitializeWizard();
 begin
   Notes := '';
   CompanionInstalledNow := False;
+  PretickFromThisPc();
   if NewerInstalled('Midi Fadester', '{#MfAppId}', '{#MfVersion}') then
   begin
     WizardSelectComponents('!obs\mf');

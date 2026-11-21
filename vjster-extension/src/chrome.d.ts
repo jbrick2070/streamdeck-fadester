@@ -33,7 +33,7 @@ declare namespace chrome {
       /** Present only for tabs on a site the extension has access to. */
       url?: string;
     }
-    function query(info: { active?: boolean; windowId?: number }): Promise<Tab[]>;
+    function query(info: { active?: boolean; windowId?: number; currentWindow?: boolean }): Promise<Tab[]>;
     function sendMessage(tabId: number, message: unknown, options?: { frameId?: number }): Promise<unknown>;
     const onRemoved: { addListener(cb: (tabId: number, info: { windowId: number; isWindowClosing: boolean }) => void): void };
     const onActivated: { addListener(cb: (info: { tabId: number; windowId: number }) => void): void };

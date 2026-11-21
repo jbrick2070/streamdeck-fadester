@@ -51,6 +51,7 @@ import AppKit
                     // The checks compare English words, whatever language this Mac uses.
                     PanelText.use("en")
                     try ModelTests.run()
+                    try LocalFiles.presetSaveSelfTest()
                     try await LifecycleTests.run(executable: URL(fileURLWithPath: CommandLine.arguments[0]))
                     exit(0)
                 } catch { fputs("\(error)\n", stderr); exit(1) }

@@ -8,8 +8,9 @@
 <Package
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap5="http://schemas.microsoft.com/appx/manifest/uap/windows10/5"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
-  IgnorableNamespaces="uap rescap">
+  IgnorableNamespaces="uap uap5 rescap">
   <Identity Name="Fluxxuuss.FadesterCompanion" Publisher="CN=AD3CC3A6-B1BD-42E3-837E-9A5147EE1AAE" Version="$VERSION$" ProcessorArchitecture="x64" />
   <Properties>
     <DisplayName>Fadester Companion</DisplayName>
@@ -39,6 +40,13 @@
     <Application Id="App" Executable="Fadester Companion.exe" EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements DisplayName="Fadester Companion" Description="Your game controller or TourBox as a hands-on vision mixer for OBS Studio."
         BackgroundColor="transparent" Square150x150Logo="Assets\Square150x150Logo.png" Square44x44Logo="Assets\Square44x44Logo.png" />
+      <Extensions>
+        <!-- "Open when I sign in" in the panel's footer. Off until the user ticks it (Enabled="false"); Windows lists it
+             under Settings, Apps, Startup, where it can be switched off again. The TaskId is the one in panel\SignIn.cs. -->
+        <uap5:Extension Category="windows.startupTask" Executable="Fadester Companion.exe" EntryPoint="Windows.FullTrustApplication">
+          <uap5:StartupTask TaskId="FadesterCompanionStartup" Enabled="false" DisplayName="Fadester Companion" />
+        </uap5:Extension>
+      </Extensions>
     </Application>
   </Applications>
   <Capabilities>

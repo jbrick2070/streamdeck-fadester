@@ -100,5 +100,23 @@
   },
   "statusYouTubeOnlyKept": {
     "message": "VJster è tornato solo su YouTube; Chrome ha mantenuto l'autorizzazione per tutti i siti, rimuovila nella pagina dei dettagli dell'estensione."
+  },
+  "tabThis": {
+    "message": "VJster controlla il video in questa scheda."
+  },
+  "tabThisPinned": {
+    "message": "VJster è fissato a questa scheda."
+  },
+  "tabOther": {
+    "message": "VJster controlla un video in un’altra scheda."
+  },
+  "tabOtherPinned": {
+    "message": "VJster è fissato a un’altra scheda."
+  },
+  "tabNone": {
+    "message": "Ancora nessuna scheda con un video. Apri un video di YouTube."
+  },
+  "popupOptions": {
+    "message": "Opzioni"
   }
 }

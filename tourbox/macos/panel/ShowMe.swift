@@ -3,7 +3,8 @@ import AppKit
 
 @MainActor final class ShowMeCanvas: NSView {
     enum Mode {
-        case tourboxImport(folderName: String)
+        /// fileName: the name the preset was written under this time ("... 2.tb" when an older, different copy was there).
+        case tourboxImport(folderName: String, fileName: String)
         case obsServer
         case obsPassword
         case obsStudio
@@ -216,8 +217,8 @@ import AppKit
         }
 
         switch mode {
-        case .tourboxImport(let folderName):
-            drawTourBoxImport(t: t, folderName: folderName)
+        case .tourboxImport(let folderName, let fileName):
+            drawTourBoxImport(t: t, folderName: folderName, fileName: fileName)
         case .obsServer:
             drawObsServer(t: t, passwordMode: false)
         case .obsPassword:
@@ -231,7 +232,7 @@ import AppKit
         }
     }
 
-    private func drawTourBoxImport(t: CGFloat, folderName: String) {
+    private func drawTourBoxImport(t: CGFloat, folderName: String, fileName: String) {
         let frame = NSColor(srgbRed: 28 / 255, green: 31 / 255, blue: 41 / 255, alpha: 1)
         let bar = NSColor(srgbRed: 39 / 255, green: 43 / 255, blue: 56 / 255, alpha: 1)
         let sidebar = NSColor(srgbRed: 34 / 255, green: 38 / 255, blue: 50 / 255, alpha: 1)
@@ -341,7 +342,7 @@ import AppKit
             // Right file list
             let fileSelected = t >= 5.2
             fill(fileItem, fileSelected ? blue : NSColor(srgbRed: 246 / 255, green: 248 / 255, blue: 252 / 255, alpha: 1), radius: 5)
-            text("OBS Fadester for TourBox.tb", at: NSPoint(x: 214, y: 90), size: 11.2, bold: true, color: fileSelected ? .white : NSColor(srgbRed: 26 / 255, green: 34 / 255, blue: 51 / 255, alpha: 1))
+            text(fileName, at: NSPoint(x: 214, y: 90), size: 11.2, bold: true, color: fileSelected ? .white : NSColor(srgbRed: 26 / 255, green: 34 / 255, blue: 51 / 255, alpha: 1))
 
             let cancelBtn = NSRect(x: 320, y: 198, width: 64, height: 26)
             fill(cancelBtn, NSColor(srgbRed: 234 / 255, green: 238 / 255, blue: 244 / 255, alpha: 1), radius: 5)
@@ -581,6 +582,8 @@ private final class SheetBackground: NSView {
     private var closeWatch: NSObjectProtocol?
     private let whyLabel = NSTextField(wrappingLabelWithString: "")
     private let stepsSummary = NSTextField(wrappingLabelWithString: "")
+    /// Shown once the preset is saved and its path copied: the keys that skip the search in Console's file window.
+    private let pathTip = NSTextField(wrappingLabelWithString: L("macGoToFolderTip"))
     private var stepButtons: [NSButton] = []
     private var saveBtn: NSButton!
     private var openBtn: NSButton!
@@ -604,7 +607,7 @@ private final class SheetBackground: NSView {
         self.onOpenConsole = onOpenConsole
         self.onDownloadConsole = onDownloadConsole
         let initialFolder = Self.folderLabel(for: savedPreset)
-        canvas = ShowMeCanvas(mode: .tourboxImport(folderName: initialFolder))
+        canvas = ShowMeCanvas(mode: .tourboxImport(folderName: initialFolder, fileName: LocalFiles.shownPresetName(saved: savedPreset)))
         panel = NSPanel(
             contentRect: NSRect(x: 0, y: 0, width: 580, height: 504),
             styleMask: [.titled, .closable, .utilityWindow],
@@ -663,6 +666,10 @@ private final class SheetBackground: NSView {
         stepsSummary.font = .systemFont(ofSize: 12, weight: .medium)
         stack.addArrangedSubview(stepsSummary)
         stepsSummary.widthAnchor.constraint(equalToConstant: 540).isActive = true
+        pathTip.font = .systemFont(ofSize: 12)
+        pathTip.textColor = .secondaryLabelColor
+        stack.addArrangedSubview(pathTip)
+        pathTip.widthAnchor.constraint(equalToConstant: 540).isActive = true
 
         saveBtn = NSButton(title: L("macSavePresetShort"), target: self, action: #selector(saveTapped))
         saveBtn.bezelStyle = .rounded
@@ -693,10 +700,12 @@ private final class SheetBackground: NSView {
 
     private func refreshCopy() {
         let folder = Self.folderLabel(for: savedPreset)
+        // Every place that names the file names the one written this time (QA-R201).
+        let file = LocalFiles.shownPresetName(saved: savedPreset)
         let accent = NSColor(srgbRed: 38 / 255, green: 90 / 255, blue: 158 / 255, alpha: 1)
-        canvas.mode = .tourboxImport(folderName: folder)
+        canvas.mode = .tourboxImport(folderName: folder, fileName: file)
         if savedPreset != nil {
-            whyLabel.stringValue = L("macImportWhySaved", folder)
+            whyLabel.stringValue = L("macImportWhySaved", folder, file)
             saveBtn.title = L("macSaveAnother")
             saveBtn.bezelColor = nil
             openBtn.bezelColor = accent
@@ -709,7 +718,8 @@ private final class SheetBackground: NSView {
             revealBtn.isHidden = true
         }
         openBtn.title = consoleInstalled ? L("macOpenConsoleStep") : L("macDownloadConsoleStep")
-        stepsSummary.stringValue = L("macImportSteps", folder)
+        stepsSummary.stringValue = L("macImportSteps", folder, file)
+        pathTip.isHidden = savedPreset == nil
     }
 
     @objc private func selectStep(_ sender: NSButton) {

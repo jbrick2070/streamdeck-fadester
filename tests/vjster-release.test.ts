@@ -30,7 +30,9 @@ const EXPECTED = [
   "icons/icon48.png",
   "manifest.json",
   "options.html",
-  "options.js"
+  "options.js",
+  "popup.html",
+  "popup.js"
 ];
 
 function build(opts: { version?: unknown; skip?: string; reverse?: boolean; touch?: number } = {}): string {
@@ -84,7 +86,9 @@ describe("the extension zip (step 6)", () => {
     expect(neededFiles(MANIFEST)).toEqual(EXPECTED.filter((n) => !n.startsWith("_locales/") || n === "_locales/en/messages.json"));
     expect(MANIFEST.default_locale).toBe("en");
     expect(LOCALES).toEqual(expect.arrayContaining([...REQUIRED.chrome]));
-    expect(ALSO_NEEDED).toEqual(["options.js"]);
+    expect(ALSO_NEEDED).toEqual(["options.js", "popup.js"]);
+    // The toolbar popup is named by the manifest's action, and is needed like the options page.
+    expect((MANIFEST.action as { default_popup?: unknown } | undefined)?.default_popup).toBe("popup.html");
   });
 
   it("holds those files at the root with forward slashes, and no source maps", () => {

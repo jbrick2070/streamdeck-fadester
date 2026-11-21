@@ -99,6 +99,7 @@ function Test-FullInstallWithStoreEdition {
     $r = Run-Setup $Setup @() 'full-store'
     Check ($r.Code -eq 0) "setup succeeds (exit $($r.Code))"
     Check ($r.Log -cmatch 'STORE-EDITION:') 'log notes the Store edition'
+    Check ($r.Log -cmatch 'PRETICK: not applied') 'a silent run keeps every component ticked, whatever this PC has'
     Check ($r.Log -cmatch 'OLD-VS:') 'log notes the old separate Visual Sidechain'
     Check (-not (Test-Path -LiteralPath $oldVsDir)) 'Midi Fadester removed the old Visual Sidechain plugin folder'
     Check (-not (Installed $c.companion.appId)) 'standalone Fadester Companion not installed'

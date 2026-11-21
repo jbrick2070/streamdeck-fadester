@@ -1,0 +1,2 @@
+/* Why macOS is asked for the Downloads folder: the system prompt shows this sentence. */
+"NSDownloadsFolderUsageDescription" = "Fadester Companion은 TourBox Console에서 가져올 수 있도록 TourBox 프리셋을 다운로드 폴더에 저장합니다.";

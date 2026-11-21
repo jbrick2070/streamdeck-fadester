@@ -1,6 +1,6 @@
 # macOS master preset
 
-This is the Mac encoding of the same single **OBS Fadester for TourBox** master: the same physical shortcut assignments, labels, TourMenu entries, native menu controls, UP modes and assignment HUD as `../OBS Fadester for TourBox.tb`, generated from the same `../map.json`. Fadester Companion for Mac bundles it and saves it from **1. Save TourBox Preset (.tb)…**. It does not install or start a companion by itself.
+This is the Mac encoding of the same single **OBS Fadester for TourBox** master: the same physical shortcut assignments, labels, TourMenu entries, native menu controls, UP modes and assignment HUD as `../OBS Fadester for TourBox.tb`, generated from the same `../map.json`. Fadester Companion for Mac bundles it and saves it to Downloads from **Import into TourBox Console**. It does not install or start a companion by itself.
 
 The committed file has English labels. The other 12 languages of `../locales.json` are generated at build time, as the Windows ones are: `build_macos.py --localized-out DIR` writes `DIR/<locale>/OBS Fadester for TourBox.tb`, each the Mac master with that language's labels and nothing else changed. `tourbox/macos/panel/build.sh` bundles them in the app (`Contents/Resources/presets/<locale>/`) and `tourbox/macos/package.sh` also puts them beside the app in the ZIP (`presets/<locale>/`). The panel saves the one matching its language.
 

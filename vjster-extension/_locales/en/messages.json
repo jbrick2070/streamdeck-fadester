@@ -100,5 +100,23 @@
   },
   "statusYouTubeOnlyKept": {
     "message": "VJster is back to YouTube only; Chrome kept the all-sites permission, remove it on the extension's details page."
+  },
+  "tabThis": {
+    "message": "VJster controls the video in this tab."
+  },
+  "tabThisPinned": {
+    "message": "VJster is pinned to this tab."
+  },
+  "tabOther": {
+    "message": "VJster controls a video in another tab."
+  },
+  "tabOtherPinned": {
+    "message": "VJster is pinned to another tab."
+  },
+  "tabNone": {
+    "message": "No tab with a video yet. Open a YouTube video."
+  },
+  "popupOptions": {
+    "message": "Options"
   }
 }

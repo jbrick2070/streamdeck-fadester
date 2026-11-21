@@ -100,5 +100,23 @@
   },
   "statusYouTubeOnlyKept": {
     "message": "VJster vuelve a funcionar solo en YouTube; Chrome ha conservado el permiso para todos los sitios: quítalo en la página de detalles de la extensión."
+  },
+  "tabThis": {
+    "message": "VJster controla el vídeo de esta pestaña."
+  },
+  "tabThisPinned": {
+    "message": "VJster está fijado a esta pestaña."
+  },
+  "tabOther": {
+    "message": "VJster controla un vídeo en otra pestaña."
+  },
+  "tabOtherPinned": {
+    "message": "VJster está fijado a otra pestaña."
+  },
+  "tabNone": {
+    "message": "Aún no hay ninguna pestaña con un vídeo. Abre un vídeo de YouTube."
+  },
+  "popupOptions": {
+    "message": "Opciones"
   }
 }

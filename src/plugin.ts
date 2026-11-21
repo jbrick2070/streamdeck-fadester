@@ -20,6 +20,7 @@ import { FilterController } from "./control/filter-controller.js";
 import { VisualSafety } from "./control/visual-safety.js";
 import { VisualSignals } from "./control/visual-signals.js";
 import { TapeDecks } from "./control/tape-decks.js";
+import { PlaylisterNowNext } from "./control/playlister-now-next.js";
 import { ObsFilterControlAction } from "./actions/obs-filter-control.js";
 import { VisualPanicKeyAction } from "./actions/visual-panic-key.js";
 import { VisualMeterAction } from "./actions/visual-meter.js";
@@ -34,24 +35,22 @@ import {
   DEFAULT_GLOBAL_SETTINGS,
   FadesterGlobalSettings
 } from "./types/settings.js";
-import { readLanguageTable, useStreamDeckLanguage } from "./i18n/load.js";
-import { translatorFor } from "./i18n/strings.js";
+import { useStreamDeckLanguage } from "./i18n/load.js";
 import { LanguageChoiceController } from "./i18n/language-choice.js";
 import { GlobalSettingsStore, START_READ_TIMEOUT_MS, connectionSaver } from "./settings/global-store.js";
 
 // Stream Deck's language, read once before any control draws (PLAN.md 8.4; 8.7 checks a language change).
 // Automatic draws never wait; a fixed choice applies when the stored settings are read (PLAN.md 11.1).
 let appLanguage: unknown = "en";
-let midiPagesLanguage = "en";
 try {
   appLanguage = streamDeck.info.application.language;
-  midiPagesLanguage = useStreamDeckLanguage(appLanguage);
+  useStreamDeckLanguage(appLanguage);
 } catch {
   useStreamDeckLanguage("en");
 }
-// The two Midi Fadester settings pages stay in Stream Deck's language until they get the Language choice (R-LANG-3,
-// PLAN.md step L.6), so what the plugin sends them is worded in that language too, whatever the choice.
-const midiPagesTranslate = translatorFor(midiPagesLanguage === "en" ? {} : readLanguageTable(midiPagesLanguage) ?? {});
+// The two Midi Fadester settings pages follow the Language choice like every other page (R-LANG-3, PLAN.md step L.6):
+// what the plugin sends them is worded by the plugin's own translator, and they take the resolved language from the
+// state broadcast (ui/pi-common.js).
 
 // Every global settings write goes through this one queue, so no save loses another's key (RL-1).
 const settingsStore = new GlobalSettingsStore({
@@ -74,6 +73,8 @@ const filters = new FilterController(directClient);
 const visualSafety = new VisualSafety(directClient, filters);
 const visualSignals = new VisualSignals(directClient, visualSafety);
 const tapeDecks = new TapeDecks(directClient);
+// What each Playlister plays now and next, for the Playlister transport keys.
+const playlisterNowNext = new PlaylisterNowNext(directClient);
 
 // The Language setting (PLAN.md 11.1): a change redraws every visible control and refills the pages.
 const languageChoice = new LanguageChoiceController({
@@ -102,8 +103,7 @@ const bridge = new PropertyInspectorBridge(store, enhancedClient, {
     void streamDeck.ui.sendToPropertyInspector(payload as JsonObject);
   },
   persistGlobalSettings: persistSharedConnection,
-  getLanguage: () => languageChoice.state(),
-  translate: midiPagesTranslate
+  getLanguage: () => languageChoice.state()
 });
 
 const directBridge = new DirectObsPropertyInspectorBridge(directClient, {
@@ -175,7 +175,7 @@ streamDeck.actions.registerAction(new ObsFadeKeyAction(directClient, visualSigna
 streamDeck.actions.registerAction(new ObsSceneTransitionKeyAction(directClient, visualSignals));
 streamDeck.actions.registerAction(new ObsLayerControlAction(layers));
 streamDeck.actions.registerAction(new ObsNeoInfobarAction(directClient, visualSignals));
-streamDeck.actions.registerAction(new PlaylisterTransportKeyAction(directClient));
+streamDeck.actions.registerAction(new PlaylisterTransportKeyAction(directClient, playlisterNowNext));
 streamDeck.actions.registerAction(new ObsFilterControlAction(filters));
 streamDeck.actions.registerAction(new VisualPanicKeyAction(visualSafety, directClient));
 streamDeck.actions.registerAction(new VisualMeterAction(visualSignals, directClient));

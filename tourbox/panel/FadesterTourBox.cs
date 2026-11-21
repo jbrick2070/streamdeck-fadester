@@ -26,13 +26,13 @@ namespace Fadester.TourBox {
       if (args.Contains("--self-test")) {
         try { PanelWindow.Test(); return 0; } catch (Exception e) { Log("self-test: " + e); return 1; }
       }
-      // --render FILE.png [--tab N] [--language CODE] [--theme dark|light]: a picture of the window as it opens, for checks and screenshots.
+      // --render FILE.png [--tab N] [--language CODE] [--theme dark|light] [--open]: a picture of the window as it opens, for checks and screenshots.
       // Nothing is read, saved, started or connected, and no window appears on screen.
       int render = Array.IndexOf(args, "--render");
       if (render >= 0 && render + 1 < args.Length) {
         try {
           int tab = Array.IndexOf(args, "--tab");
-          PanelWindow.Render(PanelText.FromArguments(args, CultureInfo.CurrentUICulture), args[render + 1], tab >= 0 && tab + 1 < args.Length ? Int32.Parse(args[tab + 1], CultureInfo.InvariantCulture) : 0);
+          PanelWindow.Render(PanelText.FromArguments(args, CultureInfo.CurrentUICulture), args[render + 1], tab >= 0 && tab + 1 < args.Length ? Int32.Parse(args[tab + 1], CultureInfo.InvariantCulture) : 0, args.Contains("--open"));
           return 0;
         } catch (Exception e) { Log("render: " + e); return 1; }
       }
@@ -77,6 +77,8 @@ namespace Fadester.TourBox {
         return GetCurrentPackageFamilyName(ref length,name)==0 ? name.ToString() : null;
       } catch(EntryPointNotFoundException) { return null; } // Windows 7 has no packages
     }
+    /** Whether this is the Microsoft Store package (its start with Windows is a start-up task, not a Run value: SignIn.cs). */
+    internal static bool Packaged { get { return PackageFamily()!=null; } }
     /** Where Windows keeps, for a package, a folder the app asked for under %LOCALAPPDATA%; null for a folder elsewhere. */
     internal static string Redirected(string dir,string localAppData,string family) {
       string local=localAppData.TrimEnd('\\');
@@ -163,6 +165,14 @@ namespace Fadester.TourBox {
       try { Directory.CreateDirectory(Path.GetDirectoryName(controlsState)); File.WriteAllText(controlsState, onOff, new UTF8Encoding(false)); }
       catch(IOException e) { Entry.Log("controls state: "+e.Message); } catch(UnauthorizedAccessException e) { Entry.Log("controls state: "+e.Message); }
     }
+    /** Which folded parts of the Setup page the user opened: its own small file, not a setting of the controls. */
+    readonly string foldsState = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FadesterTourBox", "folds.txt");
+    /** A part of the Setup page that stays closed until asked for: its link, its one-line summary and the controls it shows. */
+    internal sealed class Fold {
+      internal string Id; internal LinkLabel Link; internal Label Summary; internal bool Open, Section, Called, ByUser; internal int From;
+      internal readonly List<Control> Parts = new List<Control>();
+    }
+    readonly List<Fold> folds = new List<Fold>(); Fold obsFold, mixFold, vjFold;
     readonly Dictionary<string, ComboBox> boxes = new Dictionary<string, ComboBox>();
     readonly Dictionary<string,Image> glyphs=new Dictionary<string,Image>();
     Dictionary<string, object> config = new Dictionary<string, object>(), catalog = new Dictionary<string, object>();
@@ -197,6 +207,10 @@ namespace Fadester.TourBox {
     // Ending: the bridge the panel is ending, so whichever sees it exit first says so in the same words.
     Process stopTimedOut, ending;
     CheckBox enableMix, mixOnly, enableVjster, enableGamepad, easyMode;
+    // "Open when I sign in": off until ticked; the box shows what Windows reports (SignIn.cs).
+    CheckBox signIn; bool settingSignIn;
+    // Who decides when Windows set it by policy: its own line under the box, wrapped to the window (QA-R203, QA-R204).
+    Label signInNote; TableLayoutPanel mainGrid;
     // The game controller tab, from presets/gamepad.json (checked against the bridge by its self-test).
     DataGridView padGrid; ComboBox fastSpeed, slowSpeed;
     string[] padControls = new string[0], padOnly = new string[0];
@@ -222,6 +236,7 @@ namespace Fadester.TourBox {
       PanelText.Test();
       Readiness.Test();
       Theme.Test();
+      SignInStart.Test();
       VjsterObsPage.Test();
       // The wheel over a closed drop-down or number box scrolls the page and leaves the value alone.
       using (var page=new Panel {AutoScroll=true,Size=new Size(200,100)}) {
@@ -258,7 +273,7 @@ namespace Fadester.TourBox {
       foreach (var locale in PanelText.AllLocales) {
         using (var w = new PanelWindow(new PanelText(locale), true)) {
           w.ShowStatus(); w.ShowStartButton();
-          if (w.start.Text.Length == 0 || w.tray != null || w.obsLight == null) throw new Exception("window " + locale);
+          if (w.start.Text.Length == 0 || w.tray != null || w.obsLight == null || w.signIn.Checked || w.signIn.Text.Length == 0) throw new Exception("window " + locale);
         }
       }
       // The assignment lists show words for "none" and for a name OBS no longer has; what is saved stays the name.
@@ -270,6 +285,36 @@ namespace Fadester.TourBox {
         if (w.Picked("anchor0")!="B" || w.Picked("anchor1")!="Gone" || w.Picked("anchor2")!="" || w.boxes["anchor1"].Text!="Unavailable: Gone" ||
             w.boxes["anchor2"].Text!="Unassigned" || w.boxes["anchor0"].Text!="B") throw new Exception("assignment lists");
       }
+      // The Setup page opens short: the port and password, the long explanations and the two optional sections are closed,
+      // each with its link; a click opens one, and a light that needs a field opens its part once (U3-05).
+      using (var w = new PanelWindow(new PanelText("en"), true)) {
+        w.ShowStatus();
+        if (w.folds.Count!=5 || w.folds.Any(f=>f.Open || f.Parts.Count==0) || w.obsFold.Parts.All(c=>!c.Contains(w.password)) ||
+            w.obsFold.Link.Text!="Details ▾" || w.mixFold.Link.Text!="Show ▾" || w.mixFold.Summary.Text!="Off" || w.vjFold.Summary.Text!="On, Chrome & OBS page, port 48150") throw new Exception("setup folds");
+        w.SetFold(w.mixFold,true); w.enableMix.Checked=true; w.mixOnly.Checked=true; w.enableGamepad.Checked=true;
+        if (!w.mixFold.Open || w.mixFold.Link.Text!="Hide ▴" || w.mixFold.Summary.Text!="On, Stream Deck only" || w.vjFold.Open) throw new Exception("setup folds: open");
+        w.mixOnly.Checked=false; w.obsRunning=true; w.obsProblem="obs-bad-password"; w.ShowStatus();
+        if (!w.obsFold.Open) throw new Exception("setup folds: the password field when OBS refuses the sign-in");
+        w.SetFold(w.obsFold,false); w.ShowStatus();
+        if (w.obsFold.Open) throw new Exception("setup folds: a part the user closed stays closed");
+        w.obsProblem=null; w.obsConnected=true; w.ShowStatus(); w.obsConnected=false; w.obsProblem="obs-no-answer"; w.ShowStatus();
+        if (!w.obsFold.Open) throw new Exception("setup folds: a new problem opens it again");
+        // Only what the user opened is remembered: the part the light opened is not, and one the user closed again is not.
+        w.ToggleFold(w.vjFold);
+        if (String.Join(",",w.FoldsToRemember())!="vjster") throw new Exception("setup folds: a part a light opened is not saved");
+        w.ToggleFold(w.vjFold); w.ToggleFold(w.obsFold); w.ToggleFold(w.obsFold);
+        if (w.FoldsToRemember().Length!=1 || w.FoldsToRemember()[0]!="obs") throw new Exception("setup folds: the user's own opening is saved, a closing is not");
+      }
+      using (var w = new PanelWindow(new PanelText("en"), true)) {
+        w.ShowSignIn(SignInState.OnByPolicy);
+        if (!w.signIn.Checked || w.signIn.Enabled || w.signIn.Text!="Open when I sign in" || w.signInNote.Text!=enText.Get("signInManaged") ||
+            !w.SignInNoteShown() || w.mainGrid.RowStyles[4].Height!=168 || !w.signInNote.AutoSize) throw new Exception("sign-in box: on by policy");
+        w.ShowSignIn(SignInState.OffByPolicy);
+        if (w.signIn.Checked || w.signIn.Enabled || !w.SignInNoteShown()) throw new Exception("sign-in box: off by policy");
+        w.ShowSignIn(SignInState.Blocked);
+        if (w.signIn.Checked || !w.signIn.Enabled || w.SignInNoteShown() || w.mainGrid.RowStyles[4].Height!=128) throw new Exception("sign-in box: switched off in Windows");
+      }
+      if (MixSummary(deText,false,false)!=deText.Get("off") || VjsterSummary(enText,false,"x",1)!="Off" || !VjsterSummary(deText,true,"Ziel",48150).Contains("48150")) throw new Exception("fold summaries");
       // A refused sign-in keeps its translated sentence in the header; the retry fact follows in the same language.
       if (StillTrying(deText,"Problem.")!="Problem. "+deText.Get("stillTrying") || StillTrying(enText,null)!=enText.Get("stillTrying") ||
           deText.Get("stillTrying")==enText.Get("stillTrying") || !deText.Get("stillTrying").Contains(deText.Get("save"))) throw new Exception("still trying");
@@ -312,9 +357,10 @@ namespace Fadester.TourBox {
     /** Built for the self-test or a picture (--render): no icon in the notification area, and opening it reads and starts nothing. */
     readonly bool inert;
     /** The window in this language, with nothing behind it, drawn into a PNG file. */
-    internal static void Render(PanelText text, string file, int tab) {
+    internal static void Render(PanelText text, string file, int tab, bool open = false) {
       Application.EnableVisualStyles();
       using (var w = new PanelWindow(text, true)) {
+        if (open) { foreach (var fold in w.folds) w.SetFold(fold, true); w.enableGamepad.Checked = true; w.ShowSignIn(SignInState.OnByPolicy); }
         w.StartPosition = FormStartPosition.Manual; w.Location = new Point(-32000, -32000); w.ShowInTaskbar = false;
         w.Show();
         foreach (Control c in w.Controls[0].Controls) { var tabs = c as TabControl; if (tabs != null && tab > 0 && tab < tabs.TabCount) tabs.SelectedIndex = tab; }
@@ -332,9 +378,9 @@ namespace Fadester.TourBox {
       // The window and taskbar show the exe's own icon, not WinForms' default one.
       try { Icon=Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch (Exception e) { Entry.Log("icon: "+e.Message); }
       Font=new Font("Segoe UI",10); BackColor=Color.White; StartPosition=FormStartPosition.CenterScreen;
-      var grid=new TableLayoutPanel {Dock=DockStyle.Fill,ColumnCount=1,RowCount=5, Padding=new Padding(14)};
+      var grid=new TableLayoutPanel {Dock=DockStyle.Fill,ColumnCount=1,RowCount=5, Padding=new Padding(14)}; mainGrid=grid;
       grid.RowStyles.Add(new RowStyle(SizeType.Absolute,100)); grid.RowStyles.Add(new RowStyle(SizeType.AutoSize)); grid.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-      grid.RowStyles.Add(new RowStyle(SizeType.Percent,100)); grid.RowStyles.Add(new RowStyle(SizeType.Absolute,104));
+      grid.RowStyles.Add(new RowStyle(SizeType.Percent,100)); grid.RowStyles.Add(new RowStyle(SizeType.Absolute,128));
       grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100)); // the window's width bounds every row, so the lights wrap
       Controls.Add(grid);
       var head=new Panel {Dock=DockStyle.Fill,BackColor=navy,Padding=new Padding(12)};
@@ -367,9 +413,16 @@ namespace Fadester.TourBox {
       grid.Controls.Add(reminderBar,0,2);
       grid.ClientSizeChanged+=delegate { reminder.MaximumSize=new Size(Math.Max(150,grid.ClientSize.Width-28-bringObs.Width-40),0); };
       TabControl tabs=Theme.Dark ? (TabControl)new DarkTabs {Dock=DockStyle.Fill} : new TabControl {Dock=DockStyle.Fill}; grid.Controls.Add(tabs,0,3);
-      // Setup reads in the order a newcomer acts: OBS, then the controller in hand, then a first cue with it.
+      // Setup reads in the order a newcomer acts: OBS, then the controller in hand, then a first cue with it. Each step is one
+      // sentence and its button; what is rarely needed (the port and password OBS already gave, the long explanations, the
+      // two optional sections) is folded away until asked for, or until a light says it is needed (U3-05).
       body=Page(tabs,text.Get("setup"));
-      Title(body,text.Get("connectTitle")); Hint(body,text.Get("connectHint"));
+      Title(body,text.Get("connectTitle")); Hint(body,text.Get("connectShort"));
+      connect=AddButton(body,text.Get("discover"),async delegate { await Connect(); });
+      live=Note(body);
+      vsLive=Note(body);
+      obsFold=BeginFold(body,"obs",null);
+      Hint(body,text.Get("connectHint"));
       var row=new FlowLayoutPanel {AutoSize=true,WrapContents=true,Margin=new Padding(0,3,0,3)};
       row.Controls.Add(new Label {Text=text.Get("port"), AutoSize=true,Margin=new Padding(4,8,4,0)});
       port=new NumericUpDown {Minimum=1,Maximum=65535,Value=4455,Width=78}; row.Controls.Add(port);
@@ -377,32 +430,41 @@ namespace Fadester.TourBox {
       row.Controls.Add(new Label {Text=text.Get("password"),AutoSize=true,Margin=new Padding(10,8,4,0)});
       password=new TextBox {UseSystemPasswordChar=true,Width=142}; row.Controls.Add(password); body.Controls.Add(row);
       Hint(body,text.Get("passwordHint"));
-      connect=AddButton(body,text.Get("discover"),async delegate { await Connect(); });
-      live=Hint(body,"");
-      vsLive=Hint(body,"");
+      EndFold(body,obsFold);
       Title(body,text.Get("controllerTitle"));
       SubTitle(body,text.Get("gamepadTitle"));
       enableGamepad=Check(body,text.Get("enableGamepad"));
+      // Easy mode and what each button does matter only once the game controller is in use.
       easyMode=Check(body,text.Get("gamepadEasy")); easyMode.Checked=true;
-      Hint(body,text.Get("gamepadHint"));
+      var padHint=Hint(body,text.Get("gamepadHint"));
+      Action showPad=delegate { easyMode.Visible=padHint.Visible=enableGamepad.Checked; }; showPad();
+      enableGamepad.CheckedChanged+=delegate { showPad(); };
       SubTitle(body,"TourBox");
-      Hint(body,text.Get("importHint"));
       var importRow=new FlowLayoutPanel {AutoSize=true,WrapContents=true,Margin=new Padding(0)};
       AddButton(importRow,text.Get("openPreset"),delegate { ImportPreset(); ShowImportGuide(); });
       AddButton(importRow,text.Get("btnShowWhere"),delegate { ShowImportGuide(); });
-      body.Controls.Add(importRow); importNote=Hint(body,"");
+      body.Controls.Add(importRow); importNote=Note(body);
+      var tbFold=BeginFold(body,"tourbox",null);
+      Hint(body,text.Get("importHint"));
       Hint(body,text.Get("importAutoHint"));
+      EndFold(body,tbFold);
       Title(body,text.Get("cueTitle"));
+      Hint(body,text.Get("cueShort"));
+      var cueFold=BeginFold(body,"cue",null);
       Hint(body,text.Get("cueHint"));
-      Title(body,text.Get("inputsTitle")); Hint(body,text.Get("inputsHint"));
-      Title(body,text.Get("mixTitle"));
+      EndFold(body,cueFold);
+      // Assign your inputs is one sentence here, with the button that opens its tab.
+      Hint(body,text.Get("inputsHint"));
+      var toAssign=AddButton(body,text.Get("assignments"),null);
+      mixFold=BeginFold(body,"mix",text.Get("mixTitle"));
       enableMix=Check(body,text.Get("enableMix"));
       Hint(body,text.Get("mixHint"));
       mixOnly=Check(body,text.Get("mixOnly")); mixOnly.Enabled=false;
       enableMix.CheckedChanged+=delegate{mixOnly.Enabled=enableMix.Checked;if(!enableMix.Checked)mixOnly.Checked=false;};
       mixStep=Number(body,text.Get("mixStep"),0.25m,12m,3m,0.25m,2);
       mixDuration=Number(body,text.Get("mixFade"),0m,10000m,600m,100m,0);
-      Title(body,text.Get("vjsterTitle"));
+      EndFold(body,mixFold);
+      vjFold=BeginFold(body,"vjster",text.Get("vjsterTitle"));
       enableVjster=Check(body,text.Get("enableVjster")); enableVjster.Checked=true;
       Hint(body,text.Get("vjsterHint"));
       Hint(body,text.Get("vjsterChrome"));
@@ -422,8 +484,11 @@ namespace Fadester.TourBox {
       pageRow.Controls.Add(new Label {Text=text.Get("vjsterVideo"),AutoSize=true,UseMnemonic=false,Margin=new Padding(4,8,4,0)});
       vjsterVideo=new TextBox {Width=260}; pageRow.Controls.Add(vjsterVideo);
       AddButton(pageRow,text.Get("copyObsUrl"),delegate { CopyObsUrl(); }); body.Controls.Add(pageRow);
+      EndFold(body,vjFold);
+      enableMix.CheckedChanged+=delegate { ShowStatus(); }; vjsterPort.ValueChanged+=delegate { ShowStatus(); }; vjsterTarget.SelectedIndexChanged+=delegate { ShowStatus(); };
       enableGamepad.CheckedChanged+=delegate { ShowStatus(); }; mixOnly.CheckedChanged+=delegate { ShowStatus(); }; enableVjster.CheckedChanged+=delegate { ShowStatus(); };
       var assign=Page(tabs,text.Get("assignments")); Title(assign,text.Get("assignTitle"));
+      toAssign.Click+=delegate { tabs.SelectedTab=(TabPage)assign.Parent; };
       // Opening Assignments reads OBS's scenes and sources again when the list is old (hand test 2026-11-17: the lists
       // stayed empty until "Read scenes and inputs from OBS" was clicked).
       tabs.SelectedIndexChanged += delegate { if(tabs.SelectedTab==assign.Parent && obsConnected && DateTime.Now-catalogAt>TimeSpan.FromSeconds(10)){ var pending=Connect(true); } };
@@ -468,13 +533,16 @@ namespace Fadester.TourBox {
       AddButton(bar,text.Get("guide"),delegate { OpenPath(text.GuidePath(folder)); });
       // Shown only when config.json cannot be read, so the file can be found and repaired (a Store install keeps it elsewhere).
       openSettings=AddButton(bar,text.Get("openSettings"),delegate { OpenPath(SettingsFolder.Holding(settings)); }); openSettings.Visible=false;
+      signIn=new CheckBox {Text=text.Get("openAtSignIn"),AutoSize=true,UseMnemonic=false,Margin=new Padding(6,0,3,0)};
+      signIn.CheckedChanged+=async delegate { if(!settingSignIn) await SetSignIn(signIn.Checked); };
       // Always in view under the buttons (it used to sit at the bottom of a long Setup page), matching the Mac panel's footer.
-      var footer=new TableLayoutPanel {Dock=DockStyle.Fill,ColumnCount=1,RowCount=2,Margin=new Padding(0)};
+      var footer=new TableLayoutPanel {Dock=DockStyle.Fill,ColumnCount=1,RowCount=4,Margin=new Padding(0)};
       footer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));
-      footer.RowStyles.Add(new RowStyle(SizeType.Percent,100)); footer.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+      footer.RowStyles.Add(new RowStyle(SizeType.Percent,100)); footer.RowStyles.Add(new RowStyle(SizeType.AutoSize)); footer.RowStyles.Add(new RowStyle(SizeType.AutoSize)); footer.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+      signInNote=new Label {Text=text.Get("signInManaged"),AutoSize=true,UseMnemonic=false,Visible=false,ForeColor=Color.FromArgb(90,98,112),Margin=new Padding(24,0,4,2)};
       var keepOpen=new Label {Text=text.Get("keepOpen"),AutoSize=true,UseMnemonic=false,ForeColor=Color.FromArgb(90,98,112),Margin=new Padding(4,2,4,0)};
-      footer.ClientSizeChanged+=delegate { keepOpen.MaximumSize=new Size(Math.Max(200,footer.ClientSize.Width-12),0); };
-      footer.Controls.Add(bar,0,0); footer.Controls.Add(keepOpen,0,1);
+      footer.ClientSizeChanged+=delegate { keepOpen.MaximumSize=new Size(Math.Max(200,footer.ClientSize.Width-12),0); signInNote.MaximumSize=new Size(Math.Max(200,footer.ClientSize.Width-32),0); };
+      footer.Controls.Add(bar,0,0); footer.Controls.Add(signIn,0,1); footer.Controls.Add(signInNote,0,2); footer.Controls.Add(keepOpen,0,3);
       grid.Controls.Add(footer,0,4);
       Theme.Apply(this,navy,accent,stopRed);
       ShowStatus();
@@ -486,7 +554,7 @@ namespace Fadester.TourBox {
         // Never taller or wider than the screen it opens on (a 1080p laptop at 150 % has less room than the window asks for).
         var room=Screen.FromControl(this).WorkingArea;
         if(Width>room.Width || Height>room.Height){ Size=new Size(Math.Min(Width,room.Width),Math.Min(Height,room.Height)); Location=new Point(room.Left+(room.Width-Width)/2,room.Top+(room.Height-Height)/2); }
-        if(inert) return; ListenForShow(); ReadSettings(); ReadMap(); ReadPad(); Watch(); watch.Start(); if(!invalidConfig) await Connect(); };
+        if(inert) return; ListenForShow(); ReadFolds(); var signInRead=ReadSignIn(); ReadSettings(); ReadMap(); ReadPad(); Watch(); watch.Start(); if(!invalidConfig) await Connect(); };
       FormClosing+=async (s,e)=>{
         if(inert) return;
         Entry.Log("closing: "+e.CloseReason+(worker==null?"":", controls running")); if(worker==null)return;
@@ -503,6 +571,35 @@ namespace Fadester.TourBox {
         e.Cancel=true; if(closing)return; closing=true; await StopControls(); closing=false;
         if(worker==null)Close(); else { quitting=false; ShowFromTray(); Note(text.Get("stillClosing")); }
       };
+    }
+    /** Whether the line that says who decides is asked to show (a window that is not on screen reports every child hidden). */
+    bool signInNoteWanted;
+    internal bool SignInNoteShown() { return signInNoteWanted; }
+    /** The box as Windows has it. Set by policy (the Store build): ticked or not as it is, greyed, and it says who decides (QA-C05). */
+    void ShowSignIn(SignInState state) {
+      if(IsDisposed) return;
+      bool managed=SignInStart.Managed(state);
+      settingSignIn=true; signIn.Checked=SignInStart.Ticked(state); settingSignIn=false;
+      signIn.Enabled=!managed;
+      // The sentence is a line of its own: nothing is joined to the label, so it reads right in every language and wraps.
+      if(signInNoteWanted!=managed){ signInNoteWanted=managed; signInNote.Visible=managed; mainGrid.RowStyles[4].Height=managed ? 168 : 128; }
+    }
+    /** The box shows what Windows has: its own switch (Settings → Apps → Startup, Task Manager) may have changed since. */
+    async Task ReadSignIn() {
+      bool packaged=SettingsFolder.Packaged; string exe=Application.ExecutablePath;
+      try { ShowSignIn(await Task.Run(()=>SignInStart.Read(packaged,exe))); }
+      catch(Exception e) { Entry.Log("sign-in state: "+e.Message); }
+    }
+    /** Ticked or cleared by the user. When Windows has it switched off, only Windows' own page turns it on: say so and open it. */
+    async Task SetSignIn(bool on) {
+      bool packaged=SettingsFolder.Packaged; string exe=Application.ExecutablePath;
+      signIn.Enabled=false;
+      try {
+        var now=await Task.Run(()=>SignInStart.Set(packaged,exe,on));
+        ShowSignIn(now);
+        if(SignInStart.Managed(now)) Note(text.Get("signInManaged"));
+        else if(on && now==SignInState.Blocked){ Note(text.Get("signInSettings")); OpenPath("ms-settings:startupapps"); }
+      } catch(Exception e) { Entry.Log("sign-in: "+e); ShowSignIn(SignInState.Off); Note(text.Get("signInFailed",e.Message)); }
     }
     /** Whether closing the window only hides it: the user's own close, with the controls on and an icon to come back from. */
     internal static bool HidesOnClose(bool userClosing,bool controlsOn,bool quitting,bool hasTray) { return userClosing && controlsOn && !quitting && hasTray; }
@@ -567,10 +664,63 @@ namespace Fadester.TourBox {
       var p=new TabPage(title); t.Controls.Add(p);
       var f=new FlowLayoutPanel {Dock=DockStyle.Fill,AutoScroll=true,WrapContents=false,FlowDirection=FlowDirection.TopDown,Padding=new Padding(12),BackColor=Color.White}; p.Controls.Add(f); return f;
     }
+    /**
+     * Starts a folded part: every control added to the page until EndFold belongs to it. With a title it is an optional
+     * section, one line with its state and Show / Hide; without one it is a step's Details link.
+     */
+    Fold BeginFold(FlowLayoutPanel f,string id,string title) {
+      var fold=new Fold {Id=id,Section=title!=null};
+      fold.Link=new LinkLabel {AutoSize=true,UseMnemonic=false,LinkColor=accent,ActiveLinkColor=navy,LinkBehavior=LinkBehavior.HoverUnderline,TabStop=true};
+      // ByUser: open because the user opened it. Only those are remembered; a part a light opened is open for that
+      // problem, not for every start after it (QA-C04).
+      fold.Link.LinkClicked+=delegate { ToggleFold(fold); RememberFolds(); };
+      if(title==null){ fold.Link.Margin=new Padding(3,0,3,6); f.Controls.Add(fold.Link); }
+      else {
+        var head=new FlowLayoutPanel {AutoSize=true,WrapContents=true,Margin=new Padding(0,10,0,2)};
+        head.Controls.Add(new Label {Text=title,AutoSize=true,UseMnemonic=false,Font=new Font(Font,FontStyle.Bold),ForeColor=navy,Margin=new Padding(3,0,8,0)});
+        fold.Summary=new Label {AutoSize=true,UseMnemonic=false,ForeColor=Color.FromArgb(90,98,112),Margin=new Padding(0,0,8,0)};
+        fold.Link.Margin=new Padding(0); head.Controls.Add(fold.Summary); head.Controls.Add(fold.Link); f.Controls.Add(head);
+      }
+      fold.From=f.Controls.Count; folds.Add(fold); return fold;
+    }
+    void EndFold(FlowLayoutPanel f,Fold fold) {
+      for(int i=fold.From;i<f.Controls.Count;i++) fold.Parts.Add(f.Controls[i]);
+      SetFold(fold,false);
+    }
+    void SetFold(Fold fold,bool open) {
+      fold.Open=open; fold.Link.Text=text.Get(open ? "foldHide" : fold.Section ? "foldShow" : "foldDetails")+(open ? " ▴" : " ▾");
+      body.SuspendLayout(); foreach(var c in fold.Parts) c.Visible=open; body.ResumeLayout();
+    }
+    void ToggleFold(Fold fold) { SetFold(fold,!fold.Open); fold.ByUser=fold.Open; }
+    /** The parts to open again at the next start: the ones the user opened, never one a light opened. */
+    internal string[] FoldsToRemember() { return folds.Where(x=>x.ByUser).Select(x=>x.Id).ToArray(); }
+    /** A light asks for something inside a closed part: open it, once per problem, so a later Hide by the user stays. */
+    void CallFold(Fold fold,bool needed) {
+      if(fold==null) return;
+      if(needed && !fold.Called && !fold.Open) SetFold(fold,true);
+      fold.Called=needed;
+    }
+    /** The parts that were open when the window last closed open again; a fresh install starts with all of them closed. */
+    void ReadFolds() {
+      try { if(!File.Exists(foldsState)) return; var open=new HashSet<string>(File.ReadAllLines(foldsState).Select(x=>x.Trim())); foreach(var fold in folds) if(open.Contains(fold.Id)){ SetFold(fold,true); fold.ByUser=true; } }
+      catch(IOException) {} catch(UnauthorizedAccessException) {}
+    }
+    void RememberFolds() {
+      if(inert) return;
+      try { Directory.CreateDirectory(Path.GetDirectoryName(foldsState)); File.WriteAllLines(foldsState,FoldsToRemember(),new UTF8Encoding(false)); }
+      catch(IOException e) { Entry.Log("folds: "+e.Message); } catch(UnauthorizedAccessException e) { Entry.Log("folds: "+e.Message); }
+    }
+    /** An optional section's state in a few words, beside its title, so a closed section still says what it does. */
+    internal static string MixSummary(PanelText text,bool on,bool only) { return text.Get(!on ? "off" : only ? "sumMixOnly" : "on"); }
+    internal static string VjsterSummary(PanelText text,bool on,string target,int port) {
+      return on ? text.Get("sumVjster",target,port.ToString(CultureInfo.InvariantCulture)) : text.Get("off");
+    }
     void Title(FlowLayoutPanel f,string s) { f.Controls.Add(new Label {Text=s,AutoSize=true,Font=new Font(Font,FontStyle.Bold),ForeColor=navy,Margin=new Padding(3,10,3,2)}); }
     /** A part of a numbered step, such as the game controller or the TourBox in step 2. */
     void SubTitle(FlowLayoutPanel f,string s) { f.Controls.Add(new Label {Text=s,AutoSize=true,UseMnemonic=false,Font=new Font(Font,FontStyle.Bold),ForeColor=accent,Margin=new Padding(3,6,3,0)}); }
     Label Hint(FlowLayoutPanel f,string s) { var l=new Label {Text=s,UseMnemonic=false,AutoSize=true,MaximumSize=new Size(650,0),Margin=new Padding(3,2,3,5)}; f.Controls.Add(l); f.ClientSizeChanged+=delegate {l.MaximumSize=new Size(Math.Max(235,f.ClientSize.Width-42),0);}; return l; }
+    /** A line that is filled in later (OBS's scenes, the meter, the import's next step): it takes no room while it is empty. */
+    Label Note(FlowLayoutPanel f) { var l=Hint(f,""); l.Visible=false; l.TextChanged+=delegate { l.Visible=l.Text.Length>0; }; return l; }
     CheckBox Check(FlowLayoutPanel f,string label) {
       // An auto-sized check box never wraps its text (a long one ran off the page), so it is sized to the page and wraps.
       var check=new CheckBox {Text=label,AutoSize=false,UseMnemonic=false,TextAlign=ContentAlignment.TopLeft,CheckAlign=ContentAlignment.TopLeft};
@@ -1154,7 +1304,15 @@ namespace Fadester.TourBox {
       // A stopped bridge has no VJster link: what its lines said no longer holds.
       if(!on){ vjPeers.Clear(); vjPortBusy=false; vjOnDeck=false; }
       tbLight.Display(Readiness.TourBox(tourboxConsole,consoleInstalled,mixOnly.Checked,enableGamepad.Checked,presetState==PresetState.Old,presetState==PresetState.None),text);
-      vjLight.Display(Readiness.Vjster(enableVjster.Checked,mixOnly.Checked,on,vjPeers.Count,vjPortBusy,vjUsed,vjOnDeck),text);
+      var vjState=Readiness.Vjster(enableVjster.Checked,mixOnly.Checked,on,vjPeers.Count,vjPortBusy,vjUsed,vjOnDeck);
+      vjLight.Display(vjState,text);
+      if(mixFold!=null && vjFold!=null && enableMix!=null && vjsterTarget!=null){
+        mixFold.Summary.Text=MixSummary(text,enableMix.Checked,mixOnly.Checked);
+        vjFold.Summary.Text=VjsterSummary(text,enableVjster.Checked,Convert.ToString(vjsterTarget.SelectedItem),(int)vjsterPort.Value);
+        // The port and password are needed when OBS runs and refuses the sign-in or does not answer; VJster's fields when its light is amber or red.
+        CallFold(obsFold,Readiness.NeedsObsFields(obsConnected,obsRunning,obsProblem));
+        CallFold(vjFold,vjState.Lamp==Lamp.Amber || vjState.Lamp==Lamp.Red);
+      }
       padLight.Display(Readiness.Pad(enableGamepad.Checked,mixOnly.Checked,on,padState,padSeen,padEver),text);
       ctlLight.Display(Readiness.Controls(on,obsConnected),text);
       string key=Readiness.Reminder(on,mixOnly.Checked,obsHidden,tourboxConsole,front,obsRunning,enableVjster.Checked,consoleAutoSwitch,activeFadester);

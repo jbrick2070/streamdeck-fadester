@@ -100,5 +100,23 @@
   },
   "statusYouTubeOnlyKept": {
     "message": "VJster ist wieder auf YouTube beschränkt; Chrome hat die Berechtigung für alle Websites behalten. Sie lässt sich auf der Detailseite der Erweiterung entfernen."
+  },
+  "tabThis": {
+    "message": "VJster steuert das Video in diesem Tab."
+  },
+  "tabThisPinned": {
+    "message": "VJster ist an diesen Tab angeheftet."
+  },
+  "tabOther": {
+    "message": "VJster steuert ein Video in einem anderen Tab."
+  },
+  "tabOtherPinned": {
+    "message": "VJster ist an einen anderen Tab angeheftet."
+  },
+  "tabNone": {
+    "message": "Noch kein Tab mit einem Video. Öffnen Sie ein YouTube-Video."
+  },
+  "popupOptions": {
+    "message": "Optionen"
   }
 }

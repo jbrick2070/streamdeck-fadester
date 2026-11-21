@@ -9,7 +9,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { VJSTER_KINDS, VJSTER_PLUGIN_ID, suiteActionId } from "../../src/suite/actions.js";
 
-export const LANGUAGES = ["en", "de", "es", "fr", "ja", "ko", "zh_CN", "zh_TW", "nl"] as const;
+export const LANGUAGES = ["en", "de", "es", "fr", "ja", "ko", "zh_CN", "zh_TW", "nl", "it", "pt_BR", "ru", "tr"] as const;
 
 const FADESTER = "io.github.jbrick2070.fadester-for-obs.sdPlugin";
 const VJSTER = "com.jbrick2070.vjster.sdPlugin";
@@ -27,6 +27,36 @@ const kindOf = (id: string): string => id.slice(VJSTER_PLUGIN_ID.length + 1);
 
 /** The suite's name for a VJster action: "VJster" first, so a list of every action says whose it is. */
 const suiteName = (name: unknown): string => `VJster ${String(name)}`;
+
+/** A text up to and including its first full stop (Western or CJK), and what follows it. */
+function firstSentence(text: string): [string, string] {
+  const end = text.search(/[.。](\s|$)|。/);
+  if (end < 0) return [text, ""];
+  return [text.slice(0, end + 1), text.slice(end + 1).trim()];
+}
+
+/**
+ * VJster's settings-page texts as the suite shows them. The suite has one Language setting for both halves (UI review
+ * U2-19), so VJster's page must not say the choice is for "all VJster controls": the badge and the note's first
+ * sentence are Fadester's own words for it, in each language, and the rest of VJster's note (what stays in Stream
+ * Deck's language, the OBS page, the Chrome extension) is kept.
+ */
+export function suitePageStrings(source: string, fadesterDir: string): string {
+  const open = source.indexOf("window.VJSTER_PI_STRINGS = ");
+  const close = source.lastIndexOf(";");
+  if (open < 0 || close < open) throw new Error("the VJster settings page's texts are no longer one VJSTER_PI_STRINGS object");
+  const start = open + "window.VJSTER_PI_STRINGS = ".length;
+  const tables = record(JSON.parse(source.slice(start, close)));
+  for (const [language, table] of Object.entries(tables)) {
+    const pi = record(record(table).pi);
+    const theirs = record(record(readJson(join(fadesterDir, `${language}.json`)).Localization).pi);
+    const badge = theirs.scopeAllControls, note = theirs.languageNote;
+    if (typeof badge !== "string" || typeof note !== "string" || typeof pi.languageNote !== "string") throw new Error(`${language}: the Language texts the suite joins are missing`);
+    pi.languageBadge = badge;
+    pi.languageNote = [firstSentence(note)[0], firstSentence(pi.languageNote)[1]].filter((part) => part !== "").join(/[。]$/.test(firstSentence(note)[0]) ? "" : " ");
+  }
+  return source.slice(0, start) + JSON.stringify(tables, null, 2) + source.slice(close);
+}
 
 /** Every file the assembly owns, by path inside the Fadester plugin folder, as the bytes it must have. */
 export function wanted(root: string): Map<string, Buffer | string> {
@@ -81,7 +111,8 @@ export function wanted(root: string): Map<string, Buffer | string> {
     for (const file of ["icon.svg", "key.svg"]) out.set(`imgs/actions/vjster-${kind}/${file}`, readFileSync(join(vjster, "imgs", "actions", kind, file)));
   }
   out.set("layouts/vjster-strip.json", readFileSync(join(vjster, "layouts", "vjster-strip.json")));
-  for (const file of ["vjster.js", "vjster.css", "i18n.js"]) out.set(`ui/vjster/${file}`, readFileSync(join(vjster, "ui", file)));
+  for (const file of ["vjster.js", "vjster.css"]) out.set(`ui/vjster/${file}`, readFileSync(join(vjster, "ui", file)));
+  out.set("ui/vjster/i18n.js", suitePageStrings(readFileSync(join(vjster, "ui", "i18n.js"), "utf8"), fadester));
   const page = readFileSync(join(vjster, "ui", "vjster.html"), "utf8");
   if (!page.includes('<script src="vjster.js"></script>')) throw new Error("the VJster settings page no longer loads vjster.js the way the suite expects");
   out.set("ui/vjster/vjster.html", page.replace('<script src="vjster.js"></script>', '<script src="suite.js"></script>\n    <script src="vjster.js"></script>'));

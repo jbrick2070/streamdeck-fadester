@@ -100,5 +100,23 @@
   },
   "statusYouTubeOnlyKept": {
     "message": "VJster 已恢復為僅限 YouTube；Chrome 保留了所有網站的權限，請在擴充功能的詳細資料頁面中移除。"
+  },
+  "tabThis": {
+    "message": "VJster 正在控制此分頁中的影片。"
+  },
+  "tabThisPinned": {
+    "message": "VJster 已固定到此分頁。"
+  },
+  "tabOther": {
+    "message": "VJster 正在控制另一個分頁中的影片。"
+  },
+  "tabOtherPinned": {
+    "message": "VJster 已固定到另一個分頁。"
+  },
+  "tabNone": {
+    "message": "還沒有含影片的分頁。請開啟一部 YouTube 影片。"
+  },
+  "popupOptions": {
+    "message": "選項"
   }
 }

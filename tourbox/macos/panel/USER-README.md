@@ -10,8 +10,8 @@ Fadester Companion lets a full-size TourBox mix OBS Studio scenes on a Mac: the 
 
 ## Set up your TourBox
 
-1. On the **Setup** tab click **1. Save TourBox Preset (.tb)…** and save the file, for example in Downloads.
-2. Click **2. Open TourBox Console**. In Console click the **Import** icon beside **Preset List** and open that file. **Show me where to click** plays these clicks.
+1. On the **Setup** tab click **Import into TourBox Console**. It saves `OBS Fadester for TourBox.tb` to Downloads, copies its path and opens TourBox Console. If a different file of that name is already there, it is left alone and the preset is saved as `OBS Fadester for TourBox 2.tb`: the window names the file it saved, and that is the one to import. (macOS may ask once whether Fadester Companion may use the Downloads folder; if you say no, a save window asks where to put the file.)
+2. In Console click the **Import** icon beside **Preset List**. In the file window press ⌘⇧G, then ⌘V and Return, and open the file. If the file window does not accept ⌘⇧G, pick the file in Downloads by hand. **Show me where to click** plays these clicks.
 3. In Console turn **Auto Switch** off and select **OBS Fadester for TourBox**, so the preset works whichever app is in front.
 4. When the **Controls** light says *Accessibility: needed*, click **Grant…** beside it and turn on **Fadester Companion** in System Settings → Privacy & Security → Accessibility (and **Fadester Companion T-bar**, if macOS lists it too). The T-bar needs this permission. The controls then start by themselves.
 

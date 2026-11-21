@@ -3,8 +3,9 @@
 // Fadester plugin and the VJster plugin each run as before, each believing it is the only plugin. This module is the
 // pure part: which child gets a message from the host, what a child's message means to the host, and how the one
 // stored global-settings object is shared (Fadester keeps its keys at the top, VJster keeps its own under one name,
-// so neither one's `port` or `language` reaches the other). No sockets and no clock live here, so it tests as
-// plain calls.
+// so neither one's `port` reaches the other). The Language setting is the exception: there is one for the whole
+// plugin (UI review U2-19). It is the `language` at the top; VJster reads and writes it as its own `language`, and
+// each half is told when the other changed it. No sockets and no clock live here, so it tests as plain calls.
 
 export type Child = "fadester" | "vjster";
 export type Message = Record<string, unknown> & { event?: string; action?: string; context?: string; payload?: unknown };
@@ -31,6 +32,8 @@ const READ_ID = "suite-global-settings";
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
 const CHILDREN = ["fadester", "vjster"] as const;
+/** A stored Language value that names a language: anything but absent or Automatic. */
+const fixedLanguage = (value: unknown): boolean => typeof value === "string" && value !== "auto";
 
 export class SuiteMux {
   private full: Record<string, unknown> = {};
@@ -66,9 +69,37 @@ export class SuiteMux {
     return Object.hasOwn(this.toVjsterUuid, action);
   }
 
+  /** VJster's part as VJster sees it: its own keys, and the plugin's one Language setting as its `language`. */
   private slice(): Record<string, unknown> {
     const mine = this.full[this.options.namespace];
-    return isRecord(mine) ? { ...mine } : {};
+    const out: Record<string, unknown> = isRecord(mine) ? { ...mine } : {};
+    if ("language" in this.full) out.language = this.full.language;
+    else delete out.language;
+    return out;
+  }
+
+  /**
+   * Settings saved before there was one Language setting hold VJster's own choice inside its part. It is taken out of
+   * there; it becomes the plugin's choice when Fadester had none (a language picked on either side is kept, and
+   * Fadester's wins when both picked one). True when the stored object changed and must be saved.
+   */
+  private liftLanguage(): boolean {
+    const mine = this.full[this.options.namespace];
+    if (!isRecord(mine) || !("language" in mine)) return false;
+    const { language: theirs, ...rest } = mine;
+    const adopt = !fixedLanguage(this.full.language) && fixedLanguage(theirs);
+    this.full = { ...this.full, [this.options.namespace]: rest, ...(adopt ? { language: theirs } : {}) };
+    return true;
+  }
+
+  /** VJster's part with a save from VJster in it; a `language` in that save is the plugin's one Language setting. */
+  private withVjsterSave(saved: Record<string, unknown>): Record<string, unknown> {
+    const { language, ...rest } = saved;
+    return { ...this.full, [this.options.namespace]: rest, ...("language" in saved ? { language } : {}) };
+  }
+
+  private save(): void {
+    this.options.toHost({ event: "setGlobalSettings", context: this.options.pluginUuid, payload: this.full });
   }
 
   private withoutSlice(): Record<string, unknown> {
@@ -91,6 +122,7 @@ export class SuiteMux {
       if (this.fullKnown && message.id === READ_ID) return;
       const payload = isRecord(message.payload) ? message.payload : {};
       this.full = isRecord(payload.settings) ? { ...payload.settings } : {};
+      const lifted = this.liftLanguage();
       const firstTime = !this.fullKnown;
       this.fullKnown = true;
       // An answer goes to the ones that asked, each with its read's id (the SDK hands it to that read only). News (no id) goes to both.
@@ -101,6 +133,8 @@ export class SuiteMux {
         if (ids.length === 0 && message.id === undefined) this.options.toChild(child, this.settingsReply(child));
       }
       if (firstTime) for (const apply of this.held.splice(0)) apply();
+      // After the held saves, so one write carries everything; a save among them has already written it.
+      if (lifted) this.save();
       return;
     }
     this.remember(message);
@@ -183,8 +217,12 @@ export class SuiteMux {
       case "setGlobalSettings": {
         const payload = isRecord(message.payload) ? message.payload : {};
         this.whenKnown(() => {
-          this.full = child === "vjster" ? { ...this.full, [this.options.namespace]: payload } : { ...payload, ...this.sliceEntry() };
-          this.options.toHost({ event: "setGlobalSettings", context: this.options.pluginUuid, payload: this.full });
+          const before = this.full.language;
+          this.full = child === "vjster" ? this.withVjsterSave(payload) : { ...payload, ...this.sliceEntry() };
+          this.save();
+          // The one Language setting changed: the other half redraws its keys and tells its open page.
+          const other: Child = child === "vjster" ? "fadester" : "vjster";
+          if (this.full.language !== before) this.options.toChild(other, this.settingsReply(other));
         });
         return;
       }
@@ -215,9 +253,11 @@ export class SuiteMux {
   private saveVjsterSettings(settings: unknown): void {
     const mine = isRecord(settings) ? settings : {};
     this.whenKnown(() => {
-      this.full = { ...this.full, [this.options.namespace]: mine };
-      this.options.toHost({ event: "setGlobalSettings", context: this.options.pluginUuid, payload: this.full });
+      const before = this.full.language;
+      this.full = this.withVjsterSave(mine);
+      this.save();
       this.options.toChild("vjster", this.settingsReply("vjster"));
+      if (this.full.language !== before) this.options.toChild("fadester", this.settingsReply("fadester"));
     });
   }
 }

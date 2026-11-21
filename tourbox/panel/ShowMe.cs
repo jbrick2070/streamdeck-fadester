@@ -31,6 +31,8 @@ namespace Fadester.TourBox {
       if (problem == null) return new LightState(Lamp.Grey, "liObsLooking", null, null); // OBS is starting, or a scan is under way
       return new LightState(Lamp.Amber, "liObsSetting", "btnShowMe", "server");
     }
+    /** Whether the OBS port and password are worth showing: OBS runs here and refuses the sign-in or does not answer. */
+    internal static bool NeedsObsFields(bool connected, bool running, string problem) { return !connected && running && problem != null; }
     /** padSeen: a controller is plugged in now (read while the controls are off); padEver: one was plugged in this session. */
     internal static LightState Pad(bool enabled, bool mixOnly, bool controlsOn, string padState, bool padSeen, bool padEver = false) {
       if (mixOnly) return new LightState(Lamp.Grey, "liPadOff", null, null);

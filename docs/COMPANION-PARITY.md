@@ -29,6 +29,7 @@ Sources: `tourbox/panel/FadesterTourBox.cs` and `ShowMe.cs` (Windows), `tourbox/
 | Tabs | Setup, Assignments, Game controller, Control map, Activity (native tabs) | Setup, Assignments, Control map, Activity (four buttons) | **Intentional**: the game controller is Windows only (XInput). **Gap**: the tab control looks different |
 | Footer buttons | **Start** / **Stop** (red while on), Save assignments, Show / hide feedback, Quick guide (Open settings only when `config.json` cannot be read) | Same four buttons | Same |
 | First run | The controls start by themselves | The controls start by themselves once Accessibility is granted | **Intentional**: no system prompt at launch on the Mac |
+| Open when I sign in | A tick box under the buttons, off until ticked. ZIP and installer: one value under the user's `Run` key; Store: the package's start-up task (`uap5:StartupTask`, `Enabled="false"`). The box shows what Windows reports; when Windows has it switched off it opens Settings → Apps → Startup, and when Windows or the organisation set it by policy the box is greyed and a line under it says so. The installer's uninstall removes the value | The same tick box, worded **Open at Login** as macOS words it, on macOS 13 and later: the app registers itself as a login item (`SMAppService.mainApp`, no helper, entitlement or signing secret). When macOS wants approval it opens Login Items. Not shown on macOS 12 | Same. The Store task and the Mac login item were built without a run: check them by hand. An ad-hoc signed Mac app may have to be ticked again after an update |
 | Closing the window | With the controls on it hides to the notification area (icon beside the clock: Open, Start / Stop, Quit) | With the controls on it hides; the menu-bar icon (top right) has Open, Start / Stop, Quit, and the Dock icon reopens the window | Same behaviour, each system's own place |
 | Note under the footer | Says where the icon is and how to quit | The same, in the Mac's words | Same |
 | App menus | None (a Windows window has none) | Fadester Companion (About, Hide, Quit), Edit (Undo, Redo, Cut, Copy, Paste, Select All), Window | **Intentional** |
@@ -45,11 +46,11 @@ Sources: `tourbox/panel/FadesterTourBox.cs` and `ShowMe.cs` (Windows), `tourbox/
 | --- | --- | --- | --- |
 | 1 Connect to OBS | Port and password filled in from OBS (a typed port is kept), Read scenes and inputs, Program/Preview summary, Visual Sidechain meter line | Same | Same |
 | Setup diagram | None | Clickable setup diagram | **Gap** on Windows |
-| 2 Controller | "Choose your controller": game controller (Easy mode) and TourBox: **Import into TourBox Console** copies the preset path, opens Console and opens the **Show me where to click** guide (also its own button) | "Set up your TourBox": save the `.tb`, open Console, **Show me where to click**, **Download TourBox Console…**, **TourBox Preset Square…** | Same guide. **Intentional**: the game controller is Windows only, and the Mac saves the `.tb` with a save dialog. **Gap**: the two download links are Mac only |
+| 2 Controller | "Choose your controller": game controller (Easy mode) and TourBox: **Import into TourBox Console** copies the preset path, opens Console and opens the **Show me where to click** guide (also its own button) | "Set up your TourBox": **Import into TourBox Console** saves the `.tb` to Downloads without a save window, copies its path, opens Console and opens the **Show me where to click** guide (also its own button); under **Details**, **Download TourBox Console…** and **TourBox Preset Square…** | Same button and guide. **Intentional**: the game controller is Windows only; the Mac's `.tb` is inside the app, so it is first saved to Downloads (a copy already there is used; a different file of that name is never replaced, the preset then gets the next number, and the Setup page, the guide window and its animation name the file that was written; the save window is the fallback when Downloads cannot be written). **Gap**: the two download links are Mac only |
 | macOS Accessibility | Not applicable | Grant Accessibility, native helper window, status | **Intentional** (macOS permission) |
 | 3 Try Preview | Present | Present | Same |
-| Optional: Assign your inputs | A paragraph that points to the Assignments tab | Same | Same |
-| Optional sections, order | Assign, Whole mix, VJster | Same | Same |
+| Assigning inputs | No heading of its own: one sentence under step 3 with an **Assignments** button | Same | Same |
+| Optional sections | Whole mix, then VJster, each one line with its state and **Show** / **Hide** | Same | Same |
 | Optional: VJster | Enable, port, extension ID, Target, OBS video URL / ID, Copy OBS Browser Source URL | Same fields | Same |
 | Optional: Whole mix | Enable, **Use only Stream Deck, OpenDeck or MIDI**, step (dB), fade (ms) | Same | Same. The Mac runs `FadesterMacHost --run --mix-only`: no shortcut helper, native T-bar, Accessibility or VJster. |
 | Number fields | Spin boxes | Plain fields, with "Enter a valid number" | **Gap** |
@@ -82,7 +83,7 @@ These match on both systems:
 | OBS WebSocket server, password | Animation with OBS's labels in the panel's language | Same |
 | Studio Mode | No window: the OBS light's **Turn on** button asks OBS | Same |
 | VJster waiting for video, VJster port in use | Two-way card (Chrome or OBS page; quit Stream Deck or pick another port) | Same words |
-| TourBox import | Animation: Import, paste the copied path, open, then select the preset (Auto Switch off) | Animation: Import, pick the file in the Finder dialog, open, then select the preset (Auto Switch off), with step buttons |
+| TourBox import | Animation: Import, paste the copied path, open, then select the preset (Auto Switch off) | Animation: Import, pick the file in the Finder dialog, open, then select the preset (Auto Switch off), with step buttons; once the preset is saved, a line under it gives the quicker way (⌘⇧G, ⌘V, Return: the path is copied) and says to pick the file by hand if the window does not accept it. ⌘⇧G is the standard shortcut of the macOS file window; whether TourBox Console's own window is that one was not checked on a Mac with Console, which is why every text names the other way too |
 
 TourBox Console's own labels (Preset List, Import, Auto Switch) stay in English in both animations and texts, as Console shows them.
 
@@ -108,21 +109,20 @@ No action is called "take" anywhere: the TourBox label is **Preview to Program**
 
 1. **Check the Mac app on a real Mac.** CI builds and self-tests it on both architectures; what is left needs a screen and hardware: open the released ZIP past Gatekeeper, check the lights, the menu-bar icon, Command-V in the password field, the meter line, Stream Deck-only mode and a non-English language (`--language de`, `--language ja`, `--language tr`) on screen, grant Accessibility, and rehearse with a TourBox.
 2. **Look at the dark appearance on screen.** Windows: the pictures from `--render FILE.png --theme dark` were checked for every tab; the window itself (title bar, scroll bars, an open drop-down list, the game controller table with its rows) was not. Mac: not built or seen. Still light in dark mode: the Show-me guide windows on both, the Mac setup diagram, and on Windows the spin-box arrows and check-box squares.
-3. **Shorter Setup page.** See the proposal below. It needs an on-screen review, so it was not changed blind.
-4. **Setup diagram on Windows** (or none on either: the lights say the same in less space; the owner's choice).
-5. **The Mac's Activity lines in words**, as on Windows.
-6. **Game controller on the Mac.** This would be a new feature (Apple's GameController framework), not a parity fix.
+3. **Setup diagram on Windows** (or none on either: the lights say the same in less space; the owner's choice).
+4. **The Mac's Activity lines in words**, as on Windows.
+5. **Game controller on the Mac.** This would be a new feature (Apple's GameController framework), not a parity fix.
 
-## Proposal: a shorter Windows Setup page
+## The shorter Setup page
 
-Not implemented: it changes what a newcomer sees first, so it needs an on-screen review by the owner.
+Built on both systems (UI review U3-05). Each numbered step is a short line and its button:
+1. **Connect to OBS**: "Open OBS. Fadester Companion finds it and signs in by itself.", **Read scenes and inputs from OBS**, and under **Details** the long explanation, the OBS port and the OBS password.
+2. **Controller**: the game controller's tick box (Windows; Easy mode and its explanation appear once it is ticked), the TourBox import buttons, and under **Details** the import's explanation. The Mac keeps its Accessibility part in view.
+3. **Try Preview**: one sentence, **Details** for the long one, then the sentence about assignments with an **Assignments** button that opens that tab.
+4. **All OBS mixer inputs** and **VJster** are one line each: the title, the state in a few words ("Off", "On", "On, Stream Deck only", "On, Chrome & OBS page, port 48150") and **Show** / **Hide**.
 
-Today the Windows Setup tab is one long scrolling page: Connect to OBS, Choose your controller (game controller and TourBox), Try Preview, Assign your inputs, Whole mix and VJster. The last two are optional and hold most of the controls.
+A closed part opens by itself, once per problem, when a light needs what is in it: the OBS part when OBS runs and refuses the sign-in or does not answer, the VJster part when its light is amber or red. A part the user closes again stays closed. Only the parts the user opened are remembered (per user: `folds.txt` beside `config.json` on Windows, the app's preferences on the Mac; not in the controls' settings), never one a light opened.
 
-Proposed:
-1. **Collapse the two optional sections by default.** Show each as one line with its title, a one-line summary of its state ("Off", "On, Stream Deck only", "On, Chrome & OBS page, port 48150") and a **Show** / **Hide** link. Open a section by itself when it is on and its light is amber or red, so a problem is never hidden.
-2. **Fold "Assign your inputs" into Try Preview**, as one sentence with a link that opens the Assignments tab.
-3. **Keep the order** a newcomer acts in: OBS, controller, first cue, then the optional sections.
-4. **Remember** which optional sections were opened (a panel preference, not in `config.json`).
+Not built: a compact view while the controls run. The lights with their **Stop** button stay above the tabs, and **Show / hide feedback** already gives the last action in a small window that stays on top.
 
-Expected result: steps 1 to 3 fit on the first screen without scrolling at the default 780 × 700 window. Check on screen before building: wrapping at 125% and 150% display scaling, the longest translations (German, Russian), keyboard focus order, and the same change on the Mac panel for parity.
+Checked on Windows from pictures (`--render FILE.png --open` draws every part open) in English, German, Russian and Japanese, light and dark, at 100 %. To check on screen: 125 % and 150 % scaling, the keyboard's Tab order through the links, and the Mac page (compiled and self-tested, not seen).

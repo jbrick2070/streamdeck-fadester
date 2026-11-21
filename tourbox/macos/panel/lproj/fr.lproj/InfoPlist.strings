@@ -1,0 +1,2 @@
+/* Why macOS is asked for the Downloads folder: the system prompt shows this sentence. */
+"NSDownloadsFolderUsageDescription" = "Fadester Companion enregistre le préréglage TourBox dans Téléchargements pour que TourBox Console puisse l’importer.";

@@ -8,20 +8,25 @@
 // workflow unpacks the packed .streamDeckPlugin there, so a file that `streamdeck pack` left out fails here and not on
 // a user's computer (QA-A02). With it set, a missing file is a failure, never a skip.
 import { spawn, type ChildProcess } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { WebSocketServer, type WebSocket } from "ws";
-import { VJSTER_NAMESPACE, suiteActionId } from "../src/suite/actions.js";
+import { SUITE_PLUGIN_ID, VJSTER_NAMESPACE, suiteActionId } from "../src/suite/actions.js";
 
 const UNPACKED = (process.env.FADESTER_SMOKE_PLUGIN_DIR ?? "").trim();
 const PLUGIN_DIR = resolve(UNPACKED || "io.github.jbrick2070.fadester-for-obs.sdPlugin");
 const ENTRY = join(PLUGIN_DIR, "bin", "plugin.js");
 const NEEDED = [ENTRY, join(PLUGIN_DIR, "bin", "fadester.js"), join(PLUGIN_DIR, "bin", "vjster", "plugin.js"), join(PLUGIN_DIR, "manifest.json")];
 const built = NEEDED.every((file) => existsSync(file));
-const UUID = "io.github.jbrick2070.fadester-for-obs";
+// The plugin's own ID is read from the folder that is started: the Elgato Marketplace edition
+// (scripts/suite/package-marketplace.ts) is the same plugin under the Marketplace product's ID, and it is started
+// by this same test.
+const MANIFEST = join(PLUGIN_DIR, "manifest.json");
+const UUID = existsSync(MANIFEST) ? (JSON.parse(readFileSync(MANIFEST, "utf8")) as { UUID: string }).UUID : SUITE_PLUGIN_ID;
 const SCENE_ACTION = `${UUID}.scene-transition`;
+const VJSTER_ACTION = suiteActionId("speed-preset").replace(SUITE_PLUGIN_ID, UUID);
 
 /** A port nothing listens on: taken and given back, so a connection to it is refused at once. */
 async function closedPort(): Promise<number> {
@@ -114,7 +119,7 @@ describe.skipIf(!built)("the built plugin starts as Stream Deck starts it (G-02)
       await until(`${action} draws its key`, () => drawn(context));
     };
     await showUntilDrawn(SCENE_ACTION, "smoke-fadester-key");
-    await showUntilDrawn(suiteActionId("speed-preset"), "smoke-vjster-key");
+    await showUntilDrawn(VJSTER_ACTION, "smoke-vjster-key");
     // Both drew a picture of their own (an SVG data URI), and neither ended.
     for (const context of ["smoke-fadester-key", "smoke-vjster-key"]) {
       const image = received.find((message) => message.event === "setImage" && message.context === context)!.payload as { image?: string };

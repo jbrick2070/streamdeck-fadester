@@ -42,14 +42,14 @@ function crc32(bytes: Buffer): number {
   return (crc ^ 0xffffffff) >>> 0;
 }
 
-/** Small deterministic ZIP writer: standard UTF-8 paths, deflate, no ZIP64. */
-export function zip(files: Array<{ path: string; content: string }>): Buffer {
+/** Small deterministic ZIP writer: standard UTF-8 paths, deflate, no ZIP64. Text is written as UTF-8, bytes as they are. */
+export function zip(files: Array<{ path: string; content: string | Buffer }>): Buffer {
   const localRecords: Buffer[] = [];
   const centralRecords: Buffer[] = [];
   let offset = 0;
   for (const file of files) {
     const name = Buffer.from(file.path, "utf8");
-    const data = Buffer.from(file.content, "utf8");
+    const data = typeof file.content === "string" ? Buffer.from(file.content, "utf8") : file.content;
     const compressed = deflateRawSync(data);
     const checksum = crc32(data);
     const local = Buffer.alloc(30);

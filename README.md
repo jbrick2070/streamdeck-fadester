@@ -29,7 +29,7 @@ That is all. With OBS on the same computer the plugin finds OBS's port and signs
 
 Stream Deck installs no profile by itself when it installs the plugin: a layout arrives the first time you open it, so your profile list stays yours. You can also import any layout's `.streamDeckProfile` file by double-clicking it ([profile library](profiles/README.md)).
 
-**Upgrading from 0.9.x or earlier?** Fadester 0.10 uses a new plugin ID. Install it alongside the old version, let it sign in to OBS (it reads OBS's saved password by itself), and open a fresh layout or replace old Fadester actions in a copy of your custom profile. Keep the old plugin until you’ve checked the new controls. The standalone VJster ID has not changed.
+**Upgrading from 0.9.x or earlier with a download from this page?** Since 0.10 the download here uses a new plugin ID (a copy from the Elgato Marketplace keeps the old one and simply updates there; do not add this download to it). Install it alongside the old version, let it sign in to OBS (it reads OBS's saved password by itself), and open a fresh layout or replace old Fadester actions in a copy of your custom profile. Keep the old plugin until you’ve checked the new controls. The standalone VJster ID has not changed.
 
 ## Ready-made layouts
 
@@ -134,6 +134,7 @@ A robot (a cue list or an AI agent) uses the same doors through the API, or thro
 | **PANIC SENT** | Visual Sidechain's Panic is on. Hold **Restore visuals** for 0.8 s to bring the effects back. |
 | A key changed the picture on Program in Studio Mode | A scene's content is shared: when Preview and Program show the same scene, layer edits change both. The control is framed red and labels that scene PROGRAM. |
 | A numbered scene key does nothing | OBS has fewer scenes than the number. Add a scene, or pin the key to a named scene in its settings page. |
+| *Fadester for OBS* is listed twice in Stream Deck's actions | The plugin from the Elgato Marketplace and the one from this page are the same plugin under two IDs, and Stream Deck holds them as two. Keep one and remove the other in Stream Deck. Keys keep the copy they were placed with, so re-place the keys of the copy you remove. |
 
 When OBS goes away, the plugin reconnects by itself and every key shows the same short reason, with a broken-link picture.
 

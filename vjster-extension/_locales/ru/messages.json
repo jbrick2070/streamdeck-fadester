@@ -100,5 +100,23 @@
   },
   "statusYouTubeOnlyKept": {
     "message": "VJster снова работает только на YouTube; Chrome сохранил разрешение для всех сайтов, удалите его на странице сведений о расширении."
+  },
+  "tabThis": {
+    "message": "VJster управляет видео на этой вкладке."
+  },
+  "tabThisPinned": {
+    "message": "VJster закреплён за этой вкладкой."
+  },
+  "tabOther": {
+    "message": "VJster управляет видео на другой вкладке."
+  },
+  "tabOtherPinned": {
+    "message": "VJster закреплён за другой вкладкой."
+  },
+  "tabNone": {
+    "message": "Пока нет вкладки с видео. Откройте видео на YouTube."
+  },
+  "popupOptions": {
+    "message": "Параметры"
   }
 }

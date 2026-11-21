@@ -16,8 +16,8 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { zip } from "./build-profiles.js";
 
-/** Needed although the manifest does not name it: the options page loads it. */
-export const ALSO_NEEDED = ["options.js"] as const;
+/** Needed although the manifest does not name them: the options page and the toolbar popup load them. */
+export const ALSO_NEEDED = ["options.js", "popup.js"] as const;
 
 interface ExtensionManifest {
   version?: unknown;
@@ -27,6 +27,7 @@ interface ExtensionManifest {
   default_locale?: unknown;
   background?: { service_worker?: unknown };
   options_page?: unknown;
+  action?: { default_popup?: unknown };
   icons?: Record<string, unknown>;
   content_scripts?: { js?: unknown[] }[];
 }
@@ -52,6 +53,7 @@ export function neededFiles(manifest: ExtensionManifest, locales: readonly strin
   const named = [
     manifest.background?.service_worker,
     manifest.options_page,
+    manifest.action?.default_popup,
     ...Object.values(manifest.icons ?? {}),
     ...(manifest.content_scripts ?? []).flatMap((s) => s.js ?? [])
   ].filter((p): p is string => typeof p === "string");

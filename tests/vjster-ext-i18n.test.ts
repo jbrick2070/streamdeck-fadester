@@ -21,6 +21,9 @@ const langs = readdirSync(LOCALES).sort();
 const en = read("en");
 const html = readFileSync(join(EXT, "options.html"), "utf8");
 const options = readFileSync(join(EXT, "src", "options.ts"), "utf8");
+/** The toolbar button's popup (U2-14): its page and its script. */
+const popupHtml = readFileSync(join(EXT, "popup.html"), "utf8");
+const popup = readFileSync(join(EXT, "src", "popup.ts"), "utf8");
 /** messages.ts names the options page's link line messages (linkLine). */
 const messagesSource = readFileSync(join(EXT, "src", "messages.ts"), "utf8");
 const manifest = readFileSync(join(EXT, "manifest.json"), "utf8");
@@ -76,6 +79,12 @@ describe("Chrome extension languages (R-I18N-5)", () => {
     const used = new Set<string>();
     for (const m of manifest.matchAll(/__MSG_([A-Za-z0-9_]+)__/g)) used.add(m[1]);
     for (const m of html.matchAll(/data-i18n="([^"]+)"/g)) used.add(m[1]);
+    for (const m of popupHtml.matchAll(/data-i18n="([^"]+)"/g)) used.add(m[1]);
+    // The popup's tab line: the message names are the TabLine type's members (messages.ts), drawn by tabLine().
+    const tabNames = /export type TabLine = ([^;]+);/.exec(messagesSource)?.[1].match(/"([A-Za-z]+)"/g)?.map((name) => name.slice(1, -1)) ?? [];
+    expect(tabNames).toHaveLength(5);
+    expect(popup).toContain("tabLine(");
+    for (const name of tabNames) used.add(name);
     for (const m of options.matchAll(/status\(\s*"([A-Za-z0-9_]+)"/g)) used.add(m[1]);
     for (const m of options.matchAll(/\? "([A-Za-z0-9_]+)" : "([A-Za-z0-9_]+)"/g)) used.add(m[1]).add(m[2]);
     for (const m of messagesSource.matchAll(/\bname: "([A-Za-z0-9_]+)"/g)) used.add(m[1]);
@@ -85,9 +94,9 @@ describe("Chrome extension languages (R-I18N-5)", () => {
     expect(Object.keys(en).filter((k) => !used.has(k))).toEqual([]);
   });
 
-  it("keeps the options page's built-in English equal to en/messages.json", () => {
-    const pairs = [...html.matchAll(/data-i18n="([^"]+)">([^<]*)</g)];
-    expect(pairs.length).toBeGreaterThan(6);
+  it("keeps the options page's and the popup's built-in English equal to en/messages.json", () => {
+    const pairs = [...html.matchAll(/data-i18n="([^"]+)">([^<]*)</g), ...popupHtml.matchAll(/data-i18n="([^"]+)">([^<]*)</g)];
+    expect(pairs.length).toBeGreaterThan(10);
     for (const m of pairs) expect(m[2].replace(/&#39;/g, "'"), m[1]).toBe(en[m[1]].message);
   });
 

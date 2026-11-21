@@ -24,7 +24,7 @@ function copyStatic() {
     name: "vjster-copy-static",
     writeBundle() {
       mkdirSync(join(out, "icons"), { recursive: true });
-      for (const file of ["manifest.json", "options.html"]) copyFileSync(join(here, file), join(out, file));
+      for (const file of ["manifest.json", "options.html", "popup.html"]) copyFileSync(join(here, file), join(out, file));
       for (const file of readdirSync(join(here, "icons"))) {
         if (file.endsWith(".png")) copyFileSync(join(here, "icons", file), join(out, "icons", file));
       }
@@ -62,5 +62,6 @@ export default [
   bundle("background", "es", [cleanOut()]), // the first bundle: rollup builds this list in order
   bundle("content-main", "iife"),
   bundle("content-bridge", "iife"),
+  bundle("popup", "iife"),
   bundle("options", "iife", [copyStatic()])
 ];

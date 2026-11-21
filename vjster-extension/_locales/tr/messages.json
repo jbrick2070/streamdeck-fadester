@@ -100,5 +100,23 @@
   },
   "statusYouTubeOnlyKept": {
     "message": "VJster yeniden yalnızca YouTube'da çalışıyor; Chrome tüm siteler iznini korudu, bunu uzantının ayrıntılar sayfasından kaldırın."
+  },
+  "tabThis": {
+    "message": "VJster bu sekmedeki videoyu kontrol ediyor."
+  },
+  "tabThisPinned": {
+    "message": "VJster bu sekmeye sabitlendi."
+  },
+  "tabOther": {
+    "message": "VJster başka bir sekmedeki videoyu kontrol ediyor."
+  },
+  "tabOtherPinned": {
+    "message": "VJster başka bir sekmeye sabitlendi."
+  },
+  "tabNone": {
+    "message": "Henüz video içeren bir sekme yok. Bir YouTube videosu açın."
+  },
+  "popupOptions": {
+    "message": "Seçenekler"
   }
 }

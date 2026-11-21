@@ -3,7 +3,7 @@
 // (docs/vjster/PLAN.md 3.3 "What senders must do", 3.7; REQUIREMENTS.md R-TGT-3, R-LNK-5).
 import { describe, expect, it } from "vitest";
 import { parse } from "../src/vjster/shared/protocol.js";
-import { FROM_BRIDGE, FROM_PAGE, LINK_STATUS_REQUEST, isLinkStatusRequest, linkLine, readBridgeMessage, readBridgeToWorker, readIntent, readLinkStatus, readPageMessage, readWorkerToBridge, selfOrigin } from "../vjster-extension/src/messages.js";
+import { FROM_BRIDGE, FROM_PAGE, LINK_STATUS_REQUEST, isLinkStatusRequest, linkLine, tabLine, readBridgeMessage, readBridgeToWorker, readIntent, readLinkStatus, readPageMessage, readWorkerToBridge, selfOrigin } from "../vjster-extension/src/messages.js";
 import { NO_VIDEO, cleanHost, cleanLevel, cleanLevels, cleanMessage, cleanPageState, cleanRate, cleanRates, cleanTitle } from "../vjster-extension/src/page-state.js";
 import { chooseVideo, type VideoLike } from "../vjster-extension/src/video-choice.js";
 
@@ -238,5 +238,24 @@ describe("the options page and the link status", () => {
     expect(readLinkStatus({ state: "down", port: 48150, standby: true, everLinked: false, reloadTabs: true }))
       .toEqual({ state: "down", port: 48150, standby: true, everLinked: false, reloadTabs: true });
     expect(readLinkStatus({ state: "down", port: 48150, standby: "yes", everLinked: 1, reloadTabs: "true" })).toEqual({ state: "down", port: 48150 });
+  });
+
+  it("the popup says which tab is controlled: this one, another one, pinned or none (U2-14)", () => {
+    const status = (extra: Record<string, unknown>) => readLinkStatus({ state: "up", port: 48150, ...extra });
+    expect(status({ target: 7 })).toEqual({ state: "up", port: 48150, target: 7 });
+    expect(status({ target: null, pinned: true })).toEqual({ state: "up", port: 48150, target: null, pinned: true });
+    // A tab id is a whole number from 0; anything else is as if the worker had not said.
+    for (const bad of ["7", 1.5, -1, {}, true]) expect(status({ target: bad, pinned: "yes" })).toEqual({ state: "up", port: 48150 });
+    expect(tabLine(status({ target: 7 }), 7)).toBe("tabThis");
+    expect(tabLine(status({ target: 7 }), 8)).toBe("tabOther");
+    expect(tabLine(status({ target: 7 }), null)).toBe("tabOther");
+    expect(tabLine(status({ target: 7, pinned: true }), 7)).toBe("tabThisPinned");
+    expect(tabLine(status({ target: 7, pinned: true }), 8)).toBe("tabOtherPinned");
+    expect(tabLine(status({ target: null }), 7)).toBe("tabNone");
+    // The link's state does not change the answer: the tab is chosen before the deck connects.
+    expect(tabLine(readLinkStatus({ state: "down", port: 48150, target: 7 }), 7)).toBe("tabThis");
+    // No answer, or an older worker that names no tab: the line is left out.
+    expect(tabLine(null, 7)).toBeNull();
+    expect(tabLine(status({}), 7)).toBeNull();
   });
 });

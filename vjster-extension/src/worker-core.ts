@@ -337,7 +337,10 @@ export function installWorker(env: WorkerEnv): Worker {
       port,
       everLinked,
       ...(standingBy && !link.connected ? { standby: true } : {}),
-      ...(reloadTabs ? { reloadTabs: true } : {})
+      ...(reloadTabs ? { reloadTabs: true } : {}),
+      // For the toolbar popup: which tab is controlled, and whether the deck pinned it.
+      target: router.target(),
+      ...(router.pinned !== null && router.pinned === router.target() ? { pinned: true } : {})
     };
   }
 

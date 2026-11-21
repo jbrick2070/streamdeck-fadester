@@ -100,5 +100,23 @@
   },
   "statusYouTubeOnlyKept": {
     "message": "VJster가 다시 YouTube에서만 작동합니다. Chrome에 모든 사이트 권한이 남아 있으니 확장 프로그램 세부정보 페이지에서 해당 권한을 해제하세요."
+  },
+  "tabThis": {
+    "message": "VJster가 이 탭의 동영상을 제어합니다."
+  },
+  "tabThisPinned": {
+    "message": "VJster가 이 탭에 고정되어 있습니다."
+  },
+  "tabOther": {
+    "message": "VJster가 다른 탭의 동영상을 제어합니다."
+  },
+  "tabOtherPinned": {
+    "message": "VJster가 다른 탭에 고정되어 있습니다."
+  },
+  "tabNone": {
+    "message": "아직 동영상이 있는 탭이 없습니다. YouTube 동영상을 여세요."
+  },
+  "popupOptions": {
+    "message": "옵션"
   }
 }

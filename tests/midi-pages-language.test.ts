@@ -40,7 +40,7 @@ function stateIn(language: string, choice: string): Record<string, unknown> {
     persistGlobalSettings: async () => {},
     getLanguage: () => ({ choice: choice as "auto", resolved: language })
   });
-  return { event: "fadesterState", ...bridge.buildStatePayload() };
+  return { ...bridge.buildStatePayload() };
 }
 
 /** Opens a shipped Midi Fadester page as Stream Deck does: scripts in page order, then the socket handshake. */

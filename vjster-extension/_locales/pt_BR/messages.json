@@ -100,5 +100,23 @@
   },
   "statusYouTubeOnlyKept": {
     "message": "O VJster voltou a funcionar só no YouTube; o Chrome manteve a permissão para todos os sites. Remova-a na página de detalhes da extensão."
+  },
+  "tabThis": {
+    "message": "O VJster controla o vídeo desta guia."
+  },
+  "tabThisPinned": {
+    "message": "O VJster está fixado nesta guia."
+  },
+  "tabOther": {
+    "message": "O VJster controla um vídeo em outra guia."
+  },
+  "tabOtherPinned": {
+    "message": "O VJster está fixado em outra guia."
+  },
+  "tabNone": {
+    "message": "Ainda não há nenhuma guia com vídeo. Abra um vídeo do YouTube."
+  },
+  "popupOptions": {
+    "message": "Opções"
   }
 }

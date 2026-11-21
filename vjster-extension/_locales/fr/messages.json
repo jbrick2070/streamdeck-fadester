@@ -100,5 +100,23 @@
   },
   "statusYouTubeOnlyKept": {
     "message": "VJster est de nouveau limité à YouTube ; Chrome a conservé l'autorisation pour tous les sites, retirez-la sur la page des détails de l'extension."
+  },
+  "tabThis": {
+    "message": "VJster contrôle la vidéo de cet onglet."
+  },
+  "tabThisPinned": {
+    "message": "VJster est épinglé à cet onglet."
+  },
+  "tabOther": {
+    "message": "VJster contrôle une vidéo dans un autre onglet."
+  },
+  "tabOtherPinned": {
+    "message": "VJster est épinglé à un autre onglet."
+  },
+  "tabNone": {
+    "message": "Aucun onglet avec une vidéo pour l’instant. Ouvrez une vidéo YouTube."
+  },
+  "popupOptions": {
+    "message": "Options"
   }
 }

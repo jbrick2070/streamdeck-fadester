@@ -100,5 +100,23 @@
   },
   "statusYouTubeOnlyKept": {
     "message": "VJster 已恢复为仅限 YouTube；Chrome 保留了所有网站的权限，请在扩展程序的详情页面中移除。"
+  },
+  "tabThis": {
+    "message": "VJster 正在控制此标签页中的视频。"
+  },
+  "tabThisPinned": {
+    "message": "VJster 已固定到此标签页。"
+  },
+  "tabOther": {
+    "message": "VJster 正在控制另一个标签页中的视频。"
+  },
+  "tabOtherPinned": {
+    "message": "VJster 已固定到另一个标签页。"
+  },
+  "tabNone": {
+    "message": "还没有带视频的标签页。请打开一个 YouTube 视频。"
+  },
+  "popupOptions": {
+    "message": "选项"
   }
 }

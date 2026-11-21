@@ -1,0 +1,36 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-2.0-or-later -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>VJster</title>
+    <style>
+      :root { color-scheme: light dark; font: 13px/1.45 system-ui, sans-serif; }
+      body { width: 19rem; margin: 0; padding: 0.7rem 0.9rem 0.8rem; }
+      h1 { font-size: 1.05rem; margin: 0 0 0.45rem; }
+      h1 .version { font-size: 0.75rem; font-weight: 500; opacity: 0.6; margin-left: 0.35rem; }
+      p { margin: 0 0 0.4rem; }
+      #link-status { font-weight: 600; }
+      #link-status:empty { display: none; }
+      #link-status.up { color: #1a7f37; }
+      #link-status.down { color: #c62828; }
+      #link-help { margin: 0 0 0.45rem; padding-left: 1.1rem; }
+      #link-help li { margin: 0.2rem 0; }
+      #tab-status { opacity: 0.85; }
+      a { font-size: 0.95em; }
+      @media (prefers-color-scheme: dark) { #link-status.up { color: #3fb950; } #link-status.down { color: #ff7b72; } }
+    </style>
+  </head>
+  <body>
+    <h1>VJster <span id="version" class="version"></span></h1>
+    <p id="link-status" role="status"></p>
+    <ul id="link-help" hidden>
+      <li data-i18n="linkDownCompanion">Fadester Companion: open it on this computer and check that its controls are on.</li>
+      <li data-i18n="linkDownDeck">Stream Deck or OpenDeck: show a page with a VJster key or dial, or tick “Keep the link on” in the VJster settings.</li>
+      <li data-i18n="linkDownPort">The port here must be the same as in that program’s VJster settings.</li>
+    </ul>
+    <p id="tab-status" role="status" hidden></p>
+    <a id="open-options" href="options.html" data-i18n="popupOptions">Options</a>
+    <script src="popup.js"></script>
+  </body>
+</html>

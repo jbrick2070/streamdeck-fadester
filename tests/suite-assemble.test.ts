@@ -109,7 +109,7 @@ describe("the assembly", () => {
     const own = tables(join(VJSTER, "ui", "i18n.js"));
     expect(Object.keys(suite).sort()).toEqual([...LANGUAGES].sort());
     for (const language of LANGUAGES) {
-      const fadester = ((read(join(SUITE, `${language}.json`)) as { Localization: { pi: Record<string, string> } }).Localization.pi);
+      const fadester = (read(join(SUITE, `${language}.json`)) as unknown as { Localization: { pi: Record<string, string> } }).Localization.pi;
       const { languageBadge, languageNote, ...rest } = suite[language].pi;
       const { languageBadge: ownBadge, languageNote: ownNote, ...ownRest } = own[language].pi;
       // Only the two Language texts differ from VJster's own page.

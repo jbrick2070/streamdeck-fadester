@@ -132,6 +132,10 @@ export type LinkStatus = {
   readonly standby?: boolean;
   readonly everLinked?: boolean;
   readonly reloadTabs?: boolean;
+  /** The tab VJster controls now (null: no tab with a video yet). Absent from an older worker's answer. */
+  readonly target?: number | null;
+  /** The controlled tab was pinned from the deck (the Pin key), so it stays whichever tab is in front. */
+  readonly pinned?: boolean;
 };
 
 export function isLinkStatusRequest(data: unknown): boolean {
@@ -149,8 +153,22 @@ export function readLinkStatus(data: unknown): LinkStatus | null {
     ...(data.standby === true ? { standby: true } : {}),
     // An older worker says nothing about it: then the line is the plain "not connected" as before.
     ...(typeof data.everLinked === "boolean" ? { everLinked: data.everLinked } : {}),
-    ...(data.reloadTabs === true ? { reloadTabs: true } : {})
+    ...(data.reloadTabs === true ? { reloadTabs: true } : {}),
+    ...(data.target === null || (typeof data.target === "number" && Number.isInteger(data.target) && data.target >= 0) ? { target: data.target } : {}),
+    ...(data.pinned === true ? { pinned: true } : {})
   };
+}
+
+/** The popup's line about the tab: a message name, or null when the worker did not say (no answer, an older worker). */
+export type TabLine = "tabThis" | "tabThisPinned" | "tabOther" | "tabOtherPinned" | "tabNone";
+
+/** Which tab VJster controls, as seen from the tab the popup was opened over. */
+export function tabLine(answer: LinkStatus | null, activeTabId: number | null): TabLine | null {
+  if (!answer || answer.target === undefined) return null;
+  if (answer.target === null) return "tabNone";
+  const here = activeTabId !== null && answer.target === activeTabId;
+  if (answer.pinned) return here ? "tabThisPinned" : "tabOtherPinned";
+  return here ? "tabThis" : "tabOther";
 }
 
 /**

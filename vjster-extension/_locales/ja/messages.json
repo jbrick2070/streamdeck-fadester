@@ -100,5 +100,23 @@
   },
   "statusYouTubeOnlyKept": {
     "message": "VJster は YouTube のみに戻りました。Chrome にはすべてのサイトへのアクセス権限が残っているため、拡張機能の詳細ページでこの権限を解除してください。"
+  },
+  "tabThis": {
+    "message": "VJster はこのタブの動画を操作しています。"
+  },
+  "tabThisPinned": {
+    "message": "VJster はこのタブに固定されています。"
+  },
+  "tabOther": {
+    "message": "VJster は別のタブの動画を操作しています。"
+  },
+  "tabOtherPinned": {
+    "message": "VJster は別のタブに固定されています。"
+  },
+  "tabNone": {
+    "message": "動画のあるタブがまだありません。YouTube の動画を開いてください。"
+  },
+  "popupOptions": {
+    "message": "オプション"
   }
 }

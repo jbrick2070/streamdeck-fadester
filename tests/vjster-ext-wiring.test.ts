@@ -441,15 +441,23 @@ describe("service worker wiring (R-LNK-3, R-TGT-1..4)", () => {
     ask(options);
     await flush();
     // Never linked since the install: the page's first line is a neutral "waiting", not a red "not connected".
-    expect(answers).toEqual([{ state: "connecting", port: 48151, everLinked: false }]);
+    expect(answers).toEqual([{ state: "connecting", port: 48151, everLinked: false, target: null }]);
     opened[0].socket.open();
     ask(options);
     await flush();
-    expect(answers.at(-1)).toEqual({ state: "up", port: 48151, everLinked: true });
+    expect(answers.at(-1)).toEqual({ state: "up", port: 48151, everLinked: true, target: null });
     opened[0].socket.drop();
     ask(options);
     await flush();
-    expect(answers.at(-1)).toEqual({ state: "down", port: 48151, everLinked: true });
+    expect(answers.at(-1)).toEqual({ state: "down", port: 48151, everLinked: true, target: null });
+    // The toolbar popup is one of the extension's own pages too, and is told which tab is controlled (U2-14).
+    c.runtime.onMessage.fire({ kind: "page-state", state: { rate: 1, quality: null, qualities: [], capabilities: ["rate"], playing: true, title: "t" }, host: "www.youtube.com" },
+      { id: c.runtime.id, url: "https://www.youtube.com/watch?v=x", tab: { id: 5, windowId: 1 }, frameId: 0 }, () => undefined);
+    ask({ id: c.runtime.id, url: `chrome-extension://${c.runtime.id}/popup.html` });
+    await flush();
+    expect(answers.at(-1)).toMatchObject({ state: "down", port: 48151, target: 5 });
+    expect(answers.at(-1)).not.toHaveProperty("pinned");
+    answers.pop();
     // A YouTube tab's bridge, another extension, or another extension's page: no answer.
     ask({ id: c.runtime.id, url: "https://www.youtube.com/watch?v=x", tab: { id: 5, windowId: 1 }, frameId: 0 });
     ask({ id: "ponmlkjihgfedcbaponmlkjihgfedcba", url: "chrome-extension://ponmlkjihgfedcbaponmlkjihgfedcba/options.html" });

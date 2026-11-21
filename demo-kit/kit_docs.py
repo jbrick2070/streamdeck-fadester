@@ -212,7 +212,7 @@ README_MUSTS = [
     "260 characters", "Scene Collection > Import", "Enable WebSocket server", "Keep the link on",
     "Copy address", "untick Local file", "do not share or export", "Track 1 (Main Mix)",
     "Properties > Speed", "restarts the clip", "0.25x to 2x", "Playlister 0.5.0",
-    "Studio Mode", "cues that scene in Preview", "fade it in with the dial",
+    "Studio Mode", "puts that scene in Preview", "fade it in with the dial",
     "Visual Sidechain 0.6.0", "Fadester for OBS 0.11.0", "Stream Deck 7.6", "VJster 0.2.1",
 ]
 

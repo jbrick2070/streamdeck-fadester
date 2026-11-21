@@ -50,7 +50,7 @@ describe("P1-7 suite naming invariants", () => {
     expect(panelExtra).toContain('{ "lastAction", "Fadester Companion · ');
     expect(panelExtra).not.toContain('{ "lastAction", "Fadester · ');
     // The Mac panel takes the same words from the shared catalog (PanelText.cs, via PanelStrings.swift).
-    expect(macPanel).toContain('panel.title = L("lastAction")');
+    expect(macPanel).toContain('panel.title = titledWithVersion(L("lastAction"))');
     expect(macPanel).not.toContain('"Fadester · last action"');
   });
 

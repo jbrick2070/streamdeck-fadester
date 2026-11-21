@@ -4,7 +4,7 @@
 // plugins. Setup must not add a second copy beside a Marketplace edition, and must say so when both are there
 // already. The wizard cannot run here (it installs into Program Files), so these checks read the script; the real
 // run is installer/tests/Test-Suite.ps1 ("marketplace-edition"), with a broken-guard variant in the workflow.
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { MARKETPLACE_ID, SUITE_ID } from "../scripts/suite/package-marketplace.js";
@@ -44,9 +44,10 @@ describe("Suite Setup and the Elgato Marketplace edition", () => {
   });
 
   it("puts the version after the plugin or its copy in every language, never after Stream Deck", () => {
-    const languages = readdirSync(join(__dirname, "..", "installer", "lang")).filter((name) => name.endsWith(".isl"));
-    expect(languages).toHaveLength(12);
-    for (const name of languages) {
+    // the 12 translations of setup's own messages (the folder also holds files for other pages)
+    const languages = ["de", "es", "fr", "it", "ja", "ko", "nl", "pt-BR", "ru", "tr", "zh-CN", "zh-TW"];
+    for (const code of languages) {
+      const name = `${code}.isl`;
       const text = read("installer", "lang", name);
       for (const key of ["NoteMarketplaceSd", "NoteBothSd"]) {
         const line = new RegExp(`^${key}=(.*)$`, "m").exec(text)?.[1] ?? "";

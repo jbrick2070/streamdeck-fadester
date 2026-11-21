@@ -2,7 +2,7 @@
 // The release's check that a changed component is not published under a version it already published (G-07, QA-A03).
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { COMPONENTS, checkComponents, tagsMissingOnRunner, type Git } from "../scripts/release-component-versions.mjs";
+import { COMPONENTS, checkComponents, shallowClone, tagsMissingOnRunner, type Git } from "../scripts/release-component-versions.mjs";
 
 const COMPANION = "installer/components.json";
 const EXTENSION = "vjster-extension/manifest.json";
@@ -91,6 +91,20 @@ describe("a release never repeats a component's version over changed files (QA-A
     // On a developer's computer a clone without tags is ordinary: the check runs and says every version is new.
     expect(tagsMissingOnRunner(none, {})).toBe(false);
     expect(readFileSync("scripts/release-component-versions.mjs", "utf8")).toContain("if (tagsMissingOnRunner(git)) {");
+  });
+
+  it("stops on a shallow clone, where the tags are not joined to the commit and every version would look new", () => {
+    // Found at the step to 1.5.0: on a clone cut 56 commits deep, with every tag fetched, both lines read "ok ... a
+    // version no earlier release carries" before any number had been raised.
+    const script = readFileSync("scripts/release-component-versions.mjs", "utf8");
+    expect(script).toContain("if (shallowClone()) {");
+    expect(script.indexOf("if (shallowClone()) {")).toBeLessThan(script.indexOf("const results = checkComponents(git"));
+    expect(script).toContain("git fetch --unshallow --tags");
+    // A clone without any tag is still allowed on a developer's computer, but it is said.
+    expect(script).toContain('if (git.tags().length === 0) console.log("note ');
+    // Whatever this checkout is (CI's is one commit deep), asking never throws.
+    expect(typeof shallowClone()).toBe("boolean");
+    expect(readFileSync("PUBLISHING.md", "utf8")).toContain("git fetch --unshallow --tags");
   });
 
   it("reads the versions this repository has now, and the release workflow runs it before the Companion is built", () => {

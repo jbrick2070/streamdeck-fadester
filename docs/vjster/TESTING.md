@@ -224,7 +224,7 @@ Build them as INSTALL.md says, in a clean worktree of the release commit.
 
 4.1 **The plugin file.** Double-click `release/com.jbrick2070.vjster.streamDeckPlugin`
 (after 2.1's `npx streamdeck unlink com.jbrick2070.vjster` if it was linked).
-Expected: Stream Deck installs VJster at the version in `com.jbrick2070.vjster.sdPlugin/manifest.json` (0.2.1.0 today) with seven actions; it may ask
+Expected: Stream Deck installs VJster at the version in `com.jbrick2070.vjster.sdPlugin/manifest.json` (1.5.0.0 today) with seven actions; it may ask
 to install the bundled profiles; an action's settings page shows the OBS page
 section.
 

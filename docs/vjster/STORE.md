@@ -37,7 +37,7 @@ The zip has no `key`: the store refuses one on a first upload and gives the exte
 >
 > Made with the help of AI (Claude, by Anthropic); the code is open source (GPL-2.0-or-later).
 
-**Category:** Productivity. **Language:** English (the listing; the extension itself has 12).
+**Category:** Productivity. **Language:** English (the listing; the extension itself has 13).
 
 **Single purpose:** Let the user's Stream Deck, OpenDeck, TourBox or Xbox controller, through Fadester for OBS or Fadester Companion on the same computer, change the speed and quality of the YouTube video in a tab.
 

@@ -3,19 +3,25 @@
 What changed in Fadester for OBS and, where it says so, in VJster. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are the plugin's own (`manifest.json`). There is no change control here: the newest entry is the version.
 
 ## Unreleased
-The plugin, its settings pages and VJster (the Companion's and Suite Setup's changes are listed separately).
+
+## 1.5.0 - 2026-11-20
+This release ships Fadester for OBS 1.5.0 (0.12.16 before it), Fadester Companion 1.5.0 (0.1.17), the VJster Chrome extension 1.5.0 (0.1.6), the standalone VJster plugin 1.5.0 (0.2.1) and Fadester Suite Setup 1.5.0 (named by its build date until now). It is the suite-wide step to 1.5: every product of the Fadester suite carries version 1.5 from here on, Midi Fadester and Playlister in their own repositories too, so that one round of hand tests on Windows and on the Mac covers them all. The number is the suite's. No plugin id and no action id changed, so the keys and profiles you have from 0.12 keep working.
+
+What changed since 0.12.16 and Fadester Companion 0.1.17 is below: first the plugin, its settings pages and VJster, then Fadester Companion and Suite Setup under a heading of their own. None of it has been through the hand tests on real hardware yet.
 
 ### Added
 - **Thirteen languages**, the same list as the rest of the suite: Italian, Brazilian Portuguese, Russian and Turkish join the nine. They are chosen under **Language** on a settings page (Stream Deck itself offers eight languages, so Automatic cannot pick them, as with Dutch). VJster's keys, dials and settings page have the same thirteen, and its Chrome extension gains Italian.
 - A scene key shows where its scene is: a red frame and PROGRAM while it is on Program, a green frame and PREVIEW while it is in Preview. A Source & Layer key that edits the Program scene is framed the same way.
 - With OBS not connected, the key and the first line of every settings page say what to do: **Turn on OBS WebSocket**, **Start OBS**, or the full sentence with the menu path.
 - A new deck is offered a ready-made layout in one line at the top of the settings page; a deck model without one says so.
-- **Playlister keys show what plays.** With a Playlister that publishes it (its `get_now_next` request over obs-websocket), **Status** and **Play / pause** carry the playing item's name and **Next** names the item that follows. Names only, never paths; a key with its own label keeps it, and with an older Playlister the keys are as before.
+- **Playlister keys show what plays.** With Playlister 1.5.0 or newer, the first that publishes it (its `get_now_next` request over obs-websocket), **Status** and **Play / pause** carry the playing item's name and **Next** names the item that follows (not with Shuffle on, where Playlister chooses the next item only as it starts). Names only, never paths; a key with its own label keeps it. With an older Playlister (0.5.x) the keys are as before; the keys themselves still need only Playlister 0.5.
 - **One Language setting for the whole plugin.** The Language box on a Fadester page and the one on a VJster page are the same setting: a change on either redraws every key and dial of both at once. Settings saved with two different choices keep Fadester's when it named a language, otherwise VJster's (so Automatic in Fadester with a language picked in VJster becomes that language for both). The two Midi Fadester settings pages follow the choice too; until now they stayed in Stream Deck's language. (The standalone VJster plugin keeps its own setting.)
 - VJster: the extension's toolbar button opens a small popup with the version, whether the link to VJster is up (and what to check when it is not), and which tab VJster controls (this one, another one, pinned, or none yet), with a link to the options; the button is marked while the link is down; its options page says "waiting" before a first link and "standing by" when another copy holds the link; the settings page in Stream Deck has a button to the extension and shows the plugin's version.
+- A Scene key names the transition it will use, for example **Next · Fade**.
+- **Use OBS's own password** on every settings page, the two Midi Fadester pages included: it is shown among the OBS connection settings while a typed password is stored and OBS is on this computer, and drops the typed password for the one OBS saved.
 
 ### Changed
-- **No more "Take".** Keys, dial strips, settings pages and documents say **Preview to Program**, **Fade** and **Cut**, in every language. The T-bar, the Info Bar and Source & Layer say Program and Preview in every language (no LIVE / NEXT).
+- **Preview to Program, Fade and Cut.** Keys, dial strips, settings pages and documents call the actions by these names and by no other, in every language. The T-bar, the Info Bar and Source & Layer say Program and Preview in every language (no LIVE / NEXT).
 - **The action list**: Scene, Volume & T-bar, Audio Fade, Source & Layer, Filter, Playlister, Tape Deck, Visual Panic, Visual Sidechain Meter, Scene Info Bar. Names, order and tooltips only: no action id changed, so keys you already placed keep working and keep their settings.
 - **Settings pages**: language, connection, checklist and layouts sit behind one line at the foot that shows the version and the connection. With OBS on this computer there is nothing to fill in: the plugin reads OBS's port as well as its password. Timing and Advanced folds on Scene, Audio Fade and Volume & T-bar; shorter notes (no English note is longer than 175 characters); Refresh buttons removed where the lists follow OBS.
 - The layout list starts on the Scene Desk that fits OBS as it is (Studio Mode on or off), already chosen, so **Open this layout** is ready at once; the other layouts follow. On a T-bar dial, **Scene loop** sits under **Advanced**, which opens by itself when the loop is on.
@@ -23,6 +29,8 @@ The plugin, its settings pages and VJster (the Companion's and Suite Setup's cha
 - A wrong password is tried again every 30 seconds and the status says so; before, the plugin stopped trying until you saved the connection again.
 - The "Switch controller profile" fold, whose one button reset the whole MIDI desk, is gone from the two Midi Fadester pages; the profile is chosen in Midi Fadester's own window.
 - README: three steps to the first working key.
+- Dial turns that arrive while an earlier turn is on its way to OBS are added up and sent as one turn (volume, Source & Layer, BPM), so a fast spin no longer queues up behind a slow OBS; the same total reaches OBS. A key or strip is sent to the deck again only when its picture or title changed.
+- A Scene key keeps the reason for a failure until the scenes change, and an Audio Fade key says why a fade failed until the next press.
 
 ### Fixed
 - The status could stay "connected" on a dead connection during the first read of OBS's lists; a reconnect to another address now reports OBS unreachable until that address has answered.
@@ -32,13 +40,25 @@ The plugin, its settings pages and VJster (the Companion's and Suite Setup's cha
 - "Preparing…" on a settings page ends when the plugin never answers; a layout or Studio Mode answer goes only to the page that asked.
 - VJster: a page can no longer become the deck's target by reporting a playing video it does not have (the extension checks the page's own media elements); reports are rate limited; tabs open before an install or update get the extension's scripts.
 - Linux: OBS's saved WebSocket settings are also found in the Flatpak and Snap folders.
+- A Midi Fadester settings page could flood OBS: after one failed answer its slot editor asked for the same filter list again with every update, twice as often each round. A request still on its way is now shared, an error answer is remembered until **Refresh** or a change of connection, and a request with no answer is asked again at most three times.
+- An older Midi Fadester or Visual Sidechain that lacks a request is read as one that needs an update, the way OBS really answers (600, "No request was found"): keys read **Update Midi Fadester**, Visual Panic falls back to its hotkeys, and Tape Deck and the Visual Sidechain Meter no longer say the plugin is not loaded.
+- A password box typed in and emptied again no longer clears the saved password with the next save, on any settings page. An emptied Duration box keeps the saved length instead of saving 0, an instant fade.
+- A scene named like a built-in word of JavaScript (constructor, toString) no longer stops its Scene key from being drawn; a stored label or input name that is not text no longer does either.
+- A computer clock that is set back no longer holds up redraws and filter writes or runs an audio fade the wrong way: pacing uses a clock that only runs forward.
+- A filter step pressed again before the first was fully written counts from where the first is going, also in the moment its last write is on its way to OBS. Quick presses on a filter on/off key no longer keep flipping it for seconds after the hands are off: an odd number of presses ends flipped, an even number where it began.
+- A key press while the plugin is still connecting to OBS no longer starts the attempt over. A Preview to Program that failed no longer swallows the next Studio Mode event.
+- A message from OBS whose JSON is `null`, or not an object, is ignored instead of breaking the connection's listener.
+- The setup checklist's own checks of the computer (OBS run as administrator, OBS minimised, macOS Accessibility) work in the packaged plugin: in 0.12.16 they could not load koffi there and always answered "unknown".
+- VJster: two clients for one target (two OBS sources with the VJster page, or the extension in two Chrome profiles) no longer hand the link back and forth every half minute. The newer one still wins; the one it replaced stands by and says so. In every-site mode a player that a page builds after it has loaded is found.
 
 ### For developers
 - The release builds, packs and tests the plugin on Windows and macOS too, and starts the built plugin against a pretend host. A release stops when `tourbox/` changed and the Companion version did not.
 - The fake OBS server sends events by subscription mask, closes a client that asks before Identify and answers unknown request types with 204.
+- The packed `.streamDeckPlugin` is unzipped and started on Windows and macOS before a draft release is made. `scripts/release-component-versions.mjs` is the release's check that Fadester Companion and the VJster extension were not changed under a number already released: it reads committed files, needs the whole history and the release tags, and refuses a shallow clone. PUBLISHING.md, "Version numbers at a release", lists in order every file that holds a version; this release followed it.
+- The unused out-of-process T-bar helper driver, its lookup, its tests and `scripts/native/build-native.ts` are gone. koffi's CommonJS files are staged into the package. A settings page's state is built only while a page is open; number formats and translated texts are cached per language.
 
 ### Fadester Companion and Suite Setup
-Fadester Companion stays 0.1.17 until the release sets its number.
+Fadester Companion 1.5.0 (0.1.17 before it) on Windows, in the Microsoft Store package and on the Mac, and Fadester Suite Setup 1.5.0.
 
 #### Added
 - Fadester Companion speaks 13 languages on Windows and on the Mac (Dutch, Brazilian Portuguese and Turkish are new): the window, the TourBox preset labels and the quick guides.
@@ -54,14 +74,17 @@ Fadester Companion stays 0.1.17 until the release sets its number.
 - Mac: **Import into TourBox Console** is one button, as on Windows. It saves the preset to Downloads without a save window (a copy already there is used; a different file of that name is never replaced, the preset is then written beside it as "OBS Fadester for TourBox 2.tb", and the window, the guide and its animation name that file), copies its path, opens TourBox Console and shows where to click; in Console's file window, ⌘⇧G, ⌘V and Return go straight to the file (or pick it in Downloads by hand). If Downloads cannot be written, the save window asks where, as before.
 - **Open when I sign in**, a tick box under the buttons, off until you tick it. Windows ZIP and installer: a start-up entry for your account (Task Manager and Settings → Apps → Startup list it and can switch it off). Microsoft Store: the package's own start-up task (when Windows or your organisation set it, the box is greyed and a line under it says so). The installer's uninstall removes the entry. Mac (macOS 13 or later, where the box reads **Open at Login**): a login item, listed in System Settings → General → Login Items.
 - A shorter Setup page on Windows and on the Mac: each numbered step is a short line and its button. The OBS port and password, the long explanations, **All OBS mixer inputs** and **VJster** are folded away behind **Details** or **Show**; a closed section says its state in a few words ("Off", "On, Chrome & OBS page, port 48150"). A part opens by itself when its light needs it (OBS refuses the password or does not answer; the VJster light is amber or red), and the window remembers which parts you left open. Assigning inputs no longer has a heading: it is one sentence under step 3 with an **Assignments** button.
+- Starting the app a second time brings its open window back, on Windows and on the Mac. Windows: sharp text on scaled screens, and a window that is never larger than the screen.
 
 #### Changed
-- No action is called "take": the TourBox label is **Preview to Program**, and the texts say fade, cut and "put in Preview". Import the preset again to see the new label; its shortcuts are the same.
-- Messages say "the controls" and "Fadester Companion", and on or off; never bridge, panel, host or armed.
+- The TourBox label for sending Preview to Program reads **Preview to Program**, and the texts say fade, cut and "put in Preview". Import the preset again to see the new label; its shortcuts are the same.
+- Messages say "the controls" and "Fadester Companion", and on or off, in place of the internal names of its parts.
 - The TourBox light is green only when TourBox Console holds the preset. The VJster light stays grey until a video was connected once, and reads **VJster: on your Stream Deck** in grey when the suite's own Stream Deck or OpenDeck plugin holds its port.
 - The assignment lists on Windows say **Unassigned** and **Unavailable: name**, as on the Mac. The Mac Setup page has the same order as Windows.
 - The T-bar needs a Fade among OBS's scene transitions; it does not have to be the selected one, and the texts no longer ask you to choose it.
 - Suite Setup keeps a newer Fadester for OBS in Stream Deck or OpenDeck and a newer unpacked VJster extension, and uses the signed-in person's settings when an administrator's password was typed.
+- Fadester Suite Setup carries the release's version: the file is `Fadester-Suite-Setup-1.5.0-Windows-x64.exe` and Windows **Installed apps** shows 1.5.0 for **Fadester Suite shared files**. Until now the setup was named by the day it was built, so on a PC where an earlier setup ran that entry goes from a date such as 2026.11.15 to 1.5.0: the smaller number is the newer setup. Each part it installs still shows its own version.
+- The Studio Mode light looks again every 10 seconds for its first two minutes and once a minute after that, and not at all in Stream Deck-only mode, which needs no Studio Mode.
 
 #### Fixed
 - The game controller's fade goes out as OBS's own transition when OBS's T-bar cannot be read (OBS minimised or run as administrator), and an OBS run as administrator says so.
@@ -69,6 +92,10 @@ Fadester Companion stays 0.1.17 until the release sets its number.
 - A refused OBS password is tried again after 5 s, then twice as long each time up to a minute, not every 1.2 s; the window keeps the reason in your language.
 - Mac: a T-bar that cannot be read at start (Studio Mode off, Accessibility, not at its start) no longer switches every OBS control off, and the status line says why; the transition is checked again after a cut; a part-thrown T-bar, a duck and an owed transition survive a reconnect.
 - Mac: the window keeps looking for OBS after OBS was restarted.
+- A video's title could rewrite the saved Layer 1 and Layer 2 choice: the window looked for the sentence about an automatically picked layer anywhere in the Activity text, which also carries video titles. The controls now report a pick on a line of their own that no title, OBS name or message from another program can imitate, and the window reads only that line (Windows and Mac).
+- A power cut during a whole-mix fade can no longer leave an empty or half-written journal: the journal is only ever replaced by a write that has reached the disk, and the steps in between go to a file of their own, which recovery reads only when it is whole and newer. A fade no longer writes to the disk at every step. A journal that cannot be read at the moment of a mixer error (a scanner holds it, or it is damaged) no longer hides that error or stops the whole mix: the levels in memory are kept and the status names the journal.
+- VJster: two clients for one target no longer hand the link back and forth, as in the plugin; the one that was replaced stands by.
+- Mac: a helper that cannot be started is a refusal that says why, not a write nobody confirmed, and lock files left by an earlier run are removed.
 
 ## 0.12.16 - 2026-11-19
 Fadester Companion stays 0.1.17 and the VJster extension 0.1.6.

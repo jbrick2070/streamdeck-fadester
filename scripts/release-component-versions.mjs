@@ -7,7 +7,8 @@
 // has now (the component's own last release) and fails when the files that go into that component changed since then.
 // A version no earlier tag carries is new, and passes whatever changed.
 //
-// Run from the repository root, with the full history and the tags fetched:
+// Run from the repository root, with the full history and the tags fetched (a shallow clone is refused:
+// git fetch --unshallow --tags):
 //
 //   node scripts/release-component-versions.mjs [commit]
 //
@@ -116,6 +117,20 @@ export function tagsMissingOnRunner(git, env = process.env) {
   return env.GITHUB_ACTIONS === "true" && git.tags().length === 0;
 }
 
+/**
+ * A shallow clone can hold every tag's name and still lack the history that joins the tags to the commit. Then no tag
+ * counts as an earlier release, every version looks new and everything passes (or, one commit deep, git cannot name
+ * the commit's parent at all). That is a clone without its history, not a first release: the check stops instead.
+ * @param {string} [cwd]
+ */
+export function shallowClone(cwd = process.cwd()) {
+  try {
+    return execFileSync("git", ["rev-parse", "--is-shallow-repository"], { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim() === "true";
+  } catch {
+    return false;
+  }
+}
+
 /** The real repository. @param {string} commit @returns {Git} */
 export function gitAt(commit, cwd = process.cwd()) {
   const run = (args) => execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], maxBuffer: 64 * 1024 * 1024 });
@@ -134,11 +149,16 @@ export function gitAt(commit, cwd = process.cwd()) {
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const commit = process.argv[2] || "HEAD";
+  if (shallowClone()) {
+    console.log("STOP  This clone is shallow: its history does not reach the release tags, so every version would look new. Run: git fetch --unshallow --tags");
+    process.exit(1);
+  }
   const git = gitAt(commit);
   if (tagsMissingOnRunner(git)) {
     console.log("STOP  No release tag was found. The checkout must fetch the full history and the tags (fetch-depth: 0).");
     process.exit(1);
   }
+  if (git.tags().length === 0) console.log("note   No release tag comes before this commit, so every version below counts as new. If releases exist, fetch their tags first: git fetch --tags");
   const results = checkComponents(git, (file) => git.show(commit, file));
   for (const result of results) console.log(`${result.ok ? "ok   " : "STOP "} ${result.message}`);
   process.exit(results.every((result) => result.ok) ? 0 : 1);

@@ -16,4 +16,5 @@ export interface Git {
 export const COMPONENTS: Component[];
 export function checkComponents(git: Git, current: (file: string) => string | null, components?: Component[]): Array<{ name: string; ok: boolean; message: string }>;
 export function tagsMissingOnRunner(git: Git, env?: Record<string, string | undefined>): boolean;
+export function shallowClone(cwd?: string): boolean;
 export function gitAt(commit: string, cwd?: string): Git;

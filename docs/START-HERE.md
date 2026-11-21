@@ -14,7 +14,7 @@ Everything in the Fadester Suite runs locally on your own computer (`127.0.0.1` 
 **Want several of these at once on Windows?** The **Fadester Suite Setup** ([`installer/`](../installer/README.md)) installs any mix in one pass.
 - Each plugin and Fadester Companion keeps its own version and its own entry in **Installed apps**.
 - It never closes OBS for you, and never replaces a newer installed component.
-- It is built and tested by a manual GitHub Actions workflow, and is not code-signed yet.
+- From release 1.5.0 it comes with every release as `Fadester-Suite-Setup-<version>-Windows-x64.exe`, built from that release's own commit and tested by a GitHub Actions workflow. It is not code-signed yet.
 
 ---
 

@@ -352,7 +352,7 @@ Fadester Companion maakt van de controllers die je al hebt een beeldmixer voor O
 
 Trek aan de rechtertrigger van een Xbox- of andere XInput-gamecontroller zoals aan een echte T-bar, en de T-bar van OBS zelf volgt. Houd A vast om de mix verder te duwen en laat los om hem halverwege te laten staan. Met de D-pad omhoog en omlaag loop je door je scènelijst, de linkertrigger dempt je muziek zolang je hem vasthoudt, en met de sticks regel je de dekking en de mengmodus van een laag en de snelheid van de video die in Chrome speelt via de gratis VJster-extensie. Elke knop kun je opnieuw toewijzen, met een tweede laag zolang je LB vasthoudt, en in de eenvoudige modus vraagt elke wissel on air om kort vasthouden, zodat een aangestoten knop niets doet.
 
-Heb je een TourBox? Dezelfde Companion bedient die ook: de Dial is je T-bar, met Scroll zet je scènes in Voorbeeld en de Knob regelt de videosnelheid.
+Heb je een TourBox? Dezelfde Companion bedient die ook: de Dial is je T-bar, met Scroll zet je scènes in Voorvertoning en de Knob regelt de videosnelheid.
 
 Het blijft werken terwijl OBS op de voorgrond staat, praat alleen met OBS en de VJster-extensie op je eigen computer en stuurt niets naar internet.
 

@@ -9,8 +9,8 @@ The app is ad-hoc signed and **not notarized**. macOS will refuse to open it the
 **Verified on GitHub's macOS runners, for both architectures, on every change and every release:** `tourbox/macos/package.sh` builds the complete app, packs the ZIP, extracts it again and, from the extracted app, checks the deep strict code signature and the architecture of every binary, then runs the panel's `--self-test`, the host's `--self-test`, both helpers' `--self-test` and the fake-OBS discovery check (`macos/panel/tests/discovery-server.mjs`: 12 authenticated read-only requests). The shared control logic, preset parity, helper protocols and fake-OBS host checks below run in the same job.
 
 **Not yet verified, needs a real Mac:**
-- Opening a downloaded copy past Gatekeeper, and the app window on screen (layout, the 13 panel languages, the Setup diagram; the panel's self-test measures every diagram label in all 13 languages, but only a person can confirm the look), importing a translated preset in Mac TourBox Console, and the translated quick starts.
-- The Accessibility prompt and its attribution to the bundled helper (Fadester Companion T-bar) when the panel starts it, and which of the three names System Settings lists.
+- Opening a downloaded copy past Gatekeeper, and the app window on screen (layout, the 13 languages, the Setup diagram; the app's self-test measures every diagram label in all 13 languages, but only a person can confirm the look), importing a translated preset in Mac TourBox Console, and the translated quick starts.
+- The Accessibility prompt and its attribution to the bundled helper (Fadester Companion T-bar) when Fadester Companion starts it, and which of the three names System Settings lists.
 - Physical TourBox control of OBS end to end (every modifier combination, the Tour menu, VJster and Layer 1/2 actions), and full native T-bar throws.
 - Keychain: Fadester Companion keeps a typed OBS password in memory only and does not use the Keychain. The Fadester for OBS plugin's macOS Keychain save failed with `-25293` in the November test ([docs/CROSS-PLATFORM-CANDIDATE.md](../docs/CROSS-PLATFORM-CANDIDATE.md)) and is still unverified.
 

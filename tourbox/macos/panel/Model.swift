@@ -71,7 +71,7 @@ struct Settings {
     init() {}
     init(data: Data) throws {
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw PanelFailure.message("Settings must contain a JSON object.") }
-        if let host = json["host"], host as? String != "127.0.0.1" { throw PanelFailure.message("This panel connects only to OBS on this Mac.") }
+        if let host = json["host"], host as? String != "127.0.0.1" { throw PanelFailure.message("Fadester Companion connects only to OBS on this Mac.") }
         func text(_ key: String, _ fallback: String = "") throws -> String {
             guard let value = json[key] else { return fallback }
             guard let text = value as? String else { throw PanelFailure.message("Invalid setting: \(key).") }; return text

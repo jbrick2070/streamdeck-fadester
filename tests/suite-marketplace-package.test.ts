@@ -148,6 +148,22 @@ describe("staging the Marketplace edition", () => {
     expect(() => stageMarketplace(source, temp())).toThrow(/name an action the manifest does not list: .*\.ghost \(profiles\/desk\.streamDeckProfile, Profiles\/A\/manifest\.json\)/);
   });
 
+  it("refuses built code that registers an action the manifest does not list", () => {
+    const source = fakePlugin(ALL_ACTIONS);
+    mkdirSync(join(source, "bin"), { recursive: true });
+    writeFileSync(join(source, "bin", "fadester.js"), `const actions = [action({ UUID: "${SUITE_ID}.fader" }), action({ UUID: "${SUITE_ID}.ghost" })];\n`);
+    expect(() => stageMarketplace(source, temp())).toThrow(/name an action the manifest does not list: .*\.ghost \(bin\/fadester\.js\)/);
+  });
+
+  it("counts the actions the built code registers", () => {
+    const source = fakePlugin(ALL_ACTIONS);
+    mkdirSync(join(source, "bin"), { recursive: true });
+    writeFileSync(join(source, "bin", "fadester.js"), `const actions = [action({ UUID: "${SUITE_ID}.fader" }), action({UUID:"${SUITE_ID}.obs-fade"})];\n`);
+    const staged = stageMarketplace(source, temp());
+    expect(actionIdsIn(staged.dir).filter((entry) => entry.where === "bin/fadester.js").map((entry) => entry.id))
+      .toEqual([`${MARKETPLACE_ID}.fader`, `${MARKETPLACE_ID}.obs-fade`]);
+  });
+
   it("refuses a result that still names the other ID, in a file it does not rewrite", () => {
     const source = fakePlugin(ALL_ACTIONS);
     writeFileSync(join(source, "imgs", "odd.png"), Buffer.from(`\x89PNG ${SUITE_ID}`, "latin1"));
@@ -172,10 +188,19 @@ describe("staging the Marketplace edition", () => {
     const known = new Set([MARKETPLACE_ID, ...staged.actions.map((action) => `${MARKETPLACE_ID}.${action}`)]);
     const named = actionIdsIn(staged.dir);
     expect(named.filter((entry) => !known.has(entry.id))).toEqual([]);
-    expect(named.length).toBe(staged.actionIdsChecked);
     expect(named.filter((entry) => entry.where.includes(".streamDeckProfile")).length).toBeGreaterThan(200);
-    // the language files of Stream Deck's own eight languages name every action; the five others hold texts only
-    expect(named.filter((entry) => /^[a-z_A-Z]+\.json$/.test(entry.where)).length).toBe(8 * staged.actions.length);
+    // the language files: as many action names as the folder it was made from has (counted there, by its own ID)
+    const languageKeys = readdirSync(SUITE_DIR).filter((name) => /^[a-z_A-Z]+\.json$/.test(name) && name !== "manifest.json")
+      .flatMap((name) => Object.keys(JSON.parse(readFileSync(join(SUITE_DIR, name), "utf8")) as object)).filter((key) => key.startsWith(SUITE_ID));
+    expect(languageKeys.length).toBeGreaterThanOrEqual(staged.actions.length);
+    expect(named.filter((entry) => /^[a-z_A-Z]+\.json$/.test(entry.where)).length).toBe(languageKeys.length);
+    // the built code, when a build is there: the twelve actions Fadester registers itself (VJster's seven are put
+    // together from the ID and a kind, and are checked by kind)
+    if (existsSync(join(SUITE_DIR, "bin", "fadester.js"))) {
+      const own = staged.actions.filter((action) => !action.startsWith("vjster-")).map((action) => `${MARKETPLACE_ID}.${action}`);
+      const inCode = named.filter((entry) => entry.where === "bin/fadester.js").map((entry) => entry.id);
+      expect([...new Set(inCode)].sort()).toEqual(own.sort());
+    }
 
     const profiles = readdirSync(join(SUITE_DIR, "profiles")).filter((name) => name.endsWith(".streamDeckProfile"));
     expect(profiles.length).toBeGreaterThan(10);

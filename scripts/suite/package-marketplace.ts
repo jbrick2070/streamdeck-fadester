@@ -126,6 +126,13 @@ export function filesNaming(dir: string, id: string): string[] {
  */
 export function actionIdsIn(dir: string): Array<{ id: string; where: string }> {
   const found: Array<{ id: string; where: string }> = [];
+  const parse = (text: string, where: string): unknown => {
+    try {
+      return JSON.parse(text.replace(/^\uFEFF/, ""));
+    } catch (error) {
+      throw new Error(`${where} is not valid JSON: ${(error as Error).message}`);
+    }
+  };
   const walk = (value: unknown, key: string, where: string): void => {
     if (Array.isArray(value)) for (const item of value) walk(item, key, where);
     else if (value && typeof value === "object") for (const [name, item] of Object.entries(value)) walk(item, name, where);
@@ -135,10 +142,10 @@ export function actionIdsIn(dir: string): Array<{ id: string; where: string }> {
     const bytes = readFileSync(join(dir, file));
     if (file.endsWith(PROFILE)) {
       for (const entry of unzip(bytes)) {
-        if (entry.path.endsWith(".json")) walk(JSON.parse(entry.data.toString("utf8")), "", `${file}, ${entry.path}`);
+        if (entry.path.endsWith(".json")) walk(parse(entry.data.toString("utf8"), `${file}, ${entry.path}`), "", `${file}, ${entry.path}`);
       }
     } else if (/^[A-Za-z_]+\.json$/.test(file) && file !== "manifest.json") {
-      for (const key of Object.keys(JSON.parse(bytes.toString("utf8").replace(/^\uFEFF/, "")) as object)) {
+      for (const key of Object.keys(parse(bytes.toString("utf8"), file) as object)) {
         if (key.startsWith(MARKETPLACE_ID)) found.push({ id: key, where: file });
       }
     } else if (/^bin\/[^/]+\.js$/.test(file)) {

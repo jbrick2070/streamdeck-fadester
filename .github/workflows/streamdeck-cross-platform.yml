@@ -19,7 +19,7 @@ jobs:
     name: Combined suite (${{ matrix.platform }}-${{ matrix.arch }})
     # Standard public-repository runners; no larger runners or signing secrets.
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 15
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:

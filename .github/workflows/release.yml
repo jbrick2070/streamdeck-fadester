@@ -104,11 +104,13 @@ jobs:
           FADESTER_SMOKE_PLUGIN_DIR="$unpacked/io.github.jbrick2070.fadester-for-obs.sdPlugin" npx vitest run tests/suite-launch-smoke.test.ts
 
   # The Elgato Marketplace edition: the same build under the Marketplace product's ID (PUBLISHING.md). A job of its
-  # own that the draft does not wait for: a fault in this side edition shows as a red job and a missing artifact and
+  # own, run after the package's own jobs, that the draft does not wait for: a fault in this side edition shows as a red job and a missing artifact and
   # never holds back the GitHub release. It is not attached to the release (two editions of one plugin would be
   # offered side by side there); the artifact is for the upload in Maker Console.
   marketplace:
     name: Elgato Marketplace edition, packed and started (${{ matrix.platform }}-${{ matrix.arch }})
+    # After the tag check and the tests of the GitHub package: no Marketplace artifact from a tag that those refused.
+    needs: [streamdeck, streamdeck-native]
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 20
     strategy:

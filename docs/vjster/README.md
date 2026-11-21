@@ -1,6 +1,6 @@
 # VJster
 
-**VJster 0.2.0** rides the speed of a YouTube video from your Stream Deck. Turn a dial, the video speeds up or slows down while it plays; press a key for 0.5x, 1x or 2x; nudge in 0.05 steps to match a beat. It works on a video in a Chrome tab, or on a video inside an OBS browser source, or both at once. Nothing leaves this computer.
+**VJster 0.2.1** rides the speed of a YouTube video from your Stream Deck. Turn a dial, the video speeds up or slows down while it plays; press a key for 0.5x, 1x or 2x; nudge in 0.05 steps to match a beat. It works on a video in a Chrome tab, or on a video inside an OBS browser source, or both at once. Nothing leaves this computer.
 
 **Do you have Fadester for OBS 0.9.0 or later?** Then you already have the seven VJster actions (**VJster Speed** and the rest). Install only the Chrome extension. Do not install the VJster plugin too: both would want the same link port.
 

@@ -104,7 +104,9 @@ describe("language files (R-I18N-5)", () => {
     setLanguage("nl", readLanguageTable("nl", PLUGIN_DIR));
     expect(t("keyReady")).toBe("Gereed");
     expect(t("sceneOpCut")).toBe("Cut");
-    expect(t("infobarPreview", { scene: "Camera" })).toBe("VOORBEELD  Camera");
+    expect(t("infobarPreview", { scene: "Camera" })).toBe("VOORVERT.  Camera");
+    // OBS's own Dutch word for Preview, whole where there is room.
+    expect(t("mixerNext")).toBe("VOORVERTONING");
   });
 
   it("en.json holds the built-in English table exactly", () => {
@@ -212,7 +214,7 @@ describe("German on the deck", () => {
 
   it.each([
     ["it", "PROGRAMMA", "ANTEPRIMA", "Premi: anteprima in Programma", "Programma · Taglio"],
-    ["pt_BR", "PROGRAMA", "PRÉVIA", "Aperte: prévia para o Programa", "Programa · Corte"],
+    ["pt_BR", "PROGRAMA", "PRÉ-VIS.", "Aperte: pré-visualização para o Programa", "Programa · Corte"],
     ["ru", "ПЕРЕДАЧА", "ПРЕДПРОСМОТР", "Нажать: предпросмотр в передачу", "В передачу · Обрезка"],
     ["tr", "PROGRAM", "ÖNİZLEME", "Bas: Önizleme Program'a", "Program'a · Kes"]
   ])("%s draws OBS's own words for Program and Preview, and no word that means \"take\"", (language, program, preview, press, subtitle) => {

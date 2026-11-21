@@ -28,7 +28,7 @@ const PLUGIN_EN = {
   errorChooseInput: "Choose an existing OBS mixer input first.",
   errorConnectBeforeStudio: "Connect to OBS before preparing a Studio layout.",
   errorStudioNotEnabled: "OBS Studio Mode could not be enabled.",
-  errorTakeUnconfirmed: "OBS did not switch to Preview. Check Program in OBS.",
+  errorTakeUnconfirmed: "OBS did not put Preview on Program. Check Program in OBS.",
   errorTbarNeedsStudio: "Scene T-bar needs OBS Studio Mode.",
   errorSceneIndexUnavailableOne: "Scene {n} is unavailable; OBS has {count} scene.",
   errorSceneIndexUnavailableMany: "Scene {n} is unavailable; OBS has {count} scenes.",

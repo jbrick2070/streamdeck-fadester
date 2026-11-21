@@ -82,7 +82,7 @@ Fadester for OBS speaks thirteen languages, the same thirteen as the rest of the
 
 Stream Deck itself offers eight of them (English, German, Spanish, French, Japanese, Korean and the two Chinese). Dutch, Italian, Brazilian Portuguese, Russian and Turkish are chosen under **Language**, because **Automatic** can only follow a language Stream Deck has. Stream Deck's own menus, action list, tooltips and dial hints stay in Stream Deck's language, and so do the two Midi Fadester settings pages. The VJster keys and dials have a **Language** choice of their own on their settings page, with the same thirteen.
 
-OBS's own words (Studio Mode, Preview, Program, Scene, Source, Transition) use OBS's translation, so the deck matches OBS. Your scene, source and filter names are shown as they are.
+OBS's own words (Studio Mode, Preview, Program, Scene, Source, Transition) use OBS's translation, so the deck matches OBS; where a key or strip is too small for the whole word it is cut short (Dutch **Voorvert.** for Voorvertoning, Brazilian Portuguese **Pré-vis.** for Pré-visualização). Your scene, source and filter names are shown as they are.
 
 The translations were drafted by an AI model (Claude); eight of them were reviewed by a second one (Gemini), while Italian, Brazilian Portuguese, Russian and Turkish have had no second review yet. No native speaker has checked any of them. If something reads wrong, please open an issue or a pull request: the files are `io.github.jbrick2070.fadester-for-obs.sdPlugin/<language>.json`, with `en.json` as the English source. VJster's languages are in [docs/vjster/INSTALL.md](docs/vjster/INSTALL.md).
 

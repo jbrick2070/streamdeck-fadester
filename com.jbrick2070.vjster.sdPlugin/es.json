@@ -80,7 +80,7 @@
       "fieldControl": "Control",
       "fieldHoldLevel": "Mantener el nivel en el siguiente vídeo",
       "fieldRate": "Velocidad (0.1 a 16)",
-      "fieldDirect": "Permitir velocidades por debajo de 0,25x y por encima de 4x",
+      "fieldDirect": "Permitir velocidades por debajo de 0.25x y por encima de 4x",
       "fieldDirection": "Dirección",
       "faster": "Más rápido",
       "slower": "Más lento",

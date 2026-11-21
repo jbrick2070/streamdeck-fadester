@@ -28,8 +28,6 @@ On a fresh deck with only an empty Default profile, the source installer also se
 
 `--fadester-layouts fit` writes the ready-made layouts made for your deck (a Stream Deck + gets the "+" layouts, a 15-key deck the "15 Keys" ones, a Mini the Mini one) as OpenDeck profiles; pick one from the profile list under the deck's name. `--fadester-layouts plus-scene-desk,plus-vj-rig` writes just the ones you name (the names are the `slug` values in [profiles/layouts.json](../profiles/layouts.json)). A profile that is already there is left as it is, so your edits stay; delete it in OpenDeck to build it again. Or drag Fadester's actions from OpenDeck's action list (under **Fadester for OBS**) onto keys and dials yourself.
 
-Then follow the README's [first five minutes](../README.md#first-five-minutes) from step 3 (the OBS WebSocket password).
-
 In OpenDeck:
 
 - **Select profiles in OpenDeck.** Fadester supplies one starter directly; the source installer adds the full library. [DECK-LAYOUTS.md](../DECK-LAYOUTS.md) lists every layout key by key.

@@ -35,7 +35,7 @@
       "fieldControl": "Kontrol",
       "fieldHoldLevel": "Sonraki videoda düzeyi koru",
       "fieldRate": "Hız (0.1 ile 16 arası)",
-      "fieldDirect": "0,25x altı ve 4x üstü hızlara izin ver",
+      "fieldDirect": "0.25x altı ve 4x üstü hızlara izin ver",
       "fieldDirection": "Yön",
       "faster": "Daha hızlı",
       "slower": "Daha yavaş",

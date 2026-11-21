@@ -80,7 +80,7 @@
       "fieldControl": "Steuerung",
       "fieldHoldLevel": "Stufe beim nächsten Video beibehalten",
       "fieldRate": "Tempo (0.1 bis 16)",
-      "fieldDirect": "Tempo unter 0,25x und über 4x zulassen",
+      "fieldDirect": "Tempo unter 0.25x und über 4x zulassen",
       "fieldDirection": "Richtung",
       "faster": "Schneller",
       "slower": "Langsamer",

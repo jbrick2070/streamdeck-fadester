@@ -35,7 +35,7 @@
       "fieldControl": "Controllo",
       "fieldHoldLevel": "Mantieni il livello sul video successivo",
       "fieldRate": "Velocità (da 0.1 a 16)",
-      "fieldDirect": "Consenti velocità sotto 0,25x e sopra 4x",
+      "fieldDirect": "Consenti velocità sotto 0.25x e sopra 4x",
       "fieldDirection": "Direzione",
       "faster": "Più veloce",
       "slower": "Più lento",

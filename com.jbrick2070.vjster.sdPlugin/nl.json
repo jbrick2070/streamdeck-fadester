@@ -35,7 +35,7 @@
       "fieldControl": "Bediening",
       "fieldHoldLevel": "Niveau behouden bij de volgende video",
       "fieldRate": "Tempo (0.1 tot 16)",
-      "fieldDirect": "Snelheden onder 0,25x en boven 4x toestaan",
+      "fieldDirect": "Snelheden onder 0.25x en boven 4x toestaan",
       "fieldDirection": "Richting",
       "faster": "Sneller",
       "slower": "Langzamer",

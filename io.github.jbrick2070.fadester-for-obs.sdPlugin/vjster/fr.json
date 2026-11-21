@@ -80,7 +80,7 @@
       "fieldControl": "Piloter",
       "fieldHoldLevel": "Garder le niveau pour la vidéo suivante",
       "fieldRate": "Vitesse (0.1 à 16)",
-      "fieldDirect": "Autoriser les vitesses sous 0,25x et au-dessus de 4x",
+      "fieldDirect": "Autoriser les vitesses sous 0.25x et au-dessus de 4x",
       "fieldDirection": "Sens",
       "faster": "Plus vite",
       "slower": "Plus lentement",

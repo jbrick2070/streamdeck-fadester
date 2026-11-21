@@ -65,10 +65,10 @@
   },
   "io.github.jbrick2070.fadester-for-obs.tape-deck": {
     "Name": "Banddeck",
-    "Tooltip": "Steuert ein Visual-Sidechain-Banddeck entlang der Tempoleiter von 25 % bis 800 % (0,25x bis 8x) oder startet, pausiert, spult zum Anfang oder setzt 100 % (1x).",
+    "Tooltip": "Steuert ein Visual-Sidechain-Banddeck entlang der Tempoleiter von 25 % bis 800 % (0.25x bis 8x) oder startet, pausiert, spult zum Anfang oder setzt 100 % (1x).",
     "Encoder": {
       "TriggerDescription": {
-        "Rotate": "Tempo auf der Leiter von 25 % bis 800 % (0,25x bis 8x) ändern",
+        "Rotate": "Tempo auf der Leiter von 25 % bis 800 % (0.25x bis 8x) ändern",
         "Push": "Wiedergabe/Pause, zum Anfang, Normaltempo oder Tempostufe"
       }
     }
@@ -174,7 +174,7 @@
     "errorChooseInput": "Wählen Sie zuerst einen vorhandenen Audiomixer-Eingang.",
     "errorConnectBeforeStudio": "Verbinden Sie OBS, bevor Sie ein Studio-Layout vorbereiten.",
     "errorStudioNotEnabled": "Der Studio-Modus von OBS konnte nicht aktiviert werden.",
-    "errorTakeUnconfirmed": "OBS hat nicht zur Vorschau gewechselt. Prüfe das Programm in OBS.",
+    "errorTakeUnconfirmed": "OBS hat die Vorschau nicht ins Programm gebracht. Prüfe das Programm in OBS.",
     "errorTbarNeedsStudio": "Die Szenen-T-Bar benötigt den Studio-Modus von OBS.",
     "errorSceneIndexUnavailableOne": "Szene {n} ist nicht verfügbar; OBS hat {count} Szene.",
     "errorSceneIndexUnavailableMany": "Szene {n} ist nicht verfügbar; OBS hat {count} Szenen.",
@@ -824,7 +824,7 @@
       "fxRangeMax": "Bis",
       "fxInteger": "Ganze Zahlen",
       "fxValue": "Wert",
-      "fxUseCurrent": "Aktuellen nehmen",
+      "fxUseCurrent": "Aktuellen verwenden",
       "fxDuration": "Dauer (ms)",
       "fxStep": "Schritt (%)",
       "fxNote": "Änderungen werden geglättet. Eine Einstellung, die ein Fader oder ein Audio Modulator steuert, bleibt unberührt.",
@@ -878,7 +878,7 @@
       "quantizeStartBar": "Nächster Takt",
       "quantizeHint": "Ohne Tempo startet es sofort, und die Taste zeigt KEIN TEMPO. Erneut drücken startet sofort; halten bricht ab.",
       "tdHeading": "Banddeck",
-      "tdIntro": "Steuert einen Visual-Sidechain-Banddeck-Filter auf einer OBS-Browserquelle (25 % bis 800 % / 0,25x bis 8x Live-Tempo).",
+      "tdIntro": "Steuert einen Visual-Sidechain-Banddeck-Filter auf einer OBS-Browserquelle (25 % bis 800 % / 0.25x bis 8x Live-Tempo).",
       "tdSourceLabel": "Deck-Quelle",
       "tdAutoFirstDeck": "Automatisch (erstes Banddeck)",
       "tdOptPlayPause": "Wiedergabe / Pause",
@@ -886,7 +886,7 @@
       "tdOptNormal": "Normaltempo (100 % / 1x)",
       "tdOptSpeedUp": "Schneller (Leiter)",
       "tdOptSpeedDown": "Langsamer (Leiter)",
-      "tdNote": "Am Drehregler schaltet Drehen entlang der Tempoleiter von 25 % bis 800 % (0,25x bis 8x). Banddecks bleiben von Panik und Wiederherstellen unberührt.",
+      "tdNote": "Am Drehregler schaltet Drehen entlang der Tempoleiter von 25 % bis 800 % (0.25x bis 8x). Banddecks bleiben von Panik und Wiederherstellen unberührt.",
       "tdBannerNotLoaded": "Visual Sidechain läuft in OBS nicht. Es ist in Midi Fadester 0.9.0 oder neuer enthalten.",
       "tdBannerNeedsUpdate": "Aktualisieren Sie Midi Fadester in OBS, um Banddecks über Fadester for OBS zu steuern.",
       "tdBannerNone": "Noch kein Banddeck-Filter in OBS gefunden. Fügen Sie einer Browserquelle Visual Sidechain: Tape Deck hinzu.",

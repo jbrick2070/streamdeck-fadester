@@ -155,7 +155,7 @@ function Test-VjsterClash {
 }
 
 function Test-MarketplaceEdition {
-  Write-Host 'marketplace-edition: beside the Elgato Marketplace edition no second copy is offered; with both editions there, the log says so'
+  Write-Host 'marketplace-edition: beside the Elgato Marketplace edition no second copy is offered; with both editions there, setup says so'
   $elgato = Join-Path $env:APPDATA 'Elgato'
   $plugins = Join-Path $elgato 'StreamDeck\Plugins'
   # The topmost folder that is not there yet: everything from it down is made by this test, and removed by it.
@@ -165,13 +165,24 @@ function Test-MarketplaceEdition {
   $marketManifest = Join-Path $market 'manifest.json'
   $null = New-Item -ItemType Directory -Force -Path $market
   Set-Content -LiteralPath $marketManifest -Value '{ "Name": "Fadester for OBS", "Version": "0.8.0.0", "UUID": "com.jbrick2070.fadester-for-obs" }' -Encoding ascii
+  # What the last page says is in the log as well ("Summary: ..."): in a silent run nothing is ever imported, so the
+  # last page's sentence is what shows which way setup decided.
+  $offered = 'Fadester for OBS is ready at '
   try {
     $r = Run-Setup $Setup @('/COMPONENTS="streamdeck"') 'marketplace-edition'
     Check ($r.Code -eq 0) "setup succeeds (exit $($r.Code))"
-    Check ($r.Log -cmatch 'MARKETPLACE-EDITION: Fadester for OBS 0\.8\.0\.0 from the Elgato Marketplace') 'log says the Marketplace edition is there and no second copy is offered'
+    Check ($r.Log -cmatch 'MARKETPLACE-EDITION: Fadester for OBS \(0\.8\.0\.0\) from the Elgato Marketplace') 'log says the Marketplace edition is there and no second copy is offered'
     Check ($r.Log -cnotmatch 'BOTH-EDITIONS:') 'one edition is not reported as two'
+    Check ($r.Log -cmatch 'from the Elgato Marketplace is in Stream Deck \(0\.8\.0\.0\), so setup adds no second copy \(it carries ') 'the last page says no second copy is added, with both versions'
+    Check ($r.Log -cnotmatch [regex]::Escape($offered)) 'the last page does not offer this setup''s copy'
     Check ((Get-Content -Raw -LiteralPath $marketManifest) -match '0\.8\.0\.0') 'the Marketplace edition is untouched'
-    Check (-not (Test-Path -LiteralPath $own)) 'setup put no copy of its own into Stream Deck''s folder'
+    # A manifest that cannot be read (a Marketplace plugin can come with one): still seen, and said without a version.
+    Set-Content -LiteralPath $marketManifest -Value 'not a manifest anyone can read' -Encoding ascii
+    $r = Run-Setup $Setup @('/COMPONENTS="streamdeck"') 'marketplace-unreadable'
+    Check ($r.Code -eq 0) "setup succeeds beside an unreadable manifest (exit $($r.Code))"
+    Check ($r.Log -cmatch 'MARKETPLACE-EDITION: Fadester for OBS from the Elgato Marketplace') 'the edition is seen by its folder'
+    Check ($r.Log -cmatch 'from the Elgato Marketplace is in Stream Deck, so setup adds no second copy') 'the last page says it without a version'
+    Set-Content -LiteralPath $marketManifest -Value '{ "Name": "Fadester for OBS", "Version": "0.8.0.0", "UUID": "com.jbrick2070.fadester-for-obs" }' -Encoding ascii
     # Both editions there already: this setup's copy is handled as always, and the log says there are two.
     $null = New-Item -ItemType Directory -Force -Path $own
     Set-Content -LiteralPath (Join-Path $own 'manifest.json') -Value '{ "Name": "Fadester for OBS", "Version": "0.0.1.0" }' -Encoding ascii
@@ -179,6 +190,8 @@ function Test-MarketplaceEdition {
     Check ($r.Code -eq 0) "setup succeeds with both editions (exit $($r.Code))"
     Check ($r.Log -cmatch 'BOTH-EDITIONS: Fadester for OBS is in Stream Deck twice') 'log says the plugin is there twice'
     Check ($r.Log -cnotmatch 'MARKETPLACE-EDITION:') 'the offer is not held back when this setup''s edition is there too'
+    Check ($r.Log -cmatch 'is in Stream Deck twice: the Elgato Marketplace''s copy \(0\.8\.0\.0\) and the one from this setup') 'the last page says the plugin is there twice'
+    Check ($r.Log -cmatch [regex]::Escape($offered)) 'this setup''s copy is offered as always'
     Check ((Get-Content -Raw -LiteralPath $marketManifest) -match '0\.8\.0\.0') 'the Marketplace edition is still untouched'
   } finally {
     # Stream Deck's folder is the user's: the test removes only what it made.

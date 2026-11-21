@@ -21,25 +21,33 @@ function body(name: string): string {
 }
 
 describe("Suite Setup and the Elgato Marketplace edition", () => {
-  it("looks for the Marketplace edition where Stream Deck keeps plugins, under the Marketplace's ID", () => {
-    const version = body("MarketplaceEditionVersion");
-    expect(version).toContain(`'\\Elgato\\StreamDeck\\Plugins\\${MARKETPLACE_ID}.sdPlugin'`);
-    expect(version).toContain("ManifestVersion(Folder + '\\manifest.json', 'Version')");
-    // a folder without a manifest is not a plugin: nothing is reported
-    expect(version).toContain("if FileExists(Folder + '\\manifest.json') then");
+  it("looks for the Marketplace edition's folder where Stream Deck keeps plugins, under the Marketplace's ID", () => {
+    const present = body("MarketplaceEditionPresent");
+    // the folder is what counts: a plugin from the Marketplace can come with a manifest that cannot be read
+    expect(present).toContain(`DirExists(UserAppData() + '\\Elgato\\StreamDeck\\Plugins\\${MARKETPLACE_ID}.sdPlugin')`);
     // the broken-guard variant switches exactly this off
-    expect(version).toMatch(/#ifdef BREAK_MARKETPLACE_GUARD\n\s*Result := '';\n#endif/);
+    expect(present).toMatch(/#ifdef BREAK_MARKETPLACE_GUARD\n\s*Result := False;\n#endif/);
+    // the version is shown in brackets when it can be read, and left out when it cannot
+    const brackets = body("MarketplaceEditionInBrackets");
+    expect(brackets).toContain(`${MARKETPLACE_ID}.sdPlugin\\manifest.json', 'Version')`);
+    expect(brackets).toContain("if Result <> '' then Result := ' (' + Result + ')';");
+    for (const key of ["NoteMarketplaceSd", "NoteBothSd"]) {
+      const english = new RegExp(`^${key}=(.*)$`, "m").exec(script)![1];
+      // the bracket is part of %1: no space before it and no brackets around it in the sentence
+      expect(english, key).toMatch(/\S%1/);
+      expect(english, key).not.toContain("(%1)");
+    }
   });
 
   it("offers no second copy beside a Marketplace edition, and says so on the first page and in the log", () => {
     const offer = body("StreamDeckOfferWanted");
     expect(offer).toContain(`'\\Elgato\\StreamDeck\\Plugins\\${SUITE_ID}.sdPlugin\\manifest.json'`);
-    const alone = offer.indexOf("if (Marketplace <> '') and not FileExists(OwnManifest) then");
+    const alone = offer.indexOf("if MarketplaceEditionPresent() and not FileExists(OwnManifest) then");
     expect(alone).toBeGreaterThan(0);
     const skip = offer.slice(alone, offer.indexOf("else", alone));
     expect(skip).toContain("StreamDeckOffer := 3;");
     expect(skip).toContain("Note('MARKETPLACE-EDITION',");
-    expect(skip).toContain("CustomMessage('NoteMarketplaceSd'), [Marketplace, '{#SdVersion}']");
+    expect(skip).toContain("CustomMessage('NoteMarketplaceSd'), [MarketplaceEditionInBrackets(), '{#SdVersion}']");
     // only 1 means "ask Stream Deck to import"
     expect(offer).toContain("Result := StreamDeckOffer = 1;");
   });
@@ -47,18 +55,24 @@ describe("Suite Setup and the Elgato Marketplace edition", () => {
   it("with both editions there already, handles its own copy as always and tells the person to remove one", () => {
     const offer = body("StreamDeckOfferWanted");
     const both = offer.slice(offer.indexOf("else", offer.indexOf("StreamDeckOffer := 3;")));
+    expect(both).toContain("BothEditions := True;");
     expect(both).toContain("Note('BOTH-EDITIONS',");
-    expect(both).toContain("CustomMessage('NoteBothSd'), [Marketplace]");
+    expect(both).toContain("CustomMessage('NoteBothSd'), [MarketplaceEditionInBrackets()]");
     expect(both.indexOf("Note('BOTH-EDITIONS',")).toBeLessThan(both.indexOf("NewerOnDisk('Fadester for OBS in Stream Deck', 'NoteNewerSd', OwnManifest"));
     expect(both).toContain("StreamDeckOffer := 2;");
   });
 
-  it("repeats it on the last page instead of the newer-copy sentence", () => {
-    expect(script).toContain(
-      "if not StreamDeckOfferWanted() and (StreamDeckOffer = 3) then\n" +
-      "      Summary := Summary + FmtMessage(CustomMessage('NoteMarketplaceSd'), [MarketplaceEditionVersion(), '{#SdVersion}']) + #13#10\n" +
-      "    else if not StreamDeckOfferWanted() then"
-    );
+  it("says it again on the last page: the Marketplace sentence in place of the offer, and that there are two", () => {
+    const from = script.indexOf("if WizardIsComponentSelected('streamdeck') then", script.indexOf("Summary := Summary + CustomMessage('DoneOldVs')"));
+    const last = script.slice(from, script.indexOf("Log('Summary: ' + Summary);", from));
+    const marketplace = last.search(/if StreamDeckOffer = 3 then\s+Summary := Summary \+ FmtMessage\(CustomMessage\('NoteMarketplaceSd'\)/);
+    const newer = last.indexOf("CustomMessage('NoteNewerSd')");
+    const importing = last.indexOf("CustomMessage('DoneSdImporting')");
+    // the Marketplace branch comes first, so neither the newer-copy sentence nor the import follows it
+    expect(marketplace).toBeGreaterThan(0);
+    expect(marketplace).toBeLessThan(newer);
+    expect(newer).toBeLessThan(importing);
+    expect(last).toMatch(/if BothEditions then\s+Summary := Summary \+ FmtMessage\(CustomMessage\('NoteBothSd'\)/);
   });
 
   it("is decided before the first page is built, so the note is on it", () => {

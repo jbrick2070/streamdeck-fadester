@@ -10,6 +10,7 @@
   <key>CFBundleShortVersionString</key><string>0.1.17</string>
   <key>CFBundleVersion</key><string>1</string>
   <key>LSMinimumSystemVersion</key><string>12.0</string>
+  <key>NSDownloadsFolderUsageDescription</key><string>Fadester Companion saves the TourBox preset to Downloads, so TourBox Console can import it.</string>
   <key>NSHighResolutionCapable</key><true/>
   <key>NSPrincipalClass</key><string>NSApplication</string>
 </dict></plist>

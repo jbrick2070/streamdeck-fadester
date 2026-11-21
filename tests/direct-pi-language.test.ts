@@ -435,10 +435,14 @@ describe("the shared sections say what happened", () => {
     expect(h.byId("direct-layout").value).toBe(regularLayout.slug);
     expect(h.byId("direct-layout-open").disabled).toBe(false);
     expect(h.byId("direct-layout-open").textContent).toBe(en.layoutOpen);
-    // Studio Mode is turned on in OBS while the page is open: a list that already shows a layout keeps it, so nothing
-    // changes under the pointer.
+    // Studio Mode is turned on in OBS while the page is open and nothing was picked by hand: the offer follows OBS.
     h.receive(state({ choice: "auto", resolved: "en" }, { layouts: all, catalog: { inputVolumes: {}, studioMode: true } }));
-    expect(h.byId("direct-layout").value).toBe(regularLayout.slug);
+    expect(h.byId("direct-layout").value).toBe(studioLayout.slug);
+    // Once the operator picked one, it stays whatever OBS does.
+    h.byId("direct-layout").value = sourceDesk.slug;
+    h.byId("direct-layout").onchange?.();
+    h.receive(state({ choice: "auto", resolved: "en" }, { layouts: all }));
+    expect(h.byId("direct-layout").value).toBe(sourceDesk.slug);
     // A page opened with Studio Mode on starts on the Studio Scene Desk.
     const studio = openPage("obs-fade-key.html");
     studio.receive(state({ choice: "auto", resolved: "en" }, { layouts: all, catalog: { inputVolumes: {}, studioMode: true } }));

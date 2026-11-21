@@ -168,22 +168,51 @@ enum LocalFiles {
     static let presetStamp = support.appendingPathComponent("saved-preset.sha256")
     /// The name TourBox Console's file window shows for the preset.
     static let presetFileName = "OBS Fadester for TourBox.tb"
-    /// Writes the preset into a folder under its own name, replacing an older copy, and returns where it is.
+    /// Puts the preset into a folder and returns where it is, without ever replacing a different file (QA-C01): a file
+    /// of that name with the same bytes is used as it is; when its bytes differ (the user's own export, an older
+    /// preset kept on purpose) the preset is written beside it as "OBS Fadester for TourBox 2.tb", then 3, as Finder
+    /// numbers a copy.
     static func savePreset(_ bytes: Data, in folder: URL) throws -> URL {
-        let url = folder.appendingPathComponent(presetFileName)
-        try bytes.write(to: url, options: .atomic)
-        return url
+        let stem = (presetFileName as NSString).deletingPathExtension
+        let ending = (presetFileName as NSString).pathExtension
+        for number in 1...99 {
+            let name = number == 1 ? presetFileName : stem + " " + String(number) + "." + ending
+            let url = folder.appendingPathComponent(name)
+            if FileManager.default.fileExists(atPath: url.path) {
+                if let existing = try? Data(contentsOf: url), existing == bytes { return url }
+                continue
+            }
+            // Fails, rather than replaces, should a file of this name appear between the look and the write.
+            try bytes.write(to: url, options: .withoutOverwriting)
+            return url
+        }
+        throw PanelFailure.message("Too many copies of " + presetFileName + " in " + folder.lastPathComponent + ".")
     }
     /// Offline check of savePreset in a folder of its own under the temporary folder.
     static func presetSaveSelfTest() throws {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("fadester-preset-test-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: folder) }
+        // No file there: written under its own name.
         let first = try savePreset(Data("one".utf8), in: folder)
+        guard first.lastPathComponent == presetFileName, try Data(contentsOf: first) == Data("one".utf8) else {
+            throw PanelFailure.message("Self-test: the preset is saved under its own name")
+        }
+        // The same bytes are there: that file is used, nothing is written.
+        let stamp = try FileManager.default.attributesOfItem(atPath: first.path)[.modificationDate] as? Date
+        let again = try savePreset(Data("one".utf8), in: folder)
+        guard again == first, try FileManager.default.contentsOfDirectory(atPath: folder.path) == [presetFileName],
+              try FileManager.default.attributesOfItem(atPath: first.path)[.modificationDate] as? Date == stamp else {
+            throw PanelFailure.message("Self-test: a preset that is already there with the same bytes is reused")
+        }
+        // A different file of that name: it stays as it is, and the preset goes beside it under the next number.
         let second = try savePreset(Data("two".utf8), in: folder)
-        guard first == second, first.lastPathComponent == presetFileName, try Data(contentsOf: second) == Data("two".utf8),
-              try FileManager.default.contentsOfDirectory(atPath: folder.path) == [presetFileName] else {
-            throw PanelFailure.message("Self-test: the preset is saved once, under its own name, and a newer save replaces it")
+        let third = try savePreset(Data("three".utf8), in: folder)
+        let secondAgain = try savePreset(Data("two".utf8), in: folder)
+        guard second.lastPathComponent == "OBS Fadester for TourBox 2.tb", third.lastPathComponent == "OBS Fadester for TourBox 3.tb", secondAgain == second,
+              try Data(contentsOf: first) == Data("one".utf8), try Data(contentsOf: second) == Data("two".utf8), try Data(contentsOf: third) == Data("three".utf8),
+              try FileManager.default.contentsOfDirectory(atPath: folder.path).count == 3 else {
+            throw PanelFailure.message("Self-test: a different file of the preset's name is never replaced; the preset is written beside it")
         }
         do {
             _ = try savePreset(Data("x".utf8), in: folder.appendingPathComponent("missing"))
@@ -285,6 +314,8 @@ enum Readiness {
     static func needsObsFields(connected: Bool, running: Bool, problem: String?) -> Bool { !connected && running && problem != nil }
     /// A light needs a closed part of the Setup page: it opens once per problem, so a part the user closed again stays closed.
     static func opensFold(needed: Bool, called: Bool, open: Bool) -> Bool { needed && !called && !open }
+    /// The parts to open again at the next start: the ones the user opened, never one a light opened (QA-C04).
+    static func foldsToRemember(_ folds: [(id: String, byUser: Bool)]) -> [String] { folds.filter { $0.byUser }.map { $0.id } }
 
     /// usedBefore: a video has been connected on this Mac at some time. VJster is on by default, so until then a missing
     /// video is not a fault (grey, with the same button), and a busy port is amber, not red. As on Windows.
@@ -577,6 +608,7 @@ enum ModelTests {
                   !Readiness.needsObsFields(connected: false, running: false, problem: "obs-no-answer") && !Readiness.needsObsFields(connected: false, running: true, problem: nil), "the OBS port and password show when OBS refuses or does not answer")
         try check(Readiness.opensFold(needed: true, called: false, open: false) && !Readiness.opensFold(needed: true, called: true, open: false) &&
                   !Readiness.opensFold(needed: true, called: false, open: true) && !Readiness.opensFold(needed: false, called: false, open: false), "a light opens a closed part once per problem")
+        try check(Readiness.foldsToRemember([("obs", false), ("mix", true), ("vjster", false)]) == ["mix"], "only the parts the user opened are remembered")
         try check(Readiness.obs(connected: true, running: true, problem: nil, studioOff: true, controlsOn: false) == LightState(.amber, "OBS: turn on Studio Mode", button: "Turn on", action: "studioOn") &&
                   Readiness.obs(connected: true, running: true, problem: nil, studioOff: true, controlsOn: true).action == "studioOn", "OBS Studio Mode light")
         try check(HostController.tbarReason("T-BAR: Accessibility denied; grant the responsible app The other controls work; the T-bar is looked at again when the Dial is turned.") == L("macTbarAx") &&

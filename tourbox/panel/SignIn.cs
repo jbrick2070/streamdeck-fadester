@@ -12,8 +12,12 @@ using System.Threading;
 using Microsoft.Win32;
 
 namespace Fadester.TourBox {
-  /** Off, On, or Blocked: Windows has it switched off (by the user in Settings or Task Manager, or by policy), so only Windows' own switch turns it on. */
-  internal enum SignInState { Off, On, Blocked }
+  /**
+   * Off, On, or Blocked: Windows has it switched off (by the user in Settings or Task Manager), so only Windows' own
+   * switch turns it on. OnByPolicy and OffByPolicy (the Store build): Windows or the organisation set it, and neither
+   * the panel nor the user's switch changes it.
+   */
+  internal enum SignInState { Off, On, Blocked, OnByPolicy, OffByPolicy }
 
   internal static class SignInStart {
     const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
@@ -39,11 +43,17 @@ namespace Fadester.TourBox {
     /** The Store build's state from Windows.ApplicationModel.StartupTaskState's name. */
     internal static SignInState TaskState(string state) {
       switch (state) {
-        case "Enabled": case "EnabledByPolicy": return SignInState.On;
-        case "DisabledByUser": case "DisabledByPolicy": return SignInState.Blocked;
+        case "Enabled": return SignInState.On;
+        case "EnabledByPolicy": return SignInState.OnByPolicy;
+        case "DisabledByUser": return SignInState.Blocked;
+        case "DisabledByPolicy": return SignInState.OffByPolicy;
         default: return SignInState.Off;
       }
     }
+
+    /** Whether the box is ticked, and whether it is out of the user's hands. */
+    internal static bool Ticked(SignInState state) { return state == SignInState.On || state == SignInState.OnByPolicy; }
+    internal static bool Managed(SignInState state) { return state == SignInState.OnByPolicy || state == SignInState.OffByPolicy; }
 
     internal static SignInState Read(bool packaged, string exe) { return packaged ? ReadTask() : ReadRun(exe); }
     /** Turns it on or off and returns the state Windows then reports. */
@@ -107,9 +117,13 @@ namespace Fadester.TourBox {
           RunState(Command(exe), new byte[] { 3, 0, 0 }, exe) != SignInState.Blocked ||
           RunState(Command(@"D:\Old\Fadester Companion.exe"), null, exe) != SignInState.Off)
         throw new Exception("sign-in: Run value");
-      if (TaskState("Disabled") != SignInState.Off || TaskState("Enabled") != SignInState.On || TaskState("EnabledByPolicy") != SignInState.On ||
-          TaskState("DisabledByUser") != SignInState.Blocked || TaskState("DisabledByPolicy") != SignInState.Blocked)
+      if (TaskState("Disabled") != SignInState.Off || TaskState("Enabled") != SignInState.On || TaskState("EnabledByPolicy") != SignInState.OnByPolicy ||
+          TaskState("DisabledByUser") != SignInState.Blocked || TaskState("DisabledByPolicy") != SignInState.OffByPolicy)
         throw new Exception("sign-in: start-up task");
+      // Set by policy: shown as it is and greyed; the user's own switch-off is unticked and can be asked for again.
+      if (!Ticked(SignInState.OnByPolicy) || Ticked(SignInState.OffByPolicy) || !Managed(SignInState.OnByPolicy) || !Managed(SignInState.OffByPolicy) ||
+          Managed(SignInState.Blocked) || Managed(SignInState.On) || Ticked(SignInState.Blocked) || !Ticked(SignInState.On))
+        throw new Exception("sign-in: policy");
     }
   }
 }

@@ -247,6 +247,7 @@ namespace Fadester.TourBox {
       { "openAtSignIn", new[] { "Open when I sign in", "Abrir al iniciar sesión", "Ouvrir à l’ouverture de session", "登录时打开" } },
       { "signInSettings", new[] { "Windows has this turned off. Turn Fadester Companion on in Settings → Apps → Startup.", "Windows lo tiene desactivado. Activa Fadester Companion en Configuración → Aplicaciones → Inicio.", "Windows l’a désactivé. Activez Fadester Companion dans Paramètres → Applications → Démarrage.", "Windows 已将其关闭。请在「设置 → 应用 → 启动」中打开 Fadester Companion。" } },
       { "signInFailed", new[] { "This setting could not be changed: {0}", "No se pudo cambiar este ajuste: {0}", "Impossible de modifier ce réglage : {0}", "无法更改此设置：{0}" } },
+      { "signInManaged", new[] { "Windows or your organisation controls this setting.", "Windows o tu organización controla este ajuste.", "Windows ou votre organisation contrôle ce réglage.", "此设置由 Windows 或你的组织管理。" } },
     };
 
     internal PanelText(string requestedLocale) {

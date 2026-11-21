@@ -236,6 +236,7 @@ namespace Fadester.TourBox {
           { "openAtSignIn", "Beim Anmelden öffnen" },
           { "signInSettings", "Windows hat dies ausgeschaltet. Schalten Sie Fadester Companion unter Einstellungen → Apps → Autostart ein." },
           { "signInFailed", "Diese Einstellung konnte nicht geändert werden: {0}" },
+          { "signInManaged", "Windows oder Ihre Organisation verwaltet diese Einstellung." },
         } },
         { "it", new Dictionary<string, string> {
           { "alreadyOpen", "Fadester Companion è già aperto. Controlla la barra delle applicazioni." },
@@ -468,6 +469,7 @@ namespace Fadester.TourBox {
           { "openAtSignIn", "Apri all'accesso" },
           { "signInSettings", "Windows lo ha disattivato. Attiva Fadester Companion in Impostazioni → App → Avvio." },
           { "signInFailed", "Impossibile modificare questa impostazione: {0}" },
+          { "signInManaged", "Questa impostazione è gestita da Windows o dalla tua organizzazione." },
         } },
         { "ja", new Dictionary<string, string> {
           { "alreadyOpen", "Fadester Companion はすでに起動しています。タスクバーを確認してください。" },
@@ -700,6 +702,7 @@ namespace Fadester.TourBox {
           { "openAtSignIn", "サインイン時に開く" },
           { "signInSettings", "Windows でオフになっています。「設定 → アプリ → スタートアップ」で Fadester Companion をオンにしてください。" },
           { "signInFailed", "この設定を変更できませんでした: {0}" },
+          { "signInManaged", "この設定は Windows または組織によって管理されています。" },
         } },
         { "ko", new Dictionary<string, string> {
           { "alreadyOpen", "Fadester Companion이 이미 실행 중입니다. 작업 표시줄을 확인하세요." },
@@ -932,6 +935,7 @@ namespace Fadester.TourBox {
           { "openAtSignIn", "로그인할 때 열기" },
           { "signInSettings", "Windows에서 꺼져 있습니다. 설정 → 앱 → 시작 프로그램에서 Fadester Companion을 켜세요." },
           { "signInFailed", "이 설정을 변경할 수 없습니다: {0}" },
+          { "signInManaged", "이 설정은 Windows 또는 조직에서 관리합니다." },
         } },
         { "ru", new Dictionary<string, string> {
           { "alreadyOpen", "Fadester Companion уже запущен. Проверьте панель задач." },
@@ -1164,6 +1168,7 @@ namespace Fadester.TourBox {
           { "openAtSignIn", "Открывать при входе в систему" },
           { "signInSettings", "В Windows это отключено. Включите Fadester Companion в разделе «Параметры → Приложения → Автозагрузка»." },
           { "signInFailed", "Не удалось изменить этот параметр: {0}" },
+          { "signInManaged", "Этим параметром управляет Windows или ваша организация." },
         } },
         { "zh-TW", new Dictionary<string, string> {
           { "alreadyOpen", "Fadester Companion 已經開啟，請檢查工作列。" },
@@ -1396,6 +1401,7 @@ namespace Fadester.TourBox {
           { "openAtSignIn", "登入時開啟" },
           { "signInSettings", "Windows 已將其關閉。請在「設定 → 應用程式 → 啟動」中開啟 Fadester Companion。" },
           { "signInFailed", "無法變更此設定：{0}" },
+          { "signInManaged", "此設定由 Windows 或你的組織管理。" },
         } },
         { "nl", new Dictionary<string, string> {
           { "action", "Actie" },
@@ -1628,6 +1634,7 @@ namespace Fadester.TourBox {
           { "openAtSignIn", "Openen bij aanmelden" },
           { "signInSettings", "Windows heeft dit uitgeschakeld. Schakel Fadester Companion in via Instellingen → Apps → Opstarten." },
           { "signInFailed", "Deze instelling kon niet worden gewijzigd: {0}" },
+          { "signInManaged", "Windows of je organisatie beheert deze instelling." },
         } },
         { "pt-BR", new Dictionary<string, string> {
           { "action", "Ação" },
@@ -1860,6 +1867,7 @@ namespace Fadester.TourBox {
           { "openAtSignIn", "Abrir ao entrar" },
           { "signInSettings", "O Windows desativou isso. Ative o Fadester Companion em Configurações → Aplicativos → Inicialização." },
           { "signInFailed", "Não foi possível alterar esta configuração: {0}" },
+          { "signInManaged", "O Windows ou a sua organização controla esta configuração." },
         } },
         { "tr", new Dictionary<string, string> {
           { "action", "Eylem" },
@@ -2092,6 +2100,7 @@ namespace Fadester.TourBox {
           { "openAtSignIn", "Oturum açtığımda aç" },
           { "signInSettings", "Windows'ta bu kapalı. Fadester Companion'ı Ayarlar → Uygulamalar → Başlangıç bölümünden açın." },
           { "signInFailed", "Bu ayar değiştirilemedi: {0}" },
+          { "signInManaged", "Bu ayarı Windows veya kuruluşunuz yönetiyor." },
         } },
       };
   }

@@ -169,7 +169,7 @@ namespace Fadester.TourBox {
     readonly string foldsState = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FadesterTourBox", "folds.txt");
     /** A part of the Setup page that stays closed until asked for: its link, its one-line summary and the controls it shows. */
     internal sealed class Fold {
-      internal string Id; internal LinkLabel Link; internal Label Summary; internal bool Open, Section, Called; internal int From;
+      internal string Id; internal LinkLabel Link; internal Label Summary; internal bool Open, Section, Called, ByUser; internal int From;
       internal readonly List<Control> Parts = new List<Control>();
     }
     readonly List<Fold> folds = new List<Fold>(); Fold obsFold, mixFold, vjFold;
@@ -297,6 +297,19 @@ namespace Fadester.TourBox {
         if (w.obsFold.Open) throw new Exception("setup folds: a part the user closed stays closed");
         w.obsProblem=null; w.obsConnected=true; w.ShowStatus(); w.obsConnected=false; w.obsProblem="obs-no-answer"; w.ShowStatus();
         if (!w.obsFold.Open) throw new Exception("setup folds: a new problem opens it again");
+        // Only what the user opened is remembered: the part the light opened is not, and one the user closed again is not.
+        w.ToggleFold(w.vjFold);
+        if (String.Join(",",w.FoldsToRemember())!="vjster") throw new Exception("setup folds: a part a light opened is not saved");
+        w.ToggleFold(w.vjFold); w.ToggleFold(w.obsFold); w.ToggleFold(w.obsFold);
+        if (w.FoldsToRemember().Length!=1 || w.FoldsToRemember()[0]!="obs") throw new Exception("setup folds: the user's own opening is saved, a closing is not");
+      }
+      using (var w = new PanelWindow(new PanelText("en"), true)) {
+        w.ShowSignIn(SignInState.OnByPolicy);
+        if (!w.signIn.Checked || w.signIn.Enabled || !w.signIn.Text.EndsWith(enText.Get("signInManaged"))) throw new Exception("sign-in box: on by policy");
+        w.ShowSignIn(SignInState.OffByPolicy);
+        if (w.signIn.Checked || w.signIn.Enabled) throw new Exception("sign-in box: off by policy");
+        w.ShowSignIn(SignInState.Blocked);
+        if (w.signIn.Checked || !w.signIn.Enabled || w.signIn.Text!="Open when I sign in") throw new Exception("sign-in box: switched off in Windows");
       }
       if (MixSummary(deText,false,false)!=deText.Get("off") || VjsterSummary(enText,false,"x",1)!="Off" || !VjsterSummary(deText,true,"Ziel",48150).Contains("48150")) throw new Exception("fold summaries");
       // A refused sign-in keeps its translated sentence in the header; the retry fact follows in the same language.
@@ -555,7 +568,14 @@ namespace Fadester.TourBox {
         if(worker==null)Close(); else { quitting=false; ShowFromTray(); Note(text.Get("stillClosing")); }
       };
     }
-    void ShowSignIn(SignInState state) { if(IsDisposed) return; settingSignIn=true; signIn.Checked=state==SignInState.On; settingSignIn=false; }
+    /** The box as Windows has it. Set by policy (the Store build): ticked or not as it is, greyed, and it says who decides (QA-C05). */
+    void ShowSignIn(SignInState state) {
+      if(IsDisposed) return;
+      bool managed=SignInStart.Managed(state);
+      settingSignIn=true; signIn.Checked=SignInStart.Ticked(state); settingSignIn=false;
+      signIn.Enabled=!managed;
+      signIn.Text=managed ? text.Get("openAtSignIn")+". "+text.Get("signInManaged") : text.Get("openAtSignIn");
+    }
     /** The box shows what Windows has: its own switch (Settings → Apps → Startup, Task Manager) may have changed since. */
     async Task ReadSignIn() {
       bool packaged=SettingsFolder.Packaged; string exe=Application.ExecutablePath;
@@ -569,9 +589,9 @@ namespace Fadester.TourBox {
       try {
         var now=await Task.Run(()=>SignInStart.Set(packaged,exe,on));
         ShowSignIn(now);
-        if(on && now==SignInState.Blocked){ Note(text.Get("signInSettings")); OpenPath("ms-settings:startupapps"); }
+        if(SignInStart.Managed(now)) Note(text.Get("signInManaged"));
+        else if(on && now==SignInState.Blocked){ Note(text.Get("signInSettings")); OpenPath("ms-settings:startupapps"); }
       } catch(Exception e) { Entry.Log("sign-in: "+e); ShowSignIn(SignInState.Off); Note(text.Get("signInFailed",e.Message)); }
-      finally { if(!IsDisposed) signIn.Enabled=true; }
     }
     /** Whether closing the window only hides it: the user's own close, with the controls on and an icon to come back from. */
     internal static bool HidesOnClose(bool userClosing,bool controlsOn,bool quitting,bool hasTray) { return userClosing && controlsOn && !quitting && hasTray; }
@@ -643,7 +663,9 @@ namespace Fadester.TourBox {
     Fold BeginFold(FlowLayoutPanel f,string id,string title) {
       var fold=new Fold {Id=id,Section=title!=null};
       fold.Link=new LinkLabel {AutoSize=true,UseMnemonic=false,LinkColor=accent,ActiveLinkColor=navy,LinkBehavior=LinkBehavior.HoverUnderline,TabStop=true};
-      fold.Link.LinkClicked+=delegate { SetFold(fold,!fold.Open); RememberFolds(); };
+      // ByUser: open because the user opened it. Only those are remembered; a part a light opened is open for that
+      // problem, not for every start after it (QA-C04).
+      fold.Link.LinkClicked+=delegate { ToggleFold(fold); RememberFolds(); };
       if(title==null){ fold.Link.Margin=new Padding(3,0,3,6); f.Controls.Add(fold.Link); }
       else {
         var head=new FlowLayoutPanel {AutoSize=true,WrapContents=true,Margin=new Padding(0,10,0,2)};
@@ -661,6 +683,9 @@ namespace Fadester.TourBox {
       fold.Open=open; fold.Link.Text=text.Get(open ? "foldHide" : fold.Section ? "foldShow" : "foldDetails")+(open ? " ▴" : " ▾");
       body.SuspendLayout(); foreach(var c in fold.Parts) c.Visible=open; body.ResumeLayout();
     }
+    void ToggleFold(Fold fold) { SetFold(fold,!fold.Open); fold.ByUser=fold.Open; }
+    /** The parts to open again at the next start: the ones the user opened, never one a light opened. */
+    internal string[] FoldsToRemember() { return folds.Where(x=>x.ByUser).Select(x=>x.Id).ToArray(); }
     /** A light asks for something inside a closed part: open it, once per problem, so a later Hide by the user stays. */
     void CallFold(Fold fold,bool needed) {
       if(fold==null) return;
@@ -669,12 +694,12 @@ namespace Fadester.TourBox {
     }
     /** The parts that were open when the window last closed open again; a fresh install starts with all of them closed. */
     void ReadFolds() {
-      try { if(!File.Exists(foldsState)) return; var open=new HashSet<string>(File.ReadAllLines(foldsState).Select(x=>x.Trim())); foreach(var fold in folds) if(open.Contains(fold.Id)) SetFold(fold,true); }
+      try { if(!File.Exists(foldsState)) return; var open=new HashSet<string>(File.ReadAllLines(foldsState).Select(x=>x.Trim())); foreach(var fold in folds) if(open.Contains(fold.Id)){ SetFold(fold,true); fold.ByUser=true; } }
       catch(IOException) {} catch(UnauthorizedAccessException) {}
     }
     void RememberFolds() {
       if(inert) return;
-      try { Directory.CreateDirectory(Path.GetDirectoryName(foldsState)); File.WriteAllLines(foldsState,folds.Where(x=>x.Open).Select(x=>x.Id).ToArray(),new UTF8Encoding(false)); }
+      try { Directory.CreateDirectory(Path.GetDirectoryName(foldsState)); File.WriteAllLines(foldsState,FoldsToRemember(),new UTF8Encoding(false)); }
       catch(IOException e) { Entry.Log("folds: "+e.Message); } catch(UnauthorizedAccessException e) { Entry.Log("folds: "+e.Message); }
     }
     /** An optional section's state in a few words, beside its title, so a closed section still says what it does. */

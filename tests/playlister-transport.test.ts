@@ -8,7 +8,7 @@ import {
   formatMediaClock,
   nowNextWords
 } from "../src/actions/playlister-transport-key.js";
-import { PlaylisterNowNext, cleanName, readNowNext } from "../src/control/playlister-now-next.js";
+import { PlaylisterNowNext, cleanName, cutName, readNowNext } from "../src/control/playlister-now-next.js";
 import { setLanguage } from "../src/i18n/strings.js";
 import { FakeObsServer, FakeObsServerOptions } from "./helpers/fake-obs-server.js";
 import { deckTable } from "./helpers/languages.js";
@@ -331,6 +331,22 @@ describe("Playlister transport key", () => {
       expect(cleanName("  two\nlines\t ")).toBe("two lines");
       expect(cleanName(42)).toBe("");
       expect(cleanName("x".repeat(500))).toHaveLength(160);
+      // A long name is cut between whole characters, never inside one (QA-C02): half an emoji cannot be encoded
+      // into the key's picture, and the key would keep its old picture.
+      const emoji = "x".repeat(159) + "🎬 the rest";
+      expect(cleanName(emoji)).toBe("x".repeat(159));
+      expect(() => encodeURIComponent(cleanName(emoji))).not.toThrow();
+      const family = "y".repeat(155) + "👨‍👩‍👧‍👦 family film";
+      expect(cleanName(family)).toBe("y".repeat(155));
+      expect(cleanName("z".repeat(149) + "👨‍👩‍👧‍👦 fits")).toBe("z".repeat(149) + "👨‍👩‍👧‍👦");
+      const japanese = "東京の夜景".repeat(40);
+      expect(cleanName(japanese)).toBe(japanese.slice(0, 160));
+      expect(cleanName("e\u0301".repeat(100)).length).toBe(160);
+      expect(cleanName("a".repeat(159) + "e\u0301")).toBe("a".repeat(159));
+      // Half a pair that Playlister itself sent (a file name in a broken encoding) is dropped.
+      expect(cleanName("clip \ud83c one")).toBe("clip  one");
+      expect(() => encodeURIComponent(cleanName("\udfac" + "w".repeat(300) + "\ud83c"))).not.toThrow();
+      expect(cutName("abc", 10)).toBe("abc");
       expect(readNowNext({ found: true, playing: "D:\\clips\\a.mp4", next: "b.mp4" })).toEqual({ playing: "a.mp4", next: "b.mp4", nextDecided: true });
       expect(readNowNext({ found: false })).toBeNull();
       expect(readNowNext({ sources: [] })).toBeNull();

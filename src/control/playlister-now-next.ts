@@ -31,16 +31,34 @@ export interface NowNext {
 /** A value that looks like a file path or an address: only its last part may be shown. */
 const PATH_LIKE = /^(?:[A-Za-z]:[\\/]|[\\/]|[A-Za-z][A-Za-z0-9+.-]*:\/\/)/;
 
-/** A name as a key may show it: one line, trimmed, bounded, and never a path. */
+/** Half of a character pair on its own: it cannot be drawn, and the key's picture cannot be encoded with it. */
+const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g;
+
+/** The start of a name, at most `limit` UTF-16 units long, cut between whole characters as a reader sees them
+ *  (an emoji, a family of emoji joined together, a letter with its accents), never inside one (QA-C02). */
+export function cutName(name: string, limit: number): string {
+  if (name.length <= limit) return name;
+  const pieces = typeof Intl !== "undefined" && typeof Intl.Segmenter === "function"
+    ? Array.from(new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(name), (part) => part.segment)
+    : Array.from(name);
+  let out = "";
+  for (const piece of pieces) {
+    if (out.length + piece.length > limit) break;
+    out += piece;
+  }
+  return out;
+}
+
+/** A name as a key may show it: one line, trimmed, bounded, whole characters only, and never a path. */
 export function cleanName(value: unknown): string {
   if (typeof value !== "string") return "";
   // eslint-disable-next-line no-control-regex
-  let name = value.replace(/[\u0000-\u001f\u007f]+/g, " ").trim();
+  let name = value.replace(LONE_SURROGATE, "").replace(/[\u0000-\u001f\u007f]+/g, " ").trim();
   if (PATH_LIKE.test(name)) {
     const parts = name.split(/[\\/]+/).filter((part) => part !== "");
     name = parts.at(-1) ?? "";
   }
-  return name.length > NAME_LIMIT ? name.slice(0, NAME_LIMIT) : name;
+  return cutName(name, NAME_LIMIT);
 }
 
 /** Playlister's answer or event for one source; null when it is not a Playlister source or says nothing usable. */

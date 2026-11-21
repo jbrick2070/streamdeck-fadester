@@ -622,7 +622,9 @@
     const picker = $("direct-layout");
     const suggested = suggestedLayout(layouts, state.catalog ? state.catalog.studioMode === true : null);
     const ordered = suggested ? [suggested].concat(layouts.filter(function (layout) { return layout !== suggested; })) : layouts;
-    const selected = picker && picker.value || (!layoutPicked && suggested ? suggested.slug : "");
+    // Until the operator picks, the choice follows OBS (a page opened before OBS answered moves to the Studio desk
+    // when OBS says Studio Mode is on). The list is left alone while it has the focus (fillSelect).
+    const selected = layoutPicked ? (picker && picker.value || "") : (suggested ? suggested.slug : "");
     fillSelect(picker, ordered.map(function (layout) { return { value: layout.slug, text: layout.name }; }), selected, T("layoutChoose"));
     updateLayoutButton();
     updateStudioSetup();

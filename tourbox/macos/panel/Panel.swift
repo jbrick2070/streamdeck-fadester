@@ -151,6 +151,9 @@ private final class PillActionButton: NSControl {
     private(set) var open = false
     /// A light asked for this part and it was opened for that: a later Hide by the user then stays.
     var called = false
+    /// Open because the user opened it (or left it open last time): only these are remembered. A part a light opened
+    /// is open for that problem, not for every start after it (QA-C04).
+    var byUser = false
     var toggled: (() -> Void)?
 
     init(id: String, section: Bool) {
@@ -171,7 +174,7 @@ private final class PillActionButton: NSControl {
         content.isHidden = !value
     }
 
-    @objc private func clicked() { set(!open); toggled?() }
+    @objc private func clicked() { set(!open); byUser = open; toggled?() }
 }
 
 @MainActor private final class FeedbackHud {
@@ -678,9 +681,9 @@ private final class PillActionButton: NSControl {
         part.content.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         part.toggled = { [weak self] in
             guard let self, !self.previewMode else { return }
-            UserDefaults.standard.set(self.folds.filter { $0.open }.map { $0.id }, forKey: "fadester.openFolds")
+            UserDefaults.standard.set(Readiness.foldsToRemember(self.folds.map { ($0.id, $0.byUser) }), forKey: "fadester.openFolds")
         }
-        if !previewMode && openFolds.contains(id) { part.set(true) }
+        if !previewMode && openFolds.contains(id) { part.set(true); part.byUser = true }
         folds.append(part)
         return part
     }
@@ -1633,7 +1636,8 @@ private final class PillActionButton: NSControl {
         refreshIndicators()
     }
 
-    /// The Mac preset goes to Downloads without a question (U3-23), replacing an older copy there. macOS may ask once
+    /// The Mac preset goes to Downloads without a question (U3-23). A copy that is already there is used; a different
+    /// file of that name is never replaced (the preset then gets the next number, LocalFiles.savePreset). macOS may ask once
     /// whether Fadester Companion may use the Downloads folder; when the answer is no, or the folder cannot be written
     /// for another reason, the save dialog is the fallback.
     private func savePresetToDownloads() -> URL? {

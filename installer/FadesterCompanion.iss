@@ -5,6 +5,8 @@
 ; "Fadester for TourBox.exe" and "FadesterTourBoxBridge.exe": setup still looks for those when it checks that the app is
 ; closed, and removes them on an update, so one install never holds both names.
 ; Settings live in %LOCALAPPDATA%\FadesterTourBox and are never removed by uninstall.
+; "Open when I sign in" (the app's own tick box) is one value under a user's Run key; uninstall removes it for every
+; signed-in user whose value starts this install's program (RemoveSignInStart), so no dead start-up entry is left.
 
 #ifndef CompanionVersion
   #error Pass /DCompanionVersion, /DCompanionAppId and /DCompanionSource (build-suite.ps1 does).
@@ -102,6 +104,33 @@ begin
   Result := '';
   if CompanionRunning() then
     Result := CustomMessage('StopCompanionRunning');
+end;
+
+{ The app's "Open when I sign in" value, and Windows' own switch for it, for every user whose settings are loaded now
+  (the signed-in person, and the administrator when uninstall was elevated with another account). Only a value that
+  starts this install's program is removed: a copy unpacked from the ZIP elsewhere keeps its own. A user who is not
+  signed in keeps a value that starts nothing; the app corrects or removes nothing for them, and Windows ignores it. }
+procedure RemoveSignInStart();
+var
+  Names: TArrayOfString;
+  I: Integer;
+  Value, Mine: String;
+begin
+  Mine := Uppercase(ExpandConstant('{app}\Fadester Companion.exe'));
+  if not RegGetSubkeyNames(HKEY_USERS, '', Names) then Exit;
+  for I := 0 to GetArrayLength(Names) - 1 do
+    if (Pos('_Classes', Names[I]) = 0) and
+       RegQueryStringValue(HKEY_USERS, Names[I] + '\Software\Microsoft\Windows\CurrentVersion\Run', 'Fadester Companion', Value) and
+       (Pos(Mine, Uppercase(Value)) > 0) then
+    begin
+      RegDeleteValue(HKEY_USERS, Names[I] + '\Software\Microsoft\Windows\CurrentVersion\Run', 'Fadester Companion');
+      RegDeleteValue(HKEY_USERS, Names[I] + '\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run', 'Fadester Companion');
+    end;
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+  if CurUninstallStep = usPostUninstall then RemoveSignInStart();
 end;
 
 function InitializeUninstall(): Boolean;

@@ -39,10 +39,19 @@ describe("Fadester Companion: open when I sign in", () => {
     expect(panel).toMatch(/signIn=new CheckBox \{Text=text\.Get\("openAtSignIn"\)/);
     expect(panel).not.toMatch(/signIn=new CheckBox \{[^}]*Checked=true/);
     const extra = read("tourbox/panel/PanelExtraText.cs");
-    for (const key of ["openAtSignIn", "signInSettings", "signInFailed"]) {
+    for (const key of ["openAtSignIn", "signInSettings", "signInFailed", "signInManaged"]) {
       expect(read("tourbox/panel/PanelText.cs")).toContain(`{ "${key}", new[] {`);
       expect(extra.split(`{ "${key}", "`).length - 1, key).toBe(9);
     }
+  });
+
+  it("the installer's uninstall removes the entry, only where it starts this install's program (QA-C03)", () => {
+    const iss = read("installer/FadesterCompanion.iss");
+    expect(iss).toContain("if CurUninstallStep = usPostUninstall then RemoveSignInStart();");
+    expect(iss).toContain("Mine := Uppercase(ExpandConstant('{app}\\Fadester Companion.exe'));");
+    expect(iss).toContain("(Pos(Mine, Uppercase(Value)) > 0)");
+    expect(iss.match(/RegDeleteValue\(HKEY_USERS, [^;]*'Fadester Companion'\);/g)?.length).toBe(2);
+    expect(read("tourbox/README.md")).toContain("untick **Open when I sign in** first");
   });
 
   it("the Mac registers the app itself as a login item, from the check box only, on macOS 13 and later", () => {

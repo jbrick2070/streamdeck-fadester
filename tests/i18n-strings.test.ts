@@ -241,6 +241,66 @@ describe("German on the deck", () => {
     }
   });
 
+  // Every text of every language, in all three families of tables: the plugin's (keys, dials, settings pages), VJster's
+  // and the Chrome extension's. None may use its language's verb for "take" (QA-A02 of both rounds: German "nehmen"
+  // and French "prendre" sat on a settings page because only four languages were checked). Compounds that mean
+  // something else are not matched: German "übernehmen" (apply) and "angenommen" (accepted), Russian "выбрать".
+  const TAKE_VERBS: Record<string, RegExp> = {
+    en: /(?<!\p{L})(take|takes|taking|taken|took)(?!\p{L})/iu,
+    de: /(?<!über)nehm|(?<!über)nimm|(?<!an)genommen/iu,
+    fr: /(?<!\p{L})(prend|prenn|prenez|prise?s?(?!\p{L}))/iu,
+    es: /(?<!\p{L})(tom(ar|a|e|an|en|ó)|cog(er|e|a)|coj[ao])(?!\p{L})/iu,
+    nl: /(?<!\p{L})(nemen|neem|neemt|genomen|overnemen|overneemt)(?!\p{L})/iu,
+    it: /(?<!\p{L})(prend|pres[oa](?!\p{L})|pigli)/iu,
+    pt_BR: /(?<!\p{L})(tom(ar|e|a)|peg(ar|ue|a)|lev(ar|e|a))(?!\p{L})/iu,
+    ru: /(?<!\p{L})(взять|возьм|бер[её]т|брать|взят)/iu,
+    tr: /(?<!\p{L})al(ın|ınız|ır|mak|ıyor)?(?!\p{L})/iu,
+    ja: /テイク/u,
+    ko: /테이크/u,
+    zh_CN: /(?<!\p{L})take(?!\p{L})/iu,
+    zh_TW: /(?<!\p{L})take(?!\p{L})/iu
+  };
+  // Ordinary speech, not a product action: a second copy of the extension "takes over" the link, and reloaded tabs
+  // are "taken along"; English help text uses the verb the same way.
+  const TAKE_ALLOWED: Record<string, readonly string[]> = {
+    en: ["extension:statusStandby", "plugin:pi.accelerationHint"],
+    // "prise en charge" is the French for "supported".
+    fr: ["extension:statusStandby", "plugin:statusVersionMismatch"],
+    es: ["extension:statusStandby"],
+    nl: ["extension:statusStandby", "extension:statusAllSites"]
+  };
+
+  it.each(Object.keys(TAKE_VERBS))("%s: no text of the plugin, VJster or the extension uses a verb for \"take\"", (language) => {
+    const texts: Array<[string, string]> = [];
+    const walk = (family: string, value: unknown, path: string): void => {
+      if (typeof value === "string") texts.push([`${family}:${path}`, value]);
+      else if (value && typeof value === "object") for (const [key, inner] of Object.entries(value)) walk(family, inner, path ? `${path}.${key}` : key);
+    };
+    walk("plugin", readLanguageFile(language).Localization, "");
+    const vjster = JSON.parse(readFileSync(join(PLUGIN_DIR, "..", "com.jbrick2070.vjster.sdPlugin", `${language}.json`), "utf8")) as { Localization: Record<string, unknown> };
+    const { _comment: _drafter, ...vjsterTexts } = vjster.Localization;
+    walk("vjster", vjsterTexts, "");
+    const extension = JSON.parse(readFileSync(join(PLUGIN_DIR, "..", "vjster-extension", "_locales", language, "messages.json"), "utf8")) as Record<string, { message: string }>;
+    for (const [key, entry] of Object.entries(extension)) texts.push([`extension:${key}`, entry.message]);
+    expect(texts.length).toBeGreaterThan(900);
+    const allowed = TAKE_ALLOWED[language] ?? [];
+    const hits = texts.filter(([where, text]) => TAKE_VERBS[language].test(text) && !allowed.includes(where)).map(([where, text]) => `${where}: ${text}`);
+    expect(hits).toEqual([]);
+  });
+
+  it("the take-verb patterns catch what they are for, and leave the look-alikes", () => {
+    const caught: Array<[string, string]> = [["en", "Press to take Preview"], ["de", "Aktuellen nehmen"], ["de", "Nimm die Vorschau"], ["fr", "Prendre l’actuelle"],
+      ["es", "Tomar la vista previa"], ["nl", "Voorvertoning overnemen"], ["it", "Prendi l'anteprima"], ["pt_BR", "Levar ao Programa"],
+      ["ru", "Взять пароль из OBS"], ["tr", "Önizlemeyi al"], ["ja", "プレビューをテイク"], ["ko", "미리보기 테이크"], ["zh_CN", "Take 预览"]];
+    for (const [language, text] of caught) expect(TAKE_VERBS[language].test(text), `${language}: ${text}`).toBe(true);
+    const left: Array<[string, string]> = [["de", "In OBS übernehmen"], ["de", "bis ein Wiederherstellen angenommen wird"], ["fr", "y compris les actions"],
+      ["es", "automática"], ["it", "Playlister sta aprendo un file"], ["ru", "Выбрать предпр."], ["ru", "Нажать: убрать и вернуть"],
+      ["tr", "Geçiş yine de çalışır"], ["tr", "kapalı"], ["nl", "Voorvertoning naar Programma"]];
+    for (const [language, text] of left) {
+      expect(TAKE_VERBS[language].test(text), `${language}: ${text}`).toBe(false);
+    }
+  });
+
   it("words the Midi Fadester cells through the injected translator", () => {
     useLanguage("de");
     const offline = renderDialCellSvg({ status: { kind: "wrong_password" }, slotId: "crossfader", t: translate });

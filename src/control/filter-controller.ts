@@ -160,8 +160,11 @@ export class FilterController extends EventEmitter {
   private readonly records = new Map<string, FilterRecord>();
   private readonly toggleTurns = new WeakMap<FilterRecord, Promise<void>>();
   private readonly lastToggleAt = new WeakMap<FilterRecord, number>();
-  /** The one press that waits behind the on/off write now running; later presses join it instead of queueing. */
-  private readonly toggleWaiting = new WeakMap<FilterRecord, Promise<boolean>>();
+  /**
+   * The one turn that waits behind the on/off write now running. Later presses of the same connection join it instead
+   * of queueing, and are counted: the turn flips when the presses it stands for are odd, and writes nothing when even.
+   */
+  private readonly toggleWaiting = new WeakMap<FilterRecord, { promise: Promise<boolean>; generation: number; presses: number }>();
   /** The targets visible controls show, re-read on every reconnect and collection change. */
   private readonly watched = new Map<number, FilterTarget>();
   private watchId = 0;
@@ -411,18 +414,31 @@ export class FilterController extends EventEmitter {
     const generation = this.generation;
     const record = this.recordFor(target);
     // A filter going on and off changes the picture at once: at most three times a second per filter, however fast
-    // the key is pressed. One press may wait behind the one that is running, and flips from a fresh read; any further
-    // press meanwhile joins that waiting one, so a mashed key never leaves flips running after the hands are off.
+    // the key is pressed. One turn may wait behind the one that is running; any further press meanwhile joins that
+    // waiting turn, so a mashed key never leaves flips running after the hands are off. No press is lost: the waiting
+    // turn counts the presses it stands for and ends where their number says (three quick taps end flipped, four end
+    // where they began). A press made after a reconnect or a collection change never joins a turn from before it,
+    // which is about to fail: it gets a turn of its own.
     const waiting = this.toggleWaiting.get(record);
-    if (waiting) return waiting;
+    if (waiting && waiting.generation === generation) {
+      waiting.presses += 1;
+      return waiting.promise;
+    }
     const running = this.toggleTurns.get(record);
+    const entry = { promise: undefined as unknown as Promise<boolean>, generation, presses: 1 };
     const turn: Promise<boolean> = (running ?? Promise.resolve()).then(async () => {
-      if (this.toggleWaiting.get(record) === turn) this.toggleWaiting.delete(record);
-      const wait = (this.lastToggleAt.get(record) ?? -Infinity) + FILTER_TOGGLE_SPACING_MS - performance.now();
-      if (wait > 0) await new Promise<void>((resolve) => setTimeout(resolve, Math.min(wait, FILTER_TOGGLE_SPACING_MS)));
+      // From here on no press joins this turn: its count is final.
+      if (this.toggleWaiting.get(record) === entry) this.toggleWaiting.delete(record);
+      const flips = entry.presses % 2 === 1;
+      if (flips) {
+        const wait = (this.lastToggleAt.get(record) ?? -Infinity) + FILTER_TOGGLE_SPACING_MS - performance.now();
+        if (wait > 0) await new Promise<void>((resolve) => setTimeout(resolve, Math.min(wait, FILTER_TOGGLE_SPACING_MS)));
+      }
       if (generation !== this.generation) throw new DirectObsError(ownText("errorControlChanged"), 400);
       await this.readFilter(record, generation);
       this.requireReady(record, { ...target, setting: "" }, generation);
+      // An even number of presses asks for the state the filter has: nothing is written.
+      if (!flips) return record.enabled === true;
       if (this.panicLatched && isVisualSidechainKind(target.filterKind)) throw new DirectObsError(ownText("filterLatched"), 409);
       const next = record.enabled !== true;
       this.lastToggleAt.set(record, performance.now());
@@ -432,7 +448,8 @@ export class FilterController extends EventEmitter {
       this.emit("changed", record.eventKey);
       return next;
     });
-    if (running) this.toggleWaiting.set(record, turn);
+    entry.promise = turn;
+    if (running) this.toggleWaiting.set(record, entry);
     // The line goes on after a press that failed, and is empty again once its last press is done.
     const settled = turn.then(() => undefined, () => undefined);
     this.toggleTurns.set(record, settled);

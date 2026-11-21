@@ -505,7 +505,8 @@ describe("filter controller", () => {
     const { server, filters, sceneUuid, aura } = await setup();
     const before = aura.filterEnabled;
     const started = performance.now();
-    // Twenty presses in one burst: the first runs, the second waits, the other eighteen join the second.
+    // Twenty presses in one burst: the first runs, the other nineteen are one waiting turn. Nineteen is odd, so that
+    // turn flips once: twenty presses end where they began, after two writes.
     const presses = Array.from({ length: 20 }, () => filters.toggleEnabled(mix(sceneUuid)));
     const results = await Promise.all(presses);
     expect(results[0]).toBe(!before);
@@ -521,6 +522,47 @@ describe("filter controller", () => {
     // The key works again at once.
     await expect(filters.toggleEnabled(mix(sceneUuid))).resolves.toBe(!before);
     expect(writes()).toBe(3);
+  });
+
+  it("loses no press: three quick taps end flipped, four end where they began (QA-A03)", async () => {
+    const { server, filters, sceneUuid, aura } = await setup();
+    const writes = () => server.directCallLog.filter((call) => call.requestType === "SetSourceFilterEnabled").length;
+    const before = aura.filterEnabled;
+    // Three taps: the first flips; the second and third are one waiting turn that stands for two presses and so
+    // writes nothing. Odd presses, flipped once.
+    const three = await Promise.all([filters.toggleEnabled(mix(sceneUuid)), filters.toggleEnabled(mix(sceneUuid)), filters.toggleEnabled(mix(sceneUuid))]);
+    expect(three).toEqual([!before, !before, !before]);
+    expect(aura.filterEnabled).toBe(!before);
+    expect(writes()).toBe(1);
+    // Four taps from there: flip, then a waiting turn of three presses flips back. Even presses, back where it was.
+    const four = await Promise.all(Array.from({ length: 4 }, () => filters.toggleEnabled(mix(sceneUuid))));
+    expect(four).toEqual([before, !before, !before, !before]);
+    expect(aura.filterEnabled).toBe(!before);
+    expect(writes()).toBe(3);
+    // Five: odd again.
+    await Promise.all(Array.from({ length: 5 }, () => filters.toggleEnabled(mix(sceneUuid))));
+    expect(aura.filterEnabled).toBe(before);
+    expect(writes()).toBe(4);
+  });
+
+  it("a press after a reconnect does not join a waiting press from before it (QA-A03)", async () => {
+    const { server, filters, sceneUuid, aura } = await setup();
+    const before = aura.filterEnabled;
+    server.filterReadDelayMs = 150;
+    // One press is running (inside its read), one waits behind it.
+    const first = filters.toggleEnabled(mix(sceneUuid));
+    const second = filters.toggleEnabled(mix(sceneUuid));
+    const failed = Promise.allSettled([first, second]);
+    await sleep(40);
+    // The connection or the collection changes: what was queued is void, as before.
+    (filters as unknown as { invalidate(): void }).invalidate();
+    // A press made now is a press on the new connection: it gets a turn of its own and works.
+    const third = filters.toggleEnabled(mix(sceneUuid));
+    const [a, b] = await failed;
+    expect(a.status).toBe("rejected");
+    expect(b.status).toBe("rejected");
+    await expect(third).resolves.toBe(!before);
+    expect(aura.filterEnabled).toBe(!before);
   });
 
   it("toggles the filter from a fresh read of its enabled state", async () => {

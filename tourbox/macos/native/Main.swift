@@ -11,7 +11,7 @@ private final class PermissionWindow: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 640, height: 240), styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
         window.title = "Fadester Companion T-bar"; window.center()
-        let intro = NSTextField(wrappingLabelWithString: "This development component lets a future Fadester Mac host move OBS's real T-bar. This window does not inspect or control OBS. Permission is granted only through macOS, never automatically. The existing read-only and write probes are separate apps and remain unchanged.")
+        let intro = NSTextField(wrappingLabelWithString: "This helper is part of Fadester Companion: it moves the T-bar you see in OBS when you turn the TourBox Dial. This window does not look at or control OBS; it only shows whether macOS Accessibility is granted. Permission is granted only by you, in System Settings → Privacy & Security → Accessibility, never automatically.")
         state = NSTextField(wrappingLabelWithString: status())
         let request = NSButton(title: "Request Accessibility…", target: self, action: #selector(request))
         let refresh = NSButton(title: "Check Permission", target: self, action: #selector(check))

@@ -8,7 +8,7 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
     Func<CancellationToken, IAsyncEnumerable<double>>? rampSteps = null, Func<double, double, Task>? nativeMove = null,
     DeskActions.Memory? resume = null, bool allowAutoCloseout = true,
     VisualSidechainMonitor? vsMonitor = null, Action<string>? onStatus = null, Func<long>? clockMs = null,
-    Func<int, CancellationToken, Task>? delayAsync = null, Action<int, string, string>? onPick = null)
+    Func<int, CancellationToken, Task>? delayAsync = null, Action<int, string, string>? onPick = null, bool deferCutReturn = false)
 {
     public const double MinQuantizeConfidence = 0.35;
     public const int MaxQuantizeWaitMs = 4000;
@@ -29,6 +29,8 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
     public sealed record Memory(StudioFader.Memory Fader, AudioDesk.Duck? Duck);
     public Memory Leave() => new(fader.Leave(), audio.Leave());
     public Task<string> ResumeAsync() => fader.ResumeAsync();
+    /** As ResumeAsync for a host that writes only on a fresh command (StudioFader.ResumeWithoutWritingAsync). */
+    public Task<string> ResumeWithoutWritingAsync() => fader.ResumeWithoutWritingAsync();
     public bool IsTakeArmed { get { lock (armGate) return armedTake != null; } }
     public int ArmedWaitMs { get { lock (armGate) return armedTake?.WaitMs ?? 0; } }
     public static readonly HashSet<string> Supported = new(("music.down music.up music.fineDown music.fineUp content.down content.up music.duck music.restore undo " +
@@ -41,7 +43,7 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
     /** OBS scene-item blend modes in the order the Layer rotaries cycle them (obs-websocket SetSceneItemBlendMode). */
     public static readonly string[] BlendModes = ["OBS_BLEND_NORMAL", "OBS_BLEND_ADDITIVE", "OBS_BLEND_SUBTRACT", "OBS_BLEND_SCREEN", "OBS_BLEND_MULTIPLY", "OBS_BLEND_LIGHTEN", "OBS_BLEND_DARKEN"];
     public const string OpacityFilterName = "Fadester opacity";
-    private readonly StudioFader fader = new(rpc, cfg.FaderStep, nativeMove, resume?.Fader, allowAutoCloseout);
+    private readonly StudioFader fader = new(rpc, cfg.FaderStep, nativeMove, resume?.Fader, allowAutoCloseout) { DeferCutReturn = deferCutReturn };
     private readonly AudioDesk audio = new(rpc, rampSteps, resume?.Duck);
     private readonly MixDesk mix = new(cfg, rpc);
     public bool MixEnabled => cfg.MixEnabled;
@@ -69,8 +71,8 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
     {
         CancelArmedTake();
         bool moving = fader.Position > 0;
-        if (!await fader.MoveToAsync(target)) return "Controller T-bar: ignored a second take right after the last one";
-        return target >= 1 ? "Controller T-bar: take" : target <= 0 && moving ? "Controller T-bar: back to Program" : "";
+        if (!await fader.MoveToAsync(target)) return "Controller T-bar: ignored a second full pull right after the last one";
+        return target >= 1 ? "Controller T-bar: Preview to Program" : target <= 0 && moving ? "Controller T-bar: back to Program" : "";
     }
 
     /** The game controller's take: how to move the T-bar for it, or null for OBS's own take (StudioFader.SlidePlanAsync). */
@@ -304,7 +306,7 @@ internal sealed class DeskActions(BridgeConfig cfg, Func<string, JsonObject?, Ta
             throw new InvalidOperationException("Enable Studio Mode in OBS before using Preview or the T-bar.");
         var list = await Get("GetSceneList");
         if (Str(list, "currentProgramSceneUuid") == Str(list, "currentPreviewSceneUuid"))
-            return "take ignored: Preview is the same scene as Program. Select another Preview scene first.";
+            return "Preview to Program ignored: Preview is the same scene as Program. Select another Preview scene first.";
 
         var cts = new CancellationTokenSource();
         var entry = new ArmedTake(plan.DurationMs, plan.WaitMs, cts);

@@ -821,6 +821,36 @@ internal static class StudioFaderSelfTests
         }
         obs = new(); fader = new(obs.Call, 0.25); await fader.DispatchAsync("fader.forward");
         Check(await fader.SlidePlanAsync() is { From: 0.25, Ms: 300 }, "a take during a throw pushes on from where the T-bar is, at the Duration's speed");
+        // A host that writes only on a fresh command (the Mac host) carries a part-thrown T-bar over a reconnect without
+        // writing: OBS's T-bar stays where it is, and the next Dial turn, Fade or Cancel acts on it.
+        obs = new(); fader = new(obs.Call, 0.25, allowAutoCloseout: false); await fader.DispatchAsync("fader.forward");
+        int writesAtDrop = obs.Writes.Count;
+        var carriedOn = new StudioFader(obs.Call, 0.25, resume: fader.Leave(), allowAutoCloseout: false);
+        string kept = await carriedOn.ResumeWithoutWritingAsync();
+        Check(kept.Contains("still part-way") && obs.Writes.Count == writesAtDrop && carriedOn.Position == 0.25 && obs.Cursor is > 0 and < 1,
+            "a part-thrown T-bar is kept over a reconnect and nothing is written");
+        await carriedOn.DispatchAsync("fader.forward");
+        Check(carriedOn.Position == 0.5 && obs.Cursor is > 0 and < 1, "the next Dial turn carries the kept throw on");
+        await carriedOn.DispatchAsync("fader.cancel");
+        Check(carriedOn.Position == 0 && obs.Cursor == 0 && obs.Program == "a", "Cancel takes a kept throw back to Program");
+        obs = new(); fader = new(obs.Call, 0.25, allowAutoCloseout: false); await fader.DispatchAsync("fader.forward");
+        var memoryAtDrop = fader.Leave(); obs = new(); writesAtDrop = obs.Writes.Count; // OBS is back with its T-bar at rest
+        carriedOn = new StudioFader(obs.Call, 0.25, resume: memoryAtDrop, allowAutoCloseout: false);
+        Check(await carriedOn.ResumeWithoutWritingAsync() == "" && carriedOn.Position == 0 && obs.Writes.Count == writesAtDrop,
+            "a throw that is over when OBS is back (its T-bar at rest) is forgotten without a write");
+        await carriedOn.DispatchAsync("fader.forward");
+        Check(carriedOn.Position == 0.25, "and the Dial starts a new throw");
+        obs = new(); carriedOn = new StudioFader(obs.Call, allowAutoCloseout: false);
+        Check(await carriedOn.ResumeWithoutWritingAsync() == "" && obs.Writes.Count == 0, "with nothing carried, nothing is read into a throw or written");
+        // A slider the helper cannot read (OBS minimised or run as administrator) must not swallow the take: no slide is
+        // promised, so the controller sends OBS's own take. The read writes nothing and sets no latch.
+        obs = new(); int sliderReads = 0;
+        fader = new(obs.Call, nativeMove: (from, to) => { sliderReads++; return Task.FromException(new NativeRefusal("Cannot find the main OBS window.")); });
+        Check(await fader.SlidePlanAsync() == null && sliderReads == 1 && obs.Writes.Count == 0, "a T-bar slider that cannot be read is OBS's own take, and planning wrote nothing");
+        await fader.DispatchAsync("take");
+        Check(obs.Program == "b" && obs.Takes == 1, "the ordinary take still goes out when the slider cannot be read");
+        obs = new(); fader = new(obs.Call, nativeMove: (_, _) => Task.FromException(new System.ComponentModel.Win32Exception(5)));
+        Check(await fader.SlidePlanAsync() == null, "any failure to read the slider, not only a refusal, is OBS's own take");
         // The push itself is the trigger's path: steps, then the end takes.
         obs = new(); fader = new(obs.Call);
         foreach (var step in new[] { 0.01, 0.34, 0.67, 0.99, 1 }) await fader.MoveToAsync(step);
@@ -846,13 +876,35 @@ internal static class StudioFaderSelfTests
         obs = new(); fader = new(obs.Call);
         Check(await fader.RecheckAsync() == "" && obs.Writes.Count == 0, "with nothing owed a re-check sends nothing");
 
+        // A host that looks again after every cut (the Windows companion) leaves the put-back to that look: the cut
+        // returns as soon as Program is confirmed, so the controls' other input is not held up while OBS still drops
+        // selections. The look puts the Fade back without a word; a take before it puts it back first.
+        obs = new(); fader = new(obs.Call) { DeferCutReturn = true };
+        Check(await fader.DispatchAsync("take.cut") == "" && obs.Program == "b" && obs.Transition == "Coupe",
+            "with the put-back left to the re-check, the cut returns with Cut still selected");
+        Check(await fader.RecheckAsync() == "" && obs.Transition == "Fondu", "the re-check puts the Fade back and has nothing to report");
+        obs.Transition = "Coupe";
+        Check((await fader.RecheckAsync()).Contains("Fondu") && obs.Transition == "Fondu", "OBS back on Cut after that put-back is still caught, and said");
+        obs = new(); fader = new(obs.Call) { DeferCutReturn = true };
+        await fader.DispatchAsync("take.cut"); await Task.Delay(500);
+        await fader.DispatchAsync("take");
+        Check(obs.Transition == "Fondu" && obs.Program == "a" && obs.Takes == 2, "a take before the re-check puts the Fade back first, so it fades");
+        obs = new(); fader = new(obs.Call) { DeferCutReturn = true };
+        await fader.DispatchAsync("take.cut"); await fader.SettleAsync();
+        Check(obs.Transition == "Fondu", "a connection that ends before the re-check still puts the Fade back");
+        obs = new(); fader = new(obs.Call) { DeferCutReturn = true };
+        await fader.DispatchAsync("take.cut");
+        var afterDrop = new StudioFader(obs.Call, resume: fader.Leave()) { DeferCutReturn = true };
+        await afterDrop.ResumeAsync();
+        Check(obs.Transition == "Fondu", "a put-back still waiting when the connection drops is made on the next connection");
+
         // A take or cut that sent nothing says so; a take OBS refused does not count towards a double press.
         obs = new(); fader = new(obs.Call);
         Check(await fader.DispatchAsync("take") == "" && obs.Takes == 1, "a take that went out has nothing to add");
-        Check((await fader.DispatchAsync("take", Stopwatch.GetTimestamp())).StartsWith("take ignored: a double press") && obs.Takes == 1,
+        Check((await fader.DispatchAsync("take", Stopwatch.GetTimestamp())).StartsWith("Preview to Program ignored: a double press") && obs.Takes == 1,
             "a double press says it was ignored");
         await Task.Delay(500); obs.Preview = obs.Program;
-        Check((await fader.DispatchAsync("take.cut")).StartsWith("take.cut ignored: Preview is the same scene as Program") &&
+        Check((await fader.DispatchAsync("take.cut")).StartsWith("Cut ignored: Preview is the same scene as Program") &&
             obs.Takes == 1 && obs.Transition == "Fondu", "a cut with nothing to take says so and changes nothing");
         obs = new() { TriggerRefusal = new ObsError("TriggerStudioModeTransition", 207, "OBS is not ready") }; fader = new(obs.Call);
         await Blocked(() => fader.DispatchAsync("take"));

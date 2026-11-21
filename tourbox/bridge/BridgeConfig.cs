@@ -102,7 +102,7 @@ internal sealed class BridgeConfig
             throw new InvalidDataException("The controller's speed presets must each be one of " + string.Join(", ", PresetSpeeds.Select(r => r.ToString(System.Globalization.CultureInfo.InvariantCulture))) + ".");
         config.TakeQuantize = string.IsNullOrWhiteSpace(config.TakeQuantize) ? "now" : config.TakeQuantize.Trim().ToLowerInvariant();
         if (!ValidTakeBeats.Contains(config.TakeBeats) || config.TakeQuantize is not ("now" or "next_beat" or "next_bar") || config.TakeFallbackMs is < 50 or > 20000)
-            throw new InvalidDataException("Take beats must be 0, 1, 2, 4, 8, or 16; take quantize must be now, next_beat, or next_bar; take fallback must be 50–20000 ms.");
+            throw new InvalidDataException("takeBeats must be 0, 1, 2, 4, 8, or 16; takeQuantize must be now, next_beat, or next_bar; takeFallbackMs must be 50–20000.");
         if (config.GamepadEnabled) PadControls.Build(config.GamepadMap); // refuses an unknown control or action now, not at the first press
         config.MixStateDirectory = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(path))!, "mix-state");
         return config;

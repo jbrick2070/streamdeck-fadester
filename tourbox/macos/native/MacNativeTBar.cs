@@ -128,7 +128,11 @@ internal sealed class MacNativeTBar(int port, string applicationPath) : IDisposa
             if (Stopwatch.GetElapsedTime(queued).TotalMilliseconds > 400) throw new NativeRefusal("Queued native move expired.");
             try
             {
-                await OpenLocked();
+                // The helper is opened before the MOVE line is written: a failure here (lsof slow or failing, the helper
+                // not answering its first READ) wrote nothing, so it is a refusal and the fader needs no Cancel (F-06).
+                try { await OpenLocked(); }
+                catch (Exception e) when (e is not NativeRefusal and not OperationCanceledException and not ObjectDisposedException)
+                { throw new NativeRefusal("OBS's T-bar helper could not start (" + e.Message + "). Nothing was moved; turn the Dial again."); }
                 if (Stopwatch.GetElapsedTime(queued).TotalMilliseconds > 400) throw new NativeRefusal("Native move expired during helper startup.");
                 if (expected == desired)
                 {

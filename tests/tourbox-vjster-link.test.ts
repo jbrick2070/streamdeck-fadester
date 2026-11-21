@@ -96,6 +96,15 @@ describe("the live OBS fixture (tourbox/tests/live-obs.py)", () => {
   });
 });
 
+describe("where the end-to-end test of the Companion's VJster link runs", () => {
+  // The workflow that builds the bridge sets this: there the test below must run, not skip without a word (G-04).
+  it("is not skipped when a workflow asked for it", () => {
+    if (process.env.FADESTER_REQUIRE_BRIDGE_TEST === "1") {
+      expect(available, `needs Windows, ${exe} and dotnet.exe under DOTNET_ROOT (${dotnetRoot})`).toBe(true);
+    }
+  });
+});
+
 describe.skipIf(!available)("Fadester Companion hosts the VJster link for the real extension logic", () => {
   it("a dispatched TourBox action reaches the page and the page's answer reaches the panel line", async () => {
     const port = await freePort();

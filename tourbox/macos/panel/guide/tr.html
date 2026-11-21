@@ -1,0 +1,51 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-2.0-or-later -->
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hızlı başlangıç · Fadester Companion</title>
+  <link rel="stylesheet" href="quickstart.css">
+</head>
+<body>
+  <main>
+    <header>
+      <p>Hızlı başlangıç · Mac · Apple silicon ve Intel</p>
+      <h1>Fadester Companion</h1>
+      <p>OBS Studio'da sahneleri hazırlayın, elle geçiş yapın ve sesi TourBox'ınızla ayarlayın.</p>
+    </header>
+
+    <h2>İlk açılışta</h2>
+    <p><strong>Fadester Companion.app</strong> uygulamasını <strong>Uygulamalar</strong> klasörüne taşıyın. Uygulama Apple tarafından noter onayından geçirilmediği için macOS ilk seferde onu açmaz. Bir kez açmayı deneyin, sonra <strong>Sistem Ayarları → Gizlilik ve Güvenlik</strong> bölümünde <strong>Yine de Aç</strong>'a tıklayın. (macOS 14'e kadar, Control tuşunu basılı tutarak uygulamaya tıklayıp <strong>Aç</strong>'ı da seçebilirsiniz.)</p>
+
+    <h2>TourBox'ı OBS'e bağlayın</h2>
+    <ol>
+      <li>OBS'te <strong>Araçlar → WebSocket Sunucu Ayarları</strong>'nı açın ve sunucuyu kimlik doğrulamayla etkinleştirin. OBS Studio <strong>33</strong>'te elle geçiş için <strong>Stüdyo Modu</strong>'nu açın, <strong>Solma (Fade)</strong> geçişini seçin ve Önizleme ile Program arasındaki beyaz kaydırıcıyı görünür tutun. Fadester Companion, OBS'te kayıtlı bağlantı noktasını ve parolayı kendisi okur.</li>
+      <li>Fadester Companion'da <strong>1. TourBox hazır ayarını (.tb) kaydet…</strong> düğmesine tıklayın ve hazır ayarı kendi dilinizde, kolay bulacağınız bir yere, örneğin İndirilenler'e kaydedin.</li>
+      <li><strong>2. TourBox Console'u aç</strong>'a (veya <strong>Nereye tıklayacağımı göster</strong>'e) tıklayın. TourBox Console'da Preset List'in yanındaki içe aktarma simgesine tıklayın, <code>OBS Fadester for TourBox.tb</code> dosyasını açın, <strong>Auto Switch</strong>'i kapatın ve <strong>OBS Fadester for TourBox</strong>'ı seçin: böylece tek bir hazır ayar hangi program önde olursa olsun çalışır. Yalnızca Auto Switch'i açık bırakırsanız <strong>Not Linked</strong>'e tıklayın, <strong>OBS</strong>'i seçin ve <strong>Save</strong>'e tıklayın; Chrome öndeyken videoları kontrol etmek için hazır ayarı Google Chrome'a da bağlayın. Yalnızca bir dil sürümünü içe aktarın, Windows dosyasını değil.</li>
+      <li><strong>Fadester Companion'a Erişilebilirlik izni ver…</strong> düğmesine tıklayın ve <strong>Sistem Ayarları → Gizlilik ve Güvenlik → Erişilebilirlik</strong> bölümünde Fadester Companion'ı açın. Orada <strong>Fadester Companion T-bar</strong> ve <strong>Fadester Companion Shortcuts</strong> da varsa onları da açın. TourBox Console'un kendi izni vardır.</li>
+      <li><strong>Atamalar</strong> altında sahnelerinizi ve müzik girişini seçin. Erişilebilirlik izni verilince kontroller kendiliğinden başlar: <strong>Kontroller: açık</strong> yazısını bekleyin (ışık kapalı diyorsa yanındaki <strong>Başlat</strong>'a tıklayın). Pencereyi kapatmak kontrolleri durdurmaz: uygulama ekranın sağ üstündeki menü çubuğunda kalır.</li>
+    </ol>
+    <p>Mac hazır ayarı OBS eylemleri için <strong>Control + Option + Shift</strong>, video ve katmanlar için <strong>Control + Shift</strong> veya <strong>Option + Shift</strong> kullanır; Command'ı asla kullanmaz.</p>
+
+    <h2>İki farklı sahneyle alıştırma yapın</h2>
+    <ul>
+      <li>Önizlemeyi değiştirmek için <strong>Scroll</strong> tekerini çevirin. Program aynı kalır. Bir basış, <strong>Etkinlik</strong> sekmesinde iki sahnenin adını gösterir.</li>
+      <li>OBS kaydırıcısını hareket ettirip sahneleri karıştırmak için düz <strong>Dial</strong>'ı yavaşça çevirin. Süren bir geçişi iptal etmek için <strong>Side</strong>'ı basılı tutup <strong>Dial</strong>'a basın. Saat yönünde çevirmek T-bar'ı her zaman Önizlemeye doğru götürür, sonraki geçişte de. Tamamlanan bir geçişten sonra yeniden çevirmeden önce bir an bekleyin.</li>
+      <li>Chrome'da bir YouTube videosu oynatın (ücretsiz VJster uzantısıyla). Hızı değiştirmek için yükseltilmiş <strong>Knob</strong>'u çevirin; ince adımlar için basıp çevirin. Videoyu oynatmak veya duraklatmak için ona basın. Hızı 1x'e döndürmek için <strong>Side</strong>'a dokunun.</li>
+      <li>Bir YouTube videosunu doğrudan OBS'te kontrol etmek için onu Kurulum'a girin, <strong>OBS Tarayıcı Kaynağı URL'sini kopyala</strong>'ya tıklayın ve adresi OBS'teki bir tarayıcı kaynağına yapıştırın.</li>
+      <li>Fadester'da bir müzik girişi atayın. Ses düzeyini ayarlamak için <strong>Side</strong>'ı basılı tutup düz <strong>Dial</strong>'ı çevirin. <strong>Top</strong> basılıyken Knob, Scroll ve Dial VJ katmanlarını (karışım modu ve opaklık) kontrol eder. Seçmediğiniz katmanları Fadester ilk kullanımda canlı sahneden kendisi doldurur (Katman 1 = en üstteki görünür görüntü, Katman 2 = bir altındaki) ve Atamalar'a kaydeder.</li>
+      <li><strong>Short</strong>'a dokunmak yalnızca kayıt durumunu gösterir. <strong>Son ses değişikliğini geri al</strong> seçeneği <strong>Tour</strong> menüsündedir.</li>
+    </ul>
+
+    <h2>Tüm karışımı ayarlayın</h2>
+    <p>Kurulum'da tüm OBS mikser girişlerinin kontrolünü açın, <strong>Durdur</strong>'a ve ardından <strong>Başlat</strong>'a tıklayın. Grup seviyesini değiştirmek için <strong>Side</strong>'ı basılı tutup <strong>Knob</strong>'u çevirin. <strong>Tour</strong> menüsünden karışımı sessizliğe indirebilir ve önceki seviyeleri geri yükleyebilirsiniz. Sessize alınmış girişler sessiz kalır.</p>
+
+    <h2>Yardım</h2>
+    <p>Kontrollerin tanılama iletileri İngilizce görünür. Bir kontrol yanıt vermiyorsa TourBox Console'daki etkin hazır ayarı kontrol edin ve Fadester'da Etkinlik sekmesini açın.</p>
+    <p>OBS'in bir TourBox ile tam kontrolü Mac'te henüz bir genel provada denenmedi. Yayına çıkmadan önce deneme sahneleriyle alıştırma yapın.</p>
+    <p>macOS başka bir dil kullanıyorsa Fadester Companion'dan çıkın ve Terminal'de şunu çalıştırın: <code>open -a "Fadester Companion" --args --language tr</code>.</p>
+    <p><a href="../START-HERE.html" hreflang="en">Tam kılavuz ve kontrol başvurusu (İngilizce)</a> · <a href="../START-HERE.html#recovery" hreflang="en">Sorun giderme (İngilizce)</a></p>
+  </main>
+</body>
+</html>

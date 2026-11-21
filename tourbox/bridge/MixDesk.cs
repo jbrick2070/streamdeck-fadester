@@ -190,10 +190,19 @@ internal sealed class MixDesk(BridgeConfig cfg, Func<string, JsonObject?, Task<J
     {
         generation++; changing = false; recovering = state != null; error = e.Message;
         // Always reconcile against the durable intent on the next explicit command.
-        if (journalPath.Length != 0 && MixJournal.Exists(journalPath))
+        // Pause runs inside catch blocks: a journal that cannot be read just now (held by a scanner or a backup, or
+        // damaged) must not replace the first error or end the watch task. The state in memory is kept instead.
+        try
         {
-            state = MixJournal.Read(journalPath, cfg.Port, collection);
-            gain = state?.Gain ?? 1;
+            if (journalPath.Length != 0 && MixJournal.Exists(journalPath))
+            {
+                state = MixJournal.Read(journalPath, cfg.Port, collection);
+                gain = state?.Gain ?? 1;
+            }
+        }
+        catch (Exception read) when (read is IOException or UnauthorizedAccessException or InvalidDataException or System.Text.Json.JsonException)
+        {
+            error = e.Message + " The mixer journal could not be read (" + read.Message + "); the levels in memory are kept.";
         }
         target = gain;
     }

@@ -32,6 +32,15 @@ public sealed class StudioFader
     internal sealed record Owed(string Borrowed, string Original, long At, bool Lent = false, Owed? Resume = null);
     private Owed? owed;
     private const double OwedForMs = 30_000;
+    /// <summary>
+    /// For a host that looks again about 1.5 s after every cut (<see cref="RecheckAsync"/>): a cut that went out returns
+    /// at once and its put-back is left to that look, or to the next take, cut, T-bar move or Cancel if one comes first.
+    /// OBS drops every selection for about a second after a cut, so putting it back inside the cut held up everything
+    /// else the controls were asked to do for that long.
+    /// </summary>
+    internal bool DeferCutReturn { get; init; }
+    /// <summary>The debt in <see cref="owed"/> is a cut's put-back that has not been tried yet (DeferCutReturn).</summary>
+    private bool returnDeferred;
     // OBS drops every selection while a transition runs, and it counts one as running well after the picture is done
     // (measured on 33.0.1 with audio buffering at its 960 ms maximum: a Cut about 1.0 s, a 300 ms Fade about 1.3 s), when
     // its T-bar cursor already reads idle. Any selection can follow a transition (a cut pressed just after a take, its
@@ -235,6 +244,34 @@ public sealed class StudioFader
         finally { serial.Release(); }
     }
 
+    /// <summary>
+    /// For a host that writes to OBS only on a fresh command (the Mac host), run once on a new connection instead of
+    /// <see cref="ResumeAsync"/>. A sweep the last connection left part-thrown is kept when OBS's T-bar still sits
+    /// part-way and does not move: the operator's next Dial turn carries on from there, a Fade or Cut finishes it and
+    /// Cancel goes back to Program, each with the usual ownership checks. When OBS's T-bar is at rest, or a transition of
+    /// OBS's own is running, the sweep is over and is forgotten. Nothing is written either way.
+    /// </summary>
+    /// <returns>A line for the log, or an empty string when there was nothing to say.</returns>
+    public async Task<string> ResumeWithoutWritingAsync()
+    {
+        await serial.WaitAsync();
+        try
+        {
+            if (sweep == null) return "";
+            double cursor = await ReadCursorAsync();
+            bool still = cursor is not (0 or 1);
+            if (still)
+            {
+                await Task.Delay(150);
+                still = await ReadCursorAsync() == cursor;
+            }
+            if (still) return "T-bar: still part-way after the reconnect. Turn the Dial to carry on, or press Cancel to go back to Program.";
+            sweep = null; Position = 0; disconnectedSweep = null; disconnectedPosition = 0;
+            return "";
+        }
+        finally { serial.Release(); }
+    }
+
     public Task CancelAsync() => DispatchAsync("fader.cancel");
 
     /// <summary>
@@ -259,7 +296,9 @@ public sealed class StudioFader
         try
         {
             var debt = owed;
-            return await RepayAsync() && debt != null ? $"Transition: OBS went back to {debt.Borrowed} after the cut; {debt.Original} is selected again." : "";
+            // A put-back that was left to this look is the cut's ordinary end, not news.
+            bool planned = returnDeferred;
+            return await RepayAsync() && debt != null && !planned ? $"Transition: OBS went back to {debt.Borrowed} after the cut; {debt.Original} is selected again." : "";
         }
         finally { serial.Release(); }
     }
@@ -342,6 +381,14 @@ public sealed class StudioFader
             if (durationOverrideMs is int overrideMs and > 0) ms = Math.Clamp(overrideMs, 50, 20000);
             // A fixed-length transition has no Duration; a Fade always has one.
             if (!double.IsFinite(ms) || ms <= 0) return null;
+            // From rest, read the slider once before promising a slide: when the helper cannot reach it (OBS minimised
+            // or run as administrator, the T-bar not found) the first move would fail and no take would go out at all.
+            // The read writes nothing, so OBS's own take is still the right answer.
+            if (sweep == null && nativeMove != null)
+            {
+                try { await nativeMove(0, 0); }
+                catch (Exception e) when (e is not OperationCanceledException) { return null; }
+            }
             return (Position, (int)Math.Ceiling(ms));
         }
         finally { serial.Release(); }
@@ -393,11 +440,11 @@ public sealed class StudioFader
                 case "take": case "take.cut":
                     // A second take within 450 ms of the last is a double press, and so is one pressed before the last
                     // went out (a cut can wait about 1 s for OBS). Measured from the press when it is known.
-                    if (DoublePress(pressedAt)) return $"{action} ignored: a double press, within 0.45 s of the last take or cut.";
+                    if (DoublePress(pressedAt)) return $"{Named(action)} ignored: a double press, within 0.45 s of the last fade or cut.";
                     sweepEndAt = 0; // a take or cut by button leaves the Dial free at once
                     if (sweep != null) await FinishAndReturnAsync();
                     else if (!await TakeAsync(action == "take.cut", action == "take" ? durationOverrideMs : null))
-                        return $"{action} ignored: Preview is the same scene as Program. Cue another scene first.";
+                        return $"{Named(action)} ignored: Preview is the same scene as Program. Put another scene in Preview first.";
                     break;
                 default: throw new ArgumentException("Unknown Studio fader action: " + action, nameof(action));
             }
@@ -405,6 +452,9 @@ public sealed class StudioFader
         }
         finally { serial.Release(); }
     }
+
+    /// <summary>The two button actions as people read them in Activity; the ids themselves are protocol names.</summary>
+    internal static string Named(string action) => action == "take.cut" ? "Cut" : action == "take" ? "Preview to Program" : action;
 
     private static string Field(JsonObject value, string key) =>
         value[key]?.GetValue<string>() is { Length: > 0 } text ? text : throw new InvalidOperationException("OBS did not return " + key);
@@ -504,7 +554,7 @@ public sealed class StudioFader
         if (sweep == null)
         {
             if (!await VersionSupportedAsync())
-                throw new InvalidOperationException("The T-bar works only with OBS 33. With this OBS version, use Take and Cut.");
+                throw new InvalidOperationException("The T-bar works only with OBS 33. With this OBS version, use Preview to Program and Cut.");
             var scenes = await ReadScenesAsync();
             if (scenes.Program == scenes.Preview) throw new InvalidOperationException("Choose a different Preview scene first.");
             await RequireIdleAsync();
@@ -787,7 +837,7 @@ public sealed class StudioFader
     {
         await FinishSweepAsync();
         try { await RepayAsync(); }
-        catch (InvalidOperationException e) { throw new InvalidOperationException("Preview taken, but " + e.Message, e); }
+        catch (InvalidOperationException e) { throw new InvalidOperationException("Preview is on Program, but " + e.Message, e); }
         finally { takeAt = Stopwatch.GetTimestamp(); } // a restore can take a while: a held trigger must not take straight back
     }
 
@@ -805,7 +855,7 @@ public sealed class StudioFader
                 finally { await RestoreStudioAsync(); }
                 await ConfirmProgramAsync(original.Preview, parked: true);
                 var current = await ReadScenesAsync();
-                if (current.Program != original.Preview) throw new InvalidOperationException("Program changed after the take.");
+                if (current.Program != original.Preview) throw new InvalidOperationException("Program changed after the transition.");
                 if (current.Preview == original.Preview)
                     await rpc("SetCurrentPreviewScene", new() { ["sceneUuid"] = original.Program });
             }
@@ -905,7 +955,7 @@ public sealed class StudioFader
                     }
                 }
             }
-            if (await ReadScenesAsync() != scenes) throw new InvalidOperationException("Program or Preview changed before Take.");
+            if (await ReadScenesAsync() != scenes) throw new InvalidOperationException("Program or Preview changed before the transition.");
             await RequireIdleAsync();
             if (cut && await ReadTransitionNameAsync() != replacement)
                 throw new InvalidOperationException("The selected OBS transition changed before Cut.");
@@ -938,8 +988,14 @@ public sealed class StudioFader
                 try { await rpc("SetCurrentSceneTransitionDuration", new() { ["transitionDuration"] = priorMs }); }
                 catch { }
             }
+            // The cut went out: with a host that looks again shortly, its put-back waits for that look (DeferCutReturn).
+            if (requestedCut && triggered && confirmedCut && DeferCutReturn)
+            {
+                owed = new(replacement!, previous!, Stopwatch.GetTimestamp());
+                returnDeferred = true;
+            }
             // Say whether the cut was sent, so nobody presses it again to "retry".
-            if (requestedCut) await ReturnAsync(replacement!, previous!, confirmedCut, lent: false, triggered ? "Cut sent, but " : "No cut sent: ");
+            else if (requestedCut) await ReturnAsync(replacement!, previous!, confirmedCut, lent: false, triggered ? "Cut sent, but " : "No cut sent: ");
         }
     }
 
@@ -960,7 +1016,7 @@ public sealed class StudioFader
             {
                 if (await ReadTransitionNameAsync() != borrowed) { owed = null; throw; }
                 throw new InvalidOperationException(failurePrefix +
-                    $"OBS stayed on {borrowed}. {original} goes back with your next take, cut, T-bar move or Cancel within 30 s; after that, choose it in OBS.", e);
+                    $"OBS stayed on {borrowed}. {original} goes back with your next fade, cut, T-bar move or Cancel within 30 s; after that, choose it in OBS.", e);
             }
             finally
             {
@@ -982,6 +1038,7 @@ public sealed class StudioFader
     {
         // A running sweep still uses what it borrowed: never swap the transition under a mix.
         if (sweep != null || owed is not var (borrowed, original, at, lent, resume)) return false;
+        bool deferred = returnDeferred; returnDeferred = false;
         if (at == 0)
         {
             // The sweep is over, but OBS drops every selection while its T-bar still sits part-way: the watch starts
@@ -1007,7 +1064,8 @@ public sealed class StudioFader
                     throw new InvalidOperationException($"OBS is still on {borrowed}. Choose {original} in OBS, or press Cancel to try again.", e);
             }
         }
-        owed = lent ? resume : null;
+        // A put-back that waited for the cut to end is watched like one made inside the cut: OBS can still go back to Cut.
+        owed = lent ? resume : deferred && putBack ? new(borrowed, original, Stopwatch.GetTimestamp()) : null;
         return putBack;
     }
 }

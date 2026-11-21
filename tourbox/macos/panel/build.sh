@@ -47,7 +47,7 @@ if [[ -f "$icon_src" ]]; then
 fi
 cp "$repo/LICENSE" "$resources/LICENSE"
 cp README.md "$resources/README.md"
-"$python" make-guide.py "$resources/START-HERE.html"
+"$python" make-guide.py "$resources/START-HERE.html" "$companion_version"
 # The Mac quick start in every preset language (the Quick guide button opens the panel's language).
 mkdir -p "$resources/guide"
 for locale in $("$python" -c 'import json, sys; print(" ".join(sorted(json.load(open(sys.argv[1], encoding="utf-8")))))' "$repo/tourbox/presets/locales.json"); do
@@ -55,7 +55,7 @@ for locale in $("$python" -c 'import json, sys; print(" ".join(sorted(json.load(
   cp "guide/$locale.html" "$resources/guide/"
 done
 cp "$repo/tourbox/guide/quickstart.css" "$resources/guide/quickstart.css"
-# The panel's 10 languages come from the Windows panel's catalog; refuse a stale PanelStrings.swift.
+# The panel's 13 languages come from the Windows panel's catalog; refuse a stale PanelStrings.swift.
 if command -v node >/dev/null; then node make-strings.cjs --check; fi
 /usr/bin/swiftc -swift-version 5 -parse-as-library -O -warnings-as-errors \
   -target "$architecture-apple-macosx12.0" -framework AppKit -framework ApplicationServices -framework CryptoKit \

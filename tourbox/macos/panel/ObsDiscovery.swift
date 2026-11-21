@@ -96,6 +96,23 @@ final class ObsDiscovery {
         return result
     }
 
+    /// The one change this panel can ask of OBS, and only from the OBS light's Turn on button: Studio Mode on. It is not
+    /// part of the read-only vocabulary above on purpose; a scan never sends it. As the Windows bridge's --studio-on.
+    func turnOnStudioMode(password: String) async throws {
+        let deadline = Task { [self] in
+            do { try await Task.sleep(nanoseconds: 10_000_000_000); close() } catch { }
+        }
+        defer { deadline.cancel(); close() }
+        try await authenticate(password)
+        sequence += 1; let id = String(sequence)
+        try await send(["op":6,"d":["requestType":"SetStudioModeEnabled","requestId":id,"requestData":["studioModeEnabled":true]]])
+        let response = try await receive()
+        guard response["op"] as? Int == 7, let data = response["d"] as? [String: Any], data["requestId"] as? String == id,
+              let status = data["requestStatus"] as? [String: Any], status["result"] as? Bool == true else {
+            throw PanelFailure.message("OBS did not turn Studio Mode on.")
+        }
+    }
+
     /// The Visual Sidechain meter now, as the VS-METER line the host prints (DeskActions.Catalog's "visualSidechain" on Windows);
     /// "" when OBS could not say. A missing plugin is "not loaded".
     private func visualSidechain() async -> String {

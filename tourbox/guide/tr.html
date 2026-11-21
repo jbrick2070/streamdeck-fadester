@@ -1,0 +1,55 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-2.0-or-later -->
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hızlı başlangıç · Fadester Companion</title>
+  <link rel="stylesheet" href="quickstart.css">
+</head>
+<body>
+  <main>
+    <header>
+      <p>Hızlı başlangıç · Windows x64</p>
+      <h1>Fadester Companion</h1>
+      <p>OBS Studio'da sahneleri hazırlayın, elle geçiş yapın ve sesi bir oyun kumandası veya TourBox'ınızla ayarlayın.</p>
+    </header>
+
+    <h2>TourBox yok mu? Oyun kumandası kullanın</h2>
+    <ol>
+      <li>OBS'i açın. <strong>Araçlar → WebSocket Sunucu Ayarları</strong> altında sunucuyu açın ve kimlik doğrulamayı açık tutun. Sonra <strong>Fadester Companion</strong>'ı açın: kendiliğinden bağlanır, bağlanamazsa penceresi ne yapmanız gerektiğini söyler. T-bar için OBS 33 ile OBS ana penceresinin açık ve T-bar'ın görünür olması gerekir.</li>
+      <li><strong>Kurulum</strong> sekmesinde <strong>Xbox veya XInput oyun kumandası kullan</strong> seçeneğini işaretleyin ve <strong>Kolay mod</strong>'u işaretli bırakın. Kontroller ilk seferde kumanda olmadan kendiliğinden başlar: kumandayla başlamaları için pencerenin sol altındaki <strong>Durdur</strong>'a, sonra <strong>Başlat</strong>'a tıklayın. Hazır ayarı içe aktarmayı atlayabilirsiniz.</li>
+      <li>OBS'te <strong>Stüdyo Modu</strong>'nu açın (kapalıysa pencerenin üstündeki <strong>OBS</strong> ışığında <strong>Aç</strong> düğmesi vardır) ve <strong>Solma (Fade)</strong> geçişini seçin. OBS listesindeki sonraki sahneyi hazırlamak için yön tuşunun aşağısına, önceki için yukarısına basın.</li>
+      <li>Sağ tetiği çekin: OBS'in T-bar'ı onu izler, sonuna kadar çekildiğinde Önizleme Programa geçer. Veya <strong>A</strong>'yı basılı tutun: 0,15 sn sonra siz tuttukça T-bar ilerler ve sonunda Önizleme Programda olur. Yarı yolda bırakmak için bırakın; devam etmek için A'yı yeniden basılı tutun.</li>
+      <li><strong>B</strong> keser, <strong>View</strong> Programa geri döner, sol tetik basılı tuttuğunuz sürece müziği kısar, yön tuşunun solu ve sağı müziği ayarlar. Her düğmeyi <strong>Oyun kumandası</strong> sekmesinden değiştirebilirsiniz.</li>
+    </ol>
+    <p>Bu pencereyi kapatmak kontrolleri durdurmaz: Fadester Companion saatin yanındaki bildirim alanında kalır. Durdurmak için Durdur'a tıklayın veya o simgeye sağ tıklayıp Fadester Companion'dan Çık'ı seçin.</p>
+
+    <h2>TourBox'ı OBS'e bağlayın</h2>
+    <ol>
+      <li><strong>Fadester Companion</strong>'ı Başlat menüsünden açın. ZIP kullanıyorsanız tamamını çıkarın ve <strong>Fadester Companion.exe</strong> dosyasını açın.</li>
+      <li>OBS'i açın. TourBox Console'da Preset List'in yanındaki düğmeyle <code>presets/tr/OBS Fadester for TourBox.tb</code> dosyasını içe aktarın. <strong>Auto Switch</strong>'i kapatın ve <strong>OBS Fadester for TourBox</strong>'ı seçin: böylece tek bir hazır ayar hangi program önde olursa olsun çalışır (OBS, Chrome veya başka biri). Yalnızca Auto Switch'i açık bırakırsanız hazır ayarı OBS'e, Chrome öndeyken videoları kontrol etmek için Google Chrome'a da bağlayın. Yalnızca bir dil sürümünü içe aktarın. Fadester penceresindeki <strong>TourBox Console'a içe aktar</strong> düğmesini kullanın; <code>.tb</code> dosyasına çift tıklamayın.</li>
+      <li>OBS'te <strong>Araçlar → WebSocket Sunucu Ayarları</strong>'nı açın ve sunucuyu kimlik doğrulamayla etkinleştirin. OBS Studio <strong>33</strong>'te elle geçiş için <strong>Stüdyo Modu</strong>'nu açın, <strong>Solma (Fade)</strong> geçişini seçin ve Önizleme ile Program arasındaki beyaz kaydırıcıyı görünür tutun.</li>
+      <li>Fadester, bağlantı noktasını ve parolayı OBS'ten okur ve kontrolleri kendiliğinden başlatır. TourBox Console'da <strong>OBS Fadester for TourBox</strong>'ı seçin. Pencerenin üstündeki <strong>Kontroller</strong> ışığı yeşilse TourBox çalışır; kapalı diyorsa yanındaki <strong>Başlat</strong>'a tıklayın.</li>
+    </ol>
+    <p>Windows başka bir görüntüleme dili kullanıyorsa Fadester'ı kapatın ve çıkarılan klasörde PowerShell'de şunu çalıştırın: <code>&amp; '.\Fadester Companion.exe' --language tr</code>.</p>
+
+    <h2>İki farklı sahneyle alıştırma yapın</h2>
+    <ul>
+      <li>Önizlemeyi değiştirmek için <strong>Scroll</strong> tekerini çevirin. Program aynı kalır. Bir basış, <strong>Etkinlik</strong> sekmesinde iki sahnenin adını gösterir.</li>
+      <li>OBS kaydırıcısını hareket ettirip sahneleri karıştırmak için düz <strong>Dial</strong>'ı yavaşça çevirin. Süren bir geçişi iptal etmek için <strong>Side</strong>'ı basılı tutup <strong>Dial</strong>'a basın. Saat yönünde çevirmek T-bar'ı her zaman Önizlemeye doğru götürür, sonraki geçişte de. Tamamlanan bir geçişten sonra yeniden çevirmeden önce bir an bekleyin.</li>
+      <li>Chrome'da bir YouTube videosu oynatın (ücretsiz VJster uzantısıyla). Hızı değiştirmek için yükseltilmiş <strong>Knob</strong>'u çevirin; ince adımlar için basıp çevirin. Videoyu oynatmak veya duraklatmak için ona basın. Hızı 1x'e döndürmek için <strong>Side</strong>'a dokunun.</li>
+      <li>Bir YouTube videosunu doğrudan OBS'te kontrol etmek için onu Kurulum'a girin, <strong>OBS Tarayıcı Kaynağı URL'sini kopyala</strong>'ya tıklayın ve adresi OBS'teki bir tarayıcı kaynağına yapıştırın.</li>
+      <li>Fadester'da bir müzik girişi atayın. Ses düzeyini ayarlamak için <strong>Side</strong>'ı basılı tutup düz <strong>Dial</strong>'ı çevirin. <strong>Top</strong> basılıyken Knob, Scroll ve Dial VJ katmanlarını (karışım modu ve opaklık) kontrol eder. Seçmediğiniz katmanları Fadester ilk kullanımda canlı sahneden kendisi doldurur (Katman 1 = en üstteki görünür görüntü, Katman 2 = bir altındaki) ve Atamalar'a kaydeder.</li>
+      <li><strong>Short</strong>'a dokunmak yalnızca kayıt durumunu gösterir. <strong>Son ses değişikliğini geri al</strong> seçeneği <strong>Tour</strong> menüsündedir.</li>
+    </ul>
+
+    <h2>Tüm karışımı ayarlayın</h2>
+    <p>Kurulum'da tüm OBS mikser girişlerinin kontrolünü açın, <strong>Durdur</strong>'a ve ardından <strong>Başlat</strong>'a tıklayın. Grup seviyesini değiştirmek için <strong>Side</strong>'ı basılı tutup <strong>Knob</strong>'u çevirin. <strong>Tour</strong> menüsünden karışımı sessizliğe indirebilir ve önceki seviyeleri geri yükleyebilirsiniz. Sessize alınmış girişler sessiz kalır.</p>
+
+    <h2>Yardım</h2>
+    <p>Kontrollerin tanılama iletileri İngilizce görünür. Bir kontrol yanıt vermiyorsa TourBox Console'daki etkin hazır ayarı kontrol edin ve Fadester'da Etkinlik sekmesini açın.</p>
+    <p><a href="../START-HERE.html" hreflang="en">Tam kılavuz ve kontrol başvurusu (İngilizce)</a> · <a href="../START-HERE.html#recovery" hreflang="en">Sorun giderme (İngilizce)</a></p>
+  </main>
+</body>
+</html>

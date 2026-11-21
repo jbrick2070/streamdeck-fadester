@@ -4,16 +4,6 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 
 ## Unreleased
 
-### Fadester Companion and Suite Setup
-
-#### Changed
-- Suite Setup knows the Elgato Marketplace edition of Fadester for OBS. The Marketplace sells the same plugin under another ID, and Stream Deck holds the two as two plugins (both in the action list, their VJster parts contending for port 48150). Beside a Marketplace edition, setup no longer asks Stream Deck to import a second copy: it says so on its first and last page, with the version that is there (when it can be read) and the one it carries, and that the plugin is updated in Stream Deck's Marketplace (or removed there before setup is run again). Where both are in Stream Deck already, setup says so and that one of them should be removed. In 13 languages.
-
-### For developers
-- The Elgato Marketplace edition has a build of its own: `npm run pack:marketplace` writes the same plugin under the Marketplace product's ID, `com.jbrick2070.fadester-for-obs` (every other download is `io.github.jbrick2070.fadester-for-obs`), proves that no file names the other ID, that every action a profile's key, a language file or the built code names is one the manifest lists, and that every action of the Marketplace's 0.8 is still there, and packs it with Elgato's tool. Both workflows pack it and start it as Stream Deck does on Windows and macOS; it is a workflow artifact and is not attached to the GitHub release, and at a tag it is a job the draft release does not wait for. PUBLISHING.md, "The Elgato Marketplace edition".
-- README: what to do when *Fadester for OBS* is listed twice in Stream Deck (the Marketplace's copy and this page's are two IDs of one plugin).
-- Suite Setup's Marketplace check has a real run on the fresh Windows runner (`installer/tests/Test-Suite.ps1`, "marketplace-edition") and a broken-guard variant (`BREAK_MARKETPLACE_GUARD`) that the run must fail against.
-
 ## 1.5.0 - 2026-11-20
 This release ships Fadester for OBS 1.5.0 (0.12.16 before it), Fadester Companion 1.5.0 (0.1.17), the VJster Chrome extension 1.5.0 (0.1.6), the standalone VJster plugin 1.5.0 (0.2.1) and Fadester Suite Setup 1.5.0 (named by its build date until now). It is the suite-wide step to 1.5: every product of the Fadester suite carries version 1.5 from here on, Midi Fadester and Playlister in their own repositories too, so that one round of hand tests on Windows and on the Mac covers them all. The number is the suite's. No plugin id and no action id changed, so the keys and profiles you have from 0.12 keep working.
 
@@ -66,6 +56,9 @@ What changed since 0.12.16 and Fadester Companion 0.1.17 is below: first the plu
 - The fake OBS server sends events by subscription mask, closes a client that asks before Identify and answers unknown request types with 204.
 - The packed `.streamDeckPlugin` is unzipped and started on Windows and macOS before a draft release is made. `scripts/release-component-versions.mjs` is the release's check that Fadester Companion and the VJster extension were not changed under a number already released: it reads committed files, needs the whole history and the release tags, and refuses a shallow clone. PUBLISHING.md, "Version numbers at a release", lists in order every file that holds a version; this release followed it.
 - The unused out-of-process T-bar helper driver, its lookup, its tests and `scripts/native/build-native.ts` are gone. koffi's CommonJS files are staged into the package. A settings page's state is built only while a page is open; number formats and translated texts are cached per language.
+- The Elgato Marketplace edition has a build of its own: `npm run pack:marketplace` writes the same plugin under the Marketplace product's ID, `com.jbrick2070.fadester-for-obs` (every other download is `io.github.jbrick2070.fadester-for-obs`), proves that no file names the other ID, that every action a profile's key, a language file or the built code names is one the manifest lists, and that every action of the Marketplace's 0.8 is still there, and packs it with Elgato's tool. Both workflows pack it and start it as Stream Deck does on Windows and macOS; it is a workflow artifact and is not attached to the GitHub release, and at a tag it is a job the draft release does not wait for. PUBLISHING.md, "The Elgato Marketplace edition".
+- README: what to do when *Fadester for OBS* is listed twice in Stream Deck (the Marketplace's copy and this page's are two IDs of one plugin).
+- Suite Setup's Marketplace check has a real run on the fresh Windows runner (`installer/tests/Test-Suite.ps1`, "marketplace-edition") and a broken-guard variant (`BREAK_MARKETPLACE_GUARD`) that the run must fail against.
 
 ### Fadester Companion and Suite Setup
 Fadester Companion 1.5.0 (0.1.17 before it) on Windows, in the Microsoft Store package and on the Mac, and Fadester Suite Setup 1.5.0.
@@ -95,6 +88,8 @@ Fadester Companion 1.5.0 (0.1.17 before it) on Windows, in the Microsoft Store p
 - Suite Setup keeps a newer Fadester for OBS in Stream Deck or OpenDeck and a newer unpacked VJster extension, and uses the signed-in person's settings when an administrator's password was typed.
 - Fadester Suite Setup carries the release's version: the file is `Fadester-Suite-Setup-1.5.0-Windows-x64.exe` and Windows **Installed apps** shows 1.5.0 for **Fadester Suite shared files**. Until now the setup was named by the day it was built, so on a PC where an earlier setup ran that entry goes from a date such as 2026.11.15 to 1.5.0: the smaller number is the newer setup. Each part it installs still shows its own version.
 - The Studio Mode light looks again every 10 seconds for its first two minutes and once a minute after that, and not at all in Stream Deck-only mode, which needs no Studio Mode.
+- Fadester Suite Setup 1.5.0 carries Midi Fadester 1.5.0 and Playlister 1.5.0: both were published before this release was tagged and the setup's pins moved to them, so one run of setup brings the whole suite to 1.5.
+- Suite Setup knows the Elgato Marketplace edition of Fadester for OBS. The Marketplace sells the same plugin under another ID, and Stream Deck holds the two as two plugins (both in the action list, their VJster parts contending for port 48150). Beside a Marketplace edition, setup no longer asks Stream Deck to import a second copy: it says so on its first and last page, with the version that is there (when it can be read) and the one it carries, and that the plugin is updated in Stream Deck's Marketplace (or removed there before setup is run again). Where both are in Stream Deck already, setup says so and that one of them should be removed. In 13 languages.
 
 #### Fixed
 - The game controller's fade goes out as OBS's own transition when OBS's T-bar cannot be read (OBS minimised or run as administrator), and an OBS run as administrator says so.

@@ -2,7 +2,7 @@
 
 > **UPDATE (2026-11-19):** Visual Sidechain is part of Midi Fadester since 0.9.0, so the suite now has two OBS plugin components (Midi Fadester and Playlister). Where this note describes a separate Visual Sidechain component or pin, that part is history; see [`installer/README.md`](../installer/README.md).
 >
-> **UPDATE (2026-11-20):** from release 1.5.0 the setup carries the release's version in place of the date stamp of section 3, rule 1 (`Fadester-Suite-Setup-1.5.0-Windows-x64.exe`). Each part it installs still shows a version of its own, and the setup holds what its inputs are: Fadester for OBS, the VJster extension and Fadester Companion as built from the release's commit (1.5.0 each in that release, by the suite-wide step to 1.5, not by a shared version), and the Midi Fadester and Playlister its pins name, which are the last published ones (0.9.0 and 0.5.0 when that step was made).
+> **UPDATE (2026-11-20):** from release 1.5.0 the setup carries the release's version in place of the date stamp of section 3, rule 1 (`Fadester-Suite-Setup-1.5.0-Windows-x64.exe`). Each part it installs still shows a version of its own, and the setup holds what its inputs are: Fadester for OBS, the VJster extension and Fadester Companion as built from the release's commit (1.5.0 each in that release, by the suite-wide step to 1.5, not by a shared version), and the Midi Fadester and Playlister its pins name, which are the last published ones (1.5.0 each in release 1.5.0: both were published first and their pins moved before the tag).
 >
 > **STATUS (2026-11-15): Option B is built.**
 >

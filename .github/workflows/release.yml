@@ -233,15 +233,9 @@ jobs:
           {
             echo "Draft built from \`$GITHUB_SHA\`. Test on real hardware before publishing."
             echo
-            echo "### Which file do I need?"
-            echo
-            echo "| I have | Download |"
-            echo "|---|---|"
-            echo "| Windows, and I want everything set up for me | **Fadester Suite Setup** (\`Fadester-Suite-Setup-*.exe\`, added to this release by the Suite Setup workflow) |"
-            echo "| A Stream Deck | \`$(ls *.streamDeckPlugin | head -n 1)\`: double-click it, then in OBS tick Tools > WebSocket Server Settings > Enable WebSocket server |"
-            echo "| A TourBox, a game controller, or only a keyboard | Fadester Companion (below) |"
-            echo "| An APC40 or another MIDI controller | Midi Fadester, from its own releases page: https://github.com/jbrick2070/midi-fadester/releases |"
-            echo "| Chrome, to ride a video's speed from the deck | the VJster extension (\`$(ls *.zip | grep -i vjster | head -n 1)\`) |"
+            # The "Which file do I need?" table is written by the Suite Setup workflow when it attaches the setup to this
+            # release (suite-installer.yml, its attach job): one table, in one place.
+            echo "Which file is for which hardware: see the table the Fadester Suite Setup workflow adds to these notes when it attaches the setup. Until then: the \`.streamDeckPlugin\` file is for a Stream Deck, the Fadester Companion files below are for a TourBox or a game controller."
             echo
             echo "### Fadester Companion"
             echo

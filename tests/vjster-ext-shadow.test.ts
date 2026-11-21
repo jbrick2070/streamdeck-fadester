@@ -45,7 +45,9 @@ describe("content-main looks inside shadow roots on any site", () => {
   it("asks for a whole search on every change and at load (QA-A01)", () => {
     expect(source).toMatch(/new WholeScan\(\(\) => rescan\(\[document\]\)\)/);
     expect(source).toMatch(/new MutationObserver\(\(records\) => \{\s*whole\.request\(\);/);
-    expect(source).toMatch(/addEventListener\("load", \(\) => whole\.request\(\)/);
+    expect(source).toMatch(/addEventListener\("load", afterLoad, \{ once: true \}\)/);
+    // After load: one search at once and one more later, for a component defined late on a page that stays still.
+    expect(source).toMatch(/const afterLoad = \(\): void => \{\s*whole\.request\(\);\s*setTimeout\(\(\) => whole\.request\(\), LATE_UPGRADE_MS\);/);
   });
 });
 

@@ -31,17 +31,17 @@ of any Fadester for OBS control, find the **Language** section ("all Fadester co
 **Nederlands**. Expected:
 - the settings page changes to Dutch in place (TAAL, OBS-VERBINDING, "Verbonden: OBS ..."); a host or port
   typed and not yet saved stays, and open sections stay open;
-- every Fadester key and dial redraws in Dutch at once, on every page of the profile. Perform: Overnemen ·
-  Overgang, Vorige · Voorbeeld, Willekeurige scène, Afspelen / pauzeren, PANIEK with "Strobe en flits uit",
-  dials LIVE / VOLGENDE with "Druk: Volgende live", Effectmix, Reactiviteit, Hoofdaudio. Layers: Vorige bron,
+- every Fadester key and dial redraws in Dutch at once, on every page of the profile. Perform: Programma ·
+  Overgang, Vorige · Voorvert., Willekeurige scène, Afspelen / pauzeren, PANIEK with "Strobe en flits uit",
+  dials PROGRAMMA / VOORVERTONING with "Druk: Voorvertoning naar Programma", Effectmix, Reactiviteit, Hoofdaudio. Layers: Vorige bron,
   Tonen / verbergen, Blend Normaal, Dekking. Visuals: AAN / UIT, Herstellen with "Houd 0,8 s vast" (a decimal
-  comma). Scenes: Overnemen · Cut ("Cut" stays English), Scène 1 · Voorbeeld;
+  comma). Scenes: Programma · Cut ("Cut" stays English), Scène 1 · Voorvert.;
 - every word sits inside its key or strip on the hardware, nothing cut off or overlapping; only OBS's own names
-  (scenes, sources, filters), LIVE and Cut stay as they are;
+  (scenes, sources, filters) and Cut stay as they are;
 - Stream Deck's own action list, tooltips, dial hints and menus stay English, as the page's note says.
 
 1.3 **The Info Bar (only with a Stream Deck Neo at hand).** With the Scene Info Bar action on the Neo and
-Nederlands chosen. Expected: "OBS verbonden", "LIVE <program scene>" and, in Studio Mode, "VOORBEELD <preview
+Nederlands chosen. Expected: "OBS verbonden", "PROGRAMMA <program scene>" and, in Studio Mode, "VOORVERT. <preview
 scene>"; with OBS closed, "OBS niet verbonden". The words fit the bar.
 
 1.4 **Another page opens in Dutch.** Close the settings and open another Fadester control's settings.

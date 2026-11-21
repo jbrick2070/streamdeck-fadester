@@ -13,6 +13,8 @@ import { findYouTubePlayer, isYouTubeHost, youTubeControl, type YouTubePlayerEle
 
 /** The shortest gap between two searches of the page for shadow roots. */
 const SHADOW_RESCAN_MS = 300;
+/** A second whole-page search this long after load, for a player component whose script runs late (shadow-scan.ts). */
+const LATE_UPGRADE_MS = 6000;
 /** More added nodes than this between two searches: the page is searched whole, once, instead of node by node. */
 const MAX_PENDING_NODES = 200;
 
@@ -165,9 +167,15 @@ function start(): void {
     };
     grown.observe(document.documentElement, { childList: true, subtree: true });
     rescan([document]);
-    // Scripts that define components often run at or after load, with no change to the page's own nodes.
-    if (document.readyState === "complete") whole.request();
-    else window.addEventListener("load", () => whole.request(), { once: true });
+    // Scripts that define components often run at or after load, with no change to the page's own nodes: one search
+    // when the page has loaded and one more a little later, for a component defined after that on a page that then
+    // stays still.
+    const afterLoad = (): void => {
+      whole.request();
+      setTimeout(() => whole.request(), LATE_UPGRADE_MS);
+    };
+    if (document.readyState === "complete") afterLoad();
+    else window.addEventListener("load", afterLoad, { once: true });
   }
   adapter.changed();
 }

@@ -125,6 +125,12 @@ export function gitAt(commit, cwd = process.cwd()) {
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const commit = process.argv[2] || "HEAD";
   const git = gitAt(commit);
+  // Without any release tag every version looks new and everything passes. On a release runner that means the tags
+  // were not fetched (the checkout needs fetch-depth: 0), not that this is the first release.
+  if (process.env.GITHUB_ACTIONS === "true" && git.tags().length === 0) {
+    console.log("STOP  No release tag was found. The checkout must fetch the full history and the tags (fetch-depth: 0).");
+    process.exit(1);
+  }
   const results = checkComponents(git, (file) => git.show(commit, file));
   for (const result of results) console.log(`${result.ok ? "ok   " : "STOP "} ${result.message}`);
   process.exit(results.every((result) => result.ok) ? 0 : 1);

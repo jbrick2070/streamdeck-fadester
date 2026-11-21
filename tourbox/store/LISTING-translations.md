@@ -1,6 +1,6 @@
 # Fadester Companion: Store listings in twelve more languages
 
-The same listing as [LISTING.md](LISTING.md), for version 0.1.7. In Partner Center, in the submission, add each language under Store listings → Add/remove languages (Additional Store listing languages), and paste its blocks. Reuse the English screenshots and images from `listing/`. Copyright, license terms and "Developed by" stay as in [LISTING.md](LISTING.md). Product features are one per box; keywords are seven, entered one at a time.
+The same listing as [LISTING.md](LISTING.md), for version 1.5.0. In Partner Center, in the submission, add each language under Store listings → Add/remove languages (Additional Store listing languages), and paste its blocks. Reuse the English screenshots and images from `listing/`. Copyright, license terms and "Developed by" stay as in [LISTING.md](LISTING.md). Product features are one per box; keywords are seven, entered one at a time.
 
 ## Deutsch (de)
 
@@ -18,7 +18,7 @@ Benötigt OBS Studio mit eingeschaltetem WebSocket-Server (Werkzeuge → WebSock
 
 **Short description:** Ihr Gamecontroller als Bildmischer für OBS Studio: ein echter T-Bar am rechten Trigger, Szenen auf dem Steuerkreuz, Musik am linken Trigger.
 
-**What's new:** Version 0.1.7:
+**What's new:** Version 1.5.0:
 
 - Eine Mac-Version: Fadester Companion für Mac (Apple Silicon und Intel) liegt jetzt jeder Version auf GitHub bei.
 - Neue Anzeigen für TourBox und VJster in der Statusleiste, jede mit der einen Schaltfläche, die das Problem behebt, etwa „Console öffnen“ oder „So geht’s“.
@@ -56,7 +56,7 @@ Necesita OBS Studio con su servidor WebSocket activado (Herramientas → Ajustes
 
 **Short description:** Tu mando de juego, ahora un mezclador de vídeo para OBS Studio: un T-bar de verdad en el gatillo derecho, escenas en la cruceta y música en el gatillo izquierdo.
 
-**What's new:** Versión 0.1.7:
+**What's new:** Versión 1.5.0:
 
 - Una versión para Mac: Fadester Companion para Mac (Apple silicon e Intel) se incluye ahora en cada versión publicada en GitHub.
 - Nuevas luces de TourBox y VJster en la franja de estado, cada una con el botón que lo arregla, como Abrir Console o Muéstramelo.
@@ -94,7 +94,7 @@ Nécessite OBS Studio avec son serveur WebSocket activé (Outils → Paramètres
 
 **Short description:** Votre manette de jeu devient un mélangeur vidéo pour OBS Studio : un vrai T-bar sur la gâchette droite, les scènes sur le pavé directionnel, la musique sur la gâchette gauche.
 
-**What's new:** Version 0.1.7 :
+**What's new:** Version 1.5.0 :
 
 - Une version Mac : Fadester Companion pour Mac (Apple silicon et Intel) est désormais fourni avec chaque version publiée sur GitHub.
 - Nouveaux voyants TourBox et VJster dans la barre d’état, chacun avec le bouton qui règle le problème, comme Ouvrir Console ou Montrez-moi.
@@ -132,7 +132,7 @@ Richiede OBS Studio con il server WebSocket attivo (Strumenti → Impostazioni d
 
 **Short description:** Il tuo controller di gioco diventa un mixer video per OBS Studio: un vero T-bar sul grilletto destro, le scene sul D-pad, la musica sul grilletto sinistro.
 
-**What's new:** Versione 0.1.7:
+**What's new:** Versione 1.5.0:
 
 - Una versione per Mac: Fadester Companion per Mac (Apple silicon e Intel) ora è incluso in ogni versione pubblicata su GitHub.
 - Nuove spie di TourBox e VJster nella barra di stato, ognuna con il pulsante che risolve il problema, come Apri Console o Mostrami.
@@ -170,7 +170,7 @@ WebSocket サーバーを有効にした OBS Studio が必要です（ツール 
 
 **Short description:** ゲームコントローラーが OBS Studio のビデオスイッチャーに。右トリガーは本物の T バー、十字キーでシーン、左トリガーで音楽。
 
-**What's new:** バージョン 0.1.7：
+**What's new:** バージョン 1.5.0：
 
 - Mac 版：Fadester Companion for Mac（Apple シリコンと Intel）が GitHub の各リリースに含まれるようになりました。
 - ステータス欄に TourBox と VJster のランプを追加しました。それぞれに「Console を開く」や「やり方を見る」など、問題を解決するボタンが一つ付きます。
@@ -208,7 +208,7 @@ WebSocket 서버가 켜진 OBS Studio가 필요합니다(도구 → WebSocket �
 
 **Short description:** 게임 컨트롤러가 OBS Studio용 비디오 스위처로: 오른쪽 트리거는 진짜 T바, 십자키는 장면, 왼쪽 트리거는 음악.
 
-**What's new:** 버전 0.1.7:
+**What's new:** 버전 1.5.0:
 
 - Mac 버전: Fadester Companion for Mac(Apple 실리콘 및 Intel)이 이제 GitHub의 모든 릴리스에 포함됩니다.
 - 상태 표시줄에 TourBox와 VJster 표시등이 새로 생겼고, 각각 'Console 열기'나 '방법 보기'처럼 문제를 해결하는 버튼이 하나씩 있습니다.
@@ -246,7 +246,7 @@ Fadester Companion превращает контроллеры, которые �
 
 **Short description:** Ваш геймпад — теперь видеомикшер для OBS Studio: настоящий T-bar на правом триггере, сцены на крестовине, музыка на левом триггере.
 
-**What's new:** Версия 0.1.7:
+**What's new:** Версия 1.5.0:
 
 - Версия для Mac: Fadester Companion для Mac (Apple silicon и Intel) теперь входит в каждый выпуск на GitHub.
 - Новые индикаторы TourBox и VJster в строке состояния, у каждого — одна кнопка, которая устраняет проблему, например «Открыть Console» или «Показать».
@@ -284,7 +284,7 @@ OBS 在前台时它照样工作，只与你电脑上的 OBS 和 VJster 扩展通
 
 **Short description:** 你的游戏手柄，变身 OBS Studio 视频切换台：右扳机是真正的 T-bar，方向键切换场景，左扳机控制音乐。
 
-**What's new:** 版本 0.1.7：
+**What's new:** 版本 1.5.0：
 
 - Mac 版：Fadester Companion for Mac（Apple 芯片和 Intel）现已随 GitHub 上的每个版本一同发布。
 - 状态栏新增 TourBox 和 VJster 指示灯，每个都配有一个解决问题的按钮，例如“打开 Console”或“演示给我看”。
@@ -322,7 +322,7 @@ OBS 在前景時它照樣運作，只與你電腦上的 OBS 和 VJster 擴充功
 
 **Short description:** 你的遊戲控制器，變身 OBS Studio 視訊切換台：右扳機是真正的 T-bar，十字鍵切換場景，左扳機控制音樂。
 
-**What's new:** 版本 0.1.7：
+**What's new:** 版本 1.5.0：
 
 - Mac 版：Fadester Companion for Mac（Apple 晶片與 Intel）現在隨 GitHub 上的每個版本一同發布。
 - 狀態列新增 TourBox 與 VJster 指示燈，每個都附有一個解決問題的按鈕，例如「開啟 Console」或「示範給我看」。
@@ -360,7 +360,7 @@ Vereist OBS Studio met de WebSocket-server ingeschakeld (Hulpmiddelen → WebSoc
 
 **Short description:** Je gamecontroller als beeldmixer voor OBS Studio: een echte T-bar op de rechtertrigger, scènes op de D-pad, muziek op de linkertrigger.
 
-**What's new:** Versie 0.1.7:
+**What's new:** Versie 1.5.0:
 
 - Een Mac-versie: Fadester Companion voor Mac (Apple silicon en Intel) zit nu bij elke release op GitHub.
 - Nieuwe lampjes voor TourBox en VJster in de statusstrook, elk met de ene knop die het oplost, zoals Console openen of Laat zien.
@@ -398,7 +398,7 @@ Requer o OBS Studio com o servidor WebSocket ativado (Ferramentas → Configura�
 
 **Short description:** Seu controle de jogo agora é uma mesa de corte para o OBS Studio: um T-bar de verdade no gatilho direito, cenas no direcional, música no gatilho esquerdo.
 
-**What's new:** Versão 0.1.7:
+**What's new:** Versão 1.5.0:
 
 - Uma versão para Mac: o Fadester Companion para Mac (Apple silicon e Intel) agora acompanha cada versão no GitHub.
 - Novas luzes de TourBox e VJster na faixa de status, cada uma com o botão que resolve o problema, como Abrir o Console ou Mostrar.
@@ -436,7 +436,7 @@ WebSocket sunucusu açık OBS Studio gerekir (Araçlar → WebSocket Sunucu Ayar
 
 **Short description:** Oyun kumandanız artık OBS Studio için bir görüntü mikseri: sağ tetikte gerçek bir T-bar, D-pad'de sahneler, sol tetikte müzik.
 
-**What's new:** Sürüm 0.1.7:
+**What's new:** Sürüm 1.5.0:
 
 - Mac sürümü: Mac için Fadester Companion (Apple silicon ve Intel) artık GitHub'daki her sürümle birlikte geliyor.
 - Durum şeridinde yeni TourBox ve VJster ışıkları; her birinin yanında sorunu çözen tek düğme var, örneğin Console'u aç veya Göster.

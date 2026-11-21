@@ -20,7 +20,7 @@ Your game controller, now a vision mixer for OBS Studio: a real T-bar on the rig
 
 ## What's new in this version
 
-Version 0.1.7:
+Version 1.5.0:
 
 - A Mac version: Fadester Companion for Mac (Apple silicon and Intel) now comes with every release on GitHub.
 - New TourBox and VJster lights in the status strip, each with the one button that fixes it, such as Open Console or Show me.

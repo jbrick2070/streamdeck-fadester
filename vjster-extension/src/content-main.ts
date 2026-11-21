@@ -8,7 +8,7 @@
 import { Adapter, type MediaControl } from "./adapter-core.js";
 import { chooseVideo, videoControl } from "./generic-video.js";
 import { claimPage, listenToBridge, postReport, type PageWindow } from "./page-wiring.js";
-import { forEachShadowRoot } from "./shadow-scan.js";
+import { WholeScan, forEachShadowRoot } from "./shadow-scan.js";
 import { findYouTubePlayer, isYouTubeHost, youTubeControl, type YouTubePlayerElement } from "./youtube.js";
 
 /** The shortest gap between two searches of the page for shadow roots. */
@@ -115,11 +115,15 @@ function start(): void {
     // players added later. Busy pages change all the time, so a rescan runs at most once per SHADOW_RESCAN_MS.
     // Only what was added is searched (a busy page changes all the time, and a search of the whole document on each
     // change costs every tab, video or not): the nodes a change brought in wait at most SHADOW_RESCAN_MS, then each is
-    // searched once. Past MAX_PENDING_NODES the page is searched whole, once, instead.
+    // searched once. Past MAX_PENDING_NODES the page is searched whole, once, instead. A shadow root attached to an
+    // element that was already there (a player component upgraded after its markup) adds no node, so every change also
+    // asks for one whole search, which WholeScan runs seldom (shadow-scan.ts).
     let rescanTimer: ReturnType<typeof setTimeout> | null = null;
     let pending: Element[] = [];
     let searchAll = false;
+    const whole = new WholeScan(() => rescan([document]));
     const grown = new MutationObserver((records) => {
+      whole.request();
       for (const record of records) {
         for (const node of record.addedNodes) {
           if (!(node instanceof Element)) continue;
@@ -161,6 +165,9 @@ function start(): void {
     };
     grown.observe(document.documentElement, { childList: true, subtree: true });
     rescan([document]);
+    // Scripts that define components often run at or after load, with no change to the page's own nodes.
+    if (document.readyState === "complete") whole.request();
+    else window.addEventListener("load", () => whole.request(), { once: true });
   }
   adapter.changed();
 }

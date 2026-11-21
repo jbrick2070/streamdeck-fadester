@@ -177,6 +177,17 @@ describe("Property Inspector bridge", () => {
     expect(JSON.stringify(h.sent)).not.toContain('"wrong"');
   });
 
+  it("useObsPassword drops the typed password, saves that, and tells the page (QA-A05)", async () => {
+    h = await connect({ password: "pw-one" });
+    expect(lastState(h).connection.passwordSet).toBe(true);
+    await h.bridge.handleMessage({ event: "useObsPassword" });
+    expect(h.persisted[h.persisted.length - 1]).toMatchObject({ password: "" });
+    expect(h.client.getSettings().password).toBe("");
+    expect(lastState(h).connection.passwordSet).toBe(false);
+    // Host and port are kept as they were.
+    expect(h.persisted[h.persisted.length - 1].port).toBe(h.client.getSettings().port);
+  });
+
   it("testConnection re-reads state over the live socket instead of dropping it", async () => {
     h = await connect();
     const before = h.server.connectionCount;

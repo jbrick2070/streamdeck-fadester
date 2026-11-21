@@ -89,6 +89,7 @@ function harness() {
   add("conn-port", "input").value = "4455";
   add("conn-password", "input");
   add("conn-test-btn", "button");
+  add("conn-use-obs", "button", add("conn-use-obs-row"));
   const document = {
     activeElement: null as Element | null,
     createElement: (tag: string) => new Element(tag),
@@ -336,6 +337,30 @@ describe("Property Inspector DOM behavior", () => {
     expect(sent.at(-1)).toEqual({ event: "updateGlobalSettings", host: "127.0.0.1", port: 4456, password: "secret" });
     // Sent once: the next save does not repeat it.
     h.el("conn-host").value = "10.0.0.5"; h.el("conn-host").fire("change");
+    expect(sent.at(-1)).toEqual({ event: "updateGlobalSettings", host: "10.0.0.5", port: 4456 });
+  });
+
+  // QA-A05: an emptied password box is "no change", so the Midi Fadester pages need the explicit way back too.
+  it("offers Use OBS's own password while a typed password is stored for OBS on this computer, and asks the plugin", async () => {
+    const h = harness(); await flush();
+    const sent: RecordValue[] = [];
+    h.api.sendWith((message: RecordValue) => { sent.push(message.payload ?? message); });
+    h.api.bindConnectionPanel();
+    const row = h.el("conn-use-obs-row");
+    const state = (connection: RecordValue): RecordValue => ({ ...h.state, connection });
+    h.api.applyState(state({ host: "127.0.0.1", port: 4455, passwordSet: false, obsSaved: true }));
+    expect(row.style.display).toBe("none");
+    h.api.applyState(state({ host: "127.0.0.1", port: 4455, passwordSet: true, obsSaved: false }));
+    expect(row.style.display).toBe("");
+    // OBS on another computer has no saved password to go back to.
+    h.api.applyState(state({ host: "10.0.0.5", port: 4455, passwordSet: true, obsSaved: false }));
+    expect(row.style.display).toBe("none");
+    h.el("conn-password").value = "typed"; h.el("conn-password").fire("input");
+    h.el("conn-use-obs").fire("click");
+    expect(sent.at(-1)).toEqual({ event: "useObsPassword" });
+    expect(h.el("conn-password").value).toBe("");
+    // The half-typed password is not sent with the next host or port save.
+    h.el("conn-port").value = "4456"; h.el("conn-port").fire("change");
     expect(sent.at(-1)).toEqual({ event: "updateGlobalSettings", host: "10.0.0.5", port: 4456 });
   });
 

@@ -489,14 +489,38 @@ describe("filter controller", () => {
       return set(...args);
     };
     const before = aura.filterEnabled;
-    // A key mashed three times at once: each press still lands, in order, from a fresh read.
-    const results = await Promise.all([filters.toggleEnabled(mix(sceneUuid)), filters.toggleEnabled(mix(sceneUuid)), filters.toggleEnabled(mix(sceneUuid))]);
-    expect(results).toEqual([!before, before, !before]);
-    expect(aura.filterEnabled).toBe(!before);
-    expect(at.length).toBe(3);
+    // Two presses at once: both land, in order, each from a fresh read, a third of a second apart.
+    const results = await Promise.all([filters.toggleEnabled(mix(sceneUuid)), filters.toggleEnabled(mix(sceneUuid))]);
+    expect(results).toEqual([!before, before]);
+    expect(aura.filterEnabled).toBe(before);
+    expect(at.length).toBe(2);
     expect(at[1] - at[0]).toBeGreaterThanOrEqual(300);
+    // A later press, with nothing waiting, is spaced from the last write too.
+    await expect(filters.toggleEnabled(mix(sceneUuid))).resolves.toBe(!before);
     expect(at[2] - at[1]).toBeGreaterThanOrEqual(300);
     expect(server.directCallLog.filter((call) => call.requestType === "SetSourceFilterEnabled")).toHaveLength(3);
+  });
+
+  it("a mashed on/off key never queues more than one press behind the running one (QA-A04)", async () => {
+    const { server, filters, sceneUuid, aura } = await setup();
+    const before = aura.filterEnabled;
+    const started = performance.now();
+    // Twenty presses in one burst: the first runs, the second waits, the other eighteen join the second.
+    const presses = Array.from({ length: 20 }, () => filters.toggleEnabled(mix(sceneUuid)));
+    const results = await Promise.all(presses);
+    expect(results[0]).toBe(!before);
+    expect(results.slice(1)).toEqual(Array.from({ length: 19 }, () => before));
+    expect(aura.filterEnabled).toBe(before);
+    const writes = () => server.directCallLog.filter((call) => call.requestType === "SetSourceFilterEnabled").length;
+    expect(writes()).toBe(2);
+    // Nothing goes on flipping after the hands are off (before: twenty flips over more than six seconds).
+    expect(performance.now() - started).toBeLessThan(2000);
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    expect(writes()).toBe(2);
+    expect(aura.filterEnabled).toBe(before);
+    // The key works again at once.
+    await expect(filters.toggleEnabled(mix(sceneUuid))).resolves.toBe(!before);
+    expect(writes()).toBe(3);
   });
 
   it("toggles the filter from a fresh read of its enabled state", async () => {

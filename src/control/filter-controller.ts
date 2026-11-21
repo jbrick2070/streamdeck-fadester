@@ -160,6 +160,8 @@ export class FilterController extends EventEmitter {
   private readonly records = new Map<string, FilterRecord>();
   private readonly toggleTurns = new WeakMap<FilterRecord, Promise<void>>();
   private readonly lastToggleAt = new WeakMap<FilterRecord, number>();
+  /** The one press that waits behind the on/off write now running; later presses join it instead of queueing. */
+  private readonly toggleWaiting = new WeakMap<FilterRecord, Promise<boolean>>();
   /** The targets visible controls show, re-read on every reconnect and collection change. */
   private readonly watched = new Map<number, FilterTarget>();
   private watchId = 0;
@@ -409,8 +411,13 @@ export class FilterController extends EventEmitter {
     const generation = this.generation;
     const record = this.recordFor(target);
     // A filter going on and off changes the picture at once: at most three times a second per filter, however fast
-    // the key is pressed. The presses wait in line, each from a fresh read.
-    const turn = (this.toggleTurns.get(record) ?? Promise.resolve()).then(async () => {
+    // the key is pressed. One press may wait behind the one that is running, and flips from a fresh read; any further
+    // press meanwhile joins that waiting one, so a mashed key never leaves flips running after the hands are off.
+    const waiting = this.toggleWaiting.get(record);
+    if (waiting) return waiting;
+    const running = this.toggleTurns.get(record);
+    const turn: Promise<boolean> = (running ?? Promise.resolve()).then(async () => {
+      if (this.toggleWaiting.get(record) === turn) this.toggleWaiting.delete(record);
       const wait = (this.lastToggleAt.get(record) ?? -Infinity) + FILTER_TOGGLE_SPACING_MS - performance.now();
       if (wait > 0) await new Promise<void>((resolve) => setTimeout(resolve, Math.min(wait, FILTER_TOGGLE_SPACING_MS)));
       if (generation !== this.generation) throw new DirectObsError(ownText("errorControlChanged"), 400);
@@ -425,8 +432,13 @@ export class FilterController extends EventEmitter {
       this.emit("changed", record.eventKey);
       return next;
     });
-    // The line goes on after a press that failed.
-    this.toggleTurns.set(record, turn.then(() => undefined, () => undefined));
+    if (running) this.toggleWaiting.set(record, turn);
+    // The line goes on after a press that failed, and is empty again once its last press is done.
+    const settled = turn.then(() => undefined, () => undefined);
+    this.toggleTurns.set(record, settled);
+    void settled.then(() => {
+      if (this.toggleTurns.get(record) === settled) this.toggleTurns.delete(record);
+    });
     return turn;
   }
 

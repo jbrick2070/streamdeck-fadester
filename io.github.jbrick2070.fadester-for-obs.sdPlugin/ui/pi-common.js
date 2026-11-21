@@ -227,6 +227,7 @@
       '<div class="row"><label for="conn-port" data-i18n="port">Port</label><input type="number" id="conn-port" value="4455" min="1" max="65535" /></div>',
       '<div class="row"><label for="conn-password" data-i18n="password">OBS password</label><input type="password" id="conn-password" autocomplete="off" placeholder="Filled in from OBS on this computer" data-i18n-placeholder="passwordPlaceholderFromObs" /></div>',
       '<div class="row"><label></label><button id="conn-test-btn" class="btn" type="button" data-i18n="saveAndTest">Save for all controls &amp; test</button><span class="hint" id="conn-hint"></span></div>',
+      '<div class="row" id="conn-use-obs-row" style="display:none"><label></label><button id="conn-use-obs" class="btn secondary" type="button" data-i18n="connUseObsPassword">Use OBS\'s own password</button></div>',
       '</details>'
     ].join("");
     window.FadesterI18n.apply(mount);
@@ -369,6 +370,14 @@
           ? "passwordPlaceholderSavedAll"
           : "passwordPlaceholderFromObs");
       }
+    }
+    // The way back from a typed password to the one OBS saved on this computer (an emptied box is "no change"):
+    // offered while a typed password is stored and OBS is on this computer, as on the Fadester for OBS pages.
+    const useObsRow = $("conn-use-obs-row");
+    if (useObsRow) {
+      const host = state.connection ? String(state.connection.host || "").trim().toLowerCase() : "";
+      const local = host === "127.0.0.1" || host === "localhost" || host === "::1" || host === "[::1]";
+      useObsRow.style.display = state.connection && state.connection.passwordSet && local ? "" : "none";
     }
     const connEditor = $("conn-editor");
     if (connEditor && !connEditor.dataset.initialized && state.connection) {
@@ -1064,6 +1073,14 @@
     }
     if (hostEl) hostEl.addEventListener("change", pushGlobalConn);
     if (portEl) portEl.addEventListener("change", pushGlobalConn);
+    const useObs = $("conn-use-obs");
+    if (useObs) {
+      useObs.addEventListener("click", function () {
+        if (passEl) passEl.value = "";
+        passwordDirty = false;
+        sendToPlugin({ event: "useObsPassword" });
+      });
+    }
     if (btn) {
       btn.addEventListener("click", function () {
         pushGlobalConn();

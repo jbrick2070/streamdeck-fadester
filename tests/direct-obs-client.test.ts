@@ -592,6 +592,39 @@ describe("Direct OBS client", () => {
     expect(c.getCatalog().scenes.length).toBe(3);
   });
 
+  it("a first scene-list read replaced by a newer refresh is not 'connected' with no scenes (QA-A06)", async () => {
+    const fake = new FakeObsServer({ missingPlugin: true });
+    server = fake;
+    type Handler = (ws: WebSocket, id: string, type: string, data: Record<string, unknown>) => Promise<void>;
+    const native = fake as unknown as { handleObsRequest: Handler };
+    const original = native.handleObsRequest.bind(fake);
+    let stalled = 0;
+    let newer: Promise<unknown> | null = null;
+    let c: DirectObsClient | null = null;
+    native.handleObsRequest = async (ws, id, type, data) => {
+      if (type === "GetSceneList" && stalled < 2) {
+        stalled += 1;
+        // While the first read waits, something asks for a refresh, as an OBS event does; its scene list stalls too,
+        // and it is still out when the first read gives up.
+        if (stalled === 1) setTimeout(() => { newer = c!.refreshCatalog().catch(() => undefined); }, 60);
+        return;
+      }
+      await original(ws, id, type, data);
+    };
+    const port = await fake.start();
+    c = new DirectObsClient({ host: "127.0.0.1", port, password: "" }, { requestTimeoutMs: 150, baseReconnectMs: 30 });
+    client = c;
+    const scenesWhenConnected: number[] = [];
+    c.on("statusChanged", (status: { kind: string }) => { if (status.kind === "connected") scenesWhenConnected.push(c!.getCatalog().scenes.length); });
+    c.start();
+    await vi.waitFor(() => expect(c!.getStatus().kind).toBe("connected"), { timeout: 4000 });
+    await newer;
+    expect(stalled).toBe(2);
+    expect(scenesWhenConnected.length).toBeGreaterThan(0);
+    for (const count of scenesWhenConnected) expect(count).toBe(3);
+    expect(c.getCatalog().scenes.length).toBe(3);
+  });
+
   it("restores the destination scene override when a scene switch fails", async () => {
     const direct = await connect();
     server!.sceneTransitionOverrides.set("Scene 3", {

@@ -462,6 +462,8 @@ export class DirectObsClient extends ObsVendorClient {
   private transitionKind = "";
   /** Why the last catalog read got no scene list, or null. */
   private sceneListFailure: unknown = null;
+  /** The connection (connectionGeneration) on which a scene list was last read and applied; -1 before the first. */
+  private sceneListReadOn = -1;
   /**
    * Scenes whose own transition override this client changed for one switch and could not put back, because the
    * connection dropped in between: the temporary value it set and the value that was there. Put back after the next
@@ -621,6 +623,7 @@ export class DirectObsClient extends ObsVendorClient {
     if (scenes.status === "fulfilled") {
       next.scenes = sceneNamesInDisplayOrder(scenes.value.scenes);
       next.sceneDetails = readSceneDetails(scenes.value.scenes);
+      this.sceneListReadOn = this.connectionGeneration;
     } else {
       this.sceneListFailure = scenes.reason;
     }
@@ -2587,12 +2590,20 @@ export class DirectObsClient extends ObsVendorClient {
         MEDIA_REQUIRED_REQUESTS.every((request) => available.includes(request)) ? "ok" : "unsupported";
       await this.refreshCatalog();
       if (connection !== this.connectionGeneration) return;
+      // A read that a newer refresh replaced (an OBS event arrived meanwhile) applied nothing and recorded no failure,
+      // and the newer one may still be out or may have failed quietly: read again until this connection has a scene
+      // list or a read of it has failed. A collection that is changing reads nothing; its end starts a refresh.
+      for (let again = 0; again < 3 && this.sceneListReadOn !== connection && this.sceneListFailure === null && !this.collectionChanging; again += 1) {
+        await this.refreshCatalog();
+        if (connection !== this.connectionGeneration) return;
+      }
       // "Connected" only on the socket this sync started on, still identified. A socket that closed during the first
       // read changes no status (it was "unreachable" already), so nothing else would stop this.
       if (socket === null || this.currentSocket() !== socket || !this.isIdentified()) return;
       // And only with a scene list: without it every scene control would be empty behind a green status. NotReady is
       // tried again on this socket by the base client; any other failure drops the socket and reconnects.
       if (this.sceneListFailure !== null) throw this.sceneListFailure;
+      if (this.sceneListReadOn !== connection && !this.collectionChanging) throw new Error("OBS scene list was not read");
       this.reconnectAttempt = 0;
       this.haltedReason = "none";
       this.setStatus({

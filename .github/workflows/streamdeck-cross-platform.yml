@@ -64,7 +64,8 @@ jobs:
         run: npm test
       # The Elgato Marketplace edition is the same build under the Marketplace product's ID
       # (com.jbrick2070.fadester-for-obs). It is packed from the tree built above, unpacked and started as Stream
-      # Deck starts it, so a package that cannot run under that ID never reaches an upload.
+      # Deck starts it. On purpose in this job: a change that breaks the edition is seen on its pull request, not at
+      # the upload. (At a tag it is a job of its own, so that it cannot hold back the GitHub release.)
       - name: Pack the Elgato Marketplace edition and start it as Stream Deck does
         run: |
           set -euo pipefail

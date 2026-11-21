@@ -29,7 +29,7 @@ That is all. With OBS on the same computer the plugin finds OBS's port and signs
 
 Stream Deck installs no profile by itself when it installs the plugin: a layout arrives the first time you open it, so your profile list stays yours. You can also import any layout's `.streamDeckProfile` file by double-clicking it ([profile library](profiles/README.md)).
 
-**Upgrading from 0.9.x or earlier?** Fadester 0.10 uses a new plugin ID. Install it alongside the old version, let it sign in to OBS (it reads OBS's saved password by itself), and open a fresh layout or replace old Fadester actions in a copy of your custom profile. Keep the old plugin until you’ve checked the new controls. The standalone VJster ID has not changed.
+**Upgrading from 0.9.x or earlier with a download from this page?** Since 0.10 the download here uses a new plugin ID (a copy from the Elgato Marketplace keeps the old one and simply updates there; do not add this download to it). Install it alongside the old version, let it sign in to OBS (it reads OBS's saved password by itself), and open a fresh layout or replace old Fadester actions in a copy of your custom profile. Keep the old plugin until you’ve checked the new controls. The standalone VJster ID has not changed.
 
 ## Ready-made layouts
 

@@ -5,7 +5,7 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 ## Unreleased
 
 ### For developers
-- The Elgato Marketplace edition has a build of its own: `npm run pack:marketplace` writes the same plugin under the Marketplace product's ID, `com.jbrick2070.fadester-for-obs` (every other download is `io.github.jbrick2070.fadester-for-obs`), proves that no file names the other ID and that every action of the Marketplace's 0.8 is still there, and packs it with Elgato's tool. Both workflows pack it and start it as Stream Deck does on Windows and macOS; it is a workflow artifact and is not attached to the GitHub release. PUBLISHING.md, "The Elgato Marketplace edition".
+- The Elgato Marketplace edition has a build of its own: `npm run pack:marketplace` writes the same plugin under the Marketplace product's ID, `com.jbrick2070.fadester-for-obs` (every other download is `io.github.jbrick2070.fadester-for-obs`), proves that no file names the other ID, that every action a profile's key, a language file or the built code names is one the manifest lists, and that every action of the Marketplace's 0.8 is still there, and packs it with Elgato's tool. Both workflows pack it and start it as Stream Deck does on Windows and macOS; it is a workflow artifact and is not attached to the GitHub release, and at a tag it is a job the draft release does not wait for. PUBLISHING.md, "The Elgato Marketplace edition".
 - README: what to do when *Fadester for OBS* is listed twice in Stream Deck (the Marketplace's copy and this page's are two IDs of one plugin).
 
 ## 1.5.0 - 2026-11-20

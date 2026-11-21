@@ -4,7 +4,7 @@
 // plugins. Setup must not add a second copy beside a Marketplace edition, and must say so when both are there
 // already. The wizard cannot run here (it installs into Program Files), so these checks read the script; the real
 // run is installer/tests/Test-Suite.ps1 ("marketplace-edition"), with a broken-guard variant in the workflow.
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { MARKETPLACE_ID, SUITE_ID } from "../scripts/suite/package-marketplace.js";
@@ -40,6 +40,22 @@ describe("Suite Setup and the Elgato Marketplace edition", () => {
       expect(english, key).not.toContain("(%1)");
       // the version is the plugin's: never right after "Stream Deck", where it reads as Stream Deck's own
       expect(english, key).not.toContain("Stream Deck%1");
+    }
+  });
+
+  it("puts the version after the plugin or its copy in every language, never after Stream Deck", () => {
+    const languages = readdirSync(join(__dirname, "..", "installer", "lang")).filter((name) => name.endsWith(".isl"));
+    expect(languages).toHaveLength(12);
+    for (const name of languages) {
+      const text = read("installer", "lang", name);
+      for (const key of ["NoteMarketplaceSd", "NoteBothSd"]) {
+        const line = new RegExp(`^${key}=(.*)$`, "m").exec(text)?.[1] ?? "";
+        expect(line, `${name} ${key}`).toMatch(/\S%1/);
+        expect(line, `${name} ${key}`).not.toContain("(%1)");
+        expect(line, `${name} ${key}`).not.toContain("Stream Deck%1");
+      }
+      // which version this setup carries
+      expect(text, name).toMatch(/^NoteMarketplaceSd=.*%2/m);
     }
   });
 

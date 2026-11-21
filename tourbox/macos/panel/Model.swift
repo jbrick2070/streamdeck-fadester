@@ -254,6 +254,14 @@ enum Readiness {
         return LightState(.amber, L("liTbClosed"), button: L("btnOpenConsole"), action: "openConsole")
     }
 
+    /// An optional section's state in a few words, beside its title, so a closed section still says what it does (U3-05).
+    static func mixSummary(on: Bool, only: Bool) -> String { L(!on ? "off" : only ? "sumMixOnly" : "on") }
+    static func vjsterSummary(on: Bool, target: String, port: Int) -> String { on ? L("sumVjster", target, String(port)) : L("off") }
+    /// Whether the OBS port and password are worth showing: OBS runs here and refuses the sign-in or does not answer.
+    static func needsObsFields(connected: Bool, running: Bool, problem: String?) -> Bool { !connected && running && problem != nil }
+    /// A light needs a closed part of the Setup page: it opens once per problem, so a part the user closed again stays closed.
+    static func opensFold(needed: Bool, called: Bool, open: Bool) -> Bool { needed && !called && !open }
+
     /// usedBefore: a video has been connected on this Mac at some time. VJster is on by default, so until then a missing
     /// video is not a fault (grey, with the same button), and a busy port is amber, not red. As on Windows.
     static func vjster(enabled: Bool, controlsOn: Bool, connectedPeers: Int, portBusy: Bool = false, mixOnly: Bool = false, usedBefore: Bool = true, onDeck: Bool = false) -> LightState {
@@ -539,6 +547,12 @@ enum ModelTests {
         try check(redact("ERROR test-secret\nagain", secret: "test-secret") == "ERROR [redacted] again", "secret redaction")
         try check(redact("pw 1 tok 0123456789abcdef0123456789abcdef", secrets: ["1", "0123456789abcdef0123456789abcdef"]) == "pw [redacted] tok [redacted]", "longest-first multi-secret redaction")
         try check(Readiness.obs(connected: true, running: true, problem: nil, studioOff: false, controlsOn: false) == LightState(.green, "OBS: connected"), "OBS connected light")
+        try check(Readiness.mixSummary(on: false, only: false) == "Off" && Readiness.mixSummary(on: true, only: false) == "On" && Readiness.mixSummary(on: true, only: true) == "On, Stream Deck only" &&
+                  Readiness.vjsterSummary(on: true, target: "Chrome & OBS page", port: 48150) == "On, Chrome & OBS page, port 48150" && Readiness.vjsterSummary(on: false, target: "x", port: 1) == "Off", "optional sections say their state in one line")
+        try check(Readiness.needsObsFields(connected: false, running: true, problem: "obs-bad-password") && !Readiness.needsObsFields(connected: true, running: true, problem: nil) &&
+                  !Readiness.needsObsFields(connected: false, running: false, problem: "obs-no-answer") && !Readiness.needsObsFields(connected: false, running: true, problem: nil), "the OBS port and password show when OBS refuses or does not answer")
+        try check(Readiness.opensFold(needed: true, called: false, open: false) && !Readiness.opensFold(needed: true, called: true, open: false) &&
+                  !Readiness.opensFold(needed: true, called: false, open: true) && !Readiness.opensFold(needed: false, called: false, open: false), "a light opens a closed part once per problem")
         try check(Readiness.obs(connected: true, running: true, problem: nil, studioOff: true, controlsOn: false) == LightState(.amber, "OBS: turn on Studio Mode", button: "Turn on", action: "studioOn") &&
                   Readiness.obs(connected: true, running: true, problem: nil, studioOff: true, controlsOn: true).action == "studioOn", "OBS Studio Mode light")
         try check(HostController.tbarReason("T-BAR: Accessibility denied; grant the responsible app The other controls work; the T-bar is looked at again when the Dial is turned.") == L("macTbarAx") &&

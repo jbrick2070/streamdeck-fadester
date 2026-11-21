@@ -78,6 +78,8 @@ namespace Fadester.TourBox {
     static void Paint(Control c, Color navy, Color accent, Color stop) {
       var label = c as Label; var button = c as Button; var grid = c as DataGridView; var combo = c as ComboBox; var page = c as TabPage;
       if (label != null) {
+        var link = c as LinkLabel;
+        if (link != null) { link.LinkColor = AccentText; link.ActiveLinkColor = Text; }
         if (Is(label.ForeColor, navy)) label.ForeColor = Ink;
         else if (Is(label.ForeColor, accent)) label.ForeColor = AccentText;
         else if (Is(label.ForeColor, Color.FromArgb(90, 98, 112))) label.ForeColor = Dim;

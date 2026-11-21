@@ -21,8 +21,8 @@ Benötigt OBS Studio mit eingeschaltetem WebSocket-Server (Werkzeuge → WebSock
 **What's new:** Version 1.5.0:
 
 - Die Steuerung startet beim ersten Öffnen der App von selbst. Eine Schaltfläche startet und stoppt sie: „Starten“ oder „Stoppen“.
-- Eine kürzere Seite „Einrichtung“: Jeder nummerierte Schritt ist eine kurze Zeile mit seiner Schaltfläche. OBS-Port und OBS-Passwort sowie die optionalen Teile liegen hinter „Details“ und „Anzeigen“ und öffnen sich von selbst, wenn eine Anzeige Sie braucht.
-- Statusanzeigen, die zeigen, wie es wirklich steht, jede mit der Schaltfläche, die das Problem behebt: „OBS öffnen“, „Einschalten“ für den Studiomodus und eine TourBox-Anzeige, die nur grün ist, wenn TourBox Console das Preset enthält. Der OBS-Port wird wie das Passwort aus OBS gelesen.
+- Eine kürzere Seite „Einrichtung“: Jeder nummerierte Schritt ist eine kurze Zeile mit seiner Schaltfläche. OBS-Port und OBS-Passwort sowie die optionalen Teile liegen hinter „Details“ und „Anzeigen“ und öffnen sich von selbst, wenn eine Lampe Sie braucht.
+- Statuslampen, die zeigen, wie es wirklich steht, jede mit der Schaltfläche, die das Problem behebt: „OBS öffnen“, „Einschalten“ für den Studiomodus und eine TourBox-Lampe, die nur grün ist, wenn TourBox Console das Preset enthält. Der OBS-Port wird wie das Passwort aus OBS gelesen.
 - „Beim Anmelden öffnen“: ein Kontrollkästchen unter den Schaltflächen, aus, bis Sie es ankreuzen.
 - Beim Schließen des Fensters bleibt die Steuerung eingeschaltet: Ein Symbol im Infobereich öffnet das Fenster wieder, startet oder stoppt die Steuerung und beendet die App.
 - Ein dunkles Fenster, wenn Windows im dunklen Modus ist.
@@ -146,7 +146,7 @@ Richiede OBS Studio con il server WebSocket attivo (Strumenti → Impostazioni d
 - I controlli partono da soli la prima volta che apri l’app. Un solo pulsante li avvia e li ferma: Avvia o Ferma.
 - Una pagina Configurazione più corta: ogni passaggio numerato è una riga breve con il suo pulsante. La porta e la password di OBS e le parti facoltative stanno dietro Dettagli e Mostra, e si aprono da sole quando una spia ha bisogno di te.
 - Spie di stato che dicono come stanno davvero le cose, ognuna con il pulsante che risolve il problema: Apri OBS, Attiva per la Modalità studio e una spia TourBox che è verde solo quando TourBox Console contiene il preset. La porta di OBS viene compilata da OBS, come la password.
-- Apri all’accesso: una casella sotto i pulsanti, disattivata finché non la selezioni.
+- Apri all'accesso: una casella sotto i pulsanti, disattivata finché non la selezioni.
 - Chiudendo la finestra i controlli restano attivi: un’icona nell’area di notifica riapre la finestra, avvia o ferma i controlli ed esce dall’app.
 - Una finestra scura quando Windows è in modalità scura.
 - 13 lingue: olandese, portoghese brasiliano e turco sono nuove. La versione è nel titolo di ogni finestra.

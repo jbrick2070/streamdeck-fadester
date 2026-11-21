@@ -78,7 +78,7 @@ Fadester Companion 1.5.0 (0.1.17 before it) on Windows, in the Microsoft Store p
 
 #### Changed
 - The TourBox label for sending Preview to Program reads **Preview to Program**, and the texts say fade, cut and "put in Preview". Import the preset again to see the new label; its shortcuts are the same.
-- Messages say "the controls" and "Fadester Companion", and on or off; never bridge, panel, host or armed.
+- Messages say "the controls" and "Fadester Companion", and on or off, in place of the internal names of its parts.
 - The TourBox light is green only when TourBox Console holds the preset. The VJster light stays grey until a video was connected once, and reads **VJster: on your Stream Deck** in grey when the suite's own Stream Deck or OpenDeck plugin holds its port.
 - The assignment lists on Windows say **Unassigned** and **Unavailable: name**, as on the Mac. The Mac Setup page has the same order as Windows.
 - The T-bar needs a Fade among OBS's scene transitions; it does not have to be the selected one, and the texts no longer ask you to choose it.

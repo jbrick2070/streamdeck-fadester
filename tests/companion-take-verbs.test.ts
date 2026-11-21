@@ -9,7 +9,8 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { TAKE_VERBS } from "./helpers/take-verbs.js";
 
-const read = (path: string): string => readFileSync(path, "utf8").replace(/^﻿/, "");
+// Line ends as LF whatever the checkout wrote: a Windows checkout gives the generated PanelStrings.swift CRLF.
+const read = (path: string): string => readFileSync(path, "utf8").replace(/^﻿/, "").replace(/\r\n/g, "\n");
 /** A catalog's language code as the verb table names it: `pt-BR` is `pt_BR`. */
 const verbKey = (locale: string): string => locale.replace("-", "_");
 

@@ -22,11 +22,14 @@ Your game controller, now a vision mixer for OBS Studio: a real T-bar on the rig
 
 Version 1.5.0:
 
-- A Mac version: Fadester Companion for Mac (Apple silicon and Intel) now comes with every release on GitHub.
-- New TourBox and VJster lights in the status strip, each with the one button that fixes it, such as Open Console or Show me.
-- Show me where to click: an animated guide walks you through importing the preset into TourBox Console.
-- Bring OBS to Front: a button on the reminder brings OBS's main window back. Closing the window keeps the controls on: an icon in the notification area opens the window again, starts or stops the controls, and quits.
-- The Mac app speaks the same 13 languages as the Windows app.
+- The controls start by themselves the first time you open the app. One button starts and stops them: Start or Stop.
+- A shorter Setup page: each numbered step is one short line and its button. The OBS port and password and the optional parts sit behind Details and Show, and open by themselves when a light needs you.
+- Status lights that say how things really are, each with the button that fixes it: Open OBS, Turn on for Studio Mode, and a TourBox light that is green only when TourBox Console has the preset. The OBS port fills itself in from OBS, as the password does.
+- Open when I sign in: a tick box under the buttons, off until you tick it.
+- Closing the window keeps the controls on: an icon in the notification area opens the window again, starts or stops the controls, and quits.
+- A dark window when Windows is in dark mode.
+- 13 languages: Dutch, Brazilian Portuguese and Turkish are new. The version is in the title of every window.
+- Fixed: the game controller's fade still goes out when OBS's T-bar cannot be read, a cut no longer holds up the next press, and a password that OBS refused is tried again by itself.
 
 ## Product features
 
@@ -62,11 +65,11 @@ OBS Studio with its WebSocket server on (the T-bar needs OBS Studio 33 in Studio
 
 Fadester Companion controls OBS Studio, which must run on the same PC. To test:
 
-1. Install OBS Studio 33 (free, https://obsproject.com). In OBS open Tools → WebSocket Server Settings, tick Enable WebSocket server, keep authentication on and note the password. Turn on Studio Mode, select the Fade transition, and add two scenes.
-2. Open Fadester Companion. It connects by itself: the header says it is connected and how many scenes it found. If it does not connect, type the WebSocket password in OBS password (filled in from OBS) and click Read scenes and inputs from OBS.
+1. Install OBS Studio 33 (free, https://obsproject.com). In OBS open Tools → WebSocket Server Settings, tick Enable WebSocket server, keep authentication on and note the password. Turn on Studio Mode and add two scenes. (OBS's own Fade must still be in its Scene Transitions list, as it is in a new OBS; it does not have to be the selected one.)
+2. Open Fadester Companion. It connects by itself: the header says it is connected and how many scenes it found. If it does not connect, type the WebSocket password in OBS password (filled in from OBS), under Details in step 1 of the Setup tab (it opens by itself when OBS refuses the password), and click Read scenes and inputs from OBS.
 3. On the Setup tab, tick Use an Xbox or XInput game controller, then click Stop and Start at the bottom left of the window (the controls start by themselves the first time, without the controller). With an Xbox controller connected, press D-pad down to put a scene in Preview and pull the right trigger: OBS's T-bar follows; pulled all the way, the scene goes to Program. Holding A also pushes the T-bar.
 
-Without OBS running, the app opens and says that OBS is not answering; the controls do nothing. No account or sign-in is needed, and the app makes no internet connection.
+Without OBS running, the app opens and says that OBS is not running or not answering (its OBS light has an Open OBS button); the controls do nothing. No account or sign-in is needed, and the app makes no internet connection.
 
 ## Restricted capability: runFullTrust (justification, 500 characters at most)
 

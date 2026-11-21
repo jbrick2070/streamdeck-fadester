@@ -4,8 +4,9 @@ name: Fadester Suite Setup (Windows)
 # change what goes into it, and for every version tag. Fadester for OBS, the VJster extension and Fadester Companion
 # in it are built from the commit itself; Midi Fadester and Playlister are the pinned published installers.
 # For a version tag (or a manual run that names one), the tested setup is then attached to that tag's release, which
-# release.yml creates as a DRAFT, with a table that says which file is for which hardware. Nothing is published here:
-# a person tests the draft and publishes it.
+# release.yml creates as a DRAFT, and this workflow writes the release text's one table of which file is for which
+# hardware (release.yml leaves a single line in its place until then). Nothing is published here: a person tests the
+# draft and publishes it.
 on:
   workflow_dispatch:
     inputs:
@@ -233,18 +234,30 @@ jobs:
             echo '<!-- /which-file -->'
             echo
           } > table.md
-          gh release view "$TAG" --json body --jq '.body' > body.md
+          # A release text edited on the GitHub page comes back with CR LF line ends: the markers are matched on whole
+          # lines, so the CRs go first.
+          gh release view "$TAG" --json body --jq '.body' | tr -d '\r' > body.md
+          # A marker without its partner (a hand edit of the draft) would take the rest of the text with it. Then
+          # nothing is edited: the job stops and says so.
+          starts=$(grep -c '^<!-- which-file -->$' body.md || true)
+          ends=$(grep -c '^<!-- /which-file -->$' body.md || true)
+          if [ "$starts" != "$ends" ]; then
+            echo "The release text has $starts '<!-- which-file -->' and $ends '<!-- /which-file -->' lines. They must come in pairs; the release text was not changed. Repair the text on the release page and run this job again."
+            exit 1
+          fi
           # This job owns the one table. Whatever is there is taken out first: a table this job wrote before (between
           # its two markers), and any other "Which file do I need?" section, at any heading level, up to the next heading.
           awk '
-            /^<!-- which-file -->$/ { mine = 1; next }
-            /^<!-- \/which-file -->$/ { mine = 0; next }
+            /^<!-- which-file -->$/ { if (mine == 1) { bad = 1 } mine = 1; next }
+            /^<!-- \/which-file -->$/ { if (mine != 1) { bad = 1 } mine = 0; next }
             mine == 1 { next }
             /^#+ +Which file do I need\?/ { other = 1; next }
             other == 1 && /^#+ / { other = 0 }
             other == 1 { next }
             { print }
-          ' body.md | sed '/./,$!d' > rest.md
+            END { if (bad == 1 || mine == 1) { print "The which-file markers in the release text are not in start, end order; the release text was not changed." > "/dev/stderr"; exit 1 } }
+          ' body.md > rest.raw
+          sed '/./,$!d' rest.raw > rest.md
           if grep -qi 'Which file do I need' rest.md; then echo 'An old table is still in the release text; it was not changed.'; exit 1; fi
           cat table.md rest.md > notes.md
           gh release edit "$TAG" --notes-file notes.md

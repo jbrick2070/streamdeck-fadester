@@ -234,8 +234,11 @@ jobs:
             echo "Draft built from \`$GITHUB_SHA\`. Test on real hardware before publishing."
             echo
             # The "Which file do I need?" table is written by the Suite Setup workflow when it attaches the setup to this
-            # release (suite-installer.yml, its attach job): one table, in one place.
-            echo "Which file is for which hardware: see the table the Fadester Suite Setup workflow adds to these notes when it attaches the setup. Until then: the \`.streamDeckPlugin\` file is for a Stream Deck, the Fadester Companion files below are for a TourBox or a game controller."
+            # release (suite-installer.yml, its attach job): one table, in one place. Until it has run, this line
+            # stands in its place, between the same two markers, so that job replaces it with the table.
+            echo "<!-- which-file -->"
+            echo "Which file is for which hardware: the \`.streamDeckPlugin\` file is for a Stream Deck; the Fadester Companion files below are for a TourBox or a game controller. Fadester Suite Setup and the full table are added here when its tests have passed."
+            echo "<!-- /which-file -->"
             echo
             echo "### Fadester Companion"
             echo

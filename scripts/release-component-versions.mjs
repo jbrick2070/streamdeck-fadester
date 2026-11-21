@@ -106,6 +106,16 @@ export function checkComponents(git, current, components = COMPONENTS) {
   });
 }
 
+/**
+ * Without any release tag every version looks new and everything passes. On a release runner that means the tags were
+ * not fetched (the checkout needs fetch-depth: 0), not that this is the first release: the check stops instead.
+ * @param {Git} git
+ * @param {Record<string, string | undefined>} env
+ */
+export function tagsMissingOnRunner(git, env = process.env) {
+  return env.GITHUB_ACTIONS === "true" && git.tags().length === 0;
+}
+
 /** The real repository. @param {string} commit @returns {Git} */
 export function gitAt(commit, cwd = process.cwd()) {
   const run = (args) => execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], maxBuffer: 64 * 1024 * 1024 });
@@ -125,9 +135,7 @@ export function gitAt(commit, cwd = process.cwd()) {
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const commit = process.argv[2] || "HEAD";
   const git = gitAt(commit);
-  // Without any release tag every version looks new and everything passes. On a release runner that means the tags
-  // were not fetched (the checkout needs fetch-depth: 0), not that this is the first release.
-  if (process.env.GITHUB_ACTIONS === "true" && git.tags().length === 0) {
+  if (tagsMissingOnRunner(git)) {
     console.log("STOP  No release tag was found. The checkout must fetch the full history and the tags (fetch-depth: 0).");
     process.exit(1);
   }

@@ -15,6 +15,7 @@ import {
   t,
   translate
 } from "../src/i18n/strings.js";
+import { TAKE_VERBS } from "./helpers/take-verbs.js";
 import { templatePlaceholders, wordText } from "../packages/streamdeck-fadester-shared/src/i18n.js";
 import { statusCellReason, statusSentence } from "../packages/streamdeck-fadester-shared/src/status-text.js";
 import { ObsVendorClient } from "../packages/streamdeck-fadester-shared/src/obs/obs-vendor-client.js";
@@ -245,21 +246,6 @@ describe("German on the deck", () => {
   // and the Chrome extension's. None may use its language's verb for "take" (QA-A02 of both rounds: German "nehmen"
   // and French "prendre" sat on a settings page because only four languages were checked). Compounds that mean
   // something else are not matched: German "übernehmen" (apply) and "angenommen" (accepted), Russian "выбрать".
-  const TAKE_VERBS: Record<string, RegExp> = {
-    en: /(?<!\p{L})(take|takes|taking|taken|took)(?!\p{L})/iu,
-    de: /(?<!über)nehm|(?<!über)nimm|(?<!an)genommen/iu,
-    fr: /(?<!\p{L})(prend|prenn|prenez|prise?s?(?!\p{L}))/iu,
-    es: /(?<!\p{L})(tom(ar|a|e|an|en|ó)|cog(er|e|a)|coj[ao])(?!\p{L})/iu,
-    nl: /(?<!\p{L})(nemen|neem|neemt|genomen|overnemen|overneemt)(?!\p{L})/iu,
-    it: /(?<!\p{L})(prend|pres[oa](?!\p{L})|pigli)/iu,
-    pt_BR: /(?<!\p{L})(tom(ar|e|a)|peg(ar|ue|a)|lev(ar|e|a))(?!\p{L})/iu,
-    ru: /(?<!\p{L})(взять|возьм|бер[её]т|брать|взят)/iu,
-    tr: /(?<!\p{L})al(ın|ınız|ır|mak|ıyor)?(?!\p{L})/iu,
-    ja: /テイク/u,
-    ko: /테이크/u,
-    zh_CN: /(?<!\p{L})take(?!\p{L})/iu,
-    zh_TW: /(?<!\p{L})take(?!\p{L})/iu
-  };
   // Ordinary speech, not a product action: a second copy of the extension "takes over" the link, and reloaded tabs
   // are "taken along"; English help text uses the verb the same way.
   const TAKE_ALLOWED: Record<string, readonly string[]> = {
@@ -286,6 +272,8 @@ describe("German on the deck", () => {
     const allowed = TAKE_ALLOWED[language] ?? [];
     const hits = texts.filter(([where, text]) => TAKE_VERBS[language].test(text) && !allowed.includes(where)).map(([where, text]) => `${where}: ${text}`);
     expect(hits).toEqual([]);
+    const stale = allowed.filter((where) => !texts.some(([place, text]) => place === where && TAKE_VERBS[language].test(text)));
+    expect(stale, "allowed but no longer a hit").toEqual([]);
   });
 
   it("the take-verb patterns catch what they are for, and leave the look-alikes", () => {

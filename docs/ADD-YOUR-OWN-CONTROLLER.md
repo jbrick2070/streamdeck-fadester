@@ -10,8 +10,8 @@ OBS Studio is the hub. Its built-in WebSocket server (obs-websocket 5, **Tools >
 |---|---|---|---|
 | 1. Plain OBS requests | Scenes, transitions, Studio Mode, sources, layers, audio levels, filter settings | OBS itself | Nothing but OBS |
 | 2. The Midi Fadester vendor API | 18 fader and FX slots: T-bar throws, A/B crossfades, layer opacity, audio volume, any numeric filter setting, timed fades, Clean / All FX Off | The [Midi Fadester](https://github.com/jbrick2070/midi-fadester) OBS plugin | Midi Fadester in OBS |
-| 3. The shared whole-mix protocol | The whole mixer as one fader: level, steps, fade to silence, restore | Fadester Companion (Windows) whenever **All OBS mixer inputs** is on, with or without a TourBox; also Fadester Companion for Mac and its mix host | The companion running on the OBS computer |
-| 4. Keystrokes to Fadester Companion | Every TourBox action: Preview selection, the native T-bar, media, overlays, recording, the YouTube video in Chrome through VJster, the two VJ layers | The same companion, in its normal mode | The companion, and a device that can press keys (Windows) |
+| 3. The shared whole-mix protocol | The whole mixer as one fader: level, steps, fade to silence, restore | Fadester Companion (Windows) whenever **All OBS mixer inputs** is on, with or without a TourBox; also Fadester Companion for Mac and its mix host | Fadester Companion running on the OBS computer |
+| 4. Keystrokes to Fadester Companion | Every TourBox action: Preview selection, the native T-bar, media, overlays, recording, the YouTube video in Chrome through VJster, the two VJ layers | Fadester Companion again, in its normal mode | Fadester Companion, and a device that can press keys (Windows) |
 
 A controller that only needs door 1 does not need anything from this repository at all. If your platform can host Stream Deck plugins (as [OpenDeck](OPENDECK.md) does), run Fadester for OBS as it is and you are done.
 
@@ -71,7 +71,7 @@ Request (the `eventData` of your `BroadcastCustomEvent`):
 | `id` | A fresh UUID per request; the reply echoes it. The provider ignores a repeated id for 12 s. |
 | `op` | `mix.status`, `mix.set`, `mix.up`, `mix.down`, `mix.fadeOut` or `mix.restore`. |
 | `sentAtMs` | Unix milliseconds. Envelopes older than 10 s or more than 1.5 s in the future are dropped, so keep your clock right. |
-| `steps` | `mix.up` and `mix.down` only: 1 to 32 (default 1); one step is the companion's configured step, 3 dB by default. |
+| `steps` | `mix.up` and `mix.down` only: 1 to 32 (default 1); one step is Fadester Companion's configured step, 3 dB by default. |
 | `db`, `durationMs` | `mix.set` only: a level from −100 to 0 dB and a duration from 0 to 10 000 ms. |
 
 Reply (`eventData` of a `CustomEvent` you receive):
@@ -95,7 +95,7 @@ Reply (`eventData` of a `CustomEvent` you receive):
 }
 ```
 
-Read `enabled` first: `false` means the companion runs but **All OBS mixer inputs** is off, and only `mix.status` is answered with `ok: true`. `db` is the group level in dB and `gain` the same level as the linear multiplier (0 to 1) applied to every managed input's own level; `targetDb` is where a running fade is heading and equals `db` when nothing is fading; `db` and `targetDb` are `null` when that level is silence. `message` is a sentence from the provider ("All mixer inputs: fading to -20.0 dB over 600 ms.", or "Group fade paused. Check Activity before continuing." with `ok: false`). Every reply also carries additive `provider: { id, name, version }` (persisted per provider state folder in Fadester Companion); pin the first `provider.id` that answers your request, refuse to act with `"Two mix providers are answering"` if two providers answer (recovering once a read-only `mix.status` probe hears at most one provider or times out), and keep accepting replies without `provider` from older builds. Match replies to your request by `id`, not by order. The request's acknowledgement from OBS only says the envelope was delivered; the deck waits 4 s for a status reply and 12 s for a command reply before showing the control as offline, and sends a `mix.status` probe every 2.5 s while a mix control is visible. Do not set the `client` field: it is the receipt channel for the Midi Fadester plugin inside OBS, which cannot see broadcast events. Full wire rules live in [API-CONTRACT.md](../API-CONTRACT.md).
+Read `enabled` first: `false` means Fadester Companion runs but **All OBS mixer inputs** is off, and only `mix.status` is answered with `ok: true`. `db` is the group level in dB and `gain` the same level as the linear multiplier (0 to 1) applied to every managed input's own level; `targetDb` is where a running fade is heading and equals `db` when nothing is fading; `db` and `targetDb` are `null` when that level is silence. `message` is a sentence from the provider ("All mixer inputs: fading to -20.0 dB over 600 ms.", or "Group fade paused. Check Activity before continuing." with `ok: false`). Every reply also carries additive `provider: { id, name, version }` (persisted per provider state folder in Fadester Companion); pin the first `provider.id` that answers your request, refuse to act with `"Two mix providers are answering"` if two providers answer (recovering once a read-only `mix.status` probe hears at most one provider or times out), and keep accepting replies without `provider` from older builds. Match replies to your request by `id`, not by order. The request's acknowledgement from OBS only says the envelope was delivered; the deck waits 4 s for a status reply and 12 s for a command reply before showing the control as offline, and sends a `mix.status` probe every 2.5 s while a mix control is visible. Do not set the `client` field: it is the receipt channel for the Midi Fadester plugin inside OBS, which cannot see broadcast events. Full wire rules live in [API-CONTRACT.md](../API-CONTRACT.md).
 
 ## Door 4: keystrokes to Fadester Companion
 
@@ -105,7 +105,7 @@ Read `enabled` first: `false` means the companion runs but **All OBS mixer input
 2. Send the chord for the action you want. The action names, labels and chords live in one file, [`tourbox/presets/map.json`](../tourbox/presets/map.json), and nowhere else: the OBS actions use **Ctrl+Alt+Shift** plus a key or F-key (`Ctrl+Alt+Shift+F3` and `F4` move the T-bar, `F5` and `F6` select the previous and next Preview scene, `F7` sends Preview to Program, `C` cuts, `V` reads recording status), the video actions use **Ctrl+Shift+F1** to `F6` and `F9` to `F11` plus `Alt+Shift+F7` (quality back to Auto), the layer actions **Alt+Shift+F1**, `F2`, `F3`, `F5`, `F6` and `Ctrl+Shift+F7`, `F8`, `F12`. The package's `START-HERE.html`, generated from the same map, shows each control and its action label and links to the map for the chords.
 3. Read Fadester Companion's Activity log while you rehearse. Every refused action says why in a sentence.
 
-Rotary gestures (turn one detent) are plain repeated presses. Each chord waits in the companion's queue behind earlier actions: a T-bar, layer or video tick that is older than 180 ms when its turn comes is dropped (any other action after 1.5 s), and a T-bar tick within 400 ms of a Music or Layer 2 opacity tick is ignored. Send one press per detent as the control moves, not in a burst. On a Mac the experimental, unreleased shortcut helper registers the same chords as Control, Option and Shift, but the Mac host has no VJster link yet, so the video chords are refused there, and none of it is verified on hardware ([tourbox/MACOS.md](../tourbox/MACOS.md)).
+Rotary gestures (turn one detent) are plain repeated presses. Each chord waits in Fadester Companion's queue behind earlier actions: a T-bar, layer or video tick that is older than 180 ms when its turn comes is dropped (any other action after 1.5 s), and a T-bar tick within 400 ms of a Music or Layer 2 opacity tick is ignored. Send one press per detent as the control moves, not in a burst. On a Mac the experimental, unreleased shortcut helper registers the same chords as Control, Option and Shift, but the Mac host has no VJster link yet, so the video chords are refused there, and none of it is verified on hardware ([tourbox/MACOS.md](../tourbox/MACOS.md)).
 
 ## Robots: through the API, or through MCP
 
@@ -120,7 +120,7 @@ A robot here means an automated agent: a cue list, a show-control system, a scri
 | `obs_request(requestType, requestData)` | Door 1, passed through, with obs-websocket's protocol document as the agent's reference |
 | `fadester_get_state()`, `fadester_set(slot, value, release?)`, `fadester_nudge(slot, delta)`, `fadester_fade(slot, to, ms)`, `fadester_catalog(source?)`, `fadester_reset_fx(ms?)` | Door 2, one vendor request each, errors returned as the contract's sentence |
 | `mix_status()`, `mix_set(db, durationMs)`, `mix_step(direction, steps)`, `mix_fade_out()`, `mix_restore()` | Door 3, one envelope each, resolved by the matching reply or a timeout |
-| `tourbox_action(action)` | Door 4, the chord looked up in `map.json` and pressed on the companion's computer; Windows only |
+| `tourbox_action(action)` | Door 4, the chord looked up in `map.json` and pressed on Fadester Companion's computer; Windows only |
 
 Until then, treat this table as the vocabulary to give your agent, and point it at the JSON examples on this page.
 
@@ -129,7 +129,7 @@ Until then, treat this table as the vocabulary to give your agent, and point it 
 These are the rules every Fadester surface follows, taken from the contracts the suite is built to. A new controller that follows them fits in without anyone noticing.
 
 - **Show the reason, never guess.** Every refusal comes with a sentence (`reason`, `error`, `message`). Put it on your display or in your log as it is.
-- **Wait for the answer that matters.** OBS's request acknowledgement is not the result. For the vendor API read `responseData`; for the whole mix wait for the `reply` with your `id`; for keystrokes read the companion's Activity log.
+- **Wait for the answer that matters.** OBS's request acknowledgement is not the result. For the vendor API read `responseData`; for the whole mix wait for the `reply` with your `id`; for keystrokes read Fadester Companion's Activity log.
 - **Coalesce where values stream.** VJster and the Filter action send at most one write per 50 ms per target (200 ms for an Audio Modulator), always carrying the newest wanted value, and a filter write moves at most 10 % of the range at a time; discrete nudges (Midi Fadester slots, volume, T-bar, whole mix) are one request per detent. Midi Fadester emits at most 30 `fader_changed` events per second per slot. A controller that floods OBS slows the show for everyone.
 - **One owner per thing.** Midi Fadester owns the fader and FX slots; Fadester Companion owns the whole mix; **Fadester for OBS** never writes a filter setting a fader or an Audio Modulator already drives. If two of your controls would move the same OBS value, pick one.
 - **Studio Mode is a precondition, not an error.** T-bar throws and Preview selection need it. Say so on the control; do not switch modes on the operator's behalf. One exception you will observe: **Fadester for OBS**'s fallback way to finish a T-bar throw briefly leaves and re-enters Studio Mode when OBS 33's native slider is unreachable, because OBS 33 cannot finish a throw over obs-websocket; a controller that watches UI events should expect that off/on pair of `StudioModeStateChanged` at the end of such a throw and not read it as the operator leaving Studio Mode. Likewise, **Fadester Companion**'s T-bar (the Dial or a controller's trigger), finding Cut or another non-Fade transition selected, selects a Fade for the throw and puts the operator's transition back afterwards, so expect a pair of `CurrentSceneTransitionChanged` events around it.
@@ -146,7 +146,7 @@ Say you have a USB box with four endless knobs and four LEDs, and a small progra
 4. Update the LEDs from `fader_changed`, not from the values you sent: another surface or the operator may have moved the same slot.
 5. Press-and-hold on knob 3 first remembers the slot's current value (the last `fader_changed` you received before the hold began), then calls `auto_fade` to `0.0` over 800 ms. The ramp keeps emitting `fader_changed` with `origin: "auto_fade"`, so leave the remembered value alone while the hold lasts. Release calls `auto_fade` back to it.
 
-That is the whole program. The same shape works for a web page, a MIDI desk Midi Fadester does not know, or a cue list. A game controller is already built in: the companion reads Xbox and XInput pads natively ([docs/gamepad/README.md](gamepad/README.md)), because a browser page only gets pad input while it has focus.
+That is the whole program. The same shape works for a web page, a MIDI desk Midi Fadester does not know, or a cue list. A game controller is already built in: Fadester Companion reads Xbox and XInput pads natively ([docs/gamepad/README.md](gamepad/README.md)), because a browser page only gets pad input while it has focus.
 
 ## Where to read the code
 
@@ -154,9 +154,9 @@ That is the whole program. The same shape works for a web page, a MIDI desk Midi
 |---|---|
 | Vendor API contract (every field, every rule) | [API-CONTRACT.md](../API-CONTRACT.md); the plugin side is `src/obs/mfd-vendor-api.c` in the Midi Fadester repository |
 | Whole-mix client (what a surface sends and accepts) | [`src/obs/whole-mix.ts`](../src/obs/whole-mix.ts) |
-| Whole-mix provider (what the companion accepts and answers) | [`tourbox/bridge/MixProtocolServer.cs`](../tourbox/bridge/MixProtocolServer.cs) |
+| Whole-mix provider (what Fadester Companion accepts and answers) | [`tourbox/bridge/MixProtocolServer.cs`](../tourbox/bridge/MixProtocolServer.cs) |
 | The TourBox action map, chords and labels | [`tourbox/presets/map.json`](../tourbox/presets/map.json); the actions are dispatched in [`tourbox/bridge/DeskActions.cs`](../tourbox/bridge/DeskActions.cs) |
-| How the companion registers the chords | [`tourbox/bridge/Bindings.cs`](../tourbox/bridge/Bindings.cs) and `Hotkeys.cs` |
+| How Fadester Companion registers the chords | [`tourbox/bridge/Bindings.cs`](../tourbox/bridge/Bindings.cs) and `Hotkeys.cs` |
 | VJster's link protocol, if you build a new video target or a new deck for it | [`src/vjster/shared/protocol.ts`](../src/vjster/shared/protocol.ts) and [docs/vjster/REQUIREMENTS.md](vjster/REQUIREMENTS.md) section 2 |
 | What the Midi Fadester vendor API allows and what the plugin does with it | [FEATURE-AUDIT.md](../FEATURE-AUDIT.md) |
 

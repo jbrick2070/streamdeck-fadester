@@ -18,7 +18,7 @@ $screens = @(
       'Pick the sources to ride: duck the music', 'with the left trigger, step a playlist,',
       'blend two VJ layers.') },
   @{ Panel = 4; Title = @('Got a TourBox?', "It's in too."); Lines = @(
-      'The same companion runs a TourBox:', 'the Dial is your T-bar, Scroll puts scenes', 'in Preview, and the Knob sets the video',
+      'Fadester Companion also runs a TourBox:', 'the Dial is your T-bar, Scroll puts scenes', 'in Preview, and the Knob sets the video',
       'speed in VJster.') }
 )
 function DataUri($file) { 'data:image/png;base64,' + [Convert]::ToBase64String([IO.File]::ReadAllBytes($file)) }

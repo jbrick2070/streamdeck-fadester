@@ -390,7 +390,7 @@ O Fadester Companion transforma os controles que você já tem em uma mesa de co
 
 Puxe o gatilho direito de um controle Xbox ou de outro controle XInput como um T-bar de verdade, e o próprio T-bar do OBS acompanha. Segure A para empurrar a mixagem e solte para deixá-la no meio do caminho. O direcional para cima e para baixo percorre a sua lista de cenas, o gatilho esquerdo abaixa a música enquanto você o segura, e os analógicos ajustam a opacidade e o modo de mesclagem de uma camada e a velocidade do vídeo que toca no Chrome pela extensão gratuita VJster. Todos os botões podem ser reatribuídos, com uma segunda camada enquanto LB está pressionado, e o Modo fácil exige segurar um instante para trocar o que está no ar, de modo que um esbarrão não faz nada.
 
-Tem um TourBox? O mesmo Companion também o opera: o Dial é o seu T-bar, o Scroll coloca cenas na Prévia e o Knob ajusta a velocidade do vídeo.
+Tem um TourBox? O mesmo Companion também o opera: o Dial é o seu T-bar, o Scroll coloca cenas na Pré-visualização e o Knob ajusta a velocidade do vídeo.
 
 Ele continua funcionando com o OBS na frente, conversa apenas com o OBS e com a extensão VJster no seu próprio computador e não envia nada para a internet.
 

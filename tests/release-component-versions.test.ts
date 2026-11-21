@@ -2,7 +2,7 @@
 // The release's check that a changed component is not published under a version it already published (G-07, QA-A03).
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { COMPONENTS, checkComponents, type Git } from "../scripts/release-component-versions.mjs";
+import { COMPONENTS, checkComponents, tagsMissingOnRunner, type Git } from "../scripts/release-component-versions.mjs";
 
 const COMPANION = "installer/components.json";
 const EXTENSION = "vjster-extension/manifest.json";
@@ -81,6 +81,16 @@ describe("a release never repeats a component's version over changed files (QA-A
   it("passes with no earlier release, and stops when a version cannot be read", () => {
     expect(checkComponents(history([]), now("0.1.17", "0.1.6")).map((result) => result.ok)).toEqual([true, true]);
     expect(checkComponents(history([]), () => null).map((result) => result.ok)).toEqual([false, false]);
+  });
+
+  it("on a release runner, no tag at all stops the check instead of passing everything", () => {
+    const none = history([]);
+    const some = history([{ tag: "v0.12.16", companion: "0.1.17", extension: "0.1.6" }]);
+    expect(tagsMissingOnRunner(none, { GITHUB_ACTIONS: "true" })).toBe(true);
+    expect(tagsMissingOnRunner(some, { GITHUB_ACTIONS: "true" })).toBe(false);
+    // On a developer's computer a clone without tags is ordinary: the check runs and says every version is new.
+    expect(tagsMissingOnRunner(none, {})).toBe(false);
+    expect(readFileSync("scripts/release-component-versions.mjs", "utf8")).toContain("if (tagsMissingOnRunner(git)) {");
   });
 
   it("reads the versions this repository has now, and the release workflow runs it before the Companion is built", () => {

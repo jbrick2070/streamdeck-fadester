@@ -31,6 +31,7 @@ li + li { margin-top: .45rem; }
 code { color: #173c2c; overflow-wrap: anywhere; }
 a { color: #205b42; text-underline-offset: .18em; }
 a:focus-visible { outline: 2px solid #205b42; outline-offset: .25em; }
+.pick{display:grid;grid-template-columns:repeat(auto-fit,minmax(10.5rem,1fr));gap:.75rem;margin:1rem 0 1.5rem;padding:0;list-style:none}.pick li{margin:0}.pick a{display:block;text-align:center;padding:.75rem .5rem;border:2px solid #cfe0d5;border-radius:12px;text-decoration:none;color:inherit;background:#fff}.pick a:hover,.pick a:focus-visible{border-color:#236044}.pick svg{display:block;margin:0 auto .4rem;max-width:100%;height:auto}.pick b{display:block}.pick span{font-size:.9em;color:#3d5a4c}
 
 @media print {
   :root { background: white; }

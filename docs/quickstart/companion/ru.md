@@ -42,7 +42,7 @@ Fadester Companion позволяет микшировать сцены OBS Stud
 
 **VJster 1.5.0** управляет скоростью видео YouTube со Stream Deck: поверните ручку — и видео ускоряется или замедляется прямо во время воспроизведения; клавиша ставит 0.5x, 1x или 2x. Работает во вкладке Chrome, в источнике «Браузер» OBS или в обоих; ничего не покидает этот компьютер.
 
-<img src="../../vjster/install-steps.svg" alt="VJster в три шага: 1 — получите клавиши (Fadester for OBS в Stream Deck или Fadester Companion); 2 — добавьте расширение VJster из Chrome Web Store; 3 — включите видео YouTube и поверните ручку: скорость следует за ним." width="900">
+<img src="../../vjster/install-steps.svg" alt="VJster в три шага: 1 — получите клавиши (Fadester for OBS в Stream Deck или Fadester Companion); 2 — добавьте расширение VJster из Chrome Web Store; 3 — включите видео YouTube и поверните ручку: скорость следует за ней." width="900">
 
 1. **Получите клавиши.** У вас **Fadester for OBS 0.9.0 или новее**? В нём уже есть семь действий VJster: пропустите этот шаг. Иначе дважды щёлкните `com.jbrick2070.vjster.streamDeckPlugin` и согласитесь установить профили из комплекта (**VJster Live +** и **VJster Dual +** для Stream Deck +, **VJster Live** для 15 клавиш, **VJster Mini**).
 2. **Добавьте расширение Chrome.** Добавьте [VJster из Chrome Web Store](https://chromewebstore.google.com/detail/daohboebokfmamkblejcpbblfnaijgnb). Его страница параметров откроется один раз.
@@ -58,7 +58,7 @@ Fadester Companion позволяет микшировать сцены OBS Stud
 
 С VJster ваш Stream Deck, TourBox или геймпад меняет скорость и качество видео YouTube в Chrome.
 
-<img src="../../vjster/install-steps.svg" alt="VJster в три шага: 1 — получите клавиши (Fadester for OBS в Stream Deck или Fadester Companion); 2 — добавьте расширение VJster из Chrome Web Store; 3 — включите видео YouTube и поверните ручку: скорость следует за ним." width="900">
+<img src="../../vjster/install-steps.svg" alt="VJster в три шага: 1 — получите клавиши (Fadester for OBS в Stream Deck или Fadester Companion); 2 — добавьте расширение VJster из Chrome Web Store; 3 — включите видео YouTube и поверните ручку: скорость следует за ней." width="900">
 
 1. **Получите клавиши.** Установите [Fadester for OBS](https://github.com/jbrick2070/streamdeck-fadester/releases/latest) в Stream Deck: в его списке действий уже есть семь действий **VJster**. (TourBox или геймпад? Установите [Fadester Companion](https://apps.microsoft.com/detail/9PN7D3P2X7F4) и запустите его управление.)
 2. **Добавьте расширение Chrome.** Добавьте [VJster из Chrome Web Store](https://chromewebstore.google.com/detail/daohboebokfmamkblejcpbblfnaijgnb) (Chrome 116 или новее).

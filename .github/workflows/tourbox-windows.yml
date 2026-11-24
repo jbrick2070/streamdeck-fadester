@@ -11,6 +11,8 @@ on:
       - tourbox/build.ps1
       - tourbox/make-guide.cjs
       - tourbox/README.md
+      - tourbox/REFERENCE.md
+      - tourbox/companion-steps.svg
       - tourbox/REHEARSAL.md
       - tourbox/GALLERY.txt
       - tourbox/artwork/**
@@ -39,6 +41,8 @@ on:
       - tourbox/build.ps1
       - tourbox/make-guide.cjs
       - tourbox/README.md
+      - tourbox/REFERENCE.md
+      - tourbox/companion-steps.svg
       - tourbox/REHEARSAL.md
       - tourbox/GALLERY.txt
       - tourbox/artwork/**

@@ -48,7 +48,7 @@ OBS media play/pause is in the Tour menu. The generated reference lists every as
 
 ### The Tour menu and the HUD
 
-**Tour** and **Side + Tour** open the same menu at the pointer. Scroll to an entry, then press **Tall** or click it; **Short** closes the menu. It has scene and fade readouts, soundcheck, Preview sync, duck/restore, whole-mix fades, undo of the last audio change, transition and duration, media transport, overlay visibility, mic mute, screenshot, recording status, chapters, replay and reconnect. **Mute microphone** mutes the assigned mic; unmute it in OBS. The full list, in order: [presets/README.md](presets/README.md#tour-menu-and-assignment-hud).
+**Tour** and **Side + Tour** open the same menu at the pointer. Scroll to an entry, then press **Tall** or click it; **Short** closes the menu. It has scene and fade readouts, soundcheck, Preview sync, duck/restore, whole-mix fades, undo of the last audio change, transition and duration, media transport, overlay visibility, mic mute, screenshot, recording status, chapters, replay and reconnect. **Mute microphone** mutes the assigned mic; unmute it in OBS. The full list, in order: [presets/README.md](https://github.com/jbrick2070/streamdeck-fadester/blob/main/tourbox/presets/README.md#tour-menu-and-assignment-hud).
 
 For a compact card, open **General HUD** at the top right of Console (it starts hidden). The **Control map** tab and the offline guide have every assignment and menu entry.
 

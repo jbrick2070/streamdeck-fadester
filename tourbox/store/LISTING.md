@@ -20,16 +20,11 @@ Your game controller, now a vision mixer for OBS Studio: a real T-bar on the rig
 
 ## What's new in this version
 
-Version 1.5.0:
+Version 1.5.1:
 
-- The controls start by themselves the first time you open the app. One button starts and stops them: Start or Stop.
-- A shorter Setup page: each numbered step is one short line and its button. The OBS port and password and the optional parts sit behind Details and Show, and open by themselves when a light needs you.
-- Status lights that say how things really are, each with the button that fixes it: Open OBS, Turn on for Studio Mode, and a TourBox light that is green only when TourBox Console has the preset. The OBS port fills itself in from OBS, as the password does.
-- Open when I sign in: a tick box under the buttons, off until you tick it.
-- Closing the window keeps the controls on: an icon in the notification area opens the window again, starts or stops the controls, and quits.
-- A dark window when Windows is in dark mode.
-- 13 languages: Dutch, Brazilian Portuguese and Turkish are new. The version is in the title of every window.
-- Fixed: the game controller's fade still goes out when OBS's T-bar cannot be read, a cut no longer holds up the next press, and a password that OBS refused is tried again by itself.
+- The Quick guide now starts by asking which controller you have: game controller, TourBox or MIDI controller, with a picture of each.
+- A new section for MIDI controllers: an APC40 mkII or another MIDI controller is run by Midi Fadester, a free plugin inside OBS, not by Fadester Companion.
+- In Russian and Dutch, the app now names OBS's Tools menu as OBS does: "Сервис" in Russian, "Tools" in Dutch.
 
 ## Product features
 

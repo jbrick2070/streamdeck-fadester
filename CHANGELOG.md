@@ -4,9 +4,19 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 
 ## Unreleased
 
+## 1.5.1 - 2026-11-24
+This release ships Fadester for OBS 1.5.1, Fadester Companion 1.5.1, the VJster Chrome extension 1.5.0 (unchanged) and Fadester Suite Setup 1.5.1. The plugin, the standalone VJster plugin (1.5.0) and the extension have no change of code: Fadester for OBS moves to 1.5.1 because every release raises it. None of it has been through the hand tests on real hardware yet.
+
 ### Fadester Companion and Suite Setup
 
+#### Added
+- The quick guide (**Quick guide**, `START-HERE.html`, in thirteen languages) starts with a row that asks **Which controller do you have?**, with a picture of each: game controller, TourBox, MIDI controller. Each picture leads to its part of the guide.
+- A new part of the quick guide for MIDI controllers: an APC40 mkII or another MIDI controller is run by Midi Fadester, the free plugin inside OBS, not by Fadester Companion; it says how each desk is set up and links to the Midi Fadester guide.
+- The Windows ZIP (`tourbox/build.ps1`) carries the new picture and `tourbox/REFERENCE.md`.
+
 #### Changed
+- Russian and Dutch name OBS's Tools menu as OBS does, **Сервис** and **Tools**, in Fadester Companion's window and on Suite Setup's pages (`installer/lang`).
+- The Microsoft Store listing's **What's new in this version** is written for 1.5.1, in English and the twelve other languages.
 - The Microsoft Store listing in twelve languages (`tourbox/store/LISTING-translations.md`) has had a second model's review: 27 corrections in three rounds. The largest group is the sentence about the TourBox's Scroll, which in nine languages said that it selects scenes and now says, as the English does, that it puts them in Preview. No native speaker has read the texts yet.
 
 ## 1.5.0 - 2026-11-20

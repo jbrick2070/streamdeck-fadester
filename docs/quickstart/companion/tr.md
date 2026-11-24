@@ -1,4 +1,4 @@
-*Bu, İngilizce hızlı başlangıçların bir yapay zekâ modeliyle yapılmış ve ikinci bir modelce kontrol edilmiş çevirisidir; henüz anadili Türkçe olan biri tarafından gözden geçirilmedi.*
+*Bu, İngilizce hızlı başlangıçların bir yapay zekâ modeliyle yapılmış ve ikinci bir modelce kontrol edilmiş çevirisidir; henüz ana dili Türkçe olan biri tarafından gözden geçirilmedi.*
 
 # Hızlı başlangıç: Fadester Companion ve VJster
 

@@ -41,7 +41,7 @@ Keep the address private (it holds this computer's page key). Stream Deck must b
 
 For a deck without Fadester for OBS, the release also has `com.jbrick2070.vjster.streamDeckPlugin` (Stream Deck 7.1 or later; Windows 10 or later, macOS 13.5 or later). Double-click it and Stream Deck installs it with seven VJster actions and four profiles: **VJster Live +** and **VJster Dual +** (Stream Deck +), **VJster Live** (15 keys), **VJster Mini** (Mini). A profile may appear only once a deck of its kind is connected. It has no Elgato Marketplace listing.
 
-With a TourBox and VJster's `/obs` page on Windows, set a 32-digit lowercase hex `vjsterObsToken` in Fadester Companion's `config.json`; the Mac Companion's Setup window makes and copies the address for you. See `tourbox/README.md`.
+With a TourBox and VJster's `/obs` page, Fadester Companion makes the page key itself, on Windows and on the Mac: in the VJster section of its **Setup** tab, choose the **Target** and click **Copy OBS Browser Source URL**, then paste that address into an OBS Browser Source (on Windows, a key made while the controls run works after **Stop** and **Start**). See `tourbox/README.md`.
 
 ## Languages
 

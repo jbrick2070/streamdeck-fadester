@@ -79,6 +79,8 @@ Copy-Item -LiteralPath $art -Destination (Join-Path $bundle 'artwork') -Recurse
 Copy-Item -LiteralPath $art -Destination (Join-Path $sources 'artwork') -Recurse
 # GALLERY.txt (the notes for TourBox's preset gallery) is not for the person who downloads the ZIP: it goes with the source below.
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'README.md') -Destination $bundle
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'companion-steps.svg') -Destination $bundle
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'REFERENCE.md') -Destination $bundle
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'REHEARSAL.md') -Destination $bundle
 $license=Join-Path (Split-Path $PSScriptRoot) 'LICENSE'
 Copy-Item -LiteralPath $license -Destination $bundle

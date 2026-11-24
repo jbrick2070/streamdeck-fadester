@@ -2,24 +2,22 @@
 
 Fadester Companion lets a full-size TourBox mix OBS Studio scenes on a Mac: the flat Dial drives OBS's own Studio Mode T-bar, Scroll picks the next scene, and the buttons fade, cut and ride the music. It also answers the whole-mix keys of a Stream Deck or a MIDI controller. The version is in the window's title and under **Fadester Companion → About Fadester Companion**.
 
-## Install and open
+## Quick start
 
-1. Move **Fadester Companion.app** from this folder to **Applications**.
-2. Open it. The app is not notarized by Apple yet, so macOS refuses the first time. Go to **System Settings → Privacy & Security**, scroll down and click **Open Anyway**. (On macOS 14 and older you can instead Control-click the app and choose **Open**, then **Open** again.)
-3. In OBS 33, open **Tools → WebSocket Server Settings**, turn on **Enable WebSocket server**, keep authentication on and click **OK**. Fadester Companion connects by itself with the password OBS saved on this Mac. The **OBS** light at the top of the window turns green; when it is amber, the button beside it says what to do (**Turn on** switches Studio Mode on for you).
+1. **Install and open.** Move **Fadester Companion.app** from this folder to **Applications** and open it. The first time, macOS refuses (the app is not notarized yet): go to **System Settings → Privacy & Security**, scroll down and click **Open Anyway**.
+2. **Let it reach OBS.** In OBS 33, open **Tools → WebSocket Server Settings**, turn on **Enable WebSocket server**, keep authentication on and click **OK**. The **OBS** light at the top of the window turns green; when it is amber, the button beside it says what to do (**Turn on** switches Studio Mode on).
+3. **Import the preset.** On the **Setup** tab click **Import into TourBox Console**: it saves the preset to Downloads, copies its path and opens Console. In Console click the **Import** icon beside **Preset List**, press ⌘⇧G, then ⌘V and Return, and open the file. Turn **Auto Switch** off and select **OBS Fadester for TourBox**.
+4. **Allow Accessibility.** When the **Controls** light says *Accessibility: needed*, click **Grant…** beside it and turn on **Fadester Companion** in System Settings → Privacy & Security → Accessibility (and **Fadester Companion T-bar**, if listed). The controls then start by themselves.
 
-## Set up your TourBox
+That's it. Turn **Scroll** one step: Preview changes and Program stays. Turn the **Dial** to fade between them.
 
-1. On the **Setup** tab click **Import into TourBox Console**. It saves `OBS Fadester for TourBox.tb` to Downloads, copies its path and opens TourBox Console. If a different file of that name is already there, it is left alone and the preset is saved as `OBS Fadester for TourBox 2.tb`: the window names the file it saved, and that is the one to import. (macOS may ask once whether Fadester Companion may use the Downloads folder; if you say no, a save window asks where to put the file.)
-2. In Console click the **Import** icon beside **Preset List**. In the file window press ⌘⇧G, then ⌘V and Return, and open the file. If the file window does not accept ⌘⇧G, pick the file in Downloads by hand. **Show me where to click** plays these clicks.
-3. In Console turn **Auto Switch** off and select **OBS Fadester for TourBox**, so the preset works whichever app is in front.
-4. When the **Controls** light says *Accessibility: needed*, click **Grant…** beside it and turn on **Fadester Companion** in System Settings → Privacy & Security → Accessibility (and **Fadester Companion T-bar**, if macOS lists it too). The T-bar needs this permission. The controls then start by themselves.
+## Good to know
 
-Turn **Scroll** one step: Preview changes and Program stays. Turn the **Dial** to fade between them.
-
-## While you work
-
-Closing the window does not stop the controls: Fadester Companion stays in the menu bar, at the top right of the screen. Click that icon to open the window, to **Stop** or **Start** the controls, or to **Quit Fadester Companion**. Keep OBS's main window open with its T-bar visible.
+- **macOS 14 and older:** instead of **Open Anyway** you can Control-click the app, choose **Open**, then **Open** again.
+- **The preset file** is `OBS Fadester for TourBox.tb` in Downloads. If a different file of that name is already there, it is left alone and the new one is `OBS Fadester for TourBox 2.tb`: import the file the window names. If you refuse access to Downloads, a save window asks where to put it.
+- **The file window** does not accept ⌘⇧G? Pick the file in Downloads by hand. **Show me where to click** plays these clicks.
+- **The T-bar** needs the Accessibility permission, and OBS's main window open with its T-bar visible.
+- **Closing the window does not stop the controls.** Fadester Companion stays in the menu bar, at the top right of the screen. Click that icon to open the window, to **Stop** or **Start** the controls, or to **Quit Fadester Companion**.
 
 ## More help
 
@@ -29,6 +27,10 @@ Closing the window does not stop the controls: Fadester Companion stays in the m
 
 ## Remove
 
-Quit Fadester Companion from its menu-bar icon and move the app to the Trash. In TourBox Console, delete the **OBS Fadester for TourBox** preset. Your settings are in `~/Library/Application Support/FadesterTourBox`; delete that folder too if you do not want them kept. In System Settings → Privacy & Security → Accessibility you can remove the Fadester Companion entries.
+1. Quit Fadester Companion from its menu-bar icon and move the app to the Trash.
+2. In TourBox Console, delete the **OBS Fadester for TourBox** preset.
+3. Optional: delete your settings in `~/Library/Application Support/FadesterTourBox`, and remove the Fadester Companion entries in System Settings → Privacy & Security → Accessibility.
 
-Not yet checked on a real Mac: opening a downloaded copy, the Accessibility prompt, and control of OBS from a physical TourBox. Please report what you find, with your Mac (Apple silicon or Intel) and macOS version: https://github.com/jbrick2070/streamdeck-fadester/issues
+## Not yet checked on a real Mac
+
+Opening a downloaded copy, the Accessibility prompt, and control of OBS from a physical TourBox. Please report what you find, with your Mac (Apple silicon or Intel) and macOS version: https://github.com/jbrick2070/streamdeck-fadester/issues

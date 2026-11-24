@@ -1,10 +1,23 @@
 # Suite Demo Kit 1.1
 
 One scene collection, a few small media files and a Stream Deck profile that show what Playlister,
-Visual Sidechain, Fadester for OBS and VJster do together. Import it, switch to it, press the keys.
-The keys are already bound to the kit's sources and filters, so nothing needs picking first.
+Visual Sidechain, Fadester for OBS and VJster do together. The keys are already bound to the kit's
+sources and filters, so nothing needs picking first.
 
 Windows only (10 or later), OBS Studio 33 in Studio Mode, and a 1920x1080 canvas.
+
+## Quick start
+
+1. **Unzip and import.** Unzip to a short folder such as `C:\SuiteDemoKit`. In OBS (canvas
+   1920x1080), choose **Scene Collection > Import** in the top menu bar, pick `Suite Demo Kit.json`,
+   then choose the collection under **Scene Collection**.
+2. **Connect the deck.** In OBS turn on Studio Mode and the WebSocket server, and put its address and
+   password into one Fadester key's settings. Double-click `Suite Demo Kit +.streamDeckProfile` and
+   switch to it in Stream Deck.
+3. **Press the keys.** Each page's first key puts its scene in Preview; turn dial 1 to fade it in.
+
+That's it. The full steps, with the plugin versions you need, are under
+[Install and import](#install-and-import).
 
 ## What is in the zip
 

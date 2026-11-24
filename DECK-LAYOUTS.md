@@ -113,6 +113,8 @@ This is the one layout whose layer keys may reorder your sources (**Allow reorde
 - **Panic** sends [Visual Sidechain](https://github.com/jbrick2070/midi-fadester/blob/main/docs/VISUAL-SIDECHAIN.md)'s own Panic (part of Midi Fadester 0.9.0 or later) through OBS's hotkeys at once. The **Restore** keys (Restore visuals) need a 0.8 s hold. Panic keys read **PANIC SENT** until Restore visuals is accepted.
 - **Every filter and Playlister control ships unbound:** choose the source and its filter (or the Playlister) once in its settings page.
 
+![The Perform page of the VJ Rig on a Stream Deck +, as an earlier version drew it (a render from the plugin's own controllers against a running OBS, not a photo; the words on the keys have changed since): Preview to Program, Previous, Next and Random scene keys, Playlister Play / pause and Next, Panic, a T-bar strip and Effect mix, Reactivity and Forest Camera dials.](docs/images/vj-rig-perform-page.png)
+
 Stream Deck +, one row per page (keys top row / bottom row; dials):
 
 | Page | Keys | Dials |

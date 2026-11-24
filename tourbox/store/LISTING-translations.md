@@ -95,7 +95,7 @@ Nécessite OBS Studio avec son serveur WebSocket activé (Outils → Paramètres
 **What's new:** Version 1.5.1 :
 
 - Le Guide rapide commence maintenant par vous demander quel contrôleur vous avez : manette de jeu, TourBox ou contrôleur MIDI, avec une image de chacun.
-- Une nouvelle section pour les contrôleurs MIDI : un APC40 mkII ou un autre contrôleur MIDI est piloté par Midi Fadester, un plugin gratuit intégré à OBS, et non par Fadester Companion.
+- Une nouvelle section pour les contrôleurs MIDI : un APC40 mkII ou un autre contrôleur MIDI est piloté par Midi Fadester, un plugin gratuit qui fonctionne dans OBS, et non par Fadester Companion.
 - En russe et en néerlandais, l’application nomme désormais le menu Outils d’OBS comme OBS le nomme : Сервис en russe, Tools en néerlandais.
 
 **Product features**
@@ -418,9 +418,9 @@ WebSocket sunucusu açık OBS Studio gerekir (Araçlar → WebSocket Sunucu Ayar
 
 **What's new:** Sürüm 1.5.1:
 
-- Hızlı kılavuz artık önce hangi kontrolcünüz olduğunu soruyor: oyun kumandası, TourBox veya MIDI kontrolcüsü; her biri bir resimle.
+- Hızlı kılavuz artık önce hangi kontrolcünüz olduğunu soruyor: oyun kumandası, TourBox veya MIDI kontrolcüsü, her birinin resmiyle.
 - MIDI kontrolcüleri için yeni bir bölüm: APC40 mkII'yi veya başka bir MIDI kontrolcüsünü Fadester Companion değil, OBS içinde çalışan ücretsiz bir eklenti olan Midi Fadester yönetir.
-- Rusça ve Felemenkçede uygulama artık OBS'in Araçlar menüsünü OBS'in kendi adıyla anıyor: Сервис ve Tools.
+- Rusça ve Felemenkçede uygulama artık OBS'in Araçlar menüsünü tıpkı OBS gibi adlandırıyor: Сервис ve Tools.
 
 **Product features**
 

@@ -73,7 +73,7 @@ Fadester for OBS 是一個包含十九個動作的外掛：十二個來自 Fades
 2. **VJster 的動作在同一個清單中**，位於 *Fadester for OBS* 類別：**VJster 速度**、**VJster 畫質** 等。
 3. **加入 Chrome 擴充功能：**[Chrome Web Store 上的 VJster](https://chromewebstore.google.com/detail/daohboebokfmamkblejcpbblfnaijgnb)。它透過連接埠 48150 與外掛通訊。
 
-完成。VJster 只在一個程式中執行即可：本外掛、獨立的 VJster 外掛或 Fadester Companion 三者之一。
+完成。請只在一個程式中執行 VJster：本外掛、獨立的 VJster 外掛或 Fadester Companion 三者之一。
 
 [完整指南（英文）](../../docs/SUITE.md)
 

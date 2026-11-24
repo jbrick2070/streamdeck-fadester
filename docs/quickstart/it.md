@@ -4,7 +4,7 @@
 
 [Fadester for OBS](#fadester-for-obs) · [Inizia da qui](#start-here) · [Layout pronti](#layouts) · [OpenDeck](#opendeck) · [Un plugin con VJster](#suite) · [File di layout a mano](#profiles)
 
-Stream Deck non è in italiano: la sua lista delle azioni mostra i nomi inglesi (per esempio **Scene**). Tasti e pagine delle impostazioni di Fadester for OBS sono in italiano quando scegli **Lingua**.
+Stream Deck non è in italiano: la sua lista delle azioni mostra i nomi inglesi (per esempio **Scene**). Tasti e pagine delle impostazioni di Fadester for OBS sono in italiano quando scegli l’italiano in **Lingua**.
 
 <a id="fadester-for-obs"></a>
 ## Fadester for OBS

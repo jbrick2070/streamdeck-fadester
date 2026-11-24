@@ -60,7 +60,7 @@ Bu kadar. OBS aynı bilgisayarda ve WebSocket sunucusu açıksa eklenti kendili�
 
 1. **OpenDeck'i başlatın.** Deck'i bağlayın, Stream Deck yazılımını kapatın ve [OpenDeck](https://github.com/nekename/OpenDeck/releases)'i başlatın. Bu eklenti için [Node.js](https://nodejs.org/) 24 veya üstü gerekir.
 2. **Fadester'i kurun.** OpenDeck'in eklenti yöneticisinde **Fadester for OBS** listedeyse kurun, değilse dosyadan kurma düğmesiyle [Fadester indirmesini](https://github.com/jbrick2070/streamdeck-fadester/releases/latest/download/io.github.jbrick2070.fadester-for-obs.streamDeckPlugin) seçin.
-3. **Düzeninizi seçin**, deck adının altındaki profil listesinden: Plus için **Scene Desk + (Regular Mode)**, 15 tuş için **Scene Desk 15 Keys (Regular Mode)**, Mini için **Source Desk Mini (Either Mode)**. Diğer modellerde **Scene**'i bir tuşa sürükleyin.
+3. Deck adının altındaki profil listesinden **düzeninizi seçin**: Plus için **Scene Desk + (Regular Mode)**, 15 tuş için **Scene Desk 15 Keys (Regular Mode)**, Mini için **Source Desk Mini (Either Mode)**. Diğer modellerde **Scene**'i bir tuşa sürükleyin.
 
 OBS'in WebSocket sunucusu açıksa (**Araçlar → WebSocket Sunucu Ayarları**) bu kadar. OBS aynı bilgisayardaysa Fadester kayıtlı parolayla bağlanır.
 
@@ -71,8 +71,8 @@ OBS'in WebSocket sunucusu açıksa (**Araçlar → WebSocket Sunucu Ayarları**)
 
 Fadester for OBS, on dokuz eylemli tek bir eklentidir: on ikisi Fadester'in, yedisi VJster'in.
 
-1. **Fadester for OBS'i bir kez kurun**, Stream Deck'e ya da OpenDeck'e (yukarıya bakın).
-2. **VJster eylemleri aynı listededir**, *Fadester for OBS* kategorisinde: **VJster Speed**, **VJster Quality** ve diğerleri.
+1. **Fadester for OBS'i Stream Deck'e ya da OpenDeck'e bir kez kurun** (yukarıya bakın).
+2. **VJster eylemleri aynı listede**, *Fadester for OBS* kategorisindedir: **VJster Speed**, **VJster Quality** ve diğerleri.
 3. **Chrome uzantısını ekleyin:** [Chrome Web Store'da VJster](https://chromewebstore.google.com/detail/daohboebokfmamkblejcpbblfnaijgnb). Eklentiyle 48150 numaralı bağlantı noktası üzerinden konuşur.
 
 Bu kadar. VJster'i yalnızca bir programda çalıştırın: bu eklentide, ayrı VJster eklentisinde ya da Fadester Companion'da.

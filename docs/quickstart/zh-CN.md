@@ -73,7 +73,7 @@ Fadester for OBS 是一个包含十九个操作的插件：十二个来自 Fades
 2. **VJster 的操作在同一个列表中**，位于 *Fadester for OBS* 类别：**VJster 速度**、**VJster 画质** 等。
 3. **添加 Chrome 扩展程序：**[Chrome Web Store 中的 VJster](https://chromewebstore.google.com/detail/daohboebokfmamkblejcpbblfnaijgnb)。它通过端口 48150 与插件通信。
 
-完成。VJster 只在一个程序中运行即可：本插件、独立的 VJster 插件或 Fadester Companion 三者之一。
+完成。请只在一个程序中运行 VJster：本插件、独立的 VJster 插件或 Fadester Companion 三者之一。
 
 [完整指南（英文）](../../docs/SUITE.md)
 

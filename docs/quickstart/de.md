@@ -11,7 +11,7 @@ Fadester for OBS bringt OBS Studio auf Ihr Stream Deck: Szenen, Übergänge, Que
 
 <img src="../../docs/images/first-key-steps.svg" alt="Die erste Taste in drei Schritten: 1, die .streamDeckPlugin-Datei doppelklicken und installieren; 2, in OBS unter Werkzeuge → WebSocket-Servereinstellungen den Server aktivieren; 3, in Stream Deck Szene auf eine Taste ziehen und drücken: OBS wechselt zur nächsten Szene." width="900">
 
-1. **Plugin installieren.** Laden Sie auf der [Releases-Seite](https://github.com/jbrick2070/streamdeck-fadester/releases/latest) die Datei mit der Endung `.streamDeckPlugin` herunter und doppelklicken Sie sie. Bestätigen Sie die Installation in Stream Deck.
+1. **Plugin installieren.** Laden Sie auf der [Releases-Seite](https://github.com/jbrick2070/streamdeck-fadester/releases/latest) die Datei mit der Endung `.streamDeckPlugin` herunter und doppelklicken Sie darauf. Bestätigen Sie die Installation in Stream Deck.
 2. **WebSocket-Server von OBS einschalten.** In OBS: **Werkzeuge → WebSocket-Servereinstellungen**, den Server aktivieren, mit **OK** bestätigen. Die Authentifizierung bleibt, wie sie ist: Es gibt nichts abzuschreiben.
 3. **Szene auf eine Taste ziehen.** Ziehen Sie in der Aktionsliste von Stream Deck, Kategorie *Fadester for OBS*, die Aktion **Szene** auf eine Taste. Sie beginnt als **Nächste Szene**: Drücken Sie sie, und OBS wechselt zur nächsten Szene.
 
@@ -28,7 +28,7 @@ Welche Teile der Fadester Suite Sie für Ihre Hardware brauchen und wie Sie OBS 
 
 1. **Fadester for OBS installieren.** Die `.streamDeckPlugin`-Datei von der [Releases-Seite](https://github.com/jbrick2070/streamdeck-fadester/releases/latest) herunterladen, doppelklicken und in Stream Deck installieren.
 2. **WebSocket-Server von OBS einschalten.** In OBS Studio 33: **Werkzeuge → WebSocket-Servereinstellungen**, den Server aktivieren, **OK**. Das Plugin liest Port und Passwort, die OBS gespeichert hat.
-3. **Szene auf eine Taste ziehen** und drücken: OBS wechselt zur nächsten Szene. Für ein volles Deck klicken Sie die Taste an, dann die Zeile am Fuß ihrer Einstellungsseite, und öffnen **Fertige Layouts**.
+3. **Szene auf eine Taste ziehen** und drücken: OBS wechselt zur nächsten Szene. Für ein volles Deck klicken Sie die Taste an, dann die Zeile am Fuß ihrer Einstellungsseite, und öffnen Sie **Fertige Layouts**.
 
 Das war's. Ein anderer Controller oder mehr Teile? Die Tabelle steht in der vollständigen Anleitung.
 

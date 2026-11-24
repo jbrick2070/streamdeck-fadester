@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 300" width="900" height="300" role="img" aria-labelledby="t d">
+  <title id="t">VJster in three steps</title>
+  <desc id="d">1: get the VJster keys in Stream Deck with Fadester for OBS. 2: add the VJster extension to Chrome. 3: play a YouTube video and turn the dial to change its speed.</desc>
+  <style>
+    .card { fill: #ffffff; stroke: #cfe0d5; stroke-width: 2; }
+    .num { fill: #236044; }
+    .numt { fill: #ffffff; font: 700 22px system-ui, "Segoe UI", sans-serif; }
+    .h { fill: #162922; font: 700 21px system-ui, "Segoe UI", sans-serif; }
+    .s { fill: #3d5a4c; font: 15px system-ui, "Segoe UI", sans-serif; }
+    .ink { stroke: #236044; stroke-width: 3; fill: none; }
+    .pale { fill: #eef4ef; stroke: #236044; stroke-width: 3; }
+    .amber { fill: #e9a84a; }
+    .key { fill: #1b382d; }
+    .keyt { fill: #ffffff; font: 700 13px system-ui, "Segoe UI", sans-serif; }
+    .arrow { fill: #9bb8a8; }
+  </style>
+  <rect x="0" y="0" width="900" height="300" rx="18" fill="#eef4ef"/>
+
+  <!-- 1: the keys -->
+  <rect class="card" x="20" y="20" width="260" height="260" rx="16"/>
+  <circle class="num" cx="52" cy="52" r="18"/><text class="numt" x="52" y="60" text-anchor="middle">1</text>
+  <rect class="pale" x="70" y="80" width="160" height="104" rx="12"/>
+  <rect class="key" x="86" y="94" width="40" height="34" rx="6"/><rect class="key" x="134" y="94" width="40" height="34" rx="6"/><rect class="key" x="182" y="94" width="34" height="34" rx="6"/>
+  <rect x="86" y="136" width="40" height="34" rx="6" class="amber"/><text class="keyt" x="106" y="158" text-anchor="middle" fill="#1b382d">1.5x</text>
+  <rect class="key" x="134" y="136" width="40" height="34" rx="6"/><rect class="key" x="182" y="136" width="34" height="34" rx="6"/>
+  <text class="h" x="150" y="222" text-anchor="middle">Get the keys</text>
+  <text class="s" x="150" y="246" text-anchor="middle">Fadester for OBS in Stream Deck</text>
+  <text class="s" x="150" y="266" text-anchor="middle">(or Fadester Companion)</text>
+
+  <path class="arrow" d="M288 142 l14 8 -14 8 z"/>
+
+  <!-- 2: the extension -->
+  <rect class="card" x="320" y="20" width="260" height="260" rx="16"/>
+  <circle class="num" cx="352" cy="52" r="18"/><text class="numt" x="352" y="60" text-anchor="middle">2</text>
+  <rect class="pale" x="370" y="78" width="160" height="108" rx="10"/>
+  <line class="ink" x1="370" y1="100" x2="530" y2="100"/>
+  <circle cx="384" cy="89" r="4" fill="#236044"/><circle cx="396" cy="89" r="4" fill="#236044"/><circle cx="408" cy="89" r="4" fill="#236044"/>
+  <path d="M432 122 h14 a8 8 0 0 1 16 0 h14 v14 a8 8 0 0 1 0 16 v14 h-44 z" class="amber" stroke="#236044" stroke-width="3"/>
+  <rect x="490" y="150" width="30" height="22" rx="11" fill="#236044"/><text class="keyt" x="505" y="166" text-anchor="middle">+</text>
+  <text class="h" x="450" y="222" text-anchor="middle">Add the extension</text>
+  <text class="s" x="450" y="246" text-anchor="middle">VJster from the</text>
+  <text class="s" x="450" y="266" text-anchor="middle">Chrome Web Store</text>
+
+  <path class="arrow" d="M588 142 l14 8 -14 8 z"/>
+
+  <!-- 3: try it -->
+  <rect class="card" x="620" y="20" width="260" height="260" rx="16"/>
+  <circle class="num" cx="652" cy="52" r="18"/><text class="numt" x="652" y="60" text-anchor="middle">3</text>
+  <rect class="pale" x="668" y="80" width="110" height="72" rx="8"/>
+  <path d="M712 100 l24 16 -24 16 z" fill="#236044"/>
+  <rect x="676" y="160" width="94" height="8" rx="4" fill="#cfe0d5"/><rect x="676" y="160" width="58" height="8" rx="4" fill="#236044"/>
+  <circle cx="820" cy="132" r="32" class="pale"/><circle cx="820" cy="132" r="20" fill="#ffffff" stroke="#236044" stroke-width="2"/>
+  <line x1="820" y1="132" x2="834" y2="118" stroke="#236044" stroke-width="4" stroke-linecap="round"/>
+  <path class="ink" d="M846 96 a40 40 0 0 1 10 40" marker-end="url(#tip)"/>
+  <defs><marker id="tip" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#236044"/></marker></defs>
+  <text class="h" x="750" y="222" text-anchor="middle">Play and turn</text>
+  <text class="s" x="750" y="246" text-anchor="middle">Play a YouTube video,</text>
+  <text class="s" x="750" y="266" text-anchor="middle">turn the dial: speed follows</text>
+</svg>

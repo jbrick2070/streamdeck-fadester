@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 300" width="900" height="300" role="img" aria-labelledby="t d">
+  <title id="t">Open a ready-made layout in three steps</title>
+  <desc id="d">1: click any Fadester for OBS key in Stream Deck to open its settings. 2: click the line at the foot of the settings page, then Ready-made layouts. 3: choose a layout and press Open this layout; the deck switches to it as an editable profile.</desc>
+  <style>
+    .card { fill: #ffffff; stroke: #cfe0d5; stroke-width: 2; }
+    .num { fill: #236044; }
+    .numt { fill: #ffffff; font: 700 22px system-ui, "Segoe UI", sans-serif; }
+    .h { fill: #162922; font: 700 21px system-ui, "Segoe UI", sans-serif; }
+    .s { fill: #3d5a4c; font: 15px system-ui, "Segoe UI", sans-serif; }
+    .small { fill: #236044; font: 600 12px system-ui, "Segoe UI", sans-serif; }
+    .ink { stroke: #236044; stroke-width: 3; fill: none; }
+    .pale { fill: #eef4ef; stroke: #236044; stroke-width: 3; }
+    .amber { fill: #e9a84a; }
+    .key { fill: #1b382d; }
+    .line { fill: #cfe0d5; }
+    .keyt { fill: #ffffff; font: 700 13px system-ui, "Segoe UI", sans-serif; }
+    .arrow { fill: #9bb8a8; }
+  </style>
+  <rect x="0" y="0" width="900" height="300" rx="18" fill="#eef4ef"/>
+
+  <!-- 1: click a key -->
+  <rect class="card" x="20" y="20" width="260" height="260" rx="16"/>
+  <circle class="num" cx="52" cy="52" r="18"/><text class="numt" x="52" y="60" text-anchor="middle">1</text>
+  <rect class="pale" x="70" y="80" width="160" height="104" rx="12"/>
+  <rect class="key" x="86" y="94" width="40" height="34" rx="6"/><rect x="134" y="94" width="40" height="34" rx="6" class="amber"/><rect class="key" x="182" y="94" width="34" height="34" rx="6"/>
+  <rect class="key" x="86" y="136" width="40" height="34" rx="6"/><rect class="key" x="134" y="136" width="40" height="34" rx="6"/><rect class="key" x="182" y="136" width="34" height="34" rx="6"/>
+  <path d="M160 112 l0 30 8 -8 6 13 6 -3 -6 -13 11 0 z" fill="#ffffff" stroke="#1b382d" stroke-width="2" stroke-linejoin="round"/>
+  <text class="h" x="150" y="222" text-anchor="middle">Click a key</text>
+  <text class="s" x="150" y="246" text-anchor="middle">Any Fadester for OBS key</text>
+  <text class="s" x="150" y="266" text-anchor="middle">opens its settings</text>
+
+  <path class="arrow" d="M288 142 l14 8 -14 8 z"/>
+
+  <!-- 2: the foot line -->
+  <rect class="card" x="320" y="20" width="260" height="260" rx="16"/>
+  <circle class="num" cx="352" cy="52" r="18"/><text class="numt" x="352" y="60" text-anchor="middle">2</text>
+  <rect class="pale" x="372" y="74" width="156" height="118" rx="10"/>
+  <rect class="line" x="388" y="90" width="110" height="9" rx="4"/>
+  <rect class="line" x="388" y="108" width="124" height="9" rx="4"/>
+  <rect class="line" x="388" y="126" width="90" height="9" rx="4"/>
+  <rect x="380" y="152" width="140" height="28" rx="6" class="amber"/>
+  <text class="small" x="450" y="171" text-anchor="middle" fill="#1b382d">… · Settings</text>
+  <text class="h" x="450" y="222" text-anchor="middle">Click the foot line</text>
+  <text class="s" x="450" y="246" text-anchor="middle">then open</text>
+  <text class="s" x="450" y="266" text-anchor="middle">Ready-made layouts</text>
+
+  <path class="arrow" d="M588 142 l14 8 -14 8 z"/>
+
+  <!-- 3: open this layout -->
+  <rect class="card" x="620" y="20" width="260" height="260" rx="16"/>
+  <circle class="num" cx="652" cy="52" r="18"/><text class="numt" x="652" y="60" text-anchor="middle">3</text>
+  <rect class="pale" x="672" y="74" width="156" height="118" rx="10"/>
+  <rect class="line" x="686" y="88" width="128" height="18" rx="4"/>
+  <rect x="686" y="112" width="128" height="18" rx="4" fill="#ffffff" stroke="#236044" stroke-width="2"/>
+  <circle cx="697" cy="121" r="4" fill="#236044"/><rect class="line" x="706" y="117" width="90" height="8" rx="4"/>
+  <rect class="line" x="686" y="136" width="128" height="18" rx="4"/>
+  <rect x="690" y="162" width="120" height="24" rx="12" fill="#236044"/><text class="keyt" x="750" y="179" text-anchor="middle">Open this layout</text>
+  <text class="h" x="750" y="222" text-anchor="middle">Open this layout</text>
+  <text class="s" x="750" y="246" text-anchor="middle">Your deck switches to it,</text>
+  <text class="s" x="750" y="266" text-anchor="middle">a profile you can edit</text>
+</svg>

@@ -1,14 +1,24 @@
 # Fadester for OBS: ready-made layouts
 
-Fourteen layouts for the Stream Deck +, the 15-key Stream Deck and the Stream Deck Mini. Every one is a profile you can edit. The picker in the settings page lists the layouts for your deck with the OBS mode in front, as in **[Studio Mode] Scene Desk +**; in Stream Deck's own profile list the same layout is called **Fadester — Scene Desk + (Studio Mode)**.
+Fourteen layouts for the Stream Deck +, the 15-key Stream Deck and the Stream Deck Mini. Each one opens as a Stream Deck profile you can edit.
 
 ## Open one
 
-Click any Fadester for OBS key in Stream Deck to open its settings. Click the line at the foot of the page (it shows the version and the connection), open **Ready-made layouts**, choose a layout and press **Open this layout**. The first time, a line at the top of the page, **New deck? Fill it with a ready-made layout**, leads to the same place. A Studio Mode layout offers **Turn on Studio Mode and open** (or **Prepare Preview and open** when Studio Mode is already on) and prepares Preview for you. The second time, the same button returns to your edited copy.
+<img src="docs/images/open-layout-steps.svg" alt="Open a ready-made layout in three steps: 1, click any Fadester for OBS key to open its settings; 2, click the line at the foot of the page, then Ready-made layouts; 3, choose a layout and press Open this layout." width="900">
 
-Or double-click a `.streamDeckProfile` file linked below; Stream Deck imports it as a new profile. The [profile library](profiles/README.md) lists every file.
+1. **Click any Fadester for OBS key** in Stream Deck to open its settings.
+2. **Click the line at the foot of the page** (it shows the version and the connection) and open **Ready-made layouts**.
+3. **Choose a layout and press Open this layout.** Your deck switches to it.
 
-The plugin connects to OBS by itself when OBS runs on the same computer with its WebSocket server on (README, *Three steps to the first working key*). Every layout uses that one connection.
+That's it. The plugin connects to OBS by itself when OBS runs on the same computer with its WebSocket server on ([README, *Three steps to the first working key*](README.md#three-steps-to-the-first-working-key)); every layout uses that one connection.
+
+Quick start in other languages: [Deutsch](docs/quickstart/de.md#layouts) · [Español](docs/quickstart/es.md#layouts) · [Français](docs/quickstart/fr.md#layouts) · [Italiano](docs/quickstart/it.md#layouts) · [日本語](docs/quickstart/ja.md#layouts) · [한국어](docs/quickstart/ko.md#layouts) · [Nederlands](docs/quickstart/nl.md#layouts) · [Português (Brasil)](docs/quickstart/pt-BR.md#layouts) · [Русский](docs/quickstart/ru.md#layouts) · [Türkçe](docs/quickstart/tr.md#layouts) · [简体中文](docs/quickstart/zh-CN.md#layouts) · [繁體中文](docs/quickstart/zh-TW.md#layouts)
+
+- **The first time**, a line at the top of the settings page, **New deck? Fill it with a ready-made layout**, leads to the same place.
+- **A Studio Mode layout** offers **Turn on Studio Mode and open** (or **Prepare Preview and open** when Studio Mode is already on) and prepares Preview for you.
+- **The second time**, the same button returns to your edited copy.
+- **Names:** the picker lists the layouts for your deck with the OBS mode in front, as in **[Studio Mode] Scene Desk +**; in Stream Deck's own profile list the same layout is called **Fadester — Scene Desk + (Studio Mode)**.
+- **By hand:** double-click a `.streamDeckProfile` file linked below; Stream Deck imports it as a new profile. The [profile library](profiles/README.md) lists every file.
 
 ## Which one
 
@@ -94,13 +104,18 @@ This is the one layout whose layer keys may reorder your sources (**Allow reorde
 | Restart | Status | Free | Free |
 | **Dial:** Free | **Dial:** Free | **Dial:** Free | **Dial:** Free |
 
-The keys ship unbound: open each key's settings page once and choose the Playlister source by name. The key keeps following it if you rename it. Each key shows what OBS reports (Playing, Paused, Stopped, Ended, Empty, with the time), *Play sent* or *Pause sent* while a press waits for OBS, and *Busy* when presses are queued. Nothing is sent while the source is missing or OBS is unreachable. Status only watches. With Playlister 1.5.0 or newer (its `get_now_next` request), **Status** and **Play / pause** carry the playing item's name in place of their own word and **Next** names the item that follows (not with Shuffle on, where Playlister chooses the next item only as it starts); with an older Playlister the keys show their own words, as before.
+- **The keys ship unbound:** open each key's settings page once and choose the Playlister source by name. The key keeps following it if you rename it.
+- **Each key shows what OBS reports** (Playing, Paused, Stopped, Ended, Empty, with the time), *Play sent* or *Pause sent* while a press waits for OBS, and *Busy* when presses are queued. Nothing is sent while the source is missing or OBS is unreachable. Status only watches.
+- **With Playlister 1.5.0 or newer** (its `get_now_next` request), **Status** and **Play / pause** carry the playing item's name instead of their own word and **Next** names the item that follows (not with Shuffle on, where Playlister chooses the next item only as it starts). With an older Playlister the keys show their own words, as before.
 
 ## VJ Rig (Studio Mode)
 
 [VJ Rig +](io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/plus-vj-rig-v1.streamDeckProfile) or [VJ Rig 15 Keys](io.github.jbrick2070.fadester-for-obs.sdPlugin/profiles/buttons-vj-rig-v1.streamDeckProfile). Four pages, each with its own colour: **Perform** (brass), **Layers** (teal), **Visuals** (magenta), **Scenes** (violet). **Next page** sits bottom left and the red **PANIC** key bottom right on every page; no Cut or Transition key is ever next to Panic.
 
-Panic sends [Visual Sidechain](https://github.com/jbrick2070/midi-fadester/blob/main/docs/VISUAL-SIDECHAIN.md)'s own Panic (part of Midi Fadester 0.9.0 or later) through OBS's hotkeys at once; **Restore** needs a 0.8 s hold. Panic keys then read **PANIC SENT** until a Restore is accepted. Every filter and Playlister control ships unbound: choose the source and its filter (or the Playlister) once in its settings page.
+- **Panic** sends [Visual Sidechain](https://github.com/jbrick2070/midi-fadester/blob/main/docs/VISUAL-SIDECHAIN.md)'s own Panic (part of Midi Fadester 0.9.0 or later) through OBS's hotkeys at once. The **Restore** keys (Restore visuals) need a 0.8 s hold. Panic keys read **PANIC SENT** until Restore visuals is accepted.
+- **Every filter and Playlister control ships unbound:** choose the source and its filter (or the Playlister) once in its settings page.
+
+![The Perform page of the VJ Rig on a Stream Deck +, as an earlier version drew it (a render from the plugin's own controllers against a running OBS, not a photo; the words on the keys have changed since): Preview to Program, Previous, Next and Random scene keys, Playlister Play / pause and Next, Panic, a T-bar strip and Effect mix, Reactivity and Forest Camera dials.](docs/images/vj-rig-perform-page.png)
 
 Stream Deck +, one row per page (keys top row / bottom row; dials):
 
@@ -124,6 +139,6 @@ The effect dials ride a Visual Sidechain Shader Filter's Effect mix or Reactivit
 
 ## Good to know
 
-- Opening a layout creates a named, editable profile. Your edits stay; an updated layout in a later release opens as its own profile and leaves the old one alone.
-- Layouts contain no host, port or password. The shared OBS connection lives in the plugin.
-- Half layouts leave real empty keys for other plugins. A profile can reference another plugin's actions, but Stream Deck does not carry that plugin with the profile, so install it separately.
+- **Your edits stay.** An updated layout in a later release opens as its own profile and leaves the old one alone.
+- **No host, port or password** in any layout. The shared OBS connection lives in the plugin.
+- **Other plugins on the free keys:** a profile can reference another plugin's actions, but Stream Deck does not carry that plugin with the profile, so install it separately.

@@ -1,0 +1,12 @@
+# Fadester Suite: which video player when
+
+The suite has four ways to play video with speed control. Pick by where your clips live and whether the speed must change live without restarting playback.
+
+| Player | Plays | Speed range | Speed change | Controlled from | Pick it when |
+|---|---|---|---|---|---|
+| **VJster, Chrome tab** | YouTube (with quality control) or any allowed HTML5 `<video>` tab in Chrome, captured into OBS | `25%–200% (0.25x–2x)` (`400% (4x)` when YouTube offers it; `10%–1600% (0.1x–16x)` with **Extended** on) | Live, in place | **Fadester for OBS** (VJster keys and dials), **Fadester Companion** | You are capturing a browser window and want live speed or YouTube quality control |
+| **VJster, OBS page** | One YouTube video (`v=`) or playlist (`list=`) inside an OBS Browser Source | `25%–200% (0.25x–2x)` (the OBS CEF 150 embed ceiling) | Live, in place; speed and play/pause only (the embed has no quality control) | **Fadester for OBS** (VJster keys and dials), **Fadester Companion** | You want YouTube inside OBS with no Chrome window |
+| **Tape Deck** *(in Visual Sidechain)* | One local or network-share video file (`MP4`, `MKV`, `MOV`, `WebM`) inside a dedicated OBS Browser Source (Windows) | `25%–800% (0.25x–8x)` (`100% (1x)` normal) | Live, picture and sound, with optional **Tape pitch** and a ratio **Speed Fader** | **Fadester for OBS** (**Tape Deck** key/dial or **Filter**), Midi Fadester **Speed Fader**, OBS hotkeys, `obs-websocket` (`deck_command`). *(Fadester Companion preset support is a follow-up.)* | You want to ride the speed of one clip live from a dial, key, or MIDI fader |
+| **Playlister** | Local files, folders, `.m3u` / `.m3u8` / `.pls` playlists and stream URLs, in its own **Playlister** source that plays through OBS's Media Source (Windows, Linux and macOS; on a Mac it loads and creates its source, the hands-on test is still to come) | `1%–200% (0.01x–2x)` as a source setting (`100% (1x)` normal) | **Changing Speed restarts the clip from its beginning** | **Fadester for OBS** (**Playlister** key), OBS Media Controls, OBS hotkeys, `obs-websocket` media inputs | You want a multi-clip running order with Next/Previous transport that survives edits |
+
+Setup: VJster, [vjster/INSTALL.md](vjster/INSTALL.md); Tape Deck, [Visual Sidechain](https://github.com/jbrick2070/midi-fadester/blob/main/docs/VISUAL-SIDECHAIN.md) (in Midi Fadester); Playlister, [its README](https://github.com/jbrick2070/obs-playlister#install).

@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 300" width="900" height="300" role="img" aria-labelledby="t d">
+  <title id="t">Fadester for OBS in OpenDeck in three steps</title>
+  <desc id="d">1: start OpenDeck with the deck connected and Stream Deck software closed. 2: install Fadester for OBS from OpenDeck's plugin manager, or with its local-file install button. 3: pick the Fadester layout in the profile list under the deck's name.</desc>
+  <style>
+    .card { fill: #ffffff; stroke: #cfe0d5; stroke-width: 2; }
+    .num { fill: #236044; }
+    .numt { fill: #ffffff; font: 700 22px system-ui, "Segoe UI", sans-serif; }
+    .h { fill: #162922; font: 700 21px system-ui, "Segoe UI", sans-serif; }
+    .s { fill: #3d5a4c; font: 15px system-ui, "Segoe UI", sans-serif; }
+    .small { fill: #236044; font: 600 12px system-ui, "Segoe UI", sans-serif; }
+    .ink { stroke: #236044; stroke-width: 3; fill: none; }
+    .pale { fill: #eef4ef; stroke: #236044; stroke-width: 3; }
+    .amber { fill: #e9a84a; }
+    .key { fill: #1b382d; }
+    .line { fill: #cfe0d5; }
+    .keyt { fill: #ffffff; font: 700 13px system-ui, "Segoe UI", sans-serif; }
+    .arrow { fill: #9bb8a8; }
+  </style>
+  <rect x="0" y="0" width="900" height="300" rx="18" fill="#eef4ef"/>
+
+  <!-- 1: start OpenDeck -->
+  <rect class="card" x="20" y="20" width="260" height="260" rx="16"/>
+  <circle class="num" cx="52" cy="52" r="18"/><text class="numt" x="52" y="60" text-anchor="middle">1</text>
+  <rect class="pale" x="64" y="84" width="104" height="80" rx="12"/>
+  <rect class="key" x="76" y="96" width="24" height="24" rx="4"/><rect class="key" x="104" y="96" width="24" height="24" rx="4"/><rect class="key" x="132" y="96" width="24" height="24" rx="4"/>
+  <rect class="key" x="76" y="126" width="24" height="24" rx="4"/><rect class="key" x="104" y="126" width="24" height="24" rx="4"/><rect class="key" x="132" y="126" width="24" height="24" rx="4"/>
+  <path class="ink" d="M168 124 h22"/>
+  <rect x="190" y="98" width="52" height="52" rx="10" class="amber" stroke="#236044" stroke-width="3"/>
+  <path d="M206 112 l18 12 -18 12 z" fill="#1b382d"/>
+  <text class="h" x="150" y="222" text-anchor="middle">Start OpenDeck</text>
+  <text class="s" x="150" y="246" text-anchor="middle">Deck connected,</text>
+  <text class="s" x="150" y="266" text-anchor="middle">Stream Deck app closed</text>
+
+  <path class="arrow" d="M288 142 l14 8 -14 8 z"/>
+
+  <!-- 2: install the plugin -->
+  <rect class="card" x="320" y="20" width="260" height="260" rx="16"/>
+  <circle class="num" cx="352" cy="52" r="18"/><text class="numt" x="352" y="60" text-anchor="middle">2</text>
+  <rect class="pale" x="368" y="76" width="164" height="114" rx="10"/>
+  <rect class="line" x="382" y="92" width="80" height="10" rx="5"/>
+  <rect x="382" y="112" width="136" height="28" rx="6" fill="#ffffff" stroke="#236044" stroke-width="2"/>
+  <rect x="390" y="118" width="16" height="16" rx="3" class="amber"/>
+  <text class="small" x="412" y="131">Fadester for OBS</text>
+  <rect class="line" x="382" y="148" width="136" height="12" rx="6"/>
+  <rect x="488" y="164" width="30" height="20" rx="10" fill="#236044"/><text class="keyt" x="503" y="179" text-anchor="middle">+</text>
+  <text class="h" x="450" y="222" text-anchor="middle">Install Fadester</text>
+  <text class="s" x="450" y="246" text-anchor="middle">From the plugin manager</text>
+  <text class="s" x="450" y="266" text-anchor="middle">(or its local-file button)</text>
+
+  <path class="arrow" d="M588 142 l14 8 -14 8 z"/>
+
+  <!-- 3: pick the layout -->
+  <rect class="card" x="620" y="20" width="260" height="260" rx="16"/>
+  <circle class="num" cx="652" cy="52" r="18"/><text class="numt" x="652" y="60" text-anchor="middle">3</text>
+  <rect class="line" x="672" y="80" width="90" height="12" rx="6"/>
+  <rect x="672" y="100" width="156" height="28" rx="6" fill="#ffffff" stroke="#236044" stroke-width="2"/>
+  <text class="small" x="682" y="119">Scene Desk +</text>
+  <path d="M808 110 l6 7 6 -7" stroke="#236044" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <rect class="pale" x="700" y="136" width="100" height="52" rx="8"/>
+  <rect class="key" x="710" y="146" width="18" height="14" rx="3"/><rect x="732" y="146" width="18" height="14" rx="3" class="amber"/><rect class="key" x="754" y="146" width="18" height="14" rx="3"/><rect class="key" x="776" y="146" width="16" height="14" rx="3"/>
+  <circle cx="719" cy="174" r="7" fill="#ffffff" stroke="#236044" stroke-width="2"/><circle cx="741" cy="174" r="7" fill="#ffffff" stroke="#236044" stroke-width="2"/><circle cx="763" cy="174" r="7" fill="#ffffff" stroke="#236044" stroke-width="2"/><circle cx="785" cy="174" r="7" fill="#ffffff" stroke="#236044" stroke-width="2"/>
+  <text class="h" x="750" y="222" text-anchor="middle">Pick the layout</text>
+  <text class="s" x="750" y="246" text-anchor="middle">Profile list under</text>
+  <text class="s" x="750" y="266" text-anchor="middle">the deck's name</text>
+</svg>

@@ -262,7 +262,7 @@ Fadester Companion превращает контроллеры, которые �
 
 Он продолжает работать, когда OBS на переднем плане, общается только с OBS и расширением VJster на вашем компьютере и ничего не отправляет в интернет.
 
-Нужен OBS Studio с включённым сервером WebSocket (Инструменты → Настройки сервера WebSocket). Для T-bar нужен OBS Studio 33 в Режиме студии. Бесплатно и с открытым исходным кодом (GPL-2.0-or-later).
+Нужен OBS Studio с включённым сервером WebSocket (Сервис → Настройки сервера WebSocket). Для T-bar нужен OBS Studio 33 в Режиме студии. Бесплатно и с открытым исходным кодом (GPL-2.0-or-later).
 
 **Short description:** Ваш геймпад — теперь видеомикшер для OBS Studio: настоящий T-bar на правом триггере, сцены на крестовине, музыка на левом триггере.
 
@@ -385,7 +385,7 @@ Heb je een TourBox? Dezelfde Companion bedient die ook: de Dial is je T-bar, met
 
 De app blijft werken terwijl OBS op de voorgrond staat, praat alleen met OBS en de VJster-extensie op je eigen computer en stuurt niets naar internet.
 
-Vereist OBS Studio met de WebSocket-server ingeschakeld (Hulpmiddelen → WebSocket-serverinstellingen). De T-bar heeft OBS Studio 33 in de Studiomodus nodig. Gratis en open source (GPL-2.0-or-later).
+Vereist OBS Studio met de WebSocket-server ingeschakeld (Tools → WebSocket-serverinstellingen). De T-bar heeft OBS Studio 33 in de Studiomodus nodig. Gratis en open source (GPL-2.0-or-later).
 
 **Short description:** Je gamecontroller als beeldmixer voor OBS Studio: een echte T-bar op de rechtertrigger, scènes op de D-pad, muziek op de linkertrigger.
 

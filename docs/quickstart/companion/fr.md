@@ -14,7 +14,7 @@ Fadester Companion vous permet de mixer les scènes d’OBS Studio sous Windows 
 
 1. **Installez et ouvrez.** Obtenez **Fadester Companion** sur le [Microsoft Store](https://apps.microsoft.com/detail/9PN7D3P2X7F4) et ouvrez-le depuis le menu Démarrer. (Depuis le ZIP : extrayez tout dans un dossier que vous gardez et ouvrez **Fadester Companion.exe**.)
 2. **Reliez-le à OBS.** Dans OBS, ouvrez **Outils → Paramètres du serveur WebSocket**, cochez **Activer le serveur WebSocket**, laissez **Activer l’authentification** coché et cliquez sur **OK**. Le voyant **OBS** en haut de Fadester Companion passe au vert. Orange ? Cliquez sur le bouton à côté : **Activer** active le Mode studio, **Montrez-moi** montre les clics dans OBS.
-3. **Choisissez votre manette et faites le fondu.** Dans l’onglet **Configuration**, sous **2 Choisir un contrôleur**, cochez **Utiliser une manette Xbox ou XInput** (laissez **Mode facile**), puis cliquez sur **Arrêter** et **Démarrer**, en bas à gauche. Avec une TourBox, suivez plutôt [Connecter une TourBox](../../../tourbox/README.md#connect-a-tourbox) (en anglais). Appuyez sur le bas du pavé directionnel (TourBox : tournez **Scroll**) pour préparer la scène suivante dans l’aperçu, puis tirez la gâchette droite (TourBox : tournez le **Dial** plat) : le T-bar d’OBS suit, et tiré jusqu’au bout, l’aperçu passe au programme.
+3. **Choisissez votre manette et faites le fondu.** Dans l’onglet **Configuration**, sous **2 Choisir un contrôleur**, cochez **Utiliser une manette Xbox ou XInput** (laissez **Mode facile**), puis cliquez sur **Arrêter** et **Démarrer**, en bas à gauche. Avec une TourBox, suivez plutôt [Connecter une TourBox](../../../tourbox/README.md#connect-a-tourbox) (en anglais). Appuyez sur le bas du pavé directionnel (TourBox : tournez **Scroll**) pour préparer la scène suivante dans l’aperçu, puis tirez la gâchette droite (TourBox : tournez le **Dial** plat) : le T-bar d’OBS suit, et une fois au bout, l’aperçu passe au programme.
 
 C’est tout.
 
@@ -76,7 +76,7 @@ L’unique extension Chrome VJster fonctionne depuis Stream Deck, OpenDeck et la
 
 1. **Configurez la TourBox.** Installez Fadester Companion et importez son préréglage : [Connecter une TourBox](../../../tourbox/README.md#connect-a-tourbox) (en anglais).
 2. **Ajoutez l’extension Chrome.** Ajoutez [VJster depuis le Chrome Web Store](https://chromewebstore.google.com/detail/daohboebokfmamkblejcpbblfnaijgnb) et lisez une vidéo YouTube dans Chrome.
-3. **Tournez le Knob en relief.** La vitesse de la vidéo suit. Touchez **Side** pour revenir à 1x.
+3. **Tournez le Knob en relief.** La vitesse de la vidéo suit. Appuyez brièvement sur **Side** pour revenir à 1x.
 
 C’est tout. OBS peut rester fermé.
 

@@ -56,7 +56,7 @@ Das war's. Steht auf dem Streifen **ERWEITERUNG AUS**, lesen Sie *When something
 
 ## VJster: Installation
 
-Mit VJster ändern Ihr Stream Deck, Ihre TourBox oder Ihr Gamecontroller Tempo und Qualität eines YouTube-Videos in Chrome.
+Mit VJster ändert Ihr Stream Deck, Ihre TourBox oder Ihr Gamecontroller Tempo und Qualität eines YouTube-Videos in Chrome.
 
 <img src="../../vjster/install-steps.svg" alt="VJster in drei Schritten: 1, die Tasten holen (Fadester for OBS in Stream Deck oder Fadester Companion); 2, die VJster-Erweiterung aus dem Chrome Web Store hinzufügen; 3, ein YouTube-Video abspielen und den Drehregler drehen: das Tempo folgt." width="900">
 

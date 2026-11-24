@@ -46,9 +46,9 @@ Fadester Companion 让你在 Windows 上用 Xbox 或其他 XInput 游戏手柄�
 
 1. **获取按键。** 已有 **Fadester for OBS 0.9.0 或更高版本**？其中已经包含七个 VJster 操作，可以跳过这一步。否则双击 `com.jbrick2070.vjster.streamDeckPlugin`，并同意安装附带的配置文件（适用于 Stream Deck + 的 **VJster Live +** 和 **VJster Dual +**，适用于 15 键的 **VJster Live**，以及 **VJster Mini**）。
 2. **添加 Chrome 扩展。** 添加 [Chrome Web Store 中的 VJster](https://chromewebstore.google.com/detail/daohboebokfmamkblejcpbblfnaijgnb)。它的选项页面会打开一次。
-3. **试一试。** 把 **VJster 速度** 拖到旋钮上，或把 **VJster 速度预设** 拖到按键上（在 VJster 插件中名为 **速度** 和 **速度预设**，也可以切换到某个 VJster 配置文件）。在 Chrome 中播放一个 YouTube 视频。几秒内，速度 条（或 1x 键）会显示正在播放。转动旋钮。
+3. **试一试。** 把 **VJster 速度** 拖到旋钮上，或把 **VJster 速度预设** 拖到按键上（在 VJster 插件中名为 **速度** 和 **速度预设**，也可以切换到某个 VJster 配置文件）。在 Chrome 中播放一个 YouTube 视频。几秒内，速度 触控条（或 1x 键）会显示正在播放。转动旋钮。
 
-就这样。如果条上显示 **扩展未开启**，请参阅 [INSTALL.md](../../vjster/INSTALL.md#when-something-is-off) 中的 *When something is off*（英文）。
+就这样。如果触控条上显示 **扩展未开启**，请参阅 [INSTALL.md](../../vjster/INSTALL.md#when-something-is-off) 中的 *When something is off*（英文）。
 
 [完整指南（英文）](../../vjster/README.md)
 

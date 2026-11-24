@@ -10,6 +10,8 @@
 
 That's it. The full VJster setup, with the optional OBS page: [vjster/INSTALL.md](vjster/INSTALL.md).
 
+Quick start in other languages: [Deutsch](quickstart/de.md#suite) · [Español](quickstart/es.md#suite) · [Français](quickstart/fr.md#suite) · [Italiano](quickstart/it.md#suite) · [日本語](quickstart/ja.md#suite) · [한국어](quickstart/ko.md#suite) · [Nederlands](quickstart/nl.md#suite) · [Português (Brasil)](quickstart/pt-BR.md#suite) · [Русский](quickstart/ru.md#suite) · [Türkçe](quickstart/tr.md#suite) · [简体中文](quickstart/zh-CN.md#suite) · [繁體中文](quickstart/zh-TW.md#suite)
+
 ## Good to know
 
 - **Keep one VJster host.** Fadester Companion can host the same VJster link, so keep only one program with VJster running: this plugin, the standalone VJster plugin or Fadester Companion.

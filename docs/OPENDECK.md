@@ -12,6 +12,8 @@
 
 That's it, once OBS's WebSocket server is on (in OBS: **Tools → WebSocket Server Settings**, tick **Enable WebSocket server**). With OBS on the same computer, Fadester signs in with the password OBS saved; there is nothing to type.
 
+Quick start in other languages: [Deutsch](quickstart/de.md#opendeck) · [Español](quickstart/es.md#opendeck) · [Français](quickstart/fr.md#opendeck) · [Italiano](quickstart/it.md#opendeck) · [日本語](quickstart/ja.md#opendeck) · [한국어](quickstart/ko.md#opendeck) · [Nederlands](quickstart/nl.md#opendeck) · [Português (Brasil)](quickstart/pt-BR.md#opendeck) · [Русский](quickstart/ru.md#opendeck) · [Türkçe](quickstart/tr.md#opendeck) · [简体中文](quickstart/zh-CN.md#opendeck) · [繁體中文](quickstart/zh-TW.md#opendeck)
+
 **Try it:** with at least two scenes in OBS and streaming and recording off, press **Next scene** on Scene Desk. OBS switches scenes and the deck shows the real scene names. On a Mini, press **Next source** to select a source and **Show/hide** to toggle it; press it again to put the source back.
 
 ## Good to know

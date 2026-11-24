@@ -12,6 +12,8 @@ Which pieces of the Fadester Suite to install for your hardware, and how to set 
 
 That's it. Another controller, or more pieces? Find your hardware in [section 1](#1-what-do-you-have).
 
+Quick start in other languages: [Deutsch](quickstart/de.md#start-here) · [Español](quickstart/es.md#start-here) · [Français](quickstart/fr.md#start-here) · [Italiano](quickstart/it.md#start-here) · [日本語](quickstart/ja.md#start-here) · [한국어](quickstart/ko.md#start-here) · [Nederlands](quickstart/nl.md#start-here) · [Português (Brasil)](quickstart/pt-BR.md#start-here) · [Русский](quickstart/ru.md#start-here) · [Türkçe](quickstart/tr.md#start-here) · [简体中文](quickstart/zh-CN.md#start-here) · [繁體中文](quickstart/zh-TW.md#start-here)
+
 ## The pieces
 
 - **Fadester for OBS**: the Stream Deck and OpenDeck plugin, with the 7 VJster video actions.

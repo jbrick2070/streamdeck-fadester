@@ -8,7 +8,11 @@ Fourteen ready-made layouts ship inside the plugin for the Stream Deck +, the 15
 2. **Connect OBS (usually nothing to do).** With OBS on the same computer, Fadester signs in with the password OBS saved. For an OBS elsewhere, open one Fadester key's settings, click the line at the foot of the page, open **OBS on another computer, or another port**, fill in the host, the port and OBS's WebSocket password and press **Save for all controls & test**. Every Fadester control on every profile shares that connection.
 3. **Press the keys.** Scene keys follow your OBS scene list; Music, Mic and Aux controls have found your mixer inputs.
 
-That's it. Then, if you like:
+That's it.
+
+Quick start in other languages: [Deutsch](../docs/quickstart/de.md#profiles) · [Español](../docs/quickstart/es.md#profiles) · [Français](../docs/quickstart/fr.md#profiles) · [Italiano](../docs/quickstart/it.md#profiles) · [日本語](../docs/quickstart/ja.md#profiles) · [한국어](../docs/quickstart/ko.md#profiles) · [Nederlands](../docs/quickstart/nl.md#profiles) · [Português (Brasil)](../docs/quickstart/pt-BR.md#profiles) · [Русский](../docs/quickstart/ru.md#profiles) · [Türkçe](../docs/quickstart/tr.md#profiles) · [简体中文](../docs/quickstart/zh-CN.md#profiles) · [繁體中文](../docs/quickstart/zh-TW.md#profiles)
+
+Then, if you like:
 
 - Change any key in its settings page; keep both keys of a fade pair on the same input.
 - The keys of the Playlister Transport and VJ Rig layouts ship unbound: open each one's settings page once and choose the source, filter or Playlister.

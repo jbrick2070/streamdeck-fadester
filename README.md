@@ -14,6 +14,8 @@
 
 That's it. With OBS on the same computer the plugin finds OBS's port and signs in with the password OBS saved. While OBS is not connected, the key and the first line of its settings page say what to do, for example **Turn on OBS WebSocket** or **Start OBS**.
 
+Quick start in other languages: [Deutsch](docs/quickstart/de.md#fadester-for-obs) · [Español](docs/quickstart/es.md#fadester-for-obs) · [Français](docs/quickstart/fr.md#fadester-for-obs) · [Italiano](docs/quickstart/it.md#fadester-for-obs) · [日本語](docs/quickstart/ja.md#fadester-for-obs) · [한국어](docs/quickstart/ko.md#fadester-for-obs) · [Nederlands](docs/quickstart/nl.md#fadester-for-obs) · [Português (Brasil)](docs/quickstart/pt-BR.md#fadester-for-obs) · [Русский](docs/quickstart/ru.md#fadester-for-obs) · [Türkçe](docs/quickstart/tr.md#fadester-for-obs) · [简体中文](docs/quickstart/zh-CN.md#fadester-for-obs) · [繁體中文](docs/quickstart/zh-TW.md#fadester-for-obs)
+
 **Using [OpenDeck](docs/OPENDECK.md)**, the free open-source alternative to Elgato's Stream Deck software? Follow the [OpenDeck quick start](docs/OPENDECK.md#first-five-minutes).
 
 ### Then, if you like

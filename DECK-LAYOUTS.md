@@ -12,6 +12,8 @@ Fourteen layouts for the Stream Deck +, the 15-key Stream Deck and the Stream De
 
 That's it. The plugin connects to OBS by itself when OBS runs on the same computer with its WebSocket server on ([README, *Three steps to the first working key*](README.md#three-steps-to-the-first-working-key)); every layout uses that one connection.
 
+Quick start in other languages: [Deutsch](docs/quickstart/de.md#layouts) · [Español](docs/quickstart/es.md#layouts) · [Français](docs/quickstart/fr.md#layouts) · [Italiano](docs/quickstart/it.md#layouts) · [日本語](docs/quickstart/ja.md#layouts) · [한국어](docs/quickstart/ko.md#layouts) · [Nederlands](docs/quickstart/nl.md#layouts) · [Português (Brasil)](docs/quickstart/pt-BR.md#layouts) · [Русский](docs/quickstart/ru.md#layouts) · [Türkçe](docs/quickstart/tr.md#layouts) · [简体中文](docs/quickstart/zh-CN.md#layouts) · [繁體中文](docs/quickstart/zh-TW.md#layouts)
+
 - **The first time**, a line at the top of the settings page, **New deck? Fill it with a ready-made layout**, leads to the same place.
 - **A Studio Mode layout** offers **Turn on Studio Mode and open** (or **Prepare Preview and open** when Studio Mode is already on) and prepares Preview for you.
 - **The second time**, the same button returns to your edited copy.

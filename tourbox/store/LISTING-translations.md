@@ -167,7 +167,7 @@ WebSocket サーバーを有効にした OBS Studio が必要です（ツール 
 **What's new:** バージョン 1.5.1：
 
 - 「クイックガイド」は最初に、お持ちのコントローラー（ゲームコントローラー、TourBox、MIDI コントローラー）を尋ねるようになりました。それぞれに画像が付きます。
-- MIDI コントローラーの新しいセクション：APC40 mkII などの MIDI コントローラーは、Fadester Companion ではなく、OBS 内で動く無料プラグイン Midi Fadester で操作します。
+- MIDI コントローラーの新しいセクション：APC40 mkII などの MIDI コントローラーは、Fadester Companion ではなく、OBS 内で動く無料プラグイン Midi Fadester で使います。
 - ロシア語とオランダ語では、OBS の「ツール」メニューを OBS と同じ名前で表示するようになりました（「Сервис」と「Tools」）。
 
 **Product features**

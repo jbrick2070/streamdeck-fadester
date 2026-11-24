@@ -1,6 +1,20 @@
 # The Fadester layout library
 
-Fourteen ready-made layouts ship inside the plugin for the Stream Deck +, the 15-key Stream Deck and the Stream Deck Mini. The easy way to open one is from any Fadester for OBS key's settings: click the line at the foot of the page, open **Ready-made layouts**, choose, press **Open this layout**. This page is for importing a file by hand and for the people who build the files. What each layout does, key by key, is in [DECK-LAYOUTS.md](../DECK-LAYOUTS.md).
+Fourteen ready-made layouts ship inside the plugin for the Stream Deck +, the 15-key Stream Deck and the Stream Deck Mini. **The easy way to open one** is from any Fadester for OBS key's settings: click the line at the foot of the page, open **Ready-made layouts**, choose, press **Open this layout** ([DECK-LAYOUTS.md](../DECK-LAYOUTS.md#open-one), which also shows each layout key by key). This page is for importing a file by hand and for the people who build the files.
+
+## Import a file by hand
+
+1. **Double-click the file.** Pick the `.streamDeckProfile` for your deck in the table below; Stream Deck imports it as a new profile.
+2. **Connect OBS (usually nothing to do).** With OBS on the same computer, Fadester signs in with the password OBS saved. For an OBS elsewhere, open one Fadester key's settings, click the line at the foot of the page, open **OBS on another computer, or another port**, fill in the host, the port and OBS's WebSocket password and press **Save for all controls & test**. Every Fadester control on every profile shares that connection.
+3. **Press the keys.** Scene keys follow your OBS scene list; Music, Mic and Aux controls have found your mixer inputs.
+
+That's it. Then, if you like:
+
+- Change any key in its settings page; keep both keys of a fade pair on the same input.
+- The keys of the Playlister Transport and VJ Rig layouts ship unbound: open each one's settings page once and choose the source, filter or Playlister.
+- Put your other actions on the empty keys and dials.
+
+Opening a layout from the settings page does the same, and the second time returns you to your edited copy. A later release's updated layout opens as its own profile; your old one and its edits stay.
 
 ## The fourteen files
 
@@ -23,17 +37,7 @@ Fourteen ready-made layouts ship inside the plugin for the Stream Deck +, the 15
 
 Every profile name carries its mode: **Studio Mode**, **Regular Mode** or **Either Mode**. No file holds a host, a port, a password or a device serial number.
 
-## Import a file by hand
-
-1. Open the `.streamDeckProfile` for your deck. Stream Deck imports it as a new profile.
-2. With OBS on the same computer there is nothing to type: Fadester signs in with the password OBS saved. For an OBS elsewhere, open one Fadester key's settings, click the line at the foot of the page, open **OBS on another computer, or another port**, fill in the host, the port and OBS's WebSocket password and press **Save for all controls & test**. Every Fadester control on every profile shares that connection.
-3. Press the keys. Scene keys follow your OBS scene list; Music, Mic and Aux controls have found your mixer inputs. Change any of them in the key's settings page; keep both keys of a fade pair on the same input.
-4. The keys of the Playlister Transport and VJ Rig layouts ship unbound: open each one's settings page once and choose the source, filter or Playlister.
-5. Put your other actions on the empty keys and dials.
-
-Opening a layout from the settings page does the same, and the second time returns you to your edited copy. A later release's updated layout opens as its own profile; your old one and its edits stay.
-
-## Next to other plugins
+## Good to know: next to other plugins
 
 The half layouts leave real empty keys for the OBS actions and tools you already use: recording, replay, chat, a transform. A profile can reference another plugin's actions, but Stream Deck does not carry that plugin inside the profile, so these layouts ship with Fadester actions only and the rest is yours to add.
 
@@ -45,8 +49,7 @@ The half layouts leave real empty keys for the OBS actions and tools you already
 node --import tsx scripts/build-profiles.ts
 ```
 
-The builder writes the `.streamDeckProfile` archives into the plugin's `profiles/` folder, plus `catalog.json` and `manifest-entries.json` here. It uses fixed IDs so the output is the same every time, rejects invalid positions and action IDs, and never reads or edits installed user profiles.
-
-Each profile ZIP holds a root `*.sdProfile/manifest.json` with `Device`, `Name`, `Pages` and `Version: "3.0"`; each page has `Controllers`, `Icon` and `Name`, with actions keyed by `column,row`. Device model values come from the default profiles the installed Stream Deck app ships.
-
-Elgato's [Profiles SDK guide](https://docs.elgato.com/streamdeck/sdk/guides/profiles/) covers bundling exported profiles in a plugin, and the [manifest profile reference](https://docs.elgato.com/streamdeck/sdk/references/manifest/#profile) the device type, editability and install behaviour. The manifest entries use `AutoInstall: false` and `DontAutoSwitchWhenInstalled: true`, so Stream Deck installs no layout when it installs the plugin; a layout is installed the first time it is opened from a settings page, and the plugin then switches the deck to it. Elgato's [profile guidance](https://docs.elgato.com/stream-deck/profiles/getting-started/) explains that other plugins a profile uses must be installed separately.
+- The builder writes the `.streamDeckProfile` archives into the plugin's `profiles/` folder, plus `catalog.json` and `manifest-entries.json` here. It uses fixed IDs so the output is the same every time, rejects invalid positions and action IDs, and never reads or edits installed user profiles.
+- Each profile ZIP holds a root `*.sdProfile/manifest.json` with `Device`, `Name`, `Pages` and `Version: "3.0"`; each page has `Controllers`, `Icon` and `Name`, with actions keyed by `column,row`. Device model values come from the default profiles the installed Stream Deck app ships.
+- The manifest entries use `AutoInstall: false` and `DontAutoSwitchWhenInstalled: true`, so Stream Deck installs no layout when it installs the plugin; a layout is installed the first time it is opened from a settings page, and the plugin then switches the deck to it.
+- Elgato's [Profiles SDK guide](https://docs.elgato.com/streamdeck/sdk/guides/profiles/) covers bundling exported profiles in a plugin, and the [manifest profile reference](https://docs.elgato.com/streamdeck/sdk/references/manifest/#profile) the device type, editability and install behaviour. Elgato's [profile guidance](https://docs.elgato.com/stream-deck/profiles/getting-started/) explains that other plugins a profile uses must be installed separately.

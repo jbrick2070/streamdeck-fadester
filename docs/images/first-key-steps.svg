@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 300" width="900" height="300" role="img" aria-labelledby="t d">
+  <title id="t">Fadester for OBS: the first working key in three steps</title>
+  <desc id="d">1: double-click the .streamDeckPlugin file and press Install. 2: in OBS, open Tools, WebSocket Server Settings and tick Enable WebSocket server. 3: drag Scene onto a key in Stream Deck and press it: OBS goes to the next scene.</desc>
+  <style>
+    .card { fill: #ffffff; stroke: #cfe0d5; stroke-width: 2; }
+    .num { fill: #236044; }
+    .numt { fill: #ffffff; font: 700 22px system-ui, "Segoe UI", sans-serif; }
+    .h { fill: #162922; font: 700 21px system-ui, "Segoe UI", sans-serif; }
+    .s { fill: #3d5a4c; font: 15px system-ui, "Segoe UI", sans-serif; }
+    .small { fill: #236044; font: 600 12px system-ui, "Segoe UI", sans-serif; }
+    .ink { stroke: #236044; stroke-width: 3; fill: none; }
+    .pale { fill: #eef4ef; stroke: #236044; stroke-width: 3; }
+    .amber { fill: #e9a84a; }
+    .key { fill: #1b382d; }
+    .keyt { fill: #ffffff; font: 700 13px system-ui, "Segoe UI", sans-serif; }
+    .arrow { fill: #9bb8a8; }
+  </style>
+  <rect x="0" y="0" width="900" height="300" rx="18" fill="#eef4ef"/>
+
+  <!-- 1: install the plugin -->
+  <rect class="card" x="20" y="20" width="260" height="260" rx="16"/>
+  <circle class="num" cx="52" cy="52" r="18"/><text class="numt" x="52" y="60" text-anchor="middle">1</text>
+  <path class="pale" d="M86 74 h56 l22 22 v84 h-78 z"/>
+  <path class="ink" d="M142 74 v22 h22"/>
+  <rect x="98" y="118" width="54" height="34" rx="6" class="key"/>
+  <circle cx="111" cy="135" r="4" fill="#e9a84a"/><circle cx="125" cy="135" r="4" fill="#ffffff"/><circle cx="139" cy="135" r="4" fill="#ffffff"/>
+  <rect x="176" y="146" width="76" height="30" rx="15" fill="#236044"/><text class="keyt" x="214" y="166" text-anchor="middle">Install</text>
+  <text class="h" x="150" y="222" text-anchor="middle">Install the plugin</text>
+  <text class="s" x="150" y="246" text-anchor="middle">Double-click the file,</text>
+  <text class="s" x="150" y="266" text-anchor="middle">press Install</text>
+
+  <path class="arrow" d="M288 142 l14 8 -14 8 z"/>
+
+  <!-- 2: OBS WebSocket server -->
+  <rect class="card" x="320" y="20" width="260" height="260" rx="16"/>
+  <circle class="num" cx="352" cy="52" r="18"/><text class="numt" x="352" y="60" text-anchor="middle">2</text>
+  <rect class="pale" x="362" y="76" width="176" height="110" rx="10"/>
+  <line class="ink" x1="362" y1="98" x2="538" y2="98"/>
+  <circle cx="376" cy="87" r="4" fill="#236044"/><circle cx="388" cy="87" r="4" fill="#236044"/><circle cx="400" cy="87" r="4" fill="#236044"/>
+  <rect x="378" y="116" width="22" height="22" rx="4" class="amber" stroke="#236044" stroke-width="2"/>
+  <path d="M383 127 l5 5 9 -11" stroke="#1b382d" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <text class="small" x="408" y="125">Enable WebSocket</text>
+  <text class="small" x="408" y="140">server</text>
+  <rect x="478" y="154" width="46" height="22" rx="11" fill="#236044"/><text class="keyt" x="501" y="170" text-anchor="middle">OK</text>
+  <text class="h" x="450" y="222" text-anchor="middle">Turn on WebSocket</text>
+  <text class="s" x="450" y="246" text-anchor="middle">OBS: Tools &gt; WebSocket</text>
+  <text class="s" x="450" y="266" text-anchor="middle">Server Settings, tick Enable</text>
+
+  <path class="arrow" d="M588 142 l14 8 -14 8 z"/>
+
+  <!-- 3: drag Scene onto a key -->
+  <rect class="card" x="620" y="20" width="260" height="260" rx="16"/>
+  <circle class="num" cx="652" cy="52" r="18"/><text class="numt" x="652" y="60" text-anchor="middle">3</text>
+  <rect class="pale" x="672" y="80" width="80" height="26" rx="6"/><text class="small" x="712" y="98" text-anchor="middle">Scene</text>
+  <path class="ink" d="M716 110 q4 34 30 38" marker-end="url(#tip)"/>
+  <defs><marker id="tip" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#236044"/></marker></defs>
+  <rect class="pale" x="752" y="80" width="112" height="108" rx="12"/>
+  <rect class="key" x="764" y="92" width="40" height="40" rx="6"/><rect class="key" x="812" y="92" width="40" height="40" rx="6"/>
+  <rect x="764" y="138" width="40" height="40" rx="6" class="amber"/><text class="keyt" x="784" y="163" text-anchor="middle" fill="#1b382d">Next</text>
+  <rect class="key" x="812" y="138" width="40" height="40" rx="6"/>
+  <text class="h" x="750" y="222" text-anchor="middle">Drag Scene to a key</text>
+  <text class="s" x="750" y="246" text-anchor="middle">Press it: OBS goes</text>
+  <text class="s" x="750" y="266" text-anchor="middle">to the next scene</text>
+</svg>

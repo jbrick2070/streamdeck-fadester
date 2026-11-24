@@ -12,6 +12,8 @@ VJster lets your Stream Deck, TourBox or game controller change the speed and qu
 
 That's it. OBS does not need to be open.
 
+Quick start in other languages: [Deutsch](../quickstart/companion/de.md#vjster-install) · [Español](../quickstart/companion/es.md#vjster-install) · [Français](../quickstart/companion/fr.md#vjster-install) · [Italiano](../quickstart/companion/it.md#vjster-install) · [日本語](../quickstart/companion/ja.md#vjster-install) · [한국어](../quickstart/companion/ko.md#vjster-install) · [Nederlands](../quickstart/companion/nl.md#vjster-install) · [Português (Brasil)](../quickstart/companion/pt-BR.md#vjster-install) · [Русский](../quickstart/companion/ru.md#vjster-install) · [Türkçe](../quickstart/companion/tr.md#vjster-install) · [简体中文](../quickstart/companion/zh-CN.md#vjster-install) · [繁體中文](../quickstart/companion/zh-TW.md#vjster-install)
+
 ## Good to know
 
 - **Install the extension only once.** Fadester for OBS and Fadester Companion already contain VJster's link. Do not also install the separate VJster plugin: both would want the same port (48150).

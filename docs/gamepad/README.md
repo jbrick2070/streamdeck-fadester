@@ -14,6 +14,8 @@ Drive OBS from an Xbox controller (or any XInput-compatible pad): the right trig
 
 That's it. The lights at the top read *Controller: connected* and *Controls: on*.
 
+Quick start in other languages: [Deutsch](../quickstart/companion/de.md#gamepad) · [Español](../quickstart/companion/es.md#gamepad) · [Français](../quickstart/companion/fr.md#gamepad) · [Italiano](../quickstart/companion/it.md#gamepad) · [日本語](../quickstart/companion/ja.md#gamepad) · [한국어](../quickstart/companion/ko.md#gamepad) · [Nederlands](../quickstart/companion/nl.md#gamepad) · [Português (Brasil)](../quickstart/companion/pt-BR.md#gamepad) · [Русский](../quickstart/companion/ru.md#gamepad) · [Türkçe](../quickstart/companion/tr.md#gamepad) · [简体中文](../quickstart/companion/zh-CN.md#gamepad) · [繁體中文](../quickstart/companion/zh-TW.md#gamepad)
+
 **Try A too.** With a scene in Preview, hold **A**. After 0.15 s (Easy mode) OBS's T-bar starts moving as if your hand pushed it, and keeps moving while you hold A; at the end, Preview is on Program. Let go before then and it stays where it is; hold A again to carry on. The trip lasts the **Duration** set in OBS's **Scene Transitions** dock: about 650 ms gives you room to stop halfway.
 
 **Closing the window** while the controls are on hides it in the notification area beside the clock (the icon there has Open, Start / Stop and Quit); the controls keep running.

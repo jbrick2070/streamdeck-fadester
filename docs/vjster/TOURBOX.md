@@ -10,6 +10,8 @@ The one VJster Chrome extension works from the Stream Deck, OpenDeck and the Tou
 
 That's it. OBS can be closed.
 
+Quick start in other languages: [Deutsch](../quickstart/companion/de.md#vjster-tourbox) · [Español](../quickstart/companion/es.md#vjster-tourbox) · [Français](../quickstart/companion/fr.md#vjster-tourbox) · [Italiano](../quickstart/companion/it.md#vjster-tourbox) · [日本語](../quickstart/companion/ja.md#vjster-tourbox) · [한국어](../quickstart/companion/ko.md#vjster-tourbox) · [Nederlands](../quickstart/companion/nl.md#vjster-tourbox) · [Português (Brasil)](../quickstart/companion/pt-BR.md#vjster-tourbox) · [Русский](../quickstart/companion/ru.md#vjster-tourbox) · [Türkçe](../quickstart/companion/tr.md#vjster-tourbox) · [简体中文](../quickstart/companion/zh-CN.md#vjster-tourbox) · [繁體中文](../quickstart/companion/zh-TW.md#vjster-tourbox)
+
 ## The controls
 
 One preset, `OBS Fadester for TourBox`:

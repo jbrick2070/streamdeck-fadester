@@ -16,6 +16,8 @@ On a Mac (Apple silicon or Intel), use the `Fadester-Companion-macOS-…` ZIP fr
 
 That's it. Every control, Easy mode and the safety rules: [game controller guide](https://github.com/jbrick2070/streamdeck-fadester/blob/main/docs/gamepad/README.md).
 
+Quick start in other languages: [Deutsch](../docs/quickstart/companion/de.md#companion) · [Español](../docs/quickstart/companion/es.md#companion) · [Français](../docs/quickstart/companion/fr.md#companion) · [Italiano](../docs/quickstart/companion/it.md#companion) · [日本語](../docs/quickstart/companion/ja.md#companion) · [한국어](../docs/quickstart/companion/ko.md#companion) · [Nederlands](../docs/quickstart/companion/nl.md#companion) · [Português (Brasil)](../docs/quickstart/companion/pt-BR.md#companion) · [Русский](../docs/quickstart/companion/ru.md#companion) · [Türkçe](../docs/quickstart/companion/tr.md#companion) · [简体中文](../docs/quickstart/companion/zh-CN.md#companion) · [繁體中文](../docs/quickstart/companion/zh-TW.md#companion)
+
 <a id="first-five-minutes-game-controller"></a>
 
 ## Game controller: good to know

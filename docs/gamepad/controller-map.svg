@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 380" width="900" height="380" role="img" aria-labelledby="t d">
+  <title id="t">The game controller's default controls</title>
+  <desc id="d">A plain outline of an XInput game controller. Right trigger: the T-bar. A, held: Preview to Program. B, held: Cut. Menu: set Preview to the Program scene. Left trigger, held: duck Music. D-pad up and down: the scene above or below into Preview. D-pad left and right: Music down or up. View: cancel a manual fade.</desc>
+  <style>
+    .card { fill: #ffffff; stroke: #cfe0d5; stroke-width: 2; }
+    .h { fill: #162922; font: 700 21px system-ui, "Segoe UI", sans-serif; }
+    .s { fill: #3d5a4c; font: 15px system-ui, "Segoe UI", sans-serif; }
+    .b { fill: #162922; font: 700 15px system-ui, "Segoe UI", sans-serif; }
+    .ink { stroke: #236044; stroke-width: 3; fill: none; }
+    .pale { fill: #eef4ef; stroke: #236044; stroke-width: 3; }
+    .lead { stroke: #9bb8a8; stroke-width: 2; fill: none; }
+    .amber { fill: #e9a84a; stroke: #236044; stroke-width: 3; }
+    .keyt { fill: #236044; font: 700 13px system-ui, "Segoe UI", sans-serif; }
+    .dot { fill: #236044; }
+  </style>
+  <rect x="0" y="0" width="900" height="380" rx="18" fill="#eef4ef"/>
+  <rect class="card" x="20" y="20" width="860" height="340" rx="16"/>
+  <text class="h" x="450" y="56" text-anchor="middle">Default controls</text>
+  <text class="s" x="450" y="78" text-anchor="middle">“hold” = Easy mode wants a short hold</text>
+
+  <!-- triggers and bumpers -->
+  <rect class="pale" x="318" y="112" width="64" height="24" rx="10"/>
+  <rect class="amber" x="518" y="112" width="64" height="24" rx="10"/>
+  <text class="keyt" x="350" y="129" text-anchor="middle">LT</text>
+  <text class="keyt" x="550" y="129" text-anchor="middle">RT</text>
+  <rect class="pale" x="312" y="142" width="76" height="12" rx="6"/>
+  <rect class="pale" x="512" y="142" width="76" height="12" rx="6"/>
+
+  <!-- body -->
+  <path class="pale" d="M340 160 Q450 146 560 160 Q622 170 640 236 Q658 306 622 326 Q592 340 562 300 Q542 274 450 274 Q358 274 338 300 Q308 340 278 326 Q242 306 260 236 Q278 170 340 160 Z"/>
+
+  <!-- left stick, d-pad -->
+  <circle cx="330" cy="206" r="20" fill="#ffffff" stroke="#236044" stroke-width="3"/>
+  <circle cx="330" cy="206" r="8" class="dot"/>
+  <path d="M382 232 h16 v14 h14 v16 h-14 v14 h-16 v-14 h-14 v-16 h14 z" fill="#ffffff" stroke="#236044" stroke-width="3"/>
+
+  <!-- view, menu -->
+  <rect x="418" y="196" width="18" height="12" rx="3" fill="#ffffff" stroke="#236044" stroke-width="2"/>
+  <rect x="423" y="192" width="18" height="12" rx="3" fill="#ffffff" stroke="#236044" stroke-width="2"/>
+  <circle cx="476" cy="200" r="10" fill="#ffffff" stroke="#236044" stroke-width="2"/>
+  <path d="M470 196 h12 M470 200 h12 M470 204 h12" stroke="#236044" stroke-width="2"/>
+
+  <!-- right stick, face buttons -->
+  <circle cx="510" cy="254" r="20" fill="#ffffff" stroke="#236044" stroke-width="3"/>
+  <circle cx="510" cy="254" r="8" class="dot"/>
+  <circle cx="572" cy="180" r="11" fill="#ffffff" stroke="#236044" stroke-width="2"/><text class="keyt" x="572" y="185" text-anchor="middle">Y</text>
+  <circle cx="550" cy="202" r="11" fill="#ffffff" stroke="#236044" stroke-width="2"/><text class="keyt" x="550" y="207" text-anchor="middle">X</text>
+  <circle cx="594" cy="202" r="11" fill="#ffffff" stroke="#236044" stroke-width="2"/><text class="keyt" x="594" y="207" text-anchor="middle">B</text>
+  <circle cx="572" cy="224" r="11" class="amber"/><text class="keyt" x="572" y="229" text-anchor="middle">A</text>
+
+  <!-- left labels -->
+  <text x="44" y="128"><tspan class="b">LT hold</tspan><tspan class="s">  duck Music</tspan></text>
+  <path class="lead" d="M200 123 H316"/>
+  <text x="44" y="196"><tspan class="b">View</tspan><tspan class="s">  cancel a fade</tspan></text>
+  <path class="lead" d="M190 191 H240 L416 200"/>
+  <text class="b" x="44" y="252">D-pad up / down</text><text class="s" x="44" y="272">scene into Preview</text>
+  <path class="lead" d="M200 247 H258 L380 238"/>
+  <text class="b" x="44" y="316">D-pad left / right</text><text class="s" x="44" y="336">Music down / up</text>
+  <path class="lead" d="M190 311 H250 L366 262"/>
+
+  <!-- right labels -->
+  <text x="856" y="128" text-anchor="end"><tspan class="b">RT</tspan><tspan class="s">  the T-bar</tspan></text>
+  <path class="lead" d="M584 123 H740"/>
+  <text class="b" x="856" y="166" text-anchor="end">Menu</text><text class="s" x="856" y="186" text-anchor="end">Preview = Program scene</text>
+  <path class="lead" d="M486 196 L520 166 H808"/>
+  <text x="856" y="232" text-anchor="end"><tspan class="b">B hold</tspan><tspan class="s">  Cut</tspan></text>
+  <path class="lead" d="M606 204 L650 227 H770"/>
+  <text class="b" x="856" y="290" text-anchor="end">A hold</text><text class="s" x="856" y="310" text-anchor="end">Preview to Program</text>
+  <path class="lead" d="M578 234 L640 285 H796"/>
+</svg>

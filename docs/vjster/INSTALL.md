@@ -12,6 +12,8 @@ VJster lets your Stream Deck, TourBox or game controller change the speed and qu
 
 That's it. OBS does not need to be open.
 
+Quick start in other languages: [Deutsch](../quickstart/companion/de.md#vjster-install) · [Español](../quickstart/companion/es.md#vjster-install) · [Français](../quickstart/companion/fr.md#vjster-install) · [Italiano](../quickstart/companion/it.md#vjster-install) · [日本語](../quickstart/companion/ja.md#vjster-install) · [한국어](../quickstart/companion/ko.md#vjster-install) · [Nederlands](../quickstart/companion/nl.md#vjster-install) · [Português (Brasil)](../quickstart/companion/pt-BR.md#vjster-install) · [Русский](../quickstart/companion/ru.md#vjster-install) · [Türkçe](../quickstart/companion/tr.md#vjster-install) · [简体中文](../quickstart/companion/zh-CN.md#vjster-install) · [繁體中文](../quickstart/companion/zh-TW.md#vjster-install)
+
 ## Good to know
 
 - **Install the extension only once.** Fadester for OBS and Fadester Companion already contain VJster's link. Do not also install the separate VJster plugin: both would want the same port (48150).
@@ -41,7 +43,7 @@ Keep the address private (it holds this computer's page key). Stream Deck must b
 
 For a deck without Fadester for OBS, the release also has `com.jbrick2070.vjster.streamDeckPlugin` (Stream Deck 7.1 or later; Windows 10 or later, macOS 13.5 or later). Double-click it and Stream Deck installs it with seven VJster actions and four profiles: **VJster Live +** and **VJster Dual +** (Stream Deck +), **VJster Live** (15 keys), **VJster Mini** (Mini). A profile may appear only once a deck of its kind is connected. It has no Elgato Marketplace listing.
 
-With a TourBox and VJster's `/obs` page on Windows, set a 32-digit lowercase hex `vjsterObsToken` in Fadester Companion's `config.json`; the Mac Companion's Setup window makes and copies the address for you. See `tourbox/README.md`.
+With a TourBox and VJster's `/obs` page, Fadester Companion makes the page key itself, on Windows and on the Mac: in the VJster section of its **Setup** tab, choose the **Target** and click **Copy OBS Browser Source URL**, then paste that address into an OBS Browser Source (on Windows, a key made while the controls run works after **Stop** and **Start**). See `tourbox/README.md`.
 
 ## Languages
 

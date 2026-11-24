@@ -80,7 +80,7 @@ Stream Deck Neo. Shows the connection, the Program scene and, in Studio Mode, th
 
 ## The plugin's own settings
 
-The line at the foot of every settings page (for example `Fadester for OBS 1.5.0 · Connected to OBS 33.0.1 · Settings`) opens **Language**, **OBS connection**, **Setup checklist** and **Ready-made layouts**. They apply to every Fadester for OBS key and dial.
+The line at the foot of every settings page (for example `Fadester for OBS 1.5.1 · Connected to OBS 33.0.1 · Settings`) opens **Language**, **OBS connection**, **Setup checklist** and **Ready-made layouts**. They apply to every Fadester for OBS key and dial.
 
 - **OBS on another computer, or another port:** fill in the host, the port and OBS's password (in OBS: **Tools > WebSocket Server Settings > Show Connect Info**) and press **Save for all controls & test**. You type it once for all keys and dials.
 - **Setup checklist:** red marks what must be fixed (OBS reachable, password accepted). Studio Mode, the Fade transition, the OBS version and the T-bar rows are notes: they matter only for the controls that name them.

@@ -1,8 +1,8 @@
 # Fadester Companion: Store listings in twelve more languages
 
-The same listing as [LISTING.md](LISTING.md), for version 1.5.0. In Partner Center, in the submission, add each language under Store listings → Add/remove languages (Additional Store listing languages), and paste its blocks. Reuse the English screenshots and images from `listing/`. Copyright, license terms and "Developed by" stay as in [LISTING.md](LISTING.md). Product features are one per box; keywords are seven, entered one at a time.
+The same listing as [LISTING.md](LISTING.md), for version 1.5.1. In Partner Center, in the submission, add each language under Store listings → Add/remove languages (Additional Store listing languages), and paste its blocks. Reuse the English screenshots and images from `listing/`. Copyright, license terms and "Developed by" stay as in [LISTING.md](LISTING.md). Product features are one per box; keywords are seven, entered one at a time.
 
-Who has read these texts: a model wrote them, and a second model (Antigravity) read all twelve against the English and against the app's own window texts (`tourbox/panel/PanelText.cs`, `PanelExtraText.cs`) on 21 November 2026, in three rounds, until it had nothing left to report. Its corrections are in. No native speaker has read them yet.
+Who has read these texts: a model wrote them, and a second model (Antigravity) read all twelve against the English and against the app's own window texts (`tourbox/panel/PanelText.cs`, `PanelExtraText.cs`) on 21 November 2026, in three rounds, until it had nothing left to report. Its corrections are in. The What's new lines for 1.5.1 were written on 23 November 2026, from the quick guide's own words, and no second model has read them yet. No native speaker has read them yet.
 
 ## Deutsch (de)
 
@@ -20,16 +20,11 @@ Benötigt OBS Studio mit eingeschaltetem WebSocket-Server (Werkzeuge → WebSock
 
 **Short description:** Ihr Gamecontroller als Bildmischer für OBS Studio: ein echter T-Bar am rechten Trigger, Szenen auf dem Steuerkreuz, Musik am linken Trigger.
 
-**What's new:** Version 1.5.0:
+**What's new:** Version 1.5.1:
 
-- Die Steuerung startet beim ersten Öffnen der App von selbst. Eine Schaltfläche startet und stoppt sie: „Starten“ oder „Stoppen“.
-- Eine kürzere Seite „Einrichtung“: Jeder nummerierte Schritt ist eine kurze Zeile mit seiner Schaltfläche. OBS-Port und OBS-Passwort sowie die optionalen Teile liegen hinter „Details“ und „Anzeigen“ und öffnen sich von selbst, wenn eine Lampe Sie braucht.
-- Statuslampen, die zeigen, wie es wirklich steht, jede mit der Schaltfläche, die das Problem behebt: „OBS öffnen“, „Einschalten“ für den Studiomodus und eine TourBox-Lampe, die nur grün ist, wenn TourBox Console das Preset enthält. Der OBS-Port wird wie das Passwort aus OBS gelesen.
-- „Beim Anmelden öffnen“: ein Kontrollkästchen unter den Schaltflächen, aus, bis Sie es ankreuzen.
-- Beim Schließen des Fensters bleibt die Steuerung eingeschaltet: Ein Symbol im Infobereich öffnet das Fenster wieder, startet oder stoppt die Steuerung und beendet die App.
-- Ein dunkles Fenster, wenn Windows im dunklen Modus ist.
-- 13 Sprachen: Niederländisch, brasilianisches Portugiesisch und Türkisch sind neu. Die Version steht im Titel jedes Fensters.
-- Behoben: Die Überblendung per Gamecontroller wird auch dann ausgeführt, wenn der T-Bar von OBS nicht gelesen werden kann, ein harter Schnitt hält den nächsten Tastendruck nicht mehr auf, und ein von OBS abgelehntes Passwort wird von selbst erneut versucht.
+- Die „Kurzanleitung“ fragt jetzt zuerst, welchen Controller Sie haben: Gamecontroller, TourBox oder MIDI-Controller, mit einem Bild von jedem.
+- Ein neuer Abschnitt für MIDI-Controller: Einen APC40 mkII oder einen anderen MIDI-Controller steuert Midi Fadester, ein kostenloses Plugin in OBS, nicht Fadester Companion.
+- Auf Russisch und Niederländisch nennt die App das Menü „Werkzeuge“ von OBS jetzt so, wie OBS selbst es nennt: „Сервис“ und „Tools“.
 
 **Product features**
 
@@ -61,16 +56,11 @@ Necesita OBS Studio con su servidor WebSocket activado (Herramientas → Ajustes
 
 **Short description:** Tu mando de juego, ahora un mezclador de vídeo para OBS Studio: un T-bar de verdad en el gatillo derecho, escenas en la cruceta y música en el gatillo izquierdo.
 
-**What's new:** Versión 1.5.0:
+**What's new:** Versión 1.5.1:
 
-- Los controles se inician solos la primera vez que abres la aplicación. Un solo botón los inicia y los detiene: Iniciar o Detener.
-- Una página Configuración más corta: cada paso numerado es una línea breve con su botón. El puerto y la contraseña de OBS y las partes opcionales quedan detrás de Detalles y Mostrar, y se abren solos cuando una luz te necesita.
-- Luces de estado que dicen cómo están las cosas de verdad, cada una con el botón que lo arregla: Abrir OBS, Activar para el modo Estudio y una luz de TourBox que solo está verde cuando TourBox Console tiene el preajuste. El puerto de OBS se rellena solo desde OBS, igual que la contraseña.
-- Abrir al iniciar sesión: una casilla debajo de los botones, desactivada hasta que la marques.
-- Al cerrar la ventana, los controles siguen activos: un icono en el área de notificación abre de nuevo la ventana, inicia o detiene los controles y cierra la aplicación.
-- Una ventana oscura cuando Windows está en modo oscuro.
-- 13 idiomas: neerlandés, portugués de Brasil y turco son nuevos. La versión aparece en el título de cada ventana.
-- Corregido: el fundido del mando de juego se ejecuta también cuando no se puede leer el T-bar de OBS, un corte ya no retiene la pulsación siguiente y una contraseña que OBS rechazó se vuelve a probar sola.
+- La Guía rápida ahora empieza preguntando qué controlador tienes: mando de juego, TourBox o controlador MIDI, con una imagen de cada uno.
+- Una sección nueva para controladores MIDI: un APC40 mkII u otro controlador MIDI lo maneja Midi Fadester, un plugin gratuito dentro de OBS, no Fadester Companion.
+- En ruso y neerlandés, la aplicación ahora llama al menú Herramientas de OBS como lo llama OBS: Сервис en ruso y Tools en neerlandés.
 
 **Product features**
 
@@ -102,16 +92,11 @@ Nécessite OBS Studio avec son serveur WebSocket activé (Outils → Paramètres
 
 **Short description:** Votre manette de jeu devient un mélangeur vidéo pour OBS Studio : un vrai T-bar sur la gâchette droite, les scènes sur le pavé directionnel, la musique sur la gâchette gauche.
 
-**What's new:** Version 1.5.0 :
+**What's new:** Version 1.5.1 :
 
-- Les commandes démarrent d’elles-mêmes à la première ouverture de l’application. Un seul bouton les démarre et les arrête : Démarrer ou Arrêter.
-- Une page Configuration plus courte : chaque étape numérotée tient en une ligne brève avec son bouton. Le port et le mot de passe OBS ainsi que les parties facultatives sont rangés derrière Détails et Afficher, et s’ouvrent d’eux-mêmes quand un voyant a besoin de vous.
-- Des voyants d’état qui disent ce qu’il en est vraiment, chacun avec le bouton qui règle le problème : Ouvrir OBS, Activer pour le mode Studio, et un voyant TourBox qui n’est vert que lorsque TourBox Console contient le préréglage. Le port OBS se remplit tout seul depuis OBS, comme le mot de passe.
-- Ouvrir à l’ouverture de session : une case à cocher sous les boutons, décochée tant que vous ne la cochez pas.
-- Fermer la fenêtre laisse les commandes actives : une icône dans la zone de notification rouvre la fenêtre, démarre ou arrête les commandes et quitte l’application.
-- Une fenêtre sombre quand Windows est en mode sombre.
-- 13 langues : le néerlandais, le portugais du Brésil et le turc sont nouveaux. La version figure dans le titre de chaque fenêtre.
-- Corrigé : le fondu de la manette de jeu part aussi quand le T-bar d’OBS ne peut pas être lu, une coupe ne retient plus l’appui suivant, et un mot de passe refusé par OBS est réessayé tout seul.
+- Le Guide rapide commence maintenant par vous demander quel contrôleur vous avez : manette de jeu, TourBox ou contrôleur MIDI, avec une image de chacun.
+- Une nouvelle section pour les contrôleurs MIDI : un APC40 mkII ou un autre contrôleur MIDI est piloté par Midi Fadester, un plugin gratuit qui fonctionne dans OBS, et non par Fadester Companion.
+- En russe et en néerlandais, l’application nomme désormais le menu Outils d’OBS comme OBS le nomme : Сервис en russe, Tools en néerlandais.
 
 **Product features**
 
@@ -143,16 +128,11 @@ Richiede OBS Studio con il server WebSocket attivo (Strumenti → Impostazioni d
 
 **Short description:** Il tuo controller di gioco diventa un mixer video per OBS Studio: un vero T-bar sul grilletto destro, le scene sul D-pad, la musica sul grilletto sinistro.
 
-**What's new:** Versione 1.5.0:
+**What's new:** Versione 1.5.1:
 
-- I controlli partono da soli la prima volta che apri l’app. Un solo pulsante li avvia e li ferma: Avvia o Ferma.
-- Una pagina Configurazione più corta: ogni passaggio numerato è una riga breve con il suo pulsante. La porta e la password di OBS e le parti facoltative stanno dietro Dettagli e Mostra, e si aprono da sole quando una spia ha bisogno di te.
-- Spie di stato che dicono come stanno davvero le cose, ognuna con il pulsante che risolve il problema: Apri OBS, Attiva per la Modalità studio e una spia TourBox che è verde solo quando TourBox Console contiene il preset. La porta di OBS viene compilata da OBS, come la password.
-- Apri all'accesso: una casella sotto i pulsanti, disattivata finché non la selezioni.
-- Chiudendo la finestra i controlli restano attivi: un’icona nell’area di notifica riapre la finestra, avvia o ferma i controlli ed esce dall’app.
-- Una finestra scura quando Windows è in modalità scura.
-- 13 lingue: olandese, portoghese brasiliano e turco sono nuovi. La versione è nel titolo di ogni finestra.
-- Corretto: la dissolvenza del controller di gioco parte anche quando il T-bar di OBS non può essere letto, un taglio non blocca più la pressione successiva e una password rifiutata da OBS viene riprovata da sola.
+- La Guida rapida ora inizia chiedendo quale controller hai: controller di gioco, TourBox o controller MIDI, con un’immagine di ciascuno.
+- Una nuova sezione per i controller MIDI: un APC40 mkII o un altro controller MIDI è gestito da Midi Fadester, un plugin gratuito dentro OBS, non da Fadester Companion.
+- In russo e in olandese l’app ora chiama il menu Strumenti di OBS come lo chiama OBS: Сервис in russo, Tools in olandese.
 
 **Product features**
 
@@ -184,16 +164,11 @@ WebSocket サーバーを有効にした OBS Studio が必要です（ツール 
 
 **Short description:** ゲームコントローラーが OBS Studio のビデオスイッチャーに。右トリガーは本物の T バー、十字キーでシーン、左トリガーで音楽。
 
-**What's new:** バージョン 1.5.0：
+**What's new:** バージョン 1.5.1：
 
-- 初めてアプリを開くと、コントロールが自動で開始します。「開始」と「停止」は一つのボタンです。
-- 「セットアップ」ページを短くしました。番号付きの各ステップは、短い一行とそのボタンだけです。OBS のポートとパスワード、オプションの項目は「詳細」と「表示」の中にあり、ランプが対応を求めるときは自動で開きます。
-- 実際の状態を示すステータスランプ。それぞれに問題を解決するボタンが付きます：「OBS を開く」、スタジオモードの「オンにする」。TourBox のランプは、TourBox Console にプリセットがあるときだけ緑になります。OBS のポートは、パスワードと同じく OBS から自動で入力されます。
-- 「サインイン時に開く」：ボタンの下のチェックボックスです。チェックを入れるまではオフです。
-- ウィンドウを閉じてもコントロールはオンのままです。通知領域のアイコンから、ウィンドウを開き直す、コントロールを開始・停止する、アプリを終了することができます。
-- Windows がダークモードのときは、ウィンドウも暗い配色になります。
-- 13 言語に対応：オランダ語、ブラジルポルトガル語、トルコ語を追加しました。バージョンはすべてのウィンドウのタイトルに表示されます。
-- 修正：OBS の T バーを読み取れないときも、ゲームコントローラーのフェードが実行されます。カットの後、次の操作が待たされなくなりました。OBS に拒否されたパスワードは自動で再試行します。
+- 「クイックガイド」は最初に、お持ちのコントローラー（ゲームコントローラー、TourBox、MIDI コントローラー）を尋ねるようになりました。それぞれに画像が付きます。
+- MIDI コントローラーの新しいセクション：APC40 mkII などの MIDI コントローラーは、Fadester Companion ではなく、OBS 内で動く無料プラグイン Midi Fadester で使います。
+- ロシア語とオランダ語では、OBS の「ツール」メニューを OBS と同じ名前で表示するようになりました（「Сервис」と「Tools」）。
 
 **Product features**
 
@@ -225,16 +200,11 @@ WebSocket 서버가 켜진 OBS Studio가 필요합니다(도구 → WebSocket �
 
 **Short description:** 게임 컨트롤러가 OBS Studio용 비디오 스위처로: 오른쪽 트리거는 진짜 T바, 십자키는 장면, 왼쪽 트리거는 음악.
 
-**What's new:** 버전 1.5.0:
+**What's new:** 버전 1.5.1:
 
-- 앱을 처음 열면 컨트롤이 자동으로 시작됩니다. 버튼 하나로 시작하고 중지합니다: 시작 또는 중지.
-- 더 짧아진 설정 페이지: 번호가 붙은 각 단계는 짧은 한 줄과 그 버튼뿐입니다. OBS 포트와 비밀번호, 선택 항목은 '자세히'와 '보기' 안에 있으며, 표시등이 조치를 요구하면 자동으로 열립니다.
-- 실제 상태를 그대로 알려 주는 상태 표시등이며, 각각 문제를 해결하는 버튼이 있습니다: 'OBS 열기', 스튜디오 모드용 '켜기', 그리고 TourBox Console에 프리셋이 있을 때만 녹색이 되는 TourBox 표시등. OBS 포트는 비밀번호처럼 OBS에서 자동으로 입력됩니다.
-- 로그인할 때 열기: 버튼 아래의 확인란으로, 선택하기 전에는 꺼져 있습니다.
-- 창을 닫아도 컨트롤은 켜진 채로 유지됩니다. 알림 영역의 아이콘으로 창을 다시 열고, 컨트롤을 시작하거나 중지하고, 앱을 종료할 수 있습니다.
-- Windows가 다크 모드이면 창도 어둡게 표시됩니다.
-- 13개 언어: 네덜란드어, 브라질 포르투갈어, 튀르키예어가 새로 추가되었습니다. 모든 창의 제목에 버전이 표시됩니다.
-- 수정: OBS의 T바를 읽을 수 없을 때도 게임 컨트롤러의 페이드가 실행됩니다. 컷 이후 다음 입력이 지연되지 않습니다. OBS가 거부한 비밀번호는 자동으로 다시 시도합니다.
+- '빠른 가이드'가 이제 어떤 컨트롤러가 있는지 먼저 묻습니다: 게임 컨트롤러, TourBox, MIDI 컨트롤러이며, 각각 그림이 함께 있습니다.
+- MIDI 컨트롤러를 위한 새 섹션: APC40 mkII 등 MIDI 컨트롤러는 Fadester Companion이 아니라 OBS 안에서 동작하는 무료 플러그인 Midi Fadester가 다룹니다.
+- 러시아어와 네덜란드어에서 OBS의 '도구' 메뉴를 이제 OBS와 같은 이름으로 부릅니다: 'Сервис'와 'Tools'.
 
 **Product features**
 
@@ -266,16 +236,11 @@ Fadester Companion превращает контроллеры, которые �
 
 **Short description:** Ваш геймпад — теперь видеомикшер для OBS Studio: настоящий T-bar на правом триггере, сцены на крестовине, музыка на левом триггере.
 
-**What's new:** Версия 1.5.0:
+**What's new:** Версия 1.5.1:
 
-- Управление запускается само при первом открытии приложения. Одна кнопка запускает и останавливает его: «Запустить» или «Остановить».
-- Страница «Настройка» стала короче: каждый нумерованный шаг — одна короткая строка и её кнопка. Порт и пароль OBS и необязательные разделы скрыты за «Подробнее» и «Показать» и открываются сами, когда индикатору нужно ваше внимание.
-- Индикаторы состояния показывают, как обстоят дела на самом деле, и у каждого есть кнопка, которая устраняет проблему: «Открыть OBS», «Включить» для Режима студии, а индикатор TourBox зелёный, только когда пресет есть в TourBox Console. Порт OBS подставляется из OBS сам, как и пароль.
-- «Открывать при входе в систему»: флажок под кнопками, снят, пока вы его не установите.
-- Если закрыть окно, управление остаётся включённым: значок в области уведомлений снова открывает окно, запускает или останавливает управление и завершает работу приложения.
-- Тёмное окно, когда в Windows включён тёмный режим.
-- 13 языков: добавлены нидерландский, бразильский португальский и турецкий. Версия указана в заголовке каждого окна.
-- Исправлено: плавный переход с геймпада выполняется и тогда, когда T-bar в OBS не удаётся прочитать; резкая склейка больше не задерживает следующее нажатие; пароль, который OBS не принял, отправляется повторно автоматически.
+- «Краткая справка» теперь начинается с вопроса, какой у вас контроллер: геймпад, TourBox или MIDI-контроллер, с изображением каждого.
+- Новый раздел о MIDI-контроллерах: APC40 mkII или другим MIDI-контроллером управляет Midi Fadester, бесплатный плагин внутри OBS, а не Fadester Companion.
+- На русском и нидерландском приложение теперь называет меню инструментов OBS так же, как сам OBS: «Сервис» и «Tools».
 
 **Product features**
 
@@ -307,16 +272,11 @@ OBS 在前台时它照样工作，只与你电脑上的 OBS 和 VJster 扩展通
 
 **Short description:** 你的游戏手柄，变身 OBS Studio 视频切换台：右扳机是真正的 T-bar，方向键切换场景，左扳机控制音乐。
 
-**What's new:** 版本 1.5.0：
+**What's new:** 版本 1.5.1：
 
-- 首次打开应用时，控制会自动启动。一个按钮负责启动和停止：“启动”或“停止”。
-- 更简短的“设置”页面：每个编号步骤只有一行简短说明和对应的按钮。OBS 端口和密码以及可选部分收在“详情”和“显示”里，指示灯需要你处理时会自动展开。
-- 如实反映状态的指示灯，每个都配有解决问题的按钮：“打开 OBS”、用于工作室模式的“开启”，以及只有当 TourBox Console 中已有预设时才变绿的 TourBox 指示灯。OBS 端口与密码一样，会自动从 OBS 读取。
-- “登录时打开”：按钮下方的复选框，勾选之前保持关闭。
-- 关闭窗口后控制仍保持开启：通知区域中的图标可重新打开窗口、启动或停止控制，以及退出应用。
-- Windows 处于深色模式时，窗口也使用深色。
-- 13 种语言：新增荷兰语、巴西葡萄牙语和土耳其语。每个窗口的标题都会显示版本号。
-- 修复：无法读取 OBS 的 T-bar 时，游戏手柄的淡变仍会执行；直接切换后不再耽搁下一次按键；被 OBS 拒绝的密码会自动重试。
+- “快速指南”现在一开始就会问你用的是哪种控制器：游戏手柄、TourBox 或 MIDI 控制器，每种都配有图片。
+- 新增 MIDI 控制器一节：APC40 mkII 或其他 MIDI 控制器由 OBS 内的免费插件 Midi Fadester 驱动，而不是 Fadester Companion。
+- 在俄语和荷兰语界面中，应用现在按 OBS 自己的叫法称呼 OBS 的“工具”菜单：“Сервис”和“Tools”。
 
 **Product features**
 
@@ -348,16 +308,11 @@ OBS 在前景時它照樣運作，只與你電腦上的 OBS 和 VJster 擴充功
 
 **Short description:** 你的遊戲控制器，變身 OBS Studio 視訊切換台：右扳機是真正的 T-bar，十字鍵切換場景，左扳機控制音樂。
 
-**What's new:** 版本 1.5.0：
+**What's new:** 版本 1.5.1：
 
-- 第一次開啟應用程式時，控制會自動啟動。一個按鈕負責啟動和停止：「啟動」或「停止」。
-- 更簡短的「設定」頁面：每個編號步驟只有一行簡短說明和對應的按鈕。OBS 連接埠和密碼以及選用部分收在「詳細資訊」和「顯示」裡，指示燈需要你處理時會自動展開。
-- 如實反映狀態的指示燈，每個都附有解決問題的按鈕：「開啟 OBS」、用於工作室模式的「開啟」，以及只有當 TourBox Console 中已有預設時才變綠的 TourBox 指示燈。OBS 連接埠與密碼一樣，會自動從 OBS 讀取。
-- 「登入時開啟」：按鈕下方的核取方塊，勾選之前保持關閉。
-- 關閉視窗後控制仍保持開啟：通知區域中的圖示可重新開啟視窗、啟動或停止控制，以及結束應用程式。
-- Windows 處於深色模式時，視窗也使用深色。
-- 13 種語言：新增荷蘭文、巴西葡萄牙文和土耳其文。每個視窗的標題都會顯示版本號碼。
-- 修正：無法讀取 OBS 的 T-bar 時，遊戲控制器的淡變仍會執行；直接切換後不再耽擱下一次按鍵；被 OBS 拒絕的密碼會自動重試。
+- 「快速指南」現在一開始就會問你用的是哪種控制器：遊戲控制器、TourBox 或 MIDI 控制器，每種都附有圖片。
+- 新增 MIDI 控制器一節：APC40 mkII 或其他 MIDI 控制器由 OBS 內的免費外掛程式 Midi Fadester 驅動，而不是 Fadester Companion。
+- 在俄文和荷蘭文介面中，應用程式現在依 OBS 自己的叫法稱呼 OBS 的「工具」選單：「Сервис」和「Tools」。
 
 **Product features**
 
@@ -389,16 +344,11 @@ Vereist OBS Studio met de WebSocket-server ingeschakeld (Tools → WebSocket-ser
 
 **Short description:** Je gamecontroller als beeldmixer voor OBS Studio: een echte T-bar op de rechtertrigger, scènes op de D-pad, muziek op de linkertrigger.
 
-**What's new:** Versie 1.5.0:
+**What's new:** Versie 1.5.1:
 
-- De bediening start vanzelf als je de app voor het eerst opent. Eén knop start en stopt haar: Starten of Stoppen.
-- Een kortere pagina Instellen: elke genummerde stap is één korte regel met zijn knop. De OBS-poort en het OBS-wachtwoord en de optionele onderdelen staan achter Details en Tonen, en gaan vanzelf open als een lampje je nodig heeft.
-- Statuslampjes die zeggen hoe het er echt voor staat, elk met de knop die het oplost: OBS openen, Aanzetten voor de Studiomodus, en een TourBox-lampje dat alleen groen is als TourBox Console de preset heeft. De OBS-poort wordt vanuit OBS ingevuld, net als het wachtwoord.
-- Openen bij aanmelden: een vakje onder de knoppen, uit totdat je het aanvinkt.
-- Als je het venster sluit, blijft de bediening aan: een pictogram in het systeemvak opent het venster weer, start of stopt de bediening en sluit de app af.
-- Een donker venster als Windows in de donkere modus staat.
-- 13 talen: Nederlands, Braziliaans Portugees en Turks zijn nieuw. De versie staat in de titel van elk venster.
-- Opgelost: de fade van de gamecontroller gaat ook door als de T-bar van OBS niet kan worden gelezen, een cut houdt de volgende druk op een knop niet meer op, en een wachtwoord dat OBS weigerde wordt vanzelf opnieuw geprobeerd.
+- De Snelgids begint nu met de vraag welke controller je hebt: gamecontroller, TourBox of MIDI-controller, met een afbeelding van elk.
+- Een nieuw onderdeel voor MIDI-controllers: een APC40 mkII of een andere MIDI-controller wordt aangestuurd door Midi Fadester, een gratis plug-in in OBS, niet door Fadester Companion.
+- In het Nederlands en het Russisch noemt de app het menu Tools van OBS nu zoals OBS zelf: Tools en Сервис.
 
 **Product features**
 
@@ -430,16 +380,11 @@ Requer o OBS Studio com o servidor WebSocket ativado (Ferramentas → Configura�
 
 **Short description:** Seu controle de jogo agora é uma mesa de corte para o OBS Studio: um T-bar de verdade no gatilho direito, cenas no direcional, música no gatilho esquerdo.
 
-**What's new:** Versão 1.5.0:
+**What's new:** Versão 1.5.1:
 
-- Os controles iniciam sozinhos na primeira vez que você abre o aplicativo. Um só botão os inicia e os para: Iniciar ou Parar.
-- Uma página Configuração mais curta: cada etapa numerada é uma linha breve com o seu botão. A porta e a senha do OBS e as partes opcionais ficam atrás de Detalhes e Mostrar, e se abrem sozinhas quando uma luz precisa de você.
-- Luzes de status que dizem como as coisas realmente estão, cada uma com o botão que resolve o problema: Abrir o OBS, Ativar para o Modo Estúdio e uma luz do TourBox que só fica verde quando o TourBox Console tem o preset. A porta do OBS é preenchida pelo OBS, assim como a senha.
-- Abrir ao entrar: uma caixa de seleção abaixo dos botões, desmarcada até você marcá-la.
-- Fechar a janela mantém os controles ativados: um ícone na área de notificação abre a janela de novo, inicia ou para os controles e encerra o aplicativo.
-- Uma janela escura quando o Windows está no modo escuro.
-- 13 idiomas: holandês, português do Brasil e turco são novos. A versão aparece no título de cada janela.
-- Corrigido: o fade do controle de jogo é executado mesmo quando o T-bar do OBS não pode ser lido, um corte não segura mais o próximo toque no botão, e uma senha que o OBS recusou é tentada de novo automaticamente.
+- O Guia rápido agora começa perguntando qual controlador você tem: controle de jogo, TourBox ou controlador MIDI, com uma imagem de cada um.
+- Uma nova seção para controladores MIDI: um APC40 mkII ou outro controlador MIDI é operado pelo Midi Fadester, um plugin gratuito dentro do OBS, e não pelo Fadester Companion.
+- Em russo e holandês, o aplicativo agora chama o menu Ferramentas do OBS como o próprio OBS: Сервис e Tools.
 
 **Product features**
 
@@ -471,16 +416,11 @@ WebSocket sunucusu açık OBS Studio gerekir (Araçlar → WebSocket Sunucu Ayar
 
 **Short description:** Oyun kumandanız artık OBS Studio için bir görüntü mikseri: sağ tetikte gerçek bir T-bar, D-pad'de sahneler, sol tetikte müzik.
 
-**What's new:** Sürüm 1.5.0:
+**What's new:** Sürüm 1.5.1:
 
-- Uygulamayı ilk açtığınızda kontroller kendiliğinden başlar. Tek bir düğme onları başlatır ve durdurur: Başlat veya Durdur.
-- Daha kısa bir Kurulum sayfası: numaralı her adım kısa bir satır ve onun düğmesidir. OBS bağlantı noktası ile parolası ve isteğe bağlı bölümler Ayrıntılar ve Göster'in arkasında durur; bir ışık sizden bir şey beklediğinde kendiliğinden açılır.
-- Durumu olduğu gibi gösteren ışıklar; her birinin yanında sorunu çözen düğme var: OBS'i aç, Stüdyo Modu için Aç ve yalnızca hazır ayar TourBox Console'da olduğunda yeşil yanan bir TourBox ışığı. OBS bağlantı noktası da parola gibi OBS'ten doldurulur.
-- Oturum açtığımda aç: düğmelerin altında bir onay kutusu; siz işaretleyene kadar kapalıdır.
-- Pencereyi kapatmak kontrolleri açık bırakır: bildirim alanındaki bir simge pencereyi yeniden açar, kontrolleri başlatır veya durdurur ve uygulamadan çıkar.
-- Windows koyu moddayken pencere de koyu olur.
-- 13 dil: Felemenkçe, Brezilya Portekizcesi ve Türkçe yeni. Sürüm, her pencerenin başlığında yazar.
-- Düzeltildi: OBS'in T-bar'ı okunamadığında da oyun kumandasının yumuşak geçişi yapılır; bir kesme artık sonraki basışı bekletmez; OBS'in kabul etmediği parola kendiliğinden yeniden denenir.
+- Hızlı kılavuz artık önce hangi kontrolcünüz olduğunu soruyor: oyun kumandası, TourBox veya MIDI kontrolcüsü, her birinin resmiyle.
+- MIDI kontrolcüleri için yeni bir bölüm: APC40 mkII'yi veya başka bir MIDI kontrolcüsünü Fadester Companion değil, OBS içinde çalışan ücretsiz bir eklenti olan Midi Fadester yönetir.
+- Rusça ve Felemenkçede uygulama artık OBS'in Araçlar menüsünü tıpkı OBS gibi adlandırıyor: Сервис ve Tools.
 
 **Product features**
 

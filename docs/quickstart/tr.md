@@ -1,6 +1,6 @@
 # Fadester for OBS: hızlı başlangıçlar
 
-*Bu, İngilizce hızlı başlangıçların bir yapay zekâ modeliyle yapılmış ve ikinci bir yapay zekâ modeliyle denetlenmiş çevirisidir; henüz anadili Türkçe olan biri tarafından gözden geçirilmedi.*
+*Bu, İngilizce hızlı başlangıçların bir yapay zekâ modeliyle yapılmış ve ikinci bir yapay zekâ modeliyle denetlenmiş çevirisidir; henüz ana dili Türkçe olan biri tarafından gözden geçirilmedi.*
 
 [Fadester for OBS](#fadester-for-obs) · [Buradan başlayın](#start-here) · [Hazır düzenler](#layouts) · [OpenDeck](#opendeck) · [VJster ile tek eklenti](#suite) · [Düzen dosyalarını elle içe aktarma](#profiles)
 

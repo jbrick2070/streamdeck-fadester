@@ -6,6 +6,8 @@ import { DEFAULT_LINK_PORT, LINK_HOST } from "../../src/vjster/shared/protocol.j
 export const PORT_KEY = "vjster.port";
 export const ALL_SITES_KEY = "vjster.allSites";
 export const PIN_KEY = "vjster.pinnedTab";
+/** Local storage: the operator ticked "Keyboard hotkeys" on the options page. Absent means off. */
+export const HOTKEYS_KEY = "vjster.hotkeys";
 /** Session storage: another copy of the extension took the link and this one stands by (it outlives a worker restart). */
 export const STANDBY_KEY = "vjster.linkStandby";
 /** Local storage: the link has been up at least once since the install (the options page's first line depends on it). */
@@ -20,6 +22,15 @@ export function readPort(value: unknown): number {
 
 export function linkUrl(port: number): string {
   return `ws://${LINK_HOST}:${port}/`;
+}
+
+/**
+ * Keyboard hotkeys are on only when the operator ticked them: anything else, a missing value included, is off. Most
+ * people have their hands on the keyboard while a video plays (a comment, a search box, a chat), so the extension
+ * never takes a key without being asked to.
+ */
+export function hotkeysWanted(stored: unknown): boolean {
+  return stored === true;
 }
 
 /** The content scripts registered when the operator allows every site (D-4). */

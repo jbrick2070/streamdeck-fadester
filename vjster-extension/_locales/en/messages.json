@@ -9,7 +9,7 @@
     "message": "VJster options"
   },
   "companionNote": {
-    "message": "VJster needs one free program on this computer: Fadester for OBS or the VJster plugin (for Stream Deck or OpenDeck), or Fadester Companion. Alone, this extension does nothing."
+    "message": "VJster needs one free program on this computer: Fadester for OBS or the VJster plugin (for Stream Deck or OpenDeck), or Fadester Companion. Without one, only the keyboard hotkeys below work."
   },
   "linkGet": {
     "message": "Downloads"
@@ -40,6 +40,12 @@
   },
   "allSitesNote": {
     "message": "Speed only: quality needs YouTube's player. Untick to keep VJster on YouTube only."
+  },
+  "hotkeys": {
+    "message": "Keyboard hotkeys"
+  },
+  "hotkeysNote": {
+    "message": "[ slower, ] faster, \\ back to 1×. Off until you turn it on. Ignored while you type in a text box. Works without a Stream Deck or any other program."
   },
   "statusLinkUp": {
     "message": "Connected to VJster on port $PORT$.",

@@ -9,7 +9,7 @@
     "message": "VJster seçenekleri"
   },
   "companionNote": {
-    "message": "VJster, bu bilgisayarda ücretsiz bir programa ihtiyaç duyar: Fadester for OBS veya VJster eklentisi (Stream Deck ya da OpenDeck için) ya da Fadester Companion. Bu uzantı tek başına hiçbir şey yapmaz."
+    "message": "VJster, bu bilgisayarda ücretsiz bir programa ihtiyaç duyar: Fadester for OBS veya VJster eklentisi (Stream Deck ya da OpenDeck için) ya da Fadester Companion. Bunlardan biri olmadan yalnızca aşağıdaki klavye kısayolları çalışır."
   },
   "linkGet": {
     "message": "İndirmeler"
@@ -40,6 +40,12 @@
   },
   "allSitesNote": {
     "message": "Yalnızca hız: kalite için YouTube oynatıcısı gerekir. VJster'ı yalnızca YouTube'da tutmak için işareti kaldırın."
+  },
+  "hotkeys": {
+    "message": "Klavye kısayolları"
+  },
+  "hotkeysNote": {
+    "message": "[ daha yavaş, ] daha hızlı, \\ 1×'e dön. Siz açana kadar kapalıdır. Bir metin kutusuna yazarken yok sayılır. Stream Deck veya başka bir program olmadan çalışır."
   },
   "statusLinkUp": {
     "message": "VJster'e $PORT$ numaralı bağlantı noktasından bağlanıldı.",

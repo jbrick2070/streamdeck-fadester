@@ -9,7 +9,7 @@
     "message": "VJster 选项"
   },
   "companionNote": {
-    "message": "VJster 需要这台电脑上有一个免费程序：Fadester for OBS 或 VJster 插件（适用于 Stream Deck 或 OpenDeck），或 Fadester Companion。单独使用，此扩展程序不会执行任何操作。"
+    "message": "VJster 需要这台电脑上有一个免费程序：Fadester for OBS 或 VJster 插件（适用于 Stream Deck 或 OpenDeck），或 Fadester Companion。没有这类程序时，只有下方的键盘快捷键可用。"
   },
   "linkGet": {
     "message": "下载"
@@ -40,6 +40,12 @@
   },
   "allSitesNote": {
     "message": "仅限速度：画质需要 YouTube 播放器。取消勾选可让 VJster 只用于 YouTube。"
+  },
+  "hotkeys": {
+    "message": "键盘快捷键"
+  },
+  "hotkeysNote": {
+    "message": "[ 减速，] 加速，\\ 恢复 1×。开启前保持关闭。在文本框中输入时会被忽略。无需 Stream Deck 或其他程序即可使用。"
   },
   "statusLinkUp": {
     "message": "已通过端口 $PORT$ 连接到 VJster。",

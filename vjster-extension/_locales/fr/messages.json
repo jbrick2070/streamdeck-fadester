@@ -9,7 +9,7 @@
     "message": "Options de VJster"
   },
   "companionNote": {
-    "message": "VJster a besoin d'un programme gratuit sur cet ordinateur : Fadester for OBS ou le plugin VJster (pour Stream Deck ou OpenDeck), ou Fadester Companion. Seule, cette extension ne fait rien."
+    "message": "VJster a besoin d'un programme gratuit sur cet ordinateur : Fadester for OBS ou le plugin VJster (pour Stream Deck ou OpenDeck), ou Fadester Companion. Sans lui, seuls les raccourcis clavier ci-dessous fonctionnent."
   },
   "linkGet": {
     "message": "Téléchargements"
@@ -40,6 +40,12 @@
   },
   "allSitesNote": {
     "message": "Vitesse seulement : la qualité nécessite le lecteur YouTube. Décochez pour garder VJster sur YouTube uniquement."
+  },
+  "hotkeys": {
+    "message": "Raccourcis clavier"
+  },
+  "hotkeysNote": {
+    "message": "[ plus lent, ] plus rapide, \\ retour à 1×. Désactivé tant que vous ne l’activez pas. Ignoré pendant que vous saisissez du texte dans un champ. Fonctionne sans Stream Deck ni autre programme."
   },
   "statusLinkUp": {
     "message": "Connecté à VJster sur le port $PORT$.",

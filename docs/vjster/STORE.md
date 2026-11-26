@@ -31,7 +31,7 @@ The zip has no `key`: the store refuses one on a first upload and gives the exte
 
 > VJster lets your own controls change the speed and picture quality of a YouTube video in Chrome: slow it for a beat-match, speed it up, nudge it in small steps, set the quality, play or pause. Use the dials and keys of a Stream Deck or OpenDeck, the knobs of a TourBox, or the sticks of an Xbox controller. A Stream Deck shows the video's title and speed.
 >
-> VJster needs one free program on this computer: Fadester for OBS (the Stream Deck and OpenDeck plugin, with VJster included) or Fadester Companion (for an Xbox controller or a TourBox). Both are at github.com/jbrick2070/streamdeck-fadester. On its own, this extension does nothing.
+> VJster needs one free program on this computer: Fadester for OBS (the Stream Deck and OpenDeck plugin, with VJster included) or Fadester Companion (for an Xbox controller or a TourBox). Both are at github.com/jbrick2070/streamdeck-fadester. Without one, the extension does only one thing: the optional keyboard hotkeys, which are off until you turn them on in the extension's options (`[` slower, `]` faster, `\` back to 1x, on the page you are watching).
 >
 > It talks only to your own computer. No account, no tracking, nothing sent to any server.
 >
@@ -39,7 +39,7 @@ The zip has no `key`: the store refuses one on a first upload and gives the exte
 
 **Category:** Productivity. **Language:** English (the listing; the extension itself has 13).
 
-**Single purpose:** Let the user's Stream Deck, OpenDeck, TourBox or Xbox controller, through Fadester for OBS or Fadester Companion on the same computer, change the speed and quality of the YouTube video in a tab.
+**Single purpose:** Let the user change the speed and quality of the YouTube video in a tab from their Stream Deck, OpenDeck, TourBox or Xbox controller (through Fadester for OBS or Fadester Companion on the same computer), or, if they turn the option on, from the keyboard.
 
 **Privacy policy URL:** https://github.com/jbrick2070/streamdeck-fadester/blob/main/docs/vjster/PRIVACY.md
 
@@ -47,13 +47,13 @@ The zip has no `key`: the store refuses one on a first upload and gives the exte
 
 | Permission | Why |
 |---|---|
-| `storage` | Keeps the port number, and the pinned tab until the browser closes. |
+| `storage` | Keeps the port number, whether the user turned on the keyboard hotkeys, and the pinned tab until the browser closes. |
 | `alarms` | Checks once a minute that the link to the companion is open, because Chrome stops an idle extension worker after 30 seconds. |
 | Host `*://*.youtube.com/*` | The content scripts that read the player's state and change its speed and quality run on YouTube pages. |
 | Host `ws://127.0.0.1/*` | The connection to the VJster companion on this computer. |
 | Remote code | None. All code is in the package. |
 
-**Data use form:** it collects no user data for transmission anywhere. Tick none of the collected data types; certify that data is not sold, not used for unrelated purposes and not used for creditworthiness.
+**Data use form:** it collects no user data for transmission anywhere. Tick none of the collected data types; certify that data is not sold, not used for unrelated purposes and not used for creditworthiness. The keyboard hotkeys (version 1.5.1) are off until the user turns them on, look at a key only to act on `[`, `]` or `\`, and keep and send no key; `PRIVACY.md` says so, and the policy URL below must show that text before the version is submitted (merge it first).
 
 **Screenshots** (1280x800): the options page; a YouTube tab with the deck simulator beside it. To be added before submission.
 
@@ -61,4 +61,4 @@ The zip has no `key`: the store refuses one on a first upload and gives the exte
 
 1. The dashboard shows the extension's **id**. Give it to the install steps in [INSTALL.md](INSTALL.md): paste it into the VJster settings on the deck so only this extension can connect (R-LNK-2).
 2. Replace "loaded unpacked for now" in INSTALL.md with the store link, and keep the unpacked zip as the way to get the "every site" option.
-3. Each new version: raise `version` in `vjster-extension/manifest.json`, build, pack with `--store`, upload.
+3. Each new version: raise `version` in `vjster-extension/manifest.json` (the store refuses an upload whose version is not higher than the published one), build, pack with `--store`, then in the dashboard open the item, choose **Package**, **Upload new package**, check that the description and the privacy answers above still hold, and submit for review. A version that adds a feature the listing does not mention needs its description updated too (1.5.1: the keyboard hotkeys paragraph in section 3).

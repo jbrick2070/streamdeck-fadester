@@ -9,7 +9,7 @@
     "message": "VJster 옵션"
   },
   "companionNote": {
-    "message": "VJster를 사용하려면 이 컴퓨터에 무료 프로그램 하나가 필요합니다. Fadester for OBS나 VJster 플러그인(Stream Deck 또는 OpenDeck용), 또는 Fadester Companion입니다. 이 확장 프로그램만으로는 아무 기능도 하지 않습니다."
+    "message": "VJster를 사용하려면 이 컴퓨터에 무료 프로그램 하나가 필요합니다. Fadester for OBS나 VJster 플러그인(Stream Deck 또는 OpenDeck용), 또는 Fadester Companion입니다. 프로그램이 없으면 아래의 키보드 단축키만 작동합니다."
   },
   "linkGet": {
     "message": "다운로드"
@@ -40,6 +40,12 @@
   },
   "allSitesNote": {
     "message": "속도만: 화질은 YouTube 플레이어가 필요합니다. YouTube에서만 쓰려면 체크를 해제하세요."
+  },
+  "hotkeys": {
+    "message": "키보드 단축키"
+  },
+  "hotkeysNote": {
+    "message": "[ 느리게, ] 빠르게, \\ 1×로 되돌리기. 켜기 전에는 꺼져 있습니다. 텍스트 상자에 입력하는 동안에는 무시됩니다. Stream Deck이나 다른 프로그램 없이도 작동합니다."
   },
   "statusLinkUp": {
     "message": "포트 $PORT$에서 VJster에 연결되었습니다.",

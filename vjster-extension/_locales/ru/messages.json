@@ -9,7 +9,7 @@
     "message": "Параметры VJster"
   },
   "companionNote": {
-    "message": "Для работы VJster нужна одна бесплатная программа на этом компьютере: Fadester for OBS или плагин VJster (для Stream Deck или OpenDeck) либо Fadester Companion. Само по себе это расширение ничего не делает."
+    "message": "Для работы VJster нужна одна бесплатная программа на этом компьютере: Fadester for OBS или плагин VJster (для Stream Deck или OpenDeck) либо Fadester Companion. Без неё работают только горячие клавиши ниже."
   },
   "linkGet": {
     "message": "Загрузки"
@@ -40,6 +40,12 @@
   },
   "allSitesNote": {
     "message": "Только скорость: для качества нужен плеер YouTube. Снимите флажок, чтобы VJster работал только на YouTube."
+  },
+  "hotkeys": {
+    "message": "Горячие клавиши"
+  },
+  "hotkeysNote": {
+    "message": "[ медленнее, ] быстрее, \\ вернуть 1×. Выключено, пока вы не включите. Не действуют, пока вы печатаете в текстовом поле. Работают без Stream Deck и любой другой программы."
   },
   "statusLinkUp": {
     "message": "Подключено к VJster на порту $PORT$.",

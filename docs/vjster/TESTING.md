@@ -87,6 +87,21 @@ every second. Use one profile for a show.
 1.13 **Hold quality and pin (R-QLT-7, R-TGT-2).** These need intents from the
 deck, so they are checked with the plugin in section 2.
 
+1.14 **Keyboard hotkeys (R-KEY-1..4).** Needs no deck and no stub server. On a
+fresh install, play a YouTube video, click the page and press `]`, `[` and `\`.
+Expected: nothing changes, and the keys reach the page. Open the options page:
+"Keyboard hotkeys" is unticked. Tick it, go back to the tab that was already open,
+and press `]` twice, `[` once, then `\`. Expected: 1.25x, 1.5x, 1.25x, then 1x,
+and YouTube's own speed menu shows the same value. Click the
+comment box and type `] [ \`. Expected: the characters appear and the speed does
+not change. Hold Ctrl and press `]`: nothing. On a page with no video: nothing, and
+the page gets the key. On a plain video site (with 1.8 on) hold `]`: the speed
+keeps rising past 2x, up to 16x. With a plain video tab still open, untick
+"Control videos on every site": the keys stop working in that tab at once, and
+work again when you tick it. Reload the extension on `chrome://extensions` with a
+YouTube tab open, then press `]` once: exactly one step, not two. Untick
+"Keyboard hotkeys": at once, in every open tab, the keys do nothing again.
+
 ## 2. Stream Deck actions (Phase 1 step 5)
 
 Build and check the plugin first, from the repository root:

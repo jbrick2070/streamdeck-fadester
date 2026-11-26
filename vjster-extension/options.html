@@ -38,7 +38,7 @@
     <p id="reload-note" class="note" hidden data-i18n="reloadTabsNote">Video tabs that were open before VJster was installed or updated: reload them once.</p>
 
     <p class="callout">
-      <span data-i18n="companionNote">VJster needs one free program on this computer: Fadester for OBS or the VJster plugin (for Stream Deck or OpenDeck), or Fadester Companion. Alone, this extension does nothing.</span><br />
+      <span data-i18n="companionNote">VJster needs one free program on this computer: Fadester for OBS or the VJster plugin (for Stream Deck or OpenDeck), or Fadester Companion. Without one, only the keyboard hotkeys below work.</span><br />
       <a href="https://github.com/jbrick2070/streamdeck-fadester/releases" target="_blank" rel="noopener noreferrer" data-i18n="linkGet">Downloads</a>
       <a href="https://github.com/jbrick2070/streamdeck-fadester/blob/main/docs/vjster/INSTALL.md" target="_blank" rel="noopener noreferrer" data-i18n="linkHelp">Install steps</a>
       <a href="https://github.com/jbrick2070/streamdeck-fadester/blob/main/docs/vjster/PRIVACY.md" target="_blank" rel="noopener noreferrer" data-i18n="linkPrivacy">Privacy policy</a>
@@ -55,6 +55,11 @@
     <div id="all-sites-row">
       <label><input id="all-sites" type="checkbox" /> <span data-i18n="allSites">Control videos on every site, not only YouTube</span></label>
       <p class="note" data-i18n="allSitesNote">Speed only: quality needs YouTube's player. Untick to keep VJster on YouTube only.</p>
+    </div>
+
+    <div id="hotkeys-row">
+      <label><input id="hotkeys" type="checkbox" /> <span data-i18n="hotkeys">Keyboard hotkeys</span></label>
+      <p class="note" data-i18n="hotkeysNote">[ slower, ] faster, \ back to 1×. Off until you turn it on. Ignored while you type in a text box. Works without a Stream Deck or any other program.</p>
     </div>
 
     <div id="status" role="status"></div>

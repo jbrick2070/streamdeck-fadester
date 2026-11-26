@@ -12,6 +12,8 @@
 
 That's it. If the strip says **EXTENSION OFF**, see *When something is off* in [INSTALL.md](INSTALL.md).
 
+**Keys on the keyboard, if you want them.** The extension has optional hotkeys, off until you tick **Keyboard hotkeys** on its options page: `[` slower, `]` faster, `\` back to 1x. They work on the page you are watching, need no deck, and keep out of the way while you type.
+
 Quick start in other languages: [Deutsch](../quickstart/companion/de.md#vjster) · [Español](../quickstart/companion/es.md#vjster) · [Français](../quickstart/companion/fr.md#vjster) · [Italiano](../quickstart/companion/it.md#vjster) · [日本語](../quickstart/companion/ja.md#vjster) · [한국어](../quickstart/companion/ko.md#vjster) · [Nederlands](../quickstart/companion/nl.md#vjster) · [Português (Brasil)](../quickstart/companion/pt-BR.md#vjster) · [Русский](../quickstart/companion/ru.md#vjster) · [Türkçe](../quickstart/companion/tr.md#vjster) · [简体中文](../quickstart/companion/zh-CN.md#vjster) · [繁體中文](../quickstart/companion/zh-TW.md#vjster)
 
 **Install only one of them.** With Fadester for OBS, install only the Chrome extension: do not add the VJster plugin too, because both would want the same link port. Install steps, the OBS page, languages and uninstall: [INSTALL.md](INSTALL.md).

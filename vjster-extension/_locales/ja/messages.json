@@ -41,6 +41,12 @@
   "allSitesNote": {
     "message": "速度のみ：画質には YouTube のプレーヤーが必要です。YouTube だけで使うにはチェックを外してください。"
   },
+  "hotkeys": {
+    "message": "キーボードショートカット"
+  },
+  "hotkeysNote": {
+    "message": "[ で遅く、] で速く、\\ で 1× に戻します。オンにするまでオフです。テキスト入力中は無視されます。Stream Deck や他のプログラムがなくても動作します。"
+  },
   "statusLinkUp": {
     "message": "ポート $PORT$ で VJster に接続済みです。",
     "placeholders": {

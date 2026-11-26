@@ -41,6 +41,12 @@
   "allSitesNote": {
     "message": "Yalnızca hız: kalite için YouTube oynatıcısı gerekir. VJster'ı yalnızca YouTube'da tutmak için işareti kaldırın."
   },
+  "hotkeys": {
+    "message": "Klavye kısayolları"
+  },
+  "hotkeysNote": {
+    "message": "[ daha yavaş, ] daha hızlı, \\ 1×'e dön. Siz açana kadar kapalıdır. Bir metin kutusuna yazarken yok sayılır. Stream Deck veya başka bir program olmadan çalışır."
+  },
   "statusLinkUp": {
     "message": "VJster'e $PORT$ numaralı bağlantı noktasından bağlanıldı.",
     "placeholders": {

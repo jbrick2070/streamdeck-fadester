@@ -41,6 +41,12 @@
   "allSitesNote": {
     "message": "Alleen snelheid: kwaliteit vraagt de YouTube-speler. Haal het vinkje weg om VJster alleen op YouTube te houden."
   },
+  "hotkeys": {
+    "message": "Sneltoetsen"
+  },
+  "hotkeysNote": {
+    "message": "[ langzamer, ] sneller, \\ terug naar 1×. Uit tot je het aanzet. Wordt genegeerd terwijl je in een tekstvak typt. Werkt zonder Stream Deck of een ander programma."
+  },
   "statusLinkUp": {
     "message": "Verbonden met VJster op poort $PORT$.",
     "placeholders": {

@@ -1,18 +1,23 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // VJster extension options: whether the link to VJster is up, the link port,
-// this extension's id (to pin it in the plugin), and the optional all-sites
-// permission (docs/vjster D-4, R-LNK-1..2).
+// this extension's id (to pin it in the plugin), the optional all-sites
+// permission (docs/vjster D-4, R-LNK-1..2) and the optional keyboard hotkeys
+// (off until ticked, R-KEY-1).
 
 import { DEFAULT_LINK_PORT } from "../../src/vjster/shared/protocol.js";
 import { message, translatePage } from "./i18n.js";
 import { LINK_STATUS_REQUEST, linkLine, readLinkStatus, type LinkStatus } from "./messages.js";
-import { ALL_SITES_IDS, ALL_SITES_KEY, ALL_SITES_SCRIPTS, PORT_KEY, allSitesChecked, allSitesOffered, readPort } from "./settings.js";
+import {
+  ALL_SITES_IDS, ALL_SITES_KEY, ALL_SITES_SCRIPTS, HOTKEYS_KEY, PORT_KEY, allSitesChecked, allSitesOffered, hotkeysWanted, readPort
+} from "./settings.js";
 
 const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
 
 async function show(): Promise<void> {
-  const stored = await chrome.storage.local.get([PORT_KEY, ALL_SITES_KEY]);
+  const stored = await chrome.storage.local.get([PORT_KEY, ALL_SITES_KEY, HOTKEYS_KEY]);
   $<HTMLInputElement>("port").value = String(readPort(stored[PORT_KEY]));
+  // Off unless the operator ticked it (hotkeysWanted): the box starts unticked on a fresh install.
+  $<HTMLInputElement>("hotkeys").checked = hotkeysWanted(stored[HOTKEYS_KEY]);
   $<HTMLElement>("ext-id").textContent = chrome.runtime.id;
   const manifest = chrome.runtime.getManifest();
   // Every window shows its version (suite goal).
@@ -64,6 +69,17 @@ $<HTMLButtonElement>("save").addEventListener("click", async () => {
   }
   await chrome.storage.local.set({ [PORT_KEY]: port });
   status("statusSaved", [String(port)]);
+});
+
+// The keyboard hotkeys: saved the moment the box changes; open tabs follow it at once (hotkeys.ts listens for the change).
+$<HTMLInputElement>("hotkeys").addEventListener("change", async (event) => {
+  const box = event.target as HTMLInputElement;
+  try {
+    await chrome.storage.local.set({ [HOTKEYS_KEY]: box.checked });
+  } catch {
+    // The setting was not saved: put the box back, so it never claims hotkeys that are not on.
+    box.checked = !box.checked;
+  }
 });
 
 $<HTMLInputElement>("all-sites").addEventListener("change", async (event) => {

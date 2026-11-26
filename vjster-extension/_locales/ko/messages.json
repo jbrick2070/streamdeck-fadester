@@ -41,6 +41,12 @@
   "allSitesNote": {
     "message": "속도만: 화질은 YouTube 플레이어가 필요합니다. YouTube에서만 쓰려면 체크를 해제하세요."
   },
+  "hotkeys": {
+    "message": "키보드 단축키"
+  },
+  "hotkeysNote": {
+    "message": "[ 느리게, ] 빠르게, \\ 1×로 되돌리기. 켜기 전에는 꺼져 있습니다. 텍스트 상자에 입력하는 동안에는 무시됩니다. Stream Deck이나 다른 프로그램 없이도 작동합니다."
+  },
   "statusLinkUp": {
     "message": "포트 $PORT$에서 VJster에 연결되었습니다.",
     "placeholders": {

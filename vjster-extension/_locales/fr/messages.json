@@ -41,6 +41,12 @@
   "allSitesNote": {
     "message": "Vitesse seulement : la qualité nécessite le lecteur YouTube. Décochez pour garder VJster sur YouTube uniquement."
   },
+  "hotkeys": {
+    "message": "Raccourcis clavier"
+  },
+  "hotkeysNote": {
+    "message": "[ plus lent, ] plus rapide, \\ retour à 1×. Désactivé tant que vous ne l’activez pas. Ignoré pendant que vous saisissez du texte dans un champ. Fonctionne sans Stream Deck ni autre programme."
+  },
   "statusLinkUp": {
     "message": "Connecté à VJster sur le port $PORT$.",
     "placeholders": {

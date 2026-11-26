@@ -41,6 +41,12 @@
   "allSitesNote": {
     "message": "Nur Geschwindigkeit: Die Qualität braucht den YouTube-Player. Entfernen Sie das Häkchen, damit VJster nur auf YouTube bleibt."
   },
+  "hotkeys": {
+    "message": "Tastaturkürzel"
+  },
+  "hotkeysNote": {
+    "message": "[ langsamer, ] schneller, \\ zurück auf 1×. Aus, bis Sie es einschalten. Wird beim Tippen in ein Textfeld ignoriert. Funktioniert ohne Stream Deck oder ein anderes Programm."
+  },
   "statusLinkUp": {
     "message": "Mit VJster auf Port $PORT$ verbunden.",
     "placeholders": {

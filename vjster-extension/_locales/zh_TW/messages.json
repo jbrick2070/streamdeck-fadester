@@ -41,6 +41,12 @@
   "allSitesNote": {
     "message": "僅限速度：畫質需要 YouTube 播放器。取消勾選可讓 VJster 只用於 YouTube。"
   },
+  "hotkeys": {
+    "message": "鍵盤快速鍵"
+  },
+  "hotkeysNote": {
+    "message": "[ 減速，] 加速，\\ 恢復 1×。開啟前保持關閉。在文字方塊中輸入時會被忽略。無需 Stream Deck 或其他程式即可使用。"
+  },
   "statusLinkUp": {
     "message": "已透過連接埠 $PORT$ 連線到 VJster。",
     "placeholders": {

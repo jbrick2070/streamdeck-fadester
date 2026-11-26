@@ -12,6 +12,7 @@
 // what it passes on, however fast the page posts.
 
 import { createCoalescer, type CoalesceClock } from "../../src/vjster/shared/coalesce.js";
+import type { Intent } from "../../src/vjster/shared/protocol.js";
 import { cleanHost, NO_VIDEO, type PageState } from "./page-state.js";
 import { FROM_BRIDGE, plainIntent, readPageMessage, readWorkerToBridge, selfOrigin, type BridgeToPage, type BridgeToWorker } from "./messages.js";
 import { forEachShadowRoot, type ScanRoot } from "./shadow-scan.js";
@@ -102,7 +103,13 @@ export function vouchFor(state: PageState, played: boolean, facts: MediaFacts): 
   return { state: state.playing && !facts.playing ? { ...state, playing: false } : state, played: played && facts.played };
 }
 
-export function installBridge(win: BridgeWindow, runtime: BridgeRuntime, options: BridgeOptions = {}): void {
+/** What the bridge offers the rest of the isolated world. */
+export interface Bridge {
+  /** Give this page's adapter an intent, as if the worker had sent it (the keyboard hotkeys use it, hotkeys.ts). */
+  intentToPage(intent: Intent): void;
+}
+
+export function installBridge(win: BridgeWindow, runtime: BridgeRuntime, options: BridgeOptions = {}): Bridge {
   const host = cleanHost(win.location.hostname);
   const origin = selfOrigin(win.location.origin);
 
@@ -174,4 +181,6 @@ export function installBridge(win: BridgeWindow, runtime: BridgeRuntime, options
   win.addEventListener("pageshow", (event) => {
     if (event.persisted) toPage({ source: FROM_BRIDGE, kind: "refresh" });
   });
+
+  return { intentToPage: (intent) => toPage({ source: FROM_BRIDGE, kind: "intent", intent: plainIntent(intent) }) };
 }

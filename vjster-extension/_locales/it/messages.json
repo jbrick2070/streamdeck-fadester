@@ -41,6 +41,12 @@
   "allSitesNote": {
     "message": "Solo la velocità: la qualità richiede il player di YouTube. Togli la spunta per tenere VJster solo su YouTube."
   },
+  "hotkeys": {
+    "message": "Scorciatoie da tastiera"
+  },
+  "hotkeysNote": {
+    "message": "[ più lento, ] più veloce, \\ torna a 1×. Disattivato finché non lo attivi. Ignorato mentre scrivi in una casella di testo. Funziona senza Stream Deck né altri programmi."
+  },
   "statusLinkUp": {
     "message": "Collegato a VJster sulla porta $PORT$.",
     "placeholders": {

@@ -4,7 +4,7 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 
 ## Unreleased
 
-### VJster Chrome extension
+### VJster Chrome extension 1.5.1
 
 #### Added
 - **Keyboard hotkeys**, off until you turn them on: tick **Keyboard hotkeys** on the extension's options page and `[` slows the video, `]` speeds it up by a quarter and `\` takes it back to 1x, on the page you are looking at. They need no deck and no other program. The keys are left to the page while you type in a text box, with Ctrl, Alt or Command held, and on a page with no video, and unticking the box gives them back at once, in open tabs too. Off YouTube the speed goes up to 16x. The option has its text in all thirteen languages (`docs/vjster/REQUIREMENTS.md` R-KEY-1..4, `tests/vjster-ext-hotkeys.test.ts`).

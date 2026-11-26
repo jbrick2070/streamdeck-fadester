@@ -9,7 +9,7 @@
     "message": "VJster seçenekleri"
   },
   "companionNote": {
-    "message": "VJster, bu bilgisayarda ücretsiz bir programa ihtiyaç duyar: Fadester for OBS veya VJster eklentisi (Stream Deck ya da OpenDeck için) ya da Fadester Companion. Bu uzantı tek başına hiçbir şey yapmaz."
+    "message": "VJster, bu bilgisayarda ücretsiz bir programa ihtiyaç duyar: Fadester for OBS veya VJster eklentisi (Stream Deck ya da OpenDeck için) ya da Fadester Companion. Bunlardan biri olmadan yalnızca aşağıdaki klavye kısayolları çalışır."
   },
   "linkGet": {
     "message": "İndirmeler"

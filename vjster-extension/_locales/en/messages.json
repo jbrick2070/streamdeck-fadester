@@ -9,7 +9,7 @@
     "message": "VJster options"
   },
   "companionNote": {
-    "message": "VJster needs one free program on this computer: Fadester for OBS or the VJster plugin (for Stream Deck or OpenDeck), or Fadester Companion. Alone, this extension does nothing."
+    "message": "VJster needs one free program on this computer: Fadester for OBS or the VJster plugin (for Stream Deck or OpenDeck), or Fadester Companion. Without one, only the keyboard hotkeys below work."
   },
   "linkGet": {
     "message": "Downloads"

@@ -9,7 +9,7 @@
     "message": "VJster 選項"
   },
   "companionNote": {
-    "message": "VJster 需要這台電腦上有一個免費程式：Fadester for OBS 或 VJster 外掛程式（適用於 Stream Deck 或 OpenDeck），或 Fadester Companion。單獨使用時，此擴充功能不會有任何作用。"
+    "message": "VJster 需要這台電腦上有一個免費程式：Fadester for OBS 或 VJster 外掛程式（適用於 Stream Deck 或 OpenDeck），或 Fadester Companion。沒有這類程式時，只有下方的鍵盤快速鍵可用。"
   },
   "linkGet": {
     "message": "下載"

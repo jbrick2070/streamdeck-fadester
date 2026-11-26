@@ -9,7 +9,7 @@
     "message": "VJster 옵션"
   },
   "companionNote": {
-    "message": "VJster를 사용하려면 이 컴퓨터에 무료 프로그램 하나가 필요합니다. Fadester for OBS나 VJster 플러그인(Stream Deck 또는 OpenDeck용), 또는 Fadester Companion입니다. 이 확장 프로그램만으로는 아무 기능도 하지 않습니다."
+    "message": "VJster를 사용하려면 이 컴퓨터에 무료 프로그램 하나가 필요합니다. Fadester for OBS나 VJster 플러그인(Stream Deck 또는 OpenDeck용), 또는 Fadester Companion입니다. 프로그램이 없으면 아래의 키보드 단축키만 작동합니다."
   },
   "linkGet": {
     "message": "다운로드"

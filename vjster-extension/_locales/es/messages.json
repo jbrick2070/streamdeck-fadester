@@ -9,7 +9,7 @@
     "message": "Opciones de VJster"
   },
   "companionNote": {
-    "message": "VJster necesita un programa gratuito en este ordenador: Fadester for OBS o el plugin de VJster (para Stream Deck u OpenDeck), o Fadester Companion. Por sí sola, esta extensión no hace nada."
+    "message": "VJster necesita un programa gratuito en este ordenador: Fadester for OBS o el plugin de VJster (para Stream Deck u OpenDeck), o Fadester Companion. Sin uno, solo funcionan los atajos de teclado de más abajo."
   },
   "linkGet": {
     "message": "Descargas"

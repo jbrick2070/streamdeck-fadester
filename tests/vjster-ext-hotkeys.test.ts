@@ -14,7 +14,7 @@ import {
   type HotkeyStorage, type HotkeyWindow, type KeyLike
 } from "../vjster-extension/src/hotkeys.js";
 import { FROM_BRIDGE, readBridgeMessage, readIntent } from "../vjster-extension/src/messages.js";
-import { HOTKEYS_KEY, hotkeysWanted } from "../vjster-extension/src/settings.js";
+import { ALL_SITES_KEY, HOTKEYS_KEY, hotkeysWanted } from "../vjster-extension/src/settings.js";
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 const EXT = join(import.meta.dirname, "..", "vjster-extension");
@@ -34,24 +34,26 @@ function fakeWindow(hostname: string, videos = 1) {
   return { win, listeners };
 }
 
-/** A storage with a value (or none) and a way to fire the change event. */
-function fakeStorage(initial?: unknown, fail = false) {
-  let value = initial;
+/** A storage with the hotkeys setting and the every-site setting (or none) and a way to fire the change event. */
+function fakeStorage(initial?: unknown, fail = false, sites?: unknown) {
+  const values: Record<string, unknown> = {};
+  if (initial !== undefined) values[HOTKEYS_KEY] = initial;
+  if (sites !== undefined) values[ALL_SITES_KEY] = sites;
   let on: ((changes: Record<string, { newValue?: unknown }>, area: string) => void) | null = null;
   const storage: HotkeyStorage = {
-    get: () => (fail ? Promise.reject(new Error("Extension context invalidated.")) : Promise.resolve(value === undefined ? {} : { [HOTKEYS_KEY]: value })),
+    get: () => (fail ? Promise.reject(new Error("Extension context invalidated.")) : Promise.resolve({ ...values })),
     onChanged: { addListener: (fn) => void (on = fn) }
   };
   return {
     storage,
     change: (next: unknown, area = "local", key = HOTKEYS_KEY) => {
-      value = next;
+      values[key] = next;
       on?.({ [key]: { newValue: next } }, area);
     }
   };
 }
 
-interface KeyOptions extends Partial<Omit<KeyLike, "key" | "preventDefault" | "stopPropagation">> {
+interface KeyOptions extends Partial<Omit<KeyLike, "key" | "preventDefault" | "stopImmediatePropagation">> {
   altGraph?: boolean;
 }
 
@@ -63,16 +65,16 @@ function key(k: string, options: KeyOptions = {}) {
     key: k, ctrlKey: false, altKey: false, metaKey: false, repeat: false, isComposing: false, defaultPrevented: false, target: { tagName: "BODY" },
     getModifierState: (name) => name === "AltGraph" && altGraph === true,
     preventDefault: () => void calls.prevented++,
-    stopPropagation: () => void calls.stopped++,
+    stopImmediatePropagation: () => void calls.stopped++,
     ...rest
   };
   return { event, calls };
 }
 
 /** The hotkeys installed on a fake window and storage, with the intents they post. */
-async function setup(stored?: unknown, hostname = "example.com", videos = 1) {
+async function setup(stored?: unknown, hostname = "example.com", videos = 1, sites?: unknown) {
   const w = fakeWindow(hostname, videos);
-  const s = fakeStorage(stored);
+  const s = fakeStorage(stored, false, sites);
   const posted: Intent[] = [];
   let n = 0;
   const hotkeys = installHotkeys(w.win, s.storage, { post: (i) => void posted.push(i), newId: () => `hk-${++n}` });
@@ -214,7 +216,7 @@ describe("hotkeys never take a key that is the page's own (R-KEY-3)", () => {
     expect(t.posted).toHaveLength(1);
   });
 
-  it("ignores typing in a text field, a text area, a menu, an editor or an ARIA text box", async () => {
+  it("ignores typing in a text field, a text area, a drop-down, an editor, an ARIA text box, list or menu", async () => {
     const t = await setup(true);
     const editable: unknown[] = [
       { tagName: "INPUT" },
@@ -224,7 +226,11 @@ describe("hotkeys never take a key that is the page's own (R-KEY-3)", () => {
       { tagName: "DIV", isContentEditable: true },
       { tagName: "DIV", getAttribute: (n: string) => (n === "role" ? "textbox" : null) },
       { tagName: "DIV", getAttribute: (n: string) => (n === "role" ? "searchbox" : null) },
-      { tagName: "DIV", getAttribute: (n: string) => (n === "role" ? "Combobox" : null) }
+      { tagName: "DIV", getAttribute: (n: string) => (n === "role" ? "Combobox" : null) },
+      ...["listbox", "option", "menu", "menubar", "menuitem", "menuitemcheckbox", "menuitemradio", "spinbutton"].map((role) => ({
+        tagName: "DIV",
+        getAttribute: (n: string) => (n === "role" ? role : null)
+      }))
     ];
     for (const target of editable) {
       expect(t.press(KEY_FASTER, { target }), JSON.stringify(Object.keys(target as object))).toEqual({ prevented: 0, stopped: 0 });
@@ -285,6 +291,90 @@ describe("hotkeys never take a key that is the page's own (R-KEY-3)", () => {
     expect(hotkeys.enabled()).toBe(false);
     expect(w.listeners.size).toBe(0);
     expect(posted).toHaveLength(1);
+  });
+});
+
+describe("hotkeys follow \"Control videos on every site\" away from YouTube (R-KEY-3, D-4)", () => {
+  it("stays on when the option was never touched (it is on unless unticked), and on when ticked", async () => {
+    const never = await setup(true, "lectures.example.org");
+    expect(never.hotkeys.enabled()).toBe(true);
+    const ticked = await setup(true, "lectures.example.org", 1, true);
+    expect(ticked.hotkeys.enabled()).toBe(true);
+  });
+
+  it("installs nothing away from YouTube while that option is unticked, even with the hotkeys on", async () => {
+    const t = await setup(true, "lectures.example.org", 1, false);
+    expect(t.hotkeys.enabled()).toBe(false);
+    expect(t.listeners.size).toBe(0);
+    expect(t.press(KEY_FASTER)).toEqual({ prevented: 0, stopped: 0 });
+    expect(t.posted).toEqual([]);
+  });
+
+  it("ends in a tab that was already open when the option is unticked, and returns when it is ticked again", async () => {
+    const t = await setup(true, "lectures.example.org");
+    expect(t.press(KEY_FASTER).prevented).toBe(1);
+    t.change(false, "local", ALL_SITES_KEY);
+    expect(t.hotkeys.enabled()).toBe(false);
+    expect(t.listeners.size).toBe(0);
+    expect(t.press(KEY_FASTER)).toEqual({ prevented: 0, stopped: 0 });
+    t.change(true, "local", ALL_SITES_KEY);
+    expect(t.hotkeys.enabled()).toBe(true);
+    expect(t.press(KEY_FASTER).prevented).toBe(1);
+    expect(t.posted).toHaveLength(2);
+  });
+
+  it("is not touched by that option on YouTube, and still needs its own tick everywhere", async () => {
+    const youtube = await setup(true, "www.youtube.com", 1, false);
+    expect(youtube.hotkeys.enabled()).toBe(true);
+    youtube.change(false, "local", ALL_SITES_KEY);
+    expect(youtube.hotkeys.enabled()).toBe(true);
+    const off = await setup(undefined, "lectures.example.org", 1, true);
+    expect(off.hotkeys.enabled()).toBe(false);
+    off.change(true, "local", ALL_SITES_KEY);
+    expect(off.hotkeys.enabled()).toBe(false);
+  });
+});
+
+describe("a taken key goes no further (R-KEY-3)", () => {
+  it("stops a window handler added after ours, in a real event dispatch, and lets other keys through", async () => {
+    const target = new EventTarget();
+    const win = {
+      location: { hostname: "example.com" },
+      document: documentWith(1),
+      addEventListener: (type: string, fn: unknown, capture: boolean) => target.addEventListener(type, fn as EventListener, capture),
+      removeEventListener: (type: string, fn: unknown, capture: boolean) => target.removeEventListener(type, fn as EventListener, capture)
+    } as unknown as HotkeyWindow;
+    const posted: Intent[] = [];
+    installHotkeys(win, fakeStorage(true).storage, { post: (i) => void posted.push(i), newId: () => "hk-1" });
+    await flush();
+    let competitor = 0;
+    target.addEventListener("keydown", () => void competitor++, true);
+    const keydown = (k: string) => {
+      const event = new Event("keydown", { cancelable: true });
+      for (const [name, value] of Object.entries({ key: k, ctrlKey: false, altKey: false, metaKey: false, repeat: false, isComposing: false })) {
+        Object.defineProperty(event, name, { value });
+      }
+      target.dispatchEvent(event);
+      return event;
+    };
+    const taken = keydown("]");
+    expect(taken.defaultPrevented).toBe(true);
+    expect(competitor).toBe(0);
+    expect(posted).toHaveLength(1);
+    const other = keydown("a");
+    expect(other.defaultPrevented).toBe(false);
+    expect(competitor).toBe(1);
+  });
+
+  it("makes no message id for a key that is not one of the three, however many are typed", async () => {
+    let made = 0;
+    const w = fakeWindow("example.com");
+    installHotkeys(w.win, fakeStorage(true).storage, { post: () => undefined, newId: () => `hk-${++made}` });
+    await flush();
+    for (let i = 0; i < 200; i++) for (const fn of [...w.listeners]) fn(key(i % 2 ? "a" : "Enter").event);
+    expect(made).toBe(0);
+    for (const fn of [...w.listeners]) fn(key(KEY_FASTER).event);
+    expect(made).toBe(1);
   });
 });
 

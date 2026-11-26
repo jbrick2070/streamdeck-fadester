@@ -341,8 +341,9 @@ describe("a taken key goes no further (R-KEY-3)", () => {
     const win = {
       location: { hostname: "example.com" },
       document: documentWith(1),
-      addEventListener: (type: string, fn: unknown, capture: boolean) => target.addEventListener(type, fn as EventListener, capture),
-      removeEventListener: (type: string, fn: unknown, capture: boolean) => target.removeEventListener(type, fn as EventListener, capture)
+      // `never`, not the DOM's EventListener: the repository's root tsc has no DOM types, and the handler only needs to be called.
+      addEventListener: (type: string, fn: unknown, capture: boolean) => target.addEventListener(type, fn as never, capture),
+      removeEventListener: (type: string, fn: unknown, capture: boolean) => target.removeEventListener(type, fn as never, capture)
     } as unknown as HotkeyWindow;
     const posted: Intent[] = [];
     installHotkeys(win, fakeStorage(true).storage, { post: (i) => void posted.push(i), newId: () => "hk-1" });

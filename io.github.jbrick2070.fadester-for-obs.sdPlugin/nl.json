@@ -822,6 +822,7 @@
       "chkFixPlMissing": "Optioneel: installeer Playlister in OBS als u Playlister-transporttoetsen gebruikt.",
       "chkFixPortOther": "De VJster-koppeling wordt vastgehouden door {holder}. Sluit dat programma of zet VJster daar uit.",
       "chkFixPortUnknown": "Poort {port} is in gebruik door een ander programma. Sluit het of kies een andere VJster-poort.",
+      "chkFixPortStandalone": "De losse VJster-plug-in houdt de VJster-koppeling vast (poort {port}). Fadester for OBS bevat VJster al; verwijder daarom de losse VJster-plug-in in Stream Deck of OpenDeck.",
       "footerConnected": "{product} {version} · Verbonden met OBS {obsVersion} · Instellingen",
       "footerNotConnected": "{product} {version} · OBS niet verbonden · Instellingen",
       "foldTiming": "Timing",

@@ -27,6 +27,12 @@ export interface MuxOptions {
 
 /** The event a VJster settings page sends to have its global settings saved by the suite. */
 export const SUITE_GLOBAL_EVENT = "suiteGlobal";
+/**
+ * The key under which Fadester's view of the settings carries the port VJster's link is set to, so Fadester's setup
+ * checklist probes the right port (VJster's own part stays out of Fadester's view). It is read only: Fadester's saves
+ * drop it, and it is never stored at the top.
+ */
+export const VJSTER_PORT_KEY = "vjsterPort";
 /** The id of the suite's own read of the stored settings. */
 const READ_ID = "suite-global-settings";
 
@@ -103,12 +109,29 @@ export class SuiteMux {
   }
 
   private withoutSlice(): Record<string, unknown> {
-    const { [this.options.namespace]: _mine, ...rest } = this.full;
+    const { [this.options.namespace]: _mine, [VJSTER_PORT_KEY]: _hint, ...rest } = this.full;
     return rest;
   }
 
+  /** The port VJster's part names, when it names one (VJster's own default applies otherwise). */
+  private vjsterPort(): unknown {
+    return this.slice().port;
+  }
+
+  /** Fadester's view: everything but VJster's part, plus the port VJster's link is set to (VJSTER_PORT_KEY). */
+  private fadesterView(): Record<string, unknown> {
+    const port = this.vjsterPort();
+    return typeof port === "number" ? { ...this.withoutSlice(), [VJSTER_PORT_KEY]: port } : this.withoutSlice();
+  }
+
   private view(child: Child): Record<string, unknown> {
-    return child === "vjster" ? this.slice() : this.withoutSlice();
+    return child === "vjster" ? this.slice() : this.fadesterView();
+  }
+
+  /** Fadester's own keys from one of its saves: the read-only VJster port it was shown is not stored. */
+  private fadesterSave(saved: Record<string, unknown>): Record<string, unknown> {
+    const { [VJSTER_PORT_KEY]: _hint, ...own } = saved;
+    return { ...own, ...this.sliceEntry() };
   }
 
   private settingsReply(child: Child, id?: unknown): Message {
@@ -218,11 +241,14 @@ export class SuiteMux {
         const payload = isRecord(message.payload) ? message.payload : {};
         this.whenKnown(() => {
           const before = this.full.language;
-          this.full = child === "vjster" ? this.withVjsterSave(payload) : { ...payload, ...this.sliceEntry() };
+          const portBefore = this.vjsterPort();
+          this.full = child === "vjster" ? this.withVjsterSave(payload) : this.fadesterSave(payload);
           this.save();
-          // The one Language setting changed: the other half redraws its keys and tells its open page.
+          // The one Language setting changed: the other half redraws its keys and tells its open page. A new VJster
+          // port is news for Fadester too (its setup checklist probes that port).
           const other: Child = child === "vjster" ? "fadester" : "vjster";
-          if (this.full.language !== before) this.options.toChild(other, this.settingsReply(other));
+          const portChanged = child === "vjster" && this.vjsterPort() !== portBefore;
+          if (this.full.language !== before || portChanged) this.options.toChild(other, this.settingsReply(other));
         });
         return;
       }
@@ -254,10 +280,11 @@ export class SuiteMux {
     const mine = isRecord(settings) ? settings : {};
     this.whenKnown(() => {
       const before = this.full.language;
+      const portBefore = this.vjsterPort();
       this.full = this.withVjsterSave(mine);
       this.save();
       this.options.toChild("vjster", this.settingsReply("vjster"));
-      if (this.full.language !== before) this.options.toChild("fadester", this.settingsReply("fadester"));
+      if (this.full.language !== before || this.vjsterPort() !== portBefore) this.options.toChild("fadester", this.settingsReply("fadester"));
     });
   }
 }

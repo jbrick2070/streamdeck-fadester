@@ -30,6 +30,7 @@ import {
   PropertyInspectorBridge
 } from "./pi/pi-bridge.js";
 import { DirectObsPropertyInspectorBridge } from "./pi/direct-obs-bridge.js";
+import { vjsterPortFrom } from "./obs/setup-checklist.js";
 import { profilePathForSlug } from "./types/layouts.js";
 import {
   DEFAULT_GLOBAL_SETTINGS,
@@ -116,6 +117,8 @@ const directBridge = new DirectObsPropertyInspectorBridge(directClient, {
   isInspectorOpen: () => Boolean(streamDeck.ui.action),
   persistGlobalSettings: persistSharedConnection,
   getLanguage: () => languageChoice.state(),
+  // The setup checklist probes the port VJster is set to (the suite shows it to Fadester, src/suite/mux.ts).
+  getVjsterPort: () => vjsterPortFrom(settingsStore.snapshot()),
   getDeviceType: () => streamDeck.ui.action?.device.type,
   getOpenDeckStarter() {
     if (!isOpenDeckInstall(pluginDir)) return undefined;

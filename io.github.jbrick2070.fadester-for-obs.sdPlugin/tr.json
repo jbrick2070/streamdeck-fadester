@@ -822,6 +822,7 @@
       "chkFixPlMissing": "İsteğe bağlı: Playlister tuşlarını kullanıyorsanız OBS'e Playlister kurun.",
       "chkFixPortOther": "VJster bağlantısını {holder} kullanıyor. Bu deck'te VJster kullanıyorsanız onu kapatın ya da orada VJster'ı kapatın.",
       "chkFixPortUnknown": "{port} bağlantı noktasını başka bir program kullanıyor. Onu kapatın ya da VJster için başka bir bağlantı noktası seçin.",
+      "chkFixPortStandalone": "Bağımsız VJster eklentisi VJster bağlantısını kullanıyor ({port} numaralı bağlantı noktası). Fadester for OBS zaten VJster'ı içerir; bu yüzden bağımsız VJster eklentisini Stream Deck veya OpenDeck'ten kaldırın.",
       "footerConnected": "{product} {version} · OBS {obsVersion} bağlı · Ayarlar",
       "footerNotConnected": "{product} {version} · OBS bağlı değil · Ayarlar",
       "foldTiming": "Zamanlama",

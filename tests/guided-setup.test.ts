@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { once } from "node:events";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer as createTcpServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -18,6 +18,7 @@ import { FadesterStore } from "../src/state/fadester-store.js";
 import {
   detectPlaylisterPlugin,
   evaluateSetupChecklist,
+  vjsterPortFrom,
   type SetupChecklistItem
 } from "../src/obs/setup-checklist.js";
 import { DirectObsPropertyInspectorBridge } from "../src/pi/direct-obs-bridge.js";
@@ -445,6 +446,43 @@ describe("P1-5 Guided Setup Pass", () => {
       expect(byId(absentReport.items, "macos_accessibility")).toMatchObject({ state: "ok", code: "ok" });
       expect(byId(absentReport.items, "midi_fadester")).toMatchObject({ state: "info", code: "missing" });
       expect(byId(absentReport.items, "visual_sidechain")).toMatchObject({ state: "info", code: "missing" });
+    });
+
+    it("probes the port VJster is set to, and warns about the standalone VJster plugin instead of calling it this plugin", async () => {
+      const { client } = await connectDirect({ obsVersion: "33.0.1", studioMode: true });
+      const probed: number[] = [];
+      const report = (product: string) =>
+        evaluateSetupChecklist(client, {
+          platform: "win32",
+          vjsterPort: 48151,
+          probeLocalObsProcess: () => ({ elevated: "ok", minimised: "ok" }),
+          probeMacAccessibility: () => "not_applicable",
+          probeVjsterPort: async (port) => {
+            probed.push(port);
+            return { state: "held", holder: { product, version: "1.5.0", port } };
+          }
+        });
+      // Fadester for OBS (the suite's own VJster) on that port is this plugin.
+      expect(byId((await report("Fadester for OBS")).items, "vjster_port_holder")).toMatchObject({ state: "ok", code: "port_self", meta: { port: 48151 } });
+      // The standalone VJster plugin next to Fadester for OBS is the clash the installer warns about.
+      expect(byId((await report("VJster")).items, "vjster_port_holder")).toMatchObject({
+        state: "warn",
+        code: "port_standalone",
+        detail: "Held by VJster 1.5.0",
+        fix: "The standalone VJster plugin holds the VJster link (port 48151). Fadester for OBS already includes VJster, so remove the standalone VJster plugin in Stream Deck or OpenDeck.",
+        meta: { port: 48151, holder: "VJster 1.5.0" }
+      });
+      expect(probed).toEqual([48151, 48151]);
+    });
+
+    it("reads the port VJster is set to from the settings the suite shows Fadester, and nothing else", () => {
+      expect(vjsterPortFrom({ host: "h", vjsterPort: 48151 })).toBe(48151);
+      for (const odd of [{}, { vjsterPort: "48151" }, { vjsterPort: 80 }, { vjsterPort: 70000 }, { vjsterPort: 48151.5 }, { vjster: { port: 48151 } }, null, undefined]) {
+        expect(vjsterPortFrom(odd as never), JSON.stringify(odd)).toBeUndefined();
+      }
+      // The plugin hands that port to the settings page's checklist (the bridge's own fallback is 48150).
+      const plugin = readFileSync(join(import.meta.dirname, "..", "src", "plugin.ts"), "utf8");
+      expect(plugin).toContain("getVjsterPort: () => vjsterPortFrom(settingsStore.snapshot())");
     });
   });
 

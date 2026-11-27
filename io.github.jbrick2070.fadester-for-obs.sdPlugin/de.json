@@ -953,6 +953,7 @@
       "chkFixPlMissing": "Optional: Installieren Sie Playlister in OBS, wenn Sie Playlister-Transport-Tasten nutzen.",
       "chkFixPortOther": "Die VJster-Verbindung wird von {holder} gehalten. Schließen Sie es oder deaktivieren Sie VJster dort.",
       "chkFixPortUnknown": "Port {port} wird von einem anderen Programm genutzt. Schließen Sie es oder wählen Sie einen anderen VJster-Port.",
+      "chkFixPortStandalone": "Das eigenständige VJster-Plugin hält die VJster-Verbindung (Port {port}). Fadester for OBS enthält VJster bereits; entfernen Sie deshalb das eigenständige VJster-Plugin in Stream Deck oder OpenDeck.",
       "footerConnected": "{product} {version} · Mit OBS {obsVersion} verbunden · Einstellungen",
       "footerNotConnected": "{product} {version} · OBS nicht verbunden · Einstellungen",
       "foldTiming": "Zeitablauf",

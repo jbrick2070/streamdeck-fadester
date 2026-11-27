@@ -953,6 +953,7 @@
       "chkFixPlMissing": "선택: Playlister 트랜스포트 키를 사용한다면 OBS에 Playlister를 설치하세요.",
       "chkFixPortOther": "VJster 링크를 {holder}에서 사용 중입니다. 이 덱에서 VJster를 쓰려면 해당 프로그램을 닫거나 VJster를 끄세요.",
       "chkFixPortUnknown": "포트 {port}을(를) 다른 프로그램이 사용 중입니다. 해당 프로그램을 닫거나 다른 VJster 포트를 선택하세요.",
+      "chkFixPortStandalone": "단독 VJster 플러그인이 VJster 링크(포트 {port})를 사용 중입니다. Fadester for OBS에는 이미 VJster가 들어 있으므로 Stream Deck 또는 OpenDeck에서 단독 VJster 플러그인을 제거하세요.",
       "footerConnected": "{product} {version} · OBS {obsVersion}에 연결됨 · 설정",
       "footerNotConnected": "{product} {version} · OBS 연결 안 됨 · 설정",
       "foldTiming": "타이밍",

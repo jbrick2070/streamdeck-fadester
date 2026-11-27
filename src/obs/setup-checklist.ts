@@ -14,6 +14,7 @@ import type KoffiModule from "koffi";
 import { isLoopbackObsHost } from "../../packages/streamdeck-fadester-shared/src/obs/obs-websocket-config.js";
 import { vendorErrorKind } from "../../packages/streamdeck-fadester-shared/src/obs/obs-vendor-client.js";
 import type { ConnectionStatusInfo } from "../../packages/streamdeck-fadester-shared/src/types.js";
+import { VJSTER_PORT_KEY } from "../suite/mux.js";
 import { DEFAULT_LINK_PORT } from "../vjster/shared/protocol.js";
 import { probeVjsterPortStatus, type VjsterPortProbeResult } from "../vjster/plugin/link-server.js";
 
@@ -65,6 +66,7 @@ export type ChecklistReasonCode =
   | "port_free"
   | "port_self"
   | "port_other"
+  | "port_standalone"
   | "port_unknown_holder"
   | "unknown"
   | "not_applicable";
@@ -150,6 +152,15 @@ export interface SetupChecklistOptions {
   readonly probeLocalObsProcess?: (port: number, platform: string) => LocalObsProcessProbe;
   readonly probeMacAccessibility?: (platform: string) => "ok" | "fail" | "unknown" | "not_applicable";
   readonly probeVjsterPort?: (port: number) => Promise<VjsterPortProbeResult>;
+}
+
+/**
+ * The port VJster's link is set to, from the global settings as the suite shows them to Fadester (src/suite/mux.ts
+ * VJSTER_PORT_KEY); undefined when they name none, and VJster's default port applies.
+ */
+export function vjsterPortFrom(settings: Readonly<Record<string, unknown>> | null | undefined): number | undefined {
+  const port = settings?.[VJSTER_PORT_KEY];
+  return typeof port === "number" && Number.isInteger(port) && port >= 1024 && port <= 65535 ? port : undefined;
 }
 
 const OBS_33_RE = /^33\.\d+\.\d+(\D|$)/;
@@ -1096,7 +1107,18 @@ export async function evaluateSetupChecklist(
     };
   } else if (vjsterProbe.holder) {
     const holderLabel = `${vjsterProbe.holder.product} ${vjsterProbe.holder.version}`.trim();
-    if (vjsterProbe.holder.product === "Fadester for OBS" || vjsterProbe.holder.product === "VJster") {
+    if (vjsterProbe.holder.product === "VJster") {
+      // The standalone VJster plugin next to Fadester for OBS, which has VJster inside: the clash the installer warns
+      // about (VJSTER-CLASH), not this plugin.
+      vjsterItem = {
+        id: "vjster_port_holder",
+        state: "warn",
+        code: "port_standalone",
+        detail: `Held by ${holderLabel}`,
+        fix: `The standalone VJster plugin holds the VJster link (port ${vjsterPort}). Fadester for OBS already includes VJster, so remove the standalone VJster plugin in Stream Deck or OpenDeck.`,
+        meta: { port: vjsterPort, holder: holderLabel }
+      };
+    } else if (vjsterProbe.holder.product === "Fadester for OBS") {
       vjsterItem = {
         id: "vjster_port_holder",
         state: "ok",

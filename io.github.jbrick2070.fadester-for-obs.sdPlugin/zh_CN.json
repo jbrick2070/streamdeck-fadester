@@ -953,6 +953,7 @@
       "chkFixPlMissing": "可选：如果您使用 Playlister 播放控制键，请在 OBS 中安装 Playlister。",
       "chkFixPortOther": "VJster 连接正由 {holder} 占用。若要在此控台使用 VJster，请关闭该程序或在其中停用 VJster。",
       "chkFixPortUnknown": "端口 {port} 正被其他程序占用。请关闭该程序或选择其他 VJster 端口。",
+      "chkFixPortStandalone": "独立的 VJster 插件正占用 VJster 连接（端口 {port}）。Fadester for OBS 已包含 VJster，请在 Stream Deck 或 OpenDeck 中移除独立的 VJster 插件。",
       "footerConnected": "{product} {version} · 已连接 OBS {obsVersion} · 设置",
       "footerNotConnected": "{product} {version} · 未连接 OBS · 设置",
       "foldTiming": "时间",

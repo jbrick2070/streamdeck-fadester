@@ -24,6 +24,7 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 ### Fixes from the VJster final QA (2026-11-27)
 
 #### Fixed
+- **VJster Chrome extension, hotkeys and deck turns:** "faster" from above the player's top rate (a rate the deck's extended range or another extension wrote to the video) dropped the video to that top rate, and "slower" below the bottom raised it. A step that would go the other way now leaves the rate as it is and reports it (`vjster-extension/src/adapter-core.ts`, `tests/vjster-ext-adapter.test.ts`).
 - **VJster Chrome extension:** a state report the page's bridge was still holding back (it spaces reports 50 ms apart) could reach the deck after the answer to a deck command or a hotkey, so the deck ended on the older state (say 1x while the video played 1.25x) until something else changed. A report still waiting is now dropped when an answer goes out (`vjster-extension/src/bridge-core.ts`, `tests/vjster-ext-wiring.test.ts`).
 
 ## 1.5.1 - 2026-11-24

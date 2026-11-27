@@ -218,7 +218,12 @@ export class Adapter {
         if (!isRateStep(step)) return false;
         const range = rangeFor(c.availableRates(), intent.direct);
         const current = c.stepBase?.() ?? c.elementRate() ?? RESET_RATE;
-        return this.setSpeed(c, nextRate(current, Math.sign(intent.delta), step, range), intent.direct, intent.hold);
+        const direction = Math.sign(intent.delta);
+        const next = nextRate(current, direction, step, range);
+        // From outside the range nextRate lands on the nearer end, which may be the other way: "faster" from above the
+        // player's top rate would slow the video down. Leave it; the answer reports the rate as it is.
+        if ((direction > 0 && next < current) || (direction < 0 && next > current)) return true;
+        return this.setSpeed(c, next, intent.direct, intent.hold);
       }
       case "speed.reset":
         this.heldElementRate = null;

@@ -298,6 +298,16 @@ namespace Fadester.TourBox {
         w.config["vjsterEnabled"]=false; string off=ObsPageServed(w.config); w.config["vjsterEnabled"]=true;
         if (!ObsPageRestartNeeded(true,off,w.config)) throw new Exception("copy URL: controls started without VJster");
       }
+      // A key Copy OBS URL makes is written alone, and a write that fails says why (the link is then not copied).
+      string keysDir=Path.Combine(Path.GetTempPath(),"fadester-keys-"+Guid.NewGuid().ToString("N")), keysFile=Path.Combine(keysDir,"config.json");
+      try {
+        if (WriteKeys(keysFile,new Dictionary<string,object>{{"vjsterObsToken","x"}})==null) throw new Exception("copy URL: a write into a missing folder says it failed");
+        Directory.CreateDirectory(keysDir); File.WriteAllText(keysFile,"{\"port\":4455}");
+        if (WriteKeys(keysFile,new Dictionary<string,object>{{"vjsterObsToken","x"}})!=null) throw new Exception("copy URL: the key is written");
+        var back=Decode(File.ReadAllText(keysFile));
+        if (Val(back,"port")!="4455" || Val(back,"vjsterObsToken")!="x") throw new Exception("copy URL: only the key is written");
+        foreach (var locale in PanelText.AllLocales) if (!new PanelText(locale).Get("obsUrlNotSaved","E").EndsWith("E")) throw new Exception("copy URL: not saved, " + locale);
+      } finally { if (Directory.Exists(keysDir)) Directory.Delete(keysDir,true); }
       using (var w = new PanelWindow(new PanelText("en"), true)) {
         w.catalog=Decode("{\"scenes\":[\"A\",\"B\"]}"); w.config["anchors"]=new object[]{"B","Gone","",""};
         w.LoadChoices(false);
@@ -1001,14 +1011,17 @@ namespace Fadester.TourBox {
       Note(text.Get(RestartSettings()==startedWith ? "savedApplied" : "savedRestart"));
     }
     /** Writes only these keys into the saved settings, leaving other edits on the page unsaved (a layer the bridge picked). */
-    void SaveKeys(Dictionary<string,object> keys) {
+    void SaveKeys(Dictionary<string,object> keys) { string error=WriteKeys(settings,keys); if(error!=null) Note(error); }
+    /** Writes only these keys into the settings file; null when written, else why not. */
+    static string WriteKeys(string file, Dictionary<string,object> keys) {
       try {
-        var saved=File.Exists(settings) ? (Decode(File.ReadAllText(settings,Encoding.UTF8)) ?? new Dictionary<string,object>()) : new Dictionary<string,object>();
+        var saved=File.Exists(file) ? (Decode(File.ReadAllText(file,Encoding.UTF8)) ?? new Dictionary<string,object>()) : new Dictionary<string,object>();
         foreach(var k in keys) saved[k.Key]=k.Value;
-        string tmp=settings+"."+Guid.NewGuid().ToString("N")+".tmp";
-        try { File.WriteAllText(tmp,Json.Serialize(saved),new UTF8Encoding(false)); if(File.Exists(settings)) File.Replace(tmp,settings,null); else File.Move(tmp,settings); }
+        string tmp=file+"."+Guid.NewGuid().ToString("N")+".tmp";
+        try { File.WriteAllText(tmp,Json.Serialize(saved),new UTF8Encoding(false)); if(File.Exists(file)) File.Replace(tmp,file,null); else File.Move(tmp,file); }
         finally { if(File.Exists(tmp)) File.Delete(tmp); }
-      } catch(Exception e) { Note(e.Message); }
+        return null;
+      } catch(Exception e) { return e.Message; }
     }
     /** The saved settings a running bridge only reads at start (BridgeConfig.ApplyLive leaves them alone), as one string to compare. */
     string RestartSettings() {
@@ -1084,9 +1097,12 @@ namespace Fadester.TourBox {
       if(invalidConfig) return;
       string saved=VjsterObsPage.NormalizeToken(Val(config,"vjsterObsToken"));
       if(!VjsterObsPage.ValidToken(saved)) {
-        saved=VjsterObsPage.NewToken(); config["vjsterObsToken"]=saved;
-        SaveKeys(new Dictionary<string,object>{{"vjsterObsToken",saved}});
-      } else config["vjsterObsToken"]=saved;
+        // A key made now must be saved before its link is handed out: a link whose key is not stored never works.
+        string made=VjsterObsPage.NewToken(), error=WriteKeys(settings,new Dictionary<string,object>{{"vjsterObsToken",made}});
+        if(error!=null) { Note(text.Get("obsUrlNotSaved",error)); return; }
+        saved=made;
+      }
+      config["vjsterObsToken"]=saved;
       string id=VjsterObsPage.VideoId(vjsterVideo.Text);
       string url=ObsUrlToCopy(id);
       try { Clipboard.SetText(url); }

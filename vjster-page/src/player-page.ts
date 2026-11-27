@@ -19,7 +19,8 @@ declare global {
 
 bootPage({
   location,
-  replaceAddress: (url) => history.replaceState(null, "", url),
+  replaceAddress: (url, state) => history.replaceState(state, "", url),
+  historyState: history.state,
   language: navigator.language,
   setLanguage: (lang) => document.documentElement.setAttribute("lang", lang.replace("_", "-")),
   show: (text) => {

@@ -235,7 +235,11 @@ close Chrome: a turn and the keys still change the OBS video; the strip says
 3.4 **Studio Mode, hidden and shown.** In Studio Mode put the source in Preview
 only: it still follows the deck. Hide the source and show it again: with
 Shutdown source when not visible off (the default) nothing changes; with it
-on, the page reloads and reconnects within a few seconds.
+on, the page reloads and reconnects within a few seconds. In the source's
+properties press **Refresh cache of current page** (below the URL box): the
+video comes back and the strip leaves `NO PAGE` within a few seconds, with no
+"no token" note on the page. Tick **Refresh browser when scene becomes active**
+in the same window, switch to another scene and back: the same.
 
 3.5 **Restarts.** Restart OBS while Stream Deck runs: the page loads and
 connects. Restart Stream Deck while OBS runs: the strip says `NO PAGE`, then

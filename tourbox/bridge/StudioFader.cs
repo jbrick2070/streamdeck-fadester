@@ -656,7 +656,7 @@ public sealed class StudioFader
         try
         {
             // A release only queues work on OBS's UI thread, and a busy UI thread is the usual reason the check failed.
-            if (released) await WaitForCursorRestAsync();
+            if (released) await WaitForReleaseRestAsync(finish ? broken.Scenes.Preview : broken.Scenes.Program);
             await CloseSweepOverWebSocketAsync(broken, finish);
         }
         catch
@@ -679,15 +679,27 @@ public sealed class StudioFader
             cause);
     }
 
-    /// <summary>Waits, as <see cref="ConfirmNativeReleaseAsync"/> does, for OBS's transition cursor to come to rest.</summary>
-    private async Task WaitForCursorRestAsync()
+    /// <summary>
+    /// How long a close-out after a confirmed release waits for OBS to finish that release. docs/TBAR-SAFETY-CONTRACT.md
+    /// section 5, step 4: OBS's Transition button must be usable again within 2 seconds, so the wait leaves about half a
+    /// second for the close-out that follows it.
+    /// </summary>
+    internal const int ReleaseRestWaitMs = 1500;
+
+    /// <summary>
+    /// Waits for the release OBS accepted to come to rest, in the sense <see cref="ConfirmNativeReleaseAsync"/> uses:
+    /// the cursor at a rail and Program on the scene the release targets. A rail read while Program has not changed
+    /// yet is not rest.
+    /// </summary>
+    private async Task WaitForReleaseRestAsync(string targetProgram)
     {
         var started = Stopwatch.GetTimestamp();
         do
         {
-            if (await ReadCursorAsync() is 0 or 1) return;
+            if (await ReadCursorAsync() is 0 or 1 &&
+                Field(await rpc("GetCurrentProgramScene", null), "sceneUuid") == targetProgram) return;
             await Task.Delay(35);
-        } while (Stopwatch.GetElapsedTime(started).TotalSeconds < 2.5);
+        } while (Stopwatch.GetElapsedTime(started).TotalMilliseconds < ReleaseRestWaitMs);
     }
 
     private async Task CloseSweepOverWebSocketAsync(Sweep broken, bool finish)

@@ -91,15 +91,21 @@ describe("controls bound by an OBS name follow a rename in OBS", () => {
 
   it("a save that fails is swallowed, never an unhandled rejection", async () => {
     await connect();
-    let tried = 0;
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown): void => { unhandled.push(reason); };
+    process.on("unhandledRejection", onUnhandled);
+    cleanup.push(() => { process.off("unhandledRejection", onUnhandled); });
+    let attempts = 0;
     const key = new ObsFadeKeyInstanceController(client, {
       setImage: async () => {}, showAlert: async () => {},
-      saveSettings: async () => { tried++; throw new Error("Stream Deck connection closed"); }
+      saveSettings: (): Promise<void> => { attempts++; return Promise.reject(new Error("Stream Deck connection closed")); }
     }, { inputName: "Mic/Aux" }, 1);
     key.appear({ inputName: "Mic/Aux" });
     cleanup.push(() => key.disappear());
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    expect(tried).toBe(1);
+    expect(attempts).toBe(1);
+    // Node reports an unhandled rejection once the microtask queue has drained: one turn of the event loop, no clock.
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(unhandled).toEqual([]);
   });
 
   it("a scene key and a fixed-scene layer control keep their scene", async () => {

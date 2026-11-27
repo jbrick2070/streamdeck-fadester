@@ -266,19 +266,29 @@ internal static class StudioFaderSelfTests
         // a cancel stays cancelled) rather than apply the 0.5 rule to the position before the last write. With a busy
         // OBS UI thread the cursor still reads part-way for a while after the release: the close-out waits for it
         // instead of turning Studio Mode off and on in the middle of a transition OBS is already ending.
-        foreach (var (from, to, lateReads) in new[] { (0.2, 1d, 0), (0.6, 0d, 0), (0.2, 1d, 4), (0.6, 0d, 4) })
+        // A cursor already at a rail while Program still shows the scene from before the release is not at rest either.
+        foreach (var (from, to, lateReads, staleProgramReads) in new[]
+            { (0.2, 1d, 0, 0), (0.6, 0d, 0, 0), (0.2, 1d, 4, 0), (0.6, 0d, 4, 0), (0.2, 1d, 0, 3), (0.6, 0d, 0, 3) })
         {
             var parkObs = new Obs();
             bool failPark = false;
-            int lateLeft = lateReads;
-            Task<JsonObject> LateCursorRpc(string action, JsonObject? data)
+            int lateLeft = lateReads, staleLeft = staleProgramReads;
+            async Task<JsonObject> LateCursorRpc(string action, JsonObject? data)
             {
                 if (action == "GetCurrentSceneTransitionCursor" && parkObs.Releases > 0 && lateLeft > 0)
                 {
                     lateLeft--;
-                    return Task.FromResult(new JsonObject { ["transitionCursor"] = from });
+                    return new JsonObject { ["transitionCursor"] = from };
                 }
-                return parkObs.Call(action, data);
+                var result = await parkObs.Call(action, data);
+                if (parkObs.Releases > 0 && staleLeft > 0 && action is "GetCurrentProgramScene" or "GetSceneList")
+                {
+                    staleLeft--;
+                    string before = to == 1 ? "a" : "b"; // Program as OBS showed it during the throw, before the release ran
+                    if (action == "GetCurrentProgramScene") result["sceneUuid"] = before;
+                    else result["currentProgramSceneUuid"] = before;
+                }
+                return result;
             }
             var parkFader = new StudioFader(LateCursorRpc, 0.05, (a, b) =>
                 failPark && a == 0 && b == 0
@@ -290,8 +300,8 @@ internal static class StudioFaderSelfTests
             bool toPreview = to == 1;
             Check(parkObs.Program == (toPreview ? "b" : "a") && parkObs.Preview == (toPreview ? "a" : "b") &&
                 parkObs.Commits == (toPreview ? 1 : 0) && parkObs.Releases == 1 && parkObs.Cursor == 0 &&
-                parkObs.Writes.SequenceEqual(["SetTBarPosition"]) && parkFader.Position == 0 && lateLeft == 0,
-                $"a failed parking check after a confirmed release at {to} keeps that result (from {from}, {lateReads} late cursor reads)");
+                parkObs.Writes.SequenceEqual(["SetTBarPosition"]) && parkFader.Position == 0 && lateLeft == 0 && staleLeft == 0,
+                $"a failed parking check after a confirmed release at {to} keeps that result (from {from}, {lateReads} late cursor reads, {staleProgramReads} stale Program reads)");
         }
         await native.DispatchAsync("fader.forward"); await native.DispatchAsync("fader.forward");
         Check(nativeObs.Slider == 0 && nativeObs.Program == "b" && nativeObs.Preview == "a" &&

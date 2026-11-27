@@ -168,8 +168,8 @@ internal static class VjsterSelfTests
         return ws;
     }
 
-    static string StateJson(string inReplyTo, double rate, string title = "Clip", bool playing = true, string quality = "hd1080", string target = "browser", string rates = "0.25,0.5,1,1.25,1.5,2") =>
-        $$"""{"v":1,"id":"e{{Random.Shared.Next()}}","target":"{{target}}","type":"state","inReplyTo":{{(inReplyTo == "" ? "null" : "\"" + inReplyTo + "\"")}},"rate":{{rate.ToString(System.Globalization.CultureInfo.InvariantCulture)}},"rateDirect":false,"availableRates":[{{rates}}],"quality":"{{quality}}","availableQualities":["hd1080","hd720"],"qualityAuto":false,"title":"{{title}}","host":"www.youtube.com","playing":{{(playing ? "true" : "false")}},"adPlaying":false,"capabilities":["speed","quality","transport"],"pinned":false}""";
+    static string StateJson(string inReplyTo, double rate, string title = "Clip", bool playing = true, string quality = "hd1080", string target = "browser", string rates = "0.25,0.5,1,1.25,1.5,2", string caps = "\"speed\",\"quality\",\"transport\"") =>
+        $$"""{"v":1,"id":"e{{Random.Shared.Next()}}","target":"{{target}}","type":"state","inReplyTo":{{(inReplyTo == "" ? "null" : "\"" + inReplyTo + "\"")}},"rate":{{rate.ToString(System.Globalization.CultureInfo.InvariantCulture)}},"rateDirect":false,"availableRates":[{{rates}}],"quality":"{{quality}}","availableQualities":["hd1080","hd720"],"qualityAuto":false,"title":"{{title}}","host":"www.youtube.com","playing":{{(playing ? "true" : "false")}},"adPlaying":false,"capabilities":[{{caps}}],"pinned":false}""";
 
     static async Task Loopback()
     {
@@ -474,6 +474,44 @@ internal static class VjsterSelfTests
             await SendText(browser, StateJson(bIntent["id"]!.GetValue<string>(), 0.75, target: "browser"));
             await SendText(obs, StateJson(oIntent["id"]!.GetValue<string>(), 1.0, target: "obs"));
             Check(await bothStep == "Chrome: Clip · Video 0.75x · 1080p · playing | OBS: Clip · Video 1x · 1080p · playing", "both targets reply");
+
+            // A spontaneous report says which target it came from (Activity names the OBS page; Chrome stays as before).
+            var reports = new List<(string Target, VjsterState State)>();
+            var heard = new TaskCompletionSource();
+            link.StateReceived += r => { lock (reports) reports.Add(r); if (r.Target == "obs" && r.State.InReplyTo == null) heard.TrySetResult(); };
+            // The OBS page can never set quality (embed-control.ts canQuality false): it reports no quality capability.
+            await SendText(obs, StateJson("", 1.0, target: "obs", caps: "\"speed\",\"transport\""));
+            Check(await Task.WhenAny(heard.Task, Task.Delay(3000)) == heard.Task, "the OBS page's own report arrives");
+            Check(reports.Any(r => r.Target == "obs" && r.State.InReplyTo == null), "a spontaneous report carries its target");
+            string obsLine = VjsterDesk.ReportLine("obs", reports.Last(r => r.Target == "obs").State);
+            Check(obsLine == "OBS page · Clip · Video 1x · playing", "an OBS page report is named as the OBS page's: " + obsLine);
+            var clip = new VjsterState(1, false, [1], "hd720", ["hd720", "auto"], true, "Clip", "www.youtube.com", true, false, ["speed", "quality", "transport"], false, null);
+            Check(VjsterDesk.ReportLine("browser", clip) == VjsterDesk.Describe(clip, false) && VjsterDesk.ReportLine("browser", clip).StartsWith("Clip · Video 1x", StringComparison.Ordinal), "a Chrome report reads as before");
+            var noVideo = new VjsterState(null, false, [], null, [], null, null, null, false, false, [], false, null);
+            Check(VjsterDesk.ReportLine("obs", noVideo) == "VJster: no video is loaded in the OBS page." && VjsterDesk.ReportLine("browser", noVideo) == "VJster: no video is playing in Chrome.",
+                "no video is said of the target that has none, not always of Chrome");
+
+            // Both: a quality step goes only to the target that can take it, so no "quality control needs the YouTube player" from OBS.
+            var qualityStep = bothDesk.Dispatch("vjster.quality.up");
+            bIntent = JsonNode.Parse(await Receive(browser))!.AsObject();
+            Check(bIntent["type"]!.GetValue<string>() == "quality.step", "the quality step reaches Chrome");
+            await SendText(browser, StateJson(bIntent["id"]!.GetValue<string>(), 0.75, target: "browser"));
+            Check(await qualityStep == "Clip · Video 0.75x · 1080p · playing", "Both: a quality step skips the OBS page, which cannot set quality");
+
+            // Both: a speed step skips a target with no video while the other can take it.
+            await SendText(browser, """{"v":1,"id":"e-nv","target":"browser","type":"state","inReplyTo":null,"rate":null,"rateDirect":false,"availableRates":[],"quality":null,"availableQualities":[],"qualityAuto":null,"title":null,"host":null,"playing":false,"adPlaying":false,"capabilities":[],"pinned":false}""");
+            for (int i = 0; i < 50 && link.GetLastState("browser")?.Rate != null; i++) await Task.Delay(20);
+            var speedStep = bothDesk.Dispatch("vjster.speed.up");
+            oIntent = JsonNode.Parse(await Receive(obs))!.AsObject();
+            Check(oIntent["type"]!.GetValue<string>() == "speed.step", "the speed step reaches the OBS page");
+            await SendText(obs, StateJson(oIntent["id"]!.GetValue<string>(), 1.25, target: "obs", caps: "\"speed\",\"transport\""));
+            Check(await speedStep == "Clip · Video 1.25x · playing", "Both: a speed step skips Chrome with no video");
+
+            // When no target can take it, it still goes to them, so the target's own answer says why.
+            var refused = obsOnlyDesk.Dispatch("vjster.quality.up");
+            oIntent = JsonNode.Parse(await Receive(obs))!.AsObject();
+            await SendText(obs, $$"""{"v":1,"id":"x2","target":"obs","type":"error","code":"unsupported","message":"quality control needs the YouTube player","inReplyTo":"{{oIntent["id"]!.GetValue<string>()}}"}""");
+            Check(await refused == "VJster: quality control needs the YouTube player", "with no target able to take it, the target's own answer is shown");
         }
         finally { Directory.Delete(dir, true); }
     }

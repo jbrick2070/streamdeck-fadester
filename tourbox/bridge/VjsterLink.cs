@@ -123,7 +123,8 @@ internal sealed class VjsterLink : IAsyncDisposable
     int nextId = 1, refusalsSinceLog;
     long lastRefusalLog = long.MinValue / 2;
 
-    public event Action<VjsterState>? StateReceived;
+    /** Every state report, with the target that sent it ("browser" or "obs"). */
+    public event Action<(string Target, VjsterState State)>? StateReceived;
     public event Action<VjsterError>? ErrorReceived;
     public event Action<bool>? ConnectionChanged;
 
@@ -720,7 +721,7 @@ internal sealed class VjsterLink : IAsyncDisposable
                 if (result.State!.InReplyTo != null && pending.TryGetValue(result.State.InReplyTo, out var sEntry) && sEntry.Target == p.Target
                     && pending.TryRemove(result.State.InReplyTo, out var removed))
                     removed.Tcs.TrySetResult((result.State, null));
-                Raise(StateReceived, result.State);
+                Raise(StateReceived, (p.Target, result.State!));
                 return;
             case "error":
                 if (result.Error!.InReplyTo != null && pending.TryGetValue(result.Error.InReplyTo, out var eEntry) && eEntry.Target == p.Target

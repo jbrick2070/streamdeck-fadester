@@ -90,7 +90,10 @@ export class Router {
     const target = this.target();
     if (inReplyTo !== null && this.claim(inReplyTo, tabId)) {
       // An answer goes back whatever the target is now; it is what the intent did.
-      this.deps.sendToLink(this.report(state, host, inReplyTo));
+      const answer = this.report(state, host, inReplyTo);
+      this.deps.sendToLink(answer);
+      // From the target, the answer is the state the plugin now shows: a later return to the earlier state is news.
+      if (target === tabId) this.lastPushed = this.pushedText(target, answer);
       // The plugin keeps the answer as the current state. When another tab is now the target (the answering tab paused
       // while that one plays, or its video is gone), the target's own state follows at once (R-TGT-4). With no tab
       // left, the answer itself says there is no video.
@@ -212,11 +215,16 @@ export class Router {
     const report = this.report(record?.state ?? NO_VIDEO, record?.host ?? null, inReplyTo);
     // The same state again says nothing new: a page that reports many times a second without changing costs the
     // plugin nothing (it would parse each one and redraw every VJster key). An answer always goes out.
-    const { id: _id, inReplyTo: _reply, ...content } = report;
-    const text = JSON.stringify([target, content]);
+    const text = this.pushedText(target, report);
     if (inReplyTo === null && text === this.lastPushed) return;
     this.lastPushed = text;
     this.deps.sendToLink(report);
+  }
+
+  /** A sent state as lastPushed keeps it: the target tab and the report without its id. */
+  private pushedText(target: number | null, report: StateReport): string {
+    const { id: _id, inReplyTo: _reply, ...content } = report;
+    return JSON.stringify([target, content]);
   }
 
   private report(state: PageState, host: string | null, inReplyTo: string | null): StateReport {

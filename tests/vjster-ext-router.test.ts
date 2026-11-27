@@ -63,6 +63,22 @@ describe("Router: an unchanged state is not sent again (D-03)", () => {
     expect(sent.length).toBe(first + 2);
     expect(lastState(sent).rate).toBe(1.5);
   });
+
+  it("sends a return to the earlier state after a deck command's answer (2x from the deck, then 1x in YouTube's menu)", async () => {
+    const { router, sent } = setup();
+    router.pageState(5, 1, playing(1), "www.youtube.com", null);
+    const speed = intent({ type: "speed.set", rate: 2 });
+    await router.intent(speed);
+    router.pageState(5, 1, playing(2), "www.youtube.com", speed.id);
+    expect(lastState(sent)).toMatchObject({ rate: 2, inReplyTo: speed.id });
+    const before = sent.length;
+    // The same 2x again is not news, but the user's own return to 1x is.
+    router.pageState(5, 1, playing(2), "www.youtube.com", null);
+    expect(sent.length).toBe(before);
+    router.pageState(5, 1, playing(1), "www.youtube.com", null);
+    expect(sent.length).toBe(before + 1);
+    expect(lastState(sent)).toMatchObject({ rate: 1, inReplyTo: null });
+  });
 });
 
 describe("Router: the registry (R-TGT-1)", () => {

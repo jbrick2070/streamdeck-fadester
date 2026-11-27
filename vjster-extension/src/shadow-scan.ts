@@ -33,6 +33,45 @@ export function forEachShadowRoot(root: ScanRoot, visit: (shadow: ScanRoot) => v
   return count;
 }
 
+/** The part of WholeScan that AddedNodes uses. */
+export interface WholeScanLike {
+  request(): void;
+}
+
+/**
+ * Collects the elements a page adds and hands them to `search` at most once per `gapMs`, each once. Past `limit` waiting
+ * elements, the rest are not kept: they are left to the whole-page search (WholeScan), which keeps its own spacing, so a
+ * page that adds hundreds of nodes a second is not searched whole every `gapMs`.
+ */
+export class AddedNodes<T> {
+  private pending: T[] = [];
+  private timer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor(
+    private readonly search: (nodes: T[]) => void,
+    private readonly whole: WholeScanLike,
+    private readonly gapMs: number,
+    private readonly limit: number,
+    private readonly later: (run: () => void, ms: number) => ReturnType<typeof setTimeout> = (run, ms) => setTimeout(run, ms)
+  ) {}
+
+  add(nodes: Iterable<T>): void {
+    let overflow = false;
+    for (const node of nodes) {
+      if (this.pending.length >= this.limit) overflow = true;
+      else this.pending.push(node);
+    }
+    if (overflow) this.whole.request();
+    if (this.pending.length === 0) return;
+    this.timer ??= this.later(() => {
+      this.timer = null;
+      const nodes = this.pending;
+      this.pending = [];
+      this.search(nodes);
+    }, this.gapMs);
+  }
+}
+
 /** A whole-page search waits this long after the change that asked for it, so a burst of changes is one search. */
 export const WHOLE_SCAN_SETTLE_MS = 1000;
 /** Whole-page searches are at least this far apart, however busy the page is. */

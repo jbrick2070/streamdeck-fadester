@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { MAX_SHADOW_DEPTH, WHOLE_SCAN_SETTLE_MS, WHOLE_SCAN_SPACING_MS, WholeScan, forEachShadowRoot, type ScanElement, type ScanRoot } from "../vjster-extension/src/shadow-scan.js";
+import { AddedNodes, MAX_SHADOW_DEPTH, WHOLE_SCAN_SETTLE_MS, WHOLE_SCAN_SPACING_MS, WholeScan, forEachShadowRoot, type ScanElement, type ScanRoot } from "../vjster-extension/src/shadow-scan.js";
 
 /** A stand-in for an element or shadow root: querySelectorAll("*") lists every element under it, not inside shadows. */
 const root = (elements: ScanElement[]): ScanRoot => ({ querySelectorAll: () => elements });
@@ -48,6 +48,39 @@ describe("content-main looks inside shadow roots on any site", () => {
     expect(source).toMatch(/addEventListener\("load", afterLoad, \{ once: true \}\)/);
     // After load: one search at once and one more later, for a component defined late on a page that stays still.
     expect(source).toMatch(/const afterLoad = \(\): void => \{\s*whole\.request\(\);\s*setTimeout\(\(\) => whole\.request\(\), LATE_UPGRADE_MS\);/);
+  });
+
+  it("leaves an overflow of added nodes to the spaced whole search, never searching the document itself (review 2026-11-27 #9)", () => {
+    expect(source).toMatch(/new AddedNodes<Element>\(/);
+    expect(source).not.toMatch(/searchAll/);
+    expect(source).not.toMatch(/\? \[document\] :/);
+  });
+});
+
+describe("AddedNodes (review 2026-11-27 #9)", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("searches each added node once per gap, and past the limit asks the whole search instead of searching the page every gap", () => {
+    vi.useFakeTimers();
+    let wholeRuns = 0;
+    const whole = new WholeScan(() => { wholeRuns += 1; });
+    const searched: number[][] = [];
+    const added = new AddedNodes<number>((nodes) => searched.push(nodes), whole, 300, 200);
+    added.add([1, 2, 3]);
+    vi.advanceTimersByTime(300);
+    expect(searched).toEqual([[1, 2, 3]]);
+    expect(wholeRuns).toBe(0);
+    // An infinite feed or a live chat: 250 nodes every 100 ms for 20 s.
+    let next = 10;
+    for (let t = 0; t < 20_000; t += 100) {
+      added.add(Array.from({ length: 250 }, () => next++));
+      vi.advanceTimersByTime(100);
+    }
+    vi.advanceTimersByTime(WHOLE_SCAN_SPACING_MS);
+    expect(searched.every((nodes) => nodes.length <= 200)).toBe(true);
+    // The whole search keeps its spacing: a handful in 25 s, not one per 300 ms (about 80).
+    expect(wholeRuns).toBeGreaterThanOrEqual(1);
+    expect(wholeRuns).toBeLessThanOrEqual(1 + Math.ceil(25_000 / WHOLE_SCAN_SPACING_MS));
   });
 });
 

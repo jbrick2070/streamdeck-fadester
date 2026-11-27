@@ -222,8 +222,15 @@ export class SpeedDialController extends Base {
     this.down = false;
     if (!wasDown || this.turnedWhileDown) return;
     this.out.cancel();
+    // Like a turn or a tap: only the chosen targets that can take a speed change now (Both: not a page with no video).
+    const targets = this.readyTargets("speed");
+    if (targets.length === 0) {
+      this.pending.clear();
+      this.render();
+      return this.sink.alert();
+    }
     this.pending.set(1);
-    this.pending.sentAs(this.sendNow({ type: "speed.reset" }));
+    this.pending.sentAs(this.sendNow({ type: "speed.reset" }, targets));
     this.render();
   }
 

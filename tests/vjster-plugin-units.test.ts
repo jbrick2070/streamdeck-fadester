@@ -334,6 +334,22 @@ describe("SpeedDialController (R-SPD-1..3, R-BEH-3)", () => {
     expect(sent).toHaveLength(2);
   });
 
+  it("a press back to 1x checks the targets like every other control: alerts with none, skips one with no video", () => {
+    // Nothing connected: an alert, as a turn or a tap gives, and no dim 1x on the strip.
+    const off = make({});
+    off.c.pressDown();
+    off.c.pressUp();
+    expect(off.sent).toHaveLength(0);
+    expect(off.s.alerts).toBe(1);
+    expect(words(off.s.last())).not.toContain("1x");
+    // Both: the OBS page has no video, so only Chrome is sent the reset, and nothing answers with an error.
+    const both = make({ browser: connected(state({ rate: 2 })), obs: connected(state({ target: "obs", rate: null, title: null, capabilities: [] })) }, { target: "both" });
+    both.c.pressDown();
+    both.c.pressUp();
+    expect(both.sent.map((x) => [x.target, x.body.type])).toEqual([["browser", "speed.reset"]]);
+    expect(both.s.alerts).toBe(0);
+  });
+
   it("toggles play on a tap, and alerts when the target cannot", () => {
     const { sent, c, s, hub } = make();
     c.tap();

@@ -279,6 +279,25 @@ namespace Fadester.TourBox {
       // The assignment lists show words for "none" and for a name OBS no longer has; what is saved stays the name.
       if (ChoiceText(enText,"",null)!="Unassigned" || ChoiceText(enText,"Camera",null)!="Camera" ||
           ChoiceText(enText,"Camera",new HashSet<string>{"Camera"})!="Camera" || ChoiceText(deText,"Camera",new HashSet<string>())!="Nicht verfügbar: Camera") throw new Exception("choice text");
+      // Copy OBS Browser Source URL builds the address from the saved settings, never from a box not saved yet, and asks for
+      // Stop and Start only when the running controls serve another VJster port or token (or no VJster) than that address.
+      using (var w = new PanelWindow(new PanelText("en"), true)) {
+        string tok=VjsterObsPage.NewToken();
+        w.config["vjsterEnabled"]=true; w.config["vjsterPort"]=48151; w.config["vjsterObsToken"]=tok;
+        w.vjsterPort.Value=48160; // typed, not saved
+        if (SavedVjsterPort(w.config)!=48151 || w.ObsUrlToCopy("dQw4w9WgXcQ")!="http://127.0.0.1:48151/obs?v=dQw4w9WgXcQ#token="+tok) throw new Exception("copy URL: from the saved settings");
+        if (SavedVjsterPort(Decode("{\"vjsterPort\":80}"))!=48150 || SavedVjsterPort(Decode("{}"))!=48150) throw new Exception("copy URL: the default port");
+        string served=ObsPageServed(w.config);
+        if (ObsPageRestartNeeded(false,null,w.config) || ObsPageRestartNeeded(true,served,w.config)) throw new Exception("copy URL: no restart while the address is served, or with the controls off");
+        w.config["vjsterPort"]=48152;
+        if (!ObsPageRestartNeeded(true,served,w.config)) throw new Exception("copy URL: a saved port the running controls do not serve");
+        w.config["vjsterPort"]=48151; w.config["vjsterObsToken"]=VjsterObsPage.NewToken();
+        if (!ObsPageRestartNeeded(true,served,w.config)) throw new Exception("copy URL: a token the running controls do not know");
+        w.config["vjsterObsToken"]=tok; w.config["gamepadEnabled"]=true; w.config["mixEnabled"]=true;
+        if (ObsPageRestartNeeded(true,served,w.config)) throw new Exception("copy URL: other settings do not touch the OBS page");
+        w.config["vjsterEnabled"]=false; string off=ObsPageServed(w.config); w.config["vjsterEnabled"]=true;
+        if (!ObsPageRestartNeeded(true,off,w.config)) throw new Exception("copy URL: controls started without VJster");
+      }
       using (var w = new PanelWindow(new PanelText("en"), true)) {
         w.catalog=Decode("{\"scenes\":[\"A\",\"B\"]}"); w.config["anchors"]=new object[]{"B","Gone","",""};
         w.LoadChoices(false);
@@ -1056,20 +1075,36 @@ namespace Fadester.TourBox {
       if(exe!=null) OpenPath(exe); else DownloadConsole();
     }
     void DownloadConsole() { OpenPath("https://www.tourboxtech.com/en/downloads/"); Note(text.Get("consoleDownloadOpened")); }
-    /** Builds the bridge's OBS Browser Source link (making its private token if needed) and puts it on the clipboard. */
+    /**
+     * Builds the bridge's OBS Browser Source link from the saved settings (as the Mac panel does) and puts it on the
+     * clipboard. A box changed but not saved does not change the link, and nothing else on the page is saved: only a token
+     * made here, the first time, is written. Stop and Start are asked for when the running controls do not serve this link.
+     */
     void CopyObsUrl() {
-      if(invalidConfig || PortsClash()) return;
-      bool made=false;
+      if(invalidConfig) return;
       string saved=VjsterObsPage.NormalizeToken(Val(config,"vjsterObsToken"));
-      if(VjsterObsPage.ValidToken(saved)) config["vjsterObsToken"]=saved; else { config["vjsterObsToken"]=VjsterObsPage.NewToken(); made=true; }
+      if(!VjsterObsPage.ValidToken(saved)) {
+        saved=VjsterObsPage.NewToken(); config["vjsterObsToken"]=saved;
+        SaveKeys(new Dictionary<string,object>{{"vjsterObsToken",saved}});
+      } else config["vjsterObsToken"]=saved;
       string id=VjsterObsPage.VideoId(vjsterVideo.Text);
-      string url=VjsterObsPage.Url((int)vjsterPort.Value,id,Val(config,"vjsterObsToken"));
-      try { WriteConfig(); } catch(Exception e) { Note(e.Message); return; }
+      string url=ObsUrlToCopy(id);
       try { Clipboard.SetText(url); }
       catch(ExternalException) { Note(text.Get("obsUrlManual",url)); return; }
-      // A running bridge read its settings at start: a token made just now works after the controls restart.
-      Note(text.Get(made && worker!=null ? "obsUrlRestart" : id==null ? "obsUrlCopiedBlank" : "obsUrlCopied"));
+      Note(text.Get(ObsPageRestartNeeded(worker!=null,obsPageStartedWith,config) ? "obsUrlRestart" : id==null ? "obsUrlCopiedBlank" : "obsUrlCopied"));
     }
+    /** The OBS Browser Source link for `videoId` (null: VIDEO_ID), from the saved VJster port and token. */
+    string ObsUrlToCopy(string videoId) { return VjsterObsPage.Url(SavedVjsterPort(config),videoId,VjsterObsPage.NormalizeToken(Val(config,"vjsterObsToken"))); }
+    /** The saved VJster port, or 48150 when none valid is saved (as the page loads it). */
+    static int SavedVjsterPort(Dictionary<string,object> cfg) {
+      int vp; return Int32.TryParse(Val(cfg,"vjsterPort"),NumberStyles.Integer,CultureInfo.InvariantCulture,out vp) && vp>=1024 && vp<=65535 ? vp : 48150;
+    }
+    /** What the bridge serves the OBS page from, as read at start: VJster on or off, its port and the page's token. */
+    static string ObsPageServed(Dictionary<string,object> cfg) {
+      return Val(cfg,"vjsterEnabled")+"\n"+SavedVjsterPort(cfg).ToString(CultureInfo.InvariantCulture)+"\n"+VjsterObsPage.NormalizeToken(Val(cfg,"vjsterObsToken"));
+    }
+    /** The running controls (started with `startedWith`) do not serve the link the saved settings give: Stop and Start are needed. */
+    static bool ObsPageRestartNeeded(bool running, string startedWith, Dictionary<string,object> cfg) { return running && ObsPageServed(cfg)!=startedWith; }
     bool PortsClash() { if(!enableVjster.Checked || port.Value!=vjsterPort.Value) return false; Note(text.Get("portsClash")); return true; }
     void OpenPath(string p) { try {Process.Start(new ProcessStartInfo(p){UseShellExecute=true});} catch(Exception e){Note(e.Message);} }
     void Note(string msg) {
@@ -1085,7 +1120,7 @@ namespace Fadester.TourBox {
         activity.TopIndex=activity.Items.Count-1;
       }
     }
-    string lastNote; int lastNoteCount; DateTime catalogAt=DateTime.MinValue; string startedWith; ToolTip stateTip;
+    string lastNote; int lastNoteCount; DateTime catalogAt=DateTime.MinValue; string startedWith, obsPageStartedWith; ToolTip stateTip;
     /** The OBS a scan reads: the one the running controls use (the saved port), else the Port box. */
     int ScanPort() {
       int readPort=(int)port.Value; object savedPort;
@@ -1160,7 +1195,7 @@ namespace Fadester.TourBox {
     void StartControls() {
       if(PortsClash())return;
       try{
-        WriteConfig(); startedWith=RestartSettings(); var p=new Process {StartInfo=Command(mixOnly.Checked?"--mix-only":"--listen"),EnableRaisingEvents=true};
+        WriteConfig(); startedWith=RestartSettings(); obsPageStartedWith=ObsPageServed(config); var p=new Process {StartInfo=Command(mixOnly.Checked?"--mix-only":"--listen"),EnableRaisingEvents=true};
         p.OutputDataReceived+=(s,e)=>BridgeLine(p,e.Data); p.ErrorDataReceived+=(s,e)=>BridgeLine(p,e.Data);
         p.Exited+=delegate { try{BeginInvoke((Action)(()=>{if(worker==p){worker=null; SetVsStatus(""); ShowStartButton(); padState="stPadOff"; ShowStatus(); string said=text.Get(ending==p?"bridgeEnded":p.ExitCode==0?"stopped":"bridgeFailed"); Note(said); if(ending==p || p.ExitCode!=0) TrayTell(said);} Entry.Log("controls ended: "+p.ExitCode); try{p.CancelOutputRead();p.CancelErrorRead();}catch(InvalidOperationException){} p.Dispose();}));}catch(InvalidOperationException){} };
         vjPeers=new HashSet<string>(); vjPortBusy=false; vjOnDeck=false;

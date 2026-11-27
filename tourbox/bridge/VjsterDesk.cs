@@ -205,15 +205,19 @@ internal sealed class VjsterDesk(VjsterLink link, double fastSpeed = 2.0, double
 
     /**
      * The open targets an action goes to, as the plugin's host chooses them (controllers.ts readyTargets): with two open,
-     * only those whose last report has a video and the capability the action needs (the OBS page never has quality). When
+     * only those whose last report has a video and the capability the action needs (the OBS page never has quality), and
+     * any that has not reported yet. When
      * neither can take it, both still get it, so a target's own answer says why; one open target always gets it.
      */
     string[] Ready(string[] open, string? need)
     {
         if (need == null || open.Length < 2) return open;
-        var ready = open.Where(t => link.GetLastState(t) is { Rate: not null } s && s.Capabilities.Contains(need)).ToArray();
+        var ready = open.Where(t => CanTake(link.GetLastState(t), need)).ToArray();
         return ready.Length > 0 ? ready : open;
     }
+
+    /** A target can take an intent needing `need`: it has a video with that capability, or has not reported yet (never left out for that). */
+    internal static bool CanTake(VjsterState? s, string need) => s == null || (s.Rate != null && s.Capabilities.Contains(need));
 
     static string FormatReply(string id, string target, (VjsterState? State, VjsterError? Error)? reply)
     {

@@ -512,6 +512,9 @@ internal static class VjsterSelfTests
             oIntent = JsonNode.Parse(await Receive(obs))!.AsObject();
             await SendText(obs, $$"""{"v":1,"id":"x2","target":"obs","type":"error","code":"unsupported","message":"quality control needs the YouTube player","inReplyTo":"{{oIntent["id"]!.GetValue<string>()}}"}""");
             Check(await refused == "VJster: quality control needs the YouTube player", "with no target able to take it, the target's own answer is shown");
+            // A target connected but not reported yet (the moment after it connects) is never left out for that.
+            Check(VjsterDesk.CanTake(null, "quality") && VjsterDesk.CanTake(clip, "quality") && !VjsterDesk.CanTake(noVideo, "speed") &&
+                  !VjsterDesk.CanTake(clip with { Capabilities = ["speed", "transport"] }, "quality"), "a target that has not reported yet can take a command");
         }
         finally { Directory.Delete(dir, true); }
     }

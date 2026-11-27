@@ -20,9 +20,12 @@ import {
   NativeTbarUncertain,
   nativeTbarBlocker,
   nativeTbarEligible,
+  nativeReadTimeoutMs,
   nativeTick,
+  UIA_READ_TIMEOUT_MS,
   UiaWorkerLike
 } from "../src/obs/native-tbar.js";
+import { AX_TRAVERSAL_BUDGET_MS } from "../src/obs/native-tbar-limits.js";
 import type { UiaWorkerRequest } from "../src/obs/uia/uia-worker.js";
 import { FakeObsServer } from "./helpers/fake-obs-server.js";
 
@@ -954,6 +957,31 @@ describe("NativeTbarUia worker adapter", () => {
     await expect(uia.read()).rejects.toMatchObject({ reason: "permission" });
     worker.mode = "unavailable";
     await expect(uia.read()).rejects.toBeInstanceOf(NativeTbarUnavailable);
+  });
+
+  it("on macOS waits for a read as long as the AX worker may search for the slider, so a slow first search does not taint", async () => {
+    expect(nativeReadTimeoutMs("darwin")).toBeGreaterThan(AX_TRAVERSAL_BUDGET_MS);
+    expect(nativeReadTimeoutMs("win32")).toBe(UIA_READ_TIMEOUT_MS);
+    let worker!: FakeUiaWorker;
+    const uia = new NativeTbarUia(4455, {
+      platform: "darwin",
+      workerFactory: () => {
+        worker = new FakeUiaWorker();
+        return worker;
+      }
+    });
+    adapters.push(uia);
+    expect(await uia.read()).toBe(0);
+    // The first read after a reset searches the whole window again: here it answers after 800 ms, inside the budget.
+    uia.invalidate();
+    worker.mode = "hang";
+    setTimeout(() => worker.releaseHung(256), 800);
+    const read = uia.read();
+    await vi.waitFor(() => expect(worker.requests.some((r) => r.op === "read" && r.seq > 1)).toBe(true));
+    expect(nativeTick(await read)).toBe(256);
+    worker.mode = "ok";
+    // Not tainted: the next move goes through without a reconciliation read.
+    expect(nativeTick(await uia.move(256 / 1023, 0.5))).toBe(512);
   });
 
   it("quarantines a timed-out call as busy-tainted without terminating mid-call, drains the late reply, and clears taint only after read()", async () => {

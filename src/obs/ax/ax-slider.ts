@@ -8,6 +8,7 @@
 // check before writing, readback after writing, and uncertain-write quarantine until a fresh read succeeds.
 import { realpathSync } from "node:fs";
 import koffi from "koffi";
+import { AX_TRAVERSAL_BUDGET_MS } from "../native-tbar-limits.js";
 
 export const AX_TBAR_MAX = 1023;
 
@@ -37,7 +38,6 @@ const kAXErrorAttributeUnsupported = -25205;
 const kAXErrorNoValue = -25212;
 
 const AX_MESSAGING_TIMEOUT_SECONDS = 0.08;
-const AX_TRAVERSAL_BUDGET_MS = 1500;
 const AX_NODE_LIMIT = 3000;
 const AX_DEPTH_LIMIT = 30;
 const AX_CHILDREN_PER_NODE_LIMIT = 1024;

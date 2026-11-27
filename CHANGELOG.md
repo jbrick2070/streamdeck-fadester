@@ -21,6 +21,11 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 - **Settings page, Change what this slot does:** an open scene, source or filter menu could close under the pointer before you picked, because each update from Midi Fadester redrew the slot's fields. The fields are no longer redrawn while you are in one of them; what changed meanwhile is drawn when you leave them (`ui/pi-common.js`, `tests/pi-dom.test.ts`).
 - **Renaming an input or a scene in OBS:** audio dials, audio fade keys, scene keys and Source & Layer controls fixed on one scene kept only the OBS name, so renaming "Mic" to "Mic 2" or a scene in OBS left them saying "unavailable" until each was chosen again. They now also keep the ID OBS gives every input and scene, follow a rename through it, and save the new name, which stays what the settings page shows. Keys set up before this keep their name and get the ID the first time OBS lists that input or scene; nothing in their settings is lost. A key whose ID OBS does not know (another scene collection, another computer) finds its input or scene by name, as before (`src/obs/name-binding.ts`, `tests/name-binding.test.ts`). Tape Deck keys still go by the deck's name, which comes from Visual Sidechain, not from OBS.
 
+### Fixes from the VJster final QA (2026-11-27)
+
+#### Fixed
+- **VJster Chrome extension:** a state report the page's bridge was still holding back (it spaces reports 50 ms apart) could reach the deck after the answer to a deck command or a hotkey, so the deck ended on the older state (say 1x while the video played 1.25x) until something else changed. A report still waiting is now dropped when an answer goes out (`vjster-extension/src/bridge-core.ts`, `tests/vjster-ext-wiring.test.ts`).
+
 ## 1.5.1 - 2026-11-24
 This release ships Fadester for OBS 1.5.1, Fadester Companion 1.5.1, the VJster Chrome extension 1.5.0 (unchanged) and Fadester Suite Setup 1.5.1. The plugin, the standalone VJster plugin (1.5.0) and the extension have no change of code: Fadester for OBS moves to 1.5.1 because every release raises it. None of it has been through the hand tests on real hardware yet.
 

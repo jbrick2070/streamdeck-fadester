@@ -157,6 +157,9 @@ export function installBridge(win: BridgeWindow, runtime: BridgeRuntime, options
     }
     if (!replyAllowed()) return;
     if (message.kind === "state") {
+      // The answer is newer than any report still held back: drop that one, or it would arrive after the answer and
+      // leave the worker on the older state (the adapter's dedupe then swallows the report that would correct it).
+      reports.cancel();
       const vouched = win.document ? vouchFor(message.state, message.played, readMediaFacts(win.document)) : message;
       toWorker({ kind: "page-state", state: vouched.state, host, inReplyTo: message.inReplyTo, played: vouched.played });
     } else {

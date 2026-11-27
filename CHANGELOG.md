@@ -4,6 +4,10 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 
 ## Unreleased
 
+### VJster Chrome extension 1.5.2
+
+Version 1.5.1 (the keyboard hotkeys, below) has been on the Chrome Web Store since 27 November 2026. 1.5.2 is that extension with the fixes listed further down under **Fixes from the 2026-11-27 review** and **Fixes from the VJster final QA (2026-11-27)** that name the VJster Chrome extension or its hotkeys: text fields with several roles, "faster" and "slower" never moving the rate the wrong way, a late state report, a state changed back in the page, and the whole-page search on busy pages. Two parts of the hotkeys entry below are also new in 1.5.2 and not in the 1.5.1 on the store: on a Mac, a layout that types `[ ] \` with Option; and layouts whose `[ ] \` keys type a letter of a non-Latin script. Nothing new is asked of the user and no permission changes.
+
 ### VJster Chrome extension 1.5.1
 
 #### Added

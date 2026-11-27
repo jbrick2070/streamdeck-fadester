@@ -5,6 +5,8 @@ import { describe, expect, it } from "vitest";
 import { VJSTER_ACTIONS, VJSTER_KINDS, VJSTER_NAMESPACE, suiteActionId, vjsterActionId } from "../src/suite/actions.js";
 import { WATCHDOG, parseLaunchArgs, registersChild } from "../src/suite/launch-args.js";
 import { SUITE_GLOBAL_EVENT, SuiteMux, type Child, type Message } from "../src/suite/mux.js";
+import { GlobalSettingsStore } from "../src/settings/global-store.js";
+import { vjsterPortFrom } from "../src/obs/setup-checklist.js";
 
 const PLUGIN = "io.github.jbrick2070.fadester-for-obs.sdPlugin";
 const FADE = "io.github.jbrick2070.fadester-for-obs.obs-fade";
@@ -409,5 +411,27 @@ describe("the launch line", () => {
     expect(WATCHDOG).toContain("SUITE_PARENT_PID");
     expect(WATCHDOG).toContain("process.exit(0)");
     expect(() => new Function(WATCHDOG.replace("setInterval", "(()=>{})"))).not.toThrow();
+  });
+});
+
+describe("the VJster port reaches Fadester's setup checklist (runtime path)", () => {
+  it("goes from the suite through Fadester's settings store to vjsterPortFrom, and Fadester's saves never store it", async () => {
+    const { mux, children } = rig();
+    // Fadester's store, wired to the suite as plugin.ts wires it to Stream Deck (reads and writes go through the mux).
+    const settingsFor = (m: Message) => (m.payload as { settings: Record<string, unknown> }).settings;
+    const store = new GlobalSettingsStore({
+      getGlobalSettings: async () => settingsFor(children.fadester.filter((m) => m.event === "didReceiveGlobalSettings").at(-1)!) as never,
+      setGlobalSettings: async (settings) => void mux.fromChild("fadester", { event: "setGlobalSettings", context: PLUGIN, payload: settings })
+    }, 50);
+    mux.fromHost({ event: "didReceiveGlobalSettings", payload: { settings: { host: "127.0.0.1", port: 4455, vjster: { port: 48151, obsToken: "t" } } } });
+    await store.start();
+    expect(vjsterPortFrom(store.snapshot())).toBe(48151);
+    // VJster moves its port: the news reaches the store (plugin.ts onDidReceiveGlobalSettings calls replace).
+    mux.fromChild("vjster", { event: "setGlobalSettings", context: PLUGIN, payload: { port: 48152, obsToken: "t" } });
+    store.replace(settingsFor(children.fadester.at(-1)!) as never);
+    expect(vjsterPortFrom(store.snapshot())).toBe(48152);
+    // A Fadester save carries the hint it was shown; the suite stores Fadester's keys and VJster's part only.
+    await store.patch({ host: "10.0.0.4" });
+    expect(mux.settings).toEqual({ host: "10.0.0.4", port: 4455, vjster: { port: 48152, obsToken: "t" } });
   });
 });

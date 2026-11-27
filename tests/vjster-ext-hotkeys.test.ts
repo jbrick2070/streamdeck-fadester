@@ -4,13 +4,26 @@
 // make being ordinary speed intents for the adapter.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { Intent } from "../src/vjster/shared/protocol.js";
+
+/** Every document the hotkeys asked readMediaFacts about (a pass-through, so the real search still runs). */
+const mediaReads = vi.hoisted(() => ({ docs: [] as unknown[] }));
+vi.mock("../vjster-extension/src/bridge-core.js", async (importOriginal) => {
+  const real = await importOriginal<typeof import("../vjster-extension/src/bridge-core.js")>();
+  return {
+    ...real,
+    readMediaFacts: (doc: Parameters<typeof real.readMediaFacts>[0]) => {
+      mediaReads.docs.push(doc);
+      return real.readMediaFacts(doc);
+    }
+  };
+});
 import { Adapter, type Report } from "../vjster-extension/src/adapter-core.js";
 import { installBridge, type BridgeRuntime, type BridgeWindow } from "../vjster-extension/src/bridge-core.js";
 import { videoControl, type PlayableVideo } from "../vjster-extension/src/generic-video.js";
 import {
-  KEY_FASTER, KEY_RESET, KEY_SLOWER, hotkeyIntent, installHotkeys, isEditableTarget,
+  KEY_FASTER, KEY_RESET, KEY_SLOWER, hotkeyIntent, hotkeyOf, installHotkeys, isEditableTarget,
   type HotkeyStorage, type HotkeyWindow, type KeyLike
 } from "../vjster-extension/src/hotkeys.js";
 import { FROM_BRIDGE, readBridgeMessage, readIntent } from "../vjster-extension/src/messages.js";
@@ -23,11 +36,12 @@ const EXT = join(import.meta.dirname, "..", "vjster-extension");
 const documentWith = (count: number) => ({ querySelectorAll: (selector: string) => (selector === "video" ? Array.from({ length: count }, () => ({ paused: true, ended: false, readyState: 0 })) : []) });
 
 /** A window that keeps its keydown listeners, so a test can press keys and see whether the listener is installed. */
-function fakeWindow(hostname: string, videos = 1) {
+function fakeWindow(hostname: string, videos = 1, navigator?: HotkeyWindow["navigator"]) {
   const listeners = new Set<(e: KeyLike) => void>();
   const win: HotkeyWindow = {
     location: { hostname },
     document: documentWith(videos),
+    navigator,
     addEventListener: (_type, fn) => void listeners.add(fn),
     removeEventListener: (_type, fn) => void listeners.delete(fn)
   };
@@ -72,8 +86,8 @@ function key(k: string, options: KeyOptions = {}) {
 }
 
 /** The hotkeys installed on a fake window and storage, with the intents they post. */
-async function setup(stored?: unknown, hostname = "example.com", videos = 1, sites?: unknown) {
-  const w = fakeWindow(hostname, videos);
+async function setup(stored?: unknown, hostname = "example.com", videos = 1, sites?: unknown, navigator?: HotkeyWindow["navigator"]) {
+  const w = fakeWindow(hostname, videos, navigator);
   const s = fakeStorage(stored, false, sites);
   const posted: Intent[] = [];
   let n = 0;
@@ -181,6 +195,9 @@ describe("the keys and their intents (R-KEY-2)", () => {
   it("leaves every other key to the page", async () => {
     const t = await setup(true);
     for (const k of ["{", "a", "Enter", "Escape", " ", "ArrowRight"]) expect(t.press(k), k).toEqual({ prevented: 0, stopped: 0 });
+    // A keydown a script made with no key at all (Chrome's autofill sends one): ignored, never an error.
+    for (const k of [undefined, null, 5]) expect(() => t.press(k as unknown as string, { code: "BracketLeft" }), String(k)).not.toThrow();
+    expect(hotkeyOf({ key: undefined as unknown as string, code: "BracketLeft" })).toBeNull();
     expect(t.posted).toEqual([]);
   });
 
@@ -214,6 +231,101 @@ describe("hotkeys never take a key that is the page's own (R-KEY-3)", () => {
     // AltGr does not unlock the Command key.
     expect(t.press(KEY_FASTER, { metaKey: true, altGraph: true }).prevented).toBe(0);
     expect(t.posted).toHaveLength(1);
+    // Alt with AltGr but without Ctrl (Linux reports AltGr that way) is AltGr too; Ctrl with AltGr is Windows' AltGr.
+    expect(t.press(KEY_SLOWER, { altKey: true, altGraph: true }).prevented).toBe(1);
+    // Shift alone does not stop a key whose character is still exactly [ ] \ (layouts that type them with Shift).
+    expect(t.press(KEY_RESET, { shiftKey: true }).prevented).toBe(1);
+    // Every modifier with Command or Ctrl (and no AltGr) is a shortcut of the page or the browser.
+    for (const mod of [{ ctrlKey: true, shiftKey: true }, { metaKey: true, shiftKey: true }, { metaKey: true, altKey: true }, { ctrlKey: true, metaKey: true }]) {
+      expect(t.press(KEY_FASTER, mod), JSON.stringify(mod)).toEqual({ prevented: 0, stopped: 0 });
+    }
+    expect(t.posted).toHaveLength(3);
+  });
+
+  const MAC = { userAgentData: { platform: "macOS" }, platform: "MacIntel" };
+  const MAC_OLD = { platform: "MacIntel" }; // Chrome before userAgentData, or with it turned off
+  const WINDOWS = { userAgentData: { platform: "Windows" }, platform: "Win32" };
+  const LINUX = { userAgentData: { platform: "Linux" }, platform: "Linux x86_64" };
+
+  it("on a Mac takes [ ] \\ typed with Option (European layouts), and nothing else Option types", async () => {
+    for (const nav of [MAC, MAC_OLD]) {
+      const t = await setup(true, "www.youtube.com", 1, undefined, nav);
+      // German: Option+5 types [, Option+6 types ], Shift+Option+7 types \ (Chrome on macOS reports Option as Alt, never AltGraph).
+      expect(t.press(KEY_SLOWER, { altKey: true, code: "Digit5" }), JSON.stringify(nav)).toEqual({ prevented: 1, stopped: 1 });
+      expect(t.press(KEY_FASTER, { altKey: true, code: "Digit6" }).prevented).toBe(1);
+      expect(t.press(KEY_RESET, { altKey: true, shiftKey: true, code: "Digit7" }).prevented).toBe(1);
+      expect(t.posted.map((i) => i.type)).toEqual(["speed.step", "speed.step", "speed.reset"]);
+      // US layout: Option+[ types “ and Option+] types ‘, which are not the keys: left to the page.
+      expect(t.press("“", { altKey: true, code: "BracketLeft" }).prevented).toBe(0);
+      expect(t.press("‘", { altKey: true, code: "BracketRight" }).prevented).toBe(0);
+      // Option with Command or Ctrl is still a shortcut.
+      expect(t.press(KEY_FASTER, { altKey: true, metaKey: true }).prevented).toBe(0);
+      expect(t.press(KEY_FASTER, { altKey: true, ctrlKey: true }).prevented).toBe(0);
+      expect(t.posted).toHaveLength(3);
+    }
+  });
+
+  it("does not relax Alt on Windows or Linux: Alt+[ there is a real Alt chord", async () => {
+    for (const nav of [WINDOWS, LINUX, undefined]) {
+      const t = await setup(true, "www.youtube.com", 1, undefined, nav);
+      expect(t.press(KEY_SLOWER, { altKey: true }), JSON.stringify(nav)).toEqual({ prevented: 0, stopped: 0 });
+      expect(t.press(KEY_FASTER, { altKey: true, shiftKey: true }).prevented).toBe(0);
+      expect(t.posted).toEqual([]);
+    }
+  });
+
+  // Layouts that do not type [ ] \ on those keys (R-KEY-2).
+  it("on Russian and Ukrainian layouts takes the physical [ ] \\ keys, which type Cyrillic letters there", async () => {
+    const t = await setup(true, "www.youtube.com");
+    // Russian: BracketLeft types х, BracketRight ъ; Backslash still types \ (matched by its character).
+    expect(t.press("х", { code: "BracketLeft" })).toEqual({ prevented: 1, stopped: 1 });
+    expect(t.press("ъ", { code: "BracketRight" }).prevented).toBe(1);
+    expect(t.press(KEY_RESET, { code: "Backslash" }).prevented).toBe(1);
+    // Ukrainian: BracketRight types ї and Backslash types ґ.
+    expect(t.press("х", { code: "BracketLeft" }).prevented).toBe(1);
+    expect(t.press("ї", { code: "BracketRight" }).prevented).toBe(1);
+    expect(t.press("ґ", { code: "Backslash" }).prevented).toBe(1);
+    expect(t.posted.map((i) => i.type)).toEqual(["speed.step", "speed.step", "speed.reset", "speed.step", "speed.step", "speed.reset"]);
+    expect(t.posted.map((i) => (i.type === "speed.step" ? Math.sign(i.delta) : 0))).toEqual([-1, 1, 0, -1, 1, 0]);
+    // Caps Lock gives the capital letter on the same key: still the key.
+    expect(t.press("Х", { code: "BracketLeft" }).prevented).toBe(1);
+  });
+
+  it("leaves Cyrillic typing to the page everywhere else: other keys, Shift, modifiers, text fields", async () => {
+    const t = await setup(true, "www.youtube.com");
+    // The same letters on other keys, and other letters.
+    expect(t.press("х", { code: "KeyQ" }).prevented).toBe(0);
+    expect(t.press("ж", { code: "Semicolon" }).prevented).toBe(0);
+    expect(t.press("х").prevented).toBe(0); // no code at all
+    // Shift on that key types a capital (Х): a shifted character, as { is on a US layout.
+    expect(t.press("Х", { code: "BracketLeft", shiftKey: true }).prevented).toBe(0);
+    // Russian Shift+Backslash types /: not a letter, not the key.
+    expect(t.press("/", { code: "Backslash", shiftKey: true }).prevented).toBe(0);
+    expect(t.press("х", { code: "BracketLeft", ctrlKey: true }).prevented).toBe(0);
+    expect(t.press("х", { code: "BracketLeft", altKey: true }).prevented).toBe(0);
+    // Nor with AltGr (Windows: Ctrl+Alt with AltGraph; Linux: Alt with AltGraph), nor Option on a Mac.
+    expect(t.press("х", { code: "BracketLeft", ctrlKey: true, altKey: true, altGraph: true }).prevented).toBe(0);
+    expect(t.press("х", { code: "BracketLeft", altKey: true, altGraph: true }).prevented).toBe(0);
+    expect(t.press("х", { code: "BracketLeft", altGraph: true }).prevented).toBe(0);
+    expect(t.press("х", { code: "BracketLeft", metaKey: true }).prevented).toBe(0);
+    const mac = await setup(true, "www.youtube.com", 1, undefined, { userAgentData: { platform: "macOS" } });
+    expect(mac.press("х", { code: "BracketLeft", altKey: true }).prevented).toBe(0);
+    expect(mac.posted).toEqual([]);
+    expect(t.press("х", { code: "BracketLeft", target: { tagName: "INPUT" } }).prevented).toBe(0);
+    expect(t.press("х", { code: "BracketLeft", isComposing: true }).prevented).toBe(0);
+    expect(t.posted).toEqual([]);
+  });
+
+  it("never takes Latin letters or symbols on those keys: German ü + #, French ^ $ *, Nordic å stay with the page", async () => {
+    const t = await setup(true, "www.youtube.com");
+    const latin: [string, string][] = [
+      ["ü", "BracketLeft"], ["+", "BracketRight"], ["#", "Backslash"], // German QWERTZ
+      ["Dead", "BracketLeft"], ["^", "BracketLeft"], ["$", "BracketRight"], ["*", "Backslash"], // French AZERTY
+      ["å", "BracketLeft"], ["¨", "BracketRight"], ["'", "Backslash"], // Nordic
+      ["`", "BracketLeft"], ["ñ", "Semicolon"], ["é", "Digit2"], ["a", "BracketLeft"]
+    ];
+    for (const [k, code] of latin) expect(t.press(k, { code }), `${k} ${code}`).toEqual({ prevented: 0, stopped: 0 });
+    expect(t.posted).toEqual([]);
   });
 
   it("ignores typing in a text field, a text area, a drop-down, an editor, an ARIA text box, list or menu", async () => {
@@ -227,6 +339,11 @@ describe("hotkeys never take a key that is the page's own (R-KEY-3)", () => {
       { tagName: "DIV", getAttribute: (n: string) => (n === "role" ? "textbox" : null) },
       { tagName: "DIV", getAttribute: (n: string) => (n === "role" ? "searchbox" : null) },
       { tagName: "DIV", getAttribute: (n: string) => (n === "role" ? "Combobox" : null) },
+      // ARIA allows fallback roles, separated by spaces: any one of them that types makes the element a text field.
+      ...["textbox combobox", "combobox textbox", "  searchbox  ", "widget\ttextbox", "button Menu"].map((role) => ({
+        tagName: "DIV",
+        getAttribute: (n: string) => (n === "role" ? role : null)
+      })),
       ...["listbox", "option", "menu", "menubar", "menuitem", "menuitemcheckbox", "menuitemradio", "spinbutton"].map((role) => ({
         tagName: "DIV",
         getAttribute: (n: string) => (n === "role" ? role : null)
@@ -251,6 +368,9 @@ describe("hotkeys never take a key that is the page's own (R-KEY-3)", () => {
     for (const free of [{ tagName: "BODY" }, { tagName: "VIDEO" }, { tagName: "BUTTON" }, { tagName: "DIV", isContentEditable: false }, {}, null, undefined, "text", 3]) {
       expect(isEditableTarget(free), JSON.stringify(free)).toBe(false);
     }
+    for (const role of ["button", "slider", "button slider", "", "   ", "textboxes", "presentation none"]) {
+      expect(isEditableTarget({ tagName: "DIV", getAttribute: (n: string) => (n === "role" ? role : null) }), role).toBe(false);
+    }
   });
 
   it("ignores a key an input method is composing, and one the page already handled", async () => {
@@ -266,12 +386,20 @@ describe("hotkeys never take a key that is the page's own (R-KEY-3)", () => {
     expect(empty.posted).toEqual([]);
     const later = await setup(true);
     expect(later.press(KEY_FASTER).prevented).toBe(1);
-    // No document at all (a test window): nothing is found, nothing is taken.
+    // No document at all (a test window): nothing is searched, nothing is taken. readMediaFacts would also find no
+    // video in a missing document (its search is wrapped), so the test checks the guard itself: no search was made.
     const bare = fakeWindow("example.com");
     const noDocument: HotkeyWindow = { ...bare.win, document: undefined };
-    installHotkeys(noDocument, fakeStorage(true).storage, { post: () => undefined, newId: () => "hk-1" });
+    const posted: Intent[] = [];
+    installHotkeys(noDocument, fakeStorage(true).storage, { post: (i) => void posted.push(i), newId: () => "hk-1" });
     await flush();
-    for (const fn of bare.listeners) fn(key(KEY_FASTER).event);
+    expect(bare.listeners.size).toBe(1);
+    mediaReads.docs.length = 0;
+    const pressed = key(KEY_FASTER);
+    for (const fn of bare.listeners) fn(pressed.event);
+    expect(pressed.calls).toEqual({ prevented: 0, stopped: 0 });
+    expect(posted).toEqual([]);
+    expect(mediaReads.docs).toEqual([]);
   });
 
   it("lets go once the extension was updated under the page, so a new copy is not answered twice", async () => {

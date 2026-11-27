@@ -74,6 +74,23 @@ export function linkUrl(params: Pick<PageParams, "port" | "token">): string {
   return `ws://${LINK_HOST}:${params.port}/?token=${params.token ?? ""}`;
 }
 
+/** Whether the address's fragment names a token at all (valid or not): then the address decides, never a saved one. */
+export function fragmentHasToken(hash: string): boolean {
+  return new URLSearchParams(hash.startsWith("#") ? hash.slice(1) : hash).has("token");
+}
+
+/** The state the page keeps in its history entry, so a reload of the stripped address still has its token. */
+export interface SavedPageState {
+  readonly token: string;
+}
+
+/** The token from a history entry's state, if this page saved one there; anything else is ignored. */
+export function savedToken(state: unknown): string | null {
+  if (typeof state !== "object" || state === null || Array.isArray(state)) return null;
+  const token = (state as { token?: unknown }).token;
+  return typeof token === "string" && TOKEN.test(token) ? token : null;
+}
+
 /** The address without the token, for history.replaceState. */
 export function withoutToken(pathname: string, search: string): string {
   const q = new URLSearchParams(search);

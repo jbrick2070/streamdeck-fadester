@@ -568,3 +568,16 @@ describe("the OBS password box on the direct pages", () => {
     expect(updates().at(-1)).toEqual({ event: "directUpdateGlobalSettings", host: "10.0.0.5", port: 4455 });
   });
 });
+
+describe("the setup checklist's VJster line on the direct pages", () => {
+  it("names the standalone VJster plugin in the page's language, with the port VJster is set to", () => {
+    const page = openPage("obs-fade-key.html");
+    const item = { id: "vjster_port_holder", state: "warn", group: "optional", code: "port_standalone", detail: "Held by VJster 1.5.0", fix: "English fallback", meta: { port: 48151, holder: "VJster 1.5.0" } };
+    page.receive(state({ choice: "de", resolved: "de" }, { setupChecklist: { items: [item] } }));
+    const text = page.byId("direct-checklist-list").textContent;
+    expect(de.chkFixPortStandalone).toBeTruthy();
+    expect(text).toContain(de.chkFixPortStandalone.replace("{port}", "48151"));
+    expect(text).toContain(de.chkDetailPortOther.replace("{holder}", "VJster 1.5.0"));
+    expect(text).not.toContain("English fallback");
+  });
+});

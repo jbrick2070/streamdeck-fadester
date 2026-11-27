@@ -144,6 +144,43 @@ describe("bridge (isolated world)", () => {
     expect(r.sent.at(-1)).toEqual({ kind: "page-state", state: NO_VIDEO, host: null, inReplyTo: null, played: false });
   });
 
+  it("drops a held-back older report when an answer goes out, so the answer stays the last word", () => {
+    let time = 1000;
+    const timers: Array<{ at: number; fn: () => void }> = [];
+    const clock = {
+      now: () => time,
+      setTimeout: (fn: () => void, ms: number) => { const timer = { at: time + ms, fn }; timers.push(timer); return timer; },
+      clearTimeout: (handle: unknown) => { const i = timers.indexOf(handle as { at: number; fn: () => void }); if (i >= 0) timers.splice(i, 1); }
+    };
+    const advance = (ms: number): void => {
+      time += ms;
+      for (const timer of timers.splice(0)) if (timer.at <= time) timer.fn(); else timers.push(timer);
+    };
+    const w = fakeWindow();
+    const r = fakeRuntime();
+    installBridge(w.win as unknown as BridgeWindow, r.runtime as unknown as BridgeRuntime, { clock, reportMs: 50 });
+    const post = (rate: number, title: string, inReplyTo: string | null = null) =>
+      w.fire("message", { source: w.win, data: { source: FROM_PAGE, kind: "state", state: { ...playingState, rate, title }, inReplyTo, played: true } });
+    const sent = () => (r.sent as { kind: string; state: { rate: number; title: string }; inReplyTo: string | null }[])
+      .map((m) => (m.kind === "page-state" ? `${m.inReplyTo ?? "-"} ${m.state.rate} ${m.state.title}` : `${m.inReplyTo} ${m.kind}`));
+    // The adapter's refresh() reports at once, past its own coalescer; a change 10 ms later is held by the bridge.
+    post(1, "A");
+    advance(10);
+    post(1, "A2");
+    advance(10);
+    // The deck's intent is answered with the newer rate before the held report is due.
+    post(1.25, "A2", "hk1-1");
+    advance(100);
+    expect(sent()).toEqual(["- 1 A", "hk1-1 1.25 A2"]);
+    // An error answer carries no state: a held report still goes out after it.
+    post(1.5, "B");
+    advance(10);
+    post(1.75, "B");
+    w.fire("message", { source: w.win, data: { source: FROM_PAGE, kind: "error", code: "unsupported", message: "nope", inReplyTo: "i3" } });
+    advance(100);
+    expect(sent().at(-1)).toBe("- 1.75 B");
+  });
+
   it("relays page errors and drops anything else", () => {
     const w = fakeWindow();
     const r = fakeRuntime();

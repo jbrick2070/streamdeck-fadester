@@ -165,6 +165,37 @@ describe("Adapter: speed (R-SPD-1..4)", () => {
     expect(s.element).toBe(1);
   });
 
+  it("never lowers the rate on a step up, nor raises it on a step down, from outside the player's range", () => {
+    const { adapter, s, reports } = setup();
+    // Above the player's top rate (the deck's extended range, or another extension, wrote 4.5x straight to the element).
+    s.element = 4.5;
+    const up = intent({ type: "speed.step", delta: 0.25, direct: false, hold: true });
+    adapter.handle(up);
+    expect(s.element).toBe(4.5);
+    expect(s.calls).toEqual([]);
+    // Answered with the real state, not refused.
+    expect(last(reports)).toMatchObject({ kind: "state", inReplyTo: up.id, state: { rate: 4.5 } });
+    // A step down from there goes into the range, as before.
+    adapter.handle(intent({ type: "speed.step", delta: -0.25, direct: false, hold: false }));
+    expect(s.element).toBe(4);
+    // Below the bottom: a step down leaves it, a step up comes into the range.
+    s.element = 0.1;
+    s.apiRate = 0.1;
+    s.calls.length = 0;
+    const down = intent({ type: "speed.step", delta: -0.25, direct: false, hold: false });
+    adapter.handle(down);
+    expect(s.element).toBe(0.1);
+    expect(s.calls).toEqual([]);
+    expect(last(reports)).toMatchObject({ kind: "state", inReplyTo: down.id, state: { rate: 0.1 } });
+    adapter.handle(intent({ type: "speed.step", delta: 0.25, direct: false, hold: false }));
+    expect(s.element).toBeGreaterThan(0.1);
+    // At the top itself a step up stays there, as it always did.
+    s.element = 4;
+    s.apiRate = 4;
+    adapter.handle(intent({ type: "speed.step", delta: 0.25, direct: false, hold: false }));
+    expect(s.element).toBe(4);
+  });
+
   it("writes the element directly in extended range and marks it (R-SPD-2)", () => {
     const { adapter, s, reports } = setup();
     adapter.handle(intent({ type: "speed.set", rate: 4.5, direct: true, hold: false }));

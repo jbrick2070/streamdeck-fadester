@@ -205,7 +205,11 @@ export class SpeedDialController extends Base {
     if (blocked(view, "speed")) return this.sink.alert();
     const step: RateStep = pressed ? this.settings.fineStep : this.settings.step;
     const base = this.pending.get(view.state) ?? view.state?.rate ?? 1;
-    const rate = nextRate(base, Math.max(-1000, Math.min(1000, Math.trunc(ticks))), step, this.range(view));
+    const notches = Math.max(-1000, Math.min(1000, Math.trunc(ticks)));
+    const rate = nextRate(base, notches, step, this.range(view));
+    // From outside the range nextRate lands on the nearer end, which may be the other way (a turn up from 4.5x on a
+    // player that stops at 4x): such a turn leaves the rate as it is, as a step key does (adapter-core.ts).
+    if ((notches > 0 && rate < base) || (notches < 0 && rate > base)) return this.render();
     this.pending.set(rate);
     this.out.push(rate);
     this.render();
@@ -222,8 +226,15 @@ export class SpeedDialController extends Base {
     this.down = false;
     if (!wasDown || this.turnedWhileDown) return;
     this.out.cancel();
+    // Like a turn or a tap: only the chosen targets that can take a speed change now (Both: not a page with no video).
+    const targets = this.readyTargets("speed");
+    if (targets.length === 0) {
+      this.pending.clear();
+      this.render();
+      return this.sink.alert();
+    }
     this.pending.set(1);
-    this.pending.sentAs(this.sendNow({ type: "speed.reset" }));
+    this.pending.sentAs(this.sendNow({ type: "speed.reset" }, targets));
     this.render();
   }
 

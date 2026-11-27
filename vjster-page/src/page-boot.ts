@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // VJster OBS page: start-up, with the browser parts passed in so it is tested
 // in Node (docs/vjster/REQUIREMENTS.md R-OBS-1..2). Order matters: the token
-// leaves the page's address before YouTube's script is added, and a script
-// that fails to load is tried again, because OBS does not reload the source.
+// leaves the page's address before YouTube's script is added (kept in the
+// history entry's state, so a reload of the stripped address still works), and
+// a script that fails to load is tried again, because OBS does not reload the
+// source by itself.
 
 import type { SocketLike } from "../../vjster-extension/src/link-client.js";
 import type { EmbedPlayer } from "./embed-control.js";
 import { ObsPage, playerVars } from "./page-core.js";
-import { readParams, setupProblem, withoutToken } from "./page-params.js";
+import { fragmentHasToken, readParams, savedToken, setupProblem, withoutToken, type SavedPageState } from "./page-params.js";
 import { note, pageLanguage } from "./page-text.js";
 import type { SettleTimers } from "./settle.js";
 
@@ -28,8 +30,10 @@ export interface PlayerOptions {
 /** The browser as the page's start-up uses it. */
 export interface BootEnv {
   readonly location: { readonly search: string; readonly hash: string; readonly port: string; readonly pathname: string; readonly origin: string };
-  /** history.replaceState with this address. */
-  replaceAddress(url: string): void;
+  /** history.replaceState(state, "", url). */
+  replaceAddress(url: string, state: SavedPageState | null): void;
+  /** history.state: what an earlier start of this page saved in its history entry (it survives a reload). */
+  readonly historyState?: unknown;
   /** Show a line on the page ("" clears it). */
   show(text: string): void;
   /** The browser's language (navigator.language), used when the address names none. */
@@ -49,9 +53,16 @@ export interface BootEnv {
 
 /** Start the page; returns it, or null when its address is incomplete (the page then says why). */
 export function bootPage(env: BootEnv): ObsPage | null {
-  const params = readParams(env.location.search, env.location.hash, env.location.port);
-  // Take the token out of the address before any other script can read it.
-  env.replaceAddress(withoutToken(env.location.pathname, env.location.search));
+  const fromAddress = readParams(env.location.search, env.location.hash, env.location.port);
+  // A token in the fragment always wins (OBS re-applied the URL, perhaps with a new token). Without one, this is a
+  // reload of the address the page stripped below (OBS's Refresh, or "Refresh browser when scene becomes active"),
+  // and the token is the one the page kept in its history entry.
+  const token = fragmentHasToken(env.location.hash) ? fromAddress.token : savedToken(env.historyState);
+  const params = { ...fromAddress, token };
+  // Take the token out of the address before any other script can read it: YouTube's script puts the page's address
+  // in the embed it builds. The token stays in the history entry's state, which is not part of any address and is
+  // not written to Storage.
+  env.replaceAddress(withoutToken(env.location.pathname, env.location.search), token === null ? null : { token });
   // The notes' language: the plugin's hl= (Stream Deck's language), else the browser's, else English (PLAN.md 8.6).
   const lang = pageLanguage(params.hl ?? env.language);
   env.setLanguage?.(lang);

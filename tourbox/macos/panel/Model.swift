@@ -510,7 +510,9 @@ enum Readiness {
             }
             return reason.isEmpty ? nil : reason
         }
-        // A VJster line: "Video 1x · …", or since FIX-6 "<title> · [site · ]Video 1x · …" (bridge/VjsterDesk.cs Describe).
+        // A VJster line: "Video 1x · …", or since FIX-6 "<title> · [site · ]Video 1x · …" (bridge/VjsterDesk.cs Describe), and the
+        // OBS page's own reports "OBS page · [<title> · ]Video 1x · …" (VjsterDesk.ReportLine): both targets alike. Lines that say a
+        // target has no video ("VJster: no video is …") are feedback for neither.
         if line.hasPrefix("Video ") || line.contains(" · Video ") {
             return line
         }
@@ -706,6 +708,10 @@ enum ModelTests {
         try check(Readiness.hostFeedback(from: "RESULT vjster.speed.up: Video 1.25x · 1080p · playing") == "Video 1.25x · 1080p · playing", "Host RESULT feedback")
         try check(Readiness.hostFeedback(from: "Clip · Video 1x · Auto (720p) · playing") == "Clip · Video 1x · Auto (720p) · playing" &&
                   Readiness.hostFeedback(from: "News · www.example.com · Video 1x · paused") == "News · www.example.com · Video 1x · paused", "VJster lines that name the video are feedback")
+        try check(Readiness.hostFeedback(from: "OBS page · Clip · Video 1x · playing") == "OBS page · Clip · Video 1x · playing" &&
+                  Readiness.hostFeedback(from: "OBS page · Video 1x · paused") == "OBS page · Video 1x · paused" &&
+                  Readiness.hostFeedback(from: "VJster: no video is loaded in the OBS page.") == nil &&
+                  Readiness.hostFeedback(from: "VJster: no video is playing in Chrome.") == nil, "the OBS page's reports are feedback as Chrome's are")
         try check(Readiness.hostFeedback(from: "RESULT fader.forward: T-bar right · T-bar 0%") == "T-bar right · T-bar 0%" &&
                   Readiness.hostFeedback(from: "RESULT fader.back: T-bar left · T-bar 0 %") == L("macTbarCw"), "T-bar hints: a finished throw reads as is, back at rest says turn clockwise")
         let picks = Readiness.pickedLayers(#"LAYER-PICKED {"layer":2,"scene":"Kit Visuals","source":"Kit \u203A Title"}"#)

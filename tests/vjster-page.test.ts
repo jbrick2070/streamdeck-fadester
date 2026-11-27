@@ -52,10 +52,14 @@ describe("page address (R-OBS-2)", () => {
     expect(readPort("65535")).toBe(65535);
   });
 
-  it("builds the link address and removes the token from the page's own address", () => {
+  it("builds the link address, and the page's own address without the fragment its token lives in", () => {
     expect(linkUrl({ port: 48150, token: TOKEN })).toBe(`ws://127.0.0.1:48150/?token=${TOKEN}`);
+    // The token is only ever after `#`: the address kept is the path and the query, so the fragment goes with it.
+    const address = new URL(`http://127.0.0.1:48150/obs?v=${VIDEO}&mute=1#token=${TOKEN}`);
+    expect(withoutToken(address.pathname, address.search)).toBe(`/obs?v=${VIDEO}&mute=1`);
+    expect(withoutToken("/obs", "")).toBe("/obs");
+    // A token put in the query by mistake (it is never read from there) is not kept in the address either.
     expect(withoutToken("/obs", `?v=${VIDEO}&token=${TOKEN}`)).toBe(`/obs?v=${VIDEO}`);
-    expect(withoutToken("/obs", `?token=${TOKEN}`)).toBe("/obs");
   });
 
   it("says what is missing before it starts", () => {
@@ -656,15 +660,22 @@ describe("the page's link client speaks as the obs target (R-INT-3)", () => {
 });
 
 describe("the page's start-up (R-OBS-2)", () => {
-  function env(search: string, hash: string, opts: { scriptFails?: number; noYT?: boolean } = {}) {
+  function env(search: string, hash: string, opts: { scriptFails?: number; noYT?: boolean; historyState?: unknown } = {}) {
     const log: string[] = [];
+    /** What history.replaceState was given as the entry's state, and the link addresses opened. */
+    const states: unknown[] = [];
+    const links: string[] = [];
     const shown: string[] = [];
     const timers: { fn: () => void; ms: number }[] = [];
     let ready: (() => void) | null = null;
     let fails = opts.scriptFails ?? 0;
     const e: BootEnv = {
       location: { search, hash, port: "48150", pathname: "/obs", origin: "http://127.0.0.1:48150" },
-      replaceAddress: (url) => void log.push(`address ${url}`),
+      replaceAddress: (url, state) => {
+        log.push(`address ${url}`);
+        states.push(state);
+      },
+      historyState: opts.historyState,
       show: (text) => void shown.push(text),
       addScript: (src, onError) => {
         log.push(`script ${src}`);
@@ -680,8 +691,9 @@ describe("the page's start-up (R-OBS-2)", () => {
         log.push(`player ${id}`);
         return opts.noYT ? null : (fakeEmbed().player as never);
       },
-      openSocket: () => {
+      openSocket: (url) => {
         log.push("socket");
+        links.push(url);
         return { readyState: 0, send: () => undefined, close: () => undefined, onopen: null, onclose: null, onerror: null, onmessage: null };
       },
       timers: {
@@ -693,8 +705,50 @@ describe("the page's start-up (R-OBS-2)", () => {
       },
       random: () => 0
     };
-    return { e, log, shown, timers, ready: () => ready?.() };
+    return { e, log, shown, timers, states, links, ready: () => ready?.() };
   }
+
+  it("keeps its token across a reload of the stripped address (OBS's Refresh), without putting it back in the address", () => {
+    const first = env(`?v=${VIDEO}&mute=1`, `#token=${TOKEN}`);
+    const page = bootPage(first.e);
+    expect(first.links).toEqual([`ws://127.0.0.1:48150/?token=${TOKEN}`]);
+    // The address YouTube's script can see is clean; the token rides in the history entry's state, not in Storage.
+    expect(first.log[0]).toBe(`address /obs?v=${VIDEO}&mute=1`);
+    expect(first.states).toEqual([{ token: TOKEN }]);
+    page?.stop();
+    // OBS reloads the current entry: the stripped address, no fragment, and the state the browser kept for it.
+    const reload = env(`?v=${VIDEO}&mute=1`, "", { historyState: first.states[0] });
+    const again = bootPage(reload.e);
+    expect(again).not.toBeNull();
+    expect(reload.shown.some((text) => /no token/.test(text))).toBe(false);
+    expect(reload.links).toEqual([`ws://127.0.0.1:48150/?token=${TOKEN}`]);
+    expect(reload.log[0]).toBe(`address /obs?v=${VIDEO}&mute=1`);
+    expect(reload.states).toEqual([{ token: TOKEN }]);
+    again?.stop();
+  });
+
+  it("lets a token in the fragment win over a saved one (the URL re-applied with a new token)", () => {
+    const NEW = "fedcba9876543210fedcba9876543210";
+    const x = env(`?v=${VIDEO}`, `#token=${NEW}`, { historyState: { token: TOKEN } });
+    const page = bootPage(x.e);
+    expect(x.links).toEqual([`ws://127.0.0.1:48150/?token=${NEW}`]);
+    expect(x.states).toEqual([{ token: NEW }]);
+    page?.stop();
+    // A fragment with a broken token is the address's say too: no fallback to the old one.
+    const broken = env(`?v=${VIDEO}`, "#token=nope", { historyState: { token: TOKEN } });
+    expect(bootPage(broken.e)).toBeNull();
+    expect(broken.shown[0]).toMatch(/no token/);
+    expect(broken.states).toEqual([null]);
+  });
+
+  it("ignores a saved state that is not a token of its own (another page's state, a malformed value)", () => {
+    for (const historyState of [null, undefined, "x", { token: "ABC" }, { token: 5 }, { t: TOKEN }, [TOKEN]]) {
+      const x = env(`?v=${VIDEO}`, "", { historyState });
+      expect(bootPage(x.e), JSON.stringify(historyState)).toBeNull();
+      expect(x.shown[0]).toMatch(/no token/);
+      expect(x.links).toEqual([]);
+    }
+  });
 
   it("takes the token out of the address before it adds YouTube's script", () => {
     const x = env(`?v=${VIDEO}&mute=1`, `#token=${TOKEN}`);

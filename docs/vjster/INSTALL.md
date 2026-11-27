@@ -18,7 +18,7 @@ Quick start in other languages: [Deutsch](../quickstart/companion/de.md#vjster-i
 
 - **Install the extension only once.** Fadester for OBS and Fadester Companion already contain VJster's link. Do not also install the separate VJster plugin: both would want the same port (48150).
 - **Everything stays on your computer.** The extension talks only to your own computer; nothing goes to the internet except what YouTube's player loads.
-- **Keyboard hotkeys (optional, off until you turn them on).** Tick **Keyboard hotkeys** on the extension's options page and `[` slows the video, `]` speeds it up and `\` takes it back to 1x, on the page you are looking at, with or without a deck. They are ignored while you type in a text box, and with Ctrl, Alt or Command held. Untick the box to give the keys back.
+- **Keyboard hotkeys (optional, off until you turn them on).** Tick **Keyboard hotkeys** on the extension's options page and `[` slows the video, `]` speeds it up and `\` takes it back to 1x, on the page you are looking at, with or without a deck. They are ignored while you type in a text box, and with Ctrl, Alt or Command held (on a Mac, a layout that types `[`, `]` or `\` with Option still works). On a layout whose `[`, `]` and `\` keys type a letter of another script (Russian or Ukrainian, for example), the same three physical keys work without switching to English. Untick the box to give the keys back.
 - **Lock it to this extension (optional):** the extension's options page shows its id (`daohboebokfmamkblejcpbblfnaijgnb`); paste it into **Only this extension** on VJster's settings page.
 
 ## Optional: play the video inside OBS

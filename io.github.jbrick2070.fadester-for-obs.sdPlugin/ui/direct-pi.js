@@ -432,7 +432,7 @@
     if (id === "vjster_port_holder") {
       if (code === "port_free") return T("chkDetailPortFree", metaParams);
       if (code === "port_self") return T("chkDetailPortSelf", metaParams);
-      if (code === "port_other") return T("chkDetailPortOther", metaParams);
+      if (code === "port_other" || code === "port_standalone") return T("chkDetailPortOther", metaParams);
       if (code === "port_unknown_holder") return T("chkDetailPortInUse", metaParams);
     }
     return item.detail || "";
@@ -460,6 +460,7 @@
     if (item.id === "visual_sidechain" && code === "vs_off") return T("chkFixVsOff");
     if (item.id === "playlister" && code === "missing") return T("chkFixPlMissing");
     if (code === "port_other") return T("chkFixPortOther", metaParams);
+    if (code === "port_standalone") return T("chkFixPortStandalone", metaParams);
     if (code === "port_unknown_holder") return T("chkFixPortUnknown", metaParams);
     return item.fix || "";
   }

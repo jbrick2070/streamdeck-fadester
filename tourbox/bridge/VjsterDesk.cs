@@ -190,11 +190,34 @@ internal sealed class VjsterDesk(VjsterLink link, double fastSpeed = 2.0, double
             case "vjster.playPause": type = "transport.toggle"; break;
             default: type = "state.get"; break;
         }
+        open = Ready(open, NeedOf(id));
         if (open.Length == 1)
             return FormatReply(id, open[0], await link.Request(type, fill, ReplyTimeout, open[0]));
         var replies = await Task.WhenAll(open.Select(t => link.Request(type, fill, ReplyTimeout, t)));
         return $"Chrome: {FormatReply(id, open[0], replies[0])} | OBS: {FormatReply(id, open[1], replies[1])}";
     }
+
+    /** What an action needs of a target; null for a status read, which every open target answers. */
+    static string? NeedOf(string id) =>
+        id.StartsWith("vjster.speed.", StringComparison.Ordinal) ? "speed"
+        : id.StartsWith("vjster.quality.", StringComparison.Ordinal) ? "quality"
+        : id == "vjster.playPause" ? "transport" : null;
+
+    /**
+     * The open targets an action goes to, as the plugin's host chooses them (controllers.ts readyTargets): with two open,
+     * only those whose last report has a video and the capability the action needs (the OBS page never has quality), and
+     * any that has not reported yet. When
+     * neither can take it, both still get it, so a target's own answer says why; one open target always gets it.
+     */
+    string[] Ready(string[] open, string? need)
+    {
+        if (need == null || open.Length < 2) return open;
+        var ready = open.Where(t => CanTake(link.GetLastState(t), need)).ToArray();
+        return ready.Length > 0 ? ready : open;
+    }
+
+    /** A target can take an intent needing `need`: it has a video with that capability, or has not reported yet (never left out for that). */
+    internal static bool CanTake(VjsterState? s, string need) => s == null || (s.Rate != null && s.Capabilities.Contains(need));
 
     static string FormatReply(string id, string target, (VjsterState? State, VjsterError? Error)? reply)
     {
@@ -242,6 +265,7 @@ internal sealed class VjsterDesk(VjsterLink link, double fastSpeed = 2.0, double
         string[] candidates = this.targetChoice switch { "obs" => ["obs"], "both" => ["browser", "obs"], _ => ["browser"] };
         string[] open = candidates.Where(link.IsConnected).ToArray();
         if (open.Length == 0) return await Dispatch("vjster.status");
+        open = Ready(open, "speed");
         var replies = new List<string>();
         foreach (var target in open)
         {
@@ -274,6 +298,7 @@ internal sealed class VjsterDesk(VjsterLink link, double fastSpeed = 2.0, double
         string[] candidates = this.targetChoice switch { "obs" => ["obs"], "both" => ["browser", "obs"], _ => ["browser"] };
         string[] open = candidates.Where(link.IsConnected).ToArray();
         if (open.Length == 0) return await Dispatch("vjster.status");
+        open = Ready(open, "speed");
         var replies = new List<string>();
         foreach (var target in open)
         {
@@ -322,6 +347,16 @@ internal sealed class VjsterDesk(VjsterLink link, double fastSpeed = 2.0, double
         return string.Join(" · ", parts);
     }
 
+    /**
+     * The Activity line for a target's own report (a new video, play, pause): Chrome's as it always read, the OBS page's
+     * named as such, so with Target Both the two can be told apart and "no video" is said of the target that has none.
+     */
+    public static string ReportLine(string target, VjsterState s)
+    {
+        string line = Describe(s, false, target);
+        return target == "obs" && !line.StartsWith("VJster: ", StringComparison.Ordinal) ? "OBS page · " + line : line;
+    }
+
     static string ShortTitle(string title)
     {
         var t = string.Join(" ", title.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
@@ -356,7 +391,7 @@ internal sealed class VjsterHost : IAsyncDisposable
         Desk = new VjsterDesk(Link, cfg.GamepadFastSpeed, cfg.GamepadSlowSpeed, cfg.VjsterTarget);
         // Spontaneous reports (a new video, play, pause). The line starts with the video's title, which is text from a web
         // page: the panel takes no order from such a line (PanelLine).
-        Link.StateReceived += s => { if (s.InReplyTo == null) log(VjsterDesk.Describe(s, false)); };
+        Link.StateReceived += r => { if (r.State.InReplyTo == null) log(VjsterDesk.ReportLine(r.Target, r.State)); };
     }
 
     static string? FindObsPageDirectory()
@@ -423,12 +458,14 @@ internal sealed class VjsterHost : IAsyncDisposable
     /// <summary>
     /// What Activity says while another program holds the VJster port. When that program answers as the suite's own
     /// Stream Deck or OpenDeck plugin, the line says so ("is held by the VJster actions of"): the deck has the video, which
-    /// is no fault, and the panels show a grey light for it. Only those two known names are ever printed.
+    /// is no fault, and the panels show a grey light for it. Only those two known names are ever printed. Once that plugin's
+    /// "Keep the link on" is ticked (it ticks itself when an OBS page first connects), it holds the port while Stream Deck
+    /// runs, so removing the actions alone frees nothing: the line names the tick box and where it is first.
     /// </summary>
     internal static string PortInUseLine(int port, string? holderProduct) =>
         holderProduct is "Fadester for OBS" or "VJster"
-            ? $"VJster port {port} is held by the VJster actions of {holderProduct} on your Stream Deck or OpenDeck: the deck controls the video. To use this controller for VJster instead, remove them from the deck, or choose another port here and on the extension's options page. Trying again every 30 s."
-            : $"VJster port {port} is in use, probably by the VJster actions in your Stream Deck or OpenDeck software. Remove them from the deck, or choose another port here and on the extension's options page. Trying again every 30 s.";
+            ? $"VJster port {port} is held by the VJster actions of {holderProduct} on your Stream Deck or OpenDeck: the deck controls the video. To use this controller for VJster instead, untick Keep the link on under OBS page in a VJster action's settings there, then remove the VJster actions from the deck; or quit Stream Deck or OpenDeck; or choose another port here and on the extension's options page. Trying again every 30 s."
+            : $"VJster port {port} is in use, probably by the VJster actions in your Stream Deck or OpenDeck software. Untick Keep the link on under OBS page in a VJster action's settings there, then remove the VJster actions from the deck; or quit Stream Deck or OpenDeck; or choose another port here and on the extension's options page. Trying again every 30 s.";
 
     public ValueTask DisposeAsync() => Link.DisposeAsync();
 }

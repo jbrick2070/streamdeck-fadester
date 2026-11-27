@@ -104,7 +104,7 @@ In **Assignments**, set **Layer 1** and **Layer 2** to two items in your mix sce
 
 ### VJster: on your Stream Deck
 
-If the VJster actions of **Fadester for OBS** are on a Stream Deck or OpenDeck page, they hold the port. The **VJster** light then reads *VJster: on your Stream Deck* in grey: the deck controls the video, and nothing is wrong. To control it from this controller instead, remove them from the deck or choose another port in both places. Fadester Companion tries the port again every 30 seconds.
+If the VJster actions of **Fadester for OBS** are on a Stream Deck or OpenDeck page, they hold the port. The **VJster** light then reads *VJster: on your Stream Deck* in grey: the deck controls the video, and nothing is wrong. To control it from this controller instead, first untick **Keep the link on** under **OBS page** in the settings of a VJster action on the deck (it ticks itself the first time an OBS page connects, and then holds the port while Stream Deck runs), then remove the VJster actions from the deck. Or quit Stream Deck or OpenDeck, or choose another port in both places. Fadester Companion tries the port again every 30 seconds.
 
 ## Assignments and feel
 

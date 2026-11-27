@@ -88,6 +88,8 @@ const KEY_BY_CODE: Readonly<Record<string, string>> = { BracketLeft: KEY_SLOWER,
 export function hotkeyOf(event: Pick<KeyLike, "key" | "code" | "shiftKey">): string | null {
   const k = event.key;
   if (k === KEY_SLOWER || k === KEY_FASTER || k === KEY_RESET) return k;
+  // A keydown made by a script (Chrome's autofill sends one) may have no key at all.
+  if (typeof k !== "string") return null;
   // Cheap first: one character (two UTF-16 units at most) above Latin Extended-B, before any regular expression.
   if (k.length === 0 || k.length > 2 || k.charCodeAt(0) <= 0x24f) return null;
   if (event.shiftKey === true || !/^\p{L}$/u.test(k) || /\p{Script=Latin}/u.test(k)) return null;
@@ -191,6 +193,9 @@ export function installHotkeys(win: HotkeyWindow, storage: HotkeyStorage, deps: 
     // Option held is what the layout types there (German Option+5 is [). A US Mac's Option+[ types “, not [.
     const macOption = mac && event.altKey && !event.ctrlKey && !event.metaKey && event.key === hotkey;
     if (event.metaKey || ((event.ctrlKey || event.altKey) && !altGraph && !macOption)) return;
+    // The physical-key fallback (a non-Latin letter on the [ ] \ keys) takes no modifier at all, AltGr included: AltGr
+    // and Option are allowed only because some layouts need them to type the character [ ] \ itself.
+    if (hotkey !== event.key && (event.ctrlKey || event.altKey || altGraph)) return;
     // Holding a step key keeps stepping; holding the reset key resets once.
     if (event.repeat && hotkey === KEY_RESET) return;
     if (isEditableTarget(event.composedPath?.()[0] ?? event.target)) return;

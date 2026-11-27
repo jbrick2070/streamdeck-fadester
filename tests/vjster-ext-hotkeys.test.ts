@@ -23,7 +23,7 @@ import { Adapter, type Report } from "../vjster-extension/src/adapter-core.js";
 import { installBridge, type BridgeRuntime, type BridgeWindow } from "../vjster-extension/src/bridge-core.js";
 import { videoControl, type PlayableVideo } from "../vjster-extension/src/generic-video.js";
 import {
-  KEY_FASTER, KEY_RESET, KEY_SLOWER, hotkeyIntent, installHotkeys, isEditableTarget,
+  KEY_FASTER, KEY_RESET, KEY_SLOWER, hotkeyIntent, hotkeyOf, installHotkeys, isEditableTarget,
   type HotkeyStorage, type HotkeyWindow, type KeyLike
 } from "../vjster-extension/src/hotkeys.js";
 import { FROM_BRIDGE, readBridgeMessage, readIntent } from "../vjster-extension/src/messages.js";
@@ -195,6 +195,9 @@ describe("the keys and their intents (R-KEY-2)", () => {
   it("leaves every other key to the page", async () => {
     const t = await setup(true);
     for (const k of ["{", "a", "Enter", "Escape", " ", "ArrowRight"]) expect(t.press(k), k).toEqual({ prevented: 0, stopped: 0 });
+    // A keydown a script made with no key at all (Chrome's autofill sends one): ignored, never an error.
+    for (const k of [undefined, null, 5]) expect(() => t.press(k as unknown as string, { code: "BracketLeft" }), String(k)).not.toThrow();
+    expect(hotkeyOf({ key: undefined as unknown as string, code: "BracketLeft" })).toBeNull();
     expect(t.posted).toEqual([]);
   });
 
@@ -300,6 +303,14 @@ describe("hotkeys never take a key that is the page's own (R-KEY-3)", () => {
     expect(t.press("/", { code: "Backslash", shiftKey: true }).prevented).toBe(0);
     expect(t.press("х", { code: "BracketLeft", ctrlKey: true }).prevented).toBe(0);
     expect(t.press("х", { code: "BracketLeft", altKey: true }).prevented).toBe(0);
+    // Nor with AltGr (Windows: Ctrl+Alt with AltGraph; Linux: Alt with AltGraph), nor Option on a Mac.
+    expect(t.press("х", { code: "BracketLeft", ctrlKey: true, altKey: true, altGraph: true }).prevented).toBe(0);
+    expect(t.press("х", { code: "BracketLeft", altKey: true, altGraph: true }).prevented).toBe(0);
+    expect(t.press("х", { code: "BracketLeft", altGraph: true }).prevented).toBe(0);
+    expect(t.press("х", { code: "BracketLeft", metaKey: true }).prevented).toBe(0);
+    const mac = await setup(true, "www.youtube.com", 1, undefined, { userAgentData: { platform: "macOS" } });
+    expect(mac.press("х", { code: "BracketLeft", altKey: true }).prevented).toBe(0);
+    expect(mac.posted).toEqual([]);
     expect(t.press("х", { code: "BracketLeft", target: { tagName: "INPUT" } }).prevented).toBe(0);
     expect(t.press("х", { code: "BracketLeft", isComposing: true }).prevented).toBe(0);
     expect(t.posted).toEqual([]);

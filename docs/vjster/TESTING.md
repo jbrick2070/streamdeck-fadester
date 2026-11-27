@@ -107,8 +107,10 @@ on and a YouTube video playing:
 - On a Mac with the German layout, press Option+5 (`[`), Option+6 (`]`) and
   Shift+Option+7 (`\`). Expected: slower, faster, 1x. With the U.S. layout,
   Option+`[` (it types `“`): nothing, and the page gets the key.
-- On Windows with the Russian layout, press the keys right of P (`х`, `ъ`) and
-  `\`. Expected: slower, faster, 1x, without switching to English. Click the
+- On Windows with the Russian layout (one of the layouts whose `[ ] \` keys type
+  a non-Latin letter), press the keys right of P (`х`, `ъ`) and
+  `\`. Expected: slower, faster, 1x, without switching to English. With AltGr
+  (right Alt) held: nothing. Click the
   comment box and type them: the letters appear and the speed does not change.
 - On Windows with the German layout, press `ü`, `+` and `#`: nothing, and the
   page gets the keys. On Windows with the U.S. layout, Alt+`]`: nothing.

@@ -22,10 +22,14 @@ export const LAYER_OPERATION_LABELS: Record<LayerOperation, StringKey> = {
 interface LayerSink {
   render(svg: string): Promise<void>;
   showAlert(): Promise<void>;
+  /** Saves the control's settings when the plugin itself changes them (a scene rename followed, a UUID recorded). */
+  saveSettings?(settings: LayerSettings): Promise<void>;
 }
 
 export class ObsLayerInstanceController {
   private settings: Required<LayerSettings>;
+  /** The settings as saved, which a followed rename updates and saves again. */
+  private raw: LayerSettings;
   private unwatch: (() => void) | undefined;
   private readonly limiter: CellRateLimiter<string>;
   private lastError: LocalText | null = null;
@@ -38,9 +42,24 @@ export class ObsLayerInstanceController {
   /** Unsubscribes this control from language changes (PLAN.md 11.1). */
   private offLanguage: () => void = () => {};
   private readonly onChanged = (): void => {
+    this.followBinding();
     if (this.layers.client.isConnected() && !this.layers.getScene(this.settings).error) this.lastError = null;
     this.render();
   };
+
+  /** Keeps a fixed scene through a rename in OBS, by its UUID (name-binding.ts). */
+  private followBinding(): void {
+    if (this.settings.scope !== "fixed") return;
+    const next = this.layers.client.followBinding?.("scene", this.settings.sceneName, this.settings.sceneUuid);
+    if (!next) return;
+    this.settings = { ...this.settings, sceneName: next.name, sceneUuid: next.uuid };
+    this.raw = { ...this.raw, sceneName: next.name, sceneUuid: next.uuid };
+    if (this.visible && this.unwatch) {
+      this.unwatch();
+      this.unwatch = this.layers.watch(this.settings);
+    }
+    void this.sink.saveSettings?.(this.raw);
+  }
 
   public constructor(
     private readonly layers: LayerController,
@@ -49,6 +68,7 @@ export class ObsLayerInstanceController {
     settings?: LayerSettings
   ) {
     this.settings = normalizeLayerSettings(settings);
+    this.raw = settings ?? {};
     this.limiter = new CellRateLimiter((svg) => sink.render(svg), 100);
   }
 
@@ -60,6 +80,7 @@ export class ObsLayerInstanceController {
     this.layers.client.on("statusChanged", this.onChanged);
     this.layers.client.on("directStateChanged", this.onChanged);
     this.unwatch = this.layers.watch(this.settings);
+    this.followBinding();
     this.render();
   }
 
@@ -68,6 +89,7 @@ export class ObsLayerInstanceController {
     this.offLanguage();
     this.offLanguage = () => {};
     this.unwatch?.();
+    this.unwatch = undefined;
     this.layers.off("changed", this.onChanged);
     this.layers.client.off("statusChanged", this.onChanged);
     this.layers.client.off("directStateChanged", this.onChanged);
@@ -79,9 +101,12 @@ export class ObsLayerInstanceController {
     // Ticks counted under the old settings are not turned into another kind of turn.
     this.pendingTicks = 0;
     this.unwatch?.();
+    this.unwatch = undefined;
     this.settings = normalizeLayerSettings(settings);
+    this.raw = settings;
     this.lastError = null;
     if (this.visible) this.unwatch = this.layers.watch(this.settings);
+    this.followBinding();
     this.render();
   }
 
@@ -227,7 +252,8 @@ export class ObsLayerControlAction extends SingletonAction<LayerSettings> {
     const controller = new ObsLayerInstanceController(this.layers, {
       render: (svg) => control.isDial() ? control.setFeedback({ canvas: toStripUri(svg) }) :
         control.isKey() ? control.setImage(toSvgDataUri(svg)) : Promise.resolve(),
-      showAlert: () => control.showAlert()
+      showAlert: () => control.showAlert(),
+      saveSettings: (next) => control.setSettings(next)
     }, dial, ev.payload.settings);
     this.instances.set(control.id, controller);
     controller.appear();

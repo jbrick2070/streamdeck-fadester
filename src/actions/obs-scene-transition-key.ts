@@ -45,6 +45,8 @@ import { customCaption } from "../obs/preset-captions.js";
 interface KeyImageSink {
   setImage(image: string): Promise<void>;
   showAlert(): Promise<void>;
+  /** Saves the key's settings when the plugin itself changes them (a rename in OBS followed, a UUID recorded). */
+  saveSettings?(settings: ObsSceneTransitionKeySettings): Promise<void>;
 }
 
 function normalizeOperation(raw: unknown): ObsSceneOperation {
@@ -87,6 +89,8 @@ export function migrateScenePresetSettings(
 
 export class ObsSceneTransitionKeyInstanceController {
   private settings: Required<ObsSceneTransitionKeySettings>;
+  /** The settings as saved, which a followed rename updates and saves again. */
+  private raw: ObsSceneTransitionKeySettings;
   private visible = false;
   /** Unsubscribes this control from language changes (PLAN.md 11.1). */
   private offLanguage: () => void = () => {};
@@ -109,9 +113,19 @@ export class ObsSceneTransitionKeyInstanceController {
     }
     // A volume change, a T-bar move or another scene event says nothing about why this press failed: the reason stays
     // on the key until what refused it may have gone (the scene list, Program, Preview or Studio Mode changed).
+    this.followBinding();
     if (this.lastError !== null && this.sceneSignature() !== this.lastErrorScenes) this.lastError = null;
     this.renderNow();
   };
+
+  /** Keeps a scene chosen by name through a rename in OBS, by its UUID (name-binding.ts); placeholders are left alone. */
+  private followBinding(): void {
+    const next = this.client.followBinding?.("scene", this.settings.sceneTarget, this.settings.sceneUuid);
+    if (!next) return;
+    this.settings = { ...this.settings, sceneTarget: next.name, sceneUuid: next.uuid };
+    this.raw = { ...this.raw, sceneTarget: next.name, sceneUuid: next.uuid };
+    void this.sink.saveSettings?.(this.raw);
+  }
 
   private sceneSignature(): string {
     const catalog = this.client.getCatalog();
@@ -129,6 +143,7 @@ export class ObsSceneTransitionKeyInstanceController {
   ) {
     this.clock = clock;
     this.settings = this.mergeSettings(initialSettings);
+    this.raw = initialSettings ?? {};
     this.rateLimiter = new CellRateLimiter<string>(async (svg) => {
       await this.sink.setImage(toSvgDataUri(svg));
     }, rateLimitMs, clock);
@@ -138,12 +153,14 @@ export class ObsSceneTransitionKeyInstanceController {
   public appear(settings?: ObsSceneTransitionKeySettings): void {
     if (settings) {
       this.settings = this.mergeSettings(settings);
+      this.raw = settings;
     }
     this.visible = true;
     this.offLanguage();
     this.offLanguage = onLanguageChanged(() => this.renderNow());
     this.client.on("statusChanged", this.onStatusChanged);
     this.client.on("directStateChanged", this.onStateChanged);
+    this.followBinding();
     this.renderNow();
   }
 
@@ -160,6 +177,8 @@ export class ObsSceneTransitionKeyInstanceController {
   public updateSettings(settings: ObsSceneTransitionKeySettings): void {
     const prev = this.settings;
     this.settings = this.mergeSettings(settings);
+    this.raw = settings;
+    this.followBinding();
     if (
       prev.sceneTarget !== this.settings.sceneTarget ||
       prev.operation !== this.settings.operation ||
@@ -309,6 +328,7 @@ export class ObsSceneTransitionKeyInstanceController {
     return {
       sceneTarget:
         typeof raw?.sceneTarget === "string" ? raw.sceneTarget.trim() : DEFAULT_OBS_SCENE_TRANSITION_KEY_SETTINGS.sceneTarget,
+      sceneUuid: typeof raw?.sceneUuid === "string" ? raw.sceneUuid.trim() : "",
       operation: normalizeOperation(raw?.operation),
       transitionName:
         typeof raw?.transitionName === "string" && raw.transitionName.trim()
@@ -351,15 +371,18 @@ export class ObsSceneTransitionKeyAction extends SingletonAction<ObsSceneTransit
       this.client,
       {
         setImage: (image) => key.setImage(image),
-        showAlert: () => key.showAlert()
+        showAlert: () => key.showAlert(),
+        saveSettings: (next) => key.setSettings(next)
       },
       settings,
       100,
       this.signals
     );
     this.instances.set(key.id, controller);
+    // Saved before the controller appears, which may save once more with the scene's UUID added.
+    const saved = settings !== ev.payload.settings ? key.setSettings(settings) : undefined;
     controller.appear(settings);
-    if (settings !== ev.payload.settings) await key.setSettings(settings);
+    await saved;
   }
 
   public override onWillDisappear(

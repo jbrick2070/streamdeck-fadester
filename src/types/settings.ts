@@ -136,6 +136,8 @@ export interface ObsFaderDialSettings {
   [key: string]: string | number | boolean | undefined;
   target?: ObsFaderTarget;
   inputName?: string;
+  /** The OBS UUID of `inputName`, so a rename in OBS is followed; the name stays what is shown and the fallback. */
+  inputUuid?: string;
   stepPerTick?: DialStepPerTick;
   acceleration?: boolean;
   labelOverride?: string;
@@ -147,6 +149,7 @@ export interface ObsFaderDialSettings {
 export const DEFAULT_OBS_FADER_DIAL_SETTINGS: Required<ObsFaderDialSettings> = {
   target: "input_volume",
   inputName: "__audio_main__",
+  inputUuid: "",
   stepPerTick: 0.02,
   acceleration: true,
   labelOverride: "",
@@ -159,6 +162,8 @@ export interface ObsFadeKeySettings {
   [key: string]: string | number | boolean | undefined;
   target?: "input_volume" | "all_inputs";
   inputName?: string;
+  /** The OBS UUID of `inputName`, so a rename in OBS is followed; the name stays what is shown and the fallback. */
+  inputUuid?: string;
   to?: 0 | 1;
   durationMs?: number;
   quantizeBeats?: QuantizeBeats;
@@ -170,6 +175,7 @@ export interface ObsFadeKeySettings {
 export const DEFAULT_OBS_FADE_KEY_SETTINGS: Required<ObsFadeKeySettings> = {
   target: "input_volume",
   inputName: "__audio_main__",
+  inputUuid: "",
   to: 1,
   durationMs: 1000,
   quantizeBeats: 0,
@@ -184,6 +190,8 @@ export interface ObsSceneTransitionKeySettings {
   [key: string]: string | number | boolean | undefined;
   /** A scene name, __next_scene__, or __previous_scene__. */
   sceneTarget?: string;
+  /** The OBS UUID of a scene named in `sceneTarget`, so a rename in OBS is followed; empty for the placeholders. */
+  sceneUuid?: string;
   operation?: ObsSceneOperation;
   /** __current_transition__, __cut__, or an OBS transition name. */
   transitionName?: string;
@@ -197,6 +205,7 @@ export interface ObsSceneTransitionKeySettings {
 
 export const DEFAULT_OBS_SCENE_TRANSITION_KEY_SETTINGS: Required<ObsSceneTransitionKeySettings> = {
   sceneTarget: "__next_scene__",
+  sceneUuid: "",
   operation: "transition",
   transitionName: "__current_transition__",
   durationMs: 0,

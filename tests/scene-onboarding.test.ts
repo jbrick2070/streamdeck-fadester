@@ -86,7 +86,7 @@ describe("Scene layout onboarding", () => {
     const target = elements.get("obs-scene-target")!;
     target.value = "";
     target.onchange!();
-    expect(save).toHaveBeenCalledWith({ sceneTarget: "", presetBindingsVersion: 1 });
+    expect(save).toHaveBeenCalledWith({ sceneTarget: "", sceneUuid: "", presetBindingsVersion: 1 });
   });
 
   it("repairs old untouched scene placeholders while preserving explicit names, custom labels, and later clears", () => {

@@ -99,7 +99,8 @@
               sceneName ? T("layerStatusLoading", { scene: sceneName }) : T("layerStatusChooseScene");
       el("layer-status").className = "status-banner " + (live ? "status-warn" : "status-info");
       el("layer-scope").onchange = function () { save({ scope: el("layer-scope").value, target: "selected", sceneItemId: -1, sourceUuid: "", sourceName: "" }); };
-      el("layer-scene").onchange = function () { save({ sceneName: el("layer-scene").value, sceneItemId: -1, sourceUuid: "", sourceName: "" }); };
+      // A new scene drops the old one's UUID: the plugin records the UUID of the scene now named.
+      el("layer-scene").onchange = function () { save({ sceneName: el("layer-scene").value, sceneUuid: "", sceneItemId: -1, sourceUuid: "", sourceName: "" }); };
       el("layer-operation").onchange = function () {
         const update = { operation: el("layer-operation").value };
         if (!dial && update.operation !== operation && generatedLabel) update.labelOverride = "";
@@ -111,7 +112,7 @@
         save(update);
       };
       el("layer-target").onchange = function () {
-        if (el("layer-target").value === "fixed") save({ target: "fixed", scope: "fixed", sceneName: sceneName || "", sceneItemId: -1, sourceUuid: "", sourceName: "" });
+        if (el("layer-target").value === "fixed") save({ target: "fixed", scope: "fixed", sceneName: sceneName || "", sceneUuid: "", sceneItemId: -1, sourceUuid: "", sourceName: "" });
         else save({ target: "selected", sceneItemId: -1, sourceUuid: "", sourceName: "" });
       };
       el("layer-item").onchange = function () {

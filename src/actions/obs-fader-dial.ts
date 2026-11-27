@@ -34,6 +34,8 @@ import { StringKey, formatNumber, onLanguageChanged, t, translate } from "../i18
 interface DialFeedbackSink {
   setFeedback(feedback: { canvas: string }): Promise<void>;
   showAlert(): Promise<void>;
+  /** Saves the dial's settings when the plugin itself changes them (a rename in OBS followed, a UUID recorded). */
+  saveSettings?(settings: ObsFaderDialSettings): Promise<void>;
 }
 
 function normalizeTarget(raw: unknown): ObsFaderTarget {
@@ -43,6 +45,8 @@ function normalizeTarget(raw: unknown): ObsFaderTarget {
 
 export class ObsFaderDialInstanceController {
   private settings: Required<ObsFaderDialSettings>;
+  /** The settings as saved, which a followed rename updates and saves again. */
+  private raw: ObsFaderDialSettings;
   private readonly rateLimiter: CellRateLimiter<string>;
   private visible = false;
   /** Unsubscribes this control from language changes (PLAN.md 11.1). */
@@ -51,7 +55,20 @@ export class ObsFaderDialInstanceController {
   private lastRotateAt = 0;
   private turnedWhileDown = false;
 
-  private readonly onStateChanged = (): void => this.renderNow();
+  private readonly onStateChanged = (): void => {
+    this.followBinding();
+    this.renderNow();
+  };
+
+  /** Keeps the chosen input through a rename in OBS, by its UUID (name-binding.ts). */
+  private followBinding(): void {
+    if (this.settings.target !== "input_volume") return;
+    const next = this.client.followBinding?.("input", this.settings.inputName, this.settings.inputUuid);
+    if (!next) return;
+    this.settings = { ...this.settings, inputName: next.name, inputUuid: next.uuid };
+    this.raw = { ...this.raw, inputName: next.name, inputUuid: next.uuid };
+    void this.sink.saveSettings?.(this.raw);
+  }
 
   public constructor(
     private readonly client: DirectObsClient,
@@ -61,6 +78,7 @@ export class ObsFaderDialInstanceController {
     private readonly layers?: LayerController
   ) {
     this.settings = this.mergeSettings(initialSettings);
+    this.raw = initialSettings ?? {};
     this.rateLimiter = new CellRateLimiter<string>(async (svg) => {
       await this.sink.setFeedback({ canvas: toStripUri(svg) });
     }, rateLimitMs);
@@ -69,6 +87,7 @@ export class ObsFaderDialInstanceController {
   public appear(settings?: ObsFaderDialSettings): void {
     if (settings) {
       this.settings = this.mergeSettings(settings);
+      this.raw = settings;
     }
     this.visible = true;
     this.offLanguage();
@@ -77,6 +96,7 @@ export class ObsFaderDialInstanceController {
     this.client.on("directStateChanged", this.onStateChanged);
     this.client.on("wholeMixChanged", this.onStateChanged);
     this.syncMixObserver();
+    this.followBinding();
     this.renderNow();
   }
 
@@ -95,6 +115,8 @@ export class ObsFaderDialInstanceController {
   public updateSettings(settings: ObsFaderDialSettings): void {
     if (this.settings.autoQueueNextScene && (settings.autoQueueNextScene !== true || settings.target !== "tbar")) this.client.cancelSceneCycle();
     this.settings = this.mergeSettings(settings);
+    this.raw = settings;
+    this.followBinding();
     this.syncMixObserver();
     this.renderNow();
   }
@@ -302,6 +324,7 @@ export class ObsFaderDialInstanceController {
       target: normalizeTarget(raw?.target),
       inputName: typeof raw?.inputName === "string" ? raw.inputName.trim()
         : raw?.inputName === undefined ? DEFAULT_OBS_FADER_DIAL_SETTINGS.inputName : "",
+      inputUuid: typeof raw?.inputUuid === "string" ? raw.inputUuid.trim() : "",
       stepPerTick: normalizeStepPerTick(Number(raw?.stepPerTick)),
       acceleration:
         raw?.acceleration !== undefined
@@ -337,7 +360,8 @@ export class ObsFaderDialAction extends SingletonAction<ObsFaderDialSettings> {
       this.client,
       {
         setFeedback: (feedback) => dial.setFeedback(feedback),
-        showAlert: () => dial.showAlert()
+        showAlert: () => dial.showAlert(),
+        saveSettings: (next) => dial.setSettings(next)
       },
       settings,
       100,

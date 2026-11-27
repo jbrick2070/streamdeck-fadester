@@ -30,6 +30,8 @@ export interface LayerSettings {
   [key: string]: string | number | boolean | undefined;
   scope?: LayerScope;
   sceneName?: string;
+  /** The OBS UUID of the fixed scope's `sceneName`, so a rename in OBS is followed. */
+  sceneUuid?: string;
   target?: "selected" | "fixed";
   sceneItemId?: number;
   /** Identity saved with a fixed source, so a reused scene-item ID cannot retarget it. */
@@ -70,6 +72,7 @@ export function normalizeLayerSettings(raw: LayerSettings = {}): Required<LayerS
   return {
     scope: raw.scope === "fixed" || raw.scope === "program" ? raw.scope : "auto",
     sceneName: typeof raw.sceneName === "string" ? raw.sceneName.trim() : "",
+    sceneUuid: typeof raw.sceneUuid === "string" ? raw.sceneUuid.trim() : "",
     target: raw.target === "fixed" ? "fixed" : "selected",
     sceneItemId: Number.isInteger(raw.sceneItemId) ? Number(raw.sceneItemId) : -1,
     sourceUuid: typeof raw.sourceUuid === "string" ? raw.sourceUuid.trim() : "",

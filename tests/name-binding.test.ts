@@ -89,6 +89,19 @@ describe("controls bound by an OBS name follow a rename in OBS", () => {
     expect(server.inputVolumes.get("Mic 2")).toBeGreaterThan(0);
   });
 
+  it("a save that fails is swallowed, never an unhandled rejection", async () => {
+    await connect();
+    let tried = 0;
+    const key = new ObsFadeKeyInstanceController(client, {
+      setImage: async () => {}, showAlert: async () => {},
+      saveSettings: async () => { tried++; throw new Error("Stream Deck connection closed"); }
+    }, { inputName: "Mic/Aux" }, 1);
+    key.appear({ inputName: "Mic/Aux" });
+    cleanup.push(() => key.disappear());
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(tried).toBe(1);
+  });
+
   it("a scene key and a fixed-scene layer control keep their scene", async () => {
     await connect();
     const scene3 = server.sceneUuidFor("Scene 3");

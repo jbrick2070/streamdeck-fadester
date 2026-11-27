@@ -3,6 +3,7 @@ import {
   action, DialDownEvent, DialRotateEvent, DialUpEvent, DidReceiveSettingsEvent, KeyDownEvent,
   SingletonAction, TouchTapEvent, WillAppearEvent, WillDisappearEvent
 } from "@elgato/streamdeck";
+import { logBindingSaveFailure } from "./binding-save.js";
 import { BLEND_MODES, LayerController, LayerOperation, LayerSettings, matchesLayerIdentity, normalizeLayerSettings } from "../control/layer-controller.js";
 import { toStripUri, toSvgDataUri } from "../gfx/svg-renderer.js";
 import { accentColor, boxText, renderDirectKeySvg } from "../gfx/direct-obs-renderer.js";
@@ -58,7 +59,7 @@ export class ObsLayerInstanceController {
       this.unwatch();
       this.unwatch = this.layers.watch(this.settings);
     }
-    void this.sink.saveSettings?.(this.raw);
+    void this.sink.saveSettings?.(this.raw)?.catch(() => {}); // the action's sink logs a failed save
   }
 
   public constructor(
@@ -253,7 +254,7 @@ export class ObsLayerControlAction extends SingletonAction<LayerSettings> {
       render: (svg) => control.isDial() ? control.setFeedback({ canvas: toStripUri(svg) }) :
         control.isKey() ? control.setImage(toSvgDataUri(svg)) : Promise.resolve(),
       showAlert: () => control.showAlert(),
-      saveSettings: (next) => control.setSettings(next)
+      saveSettings: (next) => control.setSettings(next).catch((error: unknown) => logBindingSaveFailure(error))
     }, dial, ev.payload.settings);
     this.instances.set(control.id, controller);
     controller.appear();

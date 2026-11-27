@@ -262,24 +262,36 @@ internal static class StudioFaderSelfTests
             await autoFader.MoveToAsync(0);
         }
         // The release went through and only the parking check that follows it failed: the throw already ended on the
-        // target rail, so the close-out must keep that result (a take stays taken, a cancel stays cancelled) rather than
-        // apply the 0.5 rule to the position before the last write.
-        foreach (var (from, to) in new[] { (0.2, 1d), (0.6, 0d) })
+        // target rail, so the close-out must keep that result (Preview stays on Program after a release at the far end,
+        // a cancel stays cancelled) rather than apply the 0.5 rule to the position before the last write. With a busy
+        // OBS UI thread the cursor still reads part-way for a while after the release: the close-out waits for it
+        // instead of turning Studio Mode off and on in the middle of a transition OBS is already ending.
+        foreach (var (from, to, lateReads) in new[] { (0.2, 1d, 0), (0.6, 0d, 0), (0.2, 1d, 4), (0.6, 0d, 4) })
         {
             var parkObs = new Obs();
             bool failPark = false;
-            var parkFader = new StudioFader(parkObs.Call, 0.05, (a, b) =>
+            int lateLeft = lateReads;
+            Task<JsonObject> LateCursorRpc(string action, JsonObject? data)
+            {
+                if (action == "GetCurrentSceneTransitionCursor" && parkObs.Releases > 0 && lateLeft > 0)
+                {
+                    lateLeft--;
+                    return Task.FromResult(new JsonObject { ["transitionCursor"] = from });
+                }
+                return parkObs.Call(action, data);
+            }
+            var parkFader = new StudioFader(LateCursorRpc, 0.05, (a, b) =>
                 failPark && a == 0 && b == 0
                     ? Task.FromException(new InvalidOperationException("Synthetic parking check: slider not found"))
                     : parkObs.NativeMove(a, b));
             await parkFader.MoveToAsync(from);
             failPark = true;
             await Blocked(() => parkFader.MoveToAsync(to));
-            bool took = to == 1;
-            Check(parkObs.Program == (took ? "b" : "a") && parkObs.Preview == (took ? "a" : "b") &&
-                parkObs.Commits == (took ? 1 : 0) && parkObs.Releases == 1 && parkObs.Cursor == 0 &&
-                parkObs.Writes.SequenceEqual(["SetTBarPosition"]) && parkFader.Position == 0,
-                $"a failed parking check after a confirmed release at {to} keeps that result (from {from})");
+            bool toPreview = to == 1;
+            Check(parkObs.Program == (toPreview ? "b" : "a") && parkObs.Preview == (toPreview ? "a" : "b") &&
+                parkObs.Commits == (toPreview ? 1 : 0) && parkObs.Releases == 1 && parkObs.Cursor == 0 &&
+                parkObs.Writes.SequenceEqual(["SetTBarPosition"]) && parkFader.Position == 0 && lateLeft == 0,
+                $"a failed parking check after a confirmed release at {to} keeps that result (from {from}, {lateReads} late cursor reads)");
         }
         await native.DispatchAsync("fader.forward"); await native.DispatchAsync("fader.forward");
         Check(nativeObs.Slider == 0 && nativeObs.Program == "b" && nativeObs.Preview == "a" &&

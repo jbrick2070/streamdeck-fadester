@@ -9,6 +9,7 @@ import {
   WillAppearEvent,
   WillDisappearEvent
 } from "@elgato/streamdeck";
+import { logBindingSaveFailure } from "./binding-save.js";
 import { mixProblem } from "../obs/whole-mix.js";
 import { DirectObsClient } from "../obs/direct-obs-client.js";
 import { automaticInputRoleName, migrateAutomaticInputSettings } from "../obs/automatic-targets.js";
@@ -67,7 +68,7 @@ export class ObsFaderDialInstanceController {
     if (!next) return;
     this.settings = { ...this.settings, inputName: next.name, inputUuid: next.uuid };
     this.raw = { ...this.raw, inputName: next.name, inputUuid: next.uuid };
-    void this.sink.saveSettings?.(this.raw);
+    void this.sink.saveSettings?.(this.raw)?.catch(() => {}); // the action's sink logs a failed save
   }
 
   public constructor(
@@ -361,7 +362,7 @@ export class ObsFaderDialAction extends SingletonAction<ObsFaderDialSettings> {
       {
         setFeedback: (feedback) => dial.setFeedback(feedback),
         showAlert: () => dial.showAlert(),
-        saveSettings: (next) => dial.setSettings(next)
+        saveSettings: (next) => dial.setSettings(next).catch((error: unknown) => logBindingSaveFailure(error))
       },
       settings,
       100,

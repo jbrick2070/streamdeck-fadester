@@ -8,6 +8,7 @@ import {
   WillAppearEvent,
   WillDisappearEvent
 } from "@elgato/streamdeck";
+import { logBindingSaveFailure } from "./binding-save.js";
 import { mixProblem } from "../obs/whole-mix.js";
 import { DirectObsClient } from "../obs/direct-obs-client.js";
 import { VisualSignals } from "../control/visual-signals.js";
@@ -71,7 +72,7 @@ export class ObsFadeKeyInstanceController {
     if (!next) return;
     this.settings = { ...this.settings, inputName: next.name, inputUuid: next.uuid };
     this.raw = { ...this.raw, inputName: next.name, inputUuid: next.uuid };
-    void this.sink.saveSettings?.(this.raw);
+    void this.sink.saveSettings?.(this.raw)?.catch(() => {}); // the action's sink logs a failed save
   }
 
   public constructor(
@@ -281,7 +282,7 @@ export class ObsFadeKeyAction extends SingletonAction<ObsFadeKeySettings> {
       {
         setImage: (image) => key.setImage(image),
         showAlert: () => key.showAlert(),
-        saveSettings: (next) => key.setSettings(next)
+        saveSettings: (next) => key.setSettings(next).catch((error: unknown) => logBindingSaveFailure(error))
       },
       settings,
       100,

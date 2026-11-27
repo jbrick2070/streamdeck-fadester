@@ -8,6 +8,7 @@ import {
   WillAppearEvent,
   WillDisappearEvent
 } from "@elgato/streamdeck";
+import { logBindingSaveFailure } from "./binding-save.js";
 import {
   DIRECT_SCENE_CURRENT_PREVIEW,
   DIRECT_SCENE_NEXT,
@@ -124,7 +125,7 @@ export class ObsSceneTransitionKeyInstanceController {
     if (!next) return;
     this.settings = { ...this.settings, sceneTarget: next.name, sceneUuid: next.uuid };
     this.raw = { ...this.raw, sceneTarget: next.name, sceneUuid: next.uuid };
-    void this.sink.saveSettings?.(this.raw);
+    void this.sink.saveSettings?.(this.raw)?.catch(() => {}); // the action's sink logs a failed save
   }
 
   private sceneSignature(): string {
@@ -372,7 +373,7 @@ export class ObsSceneTransitionKeyAction extends SingletonAction<ObsSceneTransit
       {
         setImage: (image) => key.setImage(image),
         showAlert: () => key.showAlert(),
-        saveSettings: (next) => key.setSettings(next)
+        saveSettings: (next) => key.setSettings(next).catch((error: unknown) => logBindingSaveFailure(error))
       },
       settings,
       100,

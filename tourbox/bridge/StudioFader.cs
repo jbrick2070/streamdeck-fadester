@@ -642,7 +642,10 @@ public sealed class StudioFader
     private static bool IsOperatorMovedSlider(Exception e) =>
         e is NativeRefusal && e.Message.StartsWith("T-bar moved", StringComparison.Ordinal);
 
-    private async Task RecoverLostNativeThrowAsync(Sweep broken, double atPosition, Exception cause)
+    /// <param name="released">OBS accepted the release at <paramref name="atPosition"/> (a rail) and only the check that
+    /// its slider parked failed: the transition is ending on its own, so it is given time to come to rest before any
+    /// Studio Mode toggle.</param>
+    private async Task RecoverLostNativeThrowAsync(Sweep broken, double atPosition, Exception cause, bool released = false)
     {
         sweep = null;
         Position = 0;
@@ -652,6 +655,8 @@ public sealed class StudioFader
         bool finish = atPosition >= 0.5;
         try
         {
+            // A release only queues work on OBS's UI thread, and a busy UI thread is the usual reason the check failed.
+            if (released) await WaitForCursorRestAsync();
             await CloseSweepOverWebSocketAsync(broken, finish);
         }
         catch
@@ -664,10 +669,25 @@ public sealed class StudioFader
         try { await RepayAsync(); }
         catch (Exception) { } // closing the open T-bar comes first; any owed transition remains recorded
         throw new InvalidOperationException(
-            finish
-                ? "The OBS T-bar slider was lost mid-throw; finished Preview automatically."
-                : "The OBS T-bar slider was lost mid-throw; returned to Program automatically.",
+            released
+                ? finish
+                    ? "OBS accepted the release, but its T-bar slider could not be checked afterwards; Preview is on Program."
+                    : "OBS accepted the cancel, but its T-bar slider could not be checked afterwards; Program is back."
+                : finish
+                    ? "The OBS T-bar slider was lost mid-throw; finished Preview automatically."
+                    : "The OBS T-bar slider was lost mid-throw; returned to Program automatically.",
             cause);
+    }
+
+    /// <summary>Waits, as <see cref="ConfirmNativeReleaseAsync"/> does, for OBS's transition cursor to come to rest.</summary>
+    private async Task WaitForCursorRestAsync()
+    {
+        var started = Stopwatch.GetTimestamp();
+        do
+        {
+            if (await ReadCursorAsync() is 0 or 1) return;
+            await Task.Delay(35);
+        } while (Stopwatch.GetElapsedTime(started).TotalSeconds < 2.5);
     }
 
     private async Task CloseSweepOverWebSocketAsync(Sweep broken, bool finish)
@@ -755,8 +775,9 @@ public sealed class StudioFader
         catch (Exception ex) when (allowAutoCloseout && nativeFailed && activeSweep != null && activePos > 0 && !IsOperatorMovedSlider(ex))
         {
             // Once OBS accepted the release, the throw ended on its target rail and only the parking check failed.
-            // Closing out from the position before the write would reverse a finished take or turn a cancel into one.
-            await RecoverLostNativeThrowAsync(activeSweep, released ? value : activePos, ex);
+            // Closing out from the position before the write would undo a finished fade to Preview, or send Preview to
+            // Program after a cancel.
+            await RecoverLostNativeThrowAsync(activeSweep, released ? value : activePos, ex, released);
         }
         catch (NativeRefusal) when (!sent)
         {

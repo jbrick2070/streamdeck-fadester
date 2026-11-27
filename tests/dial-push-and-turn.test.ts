@@ -75,7 +75,7 @@ describe("Push-and-turn on the dials", () => {
     expect(client.setFaderValue).toHaveBeenCalledTimes(2);
   });
 
-  it("T-bar dial: the release after a pressed turn does not take the scene to air", async () => {
+  it("T-bar dial: the release after a pressed turn does not send Preview to Program", async () => {
     const { controller, client } = obsFaderDial();
     controller.handleDialDown();
     await controller.handleRotate(3, 1000, true);

@@ -58,7 +58,7 @@ describe("controls bound by an OBS name follow a rename in OBS", () => {
     await connect();
     const mic = inputUuid("Mic/Aux");
     const keySaves: ObsFadeKeySettings[] = [];
-    const old: ObsFadeKeySettings = { inputName: "Mic/Aux", to: 0, durationMs: 0, labelOverride: "My mic", accent: "red" };
+    const old: ObsFadeKeySettings = { inputName: "Mic/Aux", to: 0, durationMs: 0, labelOverride: "My mic", accent: "teal" };
     const key = new ObsFadeKeyInstanceController(client, {
       setImage: async () => {}, showAlert: async () => {}, saveSettings: async (s) => { keySaves.push(s); }
     }, old, 1);

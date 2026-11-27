@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import {
   action,
+  DialDownEvent,
   DialRotateEvent,
   DialUpEvent,
   DidReceiveSettingsEvent,
@@ -48,6 +49,7 @@ export class ObsFaderDialInstanceController {
   private offMix?: () => void;
   private offLanguage: () => void = () => {};
   private lastRotateAt = 0;
+  private turnedWhileDown = false;
 
   private readonly onStateChanged = (): void => this.renderNow();
 
@@ -97,7 +99,9 @@ export class ObsFaderDialInstanceController {
     this.renderNow();
   }
 
-  public async handleRotate(ticks: number, now = Date.now()): Promise<void> {
+  public async handleRotate(ticks: number, now = Date.now(), pressed = false): Promise<void> {
+    // A push-and-turn is a turn: its release must not fire the press action.
+    if (pressed) this.turnedWhileDown = true;
     if (!(await this.ensureReady(now))) {
       return;
     }
@@ -131,7 +135,15 @@ export class ObsFaderDialInstanceController {
 
   /** Presses can finish a scene transition or act on the source selected by
    * the deck. Source commands do not require a mixer-input binding. */
+  public handleDialDown(): void {
+    this.turnedWhileDown = false;
+  }
+
   public async handleDialUp(now = Date.now()): Promise<void> {
+    if (this.turnedWhileDown) {
+      this.turnedWhileDown = false;
+      return;
+    }
     const pressAction = this.settings.pressAction;
     if (pressAction === "none") return;
     // Preserve the original default: pressing an audio dial does nothing.
@@ -352,7 +364,11 @@ export class ObsFaderDialAction extends SingletonAction<ObsFaderDialSettings> {
   public override async onDialRotate(
     ev: DialRotateEvent<ObsFaderDialSettings>
   ): Promise<void> {
-    await this.instances.get(ev.action.id)?.handleRotate(ev.payload.ticks);
+    await this.instances.get(ev.action.id)?.handleRotate(ev.payload.ticks, Date.now(), ev.payload.pressed);
+  }
+
+  public override onDialDown(ev: DialDownEvent<ObsFaderDialSettings>): void {
+    this.instances.get(ev.action.id)?.handleDialDown();
   }
 
   public override async onDialUp(ev: DialUpEvent<ObsFaderDialSettings>): Promise<void> {

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import {
-  action, DialRotateEvent, DialUpEvent, DidReceiveSettingsEvent, KeyDownEvent,
+  action, DialDownEvent, DialRotateEvent, DialUpEvent, DidReceiveSettingsEvent, KeyDownEvent,
   SingletonAction, TouchTapEvent, WillAppearEvent, WillDisappearEvent
 } from "@elgato/streamdeck";
 import { BLEND_MODES, LayerController, LayerOperation, LayerSettings, matchesLayerIdentity, normalizeLayerSettings } from "../control/layer-controller.js";
@@ -33,6 +33,8 @@ export class ObsLayerInstanceController {
   /** Dial ticks not yet sent, and the turn that is sending (see rotate). */
   private pendingTicks = 0;
   private turning: Promise<void> | null = null;
+  /** The dial was turned while held in, so its release is not a press. */
+  private turnedWhileDown = false;
   /** Unsubscribes this control from language changes (PLAN.md 11.1). */
   private offLanguage: () => void = () => {};
   private readonly onChanged = (): void => {
@@ -88,12 +90,26 @@ export class ObsLayerInstanceController {
     await this.perform(operation);
   }
 
+  public dialDown(): void {
+    this.turnedWhileDown = false;
+  }
+
+  /** The dial's release presses, unless the dial was turned while held in (a push-and-turn is a turn). */
+  public async dialUp(): Promise<void> {
+    if (this.turnedWhileDown) {
+      this.turnedWhileDown = false;
+      return;
+    }
+    await this.press();
+  }
+
   /**
    * A dial turn. Each turn is a list read, a write and a list read in OBS; ticks that arrive while one is on its way
    * are added up and sent as one turn when it has finished (clockwise and counter-clockwise ticks cancel), so a fast
    * spin against a slow OBS does not go on moving after the hand has stopped.
    */
-  public rotate(ticks: number): Promise<void> {
+  public rotate(ticks: number, pressed = false): Promise<void> {
+    if (pressed) this.turnedWhileDown = true;
     if (!Number.isFinite(ticks) || ticks === 0) return Promise.resolve();
     this.pendingTicks += ticks;
     this.turning ??= (async () => {
@@ -226,13 +242,16 @@ export class ObsLayerControlAction extends SingletonAction<LayerSettings> {
   public override async onKeyDown(ev: KeyDownEvent<LayerSettings>): Promise<void> {
     await this.instances.get(ev.action.id)?.press();
   }
+  public override onDialDown(ev: DialDownEvent<LayerSettings>): void {
+    this.instances.get(ev.action.id)?.dialDown();
+  }
   public override async onDialUp(ev: DialUpEvent<LayerSettings>): Promise<void> {
-    await this.instances.get(ev.action.id)?.press();
+    await this.instances.get(ev.action.id)?.dialUp();
   }
   public override async onTouchTap(ev: TouchTapEvent<LayerSettings>): Promise<void> {
     await this.instances.get(ev.action.id)?.press();
   }
   public override async onDialRotate(ev: DialRotateEvent<LayerSettings>): Promise<void> {
-    await this.instances.get(ev.action.id)?.rotate(ev.payload.ticks);
+    await this.instances.get(ev.action.id)?.rotate(ev.payload.ticks, ev.payload.pressed);
   }
 }

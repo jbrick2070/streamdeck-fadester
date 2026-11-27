@@ -102,6 +102,29 @@ work again when you tick it. Reload the extension on `chrome://extensions` with 
 YouTube tab open, then press `]` once: exactly one step, not two. Untick
 "Keyboard hotkeys": at once, in every open tab, the keys do nothing again.
 
+1.15 **Hotkeys on other keyboard layouts (R-KEY-2, R-KEY-3).** With the hotkeys
+on and a YouTube video playing:
+- On a Mac with the German layout, press Option+5 (`[`), Option+6 (`]`) and
+  Shift+Option+7 (`\`). Expected: slower, faster, 1x. With the U.S. layout,
+  Option+`[` (it types `“`): nothing, and the page gets the key.
+- On Windows with the Russian layout, press the keys right of P (`х`, `ъ`) and
+  `\`. Expected: slower, faster, 1x, without switching to English. Click the
+  comment box and type them: the letters appear and the speed does not change.
+- On Windows with the German layout, press `ü`, `+` and `#`: nothing, and the
+  page gets the keys. On Windows with the U.S. layout, Alt+`]`: nothing.
+
+1.16 **Hotkeys on YouTube Shorts (not fixed; check by hand).** The hotkeys take a
+key on any page with a `<video>`, but the extension controls YouTube through
+`#movie_player`, and a Short may be played by another player. With the hotkeys
+on, open a Short from the YouTube home page and press `]`. Then open a watch-page
+video, go to a Short in the same tab, and press `]` again. Note for each: whether
+the Short's own speed changes, whether a hidden watch-page video changes instead,
+and whether the key is taken while nothing changes. In the console,
+`document.getElementById("movie_player")`, `document.getElementById("shorts-player")`
+and `document.querySelectorAll("video").length` show which players the page has.
+Report what you see; the review left this open (finding 6 of the 2026-11-27
+extension review).
+
 ## 2. Stream Deck actions (Phase 1 step 5)
 
 Build and check the plugin first, from the repository root:

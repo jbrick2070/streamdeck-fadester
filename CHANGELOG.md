@@ -7,7 +7,7 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 ### VJster Chrome extension 1.5.1
 
 #### Added
-- **Keyboard hotkeys**, off until you turn them on: tick **Keyboard hotkeys** on the extension's options page and `[` slows the video, `]` speeds it up by a quarter and `\` takes it back to 1x, on the page you are looking at. They need no deck and no other program. The keys are left to the page while you type in a text box, with Ctrl, Alt or Command held, and on a page with no video, and unticking the box gives them back at once, in open tabs too. Off YouTube the speed goes up to 16x. The option has its text in all thirteen languages (`docs/vjster/REQUIREMENTS.md` R-KEY-1..4, `tests/vjster-ext-hotkeys.test.ts`).
+- **Keyboard hotkeys**, off until you turn them on: tick **Keyboard hotkeys** on the extension's options page and `[` slows the video, `]` speeds it up by a quarter and `\` takes it back to 1x, on the page you are looking at. They need no deck and no other program. The keys are left to the page while you type in a text box, with Ctrl, Alt or Command held (on a Mac, a layout that types `[ ] \` with Option still works), and on a page with no video, and unticking the box gives them back at once, in open tabs too. On a Russian or Ukrainian layout the same physical keys work without switching to English; Latin letters and symbols on those keys (German `ü + #`, French `^ $ *`) stay the page's. Off YouTube the speed goes up to 16x. The option has its text in all thirteen languages (`docs/vjster/REQUIREMENTS.md` R-KEY-1..4, `tests/vjster-ext-hotkeys.test.ts`).
 
 ### Fixes from the 2026-11-27 review
 
@@ -24,6 +24,7 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 ### Fixes from the VJster final QA (2026-11-27)
 
 #### Fixed
+- **VJster Chrome extension, hotkeys:** an element whose ARIA role lists fallbacks (`role="textbox combobox"`) was not seen as a text field, so `[ ] \` typed there changed the speed instead of appearing. Any one text role in the list now makes it a text field (`vjster-extension/src/hotkeys.ts`).
 - **VJster Chrome extension, hotkeys and deck turns:** "faster" from above the player's top rate (a rate the deck's extended range or another extension wrote to the video) dropped the video to that top rate, and "slower" below the bottom raised it. A step that would go the other way now leaves the rate as it is and reports it (`vjster-extension/src/adapter-core.ts`, `tests/vjster-ext-adapter.test.ts`).
 - **VJster Chrome extension:** a state report the page's bridge was still holding back (it spaces reports 50 ms apart) could reach the deck after the answer to a deck command or a hotkey, so the deck ended on the older state (say 1x while the video played 1.25x) until something else changed. A report still waiting is now dropped when an answer goes out (`vjster-extension/src/bridge-core.ts`, `tests/vjster-ext-wiring.test.ts`).
 

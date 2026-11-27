@@ -670,7 +670,7 @@ export const MUTATIONS: readonly Mutation[] = [
     id: "M-V-79",
     rule: "the page takes the token out of its address before YouTube's script loads",
     file: "vjster-page/src/page-boot.ts",
-    from: "    env.replaceAddress(withoutToken(env.location.pathname, env.location.search), token === null ? null : { token });",
+    from: "  env.replaceAddress(withoutToken(env.location.pathname, env.location.search), token === null ? null : { token });",
     to: "  void withoutToken;",
     tests: ["tests/vjster-page.test.ts"]
   },

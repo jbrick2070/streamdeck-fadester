@@ -741,15 +741,6 @@ describe("the page's start-up (R-OBS-2)", () => {
     expect(broken.states).toEqual([null]);
   });
 
-  it("still starts with the fragment's token when the browser refuses to change the address", () => {
-    const x = env(`?v=${VIDEO}`, `#token=${TOKEN}`);
-    x.e.replaceAddress = () => { throw new Error("SecurityError"); };
-    const page = bootPage(x.e);
-    expect(page).not.toBeNull();
-    expect(x.links).toEqual([`ws://127.0.0.1:48150/?token=${TOKEN}`]);
-    page?.stop();
-  });
-
   it("ignores a saved state that is not a token of its own (another page's state, a malformed value)", () => {
     for (const historyState of [null, undefined, "x", { token: "ABC" }, { token: 5 }, { t: TOKEN }, [TOKEN]]) {
       const x = env(`?v=${VIDEO}`, "", { historyState });

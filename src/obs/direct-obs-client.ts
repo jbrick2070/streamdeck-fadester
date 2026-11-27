@@ -1018,7 +1018,9 @@ export class DirectObsClient extends ObsVendorClient {
     if (!nativeTbarEligible(this.nativePlatform, this.settings.host, this.obsVersion)) return null;
     if (!this.native && !this.nativeTried) {
       this.nativeTried = true;
-      this.native = this.nativeOption(this.settings.port) ?? null;
+      // Pinned to the OBS on the port this connection signed in on (OBS's own saved port when the client follows it).
+      // The port changes only between connections, and endNative drops the helper on every disconnect.
+      this.native = this.nativeOption(this.getActivePort()) ?? null;
     }
     return this.native;
   }

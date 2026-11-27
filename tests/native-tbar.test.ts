@@ -108,6 +108,35 @@ describe("dial throws on OBS's real slider", () => {
   const tbarWrites = (): Array<Record<string, unknown>> =>
     server.directCallLog.filter((call) => call.requestType === "SetTBarPosition").map((call) => call.requestData ?? {});
 
+  it("pins the slider helper to the port the client signed in on, not the configured one (OBS's own saved port)", async () => {
+    server = new FakeObsServer({ obsVersion: "33.0.1", password: "obs-saved" });
+    obsPort = await server.start();
+    const closed = new FakeObsServer();
+    const configured = await closed.start();
+    await closed.stop();
+    native = new FakeNative(server);
+    const asked: number[] = [];
+    client = new DirectObsClient(
+      { host: "127.0.0.1", port: configured, password: "" },
+      {
+        baseReconnectMs: 20,
+        maxReconnectMs: 40,
+        readSavedServer: () => ({ port: obsPort, enabled: true }),
+        readSavedPassword: (_host, port) => (port === obsPort ? "obs-saved" : ""),
+        nativeTbar: (port) => { asked.push(port); return native; },
+        nativePlatform: "win32"
+      }
+    );
+    client.start();
+    await vi.waitFor(() => expect(client.getStatus().kind).toBe("connected"), { timeout: 3000 });
+    await vi.waitFor(() => expect(client.getCatalog().studioMode).toBe(true), { timeout: 3000 });
+    expect(client.getActivePort()).toBe(obsPort);
+    await client.nudgeTbar(0.2);
+    expect(asked.length).toBeGreaterThan(0);
+    expect(asked.every((port) => port === obsPort)).toBe(true);
+    expect(server.nativeSlider).toBe(nativeTick(0.2));
+  });
+
   it("moves OBS's slider during the throw and takes with a release on it, without leaving Studio Mode", async () => {
     await connect();
     const live = client.getCatalog().currentProgramScene;

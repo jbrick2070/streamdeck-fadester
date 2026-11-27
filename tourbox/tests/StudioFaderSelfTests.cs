@@ -261,6 +261,26 @@ internal static class StudioFaderSelfTests
             Check(autoFader.Position == 0.25 && autoObs.Cursor == 0.25, "next throw works immediately without manual Cancel");
             await autoFader.MoveToAsync(0);
         }
+        // The release went through and only the parking check that follows it failed: the throw already ended on the
+        // target rail, so the close-out must keep that result (a take stays taken, a cancel stays cancelled) rather than
+        // apply the 0.5 rule to the position before the last write.
+        foreach (var (from, to) in new[] { (0.2, 1d), (0.6, 0d) })
+        {
+            var parkObs = new Obs();
+            bool failPark = false;
+            var parkFader = new StudioFader(parkObs.Call, 0.05, (a, b) =>
+                failPark && a == 0 && b == 0
+                    ? Task.FromException(new InvalidOperationException("Synthetic parking check: slider not found"))
+                    : parkObs.NativeMove(a, b));
+            await parkFader.MoveToAsync(from);
+            failPark = true;
+            await Blocked(() => parkFader.MoveToAsync(to));
+            bool took = to == 1;
+            Check(parkObs.Program == (took ? "b" : "a") && parkObs.Preview == (took ? "a" : "b") &&
+                parkObs.Commits == (took ? 1 : 0) && parkObs.Releases == 1 && parkObs.Cursor == 0 &&
+                parkObs.Writes.SequenceEqual(["SetTBarPosition"]) && parkFader.Position == 0,
+                $"a failed parking check after a confirmed release at {to} keeps that result (from {from})");
+        }
         await native.DispatchAsync("fader.forward"); await native.DispatchAsync("fader.forward");
         Check(nativeObs.Slider == 0 && nativeObs.Program == "b" && nativeObs.Preview == "a" &&
             nativeObs.Commits == 1 && nativeObs.NativeCalls.TakeLast(2).SequenceEqual([(0.5, 1d), (0d, 0d)]) &&

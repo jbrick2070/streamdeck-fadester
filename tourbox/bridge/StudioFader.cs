@@ -729,6 +729,7 @@ public sealed class StudioFader
         double activePos = Position;
         bool sent = false;
         bool nativeFailed = false;
+        bool released = false;
         try
         {
             // Setting the actual Qt slider drives OBS's TBarChanged signal and moves the visible handle.
@@ -739,7 +740,10 @@ public sealed class StudioFader
             }
             sent = true;
             if (nativeMove == null || release)
+            {
                 await rpc("SetTBarPosition", new() { ["position"] = value, ["release"] = release });
+                released = release;
+            }
             // OBS-WebSocket has no release-only request. At a rail its release resets the real
             // slider to zero. Equal arguments ask the native adapter to verify without moving it.
             if (nativeMove != null && release)
@@ -750,7 +754,9 @@ public sealed class StudioFader
         }
         catch (Exception ex) when (allowAutoCloseout && nativeFailed && activeSweep != null && activePos > 0 && !IsOperatorMovedSlider(ex))
         {
-            await RecoverLostNativeThrowAsync(activeSweep, activePos, ex);
+            // Once OBS accepted the release, the throw ended on its target rail and only the parking check failed.
+            // Closing out from the position before the write would reverse a finished take or turn a cancel into one.
+            await RecoverLostNativeThrowAsync(activeSweep, released ? value : activePos, ex);
         }
         catch (NativeRefusal) when (!sent)
         {

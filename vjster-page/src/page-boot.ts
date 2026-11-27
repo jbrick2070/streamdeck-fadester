@@ -62,7 +62,11 @@ export function bootPage(env: BootEnv): ObsPage | null {
   // Take the token out of the address before any other script can read it: YouTube's script puts the page's address
   // in the embed it builds. The token stays in the history entry's state, which is not part of any address and is
   // not written to Storage.
-  env.replaceAddress(withoutToken(env.location.pathname, env.location.search), token === null ? null : { token });
+  try {
+    env.replaceAddress(withoutToken(env.location.pathname, env.location.search), token === null ? null : { token });
+  } catch {
+    // A browser that refuses to change the address: the page still runs, with the token from its own address.
+  }
   // The notes' language: the plugin's hl= (Stream Deck's language), else the browser's, else English (PLAN.md 8.6).
   const lang = pageLanguage(params.hl ?? env.language);
   env.setLanguage?.(lang);

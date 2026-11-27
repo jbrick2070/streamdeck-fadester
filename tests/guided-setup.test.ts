@@ -251,6 +251,20 @@ describe("P1-5 Guided Setup Pass", () => {
       return { server, client, port };
     }
 
+    it("looks at the OBS on the port the client signed in on, not the configured one", async () => {
+      const { client, port } = await connectDirect({ obsVersion: "33.0.1", studioMode: true });
+      // With no password typed the client follows OBS's own saved port when the configured one does not answer.
+      vi.spyOn(client, "getActivePort").mockReturnValue(port + 1);
+      const probed: number[] = [];
+      await evaluateSetupChecklist(client, {
+        platform: "win32",
+        probeLocalObsProcess: (probedPort) => { probed.push(probedPort); return { elevated: "ok", minimised: "ok" }; },
+        probeMacAccessibility: () => "not_applicable",
+        probeVjsterPort: async () => ({ state: "free" }) as never
+      });
+      expect(probed).toEqual([port + 1]);
+    });
+
     it("reports all 12 checklist items green/ready on a healthy OBS 33 Studio Mode Fade setup", async () => {
       const { client } = await connectDirect({
         obsVersion: "33.0.1",

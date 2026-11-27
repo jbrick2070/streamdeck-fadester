@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import {
-  action, DialRotateEvent, DialUpEvent, DidReceiveSettingsEvent, KeyDownEvent,
+  action, DialDownEvent, DialRotateEvent, DialUpEvent, DidReceiveSettingsEvent, KeyDownEvent,
   SingletonAction, TouchTapEvent, WillAppearEvent, WillDisappearEvent
 } from "@elgato/streamdeck";
+import { logBindingSaveFailure } from "./binding-save.js";
 import { BLEND_MODES, LayerController, LayerOperation, LayerSettings, matchesLayerIdentity, normalizeLayerSettings } from "../control/layer-controller.js";
 import { toStripUri, toSvgDataUri } from "../gfx/svg-renderer.js";
 import { accentColor, boxText, renderDirectKeySvg } from "../gfx/direct-obs-renderer.js";
@@ -22,10 +23,14 @@ export const LAYER_OPERATION_LABELS: Record<LayerOperation, StringKey> = {
 interface LayerSink {
   render(svg: string): Promise<void>;
   showAlert(): Promise<void>;
+  /** Saves the control's settings when the plugin itself changes them (a scene rename followed, a UUID recorded). */
+  saveSettings?(settings: LayerSettings): Promise<void>;
 }
 
 export class ObsLayerInstanceController {
   private settings: Required<LayerSettings>;
+  /** The settings as saved, which a followed rename updates and saves again. */
+  private raw: LayerSettings;
   private unwatch: (() => void) | undefined;
   private readonly limiter: CellRateLimiter<string>;
   private lastError: LocalText | null = null;
@@ -33,12 +38,29 @@ export class ObsLayerInstanceController {
   /** Dial ticks not yet sent, and the turn that is sending (see rotate). */
   private pendingTicks = 0;
   private turning: Promise<void> | null = null;
+  /** The dial was turned while held in, so its release is not a press. */
+  private turnedWhileDown = false;
   /** Unsubscribes this control from language changes (PLAN.md 11.1). */
   private offLanguage: () => void = () => {};
   private readonly onChanged = (): void => {
+    this.followBinding();
     if (this.layers.client.isConnected() && !this.layers.getScene(this.settings).error) this.lastError = null;
     this.render();
   };
+
+  /** Keeps a fixed scene through a rename in OBS, by its UUID (name-binding.ts). */
+  private followBinding(): void {
+    if (this.settings.scope !== "fixed") return;
+    const next = this.layers.client.followBinding?.("scene", this.settings.sceneName, this.settings.sceneUuid);
+    if (!next) return;
+    this.settings = { ...this.settings, sceneName: next.name, sceneUuid: next.uuid };
+    this.raw = { ...this.raw, sceneName: next.name, sceneUuid: next.uuid };
+    if (this.visible && this.unwatch) {
+      this.unwatch();
+      this.unwatch = this.layers.watch(this.settings);
+    }
+    void this.sink.saveSettings?.(this.raw)?.catch(() => {}); // the action's sink logs a failed save
+  }
 
   public constructor(
     private readonly layers: LayerController,
@@ -47,6 +69,7 @@ export class ObsLayerInstanceController {
     settings?: LayerSettings
   ) {
     this.settings = normalizeLayerSettings(settings);
+    this.raw = settings ?? {};
     this.limiter = new CellRateLimiter((svg) => sink.render(svg), 100);
   }
 
@@ -58,6 +81,7 @@ export class ObsLayerInstanceController {
     this.layers.client.on("statusChanged", this.onChanged);
     this.layers.client.on("directStateChanged", this.onChanged);
     this.unwatch = this.layers.watch(this.settings);
+    this.followBinding();
     this.render();
   }
 
@@ -66,6 +90,7 @@ export class ObsLayerInstanceController {
     this.offLanguage();
     this.offLanguage = () => {};
     this.unwatch?.();
+    this.unwatch = undefined;
     this.layers.off("changed", this.onChanged);
     this.layers.client.off("statusChanged", this.onChanged);
     this.layers.client.off("directStateChanged", this.onChanged);
@@ -77,9 +102,12 @@ export class ObsLayerInstanceController {
     // Ticks counted under the old settings are not turned into another kind of turn.
     this.pendingTicks = 0;
     this.unwatch?.();
+    this.unwatch = undefined;
     this.settings = normalizeLayerSettings(settings);
+    this.raw = settings;
     this.lastError = null;
     if (this.visible) this.unwatch = this.layers.watch(this.settings);
+    this.followBinding();
     this.render();
   }
 
@@ -88,12 +116,26 @@ export class ObsLayerInstanceController {
     await this.perform(operation);
   }
 
+  public dialDown(): void {
+    this.turnedWhileDown = false;
+  }
+
+  /** The dial's release presses, unless the dial was turned while held in (a push-and-turn is a turn). */
+  public async dialUp(): Promise<void> {
+    if (this.turnedWhileDown) {
+      this.turnedWhileDown = false;
+      return;
+    }
+    await this.press();
+  }
+
   /**
    * A dial turn. Each turn is a list read, a write and a list read in OBS; ticks that arrive while one is on its way
    * are added up and sent as one turn when it has finished (clockwise and counter-clockwise ticks cancel), so a fast
    * spin against a slow OBS does not go on moving after the hand has stopped.
    */
-  public rotate(ticks: number): Promise<void> {
+  public rotate(ticks: number, pressed = false): Promise<void> {
+    if (pressed) this.turnedWhileDown = true;
     if (!Number.isFinite(ticks) || ticks === 0) return Promise.resolve();
     this.pendingTicks += ticks;
     this.turning ??= (async () => {
@@ -211,7 +253,8 @@ export class ObsLayerControlAction extends SingletonAction<LayerSettings> {
     const controller = new ObsLayerInstanceController(this.layers, {
       render: (svg) => control.isDial() ? control.setFeedback({ canvas: toStripUri(svg) }) :
         control.isKey() ? control.setImage(toSvgDataUri(svg)) : Promise.resolve(),
-      showAlert: () => control.showAlert()
+      showAlert: () => control.showAlert(),
+      saveSettings: (next) => control.setSettings(next).catch((error: unknown) => logBindingSaveFailure(error))
     }, dial, ev.payload.settings);
     this.instances.set(control.id, controller);
     controller.appear();
@@ -226,13 +269,16 @@ export class ObsLayerControlAction extends SingletonAction<LayerSettings> {
   public override async onKeyDown(ev: KeyDownEvent<LayerSettings>): Promise<void> {
     await this.instances.get(ev.action.id)?.press();
   }
+  public override onDialDown(ev: DialDownEvent<LayerSettings>): void {
+    this.instances.get(ev.action.id)?.dialDown();
+  }
   public override async onDialUp(ev: DialUpEvent<LayerSettings>): Promise<void> {
-    await this.instances.get(ev.action.id)?.press();
+    await this.instances.get(ev.action.id)?.dialUp();
   }
   public override async onTouchTap(ev: TouchTapEvent<LayerSettings>): Promise<void> {
     await this.instances.get(ev.action.id)?.press();
   }
   public override async onDialRotate(ev: DialRotateEvent<LayerSettings>): Promise<void> {
-    await this.instances.get(ev.action.id)?.rotate(ev.payload.ticks);
+    await this.instances.get(ev.action.id)?.rotate(ev.payload.ticks, ev.payload.pressed);
   }
 }

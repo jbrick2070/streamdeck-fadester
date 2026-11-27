@@ -8,6 +8,7 @@ import {
   WillAppearEvent,
   WillDisappearEvent
 } from "@elgato/streamdeck";
+import { logBindingSaveFailure } from "./binding-save.js";
 import { mixProblem } from "../obs/whole-mix.js";
 import { DirectObsClient } from "../obs/direct-obs-client.js";
 import { VisualSignals } from "../control/visual-signals.js";
@@ -36,10 +37,14 @@ import { formatNumber, onLanguageChanged, t, translate } from "../i18n/strings.j
 interface KeyImageSink {
   setImage(image: string): Promise<void>;
   showAlert(): Promise<void>;
+  /** Saves the key's settings when the plugin itself changes them (a rename in OBS followed, a UUID recorded). */
+  saveSettings?(settings: ObsFadeKeySettings): Promise<void>;
 }
 
 export class ObsFadeKeyInstanceController {
   private settings: Required<ObsFadeKeySettings>;
+  /** The settings as saved, which a followed rename updates and saves again. */
+  private raw: ObsFadeKeySettings;
   private visible = false;
   /** Unsubscribes this control from language changes (PLAN.md 11.1). */
   private offMix?: () => void;
@@ -52,12 +57,23 @@ export class ObsFadeKeyInstanceController {
     if (!this.client.isConnected()) {
       this.arm.cancelSilently();
     }
+    this.followBinding();
     this.renderNow();
   };
   private readonly onStatusChanged = (): void => {
     this.lastError = null;
     this.onStateChanged();
   };
+
+  /** Keeps the chosen input through a rename in OBS, by its UUID (name-binding.ts). */
+  private followBinding(): void {
+    if (this.settings.target === "all_inputs") return;
+    const next = this.client.followBinding?.("input", this.settings.inputName, this.settings.inputUuid);
+    if (!next) return;
+    this.settings = { ...this.settings, inputName: next.name, inputUuid: next.uuid };
+    this.raw = { ...this.raw, inputName: next.name, inputUuid: next.uuid };
+    void this.sink.saveSettings?.(this.raw)?.catch(() => {}); // the action's sink logs a failed save
+  }
 
   public constructor(
     private readonly client: DirectObsClient,
@@ -69,6 +85,7 @@ export class ObsFadeKeyInstanceController {
     private readonly clock: () => number = Date.now
   ) {
     this.settings = this.mergeSettings(initialSettings);
+    this.raw = initialSettings ?? {};
     this.rateLimiter = new CellRateLimiter<string>(async (svg) => {
       await this.sink.setImage(toSvgDataUri(svg));
     }, rateLimitMs, clock);
@@ -78,6 +95,7 @@ export class ObsFadeKeyInstanceController {
   public appear(settings?: ObsFadeKeySettings): void {
     if (settings) {
       this.settings = this.mergeSettings(settings);
+      this.raw = settings;
     }
     this.visible = true;
     this.offLanguage();
@@ -86,6 +104,7 @@ export class ObsFadeKeyInstanceController {
     this.client.on("directStateChanged", this.onStateChanged);
     this.client.on("wholeMixChanged", this.onStateChanged);
     this.syncMixObserver();
+    this.followBinding();
     this.renderNow();
   }
 
@@ -105,6 +124,8 @@ export class ObsFadeKeyInstanceController {
   public updateSettings(settings: ObsFadeKeySettings): void {
     const prev = this.settings;
     this.settings = this.mergeSettings(settings);
+    this.raw = settings;
+    this.followBinding();
     if (
       prev.target !== this.settings.target ||
       prev.inputName !== this.settings.inputName ||
@@ -222,6 +243,7 @@ export class ObsFadeKeyInstanceController {
       target: raw?.target === "all_inputs" ? "all_inputs" : "input_volume",
       inputName: typeof raw?.inputName === "string" ? raw.inputName.trim()
         : raw?.inputName === undefined ? DEFAULT_OBS_FADE_KEY_SETTINGS.inputName : "",
+      inputUuid: typeof raw?.inputUuid === "string" ? raw.inputUuid.trim() : "",
       to: Number(raw?.to) === 0 ? 0 : 1,
       durationMs: normalizeDurationMs(
         raw?.durationMs,
@@ -259,7 +281,8 @@ export class ObsFadeKeyAction extends SingletonAction<ObsFadeKeySettings> {
       this.client,
       {
         setImage: (image) => key.setImage(image),
-        showAlert: () => key.showAlert()
+        showAlert: () => key.showAlert(),
+        saveSettings: (next) => key.setSettings(next).catch((error: unknown) => logBindingSaveFailure(error))
       },
       settings,
       100,

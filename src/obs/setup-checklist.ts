@@ -133,6 +133,8 @@ export interface SetupChecklistClientLike {
     inputDetails?: ReadonlyArray<{ inputKind?: string; unversionedInputKind?: string }>;
   };
   getNativeTbarStatus?(): string;
+  /** The port the client is signed in on (OBS's own saved port when it follows that), when it differs from settings. */
+  getActivePort?(): number;
   sendObsRequest(requestType: string, requestData?: Record<string, unknown>): Promise<Record<string, unknown>>;
   callNamedVendor<T = Record<string, unknown>>(
     vendorName: string,
@@ -930,7 +932,8 @@ export async function evaluateSetupChecklist(
       minimised: "unknown"
     };
   } else {
-    localProbe = probeLocal(settings.port, platform);
+    // The OBS to look at is the one listening on the port the client signed in on, not the one typed in settings.
+    localProbe = probeLocal(client.getActivePort?.() ?? settings.port, platform);
     if (localProbe.minimised === "unknown" && client.getNativeTbarStatus?.() === "following") {
       localProbe = { ...localProbe, minimised: "ok" };
     }

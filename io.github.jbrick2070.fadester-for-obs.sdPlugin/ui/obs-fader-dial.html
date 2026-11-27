@@ -196,7 +196,8 @@
         if (pressLayer.value && pressScene) window.directObsSelectLayer(pressScene, Number(pressLayer.value));
       };
       if (input) input.onchange = function () {
-        const update = { inputName: input.value };
+        // A new choice drops the old input's UUID: the plugin records the UUID of the input now named.
+        const update = { inputName: input.value, inputUuid: "" };
         if (input.value !== selectedInput && generatedLabel()) update.labelOverride = "";
         save(update);
       };

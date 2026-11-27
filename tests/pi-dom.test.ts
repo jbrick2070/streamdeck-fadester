@@ -44,6 +44,7 @@ class Element {
     if (this.tag === "select") this.options.forEach((x) => { x.selected = x.value === this.rawValue; });
   }
   descendants(): Element[] { return this.children.flatMap((x) => [x, ...x.descendants()]); }
+  contains(other: Element | null): boolean { return other === this || (other !== null && this.descendants().includes(other)); }
   addEventListener(type: string, fn: () => void): void {
     this.listeners.set(type, [...this.listeners.get(type) ?? [], fn]);
   }
@@ -362,6 +363,32 @@ describe("Property Inspector DOM behavior", () => {
     // The half-typed password is not sent with the next host or port save.
     h.el("conn-port").value = "4456"; h.el("conn-port").fire("change");
     expect(sent.at(-1)).toEqual({ event: "updateGlobalSettings", host: "10.0.0.5", port: 4456 });
+  });
+
+  // Review 2026-11-27 #13: a state message redrew the slot's fields under an open, unpicked menu, which closed it.
+  it("does not redraw a slot field the operator is in; redraws once they leave it", async () => {
+    const h = harness(); await flush();
+    const menu = h.el("af-source-a");
+    expect(menu.tag).toBe("select");
+    h.document.activeElement = menu; // the operator opened the menu and has not picked yet
+    h.api.applyState(structuredClone(h.state)); await flush();
+    expect(h.el("af-source-a")).toBe(menu);
+    // A catalog answer arriving meanwhile waits too.
+    await h.api.refreshCatalog(true); await flush();
+    expect(h.el("af-source-a")).toBe(menu);
+    // A change made elsewhere meanwhile is drawn once the operator leaves the fields.
+    const moved = structuredClone(h.state); moved.slots[0].to_val = 55;
+    h.api.applyState(moved); await flush();
+    expect(h.el("af-source-a")).toBe(menu);
+    h.document.activeElement = null;
+    h.el("assign-fields").fire("focusout");
+    await new Promise((resolve) => setTimeout(resolve, 5)); await flush();
+    expect(h.el("af-source-a")).not.toBe(menu);
+    expect(h.el("af-to").value).toBe("55");
+    // Out of the fields, a state message redraws them as before.
+    const redrawn = h.el("af-source-a");
+    h.api.applyState(structuredClone(moved)); await flush();
+    expect(h.el("af-source-a")).not.toBe(redrawn);
   });
 
   // C-01: every state message redraws an open, unedited editor, and the plugin answers a failed getCatalog with two

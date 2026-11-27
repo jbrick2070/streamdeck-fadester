@@ -7,6 +7,7 @@
 import { FadesterGlobalSettings, clampDurationMs } from "../types/settings.js";
 import { ConnectionStatusInfo } from "../../packages/streamdeck-fadester-shared/src/types.js";
 import { automaticInputRole, resolveAutomaticInputName } from "./automatic-targets.js";
+import { followNameBinding } from "./name-binding.js";
 import { WholeMixClient } from "./whole-mix.js";
 import { LocalText, ownText } from "../../packages/streamdeck-fadester-shared/src/i18n.js";
 import { monotonicNow } from "../../packages/streamdeck-fadester-shared/src/cell-rate-limiter.js";
@@ -818,6 +819,17 @@ export class DirectObsClient extends ObsVendorClient {
     }
   }
 
+  /**
+   * How a control's saved input or scene binding should read now: the name a rename gave its UUID, or the UUID of a
+   * name saved without one (name-binding.ts). Null when nothing needs saving.
+   */
+  public followBinding(kind: "input" | "scene", name: string, uuid: string): { name: string; uuid: string } | null {
+    const entries = kind === "input"
+      ? this.catalog.inputDetails.map((input) => ({ name: input.inputName, uuid: input.inputUuid }))
+      : this.catalog.sceneDetails.map((scene) => ({ name: scene.sceneName, uuid: scene.sceneUuid }));
+    return followNameBinding(entries, name, uuid);
+  }
+
   public resolveInputName(target: string): string {
     return resolveAutomaticInputName(target.trim(), Object.keys(this.catalog.inputVolumes));
   }
@@ -1018,7 +1030,9 @@ export class DirectObsClient extends ObsVendorClient {
     if (!nativeTbarEligible(this.nativePlatform, this.settings.host, this.obsVersion)) return null;
     if (!this.native && !this.nativeTried) {
       this.nativeTried = true;
-      this.native = this.nativeOption(this.settings.port) ?? null;
+      // Pinned to the OBS on the port this connection signed in on (OBS's own saved port when the client follows it).
+      // The port changes only between connections, and endNative drops the helper on every disconnect.
+      this.native = this.nativeOption(this.getActivePort()) ?? null;
     }
     return this.native;
   }

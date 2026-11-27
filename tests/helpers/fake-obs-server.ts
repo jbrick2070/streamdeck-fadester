@@ -914,6 +914,18 @@ export class FakeObsServer {
     return uuid;
   }
 
+  /** Renames a scene as OBS does: its UUID stays, Program and Preview follow, and `SceneNameChanged` goes out. */
+  public renameScene(oldSceneName: string, sceneName: string): void {
+    const sceneUuid = this.sceneUuidFor(oldSceneName);
+    this.sceneUuids.delete(oldSceneName);
+    this.sceneUuids.set(sceneName, sceneUuid);
+    this.sceneNames = this.sceneNames.map((name) => name === oldSceneName ? sceneName : name);
+    if (this.programSceneName === oldSceneName) this.programSceneName = sceneName;
+    if (this.previewSceneName === oldSceneName) this.previewSceneName = sceneName;
+    for (const group of this.groups) if (group.sceneName === oldSceneName) group.sceneName = sceneName;
+    this.emitObsEvent("SceneNameChanged", { sceneUuid, oldSceneName, sceneName });
+  }
+
   /** A group inside a scene (no event: OBS's SceneCreated for groups is not modelled). */
   public addGroup(groupName: string, sceneName: string): FakeObsGroup {
     const group = { groupName, groupUuid: `9a0b0000-0000-4000-8000-${String(this.groups.length + 1).padStart(12, "0")}`, sceneName };

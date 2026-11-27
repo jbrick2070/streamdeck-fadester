@@ -8,13 +8,24 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Worker } from "node:worker_threads";
 import type { UiaWorkerCallReply, UiaWorkerMessage, UiaWorkerRequest, WorkerRefusalReason } from "./uia/uia-worker.js";
+import { AX_READ_MARGIN_MS, AX_TRAVERSAL_BUDGET_MS } from "./native-tbar-limits.js";
 
 /** OBS's slider range: 0 (Program) to 1023 (Preview fully faded in). */
 export const NATIVE_TBAR_MAX = 1023;
 /** Per-call UI Automation / Accessibility movement deadline on the main thread (~80 ms). */
 export const UIA_CALL_TIMEOUT_MS = 80;
-/** Cold discovery / setup read deadline on the main thread (~500 ms for macOS AX BFS and one-time TCC check). */
+/** Cold discovery / setup read deadline on the main thread for Windows UI Automation. */
 export const UIA_READ_TIMEOUT_MS = 500;
+/**
+ * The same on macOS: above the AX worker's own search budget, so a slow first search after a reset (a large OBS window,
+ * a busy Mac) ends in the worker's answer, found or not, instead of a main-thread timeout that taints the backend.
+ */
+export const AX_READ_TIMEOUT_MS = AX_TRAVERSAL_BUDGET_MS + AX_READ_MARGIN_MS;
+
+/** The read deadline for the platform whose worker answers it. */
+export function nativeReadTimeoutMs(platform: string): number {
+  return platform === "darwin" ? AX_READ_TIMEOUT_MS : UIA_READ_TIMEOUT_MS;
+}
 /** Initial worker thread + koffi load budget before the first call is raced. */
 export const UIA_BOOT_TIMEOUT_MS = 1500;
 /** Maximum wait for a busy-tainted worker's late reply before reconciliation gives up on native slider recovery. */
@@ -147,6 +158,8 @@ export interface NativeTbarUiaOptions {
   workerFactory?: (port: number) => UiaWorkerLike;
   callTimeoutMs?: number;
   readTimeoutMs?: number;
+  /** Whose worker answers (default: this process's platform); it sets the default read deadline. */
+  platform?: string;
   bootTimeoutMs?: number;
   taintDrainMs?: number;
   /** How long a worker that was closed while still inside a call may take to end by itself before it is terminated. */
@@ -196,7 +209,7 @@ export class NativeTbarUia implements NativeTbar {
     options: NativeTbarUiaOptions = {}
   ) {
     this.callTimeoutMs = options.callTimeoutMs ?? UIA_CALL_TIMEOUT_MS;
-    this.readTimeoutMs = options.readTimeoutMs ?? options.callTimeoutMs ?? UIA_READ_TIMEOUT_MS;
+    this.readTimeoutMs = options.readTimeoutMs ?? options.callTimeoutMs ?? nativeReadTimeoutMs(options.platform ?? process.platform);
     this.bootTimeoutMs = options.bootTimeoutMs ?? UIA_BOOT_TIMEOUT_MS;
     this.taintDrainMs = options.taintDrainMs ?? UIA_TAINT_DRAIN_MS;
     this.stuckTerminateMs = options.stuckTerminateMs ?? UIA_STUCK_TERMINATE_MS;

@@ -134,7 +134,8 @@
         banner.style.display = text ? "block" : "none";
       }
       if (scene) scene.onchange = function () {
-        const update = { sceneTarget: scene.value, presetBindingsVersion: 1 };
+        // A new choice drops the old scene's UUID: the plugin records the UUID of the scene now named.
+        const update = { sceneTarget: scene.value, sceneUuid: "", presetBindingsVersion: 1 };
         if (scene.value !== selectedTarget && generatedLabel()) update.labelOverride = "";
         save(update);
       };

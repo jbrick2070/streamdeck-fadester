@@ -88,6 +88,8 @@
   let catalogGeneration = 0;
   let applySequence = 0;
   let applying = false;
+  // A redraw of the slot fields that waited because the operator was in one of them (an open menu would close).
+  let editorRedrawWaiting = false;
 
   function markEditorDirty() {
     editorDirty = true;
@@ -959,11 +961,19 @@
       }
       const modeSel = $("assign-mode");
       if (modeSel && overviewSlot === (currentSettings.slot || "crossfader") && $("assign-editor").open) {
-        renderModeFields(modeSel.value, captureEditorDraft());
+        if (editorFieldHasFocus()) editorRedrawWaiting = true;
+        else renderModeFields(modeSel.value, captureEditorDraft());
       }
     });
     overviewPending = asked;
     return asked;
+  }
+
+  /** True while the operator is in one of the slot's fields: a menu there may be open, and a redraw would close it. */
+  function editorFieldHasFocus() {
+    const host = $("assign-fields");
+    const active = document.activeElement;
+    return Boolean(host && active && active !== host && host.contains(active));
   }
 
   function refreshEditor(state) {
@@ -972,6 +982,11 @@
     buildModeSelect(state);
     if (!editor.open) return; // closed: nothing to draw yet
     if (editorDirty || applying) return; // operator is mid-edit; keep their fields
+    if (editorFieldHasFocus()) {
+      editorRedrawWaiting = true; // drawn when the operator leaves the fields
+      return;
+    }
+    editorRedrawWaiting = false;
     const modeSel = $("assign-mode");
     renderModeFields(modeSel ? modeSel.value : "unassigned");
     refreshCatalog(false);
@@ -994,6 +1009,16 @@
       renderModeFields(modeSel.value);
     });
     editor.addEventListener("input", markEditorDirty);
+    const fieldsHost = $("assign-fields");
+    if (fieldsHost) fieldsHost.addEventListener("focusout", function () {
+      // Focus may only be moving to the next field: look once it has landed.
+      setTimeout(function () {
+        if (!editorRedrawWaiting || editorFieldHasFocus() || !editor.open) return;
+        editorRedrawWaiting = false;
+        if (editorDirty || applying) renderModeFields(modeSel.value, captureEditorDraft());
+        else if (lastState) refreshEditor(lastState);
+      }, 0);
+    });
     const discardBtn = $("assign-discard");
     if (discardBtn) discardBtn.addEventListener("click", function () {
       resetEditorContext();

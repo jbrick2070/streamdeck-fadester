@@ -49,6 +49,8 @@ export class FaderDialInstanceController {
   private holdTimer: ReturnType<typeof setTimeout> | null = null;
   private holdingForLongPress = false;
   private longPressFired = false;
+  /** A turn while the dial was held in: its release is the end of a push-and-turn, not a press. */
+  private turnedWhileDown = false;
   private visible = false;
   private needsUpdate = false;
   /** Unsubscribes this control from language changes (PLAN.md 11.1). */
@@ -122,7 +124,16 @@ export class FaderDialInstanceController {
     return { ...this.settings };
   }
 
-  public async handleRotate(ticks: number, now = Date.now()): Promise<void> {
+  public async handleRotate(ticks: number, now = Date.now(), pressed = false): Promise<void> {
+    if (pressed) {
+      // A push-and-turn is a turn: neither the long press nor the release's press may fire.
+      this.turnedWhileDown = true;
+      this.clearHoldTimer();
+      if (this.holdingForLongPress) {
+        this.holdingForLongPress = false;
+        this.renderNow();
+      }
+    }
     if (!(await this.ensureReady(now))) {
       return;
     }
@@ -157,6 +168,7 @@ export class FaderDialInstanceController {
   public handleDialDown(): void {
     this.clearHoldTimer();
     this.longPressFired = false;
+    this.turnedWhileDown = false;
 
     if (this.settings.longPressAction === "none") {
       this.holdingForLongPress = false;
@@ -185,6 +197,10 @@ export class FaderDialInstanceController {
 
     if (this.longPressFired) {
       this.longPressFired = false;
+      return;
+    }
+    if (this.turnedWhileDown) {
+      this.turnedWhileDown = false;
       return;
     }
 
@@ -446,7 +462,7 @@ export class FaderDialAction extends SingletonAction<FaderDialSettings> {
   ): Promise<void> {
     const ctrl = this.instances.get(ev.action.id);
     if (ctrl) {
-      await ctrl.handleRotate(ev.payload.ticks);
+      await ctrl.handleRotate(ev.payload.ticks, Date.now(), ev.payload.pressed);
     }
   }
 

@@ -413,6 +413,12 @@ internal static class VjsterSelfTests
         Check(VjsterHost.PortInUseLine(48150, "VJster").Contains(" is held by the VJster actions of VJster "), "the standalone VJster plugin is named as the holder");
         Check(plain.StartsWith("VJster port 48150 is in use, probably by ", StringComparison.Ordinal) && !plain.Contains(" is held by "), "an unknown holder is the plain line");
         Check(VjsterHost.PortInUseLine(48150, "Fadester Companion") == plain && VjsterHost.PortInUseLine(48150, "x is held by the VJster actions of y") == plain, "no other holder's words are printed");
+        // Removing the actions alone no longer frees the port once Keep the link on holds it: both lines name that
+        // tick box and where it is, quitting the deck software, and another port.
+        foreach (var line in new[] { deck, plain })
+            Check(line.Contains("untick Keep the link on under OBS page in a VJster action's settings", StringComparison.OrdinalIgnoreCase) &&
+                  line.Contains("quit Stream Deck or OpenDeck") && line.Contains("choose another port here and on the extension's options page"),
+                "the port-in-use line says what frees the port: Keep the link on (OBS page, a VJster action's settings), quitting, or another port");
         await link.StopAsync();
         Check(!link.Running && !link.Connected, "stopped");
         await clash.StartAsync();

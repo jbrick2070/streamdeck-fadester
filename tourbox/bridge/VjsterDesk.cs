@@ -423,12 +423,14 @@ internal sealed class VjsterHost : IAsyncDisposable
     /// <summary>
     /// What Activity says while another program holds the VJster port. When that program answers as the suite's own
     /// Stream Deck or OpenDeck plugin, the line says so ("is held by the VJster actions of"): the deck has the video, which
-    /// is no fault, and the panels show a grey light for it. Only those two known names are ever printed.
+    /// is no fault, and the panels show a grey light for it. Only those two known names are ever printed. Once that plugin's
+    /// "Keep the link on" is ticked (it ticks itself when an OBS page first connects), it holds the port while Stream Deck
+    /// runs, so removing the actions alone frees nothing: the line names the tick box and where it is first.
     /// </summary>
     internal static string PortInUseLine(int port, string? holderProduct) =>
         holderProduct is "Fadester for OBS" or "VJster"
-            ? $"VJster port {port} is held by the VJster actions of {holderProduct} on your Stream Deck or OpenDeck: the deck controls the video. To use this controller for VJster instead, remove them from the deck, or choose another port here and on the extension's options page. Trying again every 30 s."
-            : $"VJster port {port} is in use, probably by the VJster actions in your Stream Deck or OpenDeck software. Remove them from the deck, or choose another port here and on the extension's options page. Trying again every 30 s.";
+            ? $"VJster port {port} is held by the VJster actions of {holderProduct} on your Stream Deck or OpenDeck: the deck controls the video. To use this controller for VJster instead, untick Keep the link on under OBS page in a VJster action's settings there, then remove the VJster actions from the deck; or quit Stream Deck or OpenDeck; or choose another port here and on the extension's options page. Trying again every 30 s."
+            : $"VJster port {port} is in use, probably by the VJster actions in your Stream Deck or OpenDeck software. Untick Keep the link on under OBS page in a VJster action's settings there, then remove the VJster actions from the deck; or quit Stream Deck or OpenDeck; or choose another port here and on the extension's options page. Trying again every 30 s.";
 
     public ValueTask DisposeAsync() => Link.DisposeAsync();
 }

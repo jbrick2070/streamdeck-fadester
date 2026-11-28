@@ -103,60 +103,6 @@ jobs:
           unzip -q "$package" -d "$unpacked"
           FADESTER_SMOKE_PLUGIN_DIR="$unpacked/io.github.jbrick2070.fadester-for-obs.sdPlugin" npx vitest run tests/suite-launch-smoke.test.ts
 
-  # The Elgato Marketplace edition: the same build under the Marketplace product's ID (PUBLISHING.md). A job of its
-  # own, run after the package's own jobs, that the draft does not wait for: a fault in this side edition shows as a red job and a missing artifact and
-  # never holds back the GitHub release. It is not attached to the release (two editions of one plugin would be
-  # offered side by side there); the artifact is for the upload in Maker Console.
-  marketplace:
-    name: Elgato Marketplace edition, packed and started (${{ matrix.platform }}-${{ matrix.arch }})
-    # After the tag check and the tests of the GitHub package: no Marketplace artifact from a tag that those refused.
-    needs: [streamdeck, streamdeck-native]
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - runner: windows-2025
-            platform: win32
-            arch: x64
-          - runner: macos-15
-            platform: darwin
-            arch: arm64
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: '24'
-          architecture: ${{ matrix.arch }}
-          package-manager-cache: false
-      - run: npm ci
-      - name: Build, validate and pack
-        run: node --import tsx scripts/suite/package-candidate.ts
-      - name: Pack the Elgato Marketplace edition and start it as Stream Deck does
-        run: |
-          set -euo pipefail
-          node --import tsx scripts/suite/package-marketplace.ts
-          package=release/marketplace/com.jbrick2070.fadester-for-obs.streamDeckPlugin
-          test -f "$package"
-          unpacked="$RUNNER_TEMP/fadester-marketplace"
-          rm -rf "$unpacked"
-          mkdir -p "$unpacked"
-          unzip -q "$package" -d "$unpacked"
-          FADESTER_SMOKE_PLUGIN_DIR="$unpacked/com.jbrick2070.fadester-for-obs.sdPlugin" npx vitest run tests/suite-launch-smoke.test.ts
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: marketplace-fadester-for-obs-${{ matrix.platform }}-${{ matrix.arch }}
-          path: release/marketplace/*
-          retention-days: 30
-          if-no-files-found: error
-          compression-level: 0
-
   # The tag names Fadester for OBS's version. Fadester Companion (installer/components.json) and the VJster Chrome
   # extension (vjster-extension/manifest.json) are attached under versions of their own: a release that changed one of
   # them and kept its number would publish two different builds under one version, so the release stops here instead.
@@ -277,7 +223,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      # Only what belongs on the release: the Marketplace edition's artifacts (marketplace-*) stay off it.
+      # Download only release artifacts.
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           path: dist

@@ -4,6 +4,13 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 
 ## Unreleased
 
+### One Fadester for OBS, not two editions
+
+#### Corrected
+- The 1.5.0 entries below about an "Elgato Marketplace edition" rest on a wrong note. The Marketplace product's ID is the plugin's own, `io.github.jbrick2070.fadester-for-obs` (read in Maker Console on 21 November 2026); `com.jbrick2070.fadester-for-obs` was simply the plugin's ID up to 0.9.x. The build that repacked the plugin under that old ID is removed: `scripts/suite/package-marketplace.ts`, `npm run pack:marketplace`, the release workflow's `marketplace` job and the second artifact on pull requests. Pull requests still unpack the real package and start it as Stream Deck does.
+- Suite Setup's check works as before (no second copy beside a copy from before 0.10; both reported when both are there; `/ALLOWDOWNGRADE` does not change that), but its two notes now speak of an older Fadester for OBS from before version 0.10 and say where to uninstall it: in Stream Deck, **Preferences > Plugins**, right-click the older copy, **Uninstall**; keys and dials placed from it then show a question mark and need placing again. In all 13 languages, with Stream Deck's own labels where Stream Deck is translated. Log markers `OLD-ID-PLUGIN` and `BOTH-IDS` replace `MARKETPLACE-EDITION` and `BOTH-EDITIONS`; the guard test is `old-id-plugin` (`BREAK_OLDID_GUARD`).
+- README, PUBLISHING.md, docs/TROUBLESHOOTING.md and installer/README.md say the same. The README no longer suggests installing beside 0.9: uninstall the old copy first, after backing up your profiles.
+
 ### VJster Chrome extension 1.5.2
 
 Version 1.5.1 (the keyboard hotkeys, below) has been on the Chrome Web Store since 27 November 2026. 1.5.2 is that extension with the fixes listed further down under **Fixes from the 2026-11-27 review** and **Fixes from the VJster final QA (2026-11-27)** that name the VJster Chrome extension or its hotkeys: text fields with several roles, "faster" and "slower" never moving the rate the wrong way, a late state report, a state changed back in the page, and the whole-page search on busy pages. Two parts of the hotkeys entry below are also new in 1.5.2 and not in the 1.5.1 on the store: on a Mac, a layout that types `[ ] \` with Option; and layouts whose `[ ] \` keys type a letter of a non-Latin script. Nothing new is asked of the user and no permission changes.

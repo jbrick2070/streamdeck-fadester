@@ -59,7 +59,7 @@ Release 1.5.0 (20 November 2026, branch `release/1.5`) was the suite-wide step: 
 1. **Fadester for OBS and Fadester Suite Setup** (the tag's number, `X.Y.Z`):
    - `package.json` (`version`), then `npm install --package-lock-only` so `package-lock.json` follows (two lines change and nothing else);
    - `io.github.jbrick2070.fadester-for-obs.sdPlugin/manifest.json` (`Version`, as `X.Y.Z.0`);
-   - `README.md`: the first paragraph (**Fadester for OBS X.Y.Z**) and the example foot line under "Then, if you like" (`Fadester for OBS X.Y.Z · Connected to OBS …`);
+   - `README.md`: the first paragraph (**Fadester for OBS X.Y.Z**); `docs/ACTIONS.md`: the example foot line (`Fadester for OBS X.Y.Z · Connected to OBS …`);
    - Suite Setup has no file of its own to edit: its file name (`Fadester-Suite-Setup-X.Y.Z-Windows-x64.exe`), its version in Windows **Installed apps** and its wizard follow `package.json`.
 2. **The standalone VJster plugin**: `Version` in `com.jbrick2070.vjster.sdPlugin/manifest.json` (four parts), then `node --import tsx scripts/vjster/build-profiles.ts`: its four bundled profiles hold the version, `npm run build` does not rebuild them, and `tests/vjster-plugin-package.test.ts` calls them stale until that script has run. Then the number in the first line of `docs/vjster/README.md` (**VJster A.B.C**) and in `docs/vjster/TESTING.md` ("… `manifest.json` (A.B.C.0 today)"). The plugin is not attached to this repository's releases, so no job checks its number.
 3. **The VJster Chrome extension**: `version` in `vjster-extension/manifest.json`. Nothing else holds it. (`components.vjsterExtension` in `installer/components.json` is not this number but a pin: see step 8.)

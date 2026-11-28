@@ -5,19 +5,19 @@
   "components": {
     "midiFadester": {
       "name": "Midi Fadester (includes Visual Sidechain)",
-      "version": "1.5.0",
+      "version": "1.5.1",
       "appId": "8F4A92C1-5B3E-4D17-9A62-3C8E71D40F59",
-      "file": "midi-fadester-1.5.0-windows-x64-Installer.exe",
-      "url": "https://github.com/jbrick2070/midi-fadester/releases/download/1.5.0/midi-fadester-1.5.0-windows-x64-Installer.exe",
-      "sha256": "c44cd033c0164c85a4dce883345d705231b1fc65552f62e689db756bdc38ae9d"
+      "file": "midi-fadester-1.5.1-windows-x64-Installer.exe",
+      "url": "https://github.com/jbrick2070/midi-fadester/releases/download/1.5.1/midi-fadester-1.5.1-windows-x64-Installer.exe",
+      "sha256": "9c63b84fa3fe240dd4a5fb5d9607978532ceb8fd203d33fe172a3b82fa0a230a"
     },
     "playlister": {
       "name": "Playlister",
-      "version": "1.5.0",
+      "version": "1.5.1",
       "appId": "E1214DB1-63FD-4CB4-84CE-825EF8D2C21D",
-      "file": "obs-playlister-1.5.0-windows-x64-Installer.exe",
-      "url": "https://github.com/jbrick2070/obs-playlister/releases/download/1.5.0/obs-playlister-1.5.0-windows-x64-Installer.exe",
-      "sha256": "69bccab6611159709c43dd01824d2099c38f28605a3e3eec1ba6a98d226582d0"
+      "file": "obs-playlister-1.5.1-windows-x64-Installer.exe",
+      "url": "https://github.com/jbrick2070/obs-playlister/releases/download/1.5.1/obs-playlister-1.5.1-windows-x64-Installer.exe",
+      "sha256": "8f31b9e3ca49c12824672e13ad8a7f2acd44b89a59920b924c8ee4a537ed2412"
     },
     "fadesterForObs": {
       "name": "Fadester for OBS (Stream Deck and OpenDeck, includes VJster)",
@@ -35,7 +35,7 @@
     },
     "companion": {
       "name": "Fadester Companion",
-      "version": "1.5.1",
+      "version": "1.5.2",
       "appId": "18EAD777-F9B7-42AB-BB49-482FB1F46695",
       "storePackageFamilyPrefix": "Fluxxuuss.FadesterCompanion_",
       "comment": "Built from this repository by tourbox/build.ps1 (a finished build has build-complete.txt); not downloaded."

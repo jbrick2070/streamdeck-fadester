@@ -1,6 +1,6 @@
 # VJster
 
-**VJster 1.5.0** rides the speed of a YouTube video from your Stream Deck: turn a dial and the video speeds up or slows down while it plays; press a key for 0.5x, 1x or 2x; nudge in 0.05 steps to match a beat. It works on a video in a Chrome tab, inside an OBS browser source, or both at once. Nothing leaves this computer, and it needs no OBS connection.
+**VJster 1.5.1** rides the speed of a YouTube video from your Stream Deck: turn a dial and the video speeds up or slows down while it plays; press a key for 0.5x, 1x or 2x; nudge in 0.05 steps to match a beat. It works on a video in a Chrome tab, inside an OBS browser source, or both at once. Nothing leaves this computer, and it needs no OBS connection.
 
 ## First five minutes
 

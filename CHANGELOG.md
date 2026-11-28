@@ -4,6 +4,15 @@ What changed in Fadester for OBS and, where it says so, in VJster. The format fo
 
 ## Unreleased
 
+## 1.5.2 - 2026-11-27
+This release ships Fadester for OBS 1.5.2, Fadester Companion 1.5.2, the VJster Chrome extension 1.5.2 and Fadester Suite Setup 1.5.2. The standalone VJster plugin, released on its own, moves to 1.5.1 (its Speed dial changed). Suite Setup carries Midi Fadester 1.5.1 and Playlister 1.5.1. None of it has been through the hand tests on real hardware or in a live OBS yet.
+
+### Fadester Companion and Suite Setup
+
+#### Changed
+- Suite Setup carries Midi Fadester 1.5.1 and Playlister 1.5.1 (`installer/components.json`), published before this release.
+- The Microsoft Store listing's **What's new in this version** is written for 1.5.2, in English and the twelve other languages. No second model and no native speaker has read the new lines yet.
+
 ### One Fadester for OBS, not two editions
 
 #### Corrected

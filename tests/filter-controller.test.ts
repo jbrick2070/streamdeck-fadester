@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { once } from "node:events";
 import { DirectObsClient } from "../src/obs/direct-obs-client.js";
 import { FilterController, FilterTarget } from "../src/control/filter-controller.js";
+import { monotonicNow } from "../packages/streamdeck-fadester-shared/src/cell-rate-limiter.js";
 import { isDeniedSetting, listUniformNames, resolveRange, restValue, slewStep, writableValue } from "../src/obs/filter-ranges.js";
 import {
   COLOR_FILTER_KIND,
@@ -88,22 +89,29 @@ describe("filter controller", () => {
     });
     const opacity: FilterTarget = { sourceUuid: sceneUuid, filterName: "Grade", filterKind: COLOR_FILTER_KIND, setting: "opacity" };
     const amount: FilterTarget = { sourceUuid: sceneUuid, filterName: "Pulse", filterKind: VS_MODULATOR_KIND, setting: "slot_2_amount_pct", rangeMin: 0, rangeMax: 100 };
+    // The spacing is the controller's promise when it sends, so the send times are taken there, with the clock it
+    // uses itself. The fake server's arrival times also carry the socket's jitter: on a busy CI runner one late
+    // arrival made the next gap 33 ms although the two were sent 50 ms apart.
+    const sent: Array<{ filterName: string; at: number }> = [];
+    const send = filters.client.setSourceFilterSettings.bind(filters.client);
+    filters.client.setSourceFilterSettings = async (...args) => {
+      sent.push({ filterName: args[1] as string, at: monotonicNow() });
+      return send(...args);
+    };
     await Promise.all([filters.glideTo(mix(sceneUuid), 0, 0), filters.glideTo(opacity, 0.6, 0), filters.glideTo(amount, 40, 0)]);
     await vi.waitFor(() => {
       expect(aura.filterSettings.vs_effect_mix_pct).toBe(0);
       expect(grade!.filterSettings.opacity).toBe(0.6);
       expect(pulse!.filterSettings.slot_2_amount_pct).toBe(40);
     }, { timeout: 4000 });
-    const all = server.filterWriteLog.map((entry) => entry.at);
-    expect(all.length).toBe(4 + 4 + 4);
-    // The fake server stamps each write when it arrives, so one late arrival shortens the next gap although the
-    // plugin sent them 50 ms apart (a busy CI runner showed 43 ms). Every gap must still be far from "no throttle", and
-    // the average over the whole run must keep the rate.
-    for (let i = 1; i < all.length; i++) expect(all[i]! - all[i - 1]!, `write ${i}`).toBeGreaterThanOrEqual(35);
-    expect((all.at(-1)! - all[0]!) / (all.length - 1), "average gap").toBeGreaterThanOrEqual(45);
-    const modulator = server.filterWriteLog.filter((entry) => entry.filterName === "Pulse").map((entry) => entry.at);
-    for (let i = 1; i < modulator.length; i++) expect(modulator[i]! - modulator[i - 1]!, `modulator write ${i}`).toBeGreaterThanOrEqual(170);
-    expect((modulator.at(-1)! - modulator[0]!) / (modulator.length - 1), "average modulator gap").toBeGreaterThanOrEqual(190);
+    expect(server.filterWriteLog.length).toBe(4 + 4 + 4);
+    expect(sent.length).toBe(4 + 4 + 4);
+    // Timers only ever fire late, never early, so every gap is at least the interval (less a hair for rounding).
+    const all = sent.map((entry) => entry.at);
+    for (let i = 1; i < all.length; i++) expect(all[i]! - all[i - 1]!, `write ${i}`).toBeGreaterThanOrEqual(49.5);
+    const modulator = sent.filter((entry) => entry.filterName === "Pulse").map((entry) => entry.at);
+    expect(modulator.length).toBe(4);
+    for (let i = 1; i < modulator.length; i++) expect(modulator[i]! - modulator[i - 1]!, `modulator write ${i}`).toBeGreaterThanOrEqual(199.5);
   });
 
   it("moves a whole-number setting at least one per write and arrives", async () => {
@@ -399,8 +407,11 @@ describe("filter controller", () => {
     expect(filters.getState(stale).availability).toBe("wrong_kind");
     // ...and never cancels the other control's glide or empties its record.
     await expect(glide).resolves.toBe("done");
-    await vi.waitFor(() => expect(aura.filterSettings.vs_effect_mix_pct).toBe(100), { timeout: 3000 });
-    expect(filters.getState(mix(sceneUuid))).toMatchObject({ availability: "ok", value: 100 });
+    // OBS holds 100 when the last write arrives; the controller records it when OBS's reply comes back, a moment later.
+    await vi.waitFor(() => {
+      expect(aura.filterSettings.vs_effect_mix_pct).toBe(100);
+      expect(filters.getState(mix(sceneUuid))).toMatchObject({ availability: "ok", value: 100 });
+    }, { timeout: 3000 });
   });
 
   // B-10: a step above the slew cap is written 10 % at a time; a second press stepped from the value written so far

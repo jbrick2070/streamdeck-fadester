@@ -5,7 +5,7 @@
 // runs this on Linux, Windows and macOS.
 //
 // FADESTER_SMOKE_PLUGIN_DIR names another copy of the .sdPlugin folder to start instead of the tree's: the release
-// workflow unpacks the packed .streamDeckPlugin there, so a file that `streamdeck pack` left out fails here and not on
+// and pull-request workflows unpack the packed .streamDeckPlugin there, so a file that `streamdeck pack` left out fails here and not on
 // a user's computer (QA-A02). With it set, a missing file is a failure, never a skip.
 import { spawn, type ChildProcess } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
@@ -20,13 +20,10 @@ const PLUGIN_DIR = resolve(UNPACKED || "io.github.jbrick2070.fadester-for-obs.sd
 const ENTRY = join(PLUGIN_DIR, "bin", "plugin.js");
 const NEEDED = [ENTRY, join(PLUGIN_DIR, "bin", "fadester.js"), join(PLUGIN_DIR, "bin", "vjster", "plugin.js"), join(PLUGIN_DIR, "manifest.json")];
 const built = NEEDED.every((file) => existsSync(file));
-// The plugin's own ID is read from the folder that is started: the Elgato Marketplace edition
-// (scripts/suite/package-marketplace.ts) is the same plugin under the Marketplace product's ID, and it is started
-// by this same test.
 const MANIFEST = join(PLUGIN_DIR, "manifest.json");
-const UUID = existsSync(MANIFEST) ? (JSON.parse(readFileSync(MANIFEST, "utf8")) as { UUID: string }).UUID : SUITE_PLUGIN_ID;
+const UUID = SUITE_PLUGIN_ID;
 const SCENE_ACTION = `${UUID}.scene-transition`;
-const VJSTER_ACTION = suiteActionId("speed-preset").replace(SUITE_PLUGIN_ID, UUID);
+const VJSTER_ACTION = suiteActionId("speed-preset");
 
 /** A port nothing listens on: taken and given back, so a connection to it is refused at once. */
 async function closedPort(): Promise<number> {
@@ -42,6 +39,10 @@ type Message = Record<string, unknown> & { event?: string; context?: string };
 describe.runIf(UNPACKED !== "")("the unpacked package is complete (QA-A02)", () => {
   it("holds the launcher, both plugins and the manifest", () => {
     expect(NEEDED.filter((file) => !existsSync(file))).toEqual([]);
+  });
+
+  it("is the plugin under its own ID", () => {
+    expect((JSON.parse(readFileSync(MANIFEST, "utf8")) as { UUID: string }).UUID).toBe(SUITE_PLUGIN_ID);
   });
 });
 

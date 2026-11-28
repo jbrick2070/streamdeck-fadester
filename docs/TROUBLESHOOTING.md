@@ -26,7 +26,7 @@ When OBS goes away, the plugin reconnects by itself and every key shows the same
 |---|---|
 | A key changed the picture on Program in Studio Mode | A scene's content is shared: when Preview and Program show the same scene, layer edits change both. The control is framed red and labels that scene PROGRAM. |
 | A numbered scene key does nothing | OBS has fewer scenes than the number. Add a scene, or pin the key to a named scene in its settings page. |
-| *Fadester for OBS* is listed twice in Stream Deck's actions | The plugin from the Elgato Marketplace and the one from the GitHub Releases page are the same plugin under two IDs, and Stream Deck holds them as two. Keep one and remove the other in Stream Deck. Keys keep the copy they were placed with, so re-place the keys of the copy you remove. |
+| *Fadester for OBS* is listed twice in Stream Deck's actions | A copy from before 0.10 is still installed beside the current one: up to 0.9.x the plugin had another ID, and Stream Deck holds the two IDs as two plugins. In Stream Deck, open **Preferences > Plugins**, right-click the *Fadester for OBS* with the lower version number and choose **Uninstall**. Keys and dials placed from it then show a question mark: place them again from the current copy. |
 | The T-bar dial makes OBS's window flash white | The dial cannot reach OBS's own slider (over the network, another transition than Fade, OBS minimised or elevated, or no Accessibility on macOS). The picture OBS sends out stays clean. See [ACTIONS.md](ACTIONS.md#volume--t-bar). |
 
 VJster keys (**EXTENSION OFF**, **PORT IN USE** and so on): [vjster/INSTALL.md](vjster/INSTALL.md#when-something-is-off). OpenDeck: [OPENDECK.md](OPENDECK.md#when-something-is-off).

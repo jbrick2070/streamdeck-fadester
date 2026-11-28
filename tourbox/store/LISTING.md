@@ -20,11 +20,13 @@ Your game controller, now a vision mixer for OBS Studio: a real T-bar on the rig
 
 ## What's new in this version
 
-Version 1.5.1:
+Version 1.5.2:
 
-- The Quick guide now starts by asking which controller you have: game controller, TourBox or MIDI controller, with a picture of each.
-- A new section for MIDI controllers: an APC40 mkII or another MIDI controller is run by Midi Fadester, a free plugin inside OBS, not by Fadester Companion.
-- In Russian and Dutch, the app now names OBS's Tools menu as OBS does: "Сервис" in Russian, "Tools" in Dutch.
+- T-bar: when OBS accepted the end of a fade but the check of its slider failed afterwards, the app could switch back to the old scene or put Preview on air. It now keeps what OBS did, and Activity says so.
+- "Copy OBS Browser Source URL" builds the link from your saved settings and says when the controls need a stop and start.
+- VJster with both targets: speed and quality steps go only where a video can follow them, so the OBS page no longer reports an error for each quality step.
+- When the VJster actions in Stream Deck hold the VJster port, Activity and "Show me" now say what frees it: untick "Keep the link on" under "OBS page" in a VJster action's settings, then remove the actions; or quit Stream Deck.
+- The VJster page in OBS keeps working after OBS refreshes it.
 
 ## Product features
 

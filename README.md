@@ -1,6 +1,6 @@
 # Fadester for OBS
 
-**Fadester for OBS 1.5.1** puts OBS Studio on your Stream Deck: scenes, transitions, sources, filters and audio on keys and dials. It talks to OBS's built-in WebSocket server, so the main controls need no MIDI desk and no extra OBS plugin. Fourteen ready-made layouts. Thirteen languages.
+**Fadester for OBS 1.5.2** puts OBS Studio on your Stream Deck: scenes, transitions, sources, filters and audio on keys and dials. It talks to OBS's built-in WebSocket server, so the main controls need no MIDI desk and no extra OBS plugin. Fourteen ready-made layouts. Thirteen languages.
 
 > **Setting up the whole Fadester Suite?** Start with **[docs/START-HERE.md](docs/START-HERE.md)**: what to install for your controller and the first-run OBS settings.
 

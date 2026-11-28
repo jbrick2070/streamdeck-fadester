@@ -1,8 +1,8 @@
 # Fadester Companion: Store listings in twelve more languages
 
-The same listing as [LISTING.md](LISTING.md), for version 1.5.1. In Partner Center, in the submission, add each language under Store listings → Add/remove languages (Additional Store listing languages), and paste its blocks. Reuse the English screenshots and images from `listing/`. Copyright, license terms and "Developed by" stay as in [LISTING.md](LISTING.md). Product features are one per box; keywords are seven, entered one at a time.
+The same listing as [LISTING.md](LISTING.md), for version 1.5.2. In Partner Center, in the submission, add each language under Store listings → Add/remove languages (Additional Store listing languages), and paste its blocks. Reuse the English screenshots and images from `listing/`. Copyright, license terms and "Developed by" stay as in [LISTING.md](LISTING.md). Product features are one per box; keywords are seven, entered one at a time.
 
-Who has read these texts: a model wrote them, and a second model (Antigravity) read all twelve against the English and against the app's own window texts (`tourbox/panel/PanelText.cs`, `PanelExtraText.cs`) on 21 November 2026, in three rounds, until it had nothing left to report. Its corrections are in. The What's new lines for 1.5.1 were written on 23 November 2026, from the quick guide's own words, and no second model has read them yet. No native speaker has read them yet.
+Who has read these texts: a model wrote them, and a second model (Antigravity) read all twelve against the English and against the app's own window texts (`tourbox/panel/PanelText.cs`, `PanelExtraText.cs`) on 21 November 2026, in three rounds, until it had nothing left to report. Its corrections are in. The What's new lines for 1.5.2 were written on 27 November 2026, from the changelog and the window's own words (`PanelText.cs`, `PanelExtraText.cs`), and no second model has read them yet. No native speaker has read them yet.
 
 ## Deutsch (de)
 
@@ -20,11 +20,13 @@ Benötigt OBS Studio mit eingeschaltetem WebSocket-Server (Werkzeuge → WebSock
 
 **Short description:** Ihr Gamecontroller als Bildmischer für OBS Studio: ein echter T-Bar am rechten Trigger, Szenen auf dem Steuerkreuz, Musik am linken Trigger.
 
-**What's new:** Version 1.5.1:
+**What's new:** Version 1.5.2:
 
-- Die „Kurzanleitung“ fragt jetzt zuerst, welchen Controller Sie haben: Gamecontroller, TourBox oder MIDI-Controller, mit einem Bild von jedem.
-- Ein neuer Abschnitt für MIDI-Controller: Einen APC40 mkII oder einen anderen MIDI-Controller steuert Midi Fadester, ein kostenloses Plugin in OBS, nicht Fadester Companion.
-- Auf Russisch und Niederländisch nennt die App das Menü „Werkzeuge“ von OBS jetzt so, wie OBS selbst es nennt: „Сервис“ und „Tools“.
+- T-Bar: Wenn OBS das Ende einer Überblendung bestätigt hatte, die Prüfung seines Schiebereglers danach aber fehlschlug, konnte die App zur alten Szene zurückschalten oder die Vorschau auf Sendung bringen. Sie behält jetzt, was OBS getan hat, und „Aktivität“ sagt es.
+- „OBS-Browserquellen-URL kopieren“ baut den Link aus Ihren gespeicherten Einstellungen und sagt, wann die Steuerung gestoppt und wieder gestartet werden muss.
+- VJster mit beiden Zielen: Tempo- und Qualitätsschritte gehen nur dorthin, wo ein Video ihnen folgen kann, und die OBS-Seite meldet nicht mehr bei jedem Qualitätsschritt einen Fehler.
+- Wenn die VJster-Aktionen in Stream Deck den VJster-Port belegen, sagen „Aktivität“ und „So geht’s“ jetzt, was ihn freigibt: in den Einstellungen einer VJster-Aktion unter „OBS-Seite“ das Kästchen „Verbindung aktiv halten“ deaktivieren und dann die Aktionen entfernen, oder Stream Deck beenden.
+- Die VJster-Seite in OBS funktioniert weiter, nachdem OBS sie neu geladen hat.
 
 **Product features**
 
@@ -56,11 +58,13 @@ Necesita OBS Studio con su servidor WebSocket activado (Herramientas → Ajustes
 
 **Short description:** Tu mando de juego, ahora un mezclador de vídeo para OBS Studio: un T-bar de verdad en el gatillo derecho, escenas en la cruceta y música en el gatillo izquierdo.
 
-**What's new:** Versión 1.5.1:
+**What's new:** Versión 1.5.2:
 
-- La Guía rápida ahora empieza preguntando qué controlador tienes: mando de juego, TourBox o controlador MIDI, con una imagen de cada uno.
-- Una sección nueva para controladores MIDI: un APC40 mkII u otro controlador MIDI lo maneja Midi Fadester, un plugin gratuito dentro de OBS, no Fadester Companion.
-- En ruso y neerlandés, la aplicación ahora llama al menú Herramientas de OBS como lo llama OBS: Сервис en ruso y Tools en neerlandés.
+- T-bar: cuando OBS aceptaba el final de una transición pero luego fallaba la comprobación de su control deslizante, la aplicación podía volver a la escena anterior o poner Vista previa en emisión. Ahora conserva lo que hizo OBS, y Actividad lo indica.
+- Copiar URL para fuente de navegador de OBS crea el enlace con tus ajustes guardados e indica cuándo hay que detener e iniciar los controles.
+- VJster con los dos destinos: los pasos de velocidad y de calidad van solo adonde un vídeo puede seguirlos, así que la página de OBS ya no informa de un error en cada paso de calidad.
+- Cuando las acciones de VJster de Stream Deck ocupan el puerto de VJster, Actividad y Muéstramelo indican ahora qué lo libera: desmarca Mantener la conexión activa en Página de OBS, en los ajustes de una acción de VJster, y luego quita las acciones; o cierra Stream Deck.
+- La página de VJster en OBS sigue funcionando después de que OBS la actualice.
 
 **Product features**
 
@@ -92,11 +96,13 @@ Nécessite OBS Studio avec son serveur WebSocket activé (Outils → Paramètres
 
 **Short description:** Votre manette de jeu devient un mélangeur vidéo pour OBS Studio : un vrai T-bar sur la gâchette droite, les scènes sur le pavé directionnel, la musique sur la gâchette gauche.
 
-**What's new:** Version 1.5.1 :
+**What's new:** Version 1.5.2 :
 
-- Le Guide rapide commence maintenant par vous demander quel contrôleur vous avez : manette de jeu, TourBox ou contrôleur MIDI, avec une image de chacun.
-- Une nouvelle section pour les contrôleurs MIDI : un APC40 mkII ou un autre contrôleur MIDI est piloté par Midi Fadester, un plugin gratuit qui fonctionne dans OBS, et non par Fadester Companion.
-- En russe et en néerlandais, l’application nomme désormais le menu Outils d’OBS comme OBS le nomme : Сервис en russe, Tools en néerlandais.
+- T-bar : quand OBS avait accepté la fin d’un fondu mais que la vérification de son curseur échouait ensuite, l’application pouvait revenir à l’ancienne scène ou mettre l’aperçu à l’antenne. Elle garde désormais ce qu’OBS a fait, et Activité le signale.
+- Copier l’URL pour la source navigateur OBS construit le lien à partir de vos réglages enregistrés et indique quand arrêter et redémarrer les commandes.
+- VJster avec les deux cibles : les pas de vitesse et de qualité ne vont que là où une vidéo peut les suivre ; la page OBS ne signale donc plus d’erreur à chaque pas de qualité.
+- Quand les actions VJster de Stream Deck occupent le port VJster, Activité et Montrez-moi disent maintenant ce qui le libère : décochez Garder la liaison active sous Page OBS dans les réglages d’une action VJster, puis retirez les actions ; ou quittez Stream Deck.
+- La page VJster dans OBS continue de fonctionner après qu’OBS l’a actualisée.
 
 **Product features**
 
@@ -128,11 +134,13 @@ Richiede OBS Studio con il server WebSocket attivo (Strumenti → Impostazioni d
 
 **Short description:** Il tuo controller di gioco diventa un mixer video per OBS Studio: un vero T-bar sul grilletto destro, le scene sul D-pad, la musica sul grilletto sinistro.
 
-**What's new:** Versione 1.5.1:
+**What's new:** Versione 1.5.2:
 
-- La Guida rapida ora inizia chiedendo quale controller hai: controller di gioco, TourBox o controller MIDI, con un’immagine di ciascuno.
-- Una nuova sezione per i controller MIDI: un APC40 mkII o un altro controller MIDI è gestito da Midi Fadester, un plugin gratuito dentro OBS, non da Fadester Companion.
-- In russo e in olandese l’app ora chiama il menu Strumenti di OBS come lo chiama OBS: Сервис in russo, Tools in olandese.
+- T-bar: quando OBS aveva accettato la fine di una dissolvenza ma poi il controllo del suo cursore falliva, l’app poteva tornare alla scena precedente o mandare in onda l’Anteprima. Ora mantiene ciò che OBS ha fatto, e Attività lo dice.
+- Copia URL per la sorgente browser di OBS crea il link dalle impostazioni salvate e dice quando fermare e riavviare i controlli.
+- VJster con entrambe le destinazioni: i passi di velocità e di qualità vanno solo dove un video può seguirli, così la pagina OBS non segnala più un errore a ogni passo di qualità.
+- Quando le azioni VJster di Stream Deck occupano la porta di VJster, Attività e Mostrami ora dicono cosa la libera: togli la spunta a Tieni attivo il collegamento sotto Pagina OBS nelle impostazioni di un’azione VJster, poi rimuovi le azioni; oppure chiudi Stream Deck.
+- La pagina VJster in OBS continua a funzionare dopo che OBS l’ha aggiornata.
 
 **Product features**
 
@@ -164,11 +172,13 @@ WebSocket サーバーを有効にした OBS Studio が必要です（ツール 
 
 **Short description:** ゲームコントローラーが OBS Studio のビデオスイッチャーに。右トリガーは本物の T バー、十字キーでシーン、左トリガーで音楽。
 
-**What's new:** バージョン 1.5.1：
+**What's new:** バージョン 1.5.2：
 
-- 「クイックガイド」は最初に、お持ちのコントローラー（ゲームコントローラー、TourBox、MIDI コントローラー）を尋ねるようになりました。それぞれに画像が付きます。
-- MIDI コントローラーの新しいセクション：APC40 mkII などの MIDI コントローラーは、Fadester Companion ではなく、OBS 内で動く無料プラグイン Midi Fadester で使います。
-- ロシア語とオランダ語では、OBS の「ツール」メニューを OBS と同じ名前で表示するようになりました（「Сервис」と「Tools」）。
+- T バー：OBS がフェードの終わりを受け付けたのに、その後のスライダーの確認だけが失敗したとき、アプリが前のシーンに戻したり、プレビューをオンエアにしたりすることがありました。今は OBS が行った結果をそのまま保ち、「アクティビティ」にそう表示します。
+- 「OBS ブラウザソース URL をコピー」は保存済みの設定からリンクを作り、コントロールの停止と開始が必要なときはそう伝えます。
+- 両方を対象にした VJster：速度と画質のステップは、動画が従える先にだけ送られます。OBS ページが画質のステップごとにエラーを報告することはなくなりました。
+- Stream Deck の VJster アクションが VJster ポートを使っているとき、「アクティビティ」と「やり方を見る」がポートを空ける方法を示すようになりました：VJster アクションの設定の「OBS ページ」で「接続を常にオンにする」のチェックを外してからアクションを外すか、Stream Deck を終了します。
+- OBS が VJster ページを再読み込みした後も、ページは動き続けます。
 
 **Product features**
 
@@ -200,11 +210,13 @@ WebSocket 서버가 켜진 OBS Studio가 필요합니다(도구 → WebSocket �
 
 **Short description:** 게임 컨트롤러가 OBS Studio용 비디오 스위처로: 오른쪽 트리거는 진짜 T바, 십자키는 장면, 왼쪽 트리거는 음악.
 
-**What's new:** 버전 1.5.1:
+**What's new:** 버전 1.5.2:
 
-- '빠른 가이드'가 이제 어떤 컨트롤러가 있는지 먼저 묻습니다: 게임 컨트롤러, TourBox, MIDI 컨트롤러이며, 각각 그림이 함께 있습니다.
-- MIDI 컨트롤러를 위한 새 섹션: APC40 mkII 등 MIDI 컨트롤러는 Fadester Companion이 아니라 OBS 안에서 동작하는 무료 플러그인 Midi Fadester가 다룹니다.
-- 러시아어와 네덜란드어에서 OBS의 '도구' 메뉴를 이제 OBS와 같은 이름으로 부릅니다: 'Сервис'와 'Tools'.
+- T바: OBS가 페이드의 끝을 받아들였지만 그 뒤 슬라이더 확인만 실패했을 때, 앱이 이전 장면으로 되돌리거나 미리보기를 송출할 수 있었습니다. 이제 OBS가 한 결과를 그대로 두고, '활동 로그'에 그렇게 표시합니다.
+- 'OBS 브라우저 소스 URL 복사'는 저장된 설정으로 링크를 만들고, 컨트롤을 중지했다가 다시 시작해야 할 때 알려 줍니다.
+- 두 대상 모두로 설정한 VJster: 속도와 화질 단계는 동영상이 따를 수 있는 곳으로만 보내므로, OBS 페이지가 화질 단계마다 오류를 보고하지 않습니다.
+- Stream Deck의 VJster 동작이 VJster 포트를 쓰고 있을 때, '활동 로그'와 '방법 보기'가 포트를 비우는 방법을 알려 줍니다: VJster 동작 설정의 'OBS 페이지'에서 '연결 계속 켜 두기'를 해제한 뒤 동작을 제거하거나, Stream Deck을 종료하세요.
+- OBS가 VJster 페이지를 새로 고친 뒤에도 페이지가 계속 작동합니다.
 
 **Product features**
 
@@ -236,11 +248,13 @@ Fadester Companion превращает контроллеры, которые �
 
 **Short description:** Ваш геймпад — теперь видеомикшер для OBS Studio: настоящий T-bar на правом триггере, сцены на крестовине, музыка на левом триггере.
 
-**What's new:** Версия 1.5.1:
+**What's new:** Версия 1.5.2:
 
-- «Краткая справка» теперь начинается с вопроса, какой у вас контроллер: геймпад, TourBox или MIDI-контроллер, с изображением каждого.
-- Новый раздел о MIDI-контроллерах: APC40 mkII или другим MIDI-контроллером управляет Midi Fadester, бесплатный плагин внутри OBS, а не Fadester Companion.
-- На русском и нидерландском приложение теперь называет меню инструментов OBS так же, как сам OBS: «Сервис» и «Tools».
+- T-bar: если OBS принял конец перехода, но потом не удалась только проверка его ползунка, приложение могло вернуть старую сцену или вывести Предпросмотр в эфир. Теперь оно сохраняет то, что сделал OBS, и «Журнал» сообщает об этом.
+- «Скопировать URL для источника „Браузер“ OBS» строит ссылку по сохранённым настройкам и говорит, когда управление нужно остановить и снова запустить.
+- VJster с обеими целями: шаги скорости и качества идут только туда, где видео может их выполнить, поэтому страница OBS больше не сообщает об ошибке при каждом шаге качества.
+- Когда действия VJster в Stream Deck держат порт VJster, «Журнал» и «Показать» теперь говорят, как его освободить: в настройках действия VJster в разделе «Страница OBS» снимите флажок «Не отключать связь», затем уберите действия; или закройте Stream Deck.
+- Страница VJster в OBS продолжает работать после того, как OBS её обновит.
 
 **Product features**
 
@@ -272,11 +286,13 @@ OBS 在前台时它照样工作，只与你电脑上的 OBS 和 VJster 扩展通
 
 **Short description:** 你的游戏手柄，变身 OBS Studio 视频切换台：右扳机是真正的 T-bar，方向键切换场景，左扳机控制音乐。
 
-**What's new:** 版本 1.5.1：
+**What's new:** 版本 1.5.2：
 
-- “快速指南”现在一开始就会问你用的是哪种控制器：游戏手柄、TourBox 或 MIDI 控制器，每种都配有图片。
-- 新增 MIDI 控制器一节：APC40 mkII 或其他 MIDI 控制器由 OBS 内的免费插件 Midi Fadester 驱动，而不是 Fadester Companion。
-- 在俄语和荷兰语界面中，应用现在按 OBS 自己的叫法称呼 OBS 的“工具”菜单：“Сервис”和“Tools”。
+- T-bar：OBS 已接受渐变结束，但之后对其滑块的检查失败时，应用可能切回旧场景，或把预览送上直播。现在它保留 OBS 已完成的结果，并在“活动”中说明。
+- “复制 OBS 浏览器源 URL”现在根据已保存的设置生成链接，并在需要停止再启动控制时提示你。
+- VJster 同时控制两个目标时：速度和画质步进只发送到视频能执行的地方，OBS 页面不再在每次画质步进时报错。
+- 当 Stream Deck 中的 VJster 操作占用 VJster 端口时，“活动”和“演示给我看”现在会说明如何释放它：在某个 VJster 操作的设置中，于“OBS 页面”下取消勾选“保持连接开启”，然后移除这些操作；或退出 Stream Deck。
+- OBS 刷新 VJster 页面后，页面仍能继续工作。
 
 **Product features**
 
@@ -308,11 +324,13 @@ OBS 在前景時它照樣運作，只與你電腦上的 OBS 和 VJster 擴充功
 
 **Short description:** 你的遊戲控制器，變身 OBS Studio 視訊切換台：右扳機是真正的 T-bar，十字鍵切換場景，左扳機控制音樂。
 
-**What's new:** 版本 1.5.1：
+**What's new:** 版本 1.5.2：
 
-- 「快速指南」現在一開始就會問你用的是哪種控制器：遊戲控制器、TourBox 或 MIDI 控制器，每種都附有圖片。
-- 新增 MIDI 控制器一節：APC40 mkII 或其他 MIDI 控制器由 OBS 內的免費外掛程式 Midi Fadester 驅動，而不是 Fadester Companion。
-- 在俄文和荷蘭文介面中，應用程式現在依 OBS 自己的叫法稱呼 OBS 的「工具」選單：「Сервис」和「Tools」。
+- T-bar：OBS 已接受淡變結束，但之後對其滑桿的檢查失敗時，應用程式可能切回舊場景，或把預覽送上直播。現在它保留 OBS 已完成的結果，並在「活動紀錄」中說明。
+- 「複製 OBS 瀏覽器來源 URL」現在依已儲存的設定產生連結，並在需要停止再啟動控制時提示你。
+- VJster 同時控制兩個目標時：速度與畫質步進只送到影片能執行的地方，OBS 頁面不再於每次畫質步進時回報錯誤。
+- 當 Stream Deck 中的 VJster 動作占用 VJster 連接埠時，「活動紀錄」與「示範給我看」現在會說明如何釋放它：在某個 VJster 動作的設定中，於「OBS 頁面」下取消勾選「保持連線開啟」，然後移除這些動作；或結束 Stream Deck。
+- OBS 重新整理 VJster 頁面後，頁面仍能繼續運作。
 
 **Product features**
 
@@ -344,11 +362,13 @@ Vereist OBS Studio met de WebSocket-server ingeschakeld (Tools → WebSocket-ser
 
 **Short description:** Je gamecontroller als beeldmixer voor OBS Studio: een echte T-bar op de rechtertrigger, scènes op de D-pad, muziek op de linkertrigger.
 
-**What's new:** Versie 1.5.1:
+**What's new:** Versie 1.5.2:
 
-- De Snelgids begint nu met de vraag welke controller je hebt: gamecontroller, TourBox of MIDI-controller, met een afbeelding van elk.
-- Een nieuw onderdeel voor MIDI-controllers: een APC40 mkII of een andere MIDI-controller wordt aangestuurd door Midi Fadester, een gratis plug-in in OBS, niet door Fadester Companion.
-- In het Nederlands en het Russisch noemt de app het menu Tools van OBS nu zoals OBS zelf: Tools en Сервис.
+- T-bar: als OBS het einde van een overgang had aanvaard maar de controle van zijn schuif daarna mislukte, kon de app terugschakelen naar de oude scène of Voorvertoning uitzenden. Nu houdt de app wat OBS gedaan heeft, en Activiteit meldt dat.
+- URL voor OBS-browserbron kopiëren maakt de link uit je opgeslagen instellingen en zegt wanneer de bediening gestopt en opnieuw gestart moet worden.
+- VJster met beide doelen: stappen voor snelheid en kwaliteit gaan alleen naar waar een video ze kan volgen, dus de OBS-pagina meldt niet meer bij elke kwaliteitsstap een fout.
+- Als de VJster-acties in Stream Deck de VJster-poort bezet houden, zeggen Activiteit en Laat zien nu wat hem vrijmaakt: zet in de instellingen van een VJster-actie onder OBS-pagina het vinkje bij Verbinding aanhouden uit en verwijder daarna de acties; of sluit Stream Deck af.
+- De VJster-pagina in OBS blijft werken nadat OBS haar heeft vernieuwd.
 
 **Product features**
 
@@ -380,11 +400,13 @@ Requer o OBS Studio com o servidor WebSocket ativado (Ferramentas → Configura�
 
 **Short description:** Seu controle de jogo agora é uma mesa de corte para o OBS Studio: um T-bar de verdade no gatilho direito, cenas no direcional, música no gatilho esquerdo.
 
-**What's new:** Versão 1.5.1:
+**What's new:** Versão 1.5.2:
 
-- O Guia rápido agora começa perguntando qual controlador você tem: controle de jogo, TourBox ou controlador MIDI, com uma imagem de cada um.
-- Uma nova seção para controladores MIDI: um APC40 mkII ou outro controlador MIDI é operado pelo Midi Fadester, um plugin gratuito dentro do OBS, e não pelo Fadester Companion.
-- Em russo e holandês, o aplicativo agora chama o menu Ferramentas do OBS como o próprio OBS: Сервис e Tools.
+- T-bar: quando o OBS tinha aceitado o fim de uma transição, mas a verificação do controle deslizante falhava depois, o aplicativo podia voltar para a cena anterior ou colocar a Pré-visualização no ar. Agora ele mantém o que o OBS fez, e Atividade informa isso.
+- Copiar URL da Fonte de navegador do OBS monta o link com as configurações salvas e avisa quando é preciso parar e iniciar os controles.
+- VJster com os dois destinos: os passos de velocidade e de qualidade vão só para onde um vídeo pode segui-los, então a página do OBS não informa mais um erro a cada passo de qualidade.
+- Quando as ações do VJster no Stream Deck ocupam a porta do VJster, Atividade e Mostre-me agora dizem o que a libera: desmarque Manter a conexão ligada em Página do OBS, nas configurações de uma ação do VJster, e depois remova as ações; ou feche o Stream Deck.
+- A página do VJster no OBS continua funcionando depois que o OBS a atualiza.
 
 **Product features**
 
@@ -416,11 +438,13 @@ WebSocket sunucusu açık OBS Studio gerekir (Araçlar → WebSocket Sunucu Ayar
 
 **Short description:** Oyun kumandanız artık OBS Studio için bir görüntü mikseri: sağ tetikte gerçek bir T-bar, D-pad'de sahneler, sol tetikte müzik.
 
-**What's new:** Sürüm 1.5.1:
+**What's new:** Sürüm 1.5.2:
 
-- Hızlı kılavuz artık önce hangi kontrolcünüz olduğunu soruyor: oyun kumandası, TourBox veya MIDI kontrolcüsü, her birinin resmiyle.
-- MIDI kontrolcüleri için yeni bir bölüm: APC40 mkII'yi veya başka bir MIDI kontrolcüsünü Fadester Companion değil, OBS içinde çalışan ücretsiz bir eklenti olan Midi Fadester yönetir.
-- Rusça ve Felemenkçede uygulama artık OBS'in Araçlar menüsünü tıpkı OBS gibi adlandırıyor: Сервис ve Tools.
+- T-bar: OBS bir geçişin sonunu kabul ettiği hâlde ardından yalnızca kaydırıcısının denetimi başarısız olduğunda, uygulama eski sahneye geri dönebiliyor veya Önizleme'yi yayına çıkarabiliyordu. Artık OBS'in yaptığını koruyor ve Etkinlik bunu bildiriyor.
+- OBS Tarayıcı Kaynağı URL'sini kopyala, bağlantıyı kayıtlı ayarlarınızdan oluşturuyor ve kontrollerin ne zaman durdurulup yeniden başlatılması gerektiğini söylüyor.
+- İki hedefli VJster: hız ve kalite adımları yalnızca bir videonun izleyebileceği yere gidiyor; böylece OBS sayfası artık her kalite adımında hata bildirmiyor.
+- Stream Deck'teki VJster eylemleri VJster bağlantı noktasını tuttuğunda, Etkinlik ve Göster artık onu neyin boşaltacağını söylüyor: bir VJster eyleminin ayarlarında OBS sayfası altındaki Bağlantıyı açık tut kutusunun işaretini kaldırıp eylemleri kaldırın ya da Stream Deck'ten çıkın.
+- OBS, VJster sayfasını yeniledikten sonra da sayfa çalışmaya devam ediyor.
 
 **Product features**
 

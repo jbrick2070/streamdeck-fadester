@@ -22,9 +22,9 @@ Benötigt OBS Studio mit eingeschaltetem WebSocket-Server (Werkzeuge → WebSock
 
 **What's new:** Version 1.5.2:
 
-- T-Bar: Wenn OBS das Ende einer Überblendung bestätigt hatte, die Prüfung seines Schiebereglers danach aber fehlschlug, konnte die App zur alten Szene zurückschalten oder die Vorschau auf Sendung bringen. Sie behält jetzt, was OBS getan hat, und „Aktivität“ sagt es.
-- „OBS-Browserquellen-URL kopieren“ baut den Link aus Ihren gespeicherten Einstellungen und sagt, wann die Steuerung gestoppt und wieder gestartet werden muss.
-- VJster mit beiden Zielen: Tempo- und Qualitätsschritte gehen nur dorthin, wo ein Video ihnen folgen kann, und die OBS-Seite meldet nicht mehr bei jedem Qualitätsschritt einen Fehler.
+- T-Bar: Wenn OBS das Ende einer Überblendung bestätigt hatte, die Prüfung seines Schiebereglers danach aber fehlschlug, konnte die App zur alten Szene zurückschalten oder die Vorschau auf Sendung bringen. Sie behält jetzt bei, was OBS getan hat, und „Aktivität“ sagt es.
+- „OBS-Browserquellen-URL kopieren“ erstellt den Link aus Ihren gespeicherten Einstellungen und sagt, wann die Steuerung gestoppt und wieder gestartet werden muss.
+- VJster mit beiden Zielen: Tempo- und Qualitätsschritte gehen nur dorthin, wo ein Video ihnen folgen kann, sodass die OBS-Seite nicht mehr bei jedem Qualitätsschritt einen Fehler meldet.
 - Wenn die VJster-Aktionen in Stream Deck den VJster-Port belegen, sagen „Aktivität“ und „So geht’s“ jetzt, was ihn freigibt: in den Einstellungen einer VJster-Aktion unter „OBS-Seite“ das Kästchen „Verbindung aktiv halten“ deaktivieren und dann die Aktionen entfernen, oder Stream Deck beenden.
 - Die VJster-Seite in OBS funktioniert weiter, nachdem OBS sie neu geladen hat.
 
@@ -174,9 +174,9 @@ WebSocket サーバーを有効にした OBS Studio が必要です（ツール 
 
 **What's new:** バージョン 1.5.2：
 
-- T バー：OBS がフェードの終わりを受け付けたのに、その後のスライダーの確認だけが失敗したとき、アプリが前のシーンに戻したり、プレビューをオンエアにしたりすることがありました。今は OBS が行った結果をそのまま保ち、「アクティビティ」にそう表示します。
+- T バー：OBS がフェードの終わりを受け付けたのに、その後のスライダーの確認が失敗したとき、アプリが前のシーンに戻したり、プレビューをオンエアにしたりすることがありました。今は OBS が行った結果をそのまま保ち、「アクティビティ」にそう表示します。
 - 「OBS ブラウザソース URL をコピー」は保存済みの設定からリンクを作り、コントロールの停止と開始が必要なときはそう伝えます。
-- 両方を対象にした VJster：速度と画質のステップは、動画が従える先にだけ送られます。OBS ページが画質のステップごとにエラーを報告することはなくなりました。
+- 両方を対象にした VJster：速度と画質のステップは、動画が対応できる先にだけ送られるため、OBS ページが画質のステップごとにエラーを報告することはなくなりました。
 - Stream Deck の VJster アクションが VJster ポートを使っているとき、「アクティビティ」と「やり方を見る」がポートを空ける方法を示すようになりました：VJster アクションの設定の「OBS ページ」で「接続を常にオンにする」のチェックを外してからアクションを外すか、Stream Deck を終了します。
 - OBS が VJster ページを再読み込みした後も、ページは動き続けます。
 
@@ -212,10 +212,10 @@ WebSocket 서버가 켜진 OBS Studio가 필요합니다(도구 → WebSocket �
 
 **What's new:** 버전 1.5.2:
 
-- T바: OBS가 페이드의 끝을 받아들였지만 그 뒤 슬라이더 확인만 실패했을 때, 앱이 이전 장면으로 되돌리거나 미리보기를 송출할 수 있었습니다. 이제 OBS가 한 결과를 그대로 두고, '활동 로그'에 그렇게 표시합니다.
+- T바: OBS가 페이드의 끝을 받아들였지만 그 뒤 슬라이더 확인이 실패했을 때, 앱이 이전 장면으로 되돌리거나 미리보기를 송출할 수 있었습니다. 이제 OBS가 한 결과를 그대로 두고, '활동 로그'에 그렇게 표시합니다.
 - 'OBS 브라우저 소스 URL 복사'는 저장된 설정으로 링크를 만들고, 컨트롤을 중지했다가 다시 시작해야 할 때 알려 줍니다.
-- 두 대상 모두로 설정한 VJster: 속도와 화질 단계는 동영상이 따를 수 있는 곳으로만 보내므로, OBS 페이지가 화질 단계마다 오류를 보고하지 않습니다.
-- Stream Deck의 VJster 동작이 VJster 포트를 쓰고 있을 때, '활동 로그'와 '방법 보기'가 포트를 비우는 방법을 알려 줍니다: VJster 동작 설정의 'OBS 페이지'에서 '연결 계속 켜 두기'를 해제한 뒤 동작을 제거하거나, Stream Deck을 종료하세요.
+- 두 대상 모두로 설정한 VJster: 속도와 화질 단계는 동영상이 따를 수 있는 곳으로만 보내므로, OBS 페이지가 더 이상 화질 단계마다 오류를 보고하지 않습니다.
+- Stream Deck의 VJster 동작이 VJster 포트를 쓰고 있을 때, '활동 로그'와 '방법 보기'가 이제 포트를 비우는 방법을 알려 줍니다: VJster 동작 설정의 'OBS 페이지'에서 '연결 계속 켜 두기'를 해제한 뒤 동작을 제거하거나, Stream Deck을 종료하십시오.
 - OBS가 VJster 페이지를 새로 고친 뒤에도 페이지가 계속 작동합니다.
 
 **Product features**
@@ -250,8 +250,8 @@ Fadester Companion превращает контроллеры, которые �
 
 **What's new:** Версия 1.5.2:
 
-- T-bar: если OBS принял конец перехода, но потом не удалась только проверка его ползунка, приложение могло вернуть старую сцену или вывести Предпросмотр в эфир. Теперь оно сохраняет то, что сделал OBS, и «Журнал» сообщает об этом.
-- «Скопировать URL для источника „Браузер“ OBS» строит ссылку по сохранённым настройкам и говорит, когда управление нужно остановить и снова запустить.
+- T-bar: если OBS принял конец перехода, но потом не удалась проверка его ползунка, приложение могло вернуть старую сцену или вывести Предпросмотр в эфир. Теперь оно сохраняет то, что сделал OBS, и «Журнал» сообщает об этом.
+- «Скопировать URL для источника „Браузер“ OBS» формирует ссылку по сохранённым настройкам и говорит, когда управление нужно остановить и снова запустить.
 - VJster с обеими целями: шаги скорости и качества идут только туда, где видео может их выполнить, поэтому страница OBS больше не сообщает об ошибке при каждом шаге качества.
 - Когда действия VJster в Stream Deck держат порт VJster, «Журнал» и «Показать» теперь говорят, как его освободить: в настройках действия VJster в разделе «Страница OBS» снимите флажок «Не отключать связь», затем уберите действия; или закройте Stream Deck.
 - Страница VJster в OBS продолжает работать после того, как OBS её обновит.
@@ -364,7 +364,7 @@ Vereist OBS Studio met de WebSocket-server ingeschakeld (Tools → WebSocket-ser
 
 **What's new:** Versie 1.5.2:
 
-- T-bar: als OBS het einde van een overgang had aanvaard maar de controle van zijn schuif daarna mislukte, kon de app terugschakelen naar de oude scène of Voorvertoning uitzenden. Nu houdt de app wat OBS gedaan heeft, en Activiteit meldt dat.
+- T-bar: als OBS het einde van een overgang had aanvaard maar de controle van zijn schuif daarna mislukte, kon de app terugschakelen naar de oude scène of Voorvertoning uitzenden. Nu behoudt de app wat OBS gedaan heeft, en Activiteit meldt dat.
 - URL voor OBS-browserbron kopiëren maakt de link uit je opgeslagen instellingen en zegt wanneer de bediening gestopt en opnieuw gestart moet worden.
 - VJster met beide doelen: stappen voor snelheid en kwaliteit gaan alleen naar waar een video ze kan volgen, dus de OBS-pagina meldt niet meer bij elke kwaliteitsstap een fout.
 - Als de VJster-acties in Stream Deck de VJster-poort bezet houden, zeggen Activiteit en Laat zien nu wat hem vrijmaakt: zet in de instellingen van een VJster-actie onder OBS-pagina het vinkje bij Verbinding aanhouden uit en verwijder daarna de acties; of sluit Stream Deck af.
@@ -440,9 +440,9 @@ WebSocket sunucusu açık OBS Studio gerekir (Araçlar → WebSocket Sunucu Ayar
 
 **What's new:** Sürüm 1.5.2:
 
-- T-bar: OBS bir geçişin sonunu kabul ettiği hâlde ardından yalnızca kaydırıcısının denetimi başarısız olduğunda, uygulama eski sahneye geri dönebiliyor veya Önizleme'yi yayına çıkarabiliyordu. Artık OBS'in yaptığını koruyor ve Etkinlik bunu bildiriyor.
+- T-bar: OBS bir geçişin sonunu kabul ettiği hâlde ardından kaydırıcısının denetimi başarısız olduğunda, uygulama eski sahneye geri dönebiliyor veya Önizleme'yi yayına çıkarabiliyordu. Artık OBS'in yaptığını koruyor ve Etkinlik bunu bildiriyor.
 - OBS Tarayıcı Kaynağı URL'sini kopyala, bağlantıyı kayıtlı ayarlarınızdan oluşturuyor ve kontrollerin ne zaman durdurulup yeniden başlatılması gerektiğini söylüyor.
-- İki hedefli VJster: hız ve kalite adımları yalnızca bir videonun izleyebileceği yere gidiyor; böylece OBS sayfası artık her kalite adımında hata bildirmiyor.
+- İki hedefli VJster: hız ve kalite adımları yalnızca bir videonun uygulayabileceği yere gidiyor; böylece OBS sayfası artık her kalite adımında hata bildirmiyor.
 - Stream Deck'teki VJster eylemleri VJster bağlantı noktasını tuttuğunda, Etkinlik ve Göster artık onu neyin boşaltacağını söylüyor: bir VJster eyleminin ayarlarında OBS sayfası altındaki Bağlantıyı açık tut kutusunun işaretini kaldırıp eylemleri kaldırın ya da Stream Deck'ten çıkın.
 - OBS, VJster sayfasını yeniledikten sonra da sayfa çalışmaya devam ediyor.
 
